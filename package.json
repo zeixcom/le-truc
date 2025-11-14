@@ -1,0 +1,26 @@
+{
+	"name": "le-truc",
+	"version": "0.15.0",
+	"license": "MIT",
+	"author": "Esther Brunner",
+	"module": "index.ts",
+	"type": "module",
+	"main": "index.js",
+	"types": "types/index.d.ts",
+	"scripts": {
+		"build:prod": "bun build index.ts --outdir ./ --minify --define process.env.DEV_MODE=false --sourcemap=external",
+		"build:dev": "BUN_ENV=development bun build index.dev.ts --outdir ./ --define process.env.DEV_MODE=true",
+		"build": "bun run build:prod && bun run build:dev && bunx tsc && bun run lint",
+		"lint": "bunx biome check --write ./src"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@biomejs/biome": "^2.3.5"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"@zeix/cause-effect": "^0.15.2"
+	}
+}
