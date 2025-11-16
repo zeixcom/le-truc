@@ -1,8 +1,6 @@
-import type { Cleanup, MaybeCleanup } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from './component'
-import { type Effects, runEffects } from './effects'
 import { MissingElementError } from './errors'
-import { isCustomElement, isElement } from './util'
+import { isCustomElement } from './util'
 
 /* === Types === */
 
@@ -37,38 +35,23 @@ type ElementFromSelector<S extends string> = KnownTag<S> extends never
 				? MathMLElementTagNameMap[KnownTag<S>]
 				: HTMLElement
 
-type ElementUsage = {
+type FirstElement = {
 	<S extends string>(selector: S, required: string): ElementFromSelector<S>
 	<S extends string>(selector: S): ElementFromSelector<S> | null
 	<E extends Element>(selector: string, required: string): E
 	<E extends Element>(selector: string): E | null
 }
 
-type ElementsUsage = {
+type AllElements = {
 	<S extends string>(selector: S, required?: string): ElementFromSelector<S>[]
 	<E extends Element>(selector: string, required?: string): E[]
 }
 
-type UI = Record<string, ElementUsage | ElementsUsage>
+type UI = Record<string, Element | Element[] | null>
 
-type ElementEffects<P extends ComponentProps> = {
-	<S extends string>(
-		selector: S,
-		effects: Effects<P, ElementFromSelector<S>>,
-		required?: string,
-	): () => MaybeCleanup
-	<E extends Element>(
-		selector: string,
-		effects: Effects<P, E>,
-		required?: string,
-	): () => MaybeCleanup
-}
-
-type Helpers<P extends ComponentProps> = {
-	useElement: ElementUsage
-	useElements: ElementsUsage
-	first: ElementEffects<P>
-	all: ElementEffects<P>
+type Helpers = {
+	first: FirstElement
+	all: AllElements
 }
 
 /* === Internal Functions === */
@@ -133,12 +116,12 @@ const observeSubtree = (
  * Create partially applied helper functions to get descendants and run effects on them
  *
  * @since 0.14.0
- * @param {Component<P>} host - Host component
+ * @param {Component<P, U>} host - Host component
  * @returns {ElementSelectors<P>} - Helper functions for selecting descendants
  */
-const getHelpers = <P extends ComponentProps>(
-	host: Component<P>,
-): [Helpers<P>, () => string[]] => {
+const getHelpers = <P extends ComponentProps, U extends UI>(
+	host: Component<P, U>,
+): [Helpers, () => string[]] => {
 	const root = host.shadowRoot ?? host
 	const dependencies: Set<string> = new Set()
 
@@ -146,25 +129,20 @@ const getHelpers = <P extends ComponentProps>(
 	 * Get the first descendant element matching a selector
 	 * If the element is a custom elements it will be added to dependencies
 	 *
-	 * @since 0.14.0
+	 * @since 0.15.0
 	 * @param {S} selector - Selector for element to check for
 	 * @param {string} [required] - Optional reason for the assertion; if provided, throws on missing element
 	 * @returns {ElementFromSelector<S> | null} First matching descendant element, or null if not found and not required
 	 * @throws {MissingElementError} - Thrown when the element is required but not found
 	 */
-	function useElement<S extends string>(
+	function first<S extends string>(
 		selector: S,
 		required: string,
 	): ElementFromSelector<S>
-	function useElement<S extends string>(
-		selector: S,
-	): ElementFromSelector<S> | null
-	function useElement<E extends Element>(
-		selector: string,
-		required: string,
-	): E
-	function useElement<E extends Element>(selector: string): E | null
-	function useElement<S extends string>(
+	function first<S extends string>(selector: S): ElementFromSelector<S> | null
+	function first<E extends Element>(selector: string, required: string): E
+	function first<E extends Element>(selector: string): E | null
+	function first<S extends string>(
 		selector: S,
 		required?: string,
 	): ElementFromSelector<S> | null {
@@ -185,21 +163,18 @@ const getHelpers = <P extends ComponentProps>(
 	 * Get all descendant elements matching a selector
 	 * If any element is a custom element it will be added to dependencies
 	 *
-	 * @since 0.14.0
+	 * @since 0.15.0
 	 * @param {S} selector - Selector for elements to check for
 	 * @param {string} [required] - Optional reason for the assertion; if provided, throws on missing elements
 	 * @returns {ElementFromSelector<S>[]} All matching descendant elements
 	 * @throws {MissingElementError} - Thrown when elements are required but not found
 	 */
-	function useElements<S extends string>(
+	function all<S extends string>(
 		selector: S,
 		required?: string,
 	): ElementFromSelector<S>[]
-	function useElements<E extends Element>(
-		selector: string,
-		required?: string,
-	): E[]
-	function useElements<S extends string>(
+	function all<E extends Element>(selector: string, required?: string): E[]
+	function all<S extends string>(
 		selector: S,
 		required?: string,
 	): ElementFromSelector<S>[] {
@@ -224,7 +199,7 @@ const getHelpers = <P extends ComponentProps>(
 	 * @param {Effects<P, E>} effects - Effect functions to apply
 	 * @param {string} [required] - Optional reason for the assertion; if provided, throws on missing element
 	 * @throws {MissingElementError} - Thrown when the element is required but not found
-	 */
+	 * /
 	const first = <
 		S extends string,
 		E extends Element = ElementFromSelector<S>,
@@ -240,7 +215,7 @@ const getHelpers = <P extends ComponentProps>(
 		return () => {
 			if (target) return runEffects(effects, host, target as unknown as E)
 		}
-	}
+	} */
 
 	/**
 	 * Apply effect functions to all matching descendant elements within the custom element
@@ -251,7 +226,7 @@ const getHelpers = <P extends ComponentProps>(
 	 * @param {Effects<P, ElementFromSelector<S>>} effects - Effect functions to apply
 	 * @param {string} [required] - Optional reason for the assertion; if provided, throws on missing element
 	 * @throws {MissingElementError} - Thrown when the element is required but not found
-	 */
+	 * /
 	const all = <S extends string, E extends Element = ElementFromSelector<S>>(
 		selector: S,
 		effects: Effects<P, E>,
@@ -301,12 +276,9 @@ const getHelpers = <P extends ComponentProps>(
 				cleanups.clear()
 			}
 		}
-	}
+	} */
 
-	return [
-		{ useElement, useElements, first, all },
-		() => Array.from(dependencies),
-	]
+	return [{ first, all }, () => Array.from(dependencies)]
 }
 
-export { type Helpers, getHelpers, type UI }
+export { type Helpers, getHelpers, observeSubtree, type UI }

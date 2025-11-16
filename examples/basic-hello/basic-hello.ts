@@ -2,41 +2,44 @@ import {
 	asString,
 	type Component,
 	component,
-	fromDOM,
-	text,
+	getText,
 	on,
+	read,
 	setText,
 } from '../..'
 
-export type BasicHelloProps = {
-	name: string
-}
-
-export type BasicHelloUI = {
-	input: HTMLInputElement
-	output: HTMLOutputElement
-}
-
-export default component<BasicHelloProps, BasicHelloUI>({
-	name: 'basic-hello',
-	props: { name: asString(fromDOM({ output: text() }, '')) },
-	select: ({ first }) => ({
-		input: first('input', 'Needed to input the name.'),
-		output: first('output', 'Needed to display the name.'),
-	}),
-	setup: el => {
-		const fallback = el.name
-		return {
-			input: on('input', ({ target }) => {
-				el.name = target.value || fallback
-			}),
-			output: setText('name'),
-		}
-	},
-})
-
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-hello': Component<BasicHelloProps>
+		'basic-hello': Component<
+			{
+				name: string
+			},
+			{
+				input: HTMLInputElement
+				output: HTMLOutputElement
+			}
+		>
 	}
 }
+
+export default component(
+	'basic-hello',
+	({ first }) => ({
+		input: first('input', 'Needed to enter the name.'),
+		output: first('output', 'Needed to display the name.'),
+	}),
+	{
+		name: asString(read({ output: getText() }, '')),
+	},
+	el => {
+		const fallback = el.name
+		return {
+			input: [
+				on('input', ({ target }) => {
+					el.name = target.value || fallback
+				}),
+			],
+			output: [setText('name')],
+		}
+	},
+)

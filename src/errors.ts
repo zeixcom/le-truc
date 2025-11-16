@@ -68,7 +68,7 @@ class InvalidEffectsError extends TypeError {
 	 */
 	constructor(host: HTMLElement, cause?: Error) {
 		super(
-			`Invalid effects in component ${elementName(host)}. Effects must be an array of effects, a single effect function, or a Promise that resolves to effects.`,
+			`Invalid effects in component ${elementName(host)}. Effects must be a record of effects for UI elements or the component, or a Promise that resolves to effects.`,
 		)
 		this.name = 'InvalidEffectsError'
 		if (cause) this.cause = cause

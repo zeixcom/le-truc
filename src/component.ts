@@ -20,8 +20,8 @@ import {
 	InvalidComponentNameError,
 	InvalidPropertyNameError,
 } from './errors'
-import { type Extractor } from './extractors'
 import { isParser, type Parser } from './parsers'
+import type { Reader } from './readers'
 import { getHelpers, type Helpers, type UI } from './ui'
 import {
 	DEV_MODE,
@@ -49,35 +49,25 @@ type ReservedWords =
 type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>
 type ComponentProps = Record<ComponentProp, NonNullable<unknown>>
 
-type ComponentUI<P extends ComponentProps, U extends UI> = {
-	component: Component<P>
-} & U
-
 type ComponentSetup<P extends ComponentProps, U extends UI> = (
-	ui: ComponentUI<P, U>,
-	helpers: Helpers<P>,
-) => Effects<P, Component<P>>
+	host: Component<P, U>,
+) => Effects<P, U>
 
-type ComponentConfig<P extends ComponentProps, U extends UI> = {
-	name: string
-	select?: (helpers: Helpers<P>) => U
-	props?: P
-	setup?: ComponentSetup<P, U>
+type Initializers<P extends ComponentProps, U extends UI> = {
+	[K in keyof P]?:
+		| P[K]
+		| Parser<P[K]>
+		| Reader<MaybeSignal<P[K]>>
+		| ((host: Component<P, U>) => void)
 }
 
-type Component<P extends ComponentProps> = HTMLElement & P & { debug?: boolean }
+type Component<P extends ComponentProps, U extends UI> = HTMLElement &
+	P & {
+		debug?: boolean
+		readonly ui: U
+	}
 
 type MaybeSignal<T extends {}> = T | Signal<T> | ComputedCallback<T>
-
-type Initializer<
-	K extends ComponentProp,
-	P extends ComponentProps,
-	U extends UI,
-> =
-	| P[K]
-	| Parser<P[K], ComponentUI<P, U>>
-	| Extractor<MaybeSignal<P[K]>, ComponentUI<P, U>>
-	| ((ui: ComponentUI<P, U>) => void)
 
 /* === Constants === */
 
@@ -89,19 +79,19 @@ const DEPENDENCY_TIMEOUT = 50
  * Define a component with dependency resolution and setup function (connectedCallback)
  *
  * @since 0.15.0
- * @param {ComponentConfig<P>} config - Config object for the component
+ * @param {string} name - Custom element name
+ * @param {function} select - Function to select UI elements
+ * @param {object} props - Component properties
+ * @param {function} setup - Setup function
  * @throws {InvalidComponentNameError} If component name is invalid
  * @throws {InvalidPropertyNameError} If property name is invalid
  */
 function component<P extends ComponentProps, U extends UI>(
-	config: ComponentConfig<P, U>,
-): Component<P> {
-	const {
-		name,
-		select = () => ({}) as U,
-		props = {} as P,
-		setup = () => [],
-	} = config
+	name: string,
+	select: (helpers: Helpers) => U = () => ({}) as U,
+	props: Initializers<P, U> = {} as Initializers<P, U>,
+	setup: (host: Component<P, U>) => Effects<P, U> = () => ({}),
+): Component<P, U> {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
 	for (const prop of Object.keys(props)) {
@@ -111,7 +101,6 @@ function component<P extends ComponentProps, U extends UI>(
 
 	class CustomElement extends HTMLElement {
 		debug?: boolean
-		#ui = {} as ComponentUI<P, U>
 		#signals = {} as { [K in keyof P]: Signal<P[K]> }
 		#cleanup: MaybeCleanup
 
@@ -119,6 +108,8 @@ function component<P extends ComponentProps, U extends UI>(
 			Object.entries(props)
 				?.filter(([, initializer]) => isParser(initializer))
 				.map(([prop]) => prop) ?? []
+
+		ui = {} as U
 
 		/**
 		 * Native callback function when the custom element is first connected to the document
@@ -131,42 +122,36 @@ function component<P extends ComponentProps, U extends UI>(
 
 			// Initialize UI
 			const [helpers, getDependencies] = getHelpers(
-				this as unknown as Component<P>,
+				this as unknown as Component<P, U>,
 			)
-			this.#ui = {
-				...select(helpers),
-				component: this as unknown as Component<P>,
-			}
+			this.ui = select(helpers)
+			Object.freeze(this.ui)
 
 			// Initialize signals
 			const createSignal = <K extends keyof P & string>(
 				key: K,
-				initializer: Initializer<K, P, U>,
+				initializer: Initializers<P, U>[K],
 			) => {
 				const result = isFunction<MaybeSignal<P[K]>>(initializer)
-					? initializer(this as unknown as Component<P>)
+					? initializer(this as unknown as Component<P, U>, null)
 					: (initializer as P[K])
 				if (result != null) this.#setAccessor(key, result)
 			}
 			for (const [prop, initializer] of Object.entries(props)) {
 				if (initializer == null || prop in this) continue
-				createSignal(
-					prop,
-					initializer as Initializer<keyof P & string, P, U>,
-				)
+				createSignal(prop, initializer)
 			}
 
-			// Getting effects collects dependencies as a side-effect
-			const effects = setup(this.#ui, helpers)
+			// Initialize effects
+			const effects = setup(this as unknown as Component<P, U>)
 
 			// Resolve dependencies and run setup function
 			const deps = getDependencies()
 			const runSetup = () => {
-				const cleanup = runEffects(
+				this.#cleanup = runEffects(
+					this as unknown as Component<P, U>,
 					effects,
-					this as unknown as Component<P>,
 				)
-				if (cleanup) this.#cleanup = cleanup
 			}
 
 			if (deps.length) {
@@ -225,7 +210,11 @@ function component<P extends ComponentProps, U extends UI>(
 			if (newValue === oldValue || isComputed(this.#signals[name])) return // unchanged or controlled by computed
 			const parser = props[name]
 			if (!isParser<P[K]>(parser)) return
-			const parsed = parser(this.#ui, newValue, oldValue)
+			const parsed = parser(
+				this as unknown as Component<P, U>,
+				newValue,
+				oldValue,
+			)
 			if (DEV_MODE && this.debug)
 				log(
 					newValue,
@@ -270,18 +259,16 @@ function component<P extends ComponentProps, U extends UI>(
 	}
 
 	customElements.define(name, CustomElement)
-	return customElements.get(name) as unknown as Component<P>
+	return customElements.get(name) as unknown as Component<P, U>
 }
 
 export {
 	type Component,
-	type ComponentConfig,
 	type ComponentProp,
 	type ComponentProps,
 	type ComponentSetup,
-	type ComponentUI,
 	type MaybeSignal,
 	type ReservedWords,
-	type Initializer,
+	type Initializers,
 	component,
 }

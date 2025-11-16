@@ -58,13 +58,60 @@ export {
 
 export {
 	type Component,
-	type ComponentConfig,
 	type ComponentProp,
 	type ComponentProps,
 	type ComponentSetup,
-	type ComponentUI,
 	component,
-	type Initializer,
+	type Initializers,
 	type MaybeSignal,
 	type ReservedWords,
 } from './src/component'
+export {
+	type Effect,
+	type Effects,
+	type ElementEffects,
+	insertOrRemoveElement,
+	type Reactive,
+	runEffects,
+	runElementEffects,
+	updateElement,
+} from './src/effects'
+export { setAttribute, toggleAttribute } from './src/effects/attribute'
+export { toggleClass } from './src/effects/class'
+export {
+	type EventHandler,
+	type EventType,
+	emit,
+	on,
+} from './src/effects/event'
+export {
+	type DangerouslySetInnerHTMLOptions,
+	dangerouslySetInnerHTML,
+} from './src/effects/html'
+export { type PassedProp, type PassedProps, pass } from './src/effects/pass'
+export { setProperty, show } from './src/effects/property'
+export { setStyle } from './src/effects/style'
+export { setText } from './src/effects/text'
+export {
+	asBoolean,
+	asEnum,
+	asInteger,
+	asJSON,
+	asNumber,
+	asString,
+	isParser,
+	type Parser,
+} from './src/parsers'
+export {
+	type Fallback,
+	getAttribute,
+	getIdrefText,
+	getProperty,
+	getStyle,
+	getText,
+	hasAttribute,
+	hasClass,
+	type LooseReader,
+	type Reader,
+	read,
+} from './src/readers'

@@ -738,7 +738,6 @@ var HTML_ELEMENT_PROPS = new Set([
 ]);
 var idString = (id) => id ? `#${id}` : "";
 var classString = (classList) => classList?.length ? `.${Array.from(classList).join(".")}` : "";
-var isElement = (node) => node.nodeType === Node.ELEMENT_NODE;
 var isCustomElement = (element) => element.localName.includes("-");
 var elementName = (el) => el ? `<${el.localName}${idString(el.id)}${classString(el.classList)}>` : "<unknown>";
 var valueString2 = (value) => isString(value) ? `"${value}"` : !!value && typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -784,7 +783,7 @@ class InvalidPropertyNameError extends TypeError {
 
 class InvalidEffectsError extends TypeError {
   constructor(host, cause) {
-    super(`Invalid effects in component ${elementName(host)}. Effects must be an array of effects, a single effect function, or a Promise that resolves to effects.`);
+    super(`Invalid effects in component ${elementName(host)}. Effects must be a record of effects for UI elements or the component, or a Promise that resolves to effects.`);
     this.name = "InvalidEffectsError";
     if (cause)
       this.cause = cause;
@@ -805,68 +804,230 @@ class DependencyTimeoutError extends Error {
   }
 }
 
+class InvalidReactivesError extends TypeError {
+  constructor(host, target, reactives) {
+    super(`Expected reactives passed from ${elementName(host)} to ${elementName(target)} to be a record of signals, reactive property names or functions. Got ${valueString2(reactives)}.`);
+    this.name = "InvalidReactivesError";
+  }
+}
+
+class InvalidCustomElementError extends TypeError {
+  constructor(target, where) {
+    super(`Target ${elementName(target)} is not a custom element in ${where}.`);
+    this.name = "InvalidCustomElementError";
+  }
+}
+
 // src/effects.ts
-var runEffects = (effects, host, target = host) => {
+var RESET = Symbol("RESET");
+var getUpdateDescription = (op, name = "") => {
+  const ops = {
+    a: "attribute ",
+    c: "class ",
+    d: "dataset ",
+    h: "inner HTML",
+    m: "method call ",
+    p: "property ",
+    s: "style property ",
+    t: "text content"
+  };
+  return ops[op] + name;
+};
+var runElementEffects = (host, key, effects) => {
+  const targets = key === "component" ? [host] : Array.isArray(host.ui[key]) ? host.ui[key] : [host.ui[key]];
+  if (!targets.length)
+    return;
   try {
     if (effects instanceof Promise)
       throw effects;
-    if (!Array.isArray(effects))
-      return effects(host, target);
-    const cleanups = effects.filter(isFunction).map((effect2) => effect2(host, target));
+    const cleanups = [];
+    for (const fn of effects) {
+      targets.forEach((target) => {
+        const cleanup = fn(host, target);
+        if (cleanup)
+          cleanups.push(cleanup);
+      });
+    }
     return () => {
-      cleanups.filter(isFunction).forEach((cleanup) => cleanup());
+      cleanups.forEach((cleanup) => cleanup());
       cleanups.length = 0;
     };
   } catch (error) {
-    if (error instanceof Promise) {
-      error.then(() => runEffects(effects, host, target));
-    } else {
+    if (error instanceof Promise)
+      error.then(() => runElementEffects(host, key, effects));
+    else
       throw new InvalidEffectsError(host, error instanceof Error ? error : new Error(String(error)));
-    }
   }
+};
+var runEffects = (host, effects) => {
+  if (!isRecord(effects))
+    throw new InvalidEffectsError(host);
+  const cleanups = [];
+  const keys = Object.keys(effects);
+  for (const key of keys) {
+    if (!effects[key])
+      continue;
+    const cleanup = runElementEffects(host, key, Array.isArray(effects[key]) ? effects[key] : [effects[key]]);
+    if (cleanup)
+      cleanups.push(cleanup);
+  }
+  return () => {
+    cleanups.forEach((cleanup) => cleanup());
+    cleanups.length = 0;
+  };
+};
+var resolveReactive = (reactive, host, target, context) => {
+  try {
+    return isString(reactive) ? host[reactive] : isSignal(reactive) ? reactive.get() : isFunction(reactive) ? reactive(target) : RESET;
+  } catch (error) {
+    if (context) {
+      log(error, `Failed to resolve value of ${valueString2(reactive)}${context ? ` for ${context}` : ""} in ${elementName(target)}${host !== target ? ` in ${elementName(host)}` : ""}`, LOG_ERROR);
+    }
+    return RESET;
+  }
+};
+var updateElement = (reactive, updater) => (host, target) => {
+  const { op, name = "", read, update } = updater;
+  const operationDesc = getUpdateDescription(op, name);
+  const ok = (verb) => () => {
+    if (DEV_MODE && host.debug) {
+      log(target, `${verb} ${operationDesc} of ${elementName(target)} in ${elementName(host)}`);
+    }
+    updater.resolve?.(target);
+  };
+  const err = (verb) => (error) => {
+    log(error, `Failed to ${verb} ${operationDesc} of ${elementName(target)} in ${elementName(host)}`, LOG_ERROR);
+    updater.reject?.(error);
+  };
+  const fallback = read(target);
+  return effect(() => {
+    const value = resolveReactive(reactive, host, target, operationDesc);
+    const resolvedValue = value === RESET ? fallback : value === UNSET ? updater.delete ? null : fallback : value;
+    if (updater.delete && resolvedValue === null) {
+      try {
+        updater.delete(target);
+        ok("delete")();
+      } catch (error) {
+        err("delete")(error);
+      }
+    } else if (resolvedValue != null) {
+      const current = read(target);
+      if (Object.is(resolvedValue, current))
+        return;
+      try {
+        update(target, resolvedValue);
+        ok("update")();
+      } catch (error) {
+        err("update")(error);
+      }
+    }
+  });
+};
+var insertOrRemoveElement = (reactive, inserter) => (host, target) => {
+  const ok = (verb) => () => {
+    if (DEV_MODE && host.debug) {
+      log(target, `${verb} element in ${elementName(target)} in ${elementName(host)}`);
+    }
+    if (isFunction(inserter?.resolve)) {
+      inserter.resolve(target);
+    } else {
+      const signal = isSignal(reactive) ? reactive : undefined;
+      if (isState(signal))
+        signal.set(0);
+    }
+  };
+  const err = (verb) => (error) => {
+    log(error, `Failed to ${verb} element in ${elementName(target)} in ${elementName(host)}`, LOG_ERROR);
+    inserter?.reject?.(error);
+  };
+  return effect(() => {
+    const diff2 = resolveReactive(reactive, host, target, "insertion or deletion");
+    const resolvedDiff = diff2 === RESET ? 0 : diff2;
+    if (resolvedDiff > 0) {
+      if (!inserter)
+        throw new TypeError(`No inserter provided`);
+      try {
+        for (let i = 0;i < resolvedDiff; i++) {
+          const element = inserter.create(target);
+          if (!element)
+            continue;
+          target.insertAdjacentElement(inserter.position ?? "beforeend", element);
+        }
+        ok("insert")();
+      } catch (error) {
+        err("insert")(error);
+      }
+    } else if (resolvedDiff < 0) {
+      try {
+        if (inserter && (inserter.position === "afterbegin" || inserter.position === "beforeend")) {
+          for (let i = 0;i > resolvedDiff; i--) {
+            if (inserter.position === "afterbegin")
+              target.firstElementChild?.remove();
+            else
+              target.lastElementChild?.remove();
+          }
+        } else {
+          target.remove();
+        }
+        ok("remove")();
+      } catch (error) {
+        err("remove")(error);
+      }
+    }
+  });
 };
 
 // src/parsers.ts
+var parseNumber = (parseFn, value) => {
+  if (value == null)
+    return;
+  const parsed = parseFn(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
 var isParser = (value) => isFunction(value) && value.length >= 2;
+var getFallback = (host, fallback) => isFunction(fallback) ? fallback(host) : fallback;
+var asBoolean = () => (_, value) => value != null && value !== "false";
+var asInteger = (fallback = 0) => (host, value) => {
+  if (value == null)
+    return getFallback(host, fallback);
+  const trimmed = value.trim();
+  if (trimmed.toLowerCase().startsWith("0x"))
+    return parseNumber((v) => parseInt(v, 16), trimmed) ?? getFallback(host, fallback);
+  const parsed = parseNumber(parseFloat, value);
+  return parsed != null ? Math.trunc(parsed) : getFallback(host, fallback);
+};
+var asNumber = (fallback = 0) => (host, value) => parseNumber(parseFloat, value) ?? getFallback(host, fallback);
+var asString = (fallback = "") => (host, value) => value ?? getFallback(host, fallback);
+var asEnum = (valid) => (_, value) => {
+  if (value == null)
+    return valid[0];
+  const lowerValue = value.toLowerCase();
+  const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
+  return matchingValid ? value : valid[0];
+};
+var asJSON = (fallback) => (host, value) => {
+  if ((value ?? fallback) == null)
+    throw new TypeError("asJSON: Value and fallback are both null or undefined");
+  if (value == null)
+    return getFallback(host, fallback);
+  if (value === "")
+    throw new TypeError("Empty string is not valid JSON");
+  let result;
+  try {
+    result = JSON.parse(value);
+  } catch (error) {
+    throw new SyntaxError(`Failed to parse JSON: ${String(error)}`, {
+      cause: error
+    });
+  }
+  return result ?? getFallback(host, fallback);
+};
 
 // src/ui.ts
-var extractAttributes = (selector) => {
-  const attributes = new Set;
-  if (selector.includes("."))
-    attributes.add("class");
-  if (selector.includes("#"))
-    attributes.add("id");
-  if (selector.includes("[")) {
-    const parts = selector.split("[");
-    for (let i = 1;i < parts.length; i++) {
-      const part = parts[i];
-      if (!part.includes("]"))
-        continue;
-      const attrName = part.split("=")[0].trim().replace(/[^a-zA-Z0-9_-]/g, "");
-      if (attrName)
-        attributes.add(attrName);
-    }
-  }
-  return [...attributes];
-};
-var observeSubtree = (parent, selector, callback) => {
-  const observer = new MutationObserver(callback);
-  const observerConfig = {
-    childList: true,
-    subtree: true
-  };
-  const observedAttributes = extractAttributes(selector);
-  if (observedAttributes.length) {
-    observerConfig.attributes = true;
-    observerConfig.attributeFilter = observedAttributes;
-  }
-  observer.observe(parent, observerConfig);
-  return observer;
-};
 var getHelpers = (host) => {
   const root = host.shadowRoot ?? host;
   const dependencies = new Set;
-  function useElement(selector, required) {
+  function first(selector, required) {
     const target = root.querySelector(selector);
     if (required != null && !target)
       throw new MissingElementError(host, selector, required);
@@ -874,7 +1035,7 @@ var getHelpers = (host) => {
       dependencies.add(target.localName);
     return target;
   }
-  function useElements(selector, required) {
+  function all(selector, required) {
     const targets = root.querySelectorAll(selector);
     if (required != null && !targets.length)
       throw new MissingElementError(host, selector, required);
@@ -885,65 +1046,12 @@ var getHelpers = (host) => {
       });
     return Array.from(targets);
   }
-  const first = (selector, effects, required) => {
-    const target = required != null ? useElement(selector, required) : useElement(selector);
-    return () => {
-      if (target)
-        return runEffects(effects, host, target);
-    };
-  };
-  const all = (selector, effects, required) => {
-    const targets = required != null ? useElements(selector, required) : useElements(selector);
-    return () => {
-      const cleanups = new Map;
-      const attach = (target) => {
-        const cleanup = runEffects(effects, host, target);
-        if (cleanup && !cleanups.has(target))
-          cleanups.set(target, cleanup);
-      };
-      const detach = (target) => {
-        const cleanup = cleanups.get(target);
-        if (cleanup)
-          cleanup();
-        cleanups.delete(target);
-      };
-      const applyToMatching = (fn) => (node) => {
-        if (isElement(node)) {
-          if (node.matches(selector))
-            fn(node);
-          node.querySelectorAll(selector).forEach(fn);
-        }
-      };
-      const observer = observeSubtree(root, selector, (mutations) => {
-        for (const mutation of mutations) {
-          mutation.addedNodes.forEach(applyToMatching(attach));
-          mutation.removedNodes.forEach(applyToMatching(detach));
-        }
-      });
-      if (targets.length)
-        targets.forEach(attach);
-      return () => {
-        observer.disconnect();
-        cleanups.forEach((cleanup) => cleanup());
-        cleanups.clear();
-      };
-    };
-  };
-  return [
-    { useElement, useElements, first, all },
-    () => Array.from(dependencies)
-  ];
+  return [{ first, all }, () => Array.from(dependencies)];
 };
 
 // src/component.ts
 var DEPENDENCY_TIMEOUT = 50;
-function component(config) {
-  const {
-    name,
-    select = () => ({}),
-    props = {},
-    setup = () => []
-  } = config;
+function component(name, select = () => ({}), props = {}, setup = () => ({})) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
   for (const prop of Object.keys(props)) {
@@ -954,10 +1062,10 @@ function component(config) {
 
   class CustomElement extends HTMLElement {
     debug;
-    #ui = {};
     #signals = {};
     #cleanup;
     static observedAttributes = Object.entries(props)?.filter(([, initializer]) => isParser(initializer)).map(([prop]) => prop) ?? [];
+    ui = {};
     connectedCallback() {
       if (DEV_MODE) {
         this.debug = this.hasAttribute("debug");
@@ -965,12 +1073,10 @@ function component(config) {
           log(this, "Connected");
       }
       const [helpers, getDependencies] = getHelpers(this);
-      this.#ui = {
-        ...select(helpers),
-        component: this
-      };
+      this.ui = select(helpers);
+      Object.freeze(this.ui);
       const createSignal = (key, initializer) => {
-        const result = isFunction(initializer) ? initializer(this) : initializer;
+        const result = isFunction(initializer) ? initializer(this, null) : initializer;
         if (result != null)
           this.#setAccessor(key, result);
       };
@@ -979,12 +1085,10 @@ function component(config) {
           continue;
         createSignal(prop, initializer);
       }
-      const effects = setup(this.#ui, helpers);
+      const effects = setup(this);
       const deps = getDependencies();
       const runSetup = () => {
-        const cleanup = runEffects(effects, this);
-        if (cleanup)
-          this.#cleanup = cleanup;
+        this.#cleanup = runEffects(this, effects);
       };
       if (deps.length) {
         Promise.race([
@@ -1015,7 +1119,7 @@ function component(config) {
       const parser = props[name2];
       if (!isParser(parser))
         return;
-      const parsed = parser(this.#ui, newValue, oldValue);
+      const parsed = parser(this, newValue, oldValue);
       if (DEV_MODE && this.debug)
         log(newValue, `Attribute "${String(name2)}" of ${elementName(this)} changed from ${valueString2(oldValue)} to ${valueString2(newValue)}, parsed as <${typeString(parsed)}> ${valueString2(parsed)}`);
       if (name2 in this)
@@ -1043,12 +1147,231 @@ function component(config) {
   customElements.define(name, CustomElement);
   return customElements.get(name);
 }
+// src/effects/attribute.ts
+var isSafeURL = (value) => {
+  if (/^(mailto|tel):/i.test(value))
+    return true;
+  if (value.includes("://")) {
+    try {
+      const url = new URL(value, window.location.origin);
+      return ["http:", "https:", "ftp:"].includes(url.protocol);
+    } catch {
+      return false;
+    }
+  }
+  return true;
+};
+var safeSetAttribute = (element, attr, value) => {
+  if (/^on/i.test(attr))
+    throw new Error(`Unsafe attribute: ${attr}`);
+  value = String(value).trim();
+  if (!isSafeURL(value))
+    throw new Error(`Unsafe URL for ${attr}: ${value}`);
+  element.setAttribute(attr, value);
+};
+var setAttribute = (name, reactive = name) => updateElement(reactive, {
+  op: "a",
+  name,
+  read: (el) => el.getAttribute(name),
+  update: (el, value) => {
+    safeSetAttribute(el, name, value);
+  },
+  delete: (el) => {
+    el.removeAttribute(name);
+  }
+});
+var toggleAttribute = (name, reactive = name) => updateElement(reactive, {
+  op: "a",
+  name,
+  read: (el) => el.hasAttribute(name),
+  update: (el, value) => {
+    el.toggleAttribute(name, value);
+  }
+});
+// src/effects/class.ts
+var toggleClass = (token, reactive = token) => updateElement(reactive, {
+  op: "c",
+  name: token,
+  read: (el) => el.classList.contains(token),
+  update: (el, value) => {
+    el.classList.toggle(token, value);
+  }
+});
+// src/effects/event.ts
+var on = (type, handler, options = false) => (host, target) => {
+  const listener = (e) => {
+    const result = handler({ host, target, event: e });
+    if (!isRecord(result))
+      return;
+    batch(() => {
+      for (const [key, value] of Object.entries(result)) {
+        try {
+          host[key] = value;
+        } catch (error) {
+          log(error, `Reactive property "${key}" on ${elementName(host)} from event ${type} on ${elementName(target)} could not be set, because it is read-only.`, LOG_ERROR);
+        }
+      }
+    });
+  };
+  target.addEventListener(type, listener, options);
+  return () => target.removeEventListener(type, listener);
+};
+var emit = (type, reactive) => (host, target) => effect(() => {
+  const value = resolveReactive(reactive, host, target, `custom event "${type}" detail`);
+  if (value === RESET || value === UNSET)
+    return;
+  target.dispatchEvent(new CustomEvent(type, {
+    detail: value,
+    bubbles: true
+  }));
+});
+// src/effects/html.ts
+var dangerouslySetInnerHTML = (reactive, options = {}) => updateElement(reactive, {
+  op: "h",
+  read: (el) => (el.shadowRoot || !options.shadowRootMode ? el : null)?.innerHTML ?? "",
+  update: (el, html) => {
+    const { shadowRootMode, allowScripts } = options;
+    if (!html) {
+      if (el.shadowRoot)
+        el.shadowRoot.innerHTML = "<slot></slot>";
+      return "";
+    }
+    if (shadowRootMode && !el.shadowRoot)
+      el.attachShadow({ mode: shadowRootMode });
+    const target = el.shadowRoot || el;
+    target.innerHTML = html;
+    if (!allowScripts)
+      return "";
+    target.querySelectorAll("script").forEach((script) => {
+      const newScript = document.createElement("script");
+      newScript.appendChild(document.createTextNode(script.textContent ?? ""));
+      target.appendChild(newScript);
+      script.remove();
+    });
+    return " with scripts";
+  }
+});
+// src/effects/pass.ts
+var pass = (props) => (host, target) => {
+  if (!isCustomElement(target))
+    throw new InvalidCustomElementError(target, `pass from ${elementName(host)}`);
+  const reactives = isFunction(props) ? props(target) : props;
+  if (!isRecord(reactives))
+    throw new InvalidReactivesError(host, target, reactives);
+  const resetProperties = {};
+  const getGetter = (value) => {
+    if (isSignal(value))
+      return value.get;
+    const fn = isString(value) && value in host ? () => host[value] : isComputedCallback(value) ? value : undefined;
+    return fn ? computed(fn).get : undefined;
+  };
+  for (const [prop, reactive] of Object.entries(reactives)) {
+    if (reactive == null)
+      continue;
+    const descriptor = Object.getOwnPropertyDescriptor(target, prop);
+    if (!(prop in target) || !descriptor?.configurable)
+      continue;
+    const applied = isFunction(reactive) && reactive.length === 1 ? reactive(target) : reactive;
+    const isArray = Array.isArray(applied) && applied.length === 2;
+    const getter = getGetter(isArray ? applied[0] : applied);
+    const setter = isArray && isFunction(applied[1]) ? applied[1] : undefined;
+    if (!getter)
+      continue;
+    resetProperties[prop] = descriptor;
+    Object.defineProperty(target, prop, {
+      configurable: true,
+      enumerable: true,
+      get: getter,
+      set: setter
+    });
+    descriptor.set?.call(target, UNSET);
+  }
+  return () => {
+    Object.defineProperties(target, resetProperties);
+  };
+};
+// src/effects/property.ts
+var setProperty = (key, reactive = key) => updateElement(reactive, {
+  op: "p",
+  name: key,
+  read: (el) => (key in el) ? el[key] : UNSET,
+  update: (el, value) => {
+    el[key] = value;
+  }
+});
+var show = (reactive) => updateElement(reactive, {
+  op: "p",
+  name: "hidden",
+  read: (el) => !el.hidden,
+  update: (el, value) => {
+    el.hidden = !value;
+  }
+});
+// src/effects/style.ts
+var setStyle = (prop, reactive = prop) => updateElement(reactive, {
+  op: "s",
+  name: prop,
+  read: (el) => el.style.getPropertyValue(prop),
+  update: (el, value) => {
+    el.style.setProperty(prop, value);
+  },
+  delete: (el) => {
+    el.style.removeProperty(prop);
+  }
+});
+// src/effects/text.ts
+var setText = (reactive) => updateElement(reactive, {
+  op: "t",
+  read: (el) => el.textContent,
+  update: (el, value) => {
+    Array.from(el.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => node.remove());
+    el.append(document.createTextNode(value));
+  }
+});
+// src/readers.ts
+var read = (readers, fallback) => (host) => {
+  let value = undefined;
+  for (const [key, reader] of Object.entries(readers)) {
+    if (!reader)
+      continue;
+    const element = Array.isArray(host.ui[key]) ? host.ui[key][0] : host.ui[key];
+    if (!element)
+      continue;
+    value = reader(element);
+    if (value != null)
+      break;
+  }
+  return isString(value) && isParser(fallback) ? fallback(host, value) : value ?? getFallback(host, fallback);
+};
+var getText = () => (element) => element.textContent?.trim();
+var getIdrefText = (attr) => (element) => {
+  const id = element.getAttribute(attr);
+  return id ? document.getElementById(id)?.textContent?.trim() : undefined;
+};
+var getProperty = (prop) => (element) => element[prop];
+var hasAttribute = (attr) => (element) => element.hasAttribute(attr);
+var getAttribute = (attr) => (element) => element.getAttribute(attr);
+var hasClass = (token) => (element) => element.classList.contains(token);
+var getStyle = (prop) => (element) => window.getComputedStyle(element).getPropertyValue(prop);
 export {
+  updateElement,
+  toggleClass,
+  toggleAttribute,
   toSignal,
   toError,
   store,
   state,
+  show,
+  setText,
+  setStyle,
+  setProperty,
+  setAttribute,
+  runElementEffects,
+  runEffects,
   resolve,
+  read,
+  pass,
+  on,
   match,
   isSymbol,
   isString,
@@ -1057,6 +1380,7 @@ export {
   isSignal,
   isRecordOrArray,
   isRecord,
+  isParser,
   isNumber,
   isMutableSignal,
   isFunction,
@@ -1064,12 +1388,28 @@ export {
   isComputed,
   isAsyncFunction,
   isAbortError,
+  insertOrRemoveElement,
+  hasClass,
+  hasAttribute,
+  getText,
+  getStyle,
+  getProperty,
+  getIdrefText,
+  getAttribute,
   enqueue,
+  emit,
   effect,
   diff,
+  dangerouslySetInnerHTML,
   computed,
   component,
   batch,
+  asString,
+  asNumber,
+  asJSON,
+  asInteger,
+  asEnum,
+  asBoolean,
   UNSET,
   StoreKeyReadonlyError,
   StoreKeyRangeError,
