@@ -11,7 +11,8 @@
 		"build:prod": "bun build index.ts --outdir ./ --minify --define process.env.DEV_MODE=false --sourcemap=external",
 		"build:dev": "BUN_ENV=development bun build index.dev.ts --outdir ./ --define process.env.DEV_MODE=true",
 		"build": "bun run build:prod && bun run build:dev && bunx tsc && bun run lint",
-		"lint": "bunx biome check --write ./src"
+		"lint": "bunx biome check --write ./src",
+		"lint:examples": "bunx biome check --write ./examples"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",

@@ -8,21 +8,22 @@ import {
 	setText,
 } from '../..'
 
+type BasicHelloProps = {
+	name: string
+}
+
+type BasicHelloUI = {
+	input: HTMLInputElement
+	output: HTMLOutputElement
+}
+
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-hello': Component<
-			{
-				name: string
-			},
-			{
-				input: HTMLInputElement
-				output: HTMLOutputElement
-			}
-		>
+		'basic-hello': Component<BasicHelloProps, BasicHelloUI>
 	}
 }
 
-export default component(
+export default component<BasicHelloProps, BasicHelloUI>(
 	'basic-hello',
 	({ first }) => ({
 		input: first('input', 'Needed to enter the name.'),

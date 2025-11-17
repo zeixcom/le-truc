@@ -1,0 +1,70 @@
+form-checkbox {
+	flex-grow: 1;
+	border-radius: var(--space-xs);
+
+	&:has(:focus-visible) {
+		box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
+	}
+
+	& input:focus {
+		outline: none;
+		box-shadow: none;
+	}
+
+	& label {
+		font-size: var(--font-size-s);
+	}
+
+	&.todo label {
+		display: flex;
+		gap: var(--space-s);
+		line-height: var(--input-height);
+		cursor: pointer;
+
+		&::before {
+			display: inline-block;
+			box-sizing: border-box;
+			content: '';
+			font-size: var(--font-size-l);
+			text-align: center;
+			width: var(--input-height);
+			height: var(--input-height);
+			border: 1px solid var(--color-border);
+			border-radius: 100%;
+			background-color: var(--color-secondary);
+		}
+
+		&:hover::before {
+			background-color: var(--color-secondary-hover);
+			opacity: var(--opacity-solid);
+		}
+
+		&:active::before {
+			background-color: var(--color-secondary-active);
+		}
+	}
+
+	&.todo[checked] label {
+		opacity: var(--opacity-translucent);
+
+		& span {
+			text-decoration: line-through;
+		}
+
+		&::before {
+			color: var(--color-text-inverted);
+			background-color: var(--color-success);
+			border-color: var(--color-success-active);
+			text-shadow: 0 0 var(--space-xs) var(--color-success-active);
+			content: '✓';
+		}
+
+		&:hover::before {
+			background-color: var(--color-success-hover);
+		}
+
+		&:active::before {
+			background-color: var(--color-success-active);
+		}
+	}
+}
