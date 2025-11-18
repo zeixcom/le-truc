@@ -1,0 +1,43 @@
+<module-tabgroup>
+	<div role="tablist">
+		<button
+			type="button"
+			role="tab"
+			id="trigger1"
+			aria-controls="panel1"
+			aria-selected="true"
+			tabindex="0"
+		>
+			Tab 1
+		</button>
+		<button
+			type="button"
+			role="tab"
+			id="trigger2"
+			aria-controls="panel2"
+			aria-selected="false"
+			tabindex="-1"
+		>
+			Tab 2
+		</button>
+		<button
+			type="button"
+			role="tab"
+			id="trigger3"
+			aria-controls="panel3"
+			aria-selected="false"
+			tabindex="-1"
+		>
+			Tab 3
+		</button>
+	</div>
+	<div role="tabpanel" id="panel1" aria-labelledby="trigger1">
+		Tab 1 content
+	</div>
+	<div role="tabpanel" id="panel2" aria-labelledby="trigger2" hidden>
+		Tab 2 content
+	</div>
+	<div role="tabpanel" id="panel3" aria-labelledby="trigger3" hidden>
+		Tab 3 content
+	</div>
+</module-tabgroup>

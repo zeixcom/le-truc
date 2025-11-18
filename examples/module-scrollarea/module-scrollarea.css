@@ -1,0 +1,96 @@
+module-scrollarea {
+	display: block;
+	position: relative;
+	-webkit-overflow-scrolling: touch; /* iOS Overflow Momentum Scroll */
+
+	> * {
+		&::before,
+		&::after {
+			content: '';
+			display: block;
+			position: sticky;
+			opacity: 0;
+			transition: opacity var(--transition-short);
+			z-index: 1;
+			pointer-events: none;
+		}
+	}
+
+	&[orientation='horizontal'] {
+		overflow-x: auto;
+
+		> * {
+			&::before,
+			&::after {
+				height: 100%;
+				width: var(--space-s);
+			}
+
+			&::before {
+				left: 0;
+				background: linear-gradient(
+					to left,
+					transparent,
+					var(--color-shadow)
+				);
+			}
+
+			&::after {
+				right: 0;
+				background: linear-gradient(
+					to right,
+					transparent,
+					var(--color-shadow)
+				);
+			}
+		}
+
+		&.overflow-start > *::before {
+			opacity: 1;
+		}
+
+		&.overflow-end > *::after {
+			opacity: 1;
+		}
+	}
+
+	&[orientation='vertical'] {
+		overflow-y: auto;
+
+		> * {
+			container-type: inline-size;
+
+			&::before,
+			&::after {
+				width: 100%;
+				height: var(--space-m);
+			}
+
+			&::before {
+				top: 0;
+				background: linear-gradient(
+					to top,
+					transparent,
+					var(--color-shadow)
+				);
+			}
+
+			&::after {
+				bottom: 0;
+				background: linear-gradient(
+					to bottom,
+					transparent,
+					var(--color-shadow)
+				);
+			}
+		}
+
+		&.overflow-start > *::before {
+			opacity: 1;
+		}
+
+		&.overflow-end > *::after {
+			opacity: 1;
+		}
+	}
+}
