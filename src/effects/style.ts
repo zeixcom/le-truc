@@ -14,10 +14,10 @@ import { type Effect, type Reactive, updateElement } from '../effects'
  */
 const setStyle = <
 	P extends ComponentProps,
-	E extends HTMLElement | SVGElement | MathMLElement = HTMLElement,
+	E extends HTMLElement | SVGElement | MathMLElement,
 >(
 	prop: string,
-	reactive: Reactive<string, P> = prop as Reactive<string, P>,
+	reactive: Reactive<string, P, E> = prop as Reactive<string, P, E>,
 ): Effect<P, E> =>
 	updateElement(reactive, {
 		op: 's',

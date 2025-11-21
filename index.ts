@@ -100,18 +100,8 @@ export {
 	asNumber,
 	asString,
 	isParser,
-	type Parser,
-} from './src/parsers'
-export {
-	type Fallback,
-	getAttribute,
-	getIdrefText,
-	getProperty,
-	getStyle,
-	getText,
-	hasAttribute,
-	hasClass,
 	type LooseReader,
+	type Parser,
 	type Reader,
 	read,
-} from './src/readers'
+} from './src/parsers'

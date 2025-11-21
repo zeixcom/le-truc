@@ -6,7 +6,7 @@ export type BasicNumberProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-number': Component<BasicNumberProps, {}>
+		'basic-number': Component<BasicNumberProps>
 	}
 }
 
@@ -108,17 +108,18 @@ function getNumberFormatter(
 	}
 }
 
-export default component<BasicNumberProps, {}>(
+export default component<BasicNumberProps>(
 	'basic-number',
-	() => ({}),
 	{ value: asNumber() },
-	el => {
+	() => ({}),
+	ui => {
 		const formatter = getNumberFormatter(
-			el.closest('[lang]')?.getAttribute('lang') || FALLBACK_LOCALE,
-			el.getAttribute('options'),
+			ui.component.closest('[lang]')?.getAttribute('lang')
+				|| FALLBACK_LOCALE,
+			ui.component.getAttribute('options'),
 		)
 		return {
-			component: [setText(() => formatter.format(el.value))],
+			component: [setText(() => formatter.format(ui.component.value))],
 		}
 	},
 )

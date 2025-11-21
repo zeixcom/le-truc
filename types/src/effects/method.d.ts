@@ -9,7 +9,7 @@ import { type Effect, type Reactive } from '../effects';
  * @param {unknown[]} args - Arguments to pass to the method
  * @returns Effect function that calls the method on the element
  */
-declare const callMethod: <P extends ComponentProps, K extends keyof E, E extends HTMLElement = HTMLElement>(methodName: K, reactive: Reactive<boolean, P>, args?: unknown[]) => Effect<P, E>;
+declare const callMethod: <P extends ComponentProps, E extends HTMLElement, K extends keyof E & string>(methodName: K, reactive: Reactive<boolean, P, E>, args?: unknown[]) => Effect<P, E>;
 /**
  * Effect for controlling element focus by calling the 'focus()' method.
  * If the reactive value is true, element will be focussed; when false, nothing happens.
@@ -18,5 +18,5 @@ declare const callMethod: <P extends ComponentProps, K extends keyof E, E extend
  * @param {Reactive<boolean, P, E>} reactive - Reactive value bound to the focus state
  * @returns {Effect<P, E>} Effect function that sets element focus
  */
-declare const focus: <P extends ComponentProps, E extends HTMLElement = HTMLElement>(reactive: Reactive<boolean, P>) => Effect<P, E>;
+declare const focus: <P extends ComponentProps, E extends HTMLElement>(reactive: Reactive<boolean, P, E>) => Effect<P, E>;
 export { callMethod, focus };

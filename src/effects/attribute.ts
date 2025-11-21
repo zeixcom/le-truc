@@ -35,15 +35,12 @@ const safeSetAttribute = (
  *
  * @since 0.8.0
  * @param {string} name - Name of the attribute to set
- * @param {Reactive<string, P>} reactive - Reactive value bound to the attribute value (defaults to attribute name)
+ * @param {Reactive<string, P, E>} reactive - Reactive value bound to the attribute value (defaults to attribute name)
  * @returns {Effect<P, E>} Effect function that sets the attribute on the element
  */
-const setAttribute = <
-	P extends ComponentProps,
-	E extends Element = HTMLElement,
->(
+const setAttribute = <P extends ComponentProps, E extends Element>(
 	name: string,
-	reactive: Reactive<string, P> = name as Reactive<string, P>,
+	reactive: Reactive<string, P, E> = name as Reactive<string, P, E>,
 ): Effect<P, E> =>
 	updateElement(reactive, {
 		op: 'a',
@@ -63,7 +60,7 @@ const setAttribute = <
  *
  * @since 0.8.0
  * @param {string} name - Name of the attribute to toggle
- * @param {Reactive<boolean, P>} reactive - Reactive value bound to the attribute presence (defaults to attribute name)
+ * @param {Reactive<boolean, P, E>} reactive - Reactive value bound to the attribute presence (defaults to attribute name)
  * @returns {Effect<P, E>} Effect function that toggles the attribute on the element
  */
 const toggleAttribute = <
@@ -71,7 +68,7 @@ const toggleAttribute = <
 	E extends Element = HTMLElement,
 >(
 	name: string,
-	reactive: Reactive<boolean, P> = name as Reactive<boolean, P>,
+	reactive: Reactive<boolean, P, E> = name as Reactive<boolean, P, E>,
 ): Effect<P, E> =>
 	updateElement(reactive, {
 		op: 'a',

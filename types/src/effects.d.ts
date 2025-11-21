@@ -1,15 +1,12 @@
 import { type Cleanup, type MaybeCleanup, type Signal } from '@zeix/cause-effect';
-import type { Component, ComponentProps } from './component';
-import type { LooseReader } from './readers';
+import type { Component, ComponentProps, ComponentUI } from './component';
 import type { UI } from './ui';
-type Effect<P extends ComponentProps, E extends Element> = (host: Component<P, UI>, target: E) => MaybeCleanup;
-type ElementEffects<P extends ComponentProps, U extends UI, K extends keyof U | 'component'> = Awaited<Effect<P, K extends keyof U ? Extract<U[K], Element> : Component<P, U>>>[];
+type Effect<P extends ComponentProps, E extends Element> = (host: Component<P>, target: E) => MaybeCleanup;
+type ElementEffects<P extends ComponentProps, U extends UI, K extends keyof U> = Awaited<Effect<P, K extends keyof U ? Extract<U[K], Element> : Component<P>>>[];
 type Effects<P extends ComponentProps, U extends UI> = {
     [K in keyof U]?: ElementEffects<P, U, K>;
-} & {
-    component?: ElementEffects<P, U, 'component'>;
 };
-type Reactive<T, P extends ComponentProps> = keyof P | Signal<T & {}> | LooseReader<T>;
+type Reactive<T, P extends ComponentProps, E extends Element> = keyof P | Signal<T & {}> | ((target: E) => T | null | undefined);
 type UpdateOperation = 'a' | 'c' | 'd' | 'h' | 'm' | 'p' | 's' | 't';
 type ElementUpdater<E extends Element, T> = {
     op: UpdateOperation;
@@ -31,23 +28,23 @@ declare const RESET: any;
  * Run element effects
  *
  * @since 0.15.0
- * @param {Component<P>} host - Component host element
+ * @param {U} ui - Component UI
  * @param {K} key - Key of UI elements to get targets from
  * @param {ElementEffects<P, U, E>} effects - Effect functions to run
  * @returns {MaybeCleanup} - Cleanup function that runs collected cleanup functions
  * @throws {InvalidEffectsError} - If the effects are invalid
  */
-declare const runElementEffects: <P extends ComponentProps, U extends UI, K extends keyof U | "component">(host: Component<P, U>, key: K, effects: ElementEffects<P, U, K>) => MaybeCleanup;
+declare const runElementEffects: <P extends ComponentProps, U extends UI, K extends keyof U | "component">(ui: ComponentUI<P, U>, key: K, effects: ElementEffects<P, U, K>) => MaybeCleanup;
 /**
  * Run component effects
  *
  * @since 0.15.0
- * @param {Component<P>} host - Component host element
- * @param {Effects<P, E>} effects - Effect functions to run
+ * @param {ComponentUI<P, U>} ui - Component UI
+ * @param {Effects<P, U>} effects - Effect functions to run
  * @returns {Cleanup} - Cleanup function that runs collected cleanup functions
  * @throws {InvalidEffectsError} - If the effects are invalid
  */
-declare const runEffects: <P extends ComponentProps, U extends UI>(host: Component<P, U>, effects: Effects<P, U>) => Cleanup;
+declare const runEffects: <P extends ComponentProps, U extends UI>(ui: ComponentUI<P, U>, effects: Effects<P, U>) => Cleanup;
 /**
  * Resolve reactive property name, reader function or signal
  *
@@ -57,7 +54,7 @@ declare const runEffects: <P extends ComponentProps, U extends UI>(host: Compone
  * @param {string} [context] - Context for error logging
  * @returns {T} - Resolved reactive value
  */
-declare const resolveReactive: <T extends {}, P extends ComponentProps, U extends UI, E extends Element>(reactive: Reactive<T, P>, host: Component<P, U>, target: E, context?: string) => T;
+declare const resolveReactive: <T extends {}, P extends ComponentProps, E extends Element>(reactive: Reactive<T, P, E>, host: Component<P>, target: E, context?: string) => T;
 /**
  * Core effect function for updating element properties based on reactive values.
  * This function handles the lifecycle of reading, updating, and deleting element properties
@@ -68,7 +65,7 @@ declare const resolveReactive: <T extends {}, P extends ComponentProps, U extend
  * @param {ElementUpdater<E, T>} updater - Configuration object defining how to read, update, and delete the element property
  * @returns {Effect<P, E>} Effect function that manages the element property updates
  */
-declare const updateElement: <T extends {}, P extends ComponentProps, E extends Element>(reactive: Reactive<T, P>, updater: ElementUpdater<E, T>) => Effect<P, E>;
+declare const updateElement: <T extends {}, P extends ComponentProps, E extends Element>(reactive: Reactive<T, P, E>, updater: ElementUpdater<E, T>) => Effect<P, E>;
 /**
  * Effect for dynamically inserting or removing elements based on a reactive numeric value.
  * Positive values insert elements, negative values remove them.
@@ -78,5 +75,5 @@ declare const updateElement: <T extends {}, P extends ComponentProps, E extends 
  * @param {ElementInserter<E>} inserter - Configuration object defining how to create and position elements
  * @returns {Effect<P, E>} Effect function that manages element insertion and removal
  */
-declare const insertOrRemoveElement: <P extends ComponentProps, E extends Element = HTMLElement>(reactive: Reactive<number, P>, inserter?: ElementInserter<E>) => Effect<P, E>;
+declare const insertOrRemoveElement: <P extends ComponentProps, E extends Element = HTMLElement>(reactive: Reactive<number, P, E>, inserter?: ElementInserter<E>) => Effect<P, E>;
 export { type Effect, type Effects, type ElementEffects, type Reactive, runEffects, runElementEffects, resolveReactive, updateElement, insertOrRemoveElement, RESET, };

@@ -14,5 +14,4 @@ export { type PassedProp, type PassedProps, pass } from './src/effects/pass';
 export { setProperty, show } from './src/effects/property';
 export { setStyle } from './src/effects/style';
 export { setText } from './src/effects/text';
-export { asBoolean, asEnum, asInteger, asJSON, asNumber, asString, isParser, type Parser, } from './src/parsers';
-export { type Fallback, getAttribute, getIdrefText, getProperty, getStyle, getText, hasAttribute, hasClass, type LooseReader, type Reader, read, } from './src/readers';
+export { asBoolean, asEnum, asInteger, asJSON, asNumber, asString, isParser, type LooseReader, type Parser, type Reader, read, } from './src/parsers';

@@ -12,32 +12,33 @@ import {
 import { asURL, fetchWithCache } from '../_common/fetch'
 
 type ModuleLazyloadProps = {
+	readonly ui: Record<
+		'callout' | 'loading' | 'error' | 'content',
+		HTMLElement
+	>
 	src: { value: string; error: string }
 }
 
-type ModuleLazyloadUI = Record<
-	'callout' | 'loading' | 'error' | 'content',
-	HTMLElement
->
-
 declare global {
 	interface HTMLElementTagNameMap {
-		'module-lazyload': Component<ModuleLazyloadProps, ModuleLazyloadUI>
+		'module-lazyload': Component<ModuleLazyloadProps>
 	}
 }
 
-export default component<ModuleLazyloadProps, ModuleLazyloadUI>(
+export default component<ModuleLazyloadProps>(
 	'module-lazyload',
-	({ first }) => ({
-		callout: first(
-			'card-callout',
-			'Needed to display loading state and error messages.',
-		),
-		loading: first('.loading', 'Needed to display loading state.'),
-		error: first('.error', 'Needed to display error messages.'),
-		content: first('.content', 'Needed to display content.'),
-	}),
-	{ src: asURL },
+	{
+		ui: ({ first }) => ({
+			callout: first(
+				'card-callout',
+				'Needed to display loading state and error messages.',
+			),
+			loading: first('.loading', 'Needed to display loading state.'),
+			error: first('.error', 'Needed to display error messages.'),
+			content: first('.content', 'Needed to display content.'),
+		}),
+		src: asURL,
+	},
 	el => {
 		const error = state('')
 		const content = computed(async abort => {

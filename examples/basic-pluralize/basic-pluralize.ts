@@ -1,32 +1,36 @@
 import { asInteger, type Component, component, setText, show } from '../..'
 
 export type BasicPluralizeProps = {
+	readonly ui: Partial<
+		Record<
+			| 'count'
+			| 'none'
+			| 'some'
+			| 'zero'
+			| 'one'
+			| 'two'
+			| 'few'
+			| 'many'
+			| 'other',
+			HTMLElement
+		>
+	>
 	count: number
 }
 
-export type BasicPluralizeUI = Record<
-	| 'count'
-	| 'none'
-	| 'some'
-	| 'zero'
-	| 'one'
-	| 'two'
-	| 'few'
-	| 'many'
-	| 'other',
-	HTMLElement | null
->
-
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-pluralize': Component<BasicPluralizeProps, BasicPluralizeUI>
+		'basic-pluralize': Component<BasicPluralizeProps>
 	}
 }
 
 const FALLBACK_LOCALE = 'en'
 
-export default component<BasicPluralizeProps, BasicPluralizeUI>(
+export default component<BasicPluralizeProps>(
 	'basic-pluralize',
+	{
+		count: asInteger(),
+	},
 	({ first }) => ({
 		count: first('.count'),
 		none: first('.none'),
@@ -38,25 +42,27 @@ export default component<BasicPluralizeProps, BasicPluralizeUI>(
 		many: first('.many'),
 		other: first('.other'),
 	}),
-	{ count: asInteger() },
-	el => {
+	ui => {
 		const pluralizer = new Intl.PluralRules(
-			el.closest('[lang]')?.getAttribute('lang') || FALLBACK_LOCALE,
-			el.hasAttribute('ordinal') ? { type: 'ordinal' } : undefined,
+			ui.component.closest('[lang]')?.getAttribute('lang')
+				|| FALLBACK_LOCALE,
+			ui.component.hasAttribute('ordinal')
+				? { type: 'ordinal' }
+				: undefined,
 		)
 
 		// Basic effects
 		const effects = {
-			count: [setText(() => String(el.count))],
-			none: [show(() => el.count === 0)],
-			some: [show(() => el.count > 0)],
+			count: [setText(() => String(ui.component.count))],
+			none: [show(() => ui.component.count === 0)],
+			some: [show(() => ui.component.count > 0)],
 		}
 
 		// Subset of plural categories for applicable pluralizer: ['zero', 'one', 'two', 'few', 'many', 'other']
 		const categories = pluralizer.resolvedOptions().pluralCategories
 		for (const category of categories)
 			effects[category] = [
-				show(() => pluralizer.select(el.count) === category),
+				show(() => pluralizer.select(ui.component.count) === category),
 			]
 		return effects
 	},

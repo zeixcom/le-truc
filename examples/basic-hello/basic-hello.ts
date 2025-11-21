@@ -1,12 +1,4 @@
-import {
-	asString,
-	type Component,
-	component,
-	getText,
-	on,
-	read,
-	setText,
-} from '../..'
+import { asString, type Component, component, on, read, setText } from '../..'
 
 type BasicHelloProps = {
 	name: string
@@ -19,25 +11,25 @@ type BasicHelloUI = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-hello': Component<BasicHelloProps, BasicHelloUI>
+		'basic-hello': Component<BasicHelloProps>
 	}
 }
 
 export default component<BasicHelloProps, BasicHelloUI>(
 	'basic-hello',
+	{
+		name: asString(ui => ui.output.textContent),
+	},
 	({ first }) => ({
 		input: first('input', 'Needed to enter the name.'),
 		output: first('output', 'Needed to display the name.'),
 	}),
-	{
-		name: asString(read({ output: getText() }, '')),
-	},
-	el => {
-		const fallback = el.name
+	ui => {
+		const fallback = ui.component.name
 		return {
 			input: [
 				on('input', ({ target }) => {
-					el.name = target.value || fallback
+					ui.component.name = target.value || fallback
 				}),
 			],
 			output: [setText('name')],

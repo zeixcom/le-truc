@@ -15,11 +15,11 @@ import { hasMethod } from '../util'
  */
 const callMethod = <
 	P extends ComponentProps,
-	K extends keyof E,
-	E extends HTMLElement = HTMLElement,
+	E extends HTMLElement,
+	K extends keyof E & string,
 >(
 	methodName: K,
-	reactive: Reactive<boolean, P>,
+	reactive: Reactive<boolean, P, E>,
 	args?: unknown[],
 ): Effect<P, E> =>
 	updateElement(reactive, {
@@ -42,8 +42,8 @@ const callMethod = <
  * @param {Reactive<boolean, P, E>} reactive - Reactive value bound to the focus state
  * @returns {Effect<P, E>} Effect function that sets element focus
  */
-const focus = <P extends ComponentProps, E extends HTMLElement = HTMLElement>(
-	reactive: Reactive<boolean, P>,
+const focus = <P extends ComponentProps, E extends HTMLElement>(
+	reactive: Reactive<boolean, P, E>,
 ): Effect<P, E> =>
 	updateElement(reactive, {
 		op: 'm',

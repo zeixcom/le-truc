@@ -29,61 +29,60 @@ const observeOverflow = (
 	}
 }
 
-export default component(
-	'module-scrollarea',
-	() => ({}),
-	{},
-	el => {
-		const child = el.firstElementChild
-		if (!child) return {}
+export default component('module-scrollarea', undefined, undefined, ui => {
+	const child = ui.component.firstElementChild
+	if (!child) return {}
 
-		const overflowStart = state(false)
-		const overflowEnd = state(false)
-		const hasOverflow = () => overflowStart.get() || overflowEnd.get()
+	const overflowStart = state(false)
+	const overflowEnd = state(false)
+	const hasOverflow = () => overflowStart.get() || overflowEnd.get()
 
-		const scrollCallback =
-			el.getAttribute('orientation') === 'horizontal'
-				? () => {
-						overflowStart.set(el.scrollLeft > 0)
-						overflowEnd.set(
-							el.scrollLeft < el.scrollWidth - el.offsetWidth,
-						)
-					}
-				: () => {
-						overflowStart.set(el.scrollTop > 0)
-						overflowEnd.set(
-							el.scrollTop < el.scrollHeight - el.offsetHeight,
-						)
-					}
+	const scrollCallback =
+		ui.component.getAttribute('orientation') === 'horizontal'
+			? () => {
+					overflowStart.set(ui.component.scrollLeft > 0)
+					overflowEnd.set(
+						ui.component.scrollLeft
+							< ui.component.scrollWidth
+								- ui.component.offsetWidth,
+					)
+				}
+			: () => {
+					overflowStart.set(ui.component.scrollTop > 0)
+					overflowEnd.set(
+						ui.component.scrollTop
+							< ui.component.scrollHeight
+								- ui.component.offsetHeight,
+					)
+				}
 
-		let scrolling: number | null = null
+	let scrolling: number | null = null
 
-		return {
-			component: [
-				toggleClass('overflow', hasOverflow),
-				toggleClass('overflow-start', overflowStart),
-				toggleClass('overflow-end', overflowEnd),
-				() =>
-					observeOverflow(
-						el,
-						child,
-						() => {
-							overflowEnd.set(true)
-						},
-						() => {
-							overflowStart.set(false)
-							overflowEnd.set(false)
-						},
-					),
-				on('scroll', () => {
-					if (!hasOverflow()) return
-					if (scrolling) cancelAnimationFrame(scrolling)
-					scrolling = requestAnimationFrame(() => {
-						scrolling = null
-						batch(scrollCallback)
-					})
-				}),
-			],
-		}
-	},
-)
+	return {
+		component: [
+			toggleClass('overflow', hasOverflow),
+			toggleClass('overflow-start', overflowStart),
+			toggleClass('overflow-end', overflowEnd),
+			() =>
+				observeOverflow(
+					ui.component,
+					child,
+					() => {
+						overflowEnd.set(true)
+					},
+					() => {
+						overflowStart.set(false)
+						overflowEnd.set(false)
+					},
+				),
+			on('scroll', () => {
+				if (!hasOverflow()) return
+				if (scrolling) cancelAnimationFrame(scrolling)
+				scrolling = requestAnimationFrame(() => {
+					scrolling = null
+					batch(scrollCallback)
+				})
+			}),
+		],
+	}
+})

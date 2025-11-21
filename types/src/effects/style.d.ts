@@ -9,5 +9,5 @@ import { type Effect, type Reactive } from '../effects';
  * @param {Reactive<string, P, E>} reactive - Reactive value bound to the style property value (defaults to property name)
  * @returns {Effect<P, E>} Effect function that sets the style property on the element
  */
-declare const setStyle: <P extends ComponentProps, E extends HTMLElement | SVGElement | MathMLElement = HTMLElement>(prop: string, reactive?: Reactive<string, P>) => Effect<P, E>;
+declare const setStyle: <P extends ComponentProps, E extends HTMLElement | SVGElement | MathMLElement>(prop: string, reactive?: Reactive<string, P, E>) => Effect<P, E>;
 export { setStyle };

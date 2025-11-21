@@ -21,17 +21,8 @@ import {
 	InvalidPropertyNameError,
 } from './errors'
 import { isParser, type Parser } from './parsers'
-import type { Reader } from './readers'
-import { getHelpers, type Helpers, type UI } from './ui'
-import {
-	DEV_MODE,
-	elementName,
-	LOG_WARN,
-	log,
-	typeString,
-	validatePropertyName,
-	valueString,
-} from './util'
+import { type ElementQueries, getHelpers, type UI } from './ui'
+import { validatePropertyName } from './util'
 
 /* === Types === */
 
@@ -49,23 +40,23 @@ type ReservedWords =
 type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>
 type ComponentProps = Record<ComponentProp, NonNullable<unknown>>
 
+type ComponentUI<P extends ComponentProps, U extends UI> = U & {
+	component: Component<P>
+}
+
 type ComponentSetup<P extends ComponentProps, U extends UI> = (
-	host: Component<P, U>,
-) => Effects<P, U>
+	ui: ComponentUI<P, U>,
+) => Effects<P, ComponentUI<P, U>>
 
 type Initializers<P extends ComponentProps, U extends UI> = {
 	[K in keyof P]?:
 		| P[K]
-		| Parser<P[K]>
-		| Reader<MaybeSignal<P[K]>>
-		| ((host: Component<P, U>) => void)
+		| Signal<P[K]>
+		| Parser<P[K], ComponentUI<P, U>>
+		| ((ui: ComponentUI<P, U>) => MaybeSignal<P[K]> | void)
 }
 
-type Component<P extends ComponentProps, U extends UI> = HTMLElement &
-	P & {
-		debug?: boolean
-		readonly ui: U
-	}
+type Component<P extends ComponentProps> = HTMLElement & P
 
 type MaybeSignal<T extends {}> = T | Signal<T> | ComputedCallback<T>
 
@@ -80,18 +71,18 @@ const DEPENDENCY_TIMEOUT = 50
  *
  * @since 0.15.0
  * @param {string} name - Custom element name
- * @param {function} select - Function to select UI elements
  * @param {object} props - Component properties
+ * @param {function} select - Function to select UI elements
  * @param {function} setup - Setup function
  * @throws {InvalidComponentNameError} If component name is invalid
  * @throws {InvalidPropertyNameError} If property name is invalid
  */
-function component<P extends ComponentProps, U extends UI>(
+function component<P extends ComponentProps, U extends UI = {}>(
 	name: string,
-	select: (helpers: Helpers) => U = () => ({}) as U,
 	props: Initializers<P, U> = {} as Initializers<P, U>,
-	setup: (host: Component<P, U>) => Effects<P, U> = () => ({}),
-): Component<P, U> {
+	select: (helpers: ElementQueries) => U = () => ({}) as U,
+	setup: (ui: ComponentUI<P, U>) => Effects<P, U> = () => ({}),
+): Component<P> {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
 	for (const prop of Object.keys(props)) {
@@ -99,8 +90,9 @@ function component<P extends ComponentProps, U extends UI>(
 		if (error) throw new InvalidPropertyNameError(name, prop, error)
 	}
 
-	class CustomElement extends HTMLElement {
+	class Truc extends HTMLElement {
 		debug?: boolean
+		#ui = {} as ComponentUI<P, U>
 		#signals = {} as { [K in keyof P]: Signal<P[K]> }
 		#cleanup: MaybeCleanup
 
@@ -109,32 +101,32 @@ function component<P extends ComponentProps, U extends UI>(
 				?.filter(([, initializer]) => isParser(initializer))
 				.map(([prop]) => prop) ?? []
 
-		ui = {} as U
-
 		/**
-		 * Native callback function when the custom element is first connected to the document
+		 * Native callback when the custom element is first connected to the document
 		 */
 		connectedCallback() {
-			if (DEV_MODE) {
-				this.debug = this.hasAttribute('debug')
-				if (this.debug) log(this, 'Connected')
-			}
-
 			// Initialize UI
-			const [helpers, getDependencies] = getHelpers(
-				this as unknown as Component<P, U>,
-			)
-			this.ui = select(helpers)
-			Object.freeze(this.ui)
+			const [elementQueries, getDependencies] = getHelpers(this)
+			this.#ui = {
+				...select(elementQueries),
+				component: this as unknown as Component<P>,
+			}
+			Object.freeze(this.#ui)
 
 			// Initialize signals
 			const createSignal = <K extends keyof P & string>(
 				key: K,
 				initializer: Initializers<P, U>[K],
 			) => {
-				const result = isFunction<MaybeSignal<P[K]>>(initializer)
-					? initializer(this as unknown as Component<P, U>, null)
-					: (initializer as P[K])
+				const result = isFunction(initializer)
+					? isParser<P[K], U>(initializer)
+						? (initializer as Parser<P[K], U>)(this.#ui, null)
+						: (
+								initializer as (
+									ui: ComponentUI<P, U>,
+								) => MaybeSignal<P[K]> | void
+							)(this.#ui)
+					: (initializer as MaybeSignal<P[K]>)
 				if (result != null) this.#setAccessor(key, result)
 			}
 			for (const [prop, initializer] of Object.entries(props)) {
@@ -143,15 +135,12 @@ function component<P extends ComponentProps, U extends UI>(
 			}
 
 			// Initialize effects
-			const effects = setup(this as unknown as Component<P, U>)
+			const effects = setup(this.#ui)
 
 			// Resolve dependencies and run setup function
 			const deps = getDependencies()
 			const runSetup = () => {
-				this.#cleanup = runEffects(
-					this as unknown as Component<P, U>,
-					effects,
-				)
+				this.#cleanup = runEffects(this.#ui, effects)
 			}
 
 			if (deps.length) {
@@ -173,13 +162,8 @@ function component<P extends ComponentProps, U extends UI>(
 					}),
 				])
 					.then(runSetup)
-					.catch(error => {
-						if (DEV_MODE)
-							log(
-								error,
-								`Error during setup of <${name}>. Trying to run effects anyway.`,
-								LOG_WARN,
-							)
+					.catch(() => {
+						// Error during setup of <${name}>. Trying to run effects anyway.
 						runSetup()
 					})
 			} else {
@@ -188,15 +172,14 @@ function component<P extends ComponentProps, U extends UI>(
 		}
 
 		/**
-		 * Native callback function when the custom element is disconnected from the document
+		 * Native callback when the custom element is disconnected from the document
 		 */
 		disconnectedCallback() {
 			if (isFunction(this.#cleanup)) this.#cleanup()
-			if (DEV_MODE && this.debug) log(this, 'Disconnected')
 		}
 
 		/**
-		 * Native callback function when an observed attribute of the custom element changes
+		 * Native callback when an observed attribute of the custom element changes
 		 *
 		 * @param {K} name - Name of the modified attribute
 		 * @param {string | null} oldValue - Old value of the modified attribute
@@ -207,19 +190,14 @@ function component<P extends ComponentProps, U extends UI>(
 			oldValue: string | null,
 			newValue: string | null,
 		) {
-			if (newValue === oldValue || isComputed(this.#signals[name])) return // unchanged or controlled by computed
+			// Unchanged or controlled by computed
+			if (newValue === oldValue || isComputed(this.#signals[name])) return
+
+			// Check whether we have a parser for the attribute
 			const parser = props[name]
-			if (!isParser<P[K]>(parser)) return
-			const parsed = parser(
-				this as unknown as Component<P, U>,
-				newValue,
-				oldValue,
-			)
-			if (DEV_MODE && this.debug)
-				log(
-					newValue,
-					`Attribute "${String(name)}" of ${elementName(this)} changed from ${valueString(oldValue)} to ${valueString(newValue)}, parsed as <${typeString(parsed)}> ${valueString(parsed)}`,
-				)
+			if (!isParser<P[K], U>(parser)) return
+
+			const parsed = parser(this.#ui, newValue, oldValue)
 			if (name in this) (this as unknown as P)[name] = parsed
 			else this.#setAccessor(name, parsed)
 		}
@@ -250,22 +228,18 @@ function component<P extends ComponentProps, U extends UI>(
 				configurable: mutable,
 			})
 			if ((prev && isState(prev)) || isStore(prev)) prev.set(UNSET)
-			if (DEV_MODE && this.debug)
-				log(
-					signal,
-					`Set ${typeString(signal)} "${String(key)}" in ${elementName(this)}`,
-				)
 		}
 	}
 
-	customElements.define(name, CustomElement)
-	return customElements.get(name) as unknown as Component<P, U>
+	customElements.define(name, Truc)
+	return customElements.get(name) as unknown as Component<P>
 }
 
 export {
 	type Component,
 	type ComponentProp,
 	type ComponentProps,
+	type ComponentUI,
 	type ComponentSetup,
 	type MaybeSignal,
 	type ReservedWords,

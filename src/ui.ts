@@ -1,4 +1,3 @@
-import type { Component, ComponentProps } from './component'
 import { MissingElementError } from './errors'
 import { isCustomElement } from './util'
 
@@ -37,9 +36,9 @@ type ElementFromSelector<S extends string> = KnownTag<S> extends never
 
 type FirstElement = {
 	<S extends string>(selector: S, required: string): ElementFromSelector<S>
-	<S extends string>(selector: S): ElementFromSelector<S> | null
+	<S extends string>(selector: S): ElementFromSelector<S> | undefined
 	<E extends Element>(selector: string, required: string): E
-	<E extends Element>(selector: string): E | null
+	<E extends Element>(selector: string): E | undefined
 }
 
 type AllElements = {
@@ -47,9 +46,23 @@ type AllElements = {
 	<E extends Element>(selector: string, required?: string): E[]
 }
 
-type UI = Record<string, Element | Element[] | null>
+type NormalizeUI<U extends UI> = {
+	[K in keyof U]-?: (U[K] extends (infer E)[] ? E : U[K])[]
+}
 
-type Helpers = {
+type ElementOfUI<E extends unknown[]> = E extends (infer T)[] ? T : never
+
+type UI = Record<string, Element | Element[]>
+
+type ElementFromKey<U extends UI, K extends keyof U & string> = NonNullable<
+	U[K] extends (infer E extends Element)[]
+		? E
+		: U[K] extends Element
+			? U[K]
+			: never
+>
+
+type ElementQueries = {
 	first: FirstElement
 	all: AllElements
 }
@@ -81,6 +94,9 @@ const extractAttributes = (selector: string): string[] => {
 	}
 	return [...attributes]
 }
+
+const isNotYetDefinedComponent = (element: Element) =>
+	isCustomElement(element) && element.matches(':not(:defined)')
 
 /* === Exported Functions === */
 
@@ -116,12 +132,10 @@ const observeSubtree = (
  * Create partially applied helper functions to get descendants and run effects on them
  *
  * @since 0.14.0
- * @param {Component<P, U>} host - Host component
+ * @param {HTMLElement} host - Host component
  * @returns {ElementSelectors<P>} - Helper functions for selecting descendants
  */
-const getHelpers = <P extends ComponentProps, U extends UI>(
-	host: Component<P, U>,
-): [Helpers, () => string[]] => {
+const getHelpers = (host: HTMLElement): [ElementQueries, () => string[]] => {
 	const root = host.shadowRoot ?? host
 	const dependencies: Set<string> = new Set()
 
@@ -132,31 +146,30 @@ const getHelpers = <P extends ComponentProps, U extends UI>(
 	 * @since 0.15.0
 	 * @param {S} selector - Selector for element to check for
 	 * @param {string} [required] - Optional reason for the assertion; if provided, throws on missing element
-	 * @returns {ElementFromSelector<S> | null} First matching descendant element, or null if not found and not required
+	 * @returns {ElementFromSelector<S> | undefined} First matching descendant element, or void if not found and not required
 	 * @throws {MissingElementError} - Thrown when the element is required but not found
 	 */
 	function first<S extends string>(
 		selector: S,
 		required: string,
 	): ElementFromSelector<S>
-	function first<S extends string>(selector: S): ElementFromSelector<S> | null
+	function first<S extends string>(
+		selector: S,
+	): ElementFromSelector<S> | undefined
 	function first<E extends Element>(selector: string, required: string): E
-	function first<E extends Element>(selector: string): E | null
+	function first<E extends Element>(selector: string): E | undefined
 	function first<S extends string>(
 		selector: S,
 		required?: string,
-	): ElementFromSelector<S> | null {
+	): ElementFromSelector<S> | undefined {
 		const target = root.querySelector<ElementFromSelector<S>>(selector)
 		if (required != null && !target)
 			throw new MissingElementError(host, selector, required)
+
 		// Only add to dependencies if element is a custom element that's not yet defined
-		if (
-			target &&
-			isCustomElement(target) &&
-			target.matches(':not(:defined)')
-		)
+		if (target && isNotYetDefinedComponent(target))
 			dependencies.add(target.localName)
-		return target
+		return target ?? undefined
 	}
 
 	/**
@@ -184,7 +197,7 @@ const getHelpers = <P extends ComponentProps, U extends UI>(
 		if (targets.length)
 			targets.forEach(target => {
 				// Only add to dependencies if element is a custom element that's not yet defined
-				if (isCustomElement(target) && target.matches(':not(:defined)'))
+				if (isNotYetDefinedComponent(target))
 					dependencies.add(target.localName)
 			})
 		return Array.from(targets)
@@ -281,4 +294,12 @@ const getHelpers = <P extends ComponentProps, U extends UI>(
 	return [{ first, all }, () => Array.from(dependencies)]
 }
 
-export { type Helpers, getHelpers, observeSubtree, type UI }
+export {
+	type ElementFromKey,
+	type ElementOfUI,
+	type ElementQueries,
+	type NormalizeUI,
+	getHelpers,
+	observeSubtree,
+	type UI,
+}

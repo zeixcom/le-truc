@@ -1,12 +1,4 @@
-import {
-	asInteger,
-	type Component,
-	component,
-	getText,
-	on,
-	read,
-	setText,
-} from '../..'
+import { asInteger, type Component, component, on, read, setText } from '../..'
 
 type BasicCounterProps = {
 	count: number
@@ -19,12 +11,15 @@ type BasicCounterUI = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-counter': Component<BasicCounterProps, BasicCounterUI>
+		'basic-counter': Component<BasicCounterProps>
 	}
 }
 
 export default component<BasicCounterProps, BasicCounterUI>(
 	'basic-counter',
+	{
+		count: read(ui => ui.count.textContent, asInteger()),
+	},
 	({ first }) => ({
 		increment: first(
 			'button',
@@ -32,13 +27,10 @@ export default component<BasicCounterProps, BasicCounterUI>(
 		),
 		count: first('span', 'Add a span to display the count.'),
 	}),
-	{
-		count: read({ count: getText() }, asInteger()),
-	},
-	el => ({
+	ui => ({
 		increment: [
 			on('click', () => {
-				el.count++
+				ui.component.count++
 			}),
 		],
 		count: [setText('count')],

@@ -10,16 +10,20 @@ import { type Effect, type Reactive, updateElement } from '../effects'
  *
  * @since 0.8.0
  * @param {K} key - Name of the property to set
- * @param {Reactive<E[K], P>} reactive - Reactive value bound to the property value (defaults to property name)
+ * @param {Reactive<E[K], P, E>} reactive - Reactive value bound to the property value (defaults to property name)
  * @returns {Effect<P, E>} Effect function that sets the property on the element
  */
 const setProperty = <
 	P extends ComponentProps,
+	E extends Element,
 	K extends keyof E & string,
-	E extends Element = HTMLElement,
 >(
 	key: K,
-	reactive: Reactive<E[K] & {}, P> = key as unknown as Reactive<E[K] & {}, P>,
+	reactive: Reactive<E[K] & {}, P, E> = key as unknown as Reactive<
+		E[K] & {},
+		P,
+		E
+	>,
 ): Effect<P, E> =>
 	updateElement(reactive, {
 		op: 'p',
@@ -35,11 +39,11 @@ const setProperty = <
  * When the reactive value is true, the element is shown; when false, it's hidden.
  *
  * @since 0.13.1
- * @param {Reactive<boolean, P>} reactive - Reactive value bound to the visibility state
+ * @param {Reactive<boolean, P, E>} reactive - Reactive value bound to the visibility state
  * @returns {Effect<P, E>} Effect function that controls element visibility
  */
 const show = <P extends ComponentProps, E extends HTMLElement = HTMLElement>(
-	reactive: Reactive<boolean, P>,
+	reactive: Reactive<boolean, P, E>,
 ): Effect<P, E> =>
 	updateElement(reactive, {
 		op: 'p',

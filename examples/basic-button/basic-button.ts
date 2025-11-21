@@ -3,8 +3,6 @@ import {
 	asString,
 	type Component,
 	component,
-	getText,
-	read,
 	setProperty,
 	setText,
 } from '../..'
@@ -17,28 +15,28 @@ type BasicButtonProps = {
 
 type BasicButtonUI = {
 	button: HTMLButtonElement
-	label: HTMLSpanElement | null
-	badge: HTMLSpanElement | null
+	label?: HTMLSpanElement
+	badge?: HTMLSpanElement
 }
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-button': Component<BasicButtonProps, BasicButtonUI>
+		'basic-button': Component<BasicButtonProps>
 	}
 }
 
 export default component<BasicButtonProps, BasicButtonUI>(
 	'basic-button',
+	{
+		disabled: asBoolean(),
+		label: asString(ui => ui.label?.textContent ?? ui.button.textContent),
+		badge: asString(ui => ui.badge?.textContent ?? ''),
+	},
 	({ first }) => ({
 		button: first('button', 'Add a native button as descendant.'),
 		label: first('span.label'),
 		badge: first('span.badge'),
 	}),
-	{
-		disabled: asBoolean(),
-		label: asString(read({ label: getText(), button: getText() }, '')),
-		badge: asString(read({ badge: getText() }, '')),
-	},
 	() => ({
 		button: [setProperty('disabled')],
 		label: [setText('label')],

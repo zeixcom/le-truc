@@ -1,10 +1,9 @@
 import type { Component, ComponentProps } from '../component';
 import { type Effect, type Reactive } from '../effects';
-import type { UI } from '../ui';
 type EventType<K extends string> = K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K] : Event;
 type EventHandler<P extends ComponentProps, E extends Element, Evt extends Event> = (context: {
     event: Evt;
-    host: Component<P, UI>;
+    host: Component<P>;
     target: E;
 }) => {
     [K in keyof P]?: P[K];
@@ -26,8 +25,8 @@ declare const on: <K extends keyof HTMLElementEventMap | string, P extends Compo
  *
  * @since 0.13.3
  * @param {string} type - Event type to emit
- * @param {Reactive<T, P>} reactive - Reactive value bound to the event detail
+ * @param {Reactive<T, P, E>} reactive - Reactive value bound to the event detail
  * @returns {Effect<P, E>} Effect function that emits custom events
  */
-declare const emit: <T extends {}, P extends ComponentProps, E extends Element = HTMLElement>(type: string, reactive: Reactive<T, P>) => Effect<P, E>;
+declare const emit: <T extends {}, P extends ComponentProps, E extends Element>(type: string, reactive: Reactive<T, P, E>) => Effect<P, E>;
 export { type EventHandler, type EventType, emit, on };

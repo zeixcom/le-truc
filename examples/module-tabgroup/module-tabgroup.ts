@@ -1,17 +1,16 @@
 import { type Component, component, on, setProperty, show } from '../..'
 
 type ModuleTabgroupProps = {
+	readonly ui: {
+		readonly tabs: HTMLButtonElement[]
+		readonly panels: HTMLElement[]
+	}
 	selected: string
-}
-
-type ModuleTabgroupUI = {
-	readonly tabs: HTMLButtonElement[]
-	readonly panels: HTMLElement[]
 }
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'module-tabgroup': Component<ModuleTabgroupProps, ModuleTabgroupUI>
+		'module-tabgroup': Component<ModuleTabgroupProps>
 	}
 }
 
@@ -32,20 +31,20 @@ const getSelected = (
 		],
 	)
 
-export default component<ModuleTabgroupProps, ModuleTabgroupUI>(
+export default component<ModuleTabgroupProps>(
 	'module-tabgroup',
-	({ all }) => ({
-		tabs: all(
-			'button[role="tab"]',
-			'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
-		),
-		panels: all(
-			'[role="tabpanel"]',
-			'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
-		),
-	}),
 	{
-		selected: (el: Component<ModuleTabgroupProps, ModuleTabgroupUI>) =>
+		ui: ({ all }) => ({
+			tabs: all(
+				'button[role="tab"]',
+				'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
+			),
+			panels: all(
+				'[role="tabpanel"]',
+				'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
+			),
+		}),
+		selected: el =>
 			getSelected(el.ui.tabs, tab => tab.ariaSelected === 'true'),
 	},
 	el => {

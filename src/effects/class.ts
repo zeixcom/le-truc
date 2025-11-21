@@ -12,9 +12,9 @@ import { type Effect, type Reactive, updateElement } from '../effects'
  * @param {Reactive<boolean, P, E>} reactive - Reactive value bound to the class presence (defaults to class name)
  * @returns {Effect<P, U, E>} Effect function that toggles the class on the element
  */
-const toggleClass = <P extends ComponentProps, E extends Element = HTMLElement>(
+const toggleClass = <P extends ComponentProps, E extends Element>(
 	token: string,
-	reactive: Reactive<boolean, P> = token as Reactive<boolean, P>,
+	reactive: Reactive<boolean, P, E> = token as Reactive<boolean, P, E>,
 ): Effect<P, E> =>
 	updateElement(reactive, {
 		op: 'c',

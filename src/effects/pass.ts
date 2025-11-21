@@ -11,17 +11,16 @@ import {
 import type { Component, ComponentProps } from '../component'
 import type { Effect, Reactive } from '../effects'
 import { InvalidCustomElementError, InvalidReactivesError } from '../errors'
-import type { UI } from '../ui'
 import { elementName, isCustomElement } from '../util'
 
 /* === Types === */
 
-type PassedProp<T, P extends ComponentProps> =
-	| Reactive<T, P>
-	| [Reactive<T, P>, (value: T) => void]
+type PassedProp<T, P extends ComponentProps, E extends HTMLElement> =
+	| Reactive<T, P, E>
+	| [Reactive<T, P, E>, (value: T) => void]
 
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
-	[K in keyof Q & string]?: PassedProp<Q[K], P>
+	[K in keyof Q & string]?: PassedProp<Q[K], P, Component<Q>>
 }
 
 /* === Exported Function === */
@@ -40,8 +39,8 @@ const pass =
 	<P extends ComponentProps, Q extends ComponentProps>(
 		props:
 			| PassedProps<P, Q>
-			| ((target: Component<Q, UI>) => PassedProps<P, Q>),
-	): Effect<P, Component<Q, UI>> =>
+			| ((target: Component<Q>) => PassedProps<P, Q>),
+	): Effect<P, Component<Q>> =>
 	(host, target): MaybeCleanup => {
 		if (!isCustomElement(target))
 			throw new InvalidCustomElementError(

@@ -1,9 +1,8 @@
 import type { Component, ComponentProps } from '../component';
 import type { Effect, Reactive } from '../effects';
-import type { UI } from '../ui';
-type PassedProp<T, P extends ComponentProps> = Reactive<T, P> | [Reactive<T, P>, (value: T) => void];
+type PassedProp<T, P extends ComponentProps, E extends HTMLElement> = Reactive<T, P, E> | [Reactive<T, P, E>, (value: T) => void];
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
-    [K in keyof Q & string]?: PassedProp<Q[K], P>;
+    [K in keyof Q & string]?: PassedProp<Q[K], P, Component<Q>>;
 };
 /**
  * Effect for passing reactive values to a descendant Le Truc component.
@@ -15,5 +14,5 @@ type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
  * @throws {InvalidReactivesError} When the provided reactives is not a record of signals, reactive property names or functions
  * @throws {Error} When passing signals failed for some other reason
  */
-declare const pass: <P extends ComponentProps, Q extends ComponentProps>(props: PassedProps<P, Q> | ((target: Component<Q, UI>) => PassedProps<P, Q>)) => Effect<P, Component<Q, UI>>;
+declare const pass: <P extends ComponentProps, Q extends ComponentProps>(props: PassedProps<P, Q> | ((target: Component<Q>) => PassedProps<P, Q>)) => Effect<P, Component<Q>>;
 export { type PassedProp, type PassedProps, pass };

@@ -49,7 +49,10 @@ const isCacheEntryValid = (entry: CacheEntry): boolean => {
 
 /* === Exported Functions === */
 
-export const asURL: Parser<{ value: string; error: string }> = (el, v) => {
+export const asURL: Parser<{ value: string; error: string }, HTMLElement> = (
+	el: HTMLElement,
+	v: string | null | undefined,
+) => {
 	let value = ''
 	let error = ''
 	if (!v) {

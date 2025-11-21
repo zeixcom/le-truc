@@ -2,7 +2,6 @@ import {
 	asInteger,
 	type Component,
 	component,
-	getProperty,
 	on,
 	read,
 	setAttribute,
@@ -12,48 +11,44 @@ import {
 } from '../..'
 
 type ModulePaginationProps = {
+	readonly ui: {
+		input: HTMLInputElement
+		prev: HTMLButtonElement
+		next: HTMLButtonElement
+		value: HTMLElement | null
+		max: HTMLElement | null
+	}
 	value: number
 	max: number
 }
 
-type ModulePaginationUI = {
-	input: HTMLInputElement
-	prev: HTMLButtonElement
-	next: HTMLButtonElement
-	value: HTMLElement | null
-	max: HTMLElement | null
-}
-
 declare global {
 	interface HTMLElementTagNameMap {
-		'module-pagination': Component<
-			ModulePaginationProps,
-			ModulePaginationUI
-		>
+		'module-pagination': Component<ModulePaginationProps>
 	}
 }
 
-export default component<ModulePaginationProps, ModulePaginationUI>(
+export default component<ModulePaginationProps>(
 	'module-pagination',
-	({ first }) => ({
-		input: first(
-			'input',
-			'Add an <input[type="number"]> to enter the page number to go to.',
-		),
-		prev: first(
-			'button.prev',
-			'Add a <button.prev> to go to the previous page.',
-		),
-		next: first(
-			'button.next',
-			'Add a <button.next> to go to the next page.',
-		),
-		value: first('.value'),
-		max: first('.max'),
-	}),
 	{
-		value: asInteger(read({ input: getProperty('value') }, 1)),
-		max: asInteger(read({ input: getProperty('max') }, 1)),
+		ui: ({ first }) => ({
+			input: first(
+				'input',
+				'Add an <input[type="number"]> to enter the page number to go to.',
+			),
+			prev: first(
+				'button.prev',
+				'Add a <button.prev> to go to the previous page.',
+			),
+			next: first(
+				'button.next',
+				'Add a <button.next> to go to the next page.',
+			),
+			value: first('.value'),
+			max: first('.max'),
+		}),
+		value: read({ input: getProperty('value') }, asInteger(1)),
+		max: read({ input: getProperty('max') }, asInteger(1)),
 	},
 	el => ({
 		component: [

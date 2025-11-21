@@ -741,18 +741,6 @@ var classString = (classList) => classList?.length ? `.${Array.from(classList).j
 var isCustomElement = (element) => element.localName.includes("-");
 var elementName = (el) => el ? `<${el.localName}${idString(el.id)}${classString(el.classList)}>` : "<unknown>";
 var valueString2 = (value) => isString(value) ? `"${value}"` : !!value && typeof value === "object" ? JSON.stringify(value) : String(value);
-var typeString = (value) => {
-  if (value === null)
-    return "null";
-  if (typeof value !== "object")
-    return typeof value;
-  if (Array.isArray(value))
-    return "Array";
-  if (Symbol.toStringTag in Object(value)) {
-    return value[Symbol.toStringTag];
-  }
-  return value.constructor?.name || "Object";
-};
 var log = (value, msg, level = LOG_DEBUG) => {
   if (DEV_MODE || [LOG_ERROR, LOG_WARN].includes(level))
     console[level](msg, value);
@@ -833,8 +821,9 @@ var getUpdateDescription = (op, name = "") => {
   };
   return ops[op] + name;
 };
-var runElementEffects = (host, key, effects) => {
-  const targets = key === "component" ? [host] : Array.isArray(host.ui[key]) ? host.ui[key] : [host.ui[key]];
+var runElementEffects = (ui, key, effects) => {
+  const element = ui[key];
+  const targets = Array.isArray(element) ? element : [element];
   if (!targets.length)
     return;
   try {
@@ -843,7 +832,7 @@ var runElementEffects = (host, key, effects) => {
     const cleanups = [];
     for (const fn of effects) {
       targets.forEach((target) => {
-        const cleanup = fn(host, target);
+        const cleanup = fn(ui.component, target);
         if (cleanup)
           cleanups.push(cleanup);
       });
@@ -854,20 +843,21 @@ var runElementEffects = (host, key, effects) => {
     };
   } catch (error) {
     if (error instanceof Promise)
-      error.then(() => runElementEffects(host, key, effects));
+      error.then(() => runElementEffects(ui, key, effects));
     else
-      throw new InvalidEffectsError(host, error instanceof Error ? error : new Error(String(error)));
+      throw new InvalidEffectsError(ui.component, error instanceof Error ? error : new Error(String(error)));
   }
 };
-var runEffects = (host, effects) => {
+var runEffects = (ui, effects) => {
   if (!isRecord(effects))
-    throw new InvalidEffectsError(host);
+    throw new InvalidEffectsError(ui.component);
   const cleanups = [];
   const keys = Object.keys(effects);
   for (const key of keys) {
-    if (!effects[key])
+    const k = key;
+    if (!effects[k])
       continue;
-    const cleanup = runElementEffects(host, key, Array.isArray(effects[key]) ? effects[key] : [effects[key]]);
+    const cleanup = runElementEffects(ui, k, Array.isArray(effects[k]) ? effects[k] : [effects[k]]);
     if (cleanup)
       cleanups.push(cleanup);
   }
@@ -985,19 +975,23 @@ var parseNumber = (parseFn, value) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 var isParser = (value) => isFunction(value) && value.length >= 2;
-var getFallback = (host, fallback) => isFunction(fallback) ? fallback(host) : fallback;
+var getFallback = (ui, fallback) => isFunction(fallback) ? fallback(ui) : fallback;
+var read = (reader, fallback) => (ui) => {
+  const value = reader(ui);
+  return isString(value) && isParser(fallback) ? fallback(ui, value) : value ?? getFallback(ui, fallback);
+};
 var asBoolean = () => (_, value) => value != null && value !== "false";
-var asInteger = (fallback = 0) => (host, value) => {
+var asInteger = (fallback = 0) => (ui, value) => {
   if (value == null)
-    return getFallback(host, fallback);
+    return getFallback(ui, fallback);
   const trimmed = value.trim();
   if (trimmed.toLowerCase().startsWith("0x"))
-    return parseNumber((v) => parseInt(v, 16), trimmed) ?? getFallback(host, fallback);
+    return parseNumber((v) => parseInt(v, 16), trimmed) ?? getFallback(ui, fallback);
   const parsed = parseNumber(parseFloat, value);
-  return parsed != null ? Math.trunc(parsed) : getFallback(host, fallback);
+  return parsed != null ? Math.trunc(parsed) : getFallback(ui, fallback);
 };
-var asNumber = (fallback = 0) => (host, value) => parseNumber(parseFloat, value) ?? getFallback(host, fallback);
-var asString = (fallback = "") => (host, value) => value ?? getFallback(host, fallback);
+var asNumber = (fallback = 0) => (ui, value) => parseNumber(parseFloat, value) ?? getFallback(ui, fallback);
+var asString = (fallback = "") => (ui, value) => value ?? getFallback(ui, fallback);
 var asEnum = (valid) => (_, value) => {
   if (value == null)
     return valid[0];
@@ -1024,6 +1018,7 @@ var asJSON = (fallback) => (host, value) => {
 };
 
 // src/ui.ts
+var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
 var getHelpers = (host) => {
   const root = host.shadowRoot ?? host;
   const dependencies = new Set;
@@ -1031,9 +1026,9 @@ var getHelpers = (host) => {
     const target = root.querySelector(selector);
     if (required != null && !target)
       throw new MissingElementError(host, selector, required);
-    if (target && isCustomElement(target) && target.matches(":not(:defined)"))
+    if (target && isNotYetDefinedComponent(target))
       dependencies.add(target.localName);
-    return target;
+    return target ?? undefined;
   }
   function all(selector, required) {
     const targets = root.querySelectorAll(selector);
@@ -1041,7 +1036,7 @@ var getHelpers = (host) => {
       throw new MissingElementError(host, selector, required);
     if (targets.length)
       targets.forEach((target) => {
-        if (isCustomElement(target) && target.matches(":not(:defined)"))
+        if (isNotYetDefinedComponent(target))
           dependencies.add(target.localName);
       });
     return Array.from(targets);
@@ -1051,7 +1046,7 @@ var getHelpers = (host) => {
 
 // src/component.ts
 var DEPENDENCY_TIMEOUT = 50;
-function component(name, select = () => ({}), props = {}, setup = () => ({})) {
+function component(name, props = {}, select = () => ({}), setup = () => ({})) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
   for (const prop of Object.keys(props)) {
@@ -1060,23 +1055,21 @@ function component(name, select = () => ({}), props = {}, setup = () => ({})) {
       throw new InvalidPropertyNameError(name, prop, error);
   }
 
-  class CustomElement extends HTMLElement {
+  class Truc extends HTMLElement {
     debug;
+    #ui = {};
     #signals = {};
     #cleanup;
     static observedAttributes = Object.entries(props)?.filter(([, initializer]) => isParser(initializer)).map(([prop]) => prop) ?? [];
-    ui = {};
     connectedCallback() {
-      if (DEV_MODE) {
-        this.debug = this.hasAttribute("debug");
-        if (this.debug)
-          log(this, "Connected");
-      }
-      const [helpers, getDependencies] = getHelpers(this);
-      this.ui = select(helpers);
-      Object.freeze(this.ui);
+      const [elementQueries, getDependencies] = getHelpers(this);
+      this.#ui = {
+        ...select(elementQueries),
+        component: this
+      };
+      Object.freeze(this.#ui);
       const createSignal = (key, initializer) => {
-        const result = isFunction(initializer) ? initializer(this, null) : initializer;
+        const result = isFunction(initializer) ? isParser(initializer) ? initializer(this.#ui, null) : initializer(this.#ui) : initializer;
         if (result != null)
           this.#setAccessor(key, result);
       };
@@ -1085,10 +1078,10 @@ function component(name, select = () => ({}), props = {}, setup = () => ({})) {
           continue;
         createSignal(prop, initializer);
       }
-      const effects = setup(this);
+      const effects = setup(this.#ui);
       const deps = getDependencies();
       const runSetup = () => {
-        this.#cleanup = runEffects(this, effects);
+        this.#cleanup = runEffects(this.#ui, effects);
       };
       if (deps.length) {
         Promise.race([
@@ -1098,9 +1091,7 @@ function component(name, select = () => ({}), props = {}, setup = () => ({})) {
               reject(new DependencyTimeoutError(this, deps.filter((dep) => !customElements.get(dep))));
             }, DEPENDENCY_TIMEOUT);
           })
-        ]).then(runSetup).catch((error) => {
-          if (DEV_MODE)
-            log(error, `Error during setup of <${name}>. Trying to run effects anyway.`, LOG_WARN);
+        ]).then(runSetup).catch(() => {
           runSetup();
         });
       } else {
@@ -1110,8 +1101,6 @@ function component(name, select = () => ({}), props = {}, setup = () => ({})) {
     disconnectedCallback() {
       if (isFunction(this.#cleanup))
         this.#cleanup();
-      if (DEV_MODE && this.debug)
-        log(this, "Disconnected");
     }
     attributeChangedCallback(name2, oldValue, newValue) {
       if (newValue === oldValue || isComputed(this.#signals[name2]))
@@ -1119,9 +1108,7 @@ function component(name, select = () => ({}), props = {}, setup = () => ({})) {
       const parser = props[name2];
       if (!isParser(parser))
         return;
-      const parsed = parser(this, newValue, oldValue);
-      if (DEV_MODE && this.debug)
-        log(newValue, `Attribute "${String(name2)}" of ${elementName(this)} changed from ${valueString2(oldValue)} to ${valueString2(newValue)}, parsed as <${typeString(parsed)}> ${valueString2(parsed)}`);
+      const parsed = parser(this.#ui, newValue, oldValue);
       if (name2 in this)
         this[name2] = parsed;
       else
@@ -1140,11 +1127,9 @@ function component(name, select = () => ({}), props = {}, setup = () => ({})) {
       });
       if (prev && isState(prev) || isStore(prev))
         prev.set(UNSET);
-      if (DEV_MODE && this.debug)
-        log(signal, `Set ${typeString(signal)} "${String(key)}" in ${elementName(this)}`);
     }
   }
-  customElements.define(name, CustomElement);
+  customElements.define(name, Truc);
   return customElements.get(name);
 }
 // src/effects/attribute.ts
@@ -1328,31 +1313,6 @@ var setText = (reactive) => updateElement(reactive, {
     el.append(document.createTextNode(value));
   }
 });
-// src/readers.ts
-var read = (readers, fallback) => (host) => {
-  let value = undefined;
-  for (const [key, reader] of Object.entries(readers)) {
-    if (!reader)
-      continue;
-    const element = Array.isArray(host.ui[key]) ? host.ui[key][0] : host.ui[key];
-    if (!element)
-      continue;
-    value = reader(element);
-    if (value != null)
-      break;
-  }
-  return isString(value) && isParser(fallback) ? fallback(host, value) : value ?? getFallback(host, fallback);
-};
-var getText = () => (element) => element.textContent?.trim();
-var getIdrefText = (attr) => (element) => {
-  const id = element.getAttribute(attr);
-  return id ? document.getElementById(id)?.textContent?.trim() : undefined;
-};
-var getProperty = (prop) => (element) => element[prop];
-var hasAttribute = (attr) => (element) => element.hasAttribute(attr);
-var getAttribute = (attr) => (element) => element.getAttribute(attr);
-var hasClass = (token) => (element) => element.classList.contains(token);
-var getStyle = (prop) => (element) => window.getComputedStyle(element).getPropertyValue(prop);
 export {
   updateElement,
   toggleClass,
@@ -1389,13 +1349,6 @@ export {
   isAsyncFunction,
   isAbortError,
   insertOrRemoveElement,
-  hasClass,
-  hasAttribute,
-  getText,
-  getStyle,
-  getProperty,
-  getIdrefText,
-  getAttribute,
   enqueue,
   emit,
   effect,

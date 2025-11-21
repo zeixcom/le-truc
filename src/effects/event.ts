@@ -7,7 +7,6 @@ import {
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from '../component'
 import { type Effect, RESET, type Reactive, resolveReactive } from '../effects'
-import type { UI } from '../ui'
 import { elementName, LOG_ERROR, log } from '../util'
 
 /* === Types === */
@@ -22,7 +21,7 @@ type EventHandler<
 	Evt extends Event,
 > = (context: {
 	event: Evt
-	host: Component<P, UI>
+	host: Component<P>
 	target: E
 }) => { [K in keyof P]?: P[K] } | void | Promise<void>
 
@@ -76,13 +75,13 @@ const on =
  *
  * @since 0.13.3
  * @param {string} type - Event type to emit
- * @param {Reactive<T, P>} reactive - Reactive value bound to the event detail
+ * @param {Reactive<T, P, E>} reactive - Reactive value bound to the event detail
  * @returns {Effect<P, E>} Effect function that emits custom events
  */
 const emit =
-	<T extends {}, P extends ComponentProps, E extends Element = HTMLElement>(
+	<T extends {}, P extends ComponentProps, E extends Element>(
 		type: string,
-		reactive: Reactive<T, P>,
+		reactive: Reactive<T, P, E>,
 	): Effect<P, E> =>
 	(host, target): Cleanup =>
 		effect((): undefined => {

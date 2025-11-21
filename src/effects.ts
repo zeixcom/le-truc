@@ -10,37 +10,34 @@ import {
 	type Signal,
 	UNSET,
 } from '@zeix/cause-effect'
-import type { Component, ComponentProps } from './component'
+import type { Component, ComponentProps, ComponentUI } from './component'
 import { InvalidEffectsError } from './errors'
-import type { LooseReader } from './readers'
 import type { UI } from './ui'
 import { DEV_MODE, elementName, LOG_ERROR, log, valueString } from './util'
 
 /* === Types === */
 
 type Effect<P extends ComponentProps, E extends Element> = (
-	host: Component<P, UI>,
+	host: Component<P>,
 	target: E,
 ) => MaybeCleanup
 
 type ElementEffects<
 	P extends ComponentProps,
 	U extends UI,
-	K extends keyof U | 'component',
+	K extends keyof U,
 > = Awaited<
-	Effect<P, K extends keyof U ? Extract<U[K], Element> : Component<P, U>>
+	Effect<P, K extends keyof U ? Extract<U[K], Element> : Component<P>>
 >[]
 
 type Effects<P extends ComponentProps, U extends UI> = {
 	[K in keyof U]?: ElementEffects<P, U, K>
-} & {
-	component?: ElementEffects<P, U, 'component'>
 }
 
-type Reactive<T, P extends ComponentProps> =
+type Reactive<T, P extends ComponentProps, E extends Element> =
 	| keyof P
 	| Signal<T & {}>
-	| LooseReader<T>
+	| ((target: E) => T | null | undefined)
 
 type UpdateOperation = 'a' | 'c' | 'd' | 'h' | 'm' | 'p' | 's' | 't'
 
@@ -91,7 +88,7 @@ const getUpdateDescription = (
  * Run element effects
  *
  * @since 0.15.0
- * @param {Component<P>} host - Component host element
+ * @param {U} ui - Component UI
  * @param {K} key - Key of UI elements to get targets from
  * @param {ElementEffects<P, U, E>} effects - Effect functions to run
  * @returns {MaybeCleanup} - Cleanup function that runs collected cleanup functions
@@ -102,16 +99,12 @@ const runElementEffects = <
 	U extends UI,
 	K extends keyof U | 'component',
 >(
-	host: Component<P, U>,
+	ui: ComponentUI<P, U>,
 	key: K,
 	effects: ElementEffects<P, U, K>,
 ): MaybeCleanup => {
-	const targets =
-		key === 'component'
-			? [host]
-			: Array.isArray(host.ui[key])
-				? host.ui[key]
-				: [host.ui[key]]
+	const element = ui[key]
+	const targets = Array.isArray(element) ? element : [element]
 	if (!targets.length) return
 
 	try {
@@ -120,7 +113,7 @@ const runElementEffects = <
 		const cleanups: Cleanup[] = []
 		for (const fn of effects) {
 			targets.forEach(target => {
-				const cleanup = fn(host as Component<P, UI>, target)
+				const cleanup = fn(ui.component, target)
 				if (cleanup) cleanups.push(cleanup)
 			})
 		}
@@ -130,10 +123,10 @@ const runElementEffects = <
 		}
 	} catch (error) {
 		if (error instanceof Promise)
-			error.then(() => runElementEffects(host, key, effects))
+			error.then(() => runElementEffects(ui, key, effects))
 		else
 			throw new InvalidEffectsError(
-				host,
+				ui.component,
 				error instanceof Error ? error : new Error(String(error)),
 			)
 	}
@@ -143,25 +136,26 @@ const runElementEffects = <
  * Run component effects
  *
  * @since 0.15.0
- * @param {Component<P>} host - Component host element
- * @param {Effects<P, E>} effects - Effect functions to run
+ * @param {ComponentUI<P, U>} ui - Component UI
+ * @param {Effects<P, U>} effects - Effect functions to run
  * @returns {Cleanup} - Cleanup function that runs collected cleanup functions
  * @throws {InvalidEffectsError} - If the effects are invalid
  */
 const runEffects = <P extends ComponentProps, U extends UI>(
-	host: Component<P, U>,
+	ui: ComponentUI<P, U>,
 	effects: Effects<P, U>,
 ): Cleanup => {
-	if (!isRecord(effects)) throw new InvalidEffectsError(host)
+	if (!isRecord(effects)) throw new InvalidEffectsError(ui.component)
 
 	const cleanups: Cleanup[] = []
 	const keys = Object.keys(effects)
 	for (const key of keys) {
-		if (!effects[key]) continue
+		const k = key as keyof U
+		if (!effects[k]) continue
 		const cleanup = runElementEffects(
-			host,
-			key,
-			Array.isArray(effects[key]) ? effects[key] : [effects[key]],
+			ui,
+			k,
+			Array.isArray(effects[k]) ? effects[k] : [effects[k]],
 		)
 		if (cleanup) cleanups.push(cleanup)
 	}
@@ -183,11 +177,10 @@ const runEffects = <P extends ComponentProps, U extends UI>(
 const resolveReactive = <
 	T extends {},
 	P extends ComponentProps,
-	U extends UI,
 	E extends Element,
 >(
-	reactive: Reactive<T, P>,
-	host: Component<P, U>,
+	reactive: Reactive<T, P, E>,
+	host: Component<P>,
 	target: E,
 	context?: string,
 ): T => {
@@ -229,7 +222,7 @@ const resolveReactive = <
  */
 const updateElement =
 	<T extends {}, P extends ComponentProps, E extends Element>(
-		reactive: Reactive<T, P>,
+		reactive: Reactive<T, P, E>,
 		updater: ElementUpdater<E, T>,
 	): Effect<P, E> =>
 	(host, target): Cleanup => {
@@ -299,7 +292,7 @@ const updateElement =
  */
 const insertOrRemoveElement =
 	<P extends ComponentProps, E extends Element = HTMLElement>(
-		reactive: Reactive<number, P>,
+		reactive: Reactive<number, P, E>,
 		inserter?: ElementInserter<E>,
 	): Effect<P, E> =>
 	(host, target) => {

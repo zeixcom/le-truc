@@ -3,9 +3,7 @@ import {
 	asString,
 	type Component,
 	component,
-	getText,
 	on,
-	read,
 	setProperty,
 	setText,
 } from '../..'
@@ -17,30 +15,30 @@ type FormCheckboxProps = {
 
 type FormCheckboxUI = {
 	checkbox: HTMLInputElement
-	label: HTMLLabelElement
+	label?: HTMLLabelElement
 }
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-checkbox': Component<FormCheckboxProps, FormCheckboxUI>
+		'form-checkbox': Component<FormCheckboxProps>
 	}
 }
 
 export default component<FormCheckboxProps, FormCheckboxUI>(
 	'form-checkbox',
+	{
+		checked: asBoolean(),
+		label: asString(ui => ui.label?.textContent || ''),
+	},
 	({ first }) => ({
 		checkbox: first('input[type="checkbox"]', 'Add a native checkbox.'),
 		label: first('label', 'Add a native label.'),
 	}),
-	{
-		checked: asBoolean(),
-		label: asString(read({ label: getText() }, '')),
-	},
-	el => ({
+	ui => ({
 		checkbox: [
 			setProperty('checked'),
 			on('change', ({ target }) => {
-				el.checked = target.checked
+				ui.component.checked = target.checked
 			}),
 		],
 		label: [setText('label')],

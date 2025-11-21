@@ -1,7 +1,6 @@
 import { asInteger, type Component, component, on, setProperty } from '../..'
 
 type ModuleCarouselProps = {
-	readonly slides: HTMLElement[]
 	index: number
 }
 
@@ -13,7 +12,7 @@ type ModuleCarouselUI = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'module-carousel': Component<ModuleCarouselProps, ModuleCarouselUI>
+		'module-carousel': Component<ModuleCarouselProps>
 	}
 }
 
@@ -21,24 +20,24 @@ const wrapAround = (index: number, total: number) => (index + total) % total
 
 export default component<ModuleCarouselProps, ModuleCarouselUI>(
 	'module-carousel',
-	({ all, first }) => ({
-		dots: all('[role="tab"]'),
-		slides: all('[role="tabpanel"]'),
-		buttons: all('button'),
-	}),
 	{
-		index: asInteger((el: Element) =>
+		index: asInteger(ui =>
 			Math.max(
-				el.ui.slides.findIndex(slide => slide.ariaCurrent === 'true'),
+				ui.slides.findIndex(slide => slide.ariaCurrent === 'true'),
 				0,
 			),
 		),
 	},
-	el => {
+	({ all }) => ({
+		dots: all('[role="tab"]'),
+		slides: all('[role="tabpanel"]'),
+		buttons: all('nav button'),
+	}),
+	ui => {
 		const isCurrentDot = (target: HTMLElement) =>
-			target.dataset.index === String(el.index)
+			target.dataset.index === String(ui.component.index)
 		const scrollToCurrentSlide = () => {
-			el.slides[el.index].scrollIntoView({
+			ui.slides[ui.component.index].scrollIntoView({
 				behavior: 'smooth',
 				block: 'nearest',
 			})
@@ -52,7 +51,7 @@ export default component<ModuleCarouselProps, ModuleCarouselUI>(
 						entries => {
 							for (const entry of entries) {
 								if (entry.isIntersecting) {
-									el.index = el.slides.findIndex(
+									ui.component.index = ui.slides.findIndex(
 										slide => slide === entry.target,
 									)
 									break
@@ -60,11 +59,11 @@ export default component<ModuleCarouselProps, ModuleCarouselUI>(
 							}
 						},
 						{
-							root: el,
+							root: ui.component,
 							threshold: 0.5,
 						},
 					)
-					el.slides.forEach(slide => {
+					ui.slides.forEach(slide => {
 						observer.observe(slide)
 					})
 					return () => {
@@ -75,40 +74,40 @@ export default component<ModuleCarouselProps, ModuleCarouselUI>(
 
 			// Handle navigation button click and keyup events
 			buttons: [
-				on('click', ({ host, target }) => {
-					const total = host.slides.length
+				on('click', ({ target }) => {
+					const total = ui.slides.length
 					const nextIndex = target.classList.contains('prev')
-						? el.index - 1
+						? ui.component.index - 1
 						: target.classList.contains('next')
-							? el.index + 1
+							? ui.component.index + 1
 							: parseInt(target.dataset.index || '0')
-					el.index = Number.isInteger(nextIndex)
+					ui.component.index = Number.isInteger(nextIndex)
 						? wrapAround(nextIndex, total)
 						: 0
 					scrollToCurrentSlide()
 				}),
-				on('keyup', ({ event, host }) => {
+				on('keyup', ({ event }) => {
 					const key = event.key
 					if (
 						['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)
 					) {
 						event.preventDefault()
 						event.stopPropagation()
-						const total = host.slides.length
+						const total = ui.slides.length
 						const nextIndex =
 							key === 'Home'
 								? 0
 								: key === 'End'
 									? total - 1
 									: wrapAround(
-											el.index
+											ui.component.index
 												+ (key === 'ArrowLeft'
 													? -1
 													: 1),
 											total,
 										)
-						host.slides[nextIndex].focus()
-						el.index = nextIndex
+						ui.slides[nextIndex].focus()
+						ui.component.index = nextIndex
 						scrollToCurrentSlide()
 					}
 				}),
@@ -127,7 +126,7 @@ export default component<ModuleCarouselProps, ModuleCarouselUI>(
 			// Set the active slide in the slides
 			slides: [
 				setProperty('ariaCurrent', target =>
-					String(target.id === el.slides[el.index].id),
+					String(target.id === ui.slides[ui.component.index].id),
 				),
 			],
 		}
