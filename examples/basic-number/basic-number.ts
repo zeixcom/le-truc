@@ -111,15 +111,14 @@ function getNumberFormatter(
 export default component<BasicNumberProps>(
 	'basic-number',
 	{ value: asNumber() },
-	() => ({}),
-	ui => {
+	undefined,
+	({ host }) => {
 		const formatter = getNumberFormatter(
-			ui.component.closest('[lang]')?.getAttribute('lang')
-				|| FALLBACK_LOCALE,
-			ui.component.getAttribute('options'),
+			host.closest('[lang]')?.getAttribute('lang') || FALLBACK_LOCALE,
+			host.getAttribute('options'),
 		)
 		return {
-			component: [setText(() => formatter.format(ui.component.value))],
+			component: [setText(() => formatter.format(host.value))],
 		}
 	},
 )

@@ -27,10 +27,10 @@ export default component<BasicCounterProps, BasicCounterUI>(
 		),
 		count: first('span', 'Add a span to display the count.'),
 	}),
-	ui => ({
+	({ host }) => ({
 		increment: [
 			on('click', () => {
-				ui.component.count++
+				host.count++
 			}),
 		],
 		count: [setText('count')],

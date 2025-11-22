@@ -93,15 +93,13 @@ export { setProperty, show } from './src/effects/property'
 export { setStyle } from './src/effects/style'
 export { setText } from './src/effects/text'
 export {
-	asBoolean,
-	asEnum,
-	asInteger,
-	asJSON,
-	asNumber,
-	asString,
 	isParser,
 	type LooseReader,
 	type Parser,
 	type Reader,
 	read,
 } from './src/parsers'
+export { asBoolean } from './src/parsers/boolean'
+export { asJSON } from './src/parsers/json'
+export { asInteger, asNumber } from './src/parsers/number'
+export { asEnum, asString } from './src/parsers/string'

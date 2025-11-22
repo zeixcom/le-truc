@@ -113,7 +113,7 @@ const runElementEffects = <
 		const cleanups: Cleanup[] = []
 		for (const fn of effects) {
 			targets.forEach(target => {
-				const cleanup = fn(ui.component, target)
+				const cleanup = fn(ui.host, target)
 				if (cleanup) cleanups.push(cleanup)
 			})
 		}
@@ -126,7 +126,7 @@ const runElementEffects = <
 			error.then(() => runElementEffects(ui, key, effects))
 		else
 			throw new InvalidEffectsError(
-				ui.component,
+				ui.host,
 				error instanceof Error ? error : new Error(String(error)),
 			)
 	}
@@ -145,7 +145,7 @@ const runEffects = <P extends ComponentProps, U extends UI>(
 	ui: ComponentUI<P, U>,
 	effects: Effects<P, U>,
 ): Cleanup => {
-	if (!isRecord(effects)) throw new InvalidEffectsError(ui.component)
+	if (!isRecord(effects)) throw new InvalidEffectsError(ui.host)
 
 	const cleanups: Cleanup[] = []
 	const keys = Object.keys(effects)

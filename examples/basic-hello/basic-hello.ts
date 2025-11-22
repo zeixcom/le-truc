@@ -1,4 +1,4 @@
-import { asString, type Component, component, on, read, setText } from '../..'
+import { asString, type Component, component, on, setText } from '../..'
 
 type BasicHelloProps = {
 	name: string
@@ -24,12 +24,12 @@ export default component<BasicHelloProps, BasicHelloUI>(
 		input: first('input', 'Needed to enter the name.'),
 		output: first('output', 'Needed to display the name.'),
 	}),
-	ui => {
-		const fallback = ui.component.name
+	({ host }) => {
+		const fallback = host.name
 		return {
 			input: [
 				on('input', ({ target }) => {
-					ui.component.name = target.value || fallback
+					host.name = target.value || fallback
 				}),
 			],
 			output: [setText('name')],

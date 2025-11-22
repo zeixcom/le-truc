@@ -832,7 +832,7 @@ var runElementEffects = (ui, key, effects) => {
     const cleanups = [];
     for (const fn of effects) {
       targets.forEach((target) => {
-        const cleanup = fn(ui.component, target);
+        const cleanup = fn(ui.host, target);
         if (cleanup)
           cleanups.push(cleanup);
       });
@@ -845,12 +845,12 @@ var runElementEffects = (ui, key, effects) => {
     if (error instanceof Promise)
       error.then(() => runElementEffects(ui, key, effects));
     else
-      throw new InvalidEffectsError(ui.component, error instanceof Error ? error : new Error(String(error)));
+      throw new InvalidEffectsError(ui.host, error instanceof Error ? error : new Error(String(error)));
   }
 };
 var runEffects = (ui, effects) => {
   if (!isRecord(effects))
-    throw new InvalidEffectsError(ui.component);
+    throw new InvalidEffectsError(ui.host);
   const cleanups = [];
   const keys = Object.keys(effects);
   for (const key of keys) {
@@ -968,53 +968,11 @@ var insertOrRemoveElement = (reactive, inserter) => (host, target) => {
 };
 
 // src/parsers.ts
-var parseNumber = (parseFn, value) => {
-  if (value == null)
-    return;
-  const parsed = parseFn(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
 var isParser = (value) => isFunction(value) && value.length >= 2;
 var getFallback = (ui, fallback) => isFunction(fallback) ? fallback(ui) : fallback;
 var read = (reader, fallback) => (ui) => {
   const value = reader(ui);
   return isString(value) && isParser(fallback) ? fallback(ui, value) : value ?? getFallback(ui, fallback);
-};
-var asBoolean = () => (_, value) => value != null && value !== "false";
-var asInteger = (fallback = 0) => (ui, value) => {
-  if (value == null)
-    return getFallback(ui, fallback);
-  const trimmed = value.trim();
-  if (trimmed.toLowerCase().startsWith("0x"))
-    return parseNumber((v) => parseInt(v, 16), trimmed) ?? getFallback(ui, fallback);
-  const parsed = parseNumber(parseFloat, value);
-  return parsed != null ? Math.trunc(parsed) : getFallback(ui, fallback);
-};
-var asNumber = (fallback = 0) => (ui, value) => parseNumber(parseFloat, value) ?? getFallback(ui, fallback);
-var asString = (fallback = "") => (ui, value) => value ?? getFallback(ui, fallback);
-var asEnum = (valid) => (_, value) => {
-  if (value == null)
-    return valid[0];
-  const lowerValue = value.toLowerCase();
-  const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
-  return matchingValid ? value : valid[0];
-};
-var asJSON = (fallback) => (host, value) => {
-  if ((value ?? fallback) == null)
-    throw new TypeError("asJSON: Value and fallback are both null or undefined");
-  if (value == null)
-    return getFallback(host, fallback);
-  if (value === "")
-    throw new TypeError("Empty string is not valid JSON");
-  let result;
-  try {
-    result = JSON.parse(value);
-  } catch (error) {
-    throw new SyntaxError(`Failed to parse JSON: ${String(error)}`, {
-      cause: error
-    });
-  }
-  return result ?? getFallback(host, fallback);
 };
 
 // src/ui.ts
@@ -1065,7 +1023,7 @@ function component(name, props = {}, select = () => ({}), setup = () => ({})) {
       const [elementQueries, getDependencies] = getHelpers(this);
       this.#ui = {
         ...select(elementQueries),
-        component: this
+        host: this
       };
       Object.freeze(this.#ui);
       const createSignal = (key, initializer) => {
@@ -1313,6 +1271,52 @@ var setText = (reactive) => updateElement(reactive, {
     el.append(document.createTextNode(value));
   }
 });
+// src/parsers/boolean.ts
+var asBoolean = () => (_, value) => value != null && value !== "false";
+// src/parsers/json.ts
+var asJSON = (fallback) => (host, value) => {
+  if ((value ?? fallback) == null)
+    throw new TypeError("asJSON: Value and fallback are both null or undefined");
+  if (value == null)
+    return getFallback(host, fallback);
+  if (value === "")
+    throw new TypeError("Empty string is not valid JSON");
+  let result;
+  try {
+    result = JSON.parse(value);
+  } catch (error) {
+    throw new SyntaxError(`Failed to parse JSON: ${String(error)}`, {
+      cause: error
+    });
+  }
+  return result ?? getFallback(host, fallback);
+};
+// src/parsers/number.ts
+var parseNumber = (parseFn, value) => {
+  if (value == null)
+    return;
+  const parsed = parseFn(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+var asInteger = (fallback = 0) => (ui, value) => {
+  if (value == null)
+    return getFallback(ui, fallback);
+  const trimmed = value.trim();
+  if (trimmed.toLowerCase().startsWith("0x"))
+    return parseNumber((v) => parseInt(v, 16), trimmed) ?? getFallback(ui, fallback);
+  const parsed = parseNumber(parseFloat, value);
+  return parsed != null ? Math.trunc(parsed) : getFallback(ui, fallback);
+};
+var asNumber = (fallback = 0) => (ui, value) => parseNumber(parseFloat, value) ?? getFallback(ui, fallback);
+// src/parsers/string.ts
+var asString = (fallback = "") => (ui, value) => value ?? getFallback(ui, fallback);
+var asEnum = (valid) => (_, value) => {
+  if (value == null)
+    return valid[0];
+  const lowerValue = value.toLowerCase();
+  const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
+  return matchingValid ? value : valid[0];
+};
 export {
   updateElement,
   toggleClass,

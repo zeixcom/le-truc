@@ -1,11 +1,12 @@
-import { type Component, component, on, setProperty, show } from '../..'
+import { type Component, component, on, read, setProperty, show } from '../..'
 
 type ModuleTabgroupProps = {
-	readonly ui: {
-		readonly tabs: HTMLButtonElement[]
-		readonly panels: HTMLElement[]
-	}
 	selected: string
+}
+
+type ModuleTabgroupUI = {
+	tabs: HTMLButtonElement[]
+	panels: HTMLElement[]
 }
 
 declare global {
@@ -31,25 +32,27 @@ const getSelected = (
 		],
 	)
 
-export default component<ModuleTabgroupProps>(
+export default component<ModuleTabgroupProps, ModuleTabgroupUI>(
 	'module-tabgroup',
 	{
-		ui: ({ all }) => ({
-			tabs: all(
-				'button[role="tab"]',
-				'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
-			),
-			panels: all(
-				'[role="tabpanel"]',
-				'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
-			),
-		}),
-		selected: el =>
-			getSelected(el.ui.tabs, tab => tab.ariaSelected === 'true'),
+		selected: read(
+			ui => getSelected(ui.tabs, tab => tab.ariaSelected === 'true'),
+			'',
+		),
 	},
-	el => {
+	({ all }) => ({
+		tabs: all(
+			'button[role="tab"]',
+			'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
+		),
+		panels: all(
+			'[role="tabpanel"]',
+			'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
+		),
+	}),
+	({ host, tabs }) => {
 		const isCurrentTab = (tab: HTMLButtonElement) =>
-			el.selected === getAriaControls(tab)
+			host.selected === getAriaControls(tab)
 
 		return {
 			tabs: [
@@ -60,7 +63,7 @@ export default component<ModuleTabgroupProps>(
 					isCurrentTab(target) ? 0 : -1,
 				),
 				on('click', ({ target }) => {
-					el.selected = getAriaControls(target)
+					host.selected = getAriaControls(target)
 				}),
 				on('keyup', ({ event, target }) => {
 					const key = event.key
@@ -76,9 +79,9 @@ export default component<ModuleTabgroupProps>(
 					) {
 						event.preventDefault()
 						event.stopPropagation()
-						const tabsCount = el.ui.tabs.length
+						const tabsCount = tabs.length
 						const current = getSelected(
-							el.ui.tabs,
+							tabs,
 							tab => tab === target,
 							key === 'Home'
 								? -tabsCount
@@ -88,14 +91,14 @@ export default component<ModuleTabgroupProps>(
 										? -1
 										: 1,
 						)
-						el.ui.tabs
-							.filter(tab => getAriaControls(tab) === current)[0]
-							.focus()
-						el.selected = current
+						tabs.filter(
+							tab => getAriaControls(tab) === current,
+						)[0].focus()
+						host.selected = current
 					}
 				}),
 			],
-			panels: [show(target => el.selected === target.id)],
+			panels: [show(target => host.selected === target.id)],
 		}
 	},
 )

@@ -41,7 +41,7 @@ type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>
 type ComponentProps = Record<ComponentProp, NonNullable<unknown>>
 
 type ComponentUI<P extends ComponentProps, U extends UI> = U & {
-	component: Component<P>
+	host: Component<P>
 }
 
 type ComponentSetup<P extends ComponentProps, U extends UI> = (
@@ -80,7 +80,7 @@ const DEPENDENCY_TIMEOUT = 50
 function component<P extends ComponentProps, U extends UI = {}>(
 	name: string,
 	props: Initializers<P, U> = {} as Initializers<P, U>,
-	select: (helpers: ElementQueries) => U = () => ({}) as U,
+	select: (elementQueries: ElementQueries) => U = () => ({}) as U,
 	setup: (ui: ComponentUI<P, U>) => Effects<P, U> = () => ({}),
 ): Component<P> {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
@@ -109,7 +109,7 @@ function component<P extends ComponentProps, U extends UI = {}>(
 			const [elementQueries, getDependencies] = getHelpers(this)
 			this.#ui = {
 				...select(elementQueries),
-				component: this as unknown as Component<P>,
+				host: this as unknown as Component<P>,
 			}
 			Object.freeze(this.#ui)
 

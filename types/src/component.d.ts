@@ -6,7 +6,7 @@ type ReservedWords = 'constructor' | 'prototype' | '__proto__' | 'toString' | 'v
 type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>;
 type ComponentProps = Record<ComponentProp, NonNullable<unknown>>;
 type ComponentUI<P extends ComponentProps, U extends UI> = U & {
-    component: Component<P>;
+    host: Component<P>;
 };
 type ComponentSetup<P extends ComponentProps, U extends UI> = (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>>;
 type Initializers<P extends ComponentProps, U extends UI> = {
@@ -25,5 +25,5 @@ type MaybeSignal<T extends {}> = T | Signal<T> | ComputedCallback<T>;
  * @throws {InvalidComponentNameError} If component name is invalid
  * @throws {InvalidPropertyNameError} If property name is invalid
  */
-declare function component<P extends ComponentProps, U extends UI = {}>(name: string, props?: Initializers<P, U>, select?: (helpers: ElementQueries) => U, setup?: (ui: ComponentUI<P, U>) => Effects<P, U>): Component<P>;
+declare function component<P extends ComponentProps, U extends UI = {}>(name: string, props?: Initializers<P, U>, select?: (elementQueries: ElementQueries) => U, setup?: (ui: ComponentUI<P, U>) => Effects<P, U>): Component<P>;
 export { type Component, type ComponentProp, type ComponentProps, type ComponentUI, type ComponentSetup, type MaybeSignal, type ReservedWords, type Initializers, component, };
