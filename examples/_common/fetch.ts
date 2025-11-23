@@ -1,4 +1,4 @@
-import type { Parser } from '../..'
+import type { ComponentProps, ComponentUI, Parser, UI } from '../..'
 
 /* === Types === */
 
@@ -49,34 +49,37 @@ const isCacheEntryValid = (entry: CacheEntry): boolean => {
 
 /* === Exported Functions === */
 
-export const asURL: Parser<{ value: string; error: string }, HTMLElement> = (
-	el: HTMLElement,
-	v: string | null | undefined,
-) => {
-	let value = ''
-	let error = ''
-	if (!v) {
-		error = 'No URL provided'
-	} else if (
-		(el.parentElement || (el.getRootNode() as ShadowRoot).host)?.closest(
-			`${el.localName}[src="${v}"]`,
-		)
-	) {
-		error = 'Recursive loading detected'
-	} else {
-		try {
-			// Ensure 'src' attribute is a valid URL
-			const url = new URL(v, location.href)
+export const asURL =
+	<P extends ComponentProps, U extends UI>(): Parser<
+		{ value: string; error: string },
+		ComponentUI<P, U>
+	> =>
+	(ui: ComponentUI<P, U>, v: string | null | undefined) => {
+		let value = ''
+		let error = ''
+		if (!v) {
+			error = 'No URL provided'
+		} else if (
+			(
+				ui.host.parentElement
+				|| (ui.host.getRootNode() as ShadowRoot).host
+			)?.closest(`${ui.host.localName}[src="${v}"]`)
+		) {
+			error = 'Recursive loading detected'
+		} else {
+			try {
+				// Ensure 'src' attribute is a valid URL
+				const url = new URL(v, location.href)
 
-			// Sanity check for cross-origin URLs
-			if (url.origin === location.origin) value = String(url)
-			else error = 'Invalid URL origin'
-		} catch (err) {
-			error = String(err)
+				// Sanity check for cross-origin URLs
+				if (url.origin === location.origin) value = String(url)
+				else error = 'Invalid URL origin'
+			} catch (err) {
+				error = String(err)
+			}
 		}
+		return { value, error }
 	}
-	return { value, error }
-}
 
 /**
  * Fetch with HTTP caching support

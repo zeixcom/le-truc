@@ -40,6 +40,7 @@ type ReservedWords =
 type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>
 type ComponentProps = Record<ComponentProp, NonNullable<unknown>>
 
+type Component<P extends ComponentProps> = HTMLElement & P
 type ComponentUI<P extends ComponentProps, U extends UI> = U & {
 	host: Component<P>
 }
@@ -55,8 +56,6 @@ type Initializers<P extends ComponentProps, U extends UI> = {
 		| Parser<P[K], ComponentUI<P, U>>
 		| ((ui: ComponentUI<P, U>) => MaybeSignal<P[K]> | void)
 }
-
-type Component<P extends ComponentProps> = HTMLElement & P
 
 type MaybeSignal<T extends {}> = T | Signal<T> | ComputedCallback<T>
 
@@ -81,7 +80,9 @@ function component<P extends ComponentProps, U extends UI = {}>(
 	name: string,
 	props: Initializers<P, U> = {} as Initializers<P, U>,
 	select: (elementQueries: ElementQueries) => U = () => ({}) as U,
-	setup: (ui: ComponentUI<P, U>) => Effects<P, U> = () => ({}),
+	setup: (
+		ui: ComponentUI<P, U>,
+	) => Effects<P, ComponentUI<P, U>> = () => ({}),
 ): Component<P> {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
@@ -119,7 +120,7 @@ function component<P extends ComponentProps, U extends UI = {}>(
 				initializer: Initializers<P, U>[K],
 			) => {
 				const result = isFunction(initializer)
-					? isParser<P[K], U>(initializer)
+					? isParser(initializer)
 						? (initializer as Parser<P[K], U>)(this.#ui, null)
 						: (
 								initializer as (

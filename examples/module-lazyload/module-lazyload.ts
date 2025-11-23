@@ -29,7 +29,7 @@ declare global {
 export default component<ModuleLazyloadProps, ModuleLazyloadUI>(
 	'module-lazyload',
 	{
-		src: asURL,
+		src: asURL(),
 	},
 	({ first }) => ({
 		callout: first(

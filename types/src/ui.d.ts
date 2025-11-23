@@ -16,7 +16,7 @@ type NormalizeUI<U extends UI> = {
 };
 type ElementOfUI<E extends unknown[]> = E extends (infer T)[] ? T : never;
 type UI = Record<string, Element | Element[]>;
-type ElementFromKey<U extends UI, K extends keyof U & string> = NonNullable<U[K] extends (infer E extends Element)[] ? E : U[K] extends Element ? U[K] : never>;
+type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<U[K] extends (infer E extends Element)[] ? E : U[K] extends Element ? U[K] : never>;
 type ElementQueries = {
     first: FirstElement;
     all: AllElements;

@@ -12,7 +12,7 @@ import {
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps, ComponentUI } from './component'
 import { InvalidEffectsError } from './errors'
-import type { UI } from './ui'
+import type { ElementFromKey, UI } from './ui'
 import { DEV_MODE, elementName, LOG_ERROR, log, valueString } from './util'
 
 /* === Types === */
@@ -22,16 +22,15 @@ type Effect<P extends ComponentProps, E extends Element> = (
 	target: E,
 ) => MaybeCleanup
 
-type ElementEffects<
-	P extends ComponentProps,
-	U extends UI,
-	K extends keyof U,
-> = Awaited<
-	Effect<P, K extends keyof U ? Extract<U[K], Element> : Component<P>>
+type ElementEffects<P extends ComponentProps, E extends Element> = Awaited<
+	Effect<P, E>
 >[]
 
-type Effects<P extends ComponentProps, U extends UI> = {
-	[K in keyof U]?: ElementEffects<P, U, K>
+type Effects<
+	P extends ComponentProps,
+	U extends UI & { host: Component<P> },
+> = {
+	[K in keyof U]?: ElementEffects<P, ElementFromKey<U, K>>
 }
 
 type Reactive<T, P extends ComponentProps, E extends Element> =
@@ -88,34 +87,24 @@ const getUpdateDescription = (
  * Run element effects
  *
  * @since 0.15.0
- * @param {U} ui - Component UI
- * @param {K} key - Key of UI elements to get targets from
- * @param {ElementEffects<P, U, E>} effects - Effect functions to run
+ * @param {U} host - Host component
+ * @param {E} target - Target element
+ * @param {ElementEffects<P, E>} effects - Effect functions to run
  * @returns {MaybeCleanup} - Cleanup function that runs collected cleanup functions
  * @throws {InvalidEffectsError} - If the effects are invalid
  */
-const runElementEffects = <
-	P extends ComponentProps,
-	U extends UI,
-	K extends keyof U | 'component',
->(
-	ui: ComponentUI<P, U>,
-	key: K,
-	effects: ElementEffects<P, U, K>,
+const runElementEffects = <P extends ComponentProps, E extends Element>(
+	host: Component<P>,
+	target: E,
+	effects: ElementEffects<P, E>,
 ): MaybeCleanup => {
-	const element = ui[key]
-	const targets = Array.isArray(element) ? element : [element]
-	if (!targets.length) return
-
 	try {
 		if (effects instanceof Promise) throw effects
 
 		const cleanups: Cleanup[] = []
 		for (const fn of effects) {
-			targets.forEach(target => {
-				const cleanup = fn(ui.host, target)
-				if (cleanup) cleanups.push(cleanup)
-			})
+			const cleanup = fn(host, target)
+			if (cleanup) cleanups.push(cleanup)
 		}
 		return () => {
 			cleanups.forEach(cleanup => cleanup())
@@ -123,10 +112,10 @@ const runElementEffects = <
 		}
 	} catch (error) {
 		if (error instanceof Promise)
-			error.then(() => runElementEffects(ui, key, effects))
+			error.then(() => runElementEffects(host, target, effects))
 		else
 			throw new InvalidEffectsError(
-				ui.host,
+				host,
 				error instanceof Error ? error : new Error(String(error)),
 			)
 	}
@@ -141,8 +130,11 @@ const runElementEffects = <
  * @returns {Cleanup} - Cleanup function that runs collected cleanup functions
  * @throws {InvalidEffectsError} - If the effects are invalid
  */
-const runEffects = <P extends ComponentProps, U extends UI>(
-	ui: ComponentUI<P, U>,
+const runEffects = <
+	P extends ComponentProps,
+	U extends UI & { host: Component<P> },
+>(
+	ui: U,
 	effects: Effects<P, U>,
 ): Cleanup => {
 	if (!isRecord(effects)) throw new InvalidEffectsError(ui.host)
@@ -152,12 +144,27 @@ const runEffects = <P extends ComponentProps, U extends UI>(
 	for (const key of keys) {
 		const k = key as keyof U
 		if (!effects[k]) continue
-		const cleanup = runElementEffects(
-			ui,
-			k,
-			Array.isArray(effects[k]) ? effects[k] : [effects[k]],
-		)
-		if (cleanup) cleanups.push(cleanup)
+
+		const elementEffects = Array.isArray(effects[k])
+			? effects[k]
+			: [effects[k]]
+		if (Array.isArray(ui[k])) {
+			for (const target of ui[k]) {
+				const cleanup = runElementEffects(
+					ui.host,
+					target,
+					elementEffects,
+				)
+				if (cleanup) cleanups.push(cleanup)
+			}
+		} else if (ui[k]) {
+			const cleanup = runElementEffects(
+				ui.host,
+				ui[k] as ElementFromKey<U, typeof k>,
+				elementEffects,
+			)
+			if (cleanup) cleanups.push(cleanup)
+		}
 	}
 	return () => {
 		cleanups.forEach(cleanup => cleanup())

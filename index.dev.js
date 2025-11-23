@@ -821,21 +821,15 @@ var getUpdateDescription = (op, name = "") => {
   };
   return ops[op] + name;
 };
-var runElementEffects = (ui, key, effects) => {
-  const element = ui[key];
-  const targets = Array.isArray(element) ? element : [element];
-  if (!targets.length)
-    return;
+var runElementEffects = (host, target, effects) => {
   try {
     if (effects instanceof Promise)
       throw effects;
     const cleanups = [];
     for (const fn of effects) {
-      targets.forEach((target) => {
-        const cleanup = fn(ui.host, target);
-        if (cleanup)
-          cleanups.push(cleanup);
-      });
+      const cleanup = fn(host, target);
+      if (cleanup)
+        cleanups.push(cleanup);
     }
     return () => {
       cleanups.forEach((cleanup) => cleanup());
@@ -843,9 +837,9 @@ var runElementEffects = (ui, key, effects) => {
     };
   } catch (error) {
     if (error instanceof Promise)
-      error.then(() => runElementEffects(ui, key, effects));
+      error.then(() => runElementEffects(host, target, effects));
     else
-      throw new InvalidEffectsError(ui.host, error instanceof Error ? error : new Error(String(error)));
+      throw new InvalidEffectsError(host, error instanceof Error ? error : new Error(String(error)));
   }
 };
 var runEffects = (ui, effects) => {
@@ -857,9 +851,18 @@ var runEffects = (ui, effects) => {
     const k = key;
     if (!effects[k])
       continue;
-    const cleanup = runElementEffects(ui, k, Array.isArray(effects[k]) ? effects[k] : [effects[k]]);
-    if (cleanup)
-      cleanups.push(cleanup);
+    const elementEffects = Array.isArray(effects[k]) ? effects[k] : [effects[k]];
+    if (Array.isArray(ui[k])) {
+      for (const target of ui[k]) {
+        const cleanup = runElementEffects(ui.host, target, elementEffects);
+        if (cleanup)
+          cleanups.push(cleanup);
+      }
+    } else if (ui[k]) {
+      const cleanup = runElementEffects(ui.host, ui[k], elementEffects);
+      if (cleanup)
+        cleanups.push(cleanup);
+    }
   }
   return () => {
     cleanups.forEach((cleanup) => cleanup());

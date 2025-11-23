@@ -126,7 +126,7 @@ export default component<ModuleCarouselProps, ModuleCarouselUI>(
 			// Set the active slide in the slides
 			slides: [
 				setProperty('ariaCurrent', target =>
-					String(target.id === ui.slides[host.index].id),
+					String(target.id === slides[host.index].id),
 				),
 			],
 		}

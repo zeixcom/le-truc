@@ -118,7 +118,7 @@ export default component<BasicNumberProps>(
 			host.getAttribute('options'),
 		)
 		return {
-			component: [setText(() => formatter.format(host.value))],
+			host: [setText(() => formatter.format(host.value))],
 		}
 	},
 )
