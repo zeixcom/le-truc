@@ -15,14 +15,14 @@ Quick project overview
 - Examples: `examples/` show canonical usage (each example has `.html`, `.ts`, and optional `.css`).
 
 Important patterns & conventions (use these exactly)
-- Components: Use the `component(name, props, select, setup)` helper in `src/component.ts`.
-  - `name` must include a hyphen and match `/^[a-z][a-z0-9-]*$/` (see validation in `component`).
+- Components: Use the `defineComponent(name, props, select, setup)` helper in `src/component.ts`.
+  - `name` must include a hyphen and match `/^[a-z][a-z0-9-]*$/` (see validation in `defineComponent`).
   - `props` initializers can be: plain values, `Signal`s, parser functions from `src/parsers/*`, or initializer callbacks.
   - Parsers used for attributes are auto-added to `observedAttributes`. See `static observedAttributes`.
 - Parsers: Implement parser functions following `src/parsers/*` signatures and export them from `src/parsers/index`.
   - Example builtin parser: `asJSON` in `src/parsers/json.ts` — when used as a prop initializer it will parse attribute strings.
 - UI helpers & dependencies: Use `getHelpers(host)` from `src/ui.ts` to obtain `first`, `all` and automatic dependency detection.
-  - If `getHelpers` finds a not-yet-defined custom element, it adds that tag to the dependency list; `component` waits for `customElements.whenDefined`.
+  - If `getHelpers` finds a not-yet-defined custom element, it adds that tag to the dependency list; `defineComponent` waits for `customElements.whenDefined`.
   - There is a dependency timeout (`DEPENDENCY_TIMEOUT = 50`) in `src/component.ts` — expect code to try running effects even if deps time out.
 - Effects & reactive model: This repo uses `@zeix/cause-effect` signals/computed/effects. Keep side-effects inside `runEffects` and cleanup in returned cleanup functions.
 
@@ -54,6 +54,6 @@ PR guidance / descriptions
 
 Examples (copyable patterns)
 - Define a component (refer `src/component.ts`):
-  - `component('my-widget', { count: 0, value: asJSON }, q => ({ btn: q.first('button') }), ui => ({ btn: run => ... }))`
+  - `defineComponent('my-widget', { count: 0, value: asJSON }, q => ({ btn: q.first('button') }), ui => ({ btn: [on('click', () => ...)] }))`
 - Parser signature (refer `src/parsers/json.ts`):
   - `const parser = (ui, value, old) => parsedValue` — return value becomes the property value.

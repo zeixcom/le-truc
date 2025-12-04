@@ -11,21 +11,18 @@
 		"build:prod": "bun build index.ts --outdir ./ --minify --define process.env.DEV_MODE=false --sourcemap=external",
 		"build:dev": "BUN_ENV=development bun build index.dev.ts --outdir ./ --define process.env.DEV_MODE=true",
 		"build": "bun run build:prod && bun run build:dev && bunx tsc && bun run lint",
-		"build:examples:js": "bun build examples/main.ts --outdir examples/assets --target browser --define process.env.DEV_MODE=true --minify",
+		"build:examples:js": "bun run build && bun build examples/main.ts --outdir examples/assets --target browser --define process.env.DEV_MODE=true --minify",
 		"build:examples:css": "bun build examples/main.css --outdir examples/assets --target browser --minify",
 		"build:examples": "bun run build:examples:js && bun run build:examples:css",
 		"lint": "bunx biome check --write ./src",
 		"lint:examples": "bunx biome check --write ./examples",
-		"test": "bunx playwright test test",
-		"test:unit": "bun test test/core",
-		"test:all": "bun run test:unit && bun run test"
+		"serve:examples": "bun run build:examples && bun run examples/server.ts",
+		"test": "bunx playwright test test"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.8",
 		"@playwright/test": "^1.57.0",
-		"@types/bun": "latest",
-		"@types/jsdom": "^21.1.7",
-		"jsdom": "^21.1.1"
+		"@types/bun": "latest"
 	},
 	"peerDependencies": {
 		"typescript": "^5.9.3"
