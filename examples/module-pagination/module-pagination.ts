@@ -70,10 +70,10 @@ export default defineComponent<ModulePaginationProps, ModulePaginationUI>(
 		],
 		input: [
 			on('change', ({ target }) => {
-				host.value = Math.max(
-					1,
-					Math.min(target.valueAsNumber, host.max),
-				)
+				const numValue = target.valueAsNumber
+				host.value = Number.isNaN(numValue)
+					? 1
+					: Math.max(1, Math.min(numValue, host.max))
 			}),
 			setProperty('value', () => String(host.value)),
 			setProperty('max', () => String(host.max)),
