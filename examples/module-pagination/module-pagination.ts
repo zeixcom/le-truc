@@ -1,7 +1,7 @@
 import {
 	asInteger,
 	type Component,
-	component,
+	defineComponent,
 	on,
 	read,
 	setAttribute,
@@ -29,7 +29,7 @@ declare global {
 	}
 }
 
-export default component<ModulePaginationProps, ModulePaginationUI>(
+export default defineComponent<ModulePaginationProps, ModulePaginationUI>(
 	'module-pagination',
 	{
 		value: read(ui => ui.input.value, asInteger(1)),

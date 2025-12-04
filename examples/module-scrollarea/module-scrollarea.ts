@@ -1,4 +1,4 @@
-import { batch, component, on, state, toggleClass } from '../..'
+import { batch, createState, defineComponent, on, toggleClass } from '../..'
 
 const MIN_INTERSECTION_RATIO = 0
 const MAX_INTERSECTION_RATIO = 0.999 // ignore rounding errors of fraction pixels
@@ -29,7 +29,7 @@ const observeOverflow = (
 	}
 }
 
-export default component(
+export default defineComponent(
 	'module-scrollarea',
 	undefined,
 	undefined,
@@ -37,8 +37,8 @@ export default component(
 		const child = host.firstElementChild
 		if (!child) return {}
 
-		const overflowStart = state(false)
-		const overflowEnd = state(false)
+		const overflowStart = createState(false)
+		const overflowEnd = createState(false)
 		const hasOverflow = () => overflowStart.get() || overflowEnd.get()
 
 		const scrollCallback =

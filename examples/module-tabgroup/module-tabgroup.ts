@@ -1,12 +1,20 @@
-import { type Component, component, on, read, setProperty, show } from '../..'
+import {
+	type Collection,
+	type Component,
+	createSensor,
+	defineComponent,
+	read,
+	setProperty,
+	show,
+} from '../..'
 
 type ModuleTabgroupProps = {
-	selected: string
+	readonly selected: string
 }
 
 type ModuleTabgroupUI = {
-	tabs: HTMLButtonElement[]
-	panels: HTMLElement[]
+	tabs: Collection<HTMLButtonElement>
+	panels: Collection<HTMLElement>
 }
 
 declare global {
@@ -19,25 +27,63 @@ const getAriaControls = (element: HTMLElement) =>
 	element.getAttribute('aria-controls') ?? ''
 
 const getSelected = (
-	elements: HTMLElement[],
+	elements: Collection<HTMLElement>,
 	isCurrent: (element: HTMLElement) => boolean,
 	offset = 0,
 ) =>
 	getAriaControls(
-		elements[
+		elements.get()[
 			Math.min(
-				Math.max(elements.findIndex(isCurrent) + offset, 0),
+				Math.max(elements.get().findIndex(isCurrent) + offset, 0),
 				elements.length - 1,
 			)
 		],
 	)
 
-export default component<ModuleTabgroupProps, ModuleTabgroupUI>(
+export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 	'module-tabgroup',
 	{
-		selected: read(
-			ui => getSelected(ui.tabs, tab => tab.ariaSelected === 'true'),
-			'',
+		selected: createSensor(
+			'tabs',
+			read(
+				ui => getSelected(ui.tabs, tab => tab.ariaSelected === 'true'),
+				'',
+			),
+			{
+				click: ({ target }) => getAriaControls(target),
+				keyup: ({ event, ui, target }) => {
+					const key = event.key
+					if (
+						[
+							'ArrowLeft',
+							'ArrowRight',
+							'ArrowUp',
+							'ArrowDown',
+							'Home',
+							'End',
+						].includes(key)
+					) {
+						event.preventDefault()
+						event.stopPropagation()
+						const tabs = ui.tabs.get()
+						const next = getSelected(
+							ui.tabs,
+							tab => tab === target,
+							key === 'Home'
+								? -tabs.length
+								: key === 'End'
+									? tabs.length
+									: key === 'ArrowLeft' || key === 'ArrowUp'
+										? -1
+										: 1,
+						)
+						tabs.filter(
+							tab => getAriaControls(tab) === next,
+						)[0].focus()
+						return next
+					}
+				},
+			},
 		),
 	},
 	({ all }) => ({
@@ -62,41 +108,6 @@ export default component<ModuleTabgroupProps, ModuleTabgroupUI>(
 				setProperty('tabIndex', target =>
 					isCurrentTab(target) ? 0 : -1,
 				),
-				on('click', ({ target }) => {
-					host.selected = getAriaControls(target)
-				}),
-				on('keyup', ({ event, target }) => {
-					const key = event.key
-					if (
-						[
-							'ArrowLeft',
-							'ArrowRight',
-							'ArrowUp',
-							'ArrowDown',
-							'Home',
-							'End',
-						].includes(key)
-					) {
-						event.preventDefault()
-						event.stopPropagation()
-						const tabsCount = tabs.length
-						const current = getSelected(
-							tabs,
-							tab => tab === target,
-							key === 'Home'
-								? -tabsCount
-								: key === 'End'
-									? tabsCount
-									: key === 'ArrowLeft' || key === 'ArrowUp'
-										? -1
-										: 1,
-						)
-						tabs.filter(
-							tab => getAriaControls(tab) === current,
-						)[0].focus()
-						host.selected = current
-					}
-				}),
 			],
 			panels: [show(target => host.selected === target.id)],
 		}

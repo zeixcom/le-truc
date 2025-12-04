@@ -1,0 +1,89 @@
+form-radiogroup {
+	display: inline-block;
+
+	> fieldset {
+		display: flex;
+		gap: var(--space-m);
+		border: none;
+		margin: 0;
+		padding: var(--space-xs) 0 var(--space-s);
+	}
+
+	& legend,
+	& label {
+		font-size: var(--font-size-s);
+	}
+
+	& label {
+		border-radius: var(--space-xs);
+
+		&:has(:focus-visible) {
+			box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
+		}
+
+		& input:focus {
+			outline: none;
+			box-shadow: none;
+		}
+	}
+
+	&.split-button {
+		& fieldset {
+			gap: 0;
+			padding: 0;
+		}
+
+		& label {
+			display: inline-block;
+			box-sizing: border-box;
+			height: var(--input-height);
+			min-width: var(--input-height);
+			border: 1px solid var(--color-border);
+			border-radius: 0;
+			border-left-width: 0;
+			background-color: var(--color-secondary);
+			color: var(--color-text);
+			padding: var(--space-xs) var(--space-s);
+			cursor: pointer;
+			line-height: var(--line-height-s);
+			opacity: var(--opacity-dimmed);
+			transition: opacity var(--transition-short) var(--easing-inout);
+
+			&:hover {
+				background-color: var(--color-secondary-hover);
+				opacity: var(--opacity-solid);
+			}
+
+			&:active {
+				background-color: var(--color-secondary-active);
+			}
+
+			&:focus-within {
+				z-index: 1;
+			}
+
+			&.selected {
+				color: var(--color-text-inverted);
+				background-color: var(--color-primary);
+				border-color: var(--color-primary-active);
+
+				&:hover {
+					background-color: var(--color-primary-hover);
+				}
+
+				&:active {
+					background-color: var(--color-primary-active);
+				}
+			}
+		}
+
+		& legend + label {
+			border-radius: var(--space-xs) 0 0 var(--space-xs);
+			border-left-width: 1px;
+		}
+
+		& label:last-child {
+			border-radius: 0 var(--space-xs) var(--space-xs) 0;
+		}
+	}
+}

@@ -1,4 +1,5 @@
-import { elementName, valueString } from './util'
+import { valueString } from '@zeix/cause-effect'
+import { elementName } from './util'
 
 /* === Error Classes === */
 

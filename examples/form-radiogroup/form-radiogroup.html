@@ -1,0 +1,51 @@
+<form-radiogroup value="other">
+	<fieldset>
+		<legend>Gender</legend>
+		<label>
+			<input type="radio" name="gender" value="female" />
+			<span>Female</span>
+		</label>
+		<label>
+			<input type="radio" name="gender" value="male" />
+			<span>Male</span>
+		</label>
+		<label class="selected">
+			<input type="radio" name="gender" value="other" checked />
+			<span>Other</span>
+		</label>
+	</fieldset>
+</form-radiogroup>
+
+<form-radiogroup value="all" class="split-button">
+	<fieldset>
+		<legend class="visually-hidden">Filter</legend>
+		<label class="selected">
+			<input
+				type="radio"
+				class="visually-hidden"
+				name="filter"
+				value="all"
+				checked
+			/>
+			<span>All</span>
+		</label>
+		<label>
+			<input
+				type="radio"
+				class="visually-hidden"
+				name="filter"
+				value="active"
+			/>
+			<span>Active</span>
+		</label>
+		<label>
+			<input
+				type="radio"
+				class="visually-hidden"
+				name="filter"
+				value="completed"
+			/>
+			<span>Completed</span>
+		</label>
+	</fieldset>
+</form-radiogroup>

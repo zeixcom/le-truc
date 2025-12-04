@@ -2,7 +2,7 @@ import {
 	asBoolean,
 	asString,
 	type Component,
-	component,
+	defineComponent,
 	setProperty,
 	setText,
 } from '../..'
@@ -25,7 +25,7 @@ declare global {
 	}
 }
 
-export default component<BasicButtonProps, BasicButtonUI>(
+export default defineComponent<BasicButtonProps, BasicButtonUI>(
 	'basic-button',
 	{
 		disabled: asBoolean(),

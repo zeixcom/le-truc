@@ -1,6 +1,7 @@
 import {
 	type ComputedCallback,
-	computed,
+	createComputed,
+	createState,
 	isComputed,
 	isComputedCallback,
 	isFunction,
@@ -10,7 +11,6 @@ import {
 	isStore,
 	type MaybeCleanup,
 	type Signal,
-	state,
 	UNSET,
 } from '@zeix/cause-effect'
 
@@ -76,7 +76,7 @@ const DEPENDENCY_TIMEOUT = 50
  * @throws {InvalidComponentNameError} If component name is invalid
  * @throws {InvalidPropertyNameError} If property name is invalid
  */
-function component<P extends ComponentProps, U extends UI = {}>(
+function defineComponent<P extends ComponentProps, U extends UI = {}>(
 	name: string,
 	props: Initializers<P, U> = {} as Initializers<P, U>,
 	select: (elementQueries: ElementQueries) => U = () => ({}) as U,
@@ -217,11 +217,11 @@ function component<P extends ComponentProps, U extends UI = {}>(
 			const signal = isSignal(value)
 				? value
 				: isComputedCallback(value)
-					? computed(value)
-					: state(value)
+					? createComputed(value)
+					: createState(value)
 			const prev = this.#signals[key]
 			const mutable = isMutableSignal(signal)
-			this.#signals[key] = signal
+			this.#signals[key] = signal as Signal<P[K]>
 			Object.defineProperty(this, key, {
 				get: signal.get,
 				set: mutable ? signal.set : undefined,
@@ -245,5 +245,5 @@ export {
 	type MaybeSignal,
 	type ReservedWords,
 	type Initializers,
-	component,
+	defineComponent,
 }

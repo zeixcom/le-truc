@@ -96,6 +96,15 @@ const isCustomElement = /*#__PURE__*/ <E extends Element>(
 ): boolean => element.localName.includes('-')
 
 /**
+ * Check whether a custom element is not yet defined
+ *
+ * @param {Element} element - Element to check
+ * @returns {boolean} - True if the element is a custom element and not yet defined
+ */
+const isNotYetDefinedComponent = /*#__PURE__*/ (element: Element): boolean =>
+	isCustomElement(element) && element.matches(':not(:defined)')
+
+/**
  * Return a string representation of the Element instance
  *
  * @since 0.7.0
@@ -106,20 +115,6 @@ const elementName = /*#__PURE__*/ (el: Element | undefined | null): string =>
 	el
 		? `<${el.localName}${idString(el.id)}${classString(el.classList)}>`
 		: '<unknown>'
-
-/**
- * Return a string representation of a JavaScript variable
- *
- * @since 0.7.0
- * @param {unknown} value
- * @returns {string}
- */
-const valueString = /*#__PURE__*/ (value: unknown): string =>
-	isString(value)
-		? `"${value}"`
-		: !!value && typeof value === 'object'
-			? JSON.stringify(value)
-			: String(value)
 
 /**
  * Return a detailed type of a JavaScript variable
@@ -179,9 +174,9 @@ export {
 	hasMethod,
 	isElement,
 	isCustomElement,
+	isNotYetDefinedComponent,
 	log,
 	elementName,
-	valueString,
 	typeString,
 	validatePropertyName,
 	DEV_MODE,

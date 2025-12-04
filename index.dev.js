@@ -6,6 +6,13 @@ class CircularDependencyError extends Error {
   }
 }
 
+class InvalidCallbackError extends TypeError {
+  constructor(where, value) {
+    super(`Invalid ${where} callback ${value}`);
+    this.name = "InvalidCallbackError";
+  }
+}
+
 class InvalidSignalValueError extends TypeError {
   constructor(where, value) {
     super(`Invalid signal value ${value} in ${where}`);
@@ -48,7 +55,6 @@ var isNumber = (value) => typeof value === "number";
 var isSymbol = (value) => typeof value === "symbol";
 var isFunction = (fn) => typeof fn === "function";
 var isAsyncFunction = (fn) => isFunction(fn) && fn.constructor.name === "AsyncFunction";
-var isDefinedObject = (value) => !!value && typeof value === "object";
 var isObjectOfType = (value, type) => Object.prototype.toString.call(value) === `[object ${type}]`;
 var isRecord = (value) => isObjectOfType(value, "Object");
 var isRecordOrArray = (value) => isRecord(value) || Array.isArray(value);
@@ -65,12 +71,11 @@ var recordToArray = (record) => {
   if (indexes === null)
     return record;
   const array = [];
-  for (const index of indexes) {
+  for (const index of indexes)
     array.push(record[String(index)]);
-  }
   return array;
 };
-var valueString = (value) => isString(value) ? `"${value}"` : isDefinedObject(value) ? JSON.stringify(value) : String(value);
+var valueString = (value) => isString(value) ? `"${value}"` : !!value && typeof value === "object" ? JSON.stringify(value) : String(value);
 
 // node_modules/@zeix/cause-effect/src/diff.ts
 var isEqual = (a, b, visited) => {
@@ -160,64 +165,46 @@ var diff = (oldObj, newObj) => {
   };
 };
 
-// node_modules/@zeix/cause-effect/src/scheduler.ts
-var active;
-var pending = new Set;
+// node_modules/@zeix/cause-effect/src/system.ts
+var activeWatcher;
+var pendingWatchers = new Set;
 var batchDepth = 0;
-var updateMap = new Map;
-var requestId;
-var updateDOM = () => {
-  requestId = undefined;
-  const updates = Array.from(updateMap.values());
-  updateMap.clear();
-  for (const update of updates) {
-    update();
-  }
-};
-var requestTick = () => {
-  if (requestId)
-    cancelAnimationFrame(requestId);
-  requestId = requestAnimationFrame(updateDOM);
-};
-queueMicrotask(updateDOM);
-var watch = (notice) => {
+var createWatcher = (watch) => {
   const cleanups = new Set;
-  const w = notice;
-  w.off = (on) => {
-    cleanups.add(on);
+  const w = watch;
+  w.unwatch = (cleanup) => {
+    cleanups.add(cleanup);
   };
   w.cleanup = () => {
-    for (const cleanup of cleanups) {
+    for (const cleanup of cleanups)
       cleanup();
-    }
     cleanups.clear();
   };
   return w;
 };
 var subscribe = (watchers) => {
-  if (active && !watchers.has(active)) {
-    const watcher = active;
-    watchers.add(watcher);
-    active.off(() => {
+  if (activeWatcher && !watchers.has(activeWatcher)) {
+    const watcher = activeWatcher;
+    watcher.unwatch(() => {
       watchers.delete(watcher);
     });
+    watchers.add(watcher);
   }
 };
 var notify = (watchers) => {
   for (const watcher of watchers) {
     if (batchDepth)
-      pending.add(watcher);
+      pendingWatchers.add(watcher);
     else
       watcher();
   }
 };
 var flush = () => {
-  while (pending.size) {
-    const watchers = Array.from(pending);
-    pending.clear();
-    for (const watcher of watchers) {
+  while (pendingWatchers.size) {
+    const watchers = Array.from(pendingWatchers);
+    pendingWatchers.clear();
+    for (const watcher of watchers)
       watcher();
-    }
   }
 };
 var batch = (fn) => {
@@ -230,30 +217,24 @@ var batch = (fn) => {
   }
 };
 var observe = (run, watcher) => {
-  const prev = active;
-  active = watcher;
+  const prev = activeWatcher;
+  activeWatcher = watcher;
   try {
     run();
   } finally {
-    active = prev;
+    activeWatcher = prev;
   }
 };
-var enqueue = (fn, dedupe) => new Promise((resolve, reject) => {
-  updateMap.set(dedupe || Symbol(), () => {
-    try {
-      resolve(fn());
-    } catch (error) {
-      reject(error);
-    }
-  });
-  requestTick();
-});
 
 // node_modules/@zeix/cause-effect/src/computed.ts
 var TYPE_COMPUTED = "Computed";
-var computed = (fn) => {
+var createComputed = (callback, initialValue = UNSET) => {
+  if (!isComputedCallback(callback))
+    throw new InvalidCallbackError("computed", valueString(callback));
+  if (initialValue == null)
+    throw new NullishSignalValueError("computed");
   const watchers = new Set;
-  let value = UNSET;
+  let value = initialValue;
   let error;
   let controller;
   let dirty = true;
@@ -278,29 +259,29 @@ var computed = (fn) => {
     value = UNSET;
     error = newError;
   };
-  const settle = (settleFn) => (arg) => {
+  const settle = (fn) => (arg) => {
     computing = false;
     controller = undefined;
-    settleFn(arg);
+    fn(arg);
     if (changed)
       notify(watchers);
   };
-  const mark = watch(() => {
+  const watcher = createWatcher(() => {
     dirty = true;
     controller?.abort();
     if (watchers.size)
       notify(watchers);
     else
-      mark.cleanup();
+      watcher.cleanup();
   });
-  mark.off(() => {
+  watcher.unwatch(() => {
     controller?.abort();
   });
   const compute = () => observe(() => {
     if (computing)
       throw new CircularDependencyError("computed");
     changed = false;
-    if (isAsyncFunction(fn)) {
+    if (isAsyncFunction(callback)) {
       if (controller)
         return value;
       controller = new AbortController;
@@ -315,7 +296,7 @@ var computed = (fn) => {
     let result;
     computing = true;
     try {
-      result = controller ? fn(controller.signal) : fn();
+      result = controller ? callback(value, controller.signal) : callback(value);
     } catch (e) {
       if (isAbortError(e))
         nil();
@@ -331,29 +312,36 @@ var computed = (fn) => {
     else
       ok(result);
     computing = false;
-  }, mark);
-  const c = {
-    [Symbol.toStringTag]: TYPE_COMPUTED,
-    get: () => {
-      subscribe(watchers);
-      flush();
-      if (dirty)
-        compute();
-      if (error)
-        throw error;
-      return value;
+  }, watcher);
+  const computed = {};
+  Object.defineProperties(computed, {
+    [Symbol.toStringTag]: {
+      value: TYPE_COMPUTED
+    },
+    get: {
+      value: () => {
+        subscribe(watchers);
+        flush();
+        if (dirty)
+          compute();
+        if (error)
+          throw error;
+        return value;
+      }
     }
-  };
-  return c;
+  });
+  return computed;
 };
 var isComputed = (value) => isObjectOfType(value, TYPE_COMPUTED);
-var isComputedCallback = (value) => isFunction(value) && value.length < 2;
+var isComputedCallback = (value) => isFunction(value) && value.length < 3;
 // node_modules/@zeix/cause-effect/src/effect.ts
-var effect = (callback) => {
+var createEffect = (callback) => {
+  if (!isFunction(callback) || callback.length > 1)
+    throw new InvalidCallbackError("effect", valueString(callback));
   const isAsync = isAsyncFunction(callback);
   let running = false;
   let controller;
-  const run = watch(() => observe(() => {
+  const watcher = createWatcher(() => observe(() => {
     if (running)
       throw new CircularDependencyError("effect");
     running = true;
@@ -366,7 +354,7 @@ var effect = (callback) => {
         const currentController = controller;
         callback(controller.signal).then((cleanup2) => {
           if (isFunction(cleanup2) && controller === currentController)
-            run.off(cleanup2);
+            watcher.unwatch(cleanup2);
         }).catch((error) => {
           if (!isAbortError(error))
             console.error("Async effect error:", error);
@@ -374,18 +362,18 @@ var effect = (callback) => {
       } else {
         cleanup = callback();
         if (isFunction(cleanup))
-          run.off(cleanup);
+          watcher.unwatch(cleanup);
       }
     } catch (error) {
       if (!isAbortError(error))
         console.error("Effect callback error:", error);
     }
     running = false;
-  }, run));
-  run();
+  }, watcher));
+  watcher();
   return () => {
     controller?.abort();
-    run.cleanup();
+    watcher.cleanup();
   };
 };
 // node_modules/@zeix/cause-effect/src/match.ts
@@ -407,20 +395,20 @@ function match(result, handlers) {
 // node_modules/@zeix/cause-effect/src/resolve.ts
 function resolve(signals) {
   const errors = [];
-  let pending2 = false;
+  let pending = false;
   const values = {};
   for (const [key, signal] of Object.entries(signals)) {
     try {
       const value = signal.get();
       if (value === UNSET)
-        pending2 = true;
+        pending = true;
       else
         values[key] = value;
     } catch (e) {
       errors.push(toError(e));
     }
   }
-  if (pending2)
+  if (pending)
     return { ok: false, pending: true };
   if (errors.length > 0)
     return { ok: false, errors };
@@ -428,54 +416,75 @@ function resolve(signals) {
 }
 // node_modules/@zeix/cause-effect/src/state.ts
 var TYPE_STATE = "State";
-var state = (initialValue) => {
+var createState = (initialValue) => {
+  if (initialValue == null)
+    throw new NullishSignalValueError("state");
   const watchers = new Set;
   let value = initialValue;
-  const s = {
-    [Symbol.toStringTag]: TYPE_STATE,
-    get: () => {
-      subscribe(watchers);
-      return value;
-    },
-    set: (v) => {
-      if (v == null)
-        throw new NullishSignalValueError("state");
-      if (isEqual(value, v))
-        return;
-      value = v;
-      notify(watchers);
-      if (UNSET === value)
-        watchers.clear();
-    },
-    update: (fn) => {
-      s.set(fn(value));
-    }
+  const setValue = (newValue) => {
+    if (newValue == null)
+      throw new NullishSignalValueError("state");
+    if (isEqual(value, newValue))
+      return;
+    value = newValue;
+    notify(watchers);
+    if (UNSET === value)
+      watchers.clear();
   };
-  return s;
+  const state = {};
+  Object.defineProperties(state, {
+    [Symbol.toStringTag]: {
+      value: TYPE_STATE
+    },
+    get: {
+      value: () => {
+        subscribe(watchers);
+        return value;
+      }
+    },
+    set: {
+      value: (newValue) => {
+        setValue(newValue);
+      }
+    },
+    update: {
+      value: (updater) => {
+        if (!isFunction(updater))
+          throw new InvalidCallbackError("state update", valueString(updater));
+        setValue(updater(value));
+      }
+    }
+  });
+  return state;
 };
 var isState = (value) => isObjectOfType(value, TYPE_STATE);
 
 // node_modules/@zeix/cause-effect/src/store.ts
 var TYPE_STORE = "Store";
-var STORE_EVENT_ADD = "store-add";
-var STORE_EVENT_CHANGE = "store-change";
-var STORE_EVENT_REMOVE = "store-remove";
-var STORE_EVENT_SORT = "store-sort";
-var store = (initialValue) => {
+var createStore = (initialValue) => {
+  if (initialValue == null)
+    throw new NullishSignalValueError("store");
   const watchers = new Set;
-  const eventTarget = new EventTarget;
+  const listeners = {
+    add: new Set,
+    change: new Set,
+    remove: new Set,
+    sort: new Set
+  };
   const signals = new Map;
-  const cleanups = new Map;
+  const signalWatchers = new Map;
   const isArrayLike = Array.isArray(initialValue);
-  const size = state(0);
   const current = () => {
     const record = {};
-    for (const [key, signal] of signals) {
+    for (const [key, signal] of signals)
       record[key] = signal.get();
-    }
     return record;
   };
-  const emit = (type, detail) => eventTarget.dispatchEvent(new CustomEvent(type, { detail }));
+  const emit = (key, changes) => {
+    Object.freeze(changes);
+    for (const listener of listeners[key])
+      listener(changes);
+  };
   const getSortedIndexes = () => Array.from(signals.keys()).map((k) => Number(k)).filter((n) => Number.isInteger(n)).sort((a, b) => a - b);
   const isValidValue = (key, value) => {
     if (value == null)
@@ -489,39 +498,30 @@ var store = (initialValue) => {
   const addProperty = (key, value, single = false) => {
     if (!isValidValue(key, value))
       return false;
-    const signal = isState(value) || isStore(value) ? value : isRecord(value) ? store(value) : Array.isArray(value) ? store(value) : state(value);
+    const signal = isState(value) || isStore(value) ? value : isRecord(value) || Array.isArray(value) ? createStore(value) : createState(value);
     signals.set(key, signal);
-    const cleanup = effect(() => {
-      const currentValue = signal.get();
-      if (currentValue != null)
-        emit(STORE_EVENT_CHANGE, {
-          [key]: currentValue
-        });
-    });
-    cleanups.set(key, cleanup);
+    const watcher = createWatcher(() => observe(() => {
+      emit("change", { [key]: signal.get() });
+    }, watcher));
+    watcher();
+    signalWatchers.set(key, watcher);
     if (single) {
-      size.set(signals.size);
       notify(watchers);
-      emit(STORE_EVENT_ADD, {
-        [key]: value
-      });
+      emit("add", { [key]: value });
     }
     return true;
   };
   const removeProperty = (key, single = false) => {
     const ok = signals.delete(key);
     if (ok) {
-      const cleanup = cleanups.get(key);
-      if (cleanup)
-        cleanup();
-      cleanups.delete(key);
+      const watcher = signalWatchers.get(key);
+      if (watcher)
+        watcher.cleanup();
+      signalWatchers.delete(key);
     }
     if (single) {
-      size.set(signals.size);
       notify(watchers);
-      emit(STORE_EVENT_REMOVE, {
-        [key]: UNSET
-      });
+      emit("remove", { [key]: UNSET });
     }
     return ok;
   };
@@ -529,16 +529,14 @@ var store = (initialValue) => {
     const changes = diff(oldValue, newValue);
     batch(() => {
       if (Object.keys(changes.add).length) {
-        for (const key in changes.add) {
-          const value = changes.add[key] ?? UNSET;
-          addProperty(key, value);
-        }
+        for (const key in changes.add)
+          addProperty(key, changes.add[key] ?? UNSET);
         if (initialRun) {
           setTimeout(() => {
-            emit(STORE_EVENT_ADD, changes.add);
+            emit("add", changes.add);
           }, 0);
         } else {
-          emit(STORE_EVENT_ADD, changes.add);
+          emit("add", changes.add);
         }
       }
       if (Object.keys(changes.change).length) {
@@ -552,141 +550,142 @@ var store = (initialValue) => {
           else
             throw new StoreKeyReadonlyError(key, valueString(value));
         }
-        emit(STORE_EVENT_CHANGE, changes.change);
+        emit("change", changes.change);
       }
       if (Object.keys(changes.remove).length) {
         for (const key in changes.remove)
           removeProperty(key);
-        emit(STORE_EVENT_REMOVE, changes.remove);
+        emit("remove", changes.remove);
       }
-      size.set(signals.size);
     });
     return changes.changed;
   };
   reconcile({}, initialValue, true);
-  const s = {
-    add: isArrayLike ? (v) => {
-      const nextIndex = signals.size;
-      const key = String(nextIndex);
-      addProperty(key, v, true);
-    } : (k, v) => {
-      if (!signals.has(k))
-        addProperty(k, v, true);
-      else
-        throw new StoreKeyExistsError(k, valueString(v));
+  const store = {};
+  Object.defineProperties(store, {
+    [Symbol.toStringTag]: {
+      value: TYPE_STORE
     },
-    get: () => {
-      subscribe(watchers);
-      return recordToArray(current());
+    [Symbol.isConcatSpreadable]: {
+      value: isArrayLike
     },
-    remove: isArrayLike ? (index) => {
-      const currentArray = recordToArray(current());
-      const currentLength = signals.size;
-      if (!Array.isArray(currentArray) || index <= -currentLength || index >= currentLength)
-        throw new StoreKeyRangeError(index);
-      const newArray = [...currentArray];
-      newArray.splice(index, 1);
-      if (reconcile(currentArray, newArray))
-        notify(watchers);
-    } : (k) => {
-      if (signals.has(k))
-        removeProperty(k, true);
-    },
-    set: (v) => {
-      if (reconcile(current(), v)) {
-        notify(watchers);
-        if (UNSET === v)
-          watchers.clear();
+    [Symbol.iterator]: {
+      value: isArrayLike ? function* () {
+        const indexes = getSortedIndexes();
+        for (const index of indexes) {
+          const signal = signals.get(String(index));
+          if (signal)
+            yield signal;
+        }
+      } : function* () {
+        for (const [key, signal] of signals)
+          yield [key, signal];
       }
     },
-    update: (fn) => {
-      const oldValue = current();
-      const newValue = fn(recordToArray(oldValue));
-      if (reconcile(oldValue, newValue)) {
-        notify(watchers);
-        if (UNSET === newValue)
-          watchers.clear();
+    add: {
+      value: isArrayLike ? (v) => {
+        addProperty(String(signals.size), v, true);
+      } : (k, v) => {
+        if (!signals.has(k))
+          addProperty(k, v, true);
+        else
+          throw new StoreKeyExistsError(k, valueString(v));
       }
     },
-    sort: (compareFn) => {
-      const entries = Array.from(signals.entries()).map(([key, signal]) => [key, signal.get()]).sort(compareFn ? (a, b) => compareFn(a[1], b[1]) : (a, b) => String(a[1]).localeCompare(String(b[1])));
-      const newOrder = entries.map(([key]) => String(key));
-      const newSignals = new Map;
-      entries.forEach(([key], newIndex) => {
-        const oldKey = String(key);
-        const newKey = isArrayLike ? String(newIndex) : String(key);
-        const signal = signals.get(oldKey);
-        if (signal)
-          newSignals.set(newKey, signal);
-      });
-      signals.clear();
-      newSignals.forEach((signal, key) => signals.set(key, signal));
-      notify(watchers);
-      emit(STORE_EVENT_SORT, newOrder);
+    get: {
+      value: () => {
+        subscribe(watchers);
+        return recordToArray(current());
+      }
     },
-    addEventListener: eventTarget.addEventListener.bind(eventTarget),
-    removeEventListener: eventTarget.removeEventListener.bind(eventTarget),
-    dispatchEvent: eventTarget.dispatchEvent.bind(eventTarget),
-    size
-  };
-  return new Proxy({}, {
-    get(_target, prop) {
-      if (prop === Symbol.toStringTag)
-        return TYPE_STORE;
-      if (prop === Symbol.isConcatSpreadable)
-        return isArrayLike;
-      if (prop === Symbol.iterator)
-        return isArrayLike ? function* () {
-          const indexes = getSortedIndexes();
-          for (const index of indexes) {
-            const signal = signals.get(String(index));
-            if (signal)
-              yield signal;
-          }
-        } : function* () {
-          for (const [key, signal] of signals)
-            yield [key, signal];
-        };
+    remove: {
+      value: isArrayLike ? (index) => {
+        const currentArray = recordToArray(current());
+        const currentLength = signals.size;
+        if (!Array.isArray(currentArray) || index <= -currentLength || index >= currentLength)
+          throw new StoreKeyRangeError(index);
+        const newArray = [...currentArray];
+        newArray.splice(index, 1);
+        if (reconcile(currentArray, newArray))
+          notify(watchers);
+      } : (k) => {
+        if (signals.has(k))
+          removeProperty(k, true);
+      }
+    },
+    set: {
+      value: (v) => {
+        if (reconcile(current(), v)) {
+          notify(watchers);
+          if (UNSET === v)
+            watchers.clear();
+        }
+      }
+    },
+    update: {
+      value: (fn) => {
+        const oldValue = current();
+        const newValue = fn(recordToArray(oldValue));
+        if (reconcile(oldValue, newValue)) {
+          notify(watchers);
+          if (UNSET === newValue)
+            watchers.clear();
+        }
+      }
+    },
+    sort: {
+      value: (compareFn) => {
+        const entries = Array.from(signals.entries()).map(([key, signal]) => [key, signal.get()]).sort(compareFn ? (a, b) => compareFn(a[1], b[1]) : (a, b) => String(a[1]).localeCompare(String(b[1])));
+        const newOrder = entries.map(([key]) => String(key));
+        const newSignals = new Map;
+        entries.forEach(([key], newIndex) => {
+          const oldKey = String(key);
+          const newKey = isArrayLike ? String(newIndex) : String(key);
+          const signal = signals.get(oldKey);
+          if (signal)
+            newSignals.set(newKey, signal);
+        });
+        signals.clear();
+        newSignals.forEach((signal, key) => signals.set(key, signal));
+        notify(watchers);
+        emit("sort", newOrder);
+      }
+    },
+    on: {
+      value: (type, listener) => {
+        listeners[type].add(listener);
+        return () => listeners[type].delete(listener);
+      }
+    },
+    length: {
+      get() {
+        subscribe(watchers);
+        return signals.size;
+      }
+    }
+  });
+  return new Proxy(store, {
+    get(target, prop) {
+      if (prop in target)
+        return Reflect.get(target, prop);
       if (isSymbol(prop))
         return;
-      if (prop in s)
-        return s[prop];
-      if (prop === "length" && isArrayLike) {
-        subscribe(watchers);
-        return size.get();
-      }
       return signals.get(prop);
     },
-    has(_target, prop) {
-      const stringProp = String(prop);
-      return stringProp && signals.has(stringProp) || Object.keys(s).includes(stringProp) || prop === Symbol.toStringTag || prop === Symbol.iterator || prop === Symbol.isConcatSpreadable || prop === "length" && isArrayLike;
+    has(target, prop) {
+      if (prop in target)
+        return true;
+      return signals.has(String(prop));
     },
-    ownKeys() {
-      return isArrayLike ? getSortedIndexes().map((key) => String(key)).concat(["length"]) : Array.from(signals.keys()).map((key) => String(key));
+    ownKeys(target) {
+      const staticKeys = Reflect.ownKeys(target);
+      const signalKeys = isArrayLike ? getSortedIndexes().map((key) => String(key)) : Array.from(signals.keys());
+      return [...new Set([...signalKeys, ...staticKeys])];
     },
-    getOwnPropertyDescriptor(_target, prop) {
-      const nonEnumerable = (value) => ({
-        enumerable: false,
-        configurable: true,
-        writable: false,
-        value
-      });
-      if (prop === "length" && isArrayLike)
-        return {
-          enumerable: true,
-          configurable: true,
-          writable: false,
-          value: size.get()
-        };
-      if (prop === Symbol.isConcatSpreadable)
-        return nonEnumerable(isArrayLike);
-      if (prop === Symbol.toStringTag)
-        return nonEnumerable(TYPE_STORE);
-      if (isSymbol(prop))
-        return;
-      if (Object.keys(s).includes(prop))
-        return nonEnumerable(s[prop]);
-      const signal = signals.get(prop);
+    getOwnPropertyDescriptor(target, prop) {
+      if (prop in target)
+        return Reflect.getOwnPropertyDescriptor(target, prop);
+      const signal = signals.get(String(prop));
       return signal ? {
         enumerable: true,
         configurable: true,
@@ -705,10 +704,10 @@ function toSignal(value) {
   if (isSignal(value))
     return value;
   if (isComputedCallback(value))
-    return computed(value);
+    return createComputed(value);
   if (Array.isArray(value) || isRecord(value))
-    return store(value);
-  return state(value);
+    return createStore(value);
+  return createState(value);
 }
 // src/util.ts
 var DEV_MODE = true;
@@ -738,9 +737,11 @@ var HTML_ELEMENT_PROPS = new Set([
 ]);
 var idString = (id) => id ? `#${id}` : "";
 var classString = (classList) => classList?.length ? `.${Array.from(classList).join(".")}` : "";
+var hasMethod = (obj, methodName) => isString(methodName) && (methodName in obj) && isFunction(obj[methodName]);
+var isElement = (node) => node.nodeType === Node.ELEMENT_NODE;
 var isCustomElement = (element) => element.localName.includes("-");
+var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
 var elementName = (el) => el ? `<${el.localName}${idString(el.id)}${classString(el.classList)}>` : "<unknown>";
-var valueString2 = (value) => isString(value) ? `"${value}"` : !!value && typeof value === "object" ? JSON.stringify(value) : String(value);
 var log = (value, msg, level = LOG_DEBUG) => {
   if (DEV_MODE || [LOG_ERROR, LOG_WARN].includes(level))
     console[level](msg, value);
@@ -794,7 +795,7 @@ class DependencyTimeoutError extends Error {
 
 class InvalidReactivesError extends TypeError {
   constructor(host, target, reactives) {
-    super(`Expected reactives passed from ${elementName(host)} to ${elementName(target)} to be a record of signals, reactive property names or functions. Got ${valueString2(reactives)}.`);
+    super(`Expected reactives passed from ${elementName(host)} to ${elementName(target)} to be a record of signals, reactive property names or functions. Got ${valueString(reactives)}.`);
     this.name = "InvalidReactivesError";
   }
 }
@@ -805,6 +806,172 @@ class InvalidCustomElementError extends TypeError {
     this.name = "InvalidCustomElementError";
   }
 }
+
+// src/signals/collection.ts
+var TYPE_COLLECTION = "Collection";
+var extractAttributes = (selector) => {
+  const attributes = new Set;
+  if (selector.includes("."))
+    attributes.add("class");
+  if (selector.includes("#"))
+    attributes.add("id");
+  if (selector.includes("[")) {
+    const parts = selector.split("[");
+    for (let i = 1;i < parts.length; i++) {
+      const part = parts[i];
+      if (!part.includes("]"))
+        continue;
+      const attrName = part.split("=")[0].trim().replace(/[^a-zA-Z0-9_-]/g, "");
+      if (attrName)
+        attributes.add(attrName);
+    }
+  }
+  return [...attributes];
+};
+var createCollection = (parent, selector) => {
+  const watchers = new Set;
+  const listeners = {
+    add: new Set,
+    remove: new Set
+  };
+  let elements = [];
+  let observer;
+  let cleanup;
+  const filterMatches = (elements2) => Array.from(elements2).filter(isElement).filter((element) => element.matches(selector));
+  const notifyListeners = (listeners2, elements2) => {
+    Object.freeze(elements2);
+    for (const listener of listeners2)
+      listener(elements2);
+  };
+  const observe2 = () => {
+    elements = Array.from(parent.querySelectorAll(selector));
+    observer = new MutationObserver(([mutation]) => {
+      if (!watchers.size && !listeners.add.size && !listeners.remove.size) {
+        if (cleanup)
+          cleanup();
+        return;
+      }
+      const added = filterMatches(mutation.addedNodes);
+      const removed = filterMatches(mutation.removedNodes);
+      if (added.length) {
+        notifyListeners(listeners.add, added);
+        elements = Array.from(parent.querySelectorAll(selector));
+      }
+      if (removed.length) {
+        notifyListeners(listeners.remove, removed);
+        for (const element of removed) {
+          const index = elements.indexOf(element);
+          if (index !== -1)
+            elements.splice(index, 1);
+        }
+      }
+      if (added.length || removed.length)
+        notify(watchers);
+    });
+    const observerConfig = {
+      childList: true,
+      subtree: true
+    };
+    const observedAttributes = extractAttributes(selector);
+    if (observedAttributes.length) {
+      observerConfig.attributes = true;
+      observerConfig.attributeFilter = observedAttributes;
+    }
+    observer.observe(parent, observerConfig);
+    cleanup = () => {
+      if (observer)
+        observer.disconnect();
+      cleanup = undefined;
+    };
+  };
+  const collection = {};
+  Object.defineProperties(collection, {
+    [Symbol.toStringTag]: {
+      value: TYPE_COLLECTION
+    },
+    [Symbol.isConcatSpreadable]: {
+      value: true
+    },
+    [Symbol.iterator]: {
+      value: function* () {
+        for (const element of elements)
+          yield element;
+      }
+    },
+    get: {
+      value: () => {
+        subscribe(watchers);
+        if (!observer)
+          observe2();
+        return elements;
+      }
+    },
+    on: {
+      value: (type, listener) => {
+        const listenerSet = listeners[type];
+        if (!listenerSet)
+          throw new TypeError(`Invalid change notification type: ${type}`);
+        listenerSet.add(listener);
+        if (!observer)
+          observe2();
+        return () => listenerSet.delete(listener);
+      }
+    },
+    length: {
+      get: () => {
+        subscribe(watchers);
+        if (!observer)
+          observe2();
+        return elements.length;
+      }
+    }
+  });
+  return new Proxy(collection, {
+    get(target, prop) {
+      if (prop in target)
+        return Reflect.get(target, prop);
+      if (isSymbol(prop))
+        return;
+      const index = Number(prop);
+      if (Number.isInteger(index))
+        return elements[index];
+      if (isString(prop) && hasMethod(elements, prop)) {
+        const method = elements[prop];
+        return (...args) => {
+          subscribe(watchers);
+          if (!observer)
+            observe2();
+          return method.apply(elements, args);
+        };
+      }
+      return;
+    },
+    has(target, prop) {
+      if (prop in target)
+        return true;
+      if (Number.isInteger(Number(prop)))
+        return !!elements[Number(prop)];
+      return isString(prop) && hasMethod(elements, prop);
+    },
+    ownKeys(target) {
+      const staticKeys = Reflect.ownKeys(target);
+      const indexes = Object.keys(elements).map((key) => String(key));
+      return [...new Set([...indexes, ...staticKeys])];
+    },
+    getOwnPropertyDescriptor(target, prop) {
+      if (prop in target)
+        return Reflect.getOwnPropertyDescriptor(target, prop);
+      const element = elements[Number(prop)];
+      return element ? {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: element
+      } : undefined;
+    }
+  });
+};
+var isCollection = (value) => Object.prototype.toString.call(value) === `[object Collection]`;
 
 // src/effects.ts
 var RESET = Symbol("RESET");
@@ -842,6 +1009,32 @@ var runElementEffects = (host, target, effects) => {
       throw new InvalidEffectsError(host, error instanceof Error ? error : new Error(String(error)));
   }
 };
+var runCollectionEffects = (host, collection, effects) => {
+  const cleanups = new Map;
+  const attach = (targets) => {
+    for (const target of targets) {
+      const cleanup = runElementEffects(host, target, effects);
+      if (cleanup)
+        cleanups.set(target, cleanup);
+    }
+  };
+  const detach = (targets) => {
+    for (const target of targets) {
+      const cleanup = cleanups.get(target);
+      if (cleanup)
+        cleanup();
+      cleanups.delete(target);
+    }
+  };
+  collection.on("add", attach);
+  collection.on("remove", detach);
+  attach(collection.get());
+  return () => {
+    for (const cleanup of cleanups.values())
+      cleanup();
+    cleanups.clear();
+  };
+};
 var runEffects = (ui, effects) => {
   if (!isRecord(effects))
     throw new InvalidEffectsError(ui.host);
@@ -852,12 +1045,8 @@ var runEffects = (ui, effects) => {
     if (!effects[k])
       continue;
     const elementEffects = Array.isArray(effects[k]) ? effects[k] : [effects[k]];
-    if (Array.isArray(ui[k])) {
-      for (const target of ui[k]) {
-        const cleanup = runElementEffects(ui.host, target, elementEffects);
-        if (cleanup)
-          cleanups.push(cleanup);
-      }
+    if (isCollection(ui[k])) {
+      cleanups.push(runCollectionEffects(ui.host, ui[k], elementEffects));
     } else if (ui[k]) {
       const cleanup = runElementEffects(ui.host, ui[k], elementEffects);
       if (cleanup)
@@ -865,7 +1054,8 @@ var runEffects = (ui, effects) => {
     }
   }
   return () => {
-    cleanups.forEach((cleanup) => cleanup());
+    for (const cleanup of cleanups)
+      cleanup();
     cleanups.length = 0;
   };
 };
@@ -874,7 +1064,7 @@ var resolveReactive = (reactive, host, target, context) => {
     return isString(reactive) ? host[reactive] : isSignal(reactive) ? reactive.get() : isFunction(reactive) ? reactive(target) : RESET;
   } catch (error) {
     if (context) {
-      log(error, `Failed to resolve value of ${valueString2(reactive)}${context ? ` for ${context}` : ""} in ${elementName(target)}${host !== target ? ` in ${elementName(host)}` : ""}`, LOG_ERROR);
+      log(error, `Failed to resolve value of ${valueString(reactive)}${context ? ` for ${context}` : ""} in ${elementName(target)}${host !== target ? ` in ${elementName(host)}` : ""}`, LOG_ERROR);
     }
     return RESET;
   }
@@ -893,7 +1083,7 @@ var updateElement = (reactive, updater) => (host, target) => {
     updater.reject?.(error);
   };
   const fallback = read(target);
-  return effect(() => {
+  return createEffect(() => {
     const value = resolveReactive(reactive, host, target, operationDesc);
     const resolvedValue = value === RESET ? fallback : value === UNSET ? updater.delete ? null : fallback : value;
     if (updater.delete && resolvedValue === null) {
@@ -933,7 +1123,7 @@ var insertOrRemoveElement = (reactive, inserter) => (host, target) => {
     log(error, `Failed to ${verb} element in ${elementName(target)} in ${elementName(host)}`, LOG_ERROR);
     inserter?.reject?.(error);
   };
-  return effect(() => {
+  return createEffect(() => {
     const diff2 = resolveReactive(reactive, host, target, "insertion or deletion");
     const resolvedDiff = diff2 === RESET ? 0 : diff2;
     if (resolvedDiff > 0) {
@@ -979,7 +1169,6 @@ var read = (reader, fallback) => (ui) => {
 };
 
 // src/ui.ts
-var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
 var getHelpers = (host) => {
   const root = host.shadowRoot ?? host;
   const dependencies = new Set;
@@ -992,7 +1181,8 @@ var getHelpers = (host) => {
     return target ?? undefined;
   }
   function all(selector, required) {
-    const targets = root.querySelectorAll(selector);
+    const collection = createCollection(root, selector);
+    const targets = collection.get();
     if (required != null && !targets.length)
       throw new MissingElementError(host, selector, required);
     if (targets.length)
@@ -1000,14 +1190,14 @@ var getHelpers = (host) => {
         if (isNotYetDefinedComponent(target))
           dependencies.add(target.localName);
       });
-    return Array.from(targets);
+    return collection;
   }
   return [{ first, all }, () => Array.from(dependencies)];
 };
 
 // src/component.ts
 var DEPENDENCY_TIMEOUT = 50;
-function component(name, props = {}, select = () => ({}), setup = () => ({})) {
+function defineComponent(name, props = {}, select = () => ({}), setup = () => ({})) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
   for (const prop of Object.keys(props)) {
@@ -1076,7 +1266,7 @@ function component(name, props = {}, select = () => ({}), setup = () => ({})) {
         this.#setAccessor(name2, parsed);
     }
     #setAccessor(key, value) {
-      const signal = isSignal(value) ? value : isComputedCallback(value) ? computed(value) : state(value);
+      const signal = isSignal(value) ? value : isComputedCallback(value) ? createComputed(value) : createState(value);
       const prev = this.#signals[key];
       const mutable = isMutableSignal(signal);
       this.#signals[key] = signal;
@@ -1162,7 +1352,7 @@ var on = (type, handler, options = false) => (host, target) => {
   target.addEventListener(type, listener, options);
   return () => target.removeEventListener(type, listener);
 };
-var emit = (type, reactive) => (host, target) => effect(() => {
+var emit = (type, reactive) => (host, target) => createEffect(() => {
   const value = resolveReactive(reactive, host, target, `custom event "${type}" detail`);
   if (value === RESET || value === UNSET)
     return;
@@ -1209,7 +1399,7 @@ var pass = (props) => (host, target) => {
     if (isSignal(value))
       return value.get;
     const fn = isString(value) && value in host ? () => host[value] : isComputedCallback(value) ? value : undefined;
-    return fn ? computed(fn).get : undefined;
+    return fn ? createComputed(fn).get : undefined;
   };
   for (const [prop, reactive] of Object.entries(reactives)) {
     if (reactive == null)
@@ -1320,14 +1510,76 @@ var asEnum = (valid) => (_, value) => {
   const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
   return matchingValid ? value : valid[0];
 };
+// src/signals/sensor.ts
+var createSensor = (key, init, events) => (ui) => {
+  const watchers = new Set;
+  let value = getFallback(ui, init);
+  const targets = isCollection(ui[key]) ? ui[key].get() : [ui[key]];
+  const eventMap = new Map;
+  let cleanup;
+  const listen = () => {
+    for (const [type, transform] of Object.entries(events)) {
+      const listener = (e) => {
+        const target = e.target;
+        if (!target || !targets.includes(target))
+          return;
+        e.stopPropagation();
+        try {
+          const newValue = transform({
+            event: e,
+            ui,
+            target,
+            value
+          });
+          if (newValue == null || newValue instanceof Promise)
+            return;
+          if (!Object.is(newValue, value)) {
+            value = newValue;
+            if (watchers.size)
+              notify(watchers);
+            else if (cleanup)
+              cleanup();
+          }
+        } catch (error) {
+          e.stopImmediatePropagation();
+          throw error;
+        }
+      };
+      eventMap.set(type, listener);
+      ui.host.addEventListener(type, listener);
+    }
+    cleanup = () => {
+      if (eventMap.size) {
+        for (const [type, listener] of eventMap)
+          ui.host.removeEventListener(type, listener);
+        eventMap.clear();
+      }
+      cleanup = undefined;
+    };
+  };
+  const sensor = {};
+  Object.defineProperties(sensor, {
+    [Symbol.toStringTag]: {
+      value: TYPE_COMPUTED
+    },
+    get: {
+      value: () => {
+        subscribe(watchers);
+        if (watchers.size && !eventMap.size)
+          listen();
+        return value;
+      }
+    }
+  });
+  return sensor;
+};
 export {
+  valueString,
   updateElement,
   toggleClass,
   toggleAttribute,
   toSignal,
   toError,
-  store,
-  state,
   show,
   setText,
   setStyle,
@@ -1353,16 +1605,20 @@ export {
   isFunction,
   isEqual,
   isComputed,
+  isCollection,
   isAsyncFunction,
   isAbortError,
   insertOrRemoveElement,
-  enqueue,
   emit,
-  effect,
   diff,
+  defineComponent,
   dangerouslySetInnerHTML,
-  computed,
-  component,
+  createStore,
+  createState,
+  createSensor,
+  createEffect,
+  createComputed,
+  createCollection,
   batch,
   asString,
   asNumber,
@@ -1376,5 +1632,6 @@ export {
   StoreKeyExistsError,
   NullishSignalValueError,
   InvalidSignalValueError,
+  InvalidCallbackError,
   CircularDependencyError
 };

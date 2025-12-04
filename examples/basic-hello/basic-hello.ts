@@ -1,4 +1,4 @@
-import { asString, type Component, component, on, setText } from '../..'
+import { asString, type Component, defineComponent, on, setText } from '../..'
 
 type BasicHelloProps = {
 	name: string
@@ -15,7 +15,7 @@ declare global {
 	}
 }
 
-export default component<BasicHelloProps, BasicHelloUI>(
+export default defineComponent<BasicHelloProps, BasicHelloUI>(
 	'basic-hello',
 	{
 		name: asString(ui => ui.output.textContent),

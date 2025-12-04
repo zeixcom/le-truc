@@ -1,11 +1,11 @@
 import {
 	type Component,
-	component,
-	computed,
+	createComputed,
+	createState,
 	dangerouslySetInnerHTML,
+	defineComponent,
 	setText,
 	show,
-	state,
 	toggleClass,
 	UNSET,
 } from '../..'
@@ -26,7 +26,7 @@ declare global {
 	}
 }
 
-export default component<ModuleLazyloadProps, ModuleLazyloadUI>(
+export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 	'module-lazyload',
 	{
 		src: asURL(),
@@ -41,12 +41,12 @@ export default component<ModuleLazyloadProps, ModuleLazyloadUI>(
 		content: first('.content', 'Needed to display content.'),
 	}),
 	({ host }) => {
-		const error = state('')
-		const content = computed(async abort => {
+		const error = createState('')
+		const content = createComputed<string>(async (prev, abort) => {
 			const url = host.src.value
 			if (host.src.error || !url) {
 				error.set(host.src.error ?? 'No URL provided')
-				return ''
+				return prev
 			}
 
 			try {
@@ -55,7 +55,7 @@ export default component<ModuleLazyloadProps, ModuleLazyloadUI>(
 				return content
 			} catch (err) {
 				error.set(err instanceof Error ? err.message : String(err))
-				return ''
+				return prev
 			}
 		})
 

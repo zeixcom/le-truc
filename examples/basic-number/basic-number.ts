@@ -1,4 +1,4 @@
-import { asNumber, type Component, component, setText } from '../..'
+import { asNumber, type Component, defineComponent, setText } from '../..'
 
 export type BasicNumberProps = {
 	value: number
@@ -108,7 +108,7 @@ function getNumberFormatter(
 	}
 }
 
-export default component<BasicNumberProps>(
+export default defineComponent<BasicNumberProps>(
 	'basic-number',
 	{ value: asNumber() },
 	undefined,

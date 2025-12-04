@@ -1,0 +1,14 @@
+[test]
+# Test configuration for le-truc
+preload = ["./test/setup.ts"]
+timeout = 5000
+
+# Test patterns
+include = ["test/**/*.test.ts", "test/**/*.spec.ts"]
+exclude = ["test/**/*.integration.*", "test/components/**/*"]
+
+# Environment
+env = "development"
+
+# Coverage (optional)
+coverage = false

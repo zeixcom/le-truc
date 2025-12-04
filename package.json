@@ -16,17 +16,21 @@
 		"build:examples": "bun run build:examples:js && bun run build:examples:css",
 		"lint": "bunx biome check --write ./src",
 		"lint:examples": "bunx biome check --write ./examples",
-		"test": "bunx playwright test test"
+		"test": "bunx playwright test test",
+		"test:unit": "bun test test/core",
+		"test:all": "bun run test:unit && bun run test"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.5",
-		"@playwright/test": "^1.56.1",
-		"@types/bun": "latest"
+		"@biomejs/biome": "^2.3.8",
+		"@playwright/test": "^1.57.0",
+		"@types/bun": "latest",
+		"@types/jsdom": "^21.1.7",
+		"jsdom": "^21.1.1"
 	},
 	"peerDependencies": {
-		"typescript": "^5"
+		"typescript": "^5.9.3"
 	},
 	"dependencies": {
-		"@zeix/cause-effect": "^0.15.2"
+		"@zeix/cause-effect": "^0.16.1"
 	}
 }

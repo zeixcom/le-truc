@@ -1,7 +1,7 @@
 import {
 	batch,
 	type Cleanup,
-	effect,
+	createEffect,
 	isRecord,
 	UNSET,
 } from '@zeix/cause-effect'
@@ -84,7 +84,7 @@ const emit =
 		reactive: Reactive<T, P, E>,
 	): Effect<P, E> =>
 	(host, target): Cleanup =>
-		effect((): undefined => {
+		createEffect((): undefined => {
 			const value = resolveReactive(
 				reactive,
 				host,

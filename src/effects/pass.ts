@@ -1,5 +1,5 @@
 import {
-	computed,
+	createComputed,
 	isComputedCallback,
 	isFunction,
 	isRecord,
@@ -62,7 +62,7 @@ const pass =
 					: isComputedCallback(value)
 						? value
 						: undefined
-			return fn ? computed(fn).get : undefined
+			return fn ? createComputed(fn).get : undefined
 		}
 
 		// Iterate through reactives

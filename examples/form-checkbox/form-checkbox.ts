@@ -1,21 +1,21 @@
 import {
-	asBoolean,
 	asString,
 	type Component,
-	component,
-	on,
-	setProperty,
+	createSensor,
+	defineComponent,
+	read,
 	setText,
+	toggleAttribute,
 } from '../..'
 
 type FormCheckboxProps = {
-	checked: boolean
+	readonly checked: boolean
 	label: string
 }
 
 type FormCheckboxUI = {
 	checkbox: HTMLInputElement
-	label?: HTMLLabelElement
+	label?: HTMLElement
 }
 
 declare global {
@@ -24,23 +24,27 @@ declare global {
 	}
 }
 
-export default component<FormCheckboxProps, FormCheckboxUI>(
+export default defineComponent<FormCheckboxProps, FormCheckboxUI>(
 	'form-checkbox',
 	{
-		checked: asBoolean(),
-		label: asString(ui => ui.label?.textContent || ''),
+		checked: createSensor(
+			'checkbox',
+			read(ui => ui.checkbox.checked, false),
+			{ change: ({ target }) => target.checked },
+		),
+		label: asString(
+			ui =>
+				ui.label?.textContent
+				?? ui.host.querySelector('label')?.textContent
+				?? '',
+		),
 	},
 	({ first }) => ({
 		checkbox: first('input[type="checkbox"]', 'Add a native checkbox.'),
-		label: first('label', 'Add a native label.'),
+		label: first('.label'),
 	}),
-	({ host }) => ({
-		checkbox: [
-			setProperty('checked'),
-			on('change', ({ target }) => {
-				host.checked = target.checked
-			}),
-		],
+	() => ({
+		host: [toggleAttribute('checked')],
 		label: [setText('label')],
 	}),
 )

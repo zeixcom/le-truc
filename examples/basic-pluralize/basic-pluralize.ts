@@ -1,4 +1,10 @@
-import { asInteger, type Component, component, setText, show } from '../..'
+import {
+	asInteger,
+	type Component,
+	defineComponent,
+	setText,
+	show,
+} from '../..'
 
 export type BasicPluralizeProps = {
 	count: number
@@ -27,7 +33,7 @@ declare global {
 
 const FALLBACK_LOCALE = 'en'
 
-export default component<BasicPluralizeProps, BasicPluralizeUI>(
+export default defineComponent<BasicPluralizeProps, BasicPluralizeUI>(
 	'basic-pluralize',
 	{
 		count: asInteger(),

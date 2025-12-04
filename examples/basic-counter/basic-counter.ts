@@ -1,4 +1,11 @@
-import { asInteger, type Component, component, on, read, setText } from '../..'
+import {
+	asInteger,
+	type Component,
+	defineComponent,
+	on,
+	read,
+	setText,
+} from '../..'
 
 type BasicCounterProps = {
 	count: number
@@ -15,7 +22,7 @@ declare global {
 	}
 }
 
-export default component<BasicCounterProps, BasicCounterUI>(
+export default defineComponent<BasicCounterProps, BasicCounterUI>(
 	'basic-counter',
 	{
 		count: read(ui => ui.count.textContent, asInteger()),

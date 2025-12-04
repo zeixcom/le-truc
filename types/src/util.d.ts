@@ -20,6 +20,13 @@ declare const isElement: (node: Node) => node is Element;
  */
 declare const isCustomElement: <E extends Element>(element: E) => boolean;
 /**
+ * Check whether a custom element is not yet defined
+ *
+ * @param {Element} element - Element to check
+ * @returns {boolean} - True if the element is a custom element and not yet defined
+ */
+declare const isNotYetDefinedComponent: (element: Element) => boolean;
+/**
  * Return a string representation of the Element instance
  *
  * @since 0.7.0
@@ -27,14 +34,6 @@ declare const isCustomElement: <E extends Element>(element: E) => boolean;
  * @returns {string}
  */
 declare const elementName: (el: Element | undefined | null) => string;
-/**
- * Return a string representation of a JavaScript variable
- *
- * @since 0.7.0
- * @param {unknown} value
- * @returns {string}
- */
-declare const valueString: (value: unknown) => string;
 /**
  * Return a detailed type of a JavaScript variable
  *
@@ -63,4 +62,4 @@ declare const log: <T>(value: T, msg: string, level?: LogLevel) => T;
  * @returns {string | null} - Error message or null if valid
  */
 declare const validatePropertyName: (prop: string) => string | null;
-export { type LogLevel, hasMethod, isElement, isCustomElement, log, elementName, valueString, typeString, validatePropertyName, DEV_MODE, LOG_DEBUG, LOG_INFO, LOG_WARN, LOG_ERROR, };
+export { type LogLevel, hasMethod, isElement, isCustomElement, isNotYetDefinedComponent, log, elementName, typeString, validatePropertyName, DEV_MODE, LOG_DEBUG, LOG_INFO, LOG_WARN, LOG_ERROR, };

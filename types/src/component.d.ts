@@ -25,5 +25,5 @@ type MaybeSignal<T extends {}> = T | Signal<T> | ComputedCallback<T>;
  * @throws {InvalidComponentNameError} If component name is invalid
  * @throws {InvalidPropertyNameError} If property name is invalid
  */
-declare function component<P extends ComponentProps, U extends UI = {}>(name: string, props?: Initializers<P, U>, select?: (elementQueries: ElementQueries) => U, setup?: (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>>): Component<P>;
-export { type Component, type ComponentProp, type ComponentProps, type ComponentUI, type ComponentSetup, type MaybeSignal, type ReservedWords, type Initializers, component, };
+declare function defineComponent<P extends ComponentProps, U extends UI = {}>(name: string, props?: Initializers<P, U>, select?: (elementQueries: ElementQueries) => U, setup?: (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>>): Component<P>;
+export { type Component, type ComponentProp, type ComponentProps, type ComponentUI, type ComponentSetup, type MaybeSignal, type ReservedWords, type Initializers, defineComponent, };

@@ -1,13 +1,20 @@
-import { asInteger, type Component, component, on, setProperty } from '../..'
+import {
+	asInteger,
+	Collection,
+	type Component,
+	defineComponent,
+	on,
+	setProperty,
+} from '../..'
 
 type ModuleCarouselProps = {
 	index: number
 }
 
 type ModuleCarouselUI = {
-	dots: HTMLElement[]
-	slides: HTMLElement[]
-	buttons: HTMLElement[]
+	dots: Collection<HTMLElement>
+	slides: Collection<HTMLElement>
+	buttons: Collection<HTMLElement>
 }
 
 declare global {
@@ -18,12 +25,14 @@ declare global {
 
 const wrapAround = (index: number, total: number) => (index + total) % total
 
-export default component<ModuleCarouselProps, ModuleCarouselUI>(
+export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 	'module-carousel',
 	{
 		index: asInteger(ui =>
 			Math.max(
-				ui.slides.findIndex(slide => slide.ariaCurrent === 'true'),
+				ui.slides
+					.get()
+					.findIndex(slide => slide.ariaCurrent === 'true'),
 				0,
 			),
 		),
@@ -51,9 +60,11 @@ export default component<ModuleCarouselProps, ModuleCarouselUI>(
 						entries => {
 							for (const entry of entries) {
 								if (entry.isIntersecting) {
-									host.index = slides.findIndex(
-										slide => slide === entry.target,
-									)
+									host.index = slides
+										.get()
+										.findIndex(
+											slide => slide === entry.target,
+										)
 									break
 								}
 							}
@@ -63,7 +74,7 @@ export default component<ModuleCarouselProps, ModuleCarouselUI>(
 							threshold: 0.5,
 						},
 					)
-					slides.forEach(slide => {
+					slides.get().forEach(slide => {
 						observer.observe(slide)
 					})
 					return () => {
