@@ -43,22 +43,22 @@ const manageFocus = (
 		on('click', () => {
 			index = getCheckedIndex(radios)
 		}),
+		on('focus', ({ target }) => {
+			index = radios.get().findIndex(radio => radio === target)
+		}),
 		on('keydown', ({ event }) => {
 			const { key } = event
 			if (!HANDLED_KEYS.includes(key)) return
 			event.preventDefault()
 			event.stopPropagation()
-			const max = radios.length - 1
 			if (key === FIRST_KEY) index = 0
-			else if (key === LAST_KEY) index = max
+			else if (key === LAST_KEY) index = radios.length - 1
 			else
-				index = Math.min(
-					Math.max(
-						index + (INCREMENT_KEYS.includes(key) ? 1 : -1),
-						0,
-					),
-					max,
-				)
+				index =
+					(index
+						+ (INCREMENT_KEYS.includes(key) ? 1 : -1)
+						+ radios.length)
+					% radios.length
 			if (radios[index]) radios[index].focus()
 		}),
 	]
