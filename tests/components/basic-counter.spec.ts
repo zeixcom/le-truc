@@ -1,21 +1,25 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('basic-counter component', () => {
-	test('renders initial count and increments on button click', async ({
-		page,
-	}) => {
+	test.beforeEach(async ({ page }) => {
 		page.on('console', msg => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
 		await page.goto('http://localhost:4173/test/basic-counter.html')
-
 		await page.waitForSelector('basic-counter')
+	})
 
-		const countSpan = page.locator('basic-counter span')
+	test('renders initial count and increments on button click', async ({
+		page,
+	}) => {
+		// Use the default (first) basic-counter element
+		const defaultElement = page.locator('basic-counter').first()
+		const countSpan = defaultElement.locator('span')
+		const incrementButton = defaultElement.locator('button')
+
 		await expect(countSpan).toHaveText('42')
 
-		const incrementButton = page.locator('basic-counter button')
 		await incrementButton.click()
 		await expect(countSpan).toHaveText('43')
 
@@ -24,20 +28,10 @@ test.describe('basic-counter component', () => {
 	})
 
 	test('reads initial count from DOM span content', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-counter.html')
-
-		// Create element with different initial count in span
-		await page.evaluate(() => {
-			const element = document.createElement('basic-counter') as any
-			element.innerHTML = `<button type="button">+ <span>100</span></button>`
-			document.body.appendChild(element)
-		})
-
-		await page.waitForSelector('basic-counter')
-
-		const newCounter = page.locator('basic-counter').last()
-		const countSpan = newCounter.locator('span')
-		const incrementButton = newCounter.locator('button')
+		// Use the existing DOM read test element from HTML
+		const domReadElement = page.locator('#dom-read-test')
+		const countSpan = domReadElement.locator('span')
+		const incrementButton = domReadElement.locator('button')
 
 		// Should read initial count from span content
 		await expect(countSpan).toHaveText('100')
@@ -51,11 +45,10 @@ test.describe('basic-counter component', () => {
 	})
 
 	test('handles multiple increment clicks', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-counter.html')
-		await page.waitForSelector('basic-counter')
-
-		const countSpan = page.locator('basic-counter span')
-		const incrementButton = page.locator('basic-counter button')
+		// Use the existing multiple increment test element from HTML
+		const multipleElement = page.locator('#multiple-increment-test')
+		const countSpan = multipleElement.locator('span')
+		const incrementButton = multipleElement.locator('button')
 
 		// Start at 42, increment multiple times
 		await expect(countSpan).toHaveText('42')
@@ -69,27 +62,7 @@ test.describe('basic-counter component', () => {
 	})
 
 	test('works with different initial values in DOM', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-counter.html')
-
-		// Test with zero
-		await page.evaluate(() => {
-			const element = document.createElement('basic-counter') as any
-			element.innerHTML = `<button type="button">Count: <span>0</span></button>`
-			element.setAttribute('id', 'zero-counter')
-			document.body.appendChild(element)
-		})
-
-		// Test with negative number
-		await page.evaluate(() => {
-			const element = document.createElement('basic-counter') as any
-			element.innerHTML = `<button type="button">Value: <span>-5</span></button>`
-			element.setAttribute('id', 'negative-counter')
-			document.body.appendChild(element)
-		})
-
-		await page.waitForSelector('#zero-counter')
-		await page.waitForSelector('#negative-counter')
-
+		// Use the existing elements from HTML
 		const zeroCounter = page.locator('#zero-counter')
 		const negativeCounter = page.locator('#negative-counter')
 

@@ -1,8 +1,64 @@
+<!-- Default example -->
 <basic-pluralize>
 	<p class="none">Well done, all done!</p>
 	<p class="some">
 		<span class="count"></span>
 		task<span class="other">s</span>
 		remaining
+	</p>
+</basic-pluralize>
+
+<!-- Test example with plural categories -->
+<basic-pluralize id="plural-test" count="1">
+	<p class="none">Nobody</p>
+	<p class="some">
+		<span class="count"></span>
+		<span class="one">person</span>
+		<span class="other">people</span>
+	</p>
+</basic-pluralize>
+
+<!-- Welsh locale example - demonstrates complex pluralization rules
+     Welsh has 6 plural categories: zero, one, two, few, many, other
+     Example: "dog" in Welsh
+     0 = cŵn (zero), 1 = ci (one), 2 = gi (two), 3 = chi (few), 6 = chi (many), 4/5/7+ = ci (other) -->
+<div lang="cy">
+	<basic-pluralize id="welsh-test" count="0">
+		<p class="none">Dim anifeiliaid!</p>
+		<p class="some">
+			<span class="count"></span>
+			<span class="zero">cŵn</span>
+			<span class="one">ci</span>
+			<span class="two">gi</span>
+			<span class="few">chi</span>
+			<span class="many">chi</span>
+			<span class="other">ci</span>
+		</p>
+	</basic-pluralize>
+</div>
+
+<!-- Ordinal example -->
+<basic-pluralize id="ordinal-test" count="1" ordinal>
+	<p class="none">None</p>
+	<p class="some">
+		<span class="count"></span><span class="one">st</span
+		><span class="two">nd</span><span class="few">rd</span
+		><span class="other">th</span>
+	</p>
+</basic-pluralize>
+
+<!-- Multiple instances example -->
+<basic-pluralize id="pluralize-1" count="0">
+	<p class="none">No items</p>
+	<p class="some">
+		<span class="count"></span> item<span class="other">s</span>
+	</p>
+</basic-pluralize>
+
+<basic-pluralize id="pluralize-2" count="5">
+	<p class="none">No filters</p>
+	<p class="some">
+		<span class="count"></span> filter criteri<span class="one">on</span
+		><span class="other">a</span>
 	</p>
 </basic-pluralize>

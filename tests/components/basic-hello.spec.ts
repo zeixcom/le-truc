@@ -1,20 +1,24 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('basic-hello component', () => {
-	test('renders default greeting and updates output on input', async ({
-		page,
-	}) => {
+	test.beforeEach(async ({ page }) => {
 		page.on('console', msg => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
 		await page.goto('http://localhost:4173/test/basic-hello.html')
 		await page.waitForSelector('basic-hello')
+	})
+
+	test('renders default greeting and updates output on input', async ({
+		page,
+	}) => {
+		// Use the default (first) basic-hello element
+		const defaultElement = page.locator('basic-hello').first()
+		const output = defaultElement.locator('output')
+		const input = defaultElement.locator('input[name="name"]')
 
 		// Check initial state
-		const output = page.locator('basic-hello output')
-		const input = page.locator('basic-hello input[name="name"]')
-
 		await expect(output).toHaveText('World')
 		await expect(input).toHaveValue('')
 
@@ -28,47 +32,30 @@ test.describe('basic-hello component', () => {
 	})
 
 	test('supports initial name attribute', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-hello.html')
+		// Use the existing element with initial name from HTML
+		const initialElement = page.locator('#initial-name-test')
+		const output = initialElement.locator('output')
 
-		// Create element with initial name attribute
-		await page.evaluate(() => {
-			const element = document.createElement('basic-hello') as any
-			element.setAttribute('name', 'Alice')
-			element.innerHTML = `
-				<label for="name">Your name</label>
-				<input id="name" name="name" type="text" autocomplete="given-name" />
-				<p>Hello, <output for="name">World</output>!</p>
-			`
-			document.body.appendChild(element)
-		})
-
-		await page.waitForSelector('basic-hello')
-
-		const newElement = page.locator('basic-hello').last()
-		const output = newElement.locator('output')
-
-		// Should show the initial name
+		// Should show the initial name "Alice"
 		await expect(output).toHaveText('Alice')
 	})
 
 	test('updates when name property changes programmatically', async ({
 		page,
 	}) => {
-		await page.goto('http://localhost:4173/test/basic-hello.html')
-		await page.waitForSelector('basic-hello')
-
-		const basicHello = page.locator('basic-hello')
-		const output = basicHello.locator('output')
+		// Use the existing programmatic test element from HTML
+		const programmaticElement = page.locator('#programmatic-test')
+		const output = programmaticElement.locator('output')
 
 		// Change name property directly
-		await basicHello.evaluate(node => {
+		await programmaticElement.evaluate(node => {
 			;(node as any).name = 'Bob'
 		})
 
 		await expect(output).toHaveText('Bob')
 
 		// Change via attribute
-		await basicHello.evaluate(node => {
+		await programmaticElement.evaluate(node => {
 			node.setAttribute('name', 'Charlie')
 		})
 
@@ -78,12 +65,10 @@ test.describe('basic-hello component', () => {
 	test('preserves input value when switching between programmatic and user input', async ({
 		page,
 	}) => {
-		await page.goto('http://localhost:4173/test/basic-hello.html')
-		await page.waitForSelector('basic-hello')
-
-		const basicHello = page.locator('basic-hello')
-		const input = basicHello.locator('input')
-		const output = basicHello.locator('output')
+		// Use the existing preservation test element from HTML
+		const preservationElement = page.locator('#preservation-test')
+		const input = preservationElement.locator('input')
+		const output = preservationElement.locator('output')
 
 		// User types something
 		await input.fill('David')
@@ -91,7 +76,7 @@ test.describe('basic-hello component', () => {
 		await expect(input).toHaveValue('David')
 
 		// Programmatic change
-		await basicHello.evaluate(node => {
+		await preservationElement.evaluate(node => {
 			;(node as any).name = 'Eve'
 		})
 		await expect(output).toHaveText('Eve')
@@ -105,11 +90,10 @@ test.describe('basic-hello component', () => {
 	})
 
 	test('handles special characters and unicode', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-hello.html')
-		await page.waitForSelector('basic-hello')
-
-		const input = page.locator('basic-hello input')
-		const output = page.locator('basic-hello output')
+		// Use the existing unicode test element from HTML
+		const unicodeElement = page.locator('#unicode-test')
+		const input = unicodeElement.locator('input')
+		const output = unicodeElement.locator('output')
 
 		// Test special characters
 		await input.fill('José María')

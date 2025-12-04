@@ -1,41 +1,79 @@
-<ul>
-	<li>
-		inherited (en):
-		<basic-number
-			value="25678.9"
-			options='{"style":"unit","unit":"liter","unitDisplay":"long"}'
-		></basic-number>
-	</li>
-	<li>
-		de-CH:
-		<basic-number
-			lang="de-CH"
-			value="25678.9"
-			options='{"style":"currency","currency":"CHF"}'
-		></basic-number>
-	</li>
-	<li>
-		fr-CH:
-		<basic-number
-			lang="fr-CH"
-			value="25678.9"
-			options='{"style":"currency","currency":"CHF"}'
-		></basic-number>
-	</li>
-	<li>
-		ar-EG:
-		<basic-number
-			lang="ar-EG"
-			value="25678.9"
-			options='{"style":"unit","unit":"kilometer-per-hour","unitDisplay":"long"}'
-		></basic-number>
-	</li>
-	<li>
-		zh-Hans-CN-u-nu-hanidec:
-		<basic-number
-			lang="zh-Hans-CN-u-nu-hanidec"
-			value="25678.9"
-			options='{"style":"unit","unit":"second","unitDisplay":"long"}'
-		></basic-number>
-	</li>
-</ul>
+<!-- Default example -->
+<basic-number
+	value="25678.9"
+	options='{"style":"unit","unit":"liter","unitDisplay":"long"}'
+></basic-number>
+
+<!-- Currency examples -->
+<basic-number
+	id="german-swiss"
+	lang="de-CH"
+	value="25678.9"
+	options='{"style":"currency","currency":"CHF"}'
+></basic-number>
+
+<basic-number
+	id="french-swiss"
+	lang="fr-CH"
+	value="25678.9"
+	options='{"style":"currency","currency":"CHF"}'
+></basic-number>
+
+<!-- International examples -->
+<basic-number
+	id="arabic-speed"
+	lang="ar-EG"
+	value="25678.9"
+	options='{"style":"unit","unit":"kilometer-per-hour","unitDisplay":"long"}'
+></basic-number>
+
+<basic-number
+	id="chinese-time"
+	lang="zh-Hans-CN-u-nu-hanidec"
+	value="25678.9"
+	options='{"style":"unit","unit":"second","unitDisplay":"long"}'
+></basic-number>
+
+<!-- Decimal formatting example -->
+<basic-number
+	id="decimal-test"
+	value="1234.56789"
+	options='{"style":"decimal","minimumFractionDigits":2,"maximumFractionDigits":3}'
+></basic-number>
+
+<!-- Inheritance example -->
+<div lang="de-DE">
+	<basic-number
+		id="inherit-test"
+		value="1234.5"
+		options='{"style":"currency","currency":"EUR"}'
+	></basic-number>
+</div>
+
+<!-- Zero and negative examples -->
+<basic-number id="zero-test" value="0"></basic-number>
+<basic-number id="negative-test" value="-1234.5"></basic-number>
+
+<!-- Invalid configuration examples - should log console errors on page load -->
+<!-- These demonstrate proper error reporting to help developers debug configuration issues -->
+
+<!-- Invalid JSON syntax - logs "Invalid JSON: SyntaxError..." -->
+<basic-number
+	id="invalid-json-html"
+	value="1234.5"
+	options="{ invalid json }"
+></basic-number>
+
+<!-- Missing required currency for style="currency" - logs "style='currency' requires a 3-letter ISO currency..." -->
+<basic-number
+	id="missing-currency-html"
+	value="1000"
+	options='{"style":"currency"}'
+></basic-number>
+
+<!-- Missing required unit for style="unit" - logs "style='unit' requires a 'unit'..." -->
+<basic-number
+	id="missing-unit-html"
+	value="500"
+	options='{"style":"unit"}'
+></basic-number>

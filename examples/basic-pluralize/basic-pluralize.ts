@@ -4,6 +4,7 @@ import {
 	defineComponent,
 	setText,
 	show,
+	UI,
 } from '../..'
 
 export type BasicPluralizeProps = {
@@ -33,10 +34,20 @@ declare global {
 
 const FALLBACK_LOCALE = 'en'
 
+/**
+ * Parse a string as a positive integer (>= 0), falling back to 0 for negative values
+ */
+const asPositiveInteger =
+	() =>
+	<U extends UI>(ui: U, value: string | null | undefined) => {
+		const parsed = asInteger()(ui, value)
+		return parsed < 0 ? 0 : parsed
+	}
+
 export default defineComponent<BasicPluralizeProps, BasicPluralizeUI>(
 	'basic-pluralize',
 	{
-		count: asInteger(),
+		count: asPositiveInteger(),
 	},
 	({ first }) => ({
 		count: first('.count'),

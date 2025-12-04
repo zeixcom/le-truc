@@ -1,14 +1,16 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('basic-number component', () => {
-	test('renders default number formatting', async ({ page }) => {
+	test.beforeEach(async ({ page }) => {
 		page.on('console', msg => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
 		await page.goto('http://localhost:4173/test/basic-number.html')
 		await page.waitForSelector('basic-number')
+	})
 
+	test('renders default number formatting', async ({ page }) => {
 		// Test the first example: basic unit formatting
 		const firstNumber = page.locator('basic-number').first()
 		await expect(firstNumber).toHaveText('25,678.9 liters')
@@ -17,39 +19,28 @@ test.describe('basic-number component', () => {
 	test('formats currency with locale-specific formatting', async ({
 		page,
 	}) => {
-		await page.goto('http://localhost:4173/test/basic-number.html')
-		await page.waitForSelector('basic-number')
-
 		// Test German-Swiss currency formatting
-		const germanNumber = page.locator('basic-number[lang="de-CH"]').first()
+		const germanNumber = page.locator('#german-swiss')
 		await expect(germanNumber).toContainText('CHF') // Should contain Swiss Franc
 		await expect(germanNumber).toContainText('25') // Should contain the base number
 
 		// Test French-Swiss currency formatting
-		const frenchNumber = page.locator('basic-number[lang="fr-CH"]').first()
+		const frenchNumber = page.locator('#french-swiss')
 		await expect(frenchNumber).toContainText('CHF') // Should contain Swiss Franc
 		await expect(frenchNumber).toContainText('25') // Should contain the base number
 	})
 
 	test('handles different unit types and locales', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-number.html')
-		await page.waitForSelector('basic-number')
-
 		// Test Arabic locale with speed unit - expect Arabic-Indic numerals
-		const arabicNumber = page.locator('basic-number[lang="ar-EG"]')
+		const arabicNumber = page.locator('#arabic-speed')
 		await expect(arabicNumber).toContainText('٢٥') // Should contain Arabic-Indic numerals for 25
 
 		// Test Chinese locale with time unit - should contain time unit and some form of the number
-		const chineseNumber = page.locator(
-			'basic-number[lang="zh-Hans-CN-u-nu-hanidec"]',
-		)
+		const chineseNumber = page.locator('#chinese-time')
 		await expect(chineseNumber).toContainText('秒') // Should contain Chinese word for "second"
 	})
 
 	test('updates when value property changes', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-number.html')
-		await page.waitForSelector('basic-number')
-
 		const numberElement = page.locator('basic-number').first()
 
 		// Get initial text
@@ -66,129 +57,120 @@ test.describe('basic-number component', () => {
 	})
 
 	test('handles invalid JSON options gracefully', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-number.html')
+		// Test HTML markup error logging - should log error on page load
+		const htmlElement = page.locator('#invalid-json-html')
+		await expect(htmlElement).toHaveText('1,234.5') // Should fall back to default
 
-		// Create element with invalid JSON options
+		// Test dynamic creation also logs errors
+		const consoleMessages: string[] = []
+		page.on('console', msg => {
+			if (msg.type() === 'error') {
+				consoleMessages.push(msg.text())
+			}
+		})
+
 		await page.evaluate(() => {
 			const element = document.createElement('basic-number') as any
-			element.value = 1234.5
+			element.value = 9999
 			element.setAttribute('options', '{ invalid json }')
+			element.setAttribute('id', 'invalid-json-dynamic')
 			document.body.appendChild(element)
 		})
 
-		await page.waitForSelector('basic-number')
+		const dynamicElement = page.locator('#invalid-json-dynamic')
+		await expect(dynamicElement).toHaveText('9,999') // Should fall back to default
 
-		// Should fall back to default formatting
-		const newElement = page.locator('basic-number').last()
-		await expect(newElement).toHaveText('1,234.5')
+		// Verify console error was logged for dynamic creation
+		await page.waitForTimeout(100) // Allow time for console message
+		const hasJsonError = consoleMessages.some(
+			msg => msg.includes('Invalid JSON') || msg.includes('JSON'),
+		)
+		expect(hasJsonError).toBe(true)
 	})
 
 	test('handles missing required currency gracefully', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-number.html')
+		// Test HTML markup error logging - should log error on page load
+		const htmlElement = page.locator('#missing-currency-html')
+		await expect(htmlElement).toHaveText('1,000') // Should fall back to default
 
-		// Create element with currency style but no currency specified
+		// Test dynamic creation also logs errors
+		const consoleMessages: string[] = []
+		page.on('console', msg => {
+			if (msg.type() === 'error') {
+				consoleMessages.push(msg.text())
+			}
+		})
+
 		await page.evaluate(() => {
 			const element = document.createElement('basic-number') as any
-			element.value = 1000
+			element.value = 9999
 			element.setAttribute('options', '{"style":"currency"}')
+			element.setAttribute('id', 'missing-currency-dynamic')
 			document.body.appendChild(element)
 		})
 
-		await page.waitForSelector('basic-number')
+		const dynamicElement = page.locator('#missing-currency-dynamic')
+		await expect(dynamicElement).toHaveText('9,999') // Should fall back to default
 
-		// Should fall back to default formatting
-		const newElement = page.locator('basic-number').last()
-		await expect(newElement).toHaveText('1,000')
+		// Verify console error was logged for dynamic creation
+		await page.waitForTimeout(100) // Allow time for console message
+		const hasCurrencyError = consoleMessages.some(
+			msg => msg.includes('currency') && msg.includes('CHF'),
+		)
+		expect(hasCurrencyError).toBe(true)
 	})
 
 	test('handles missing required unit gracefully', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-number.html')
+		// Test HTML markup error logging - should log error on page load
+		const htmlElement = page.locator('#missing-unit-html')
+		await expect(htmlElement).toHaveText('500') // Should fall back to default
 
-		// Create element with unit style but no unit specified
+		// Test dynamic creation also logs errors
+		const consoleMessages: string[] = []
+		page.on('console', msg => {
+			if (msg.type() === 'error') {
+				consoleMessages.push(msg.text())
+			}
+		})
+
 		await page.evaluate(() => {
 			const element = document.createElement('basic-number') as any
-			element.value = 500
+			element.value = 9999
 			element.setAttribute('options', '{"style":"unit"}')
+			element.setAttribute('id', 'missing-unit-dynamic')
 			document.body.appendChild(element)
 		})
 
-		await page.waitForSelector('basic-number')
+		const dynamicElement = page.locator('#missing-unit-dynamic')
+		await expect(dynamicElement).toHaveText('9,999') // Should fall back to default
 
-		// Should fall back to default formatting
-		const newElement = page.locator('basic-number').last()
-		await expect(newElement).toHaveText('500')
+		// Verify console error was logged for dynamic creation
+		await page.waitForTimeout(100) // Allow time for console message
+		const hasUnitError = consoleMessages.some(
+			msg =>
+				msg.includes('unit')
+				&& (msg.includes('liter') || msg.includes('kilometer')),
+		)
+		expect(hasUnitError).toBe(true)
 	})
 
 	test('works with decimal style formatting', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-number.html')
-
-		// Create element with decimal formatting options
-		await page.evaluate(() => {
-			const element = document.createElement('basic-number') as any
-			element.value = 1234.56789
-			element.setAttribute(
-				'options',
-				'{"style":"decimal","minimumFractionDigits":2,"maximumFractionDigits":3}',
-			)
-			document.body.appendChild(element)
-		})
-
-		await page.waitForSelector('basic-number')
-
-		const newElement = page.locator('basic-number').last()
+		// Use the existing decimal test element from HTML
+		const decimalElement = page.locator('#decimal-test')
 		// Should respect the fraction digit limits
-		await expect(newElement).toHaveText('1,234.568')
+		await expect(decimalElement).toHaveText('1,234.568')
 	})
 
 	test('inherits locale from closest lang attribute', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-number.html')
-
-		// Create a container with lang attribute and nested basic-number
-		await page.evaluate(() => {
-			const container = document.createElement('div')
-			container.setAttribute('lang', 'de-DE')
-
-			const element = document.createElement('basic-number') as any
-			element.value = 1234.5
-			element.setAttribute(
-				'options',
-				'{"style":"currency","currency":"EUR"}',
-			)
-
-			container.appendChild(element)
-			document.body.appendChild(container)
-		})
-
-		await page.waitForSelector('basic-number')
-
-		const newElement = page.locator('div[lang="de-DE"] basic-number')
+		// Use the existing inheritance test element from HTML
+		const inheritElement = page.locator('#inherit-test')
 		// Should use German formatting for currency
-		await expect(newElement).toContainText('€')
-		await expect(newElement).toContainText('1') // Should contain the number
+		await expect(inheritElement).toContainText('€')
+		await expect(inheritElement).toContainText('1') // Should contain the number
 	})
 
 	test('handles zero and negative values correctly', async ({ page }) => {
-		await page.goto('http://localhost:4173/test/basic-number.html')
-
-		// Test zero value
-		await page.evaluate(() => {
-			const element = document.createElement('basic-number') as any
-			element.value = 0
-			element.setAttribute('id', 'zero-test')
-			document.body.appendChild(element)
-		})
-
-		// Test negative value
-		await page.evaluate(() => {
-			const element = document.createElement('basic-number') as any
-			element.value = -1234.5
-			element.setAttribute('id', 'negative-test')
-			document.body.appendChild(element)
-		})
-
-		await page.waitForSelector('#zero-test')
-		await page.waitForSelector('#negative-test')
-
+		// Use the existing elements from HTML
 		const zeroElement = page.locator('#zero-test')
 		const negativeElement = page.locator('#negative-test')
 

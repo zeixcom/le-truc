@@ -1,5 +1,34 @@
+<!-- Default example -->
 <basic-hello>
 	<label for="name">Your name</label>
 	<input id="name" name="name" type="text" autocomplete="given-name" />
 	<p>Hello, <output for="name">World</output>!</p>
+</basic-hello>
+
+<!-- Initial name attribute example - tests that name="Alice" shows initially -->
+<basic-hello id="initial-name-test" name="Alice">
+	<label for="name2">Your name</label>
+	<input id="name2" name="name" type="text" autocomplete="given-name" />
+	<p>Hello, <output for="name2">World</output>!</p>
+</basic-hello>
+
+<!-- Programmatic changes example - tests property and attribute changes -->
+<basic-hello id="programmatic-test">
+	<label for="name3">Your name</label>
+	<input id="name3" name="name" type="text" autocomplete="given-name" />
+	<p>Hello, <output for="name3">World</output>!</p>
+</basic-hello>
+
+<!-- Input preservation example - tests that input value is preserved when switching between user input and programmatic changes -->
+<basic-hello id="preservation-test">
+	<label for="name4">Your name</label>
+	<input id="name4" name="name" type="text" autocomplete="given-name" />
+	<p>Hello, <output for="name4">World</output>!</p>
+</basic-hello>
+
+<!-- Special characters and unicode example - tests José María, emojis, and HTML-sensitive characters -->
+<basic-hello id="unicode-test">
+	<label for="name5">Your name</label>
+	<input id="name5" name="name" type="text" autocomplete="given-name" />
+	<p>Hello, <output for="name5">World</output>!</p>
 </basic-hello>

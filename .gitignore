@@ -12,6 +12,7 @@ examples/assets/main.css
 
 # Playwright test reports
 playwright-report/
+test-results/
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
