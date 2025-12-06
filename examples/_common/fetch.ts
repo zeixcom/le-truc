@@ -61,8 +61,8 @@ export const asURL =
 			error = 'No URL provided'
 		} else if (
 			(
-				ui.host.parentElement
-				|| (ui.host.getRootNode() as ShadowRoot).host
+				ui.host.parentElement ||
+				(ui.host.getRootNode() as ShadowRoot).host
 			)?.closest(`${ui.host.localName}[src="${v}"]`)
 		) {
 			error = 'Recursive loading detected'

@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
-	testDir: './tests',
+	testDir: './examples',
+	testMatch: '**/*.spec.ts',
 	timeout: 30 * 1000,
 	expect: {
 		timeout: 5000,

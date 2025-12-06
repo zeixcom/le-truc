@@ -1,7 +1,7 @@
 import { batch, createState, defineComponent, on, toggleClass } from '../..'
 
 const MIN_INTERSECTION_RATIO = 0
-const MAX_INTERSECTION_RATIO = 0.999 // ignore rounding errors of fraction pixels
+const MAX_INTERSECTION_RATIO = 0.99 // ignore rounding errors of fraction pixels
 
 const observeOverflow = (
 	container: HTMLElement,

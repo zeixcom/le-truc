@@ -111,10 +111,8 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 								: key === 'End'
 									? total - 1
 									: wrapAround(
-											host.index
-												+ (key === 'ArrowLeft'
-													? -1
-													: 1),
+											host.index +
+												(key === 'ArrowLeft' ? -1 : 1),
 											total,
 										)
 						slides[nextIndex].focus()

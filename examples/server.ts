@@ -12,9 +12,9 @@ async function getComponentFragments() {
 	const fragments: Record<string, string> = {}
 	for (const dir of dirs) {
 		if (
-			!dir.isDirectory()
-			|| dir.name === 'assets'
-			|| dir.name === '_common'
+			!dir.isDirectory() ||
+			dir.name === 'assets' ||
+			dir.name === '_common'
 		)
 			continue
 		const files = await readdir(join(EXAMPLES_DIR, dir.name))

@@ -17,7 +17,7 @@ module-carousel {
 		overscroll-behavior-x: none;
 	}
 
-	[role='tabpanel'] {
+	[role="tabpanel"] {
 		width: 100%;
 		height: calc(100% - var(--input-height));
 		padding-bottom: var(--input-height);
@@ -77,7 +77,7 @@ module-carousel {
 			}
 		}
 
-		[role='tablist'] {
+		[role="tablist"] {
 			position: absolute;
 			bottom: 0;
 			left: 0;
@@ -86,7 +86,7 @@ module-carousel {
 			justify-content: center;
 			margin-block: var(--space-m);
 
-			[role='tab'] {
+			[role="tab"] {
 				width: var(--space-l);
 				height: var(--space-l);
 				border: 0;
@@ -104,7 +104,7 @@ module-carousel {
 					opacity: var(--opacity-dimmed);
 				}
 
-				&[aria-selected='true'] {
+				&[aria-selected="true"] {
 					opacity: var(--opacity-solid);
 				}
 			}

@@ -55,10 +55,10 @@ const manageFocus = (
 			else if (key === LAST_KEY) index = radios.length - 1
 			else
 				index =
-					(index
-						+ (INCREMENT_KEYS.includes(key) ? 1 : -1)
-						+ radios.length)
-					% radios.length
+					(index +
+						(INCREMENT_KEYS.includes(key) ? 1 : -1) +
+						radios.length) %
+					radios.length
 			if (radios[index]) radios[index].focus()
 		}),
 	]

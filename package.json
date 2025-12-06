@@ -17,7 +17,7 @@
 		"lint": "bunx biome check --write ./src",
 		"lint:examples": "bunx biome check --write ./examples",
 		"serve:examples": "bun run build:examples && bun run examples/server.ts",
-		"test": "bunx playwright test test"
+		"test:examples": "bunx playwright test examples"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.8",

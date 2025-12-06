@@ -1,4 +1,5 @@
-<module-scrollarea orientation="vertical">
+<!-- Default vertical scrollarea with overflow -->
+<module-scrollarea id="default-vertical" orientation="vertical">
 	<div>
 		<p>
 			Forts torterep mansporternme hood, weres mainig foold low, awayor
@@ -47,3 +48,146 @@
 		</p>
 	</div>
 </module-scrollarea>
+
+<style>
+	#default-vertical {
+		height: 200px;
+		width: 300px;
+		border: 1px solid #ccc;
+		margin: 20px;
+	}
+</style>
+
+<!-- Horizontal scrollarea with overflow -->
+<module-scrollarea id="horizontal-overflow" orientation="horizontal">
+	<div style="display: flex; gap: 20px; width: 800px">
+		<div
+			style="
+				flex-shrink: 0;
+				width: 150px;
+				height: 100px;
+				background: #f0f0f0;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			"
+		>
+			Item 1
+		</div>
+		<div
+			style="
+				flex-shrink: 0;
+				width: 150px;
+				height: 100px;
+				background: #e0e0e0;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			"
+		>
+			Item 2
+		</div>
+		<div
+			style="
+				flex-shrink: 0;
+				width: 150px;
+				height: 100px;
+				background: #d0d0d0;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			"
+		>
+			Item 3
+		</div>
+		<div
+			style="
+				flex-shrink: 0;
+				width: 150px;
+				height: 100px;
+				background: #c0c0c0;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			"
+		>
+			Item 4
+		</div>
+		<div
+			style="
+				flex-shrink: 0;
+				width: 150px;
+				height: 100px;
+				background: #b0b0b0;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			"
+		>
+			Item 5
+		</div>
+	</div>
+</module-scrollarea>
+
+<style>
+	#horizontal-overflow {
+		width: 400px;
+		height: 120px;
+		border: 1px solid #ccc;
+		margin: 20px;
+	}
+</style>
+
+<!-- Vertical scrollarea without overflow -->
+<module-scrollarea id="no-overflow-vertical" orientation="vertical">
+	<div>
+		<p>Short content that doesn't overflow.</p>
+	</div>
+</module-scrollarea>
+
+<style>
+	#no-overflow-vertical {
+		height: 200px;
+		width: 300px;
+		border: 1px solid #ccc;
+		margin: 20px;
+	}
+</style>
+
+<!-- Horizontal scrollarea without overflow -->
+<module-scrollarea id="no-overflow-horizontal" orientation="horizontal">
+	<div
+		style="
+			width: 200px;
+			height: 100px;
+			background: #f0f0f0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		"
+	>
+		Short content
+	</div>
+</module-scrollarea>
+
+<style>
+	#no-overflow-horizontal {
+		width: 400px;
+		height: 120px;
+		border: 1px solid #ccc;
+		margin: 20px;
+	}
+</style>
+
+<!-- Empty scrollarea -->
+<module-scrollarea id="empty-scrollarea" orientation="vertical">
+</module-scrollarea>
+
+<style>
+	#empty-scrollarea {
+		height: 200px;
+		width: 300px;
+		border: 1px solid #ccc;
+		margin: 20px;
+	}
+</style>
