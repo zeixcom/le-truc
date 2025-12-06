@@ -1333,21 +1333,64 @@ var toggleClass = (token, reactive = token) => updateElement(reactive, {
     el.classList.toggle(token, value);
   }
 });
+// src/scheduler.ts
+var pendingComponents = new Set;
+var tasks = new WeakMap;
+var requestId;
+var runTasks = () => {
+  requestId = undefined;
+  const components = Array.from(pendingComponents);
+  pendingComponents.clear();
+  for (const component of components)
+    tasks.get(component)?.();
+};
+var requestTick = () => {
+  if (requestId)
+    cancelAnimationFrame(requestId);
+  requestId = requestAnimationFrame(runTasks);
+};
+var schedule = (component, task) => {
+  tasks.set(component, task);
+  pendingComponents.add(component);
+  requestTick();
+};
+
 // src/effects/event.ts
-var on = (type, handler, options = false) => (host, target) => {
+var PASSIVE_EVENTS = new Set([
+  "scroll",
+  "resize",
+  "input",
+  "mousewheel",
+  "touchstart",
+  "touchmove",
+  "wheel"
+]);
+var on = (type, handler, options = {}) => (host, target) => {
+  if (!("passive" in options))
+    options = { ...options, passive: PASSIVE_EVENTS.has(type) };
   const listener = (e) => {
-    const result = handler({ host, target, event: e });
-    if (!isRecord(result))
-      return;
-    batch(() => {
-      for (const [key, value] of Object.entries(result)) {
-        try {
-          host[key] = value;
-        } catch (error) {
-          log(error, `Reactive property "${key}" on ${elementName(host)} from event ${type} on ${elementName(target)} could not be set, because it is read-only.`, LOG_ERROR);
+    const task = () => {
+      const result = handler({
+        host,
+        target,
+        event: e
+      });
+      if (!isRecord(result))
+        return;
+      batch(() => {
+        for (const [key, value] of Object.entries(result)) {
+          try {
+            host[key] = value;
+          } catch (error) {
+            log(error, `Reactive property "${key}" on ${elementName(host)} from event ${type} on ${elementName(target)} could not be set, because it is read-only.`, LOG_ERROR);
+          }
         }
-      }
-    });
+      });
+    };
+    if (options.passive)
+      schedule(host, task);
+    else
+      task();
   };
   target.addEventListener(type, listener, options);
   return () => target.removeEventListener(type, listener);
@@ -1585,6 +1628,7 @@ export {
   setStyle,
   setProperty,
   setAttribute,
+  schedule,
   runElementEffects,
   runEffects,
   resolve,

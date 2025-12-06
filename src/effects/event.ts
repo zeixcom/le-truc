@@ -7,6 +7,7 @@ import {
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from '../component'
 import { type Effect, RESET, type Reactive, resolveReactive } from '../effects'
+import { schedule } from '../scheduler'
 import { elementName, LOG_ERROR, log } from '../util'
 
 /* === Types === */
@@ -24,6 +25,19 @@ type EventHandler<
 	host: Component<P>
 	target: E
 }) => { [K in keyof P]?: P[K] } | void | Promise<void>
+
+/* === Constants === */
+
+// High-frequency events that are passive by default and should be scheduled
+const PASSIVE_EVENTS = new Set([
+	'scroll',
+	'resize',
+	'input',
+	'mousewheel',
+	'touchstart',
+	'touchmove',
+	'wheel',
+])
 
 /* === Exported Function === */
 
@@ -45,25 +59,35 @@ const on =
 	>(
 		type: K,
 		handler: EventHandler<P, E, EventType<K>>,
-		options: AddEventListenerOptions | boolean = false,
+		options: AddEventListenerOptions = {},
 	): Effect<P, E> =>
 	(host, target): Cleanup => {
+		if (!('passive' in options))
+			options = { ...options, passive: PASSIVE_EVENTS.has(type) }
 		const listener = (e: Event) => {
-			const result = handler({ host, target, event: e as EventType<K> })
-			if (!isRecord(result)) return
-			batch(() => {
-				for (const [key, value] of Object.entries(result)) {
-					try {
-						host[key as keyof P] = value
-					} catch (error) {
-						log(
-							error,
-							`Reactive property "${key}" on ${elementName(host)} from event ${type} on ${elementName(target)} could not be set, because it is read-only.`,
-							LOG_ERROR,
-						)
+			const task = () => {
+				const result = handler({
+					host,
+					target,
+					event: e as EventType<K>,
+				})
+				if (!isRecord(result)) return
+				batch(() => {
+					for (const [key, value] of Object.entries(result)) {
+						try {
+							host[key as keyof P] = value
+						} catch (error) {
+							log(
+								error,
+								`Reactive property "${key}" on ${elementName(host)} from event ${type} on ${elementName(target)} could not be set, because it is read-only.`,
+								LOG_ERROR,
+							)
+						}
 					}
-				}
-			})
+				})
+			}
+			if (options.passive) schedule(host, task)
+			else task()
 		}
 		target.addEventListener(type, listener, options)
 		return () => target.removeEventListener(type, listener)

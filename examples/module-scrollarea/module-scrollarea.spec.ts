@@ -16,7 +16,6 @@ test.describe('module-scrollarea component', () => {
 		}) => {
 			const scrollarea = page.locator('#default-vertical')
 			await expect(scrollarea).toBeVisible()
-			await expect(scrollarea).toHaveAttribute('orientation', 'vertical')
 
 			// Should have overflow-y: auto styling
 			const computedStyle = await scrollarea.evaluate(

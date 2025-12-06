@@ -18,7 +18,7 @@ type EventHandler<P extends ComponentProps, E extends Element, Evt extends Event
  * @param {AddEventListenerOptions | boolean} options - Event listener options
  * @returns {Effect<ComponentProps, E>} Effect function that manages the event listener
  */
-declare const on: <K extends keyof HTMLElementEventMap | string, P extends ComponentProps, E extends Element = HTMLElement>(type: K, handler: EventHandler<P, E, EventType<K>>, options?: AddEventListenerOptions | boolean) => Effect<P, E>;
+declare const on: <K extends keyof HTMLElementEventMap | string, P extends ComponentProps, E extends Element = HTMLElement>(type: K, handler: EventHandler<P, E, EventType<K>>, options?: AddEventListenerOptions) => Effect<P, E>;
 /**
  * Effect for emitting custom events with reactive detail values.
  * Creates and dispatches CustomEvent instances with bubbling enabled by default.

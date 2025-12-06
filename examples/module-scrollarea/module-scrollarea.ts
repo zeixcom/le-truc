@@ -58,8 +58,6 @@ export default defineComponent(
 						)
 					}
 
-		let scrolling: number | null = null
-
 		return {
 			host: [
 				toggleClass('overflow', hasOverflow),
@@ -78,12 +76,7 @@ export default defineComponent(
 						},
 					),
 				on('scroll', () => {
-					if (!hasOverflow()) return
-					if (scrolling) cancelAnimationFrame(scrolling)
-					scrolling = requestAnimationFrame(() => {
-						scrolling = null
-						batch(scrollCallback)
-					})
+					if (hasOverflow()) batch(scrollCallback)
 				}),
 			],
 		}
