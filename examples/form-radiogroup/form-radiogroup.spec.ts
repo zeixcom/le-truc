@@ -114,32 +114,32 @@ test.describe('form-radiogroup component', () => {
 
 		// Arrow right should wrap around to index 0 (female)
 		await page.keyboard.press('ArrowRight')
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 		await expect(femaleRadio).toBeFocused()
 
 		// Arrow right should move to index 1 (male)
 		await page.keyboard.press('ArrowRight')
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 		await expect(maleRadio).toBeFocused()
 
 		// Arrow right should move to index 2 (other)
 		await page.keyboard.press('ArrowRight')
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 		await expect(otherRadio).toBeFocused()
 
 		// Arrow left should move backwards to index 1 (male)
 		await page.keyboard.press('ArrowLeft')
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 		await expect(maleRadio).toBeFocused()
 
 		// Arrow left should move to index 0 (female)
 		await page.keyboard.press('ArrowLeft')
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 		await expect(femaleRadio).toBeFocused()
 
 		// Arrow left from first item should wrap around to last item (other)
 		await page.keyboard.press('ArrowLeft')
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 		await expect(otherRadio).toBeFocused()
 	})
 
@@ -157,17 +157,17 @@ test.describe('form-radiogroup component', () => {
 
 		// Arrow down should move focus (same as arrow right) to next index (other)
 		await page.keyboard.press('ArrowDown')
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 		await expect(otherRadio).toBeFocused()
 
 		// Arrow down should wrap around to first item (female)
 		await page.keyboard.press('ArrowDown')
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 		await expect(femaleRadio).toBeFocused()
 
 		// Arrow up should move focus backwards (same as arrow left) to last item (other)
 		await page.keyboard.press('ArrowUp')
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 		await expect(otherRadio).toBeFocused()
 	})
 
@@ -183,12 +183,12 @@ test.describe('form-radiogroup component', () => {
 
 		// Home should move to first radio (female is first in DOM)
 		await page.keyboard.press('Home')
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 		await expect(femaleRadio).toBeFocused()
 
 		// End should move to last radio (other is last in DOM)
 		await page.keyboard.press('End')
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 		await expect(otherRadio).toBeFocused()
 	})
 
@@ -247,7 +247,7 @@ test.describe('form-radiogroup component', () => {
 
 		// After selecting female, it should get tabindex 0
 		await femaleRadio.click()
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 
 		// Check tabindex after selection change
 		const updatedTabIndexes = await page.evaluate(() => {
@@ -574,7 +574,7 @@ test.describe('form-radiogroup component', () => {
 
 		// Verify focus management is still working - should move to next index
 		await page.keyboard.press('ArrowRight')
-		await page.waitForTimeout(100)
+		await page.waitForTimeout(10)
 		const maleRadio = radiogroupComponent.locator('input[value="male"]')
 		await expect(maleRadio).toBeFocused()
 	})

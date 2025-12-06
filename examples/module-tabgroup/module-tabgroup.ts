@@ -30,15 +30,12 @@ const getSelected = (
 	elements: Collection<HTMLElement>,
 	isCurrent: (element: HTMLElement) => boolean,
 	offset = 0,
-) =>
-	getAriaControls(
-		elements.get()[
-			Math.min(
-				Math.max(elements.get().findIndex(isCurrent) + offset, 0),
-				elements.length - 1,
-			)
-		],
-	)
+) => {
+	const tabs = elements.get()
+	const currentIndex = tabs.findIndex(isCurrent)
+	const newIndex = (currentIndex + offset + tabs.length) % tabs.length
+	return getAriaControls(tabs[newIndex])
+}
 
 export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 	'module-tabgroup',
@@ -66,17 +63,19 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 						event.preventDefault()
 						event.stopPropagation()
 						const tabs = ui.tabs.get()
-						const next = getSelected(
-							ui.tabs,
-							tab => tab === target,
+						const next =
 							key === 'Home'
-								? -tabs.length
+								? getAriaControls(tabs[0])
 								: key === 'End'
-									? tabs.length
-									: key === 'ArrowLeft' || key === 'ArrowUp'
-										? -1
-										: 1,
-						)
+									? getAriaControls(tabs[tabs.length - 1])
+									: getSelected(
+											ui.tabs,
+											tab => tab === target,
+											key === 'ArrowLeft'
+												|| key === 'ArrowUp'
+												? -1
+												: 1,
+										)
 						tabs.filter(
 							tab => getAriaControls(tab) === next,
 						)[0].focus()

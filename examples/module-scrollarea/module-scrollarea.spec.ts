@@ -58,7 +58,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#default-vertical')
 
 			// Wait for component to initialize and detect overflow
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Should have overflow classes when content overflows
 			await expect(scrollarea).toHaveClass(/overflow/)
@@ -74,7 +74,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#no-overflow-vertical')
 
 			// Wait for component to initialize
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Should not have any overflow classes
 			await expect(scrollarea).not.toHaveClass(/overflow/)
@@ -88,7 +88,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#default-vertical')
 
 			// Wait for initial state
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 			await expect(scrollarea).toHaveClass(/overflow-end/)
 			await expect(scrollarea).not.toHaveClass(/overflow-start/)
 
@@ -98,7 +98,7 @@ test.describe('module-scrollarea component', () => {
 			})
 
 			// Wait for scroll handler to execute
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Should now have both overflow classes
 			await expect(scrollarea).toHaveClass(/overflow/)
@@ -112,7 +112,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#default-vertical')
 
 			// Wait for initial state
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Scroll to bottom
 			await scrollarea.evaluate(el => {
@@ -121,7 +121,7 @@ test.describe('module-scrollarea component', () => {
 			})
 
 			// Wait for scroll handler to execute
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Should have overflow-start but not overflow-end
 			await expect(scrollarea).toHaveClass(/overflow-start/)
@@ -168,7 +168,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#no-overflow-horizontal')
 
 			// Wait for component to initialize
-			await page.waitForTimeout(300)
+			await page.waitForTimeout(10)
 
 			// Check actual overflow state
 			const dimensions = await scrollarea.evaluate(el => {
@@ -191,7 +191,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#horizontal-overflow')
 
 			// Wait for initial state
-			await page.waitForTimeout(500)
+			await page.waitForTimeout(10)
 
 			// Check if we have overflow first
 			const hasOverflow = await scrollarea.evaluate(el => {
@@ -216,7 +216,7 @@ test.describe('module-scrollarea component', () => {
 			})
 
 			// Wait for scroll handler to execute
-			await page.waitForTimeout(300)
+			await page.waitForTimeout(10)
 
 			// Verify scroll position changed
 			const newScrollLeft = await scrollarea.evaluate(el => el.scrollLeft)
@@ -261,7 +261,7 @@ test.describe('module-scrollarea component', () => {
 			}, maxScrollLeft)
 
 			// Wait for scroll handler to execute
-			await page.waitForTimeout(300)
+			await page.waitForTimeout(10)
 
 			// Verify we're at the right edge
 			const finalScrollLeft = await scrollarea.evaluate(
@@ -279,7 +279,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#default-vertical')
 
 			// Wait for initial state
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(50)
 
 			// Check that bottom shadow is visible (overflow-end class present)
 			const afterOpacity = await scrollarea.evaluate(
@@ -300,7 +300,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#horizontal-overflow')
 
 			// Wait for initial state
-			await page.waitForTimeout(500)
+			await page.waitForTimeout(20)
 
 			// Check if we have actual overflow first
 			const hasOverflow = await scrollarea.evaluate(el => {
@@ -310,7 +310,7 @@ test.describe('module-scrollarea component', () => {
 
 			if (hasOverflow) {
 				// Wait for classes to be applied
-				await page.waitForTimeout(200)
+				await page.waitForTimeout(20)
 
 				// Check pseudo-elements (may not work in all browsers)
 				try {
@@ -344,7 +344,7 @@ test.describe('module-scrollarea component', () => {
 			})
 
 			// Wait for scroll handler
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(50)
 
 			// Both shadows should be visible when in middle
 			const beforeOpacity = await scrollarea.evaluate(
@@ -376,7 +376,7 @@ test.describe('module-scrollarea component', () => {
 			await page.mouse.wheel(0, 100)
 
 			// Wait for scroll to complete
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(50)
 
 			// Should have scrolled down
 			const newScrollTop = await scrollarea.evaluate(el => el.scrollTop)
@@ -400,7 +400,7 @@ test.describe('module-scrollarea component', () => {
 			})
 
 			// Wait for scroll to complete
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Should have scrolled right
 			const newScrollLeft = await scrollarea.evaluate(el => el.scrollLeft)
@@ -434,7 +434,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#default-vertical')
 
 			// Wait for initialization
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Check class combinations
 			const classes = await scrollarea.getAttribute('class')
@@ -466,7 +466,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#no-overflow-vertical')
 
 			// Initially no overflow
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 			await expect(scrollarea).not.toHaveClass(/overflow/)
 
 			// Add more content dynamically
@@ -480,7 +480,7 @@ test.describe('module-scrollarea component', () => {
 			})
 
 			// Wait for intersection observer to detect changes
-			await page.waitForTimeout(200)
+			await page.waitForTimeout(10)
 
 			// Should now detect overflow
 			await expect(scrollarea).toHaveClass(/overflow/)
@@ -492,7 +492,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#default-vertical')
 
 			// Initial state with overflow
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 			await expect(scrollarea).toHaveClass(/overflow/)
 
 			// Remove content to eliminate overflow
@@ -504,7 +504,7 @@ test.describe('module-scrollarea component', () => {
 			})
 
 			// Wait for intersection observer to detect changes
-			await page.waitForTimeout(300)
+			await page.waitForTimeout(10)
 
 			// Should no longer have overflow classes
 			await expect(scrollarea).not.toHaveClass(/overflow-end/)
@@ -523,7 +523,7 @@ test.describe('module-scrollarea component', () => {
 			}
 
 			// Wait for all animations to complete
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Should still respond correctly to final position
 			const finalScrollTop = await scrollarea.evaluate(el => el.scrollTop)

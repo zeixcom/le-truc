@@ -98,7 +98,7 @@ test.describe('module-carousel component', () => {
 			await nextButton.click()
 
 			// Wait for navigation
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Second slide should be current
 			const secondSlide = slides.nth(1)
@@ -127,11 +127,11 @@ test.describe('module-carousel component', () => {
 
 			// Go to second slide first
 			await nextButton.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Click prev button
 			await prevButton.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// First slide should be current again
 			const firstSlide = slides.first()
@@ -152,9 +152,9 @@ test.describe('module-carousel component', () => {
 
 			// Navigate to last slide (index 2)
 			await nextButton.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 			await nextButton.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Third slide should be current
 			const thirdSlide = slides.nth(2)
@@ -162,7 +162,7 @@ test.describe('module-carousel component', () => {
 
 			// Click next again to wrap around
 			await nextButton.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Should wrap to first slide
 			const firstSlide = slides.first()
@@ -182,7 +182,7 @@ test.describe('module-carousel component', () => {
 
 			// Click prev from first slide to wrap around
 			await prevButton.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Should wrap to last slide
 			const thirdSlide = slides.nth(2)
@@ -207,7 +207,7 @@ test.describe('module-carousel component', () => {
 			// Click third dot (index 2)
 			const thirdDot = dots.nth(2)
 			await thirdDot.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Third slide should be current
 			const thirdSlide = slides.nth(2)
@@ -235,7 +235,7 @@ test.describe('module-carousel component', () => {
 			// Click second dot
 			const secondDot = dots.nth(1)
 			await secondDot.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			const currentIndex = await page.evaluate(() => {
 				const carousel = document.querySelector('module-carousel')
@@ -256,7 +256,7 @@ test.describe('module-carousel component', () => {
 
 			// Press right arrow
 			await page.keyboard.press('ArrowRight')
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Second slide should be current
 			const secondSlide = slides.nth(1)
@@ -264,7 +264,7 @@ test.describe('module-carousel component', () => {
 
 			// Press left arrow
 			await page.keyboard.press('ArrowLeft')
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// First slide should be current again
 			const firstSlide = slides.first()
@@ -278,12 +278,12 @@ test.describe('module-carousel component', () => {
 
 			// Go to middle slide first
 			await nextButton.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Focus and press End key
 			await nextButton.focus()
 			await page.keyboard.press('End')
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Last slide should be current
 			const thirdSlide = slides.nth(2)
@@ -291,7 +291,7 @@ test.describe('module-carousel component', () => {
 
 			// Press Home key
 			await page.keyboard.press('Home')
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// First slide should be current
 			const firstSlide = slides.first()
@@ -305,14 +305,14 @@ test.describe('module-carousel component', () => {
 
 			// Navigate to last slide
 			await nextButton.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 			await nextButton.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Focus and press right arrow to wrap around
 			await nextButton.focus()
 			await page.keyboard.press('ArrowRight')
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Should wrap to first slide
 			const firstSlide = slides.first()
@@ -320,7 +320,7 @@ test.describe('module-carousel component', () => {
 
 			// Press left arrow to wrap around backwards
 			await page.keyboard.press('ArrowLeft')
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Should wrap to last slide
 			const thirdSlide = slides.nth(2)
@@ -372,7 +372,7 @@ test.describe('module-carousel component', () => {
 			})
 
 			// Wait for reactive updates
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Index should be updated
 			const updatedIndex = await page.evaluate(() => {
@@ -393,7 +393,7 @@ test.describe('module-carousel component', () => {
 			// Click different dots and verify index updates
 			for (let i = 0; i < 3; i++) {
 				await dots.nth(i).click()
-				await page.waitForTimeout(100)
+				await page.waitForTimeout(10)
 
 				const currentIndex = await page.evaluate(() => {
 					const carousel = document.querySelector('module-carousel')
@@ -422,7 +422,7 @@ test.describe('module-carousel component', () => {
 
 			// Navigate and check ARIA states update
 			await nextButton.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			await expect(slides.first()).toHaveAttribute(
 				'aria-current',
@@ -450,7 +450,7 @@ test.describe('module-carousel component', () => {
 
 			// Navigate and check tabindex updates
 			await nextButton.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			await expect(dots.first()).toHaveAttribute('tabindex', '-1')
 			await expect(dots.nth(1)).toHaveAttribute('tabindex', '0')
@@ -510,7 +510,7 @@ test.describe('module-carousel component', () => {
 			// Navigate through all slides sequentially
 			for (let i = 0; i < 5; i++) {
 				await nextButton.click()
-				await page.waitForTimeout(100)
+				await page.waitForTimeout(10)
 
 				expectedIndex = (expectedIndex + 1) % 3 // Wrap around at 3
 
@@ -532,7 +532,7 @@ test.describe('module-carousel component', () => {
 
 			// Use button navigation
 			await nextButton.click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			let currentIndex = await page.evaluate(() => {
 				const carousel = document.querySelector('module-carousel')
@@ -542,7 +542,7 @@ test.describe('module-carousel component', () => {
 
 			// Use dot navigation
 			await dots.nth(2).click()
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			currentIndex = await page.evaluate(() => {
 				const carousel = document.querySelector('module-carousel')
@@ -553,7 +553,7 @@ test.describe('module-carousel component', () => {
 			// Use keyboard navigation
 			await nextButton.focus()
 			await page.keyboard.press('Home')
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			currentIndex = await page.evaluate(() => {
 				const carousel = document.querySelector('module-carousel')

@@ -208,7 +208,7 @@ test.describe('module-pagination component', () => {
 			// Go to page 3 first
 			await nextButton.click()
 			await nextButton.click()
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			// Click prev button
 			await prevButton.click()
@@ -250,7 +250,7 @@ test.describe('module-pagination component', () => {
 			// Go to maximum value (10)
 			await input.fill('10')
 			await input.blur()
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			// Next button should be disabled
 			await expect(nextButton).toBeDisabled()
@@ -285,7 +285,7 @@ test.describe('module-pagination component', () => {
 					}),
 				)
 			})
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			let componentValue = await page.evaluate(() => {
 				const pagination = document.querySelector('module-pagination')
@@ -304,7 +304,7 @@ test.describe('module-pagination component', () => {
 					}),
 				)
 			})
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			componentValue = await page.evaluate(() => {
 				const pagination = document.querySelector('module-pagination')
@@ -327,7 +327,7 @@ test.describe('module-pagination component', () => {
 					new KeyboardEvent('keyup', { key: '+', bubbles: true }),
 				)
 			})
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			let componentValue = await page.evaluate(() => {
 				const pagination = document.querySelector('module-pagination')
@@ -343,7 +343,7 @@ test.describe('module-pagination component', () => {
 					new KeyboardEvent('keyup', { key: '-', bubbles: true }),
 				)
 			})
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			componentValue = await page.evaluate(() => {
 				const pagination = document.querySelector('module-pagination')
@@ -372,7 +372,7 @@ test.describe('module-pagination component', () => {
 					}),
 				)
 			})
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			let componentValue = await page.evaluate(() => {
 				const pagination = document.querySelector('module-pagination')
@@ -395,7 +395,7 @@ test.describe('module-pagination component', () => {
 					}),
 				)
 			})
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			componentValue = await page.evaluate(() => {
 				const pagination = document.querySelector('module-pagination')
@@ -423,7 +423,7 @@ test.describe('module-pagination component', () => {
 					}),
 				)
 			})
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			const componentValue = await page.evaluate(() => {
 				const pagination = document.querySelector('module-pagination')
@@ -597,7 +597,7 @@ test.describe('module-pagination component', () => {
 			// At maximum (10), next should be disabled
 			await input.fill('10')
 			await input.blur()
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			await expect(prevButton).toBeEnabled()
 			await expect(nextButton).toBeDisabled()
@@ -605,7 +605,7 @@ test.describe('module-pagination component', () => {
 			// In middle range, both should be enabled
 			await input.fill('5')
 			await input.blur()
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			await expect(prevButton).toBeEnabled()
 			await expect(nextButton).toBeEnabled()
@@ -633,7 +633,7 @@ test.describe('module-pagination component', () => {
 			// Change value
 			await input.fill('5')
 			await input.blur()
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			// Create and reset a form
 			await page.evaluate(() => {
@@ -655,7 +655,7 @@ test.describe('module-pagination component', () => {
 				)
 			})
 
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// Should reset to original value
 			const componentValue = await page.evaluate(() => {
@@ -675,7 +675,7 @@ test.describe('module-pagination component', () => {
 			// Rapid clicking
 			for (let i = 0; i < 5; i++) {
 				await nextButton.click()
-				await page.waitForTimeout(20)
+				await page.waitForTimeout(10)
 			}
 
 			// Should handle rapid clicks correctly
@@ -696,24 +696,24 @@ test.describe('module-pagination component', () => {
 
 			// Use button navigation
 			await nextButton.click()
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			// Use input field
 			await input.fill('5')
 			await input.blur()
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			// Use keyboard navigation
 			await pagination.focus()
 			await page.keyboard.press('ArrowRight')
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			// Use programmatic update
 			await page.evaluate(() => {
 				const pagination = document.querySelector('module-pagination')
 				pagination!.value = 3
 			})
-			await page.waitForTimeout(100)
+			await page.waitForTimeout(10)
 
 			// All should be in sync
 			const componentValue = await page.evaluate(() => {
@@ -736,7 +736,7 @@ test.describe('module-pagination component', () => {
 			// Enter decimal value
 			await input.fill('5.7')
 			await input.blur()
-			await page.waitForTimeout(50)
+			await page.waitForTimeout(10)
 
 			// Component preserves decimal values (asInteger parser doesn't truncate)
 			const componentValue = await page.evaluate(() => {
