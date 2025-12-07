@@ -66,8 +66,8 @@ export default defineComponent<FormRadiogroupProps, FormRadiogroupUI>(
 	'form-radiogroup',
 	{
 		value: createSensor(
-			'radios',
 			read(({ radios }) => radios[getIndex(radios)]?.value, ''),
+			'radios',
 			{
 				change: ({ target }) => target.value,
 			},
@@ -82,9 +82,7 @@ export default defineComponent<FormRadiogroupProps, FormRadiogroupUI>(
 	}),
 	({ host, radios }) => ({
 		radios: [
-			setProperty('tabIndex', target =>
-				target.value === host.value ? 0 : -1,
-			),
+			setProperty('tabIndex', target => (target.value === host.value ? 0 : -1)),
 			...manageFocus(radios, getIndex),
 			on('keyup', ({ event, target }) => {
 				if (event.key === 'Enter') target.click()

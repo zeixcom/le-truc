@@ -1563,7 +1563,7 @@ var asEnum = (valid) => (_, value) => {
   return matchingValid ? value : valid[0];
 };
 // src/signals/sensor.ts
-var createSensor = (key, init, events) => (ui) => {
+var createSensor = (init, key, events) => (ui) => {
   const watchers = new Set;
   let value = getFallback(ui, init);
   const targets = isCollection(ui[key]) ? ui[key].get() : [ui[key]];

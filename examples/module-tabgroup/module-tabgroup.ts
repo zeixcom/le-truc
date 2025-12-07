@@ -41,11 +41,8 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 	'module-tabgroup',
 	{
 		selected: createSensor(
+			read(ui => getSelected(ui.tabs, tab => tab.ariaSelected === 'true'), ''),
 			'tabs',
-			read(
-				ui => getSelected(ui.tabs, tab => tab.ariaSelected === 'true'),
-				'',
-			),
 			{
 				click: ({ target }) => getAriaControls(target),
 				keyup: ({ event, ui, target }) => {
@@ -71,14 +68,9 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 									: getSelected(
 											ui.tabs,
 											tab => tab === target,
-											key === 'ArrowLeft' ||
-												key === 'ArrowUp'
-												? -1
-												: 1,
+											key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1,
 										)
-						tabs.filter(
-							tab => getAriaControls(tab) === next,
-						)[0].focus()
+						tabs.filter(tab => getAriaControls(tab) === next)[0].focus()
 						return next
 					}
 				},
@@ -101,12 +93,8 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 
 		return {
 			tabs: [
-				setProperty('ariaSelected', target =>
-					String(isCurrentTab(target)),
-				),
-				setProperty('tabIndex', target =>
-					isCurrentTab(target) ? 0 : -1,
-				),
+				setProperty('ariaSelected', target => String(isCurrentTab(target))),
+				setProperty('tabIndex', target => (isCurrentTab(target) ? 0 : -1)),
 			],
 			panels: [show(target => host.selected === target.id)],
 		}

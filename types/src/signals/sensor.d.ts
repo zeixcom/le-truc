@@ -21,7 +21,7 @@ type SensorEvents<T extends {}, U extends UI, E extends Element> = {
  * @param {SensorEvents<T, ElementFromSelector<S>, C>} events - Transformation functions for events
  * @returns {Extractor<Computed<T>, C>} Extractor function for value from event
  */
-declare const createSensor: <T extends {}, P extends ComponentProps, U extends UI, K extends keyof U>(key: K, init: ParserOrFallback<T, U>, events: SensorEvents<T, U, ElementFromKey<U, K>>) => ((ui: U & {
+declare const createSensor: <T extends {}, P extends ComponentProps, U extends UI, K extends keyof U>(init: ParserOrFallback<T, U>, key: K, events: SensorEvents<T, U, ElementFromKey<U, K>>) => ((ui: U & {
     host: Component<P>;
 }) => Computed<T>);
 export { createSensor };

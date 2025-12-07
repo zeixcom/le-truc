@@ -46,8 +46,8 @@ type SensorEvents<T extends {}, U extends UI, E extends Element> = {
  */
 const createSensor =
 	<T extends {}, P extends ComponentProps, U extends UI, K extends keyof U>(
-		key: K,
 		init: ParserOrFallback<T, U>,
+		key: K,
 		events: SensorEvents<T, U, ElementFromKey<U, K>>,
 	): ((ui: U & { host: Component<P> }) => Computed<T>) =>
 	(ui: U & { host: Component<P> }) => {

@@ -28,8 +28,8 @@ export default defineComponent<FormCheckboxProps, FormCheckboxUI>(
 	'form-checkbox',
 	{
 		checked: createSensor(
-			'checkbox',
 			read(ui => ui.checkbox.checked, false),
+			'checkbox',
 			{ change: ({ target }) => target.checked },
 		),
 		label: asString(

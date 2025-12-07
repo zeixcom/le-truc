@@ -1,0 +1,53 @@
+<form-textbox>
+	<label for="name-input">Name</label>
+	<div class="input">
+		<input
+			type="text"
+			id="name-input"
+			name="name"
+			autocomplete="name"
+			required
+		/>
+	</div>
+	<p class="error" role="alert" aria-live="assertive" id="name-error"></p>
+	<p class="description" aria-live="polite" id="city-description">
+		Tell us how you want us to call you in our communications.
+	</p>
+</form-textbox>
+
+<form-textbox clearable>
+	<label for="query-input">Search terms</label>
+	<div class="input">
+		<input
+			type="text"
+			id="query-input"
+			name="query"
+			autocomplete="off"
+			placeholder="apple banana"
+			required
+		/>
+		<button type="button" class="clear" aria-label="Clear input" hidden>
+			✕
+		</button>
+	</div>
+	<p class="error" role="alert" aria-live="assertive" id="query-error"></p>
+</form-textbox>
+
+<form-textbox>
+	<label for="comment-input">Comment</label>
+	<div class="input">
+		<textarea
+			id="comment-input"
+			name="comment"
+			autocomplete="off"
+			maxlength="500"
+		></textarea>
+	</div>
+	<p class="error" role="alert" aria-live="assertive" id="comment-error"></p>
+	<p
+		class="description"
+		aria-live="polite"
+		id="comment-description"
+		data-remaining="${n} characters remaining"
+	></p>
+</form-textbox>
