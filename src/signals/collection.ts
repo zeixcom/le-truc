@@ -96,11 +96,7 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 		elements = Array.from(parent.querySelectorAll<E>(selector))
 
 		observer = new MutationObserver(([mutation]) => {
-			if (
-				!watchers.size &&
-				!listeners.add.size &&
-				!listeners.remove.size
-			) {
+			if (!watchers.size && !listeners.add.size && !listeners.remove.size) {
 				if (cleanup) cleanup()
 				return
 			}
@@ -158,15 +154,10 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 			},
 		},
 		on: {
-			value: (
-				type: 'add' | 'remove',
-				listener: CollectionListener<E>,
-			) => {
+			value: (type: 'add' | 'remove', listener: CollectionListener<E>) => {
 				const listenerSet = listeners[type]
 				if (!listenerSet)
-					throw new TypeError(
-						`Invalid change notification type: ${type}`,
-					)
+					throw new TypeError(`Invalid change notification type: ${type}`)
 				listenerSet.add(listener)
 				if (!observer) observe()
 				return () => listenerSet.delete(listener)
@@ -213,8 +204,7 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 			return [...new Set([...indexes, ...staticKeys])]
 		},
 		getOwnPropertyDescriptor(target, prop) {
-			if (prop in target)
-				return Reflect.getOwnPropertyDescriptor(target, prop)
+			if (prop in target) return Reflect.getOwnPropertyDescriptor(target, prop)
 
 			const element = elements[Number(prop)]
 			return element

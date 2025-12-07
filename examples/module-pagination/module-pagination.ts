@@ -44,10 +44,7 @@ export default defineComponent<ModulePaginationProps, ModulePaginationUI>(
 			'button.prev',
 			'Add a <button.prev> to go to the previous page.',
 		),
-		next: first(
-			'button.next',
-			'Add a <button.next> to go to the next page.',
-		),
+		next: first('button.next', 'Add a <button.next> to go to the next page.'),
 		value: first('.value'),
 		max: first('.max'),
 	}),
@@ -59,12 +56,8 @@ export default defineComponent<ModulePaginationProps, ModulePaginationUI>(
 			on('keyup', ({ event }) => {
 				if ((event.target as HTMLElement)?.localName === 'input') return
 				const key = event.key
-				if ((key === 'ArrowLeft' || key === '-') && host.value > 1)
-					host.value--
-				else if (
-					(key === 'ArrowRight' || key === '+')
-					&& host.value < host.max
-				)
+				if ((key === 'ArrowLeft' || key === '-') && host.value > 1) host.value--
+				else if ((key === 'ArrowRight' || key === '+') && host.value < host.max)
 					host.value++
 			}),
 		],

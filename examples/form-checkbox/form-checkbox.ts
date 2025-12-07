@@ -34,9 +34,9 @@ export default defineComponent<FormCheckboxProps, FormCheckboxUI>(
 		),
 		label: asString(
 			ui =>
-				ui.label?.textContent ??
-				ui.host.querySelector('label')?.textContent ??
-				'',
+				ui.label?.textContent
+				?? ui.host.querySelector('label')?.textContent
+				?? '',
 		),
 	},
 	({ first }) => ({

@@ -187,9 +187,7 @@ test.describe('basic-pluralize component', () => {
 		await expect(ordinalElement.locator('.other')).toBeVisible()
 	})
 
-	test('handles multiple instances with different counts', async ({
-		page,
-	}) => {
+	test('handles multiple instances with different counts', async ({ page }) => {
 		// Use the existing elements from HTML
 		const firstElement = page.locator('#pluralize-1')
 		const secondElement = page.locator('#pluralize-2')

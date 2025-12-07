@@ -71,8 +71,8 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 									: getSelected(
 											ui.tabs,
 											tab => tab === target,
-											key === 'ArrowLeft'
-												|| key === 'ArrowUp'
+											key === 'ArrowLeft' ||
+												key === 'ArrowUp'
 												? -1
 												: 1,
 										)

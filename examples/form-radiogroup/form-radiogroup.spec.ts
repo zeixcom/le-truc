@@ -89,8 +89,7 @@ test.describe('form-radiogroup component', () => {
 			.filter({ has: page.locator('input[value="other"]') })
 
 		// Initially "other" label should have selected class
-		const initialSelectedLabel =
-			radiogroupComponent.locator('label.selected')
+		const initialSelectedLabel = radiogroupComponent.locator('label.selected')
 		await expect(initialSelectedLabel).toHaveCount(1)
 		await expect(femaleLabel).not.toHaveClass(/selected/)
 
@@ -143,9 +142,7 @@ test.describe('form-radiogroup component', () => {
 		await expect(otherRadio).toBeFocused()
 	})
 
-	test('handles keyboard navigation with up/down arrows', async ({
-		page,
-	}) => {
+	test('handles keyboard navigation with up/down arrows', async ({ page }) => {
 		const radiogroupComponent = page.locator('form-radiogroup').first()
 		const femaleRadio = radiogroupComponent.locator('input[value="female"]')
 		const maleRadio = radiogroupComponent.locator('input[value="male"]')
@@ -225,9 +222,7 @@ test.describe('form-radiogroup component', () => {
 		// Check the DOM property, not the attribute
 		const initialTabIndexes = await page.evaluate(() => {
 			const radios = Array.from(
-				document.querySelectorAll(
-					'form-radiogroup input[type="radio"]',
-				),
+				document.querySelectorAll('form-radiogroup input[type="radio"]'),
 			)
 			return radios.map((r: any) => ({
 				value: r.value,
@@ -235,15 +230,9 @@ test.describe('form-radiogroup component', () => {
 			}))
 		})
 
-		expect(initialTabIndexes.find(r => r.value === 'other')?.tabIndex).toBe(
-			0,
-		)
-		expect(
-			initialTabIndexes.find(r => r.value === 'female')?.tabIndex,
-		).toBe(-1)
-		expect(initialTabIndexes.find(r => r.value === 'male')?.tabIndex).toBe(
-			-1,
-		)
+		expect(initialTabIndexes.find(r => r.value === 'other')?.tabIndex).toBe(0)
+		expect(initialTabIndexes.find(r => r.value === 'female')?.tabIndex).toBe(-1)
+		expect(initialTabIndexes.find(r => r.value === 'male')?.tabIndex).toBe(-1)
 
 		// After selecting female, it should get tabindex 0
 		await femaleRadio.click()
@@ -252,9 +241,7 @@ test.describe('form-radiogroup component', () => {
 		// Check tabindex after selection change
 		const updatedTabIndexes = await page.evaluate(() => {
 			const radios = Array.from(
-				document.querySelectorAll(
-					'form-radiogroup input[type="radio"]',
-				),
+				document.querySelectorAll('form-radiogroup input[type="radio"]'),
 			)
 			return radios.map((r: any) => ({
 				value: r.value,
@@ -262,15 +249,9 @@ test.describe('form-radiogroup component', () => {
 			}))
 		})
 
-		expect(
-			updatedTabIndexes.find(r => r.value === 'female')?.tabIndex,
-		).toBe(0)
-		expect(updatedTabIndexes.find(r => r.value === 'other')?.tabIndex).toBe(
-			-1,
-		)
-		expect(updatedTabIndexes.find(r => r.value === 'male')?.tabIndex).toBe(
-			-1,
-		)
+		expect(updatedTabIndexes.find(r => r.value === 'female')?.tabIndex).toBe(0)
+		expect(updatedTabIndexes.find(r => r.value === 'other')?.tabIndex).toBe(-1)
+		expect(updatedTabIndexes.find(r => r.value === 'male')?.tabIndex).toBe(-1)
 	})
 
 	test('handles clicking on label to select radio', async ({ page }) => {
@@ -303,9 +284,7 @@ test.describe('form-radiogroup component', () => {
 		await expect(secondAllRadio).toBeChecked()
 
 		// Change selection in first radiogroup
-		const firstFemaleRadio = firstRadiogroup.locator(
-			'input[value="female"]',
-		)
+		const firstFemaleRadio = firstRadiogroup.locator('input[value="female"]')
 		await firstFemaleRadio.click()
 		await expect(firstFemaleRadio).toBeChecked()
 		await expect(firstOtherRadio).not.toBeChecked()
@@ -317,9 +296,7 @@ test.describe('form-radiogroup component', () => {
 		const secondActiveLabel = secondRadiogroup
 			.locator('label')
 			.filter({ has: page.locator('input[value="active"]') })
-		const secondActiveRadio = secondRadiogroup.locator(
-			'input[value="active"]',
-		)
+		const secondActiveRadio = secondRadiogroup.locator('input[value="active"]')
 		await secondActiveLabel.click()
 		await expect(secondActiveRadio).toBeChecked()
 		await expect(secondAllRadio).not.toBeChecked()
@@ -329,9 +306,7 @@ test.describe('form-radiogroup component', () => {
 	})
 
 	test('handles split-button variant styling', async ({ page }) => {
-		const splitButtonRadiogroup = page.locator(
-			'form-radiogroup.split-button',
-		)
+		const splitButtonRadiogroup = page.locator('form-radiogroup.split-button')
 		const labels = splitButtonRadiogroup.locator('label')
 		const selectedLabel = splitButtonRadiogroup.locator('label.selected')
 
@@ -346,9 +321,7 @@ test.describe('form-radiogroup component', () => {
 		await expect(selectedLabel.locator('span')).toHaveText('All')
 
 		// Visually hidden inputs should be present
-		const hiddenInputs = splitButtonRadiogroup.locator(
-			'input.visually-hidden',
-		)
+		const hiddenInputs = splitButtonRadiogroup.locator('input.visually-hidden')
 		await expect(hiddenInputs).toHaveCount(3)
 	})
 
@@ -481,9 +454,7 @@ test.describe('form-radiogroup component', () => {
 		expect(formData).toEqual({ gender: 'female' })
 	})
 
-	test('prevents default behavior on keyboard navigation', async ({
-		page,
-	}) => {
+	test('prevents default behavior on keyboard navigation', async ({ page }) => {
 		// Set up event listener to track prevented events on the radio inputs
 		await page.evaluate(() => {
 			;(window as any).preventedEvents = []
@@ -513,12 +484,7 @@ test.describe('form-radiogroup component', () => {
 		const preventedEvents = await page.evaluate(
 			() => (window as any).preventedEvents,
 		)
-		expect(preventedEvents).toEqual([
-			'ArrowRight',
-			'ArrowLeft',
-			'Home',
-			'End',
-		])
+		expect(preventedEvents).toEqual(['ArrowRight', 'ArrowLeft', 'Home', 'End'])
 	})
 
 	test('handles rapid selection changes', async ({ page }) => {
@@ -549,8 +515,7 @@ test.describe('form-radiogroup component', () => {
 		// Create a radiogroup without the required radio buttons
 		await page.evaluate(() => {
 			const emptyRadiogroup = document.createElement('form-radiogroup')
-			emptyRadiogroup.innerHTML =
-				'<fieldset><legend>Empty</legend></fieldset>'
+			emptyRadiogroup.innerHTML = '<fieldset><legend>Empty</legend></fieldset>'
 			document.body.appendChild(emptyRadiogroup)
 		})
 

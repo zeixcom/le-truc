@@ -11,9 +11,7 @@ test.describe('module-tabgroup component', () => {
 	})
 
 	test.describe('Initial State', () => {
-		test('renders tabgroup with correct initial state', async ({
-			page,
-		}) => {
+		test('renders tabgroup with correct initial state', async ({ page }) => {
 			const tabgroup = page.locator('module-tabgroup').first()
 			const tabs = tabgroup.locator('button[role="tab"]')
 			const panels = tabgroup.locator('[role="tabpanel"]')
@@ -286,10 +284,7 @@ test.describe('module-tabgroup component', () => {
 			for (let i = 1; i < 5; i++) {
 				await page.keyboard.press('ArrowRight')
 				await expect(tabs.nth(i)).toHaveAttribute('tabindex', '0')
-				await expect(tabs.nth(i)).toHaveAttribute(
-					'aria-selected',
-					'true',
-				)
+				await expect(tabs.nth(i)).toHaveAttribute('aria-selected', 'true')
 			}
 
 			// Wrap around to first
@@ -371,9 +366,7 @@ test.describe('module-tabgroup component', () => {
 	})
 
 	test.describe('Component Properties', () => {
-		test('selected property reflects current selection', async ({
-			page,
-		}) => {
+		test('selected property reflects current selection', async ({ page }) => {
 			const tabgroup = page.locator('module-tabgroup').first()
 			const tabs = tabgroup.locator('button[role="tab"]')
 
@@ -385,16 +378,12 @@ test.describe('module-tabgroup component', () => {
 
 			// Click second tab
 			await tabs.nth(1).click()
-			selectedValue = await tabgroup.evaluate(
-				node => (node as any).selected,
-			)
+			selectedValue = await tabgroup.evaluate(node => (node as any).selected)
 			expect(selectedValue).toBe('panel2')
 
 			// Click third tab
 			await tabs.nth(2).click()
-			selectedValue = await tabgroup.evaluate(
-				node => (node as any).selected,
-			)
+			selectedValue = await tabgroup.evaluate(node => (node as any).selected)
 			expect(selectedValue).toBe('panel3')
 		})
 
@@ -412,9 +401,7 @@ test.describe('module-tabgroup component', () => {
 
 			// Click second tab - selected property should update
 			await tabs.nth(1).click()
-			selectedValue = await tabgroup.evaluate(
-				node => (node as any).selected,
-			)
+			selectedValue = await tabgroup.evaluate(node => (node as any).selected)
 			expect(selectedValue).toBe('panel13')
 
 			// Try to programmatically change selected property (should not work since it's a sensor)
@@ -427,9 +414,7 @@ test.describe('module-tabgroup component', () => {
 			})
 
 			// Selected should still be panel13 (readonly property)
-			selectedValue = await tabgroup.evaluate(
-				node => (node as any).selected,
-			)
+			selectedValue = await tabgroup.evaluate(node => (node as any).selected)
 			expect(selectedValue).toBe('panel13')
 
 			// UI state should match the sensor value, not the attempted programmatic change
@@ -497,9 +482,7 @@ test.describe('module-tabgroup component', () => {
 
 			// Should maintain some reasonable state
 			const visiblePanels = await panels.evaluateAll(
-				panels =>
-					panels.filter(panel => !(panel as HTMLElement).hidden)
-						.length,
+				panels => panels.filter(panel => !(panel as HTMLElement).hidden).length,
 			)
 
 			// At least one panel should be visible or all should be hidden
@@ -571,9 +554,7 @@ test.describe('module-tabgroup component', () => {
 	})
 
 	test.describe('Sensor Integration', () => {
-		test('selected sensor detects initial state from DOM', async ({
-			page,
-		}) => {
+		test('selected sensor detects initial state from DOM', async ({ page }) => {
 			const tabgroup = page.locator('module-tabgroup').first()
 
 			// The sensor should read the initial state from aria-selected="true"
@@ -596,9 +577,7 @@ test.describe('module-tabgroup component', () => {
 			expect(selectedAfterClick).toBe('panel3')
 		})
 
-		test('sensor responds to keyboard events correctly', async ({
-			page,
-		}) => {
+		test('sensor responds to keyboard events correctly', async ({ page }) => {
 			const tabgroup = page.locator('module-tabgroup').first()
 			const tabs = tabgroup.locator('button[role="tab"]')
 
@@ -614,9 +593,7 @@ test.describe('module-tabgroup component', () => {
 			await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
 
 			// Selected property should now be the third tab
-			currentSelected = await tabgroup.evaluate(
-				node => (node as any).selected,
-			)
+			currentSelected = await tabgroup.evaluate(node => (node as any).selected)
 			expect(currentSelected).toBe('panel3')
 		})
 

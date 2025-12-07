@@ -72,9 +72,7 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 	name: string,
 	props: Initializers<P, U> = {} as Initializers<P, U>,
 	select: (elementQueries: ElementQueries) => U = () => ({}) as U,
-	setup: (
-		ui: ComponentUI<P, U>,
-	) => Effects<P, ComponentUI<P, U>> = () => ({}),
+	setup: (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>> = () => ({}),
 ): Component<P> {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
@@ -114,10 +112,7 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 			) => {
 				const result = isFunction(initializer)
 					? isParser(initializer)
-						? (initializer as Parser<P[K], U>)(
-								ui,
-								this.getAttribute(key),
-							)
+						? (initializer as Parser<P[K], U>)(ui, this.getAttribute(key))
 						: (
 								initializer as (
 									ui: ComponentUI<P, U>,
@@ -157,11 +152,7 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 			newValue: string | null,
 		) {
 			// Not connected yet, unchanged value or controlled by computed
-			if (
-				!this.#ui ||
-				newValue === oldValue ||
-				isComputed(this.#signals[name])
-			)
+			if (!this.#ui || newValue === oldValue || isComputed(this.#signals[name]))
 				return
 
 			// Check whether we have a parser for the attribute
@@ -180,10 +171,7 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 		 * @param {K} key - Key to set accessor for
 		 * @param {MaybeSignal<P[K]>} value - Initial value, signal or computed callback to create signal
 		 */
-		#setAccessor<K extends keyof P>(
-			key: K,
-			value: MaybeSignal<P[K]>,
-		): void {
+		#setAccessor<K extends keyof P>(key: K, value: MaybeSignal<P[K]>): void {
 			const signal = isSignal(value)
 				? value
 				: isComputedCallback(value)

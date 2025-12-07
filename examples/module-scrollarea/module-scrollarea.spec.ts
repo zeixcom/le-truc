@@ -29,10 +29,7 @@ test.describe('module-scrollarea component', () => {
 		}) => {
 			const scrollarea = page.locator('#horizontal-overflow')
 			await expect(scrollarea).toBeVisible()
-			await expect(scrollarea).toHaveAttribute(
-				'orientation',
-				'horizontal',
-			)
+			await expect(scrollarea).toHaveAttribute('orientation', 'horizontal')
 
 			// Should have overflow-x: auto styling
 			const computedStyle = await scrollarea.evaluate(
@@ -179,14 +176,10 @@ test.describe('module-scrollarea component', () => {
 			})
 
 			// Test based on actual measurements (component may be slow to update classes)
-			expect(dimensions.scrollWidth).toBeLessThanOrEqual(
-				dimensions.clientWidth,
-			)
+			expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth)
 		})
 
-		test('updates overflow classes on horizontal scroll', async ({
-			page,
-		}) => {
+		test('updates overflow classes on horizontal scroll', async ({ page }) => {
 			const scrollarea = page.locator('#horizontal-overflow')
 
 			// Wait for initial state
@@ -204,9 +197,7 @@ test.describe('module-scrollarea component', () => {
 			}
 
 			// Test actual scroll behavior instead of just classes
-			const initialScrollLeft = await scrollarea.evaluate(
-				el => el.scrollLeft,
-			)
+			const initialScrollLeft = await scrollarea.evaluate(el => el.scrollLeft)
 			expect(initialScrollLeft).toBe(0)
 
 			// Scroll right a bit
@@ -253,8 +244,7 @@ test.describe('module-scrollarea component', () => {
 			}
 
 			// Scroll to right edge
-			const maxScrollLeft =
-				scrollInfo.scrollWidth - scrollInfo.offsetWidth
+			const maxScrollLeft = scrollInfo.scrollWidth - scrollInfo.offsetWidth
 			await scrollarea.evaluate((el, maxScroll) => {
 				el.scrollLeft = maxScroll
 			}, maxScrollLeft)
@@ -263,9 +253,7 @@ test.describe('module-scrollarea component', () => {
 			await page.waitForTimeout(10)
 
 			// Verify we're at the right edge
-			const finalScrollLeft = await scrollarea.evaluate(
-				el => el.scrollLeft,
-			)
+			const finalScrollLeft = await scrollarea.evaluate(el => el.scrollLeft)
 			expect(finalScrollLeft).toBeGreaterThan(0)
 			expect(finalScrollLeft).toBeLessThanOrEqual(maxScrollLeft)
 		})
@@ -327,9 +315,7 @@ test.describe('module-scrollarea component', () => {
 					}
 				} catch {
 					// Pseudo-element testing may not work in all browsers
-					console.log(
-						'Pseudo-element testing not supported in this browser',
-					)
+					console.log('Pseudo-element testing not supported in this browser')
 				}
 			}
 		})
@@ -365,9 +351,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#default-vertical')
 
 			// Get initial scroll position
-			const initialScrollTop = await scrollarea.evaluate(
-				el => el.scrollTop,
-			)
+			const initialScrollTop = await scrollarea.evaluate(el => el.scrollTop)
 			expect(initialScrollTop).toBe(0)
 
 			// Scroll down with mouse wheel
@@ -382,15 +366,11 @@ test.describe('module-scrollarea component', () => {
 			expect(newScrollTop).toBeGreaterThan(initialScrollTop)
 		})
 
-		test('responds to programmatic horizontal scrolling', async ({
-			page,
-		}) => {
+		test('responds to programmatic horizontal scrolling', async ({ page }) => {
 			const scrollarea = page.locator('#horizontal-overflow')
 
 			// Get initial scroll position
-			const initialScrollLeft = await scrollarea.evaluate(
-				el => el.scrollLeft,
-			)
+			const initialScrollLeft = await scrollarea.evaluate(el => el.scrollLeft)
 			expect(initialScrollLeft).toBe(0)
 
 			// Scroll right programmatically (more reliable than mouse wheel)
@@ -420,9 +400,7 @@ test.describe('module-scrollarea component', () => {
 
 			expect(styles.overflowY).toBe('auto')
 			// Touch action should allow scrolling
-			expect(['auto', 'manipulation', 'pan-y']).toContain(
-				styles.touchAction,
-			)
+			expect(['auto', 'manipulation', 'pan-y']).toContain(styles.touchAction)
 		})
 	})
 
@@ -473,8 +451,7 @@ test.describe('module-scrollarea component', () => {
 				const content = el.querySelector('div')
 				if (content) {
 					content.innerHTML +=
-						'<br>'.repeat(50)
-						+ 'Additional content that causes overflow'
+						'<br>'.repeat(50) + 'Additional content that causes overflow'
 				}
 			})
 
@@ -485,9 +462,7 @@ test.describe('module-scrollarea component', () => {
 			await expect(scrollarea).toHaveClass(/overflow/)
 		})
 
-		test('handles content changes that affect overflow', async ({
-			page,
-		}) => {
+		test('handles content changes that affect overflow', async ({ page }) => {
 			const scrollarea = page.locator('#default-vertical')
 
 			// Initial state with overflow
@@ -509,9 +484,7 @@ test.describe('module-scrollarea component', () => {
 			await expect(scrollarea).not.toHaveClass(/overflow-end/)
 		})
 
-		test('maintains performance with rapid scroll events', async ({
-			page,
-		}) => {
+		test('maintains performance with rapid scroll events', async ({ page }) => {
 			const scrollarea = page.locator('#default-vertical')
 
 			// Perform rapid scrolling

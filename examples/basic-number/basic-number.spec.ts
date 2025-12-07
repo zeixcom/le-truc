@@ -16,9 +16,7 @@ test.describe('basic-number component', () => {
 		await expect(firstNumber).toHaveText('25,678.9 liters')
 	})
 
-	test('formats currency with locale-specific formatting', async ({
-		page,
-	}) => {
+	test('formats currency with locale-specific formatting', async ({ page }) => {
 		// Test German-Swiss currency formatting
 		const germanNumber = page.locator('#german-swiss')
 		await expect(germanNumber).toContainText('CHF') // Should contain Swiss Franc

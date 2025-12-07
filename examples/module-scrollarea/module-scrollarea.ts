@@ -46,15 +46,13 @@ export default defineComponent(
 				? () => {
 						overflowStart.set(host.scrollLeft > 0)
 						overflowEnd.set(
-							host.scrollLeft
-								< host.scrollWidth - host.offsetWidth,
+							host.scrollLeft < host.scrollWidth - host.offsetWidth,
 						)
 					}
 				: () => {
 						overflowStart.set(host.scrollTop > 0)
 						overflowEnd.set(
-							host.scrollTop
-								< host.scrollHeight - host.offsetHeight,
+							host.scrollTop < host.scrollHeight - host.offsetHeight,
 						)
 					}
 

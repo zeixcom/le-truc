@@ -38,9 +38,7 @@ test.describe('module-lazyload component', () => {
 	})
 
 	test.describe('Basic Loading Functionality', () => {
-		test('loads and displays simple content successfully', async ({
-			page,
-		}) => {
+		test('loads and displays simple content successfully', async ({ page }) => {
 			const loader = page.locator('module-lazyload').first()
 			const loading = loader.locator('.loading')
 			const content = loader.locator('.content')
@@ -81,9 +79,7 @@ test.describe('module-lazyload component', () => {
 			expect(borderStyle).toContain('2px')
 		})
 
-		test('loads and initializes nested custom components', async ({
-			page,
-		}) => {
+		test('loads and initializes nested custom components', async ({ page }) => {
 			const loader = page.locator('#nested-components-test')
 			const content = loader.locator('.content')
 
@@ -213,9 +209,7 @@ test.describe('module-lazyload component', () => {
 
 			// The inner module-lazyload should show error due to recursion detection
 			const innerError = outerContent.locator('module-lazyload .error')
-			const innerCallout = outerContent.locator(
-				'module-lazyload card-callout',
-			)
+			const innerCallout = outerContent.locator('module-lazyload card-callout')
 
 			await expect(innerError).toBeVisible()
 			await expect(innerCallout).toHaveClass('danger')
@@ -253,9 +247,7 @@ test.describe('module-lazyload component', () => {
 			})
 		})
 
-		test('handles src property changes programmatically', async ({
-			page,
-		}) => {
+		test('handles src property changes programmatically', async ({ page }) => {
 			const loader = page.locator('#dynamic-src-test')
 			const content = loader.locator('.content')
 
@@ -271,8 +263,7 @@ test.describe('module-lazyload component', () => {
 
 			// Verify property reflects the URL
 			const srcProperty = await loader.evaluate(node => (node as any).src)
-			expect(srcProperty.value).toContain('simple-text.html')
-			expect(srcProperty.error).toBe('')
+			expect(srcProperty).toContain('simple-text.html')
 		})
 
 		test('clears content when src becomes invalid', async ({ page }) => {
@@ -300,25 +291,19 @@ test.describe('module-lazyload component', () => {
 	})
 
 	test.describe('Component Properties and State', () => {
-		test('src property returns parsed URL object with value and error', async ({
-			page,
-		}) => {
+		test('src property returns string value', async ({ page }) => {
 			const validLoader = page.locator('module-lazyload').first()
 			const invalidLoader = page.locator('#cross-origin-test')
 
-			// Valid URL should have value, no error
-			const validSrc = await validLoader.evaluate(
-				node => (node as any).src,
-			)
-			expect(validSrc.value).toBeTruthy()
-			expect(validSrc.error).toBe('')
+			// Valid URL should return the URL string
+			const validSrc = await validLoader.evaluate(node => (node as any).src)
+			expect(typeof validSrc).toBe('string')
+			expect(validSrc).toBeTruthy()
 
-			// Invalid URL should have error, no value
-			const invalidSrc = await invalidLoader.evaluate(
-				node => (node as any).src,
-			)
-			expect(invalidSrc.value).toBe('')
-			expect(invalidSrc.error).toBeTruthy()
+			// Invalid URL should still return the string value
+			const invalidSrc = await invalidLoader.evaluate(node => (node as any).src)
+			expect(typeof invalidSrc).toBe('string')
+			expect(invalidSrc).toBeTruthy()
 		})
 
 		test('maintains loading state consistency', async ({ page }) => {
@@ -514,10 +499,7 @@ test.describe('module-lazyload component', () => {
 			await expect(moduleOutput).toHaveText(
 				'Module script executed successfully!',
 			)
-			await expect(moduleOutput).toHaveAttribute(
-				'data-module-executed',
-				'true',
-			)
+			await expect(moduleOutput).toHaveAttribute('data-module-executed', 'true')
 
 			// Verify module script globals were set
 			const moduleTestResult = await page.evaluate(
@@ -544,9 +526,7 @@ test.describe('module-lazyload component', () => {
 			// Should have both module and regular script types preserved
 			expect(scriptTypes.length).toBeGreaterThan(0)
 			const moduleScript = scriptTypes.find(s => s.type === 'module')
-			const regularScript = scriptTypes.find(
-				s => s.type === 'text/javascript',
-			)
+			const regularScript = scriptTypes.find(s => s.type === 'text/javascript')
 
 			expect(moduleScript).toBeTruthy()
 			expect(moduleScript?.hasContent).toBe(true)
@@ -600,9 +580,7 @@ test.describe('module-lazyload component', () => {
 			expect(bodyBgColor).not.toContain('crimson')
 		})
 
-		test('compares Shadow DOM vs regular DOM behavior', async ({
-			page,
-		}) => {
+		test('compares Shadow DOM vs regular DOM behavior', async ({ page }) => {
 			// Create a test module-lazyload without Shadow DOM for comparison
 			await page.evaluate(() => {
 				const testContainer = document.createElement('div')
@@ -630,15 +608,11 @@ test.describe('module-lazyload component', () => {
 			})
 
 			// Verify Shadow DOM component has shadow root
-			const hasShadowRoot = await shadowLoader.evaluate(
-				el => !!el.shadowRoot,
-			)
+			const hasShadowRoot = await shadowLoader.evaluate(el => !!el.shadowRoot)
 			expect(hasShadowRoot).toBe(true)
 
 			// Verify regular DOM component does not have shadow root
-			const hasNoShadowRoot = await regularLoader.evaluate(
-				el => !el.shadowRoot,
-			)
+			const hasNoShadowRoot = await regularLoader.evaluate(el => !el.shadowRoot)
 			expect(hasNoShadowRoot).toBe(true)
 
 			// Both should have functional scripts (both have allow-scripts)
@@ -648,16 +622,12 @@ test.describe('module-lazyload component', () => {
 			// Test Shadow DOM functionality
 			await shadowButton.click()
 			await page.waitForTimeout(100)
-			await expect(shadowLoader.locator('shake-hands .count')).toHaveText(
-				'43',
-			)
+			await expect(shadowLoader.locator('shake-hands .count')).toHaveText('43')
 
 			// Test regular DOM functionality
 			await regularButton.click()
 			await page.waitForTimeout(100)
-			await expect(
-				regularLoader.locator('shake-hands .count'),
-			).toHaveText('43')
+			await expect(regularLoader.locator('shake-hands .count')).toHaveText('43')
 
 			// Verify style isolation difference
 			// Shadow DOM: styles are encapsulated

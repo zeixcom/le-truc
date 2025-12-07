@@ -39,9 +39,7 @@ test.describe('module-pagination component', () => {
 	})
 
 	test.describe('Initial State', () => {
-		test('renders pagination with correct initial state', async ({
-			page,
-		}) => {
+		test('renders pagination with correct initial state', async ({ page }) => {
 			const pagination = page.locator('module-pagination')
 			const input = pagination.locator('input[type="number"]')
 			const prevButton = pagination.locator('button.prev')
@@ -69,9 +67,7 @@ test.describe('module-pagination component', () => {
 			await expect(valueDisplay).toHaveAttribute('aria-current', 'page')
 		})
 
-		test('reads initial values from component properties', async ({
-			page,
-		}) => {
+		test('reads initial values from component properties', async ({ page }) => {
 			const initialValues = await page.evaluate(() => {
 				const pagination = document.querySelector('module-pagination')
 				return {
@@ -353,9 +349,7 @@ test.describe('module-pagination component', () => {
 			await expect(valueDisplay).toHaveText('1')
 		})
 
-		test('respects boundaries with keyboard navigation', async ({
-			page,
-		}) => {
+		test('respects boundaries with keyboard navigation', async ({ page }) => {
 			const pagination = page.locator('module-pagination')
 			const input = pagination.locator('input[type="number"]')
 			const nextButton = pagination.locator('button.next')
@@ -404,9 +398,7 @@ test.describe('module-pagination component', () => {
 			expect(componentValue).toBe(10) // Should stay at maximum
 		})
 
-		test('ignores keyboard events when input is focused', async ({
-			page,
-		}) => {
+		test('ignores keyboard events when input is focused', async ({ page }) => {
 			const pagination = page.locator('module-pagination')
 			const input = pagination.locator('input[type="number"]')
 
@@ -489,9 +481,7 @@ test.describe('module-pagination component', () => {
 			await expect(nextButton).toBeDisabled()
 		})
 
-		test('automatically clamps value when max is reduced', async ({
-			page,
-		}) => {
+		test('automatically clamps value when max is reduced', async ({ page }) => {
 			const pagination = page.locator('module-pagination')
 			const input = pagination.locator('input[type="number"]')
 			const valueDisplay = pagination.locator('.value')
@@ -569,10 +559,7 @@ test.describe('module-pagination component', () => {
 			const input = pagination.locator('input[type="number"]')
 
 			// Check button labels
-			await expect(prevButton).toHaveAttribute(
-				'aria-label',
-				'Previous page',
-			)
+			await expect(prevButton).toHaveAttribute('aria-label', 'Previous page')
 			await expect(nextButton).toHaveAttribute('aria-label', 'Next page')
 
 			// Check value display has aria-current
@@ -639,9 +626,7 @@ test.describe('module-pagination component', () => {
 			await page.evaluate(() => {
 				const form = document.createElement('form')
 				const pagination = document.querySelector('module-pagination')
-				const clonedInput = pagination!
-					.querySelector('input')!
-					.cloneNode()
+				const clonedInput = pagination!.querySelector('input')!.cloneNode()
 				;(clonedInput as HTMLInputElement).value = '5'
 				form.appendChild(clonedInput)
 				document.body.appendChild(form)
@@ -650,9 +635,7 @@ test.describe('module-pagination component', () => {
 				// Simulate reset by setting input back to original value
 				const originalInput = pagination!.querySelector('input')
 				originalInput!.value = '1'
-				originalInput!.dispatchEvent(
-					new Event('change', { bubbles: true }),
-				)
+				originalInput!.dispatchEvent(new Event('change', { bubbles: true }))
 			})
 
 			await page.waitForTimeout(10)
@@ -726,9 +709,7 @@ test.describe('module-pagination component', () => {
 			await expect(pagination).toHaveAttribute('value', '3')
 		})
 
-		test('handles decimal and float inputs appropriately', async ({
-			page,
-		}) => {
+		test('handles decimal and float inputs appropriately', async ({ page }) => {
 			const pagination = page.locator('module-pagination')
 			const input = pagination.locator('input[type="number"]')
 			const valueDisplay = pagination.locator('.value')

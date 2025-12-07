@@ -1420,17 +1420,21 @@ var dangerouslySetInnerHTML = (reactive, options = {}) => updateElement(reactive
     if (shadowRootMode && !el.shadowRoot)
       el.attachShadow({ mode: shadowRootMode });
     const target = el.shadowRoot || el;
-    target.innerHTML = html;
+    observe(() => {
+      target.innerHTML = html;
+    });
     if (!allowScripts)
       return "";
-    target.querySelectorAll("script").forEach((script) => {
-      const newScript = document.createElement("script");
-      newScript.appendChild(document.createTextNode(script.textContent ?? ""));
-      const typeAttr = script.getAttribute("type");
-      if (typeAttr)
-        newScript.setAttribute("type", typeAttr);
-      target.appendChild(newScript);
-      script.remove();
+    observe(() => {
+      target.querySelectorAll("script").forEach((script) => {
+        const newScript = document.createElement("script");
+        newScript.appendChild(document.createTextNode(script.textContent ?? ""));
+        const typeAttr = script.getAttribute("type");
+        if (typeAttr)
+          newScript.setAttribute("type", typeAttr);
+        target.appendChild(newScript);
+        script.remove();
+      });
     });
     return " with scripts";
   }

@@ -49,39 +49,40 @@ const isCacheEntryValid = (entry: CacheEntry): boolean => {
 
 /* === Exported Functions === */
 
-export const asURL =
-	<P extends ComponentProps, U extends UI>(): Parser<
-		{ value: string; error: string },
-		ComponentUI<P, U>
-	> =>
-	(ui: ComponentUI<P, U>, v: string | null | undefined) => {
-		// Get src attribute value if v is not provided
-		const attributeValue = v ?? ui.host.getAttribute('src')
-		let value = ''
-		let error = ''
-		if (!attributeValue) {
-			error = 'No URL provided'
-		} else if (
-			(
-				ui.host.parentElement
-				|| (ui.host.getRootNode() as ShadowRoot).host
-			)?.closest(`${ui.host.localName}[src="${attributeValue}"]`)
-		) {
-			error = 'Recursive loading detected'
-		} else {
-			try {
-				// Ensure 'src' attribute is a valid URL
-				const url = new URL(attributeValue, location.href)
+/**
+ * Check if an URL is recursive
+ *
+ * @param {string} value - URL to check
+ * @param {HTMLElement} host - Host element
+ * @param {string} attr - Attribute name
+ * @returns {boolean} - True if the URL is recursive, false otherwise
+ */
+export const isRecursiveURL = (
+	value: string,
+	host: HTMLElement,
+	attr: string = 'src',
+): boolean =>
+	!!value
+	&& !!(host.parentElement || (host.getRootNode() as ShadowRoot).host)?.closest(
+		`${host.localName}[${attr}="${value}"]`,
+	)
 
-				// Sanity check for cross-origin URLs
-				if (url.origin === location.origin) value = String(url)
-				else error = 'Invalid URL origin'
-			} catch (err) {
-				error = String(err)
-			}
-		}
-		return { value, error }
+/**
+ * Check if an URL is valid
+ *
+ * @param {string} value - URL to check
+ * @returns {boolean} - True if the URL is valid, false otherwise
+ */
+export const isValidURL = (value: string): boolean => {
+	if (!value) return false
+	try {
+		const url = new URL(value, location.href)
+		if (url.origin === location.origin) return true
+	} catch {
+		return false
 	}
+	return false
+}
 
 /**
  * Fetch with HTTP caching support
@@ -107,13 +108,10 @@ export const fetchWithCache = async <T = string>(
 	const response = await fetch(url, { signal, headers })
 
 	// Handle 304 Not Modified
-	if (response.status === 304 && cached) {
+	if (response.status === 304 && cached)
 		return { content: cached.content, fromCache: true }
-	}
 
-	if (!response.ok) {
-		throw new Error(`HTTP error! status: ${response.status}`)
-	}
+	if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`)
 
 	const content = await parseResponse(response)
 	const cacheControl = response.headers.get('cache-control')
@@ -135,9 +133,8 @@ export const fetchWithCache = async <T = string>(
 			maxAge: cacheDirectives.maxAge,
 		}
 
-		if (!cacheDirectives.noCache || isCacheEntryValid(entry)) {
+		if (!cacheDirectives.noCache || isCacheEntryValid(entry))
 			cache.set(url, entry)
-		}
 	}
 
 	return { content, fromCache: false }

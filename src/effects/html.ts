@@ -1,3 +1,4 @@
+import { observe } from '@zeix/cause-effect'
 import type { ComponentProps } from '../component'
 import { type Effect, type Reactive, updateElement } from '../effects'
 
@@ -26,8 +27,7 @@ const dangerouslySetInnerHTML = <P extends ComponentProps, E extends Element>(
 	updateElement(reactive, {
 		op: 'h',
 		read: el =>
-			(el.shadowRoot || !options.shadowRootMode ? el : null)?.innerHTML ??
-			'',
+			(el.shadowRoot || !options.shadowRootMode ? el : null)?.innerHTML ?? '',
 		update: (el, html) => {
 			const { shadowRootMode, allowScripts } = options
 			if (!html) {
@@ -37,18 +37,22 @@ const dangerouslySetInnerHTML = <P extends ComponentProps, E extends Element>(
 			if (shadowRootMode && !el.shadowRoot)
 				el.attachShadow({ mode: shadowRootMode })
 			const target = el.shadowRoot || el
-			target.innerHTML = html
+			observe(() => {
+				target.innerHTML = html
+			})
 			if (!allowScripts) return ''
-			target.querySelectorAll('script').forEach(script => {
-				const newScript = document.createElement('script')
-				newScript.appendChild(
-					document.createTextNode(script.textContent ?? ''),
-				)
-				// Safely copy only the type attribute to preserve module/MIME type info
-				const typeAttr = script.getAttribute('type')
-				if (typeAttr) newScript.setAttribute('type', typeAttr)
-				target.appendChild(newScript)
-				script.remove()
+			observe(() => {
+				target.querySelectorAll('script').forEach(script => {
+					const newScript = document.createElement('script')
+					newScript.appendChild(
+						document.createTextNode(script.textContent ?? ''),
+					)
+					// Safely copy only the type attribute to preserve module/MIME type info
+					const typeAttr = script.getAttribute('type')
+					if (typeAttr) newScript.setAttribute('type', typeAttr)
+					target.appendChild(newScript)
+					script.remove()
+				})
 			})
 			return ' with scripts'
 		},

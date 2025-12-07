@@ -21,19 +21,11 @@
 						zero-label="Add Row"
 						increment-label="Increment"
 					>
-						<button
-							type="button"
-							class="decrement"
-							aria-label="Decrement"
-						>
+						<button type="button" class="decrement" aria-label="Decrement">
 							−
 						</button>
 						<p class="value">3</p>
-						<button
-							type="button"
-							class="increment"
-							aria-label="Increment"
-						>
+						<button type="button" class="increment" aria-label="Increment">
 							+
 						</button>
 					</form-spinbutton>
@@ -45,19 +37,11 @@
 						zero-label="Add Column"
 						increment-label="Increment"
 					>
-						<button
-							type="button"
-							class="decrement"
-							aria-label="Decrement"
-						>
+						<button type="button" class="decrement" aria-label="Decrement">
 							−
 						</button>
 						<p class="value">3</p>
-						<button
-							type="button"
-							class="increment"
-							aria-label="Increment"
-						>
+						<button type="button" class="increment" aria-label="Increment">
 							+
 						</button>
 					</form-spinbutton>
@@ -87,13 +71,7 @@
 					<td>
 						<label>
 							<span class="visually-hidden"><slot></slot></span>
-							<input
-								type="number"
-								min="0"
-								max="100"
-								step="1"
-								value=""
-							/>
+							<input type="number" min="0" max="100" step="1" value="" />
 						</label>
 					</td>
 				</template>
@@ -155,35 +133,26 @@
 					</rating-stars>
 					<div class="feedback" hidden>
 						<header>
-							<button
-								button="button"
-								class="hide"
-								aria-label="Hide"
-							>
-								×
-							</button>
+							<button button="button" class="hide" aria-label="Hide">×</button>
 							<p hidden>
-								We're sorry to hear that! Your feedback is
-								important, and we'd love to improve. Let us know
-								how we can do better.
+								We're sorry to hear that! Your feedback is important, and we'd
+								love to improve. Let us know how we can do better.
 							</p>
 							<p hidden>
-								Thank you for your honesty. We appreciate your
-								feedback and will work on making things better.
+								Thank you for your honesty. We appreciate your feedback and will
+								work on making things better.
 							</p>
 							<p hidden>
-								Thanks for your rating! If there's anything we
-								can improve, we'd love to hear your thoughts.
+								Thanks for your rating! If there's anything we can improve, we'd
+								love to hear your thoughts.
 							</p>
 							<p hidden>
-								We're glad you had a good experience! If there's
-								anything that could make it even better, let us
-								know.
+								We're glad you had a good experience! If there's anything that
+								could make it even better, let us know.
 							</p>
 							<p hidden>
-								Thank you for your support! We're thrilled you
-								had a great experience. Your feedback keeps us
-								motivated!
+								Thank you for your support! We're thrilled you had a great
+								experience. Your feedback keeps us motivated!
 							</p>
 						</header>
 						<fieldset>
@@ -192,9 +161,7 @@
 							>
 							<textarea id="rating-feedback"></textarea>
 							<basic-button disabled>
-								<button type="submit" class="primary" disabled>
-									Submit
-								</button>
+								<button type="submit" class="primary" disabled>Submit</button>
 							</basic-button>
 						</fieldset>
 					</div>

@@ -37,9 +37,7 @@ type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
  */
 const pass =
 	<P extends ComponentProps, Q extends ComponentProps>(
-		props:
-			| PassedProps<P, Q>
-			| ((target: Component<Q>) => PassedProps<P, Q>),
+		props: PassedProps<P, Q> | ((target: Component<Q>) => PassedProps<P, Q>),
 	): Effect<P, Component<Q>> =>
 	(host, target): MaybeCleanup => {
 		if (!isCustomElement(target))
@@ -80,8 +78,7 @@ const pass =
 					: reactive
 			const isArray = Array.isArray(applied) && applied.length === 2
 			const getter = getGetter(isArray ? applied[0] : applied)
-			const setter =
-				isArray && isFunction(applied[1]) ? applied[1] : undefined
+			const setter = isArray && isFunction(applied[1]) ? applied[1] : undefined
 			if (!getter) continue
 
 			// Store original descriptor for reset and assign new descriptor

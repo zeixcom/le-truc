@@ -32,8 +32,7 @@ const asInteger =
 		const trimmed = value.trim()
 		if (trimmed.toLowerCase().startsWith('0x'))
 			return (
-				parseNumber(v => parseInt(v, 16), trimmed) ??
-				getFallback(ui, fallback)
+				parseNumber(v => parseInt(v, 16), trimmed) ?? getFallback(ui, fallback)
 			)
 
 		// Handle other formats (including scientific notation)

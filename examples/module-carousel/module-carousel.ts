@@ -30,9 +30,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 	{
 		index: asInteger(ui =>
 			Math.max(
-				ui.slides
-					.get()
-					.findIndex(slide => slide.ariaCurrent === 'true'),
+				ui.slides.get().findIndex(slide => slide.ariaCurrent === 'true'),
 				0,
 			),
 		),
@@ -62,9 +60,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 								if (entry.isIntersecting) {
 									host.index = slides
 										.get()
-										.findIndex(
-											slide => slide === entry.target,
-										)
+										.findIndex(slide => slide === entry.target)
 									break
 								}
 							}
@@ -99,9 +95,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 				}),
 				on('keyup', ({ event }) => {
 					const key = event.key
-					if (
-						['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)
-					) {
+					if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) {
 						event.preventDefault()
 						event.stopPropagation()
 						const total = slides.length
@@ -111,8 +105,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 								: key === 'End'
 									? total - 1
 									: wrapAround(
-											host.index +
-												(key === 'ArrowLeft' ? -1 : 1),
+											host.index + (key === 'ArrowLeft' ? -1 : 1),
 											total,
 										)
 						slides[nextIndex].focus()
@@ -124,12 +117,8 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 
 			// Set the active slide in the navigation
 			dots: [
-				setProperty('ariaSelected', target =>
-					String(isCurrentDot(target)),
-				),
-				setProperty('tabIndex', target =>
-					isCurrentDot(target) ? 0 : -1,
-				),
+				setProperty('ariaSelected', target => String(isCurrentDot(target))),
+				setProperty('tabIndex', target => (isCurrentDot(target) ? 0 : -1)),
 			],
 
 			// Set the active slide in the slides

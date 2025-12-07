@@ -1,17 +1,17 @@
 import {
+	asString,
 	type Component,
 	createComputed,
 	dangerouslySetInnerHTML,
 	defineComponent,
-	resolve,
 	setText,
 	show,
 	toggleClass,
 } from '../..'
-import { asURL, fetchWithCache } from '../_common/fetch'
+import { fetchWithCache, isRecursiveURL, isValidURL } from '../_common/fetch'
 
 type ModuleLazyloadProps = {
-	src: { value: string; error: string }
+	src: string
 }
 
 type ModuleLazyloadUI = Record<
@@ -28,7 +28,7 @@ declare global {
 export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 	'module-lazyload',
 	{
-		src: asURL(),
+		src: asString(),
 	},
 	({ first }) => ({
 		callout: first(
@@ -41,32 +41,45 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 	}),
 	ui => {
 		const { host } = ui
-		const response = createComputed<string>(async (_prev, abort) => {
-			const url = host.src.value
-			if (host.src.error || !url)
-				throw new Error(host.src.error ?? 'No URL provided')
-			const { content } = await fetchWithCache(url, abort)
-			return content
-		})
-		const result = createComputed(() => resolve({ response }))
-		const hasError = () => !!result.get().errors
+		const result = createComputed<{
+			ok: boolean
+			value: string
+			error: string
+			pending: boolean
+		}>(
+			async (_prev, abort) => {
+				const url = host.src
+				let error = ''
+				if (!url) error = 'No URL provided'
+				if (!isValidURL(url)) error = 'Invalid URL'
+				if (isRecursiveURL(url, host)) error = 'Recursive URL detected'
+				if (error) return { ok: false, value: '', error, pending: false }
+
+				try {
+					const { content } = await fetchWithCache(url, abort)
+					return { ok: true, value: content, error: '', pending: false }
+				} catch (error) {
+					return {
+						ok: false,
+						value: '',
+						error: `Failed to fetch content for "${url}": ${String(error)}`,
+						pending: false,
+					}
+				}
+			},
+			{ ok: false, value: '', error: '', pending: true },
+		)
+		const hasError = () => !!result.get().error
 
 		return {
-			callout: [
-				show(() => !result.get().ok),
-				toggleClass('danger', hasError),
-			],
+			callout: [show(() => !result.get().ok), toggleClass('danger', hasError)],
 			loading: [show(() => !!result.get().pending)],
-			error: [
-				show(hasError),
-				setText(() => result.get().errors?.[0].message ?? ''),
-			],
+			error: [show(hasError), setText(() => result.get().error ?? '')],
 			content: [
 				show(() => result.get().ok),
-				dangerouslySetInnerHTML(
-					() => result.get().values?.response ?? '',
-					{ allowScripts: host.hasAttribute('allow-scripts') },
-				),
+				dangerouslySetInnerHTML(() => result.get().value ?? '', {
+					allowScripts: host.hasAttribute('allow-scripts'),
+				}),
 			],
 		}
 	},

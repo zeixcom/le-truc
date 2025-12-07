@@ -41,10 +41,7 @@ export default class VanillaCheckbox extends HTMLElement {
 		for (const element of Object.keys(ui)) {
 			this.#ui[element] = this.querySelector(ui[element])
 			if (!this.#ui[element])
-				this.#throwMissingElementError(
-					ui[element],
-					`Add a native ${element}.`,
-				)
+				this.#throwMissingElementError(ui[element], `Add a native ${element}.`)
 		}
 		Object.freeze(this.#ui)
 

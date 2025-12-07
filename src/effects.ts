@@ -187,9 +187,7 @@ const runEffects = <
 		const k = key as keyof U
 		if (!effects[k]) continue
 
-		const elementEffects = Array.isArray(effects[k])
-			? effects[k]
-			: [effects[k]]
+		const elementEffects = Array.isArray(effects[k]) ? effects[k] : [effects[k]]
 		if (isCollection<ElementFromKey<U, typeof k>>(ui[k])) {
 			cleanups.push(runCollectionEffects(ui.host, ui[k], elementEffects))
 		} else if (ui[k]) {
@@ -241,9 +239,7 @@ const resolveReactive = <
 				`Failed to resolve value of ${valueString(reactive)}${
 					context ? ` for ${context}` : ''
 				} in ${elementName(target)}${
-					(host as unknown as E) !== target
-						? ` in ${elementName(host)}`
-						: ''
+					(host as unknown as E) !== target ? ` in ${elementName(host)}` : ''
 				}`,
 				LOG_ERROR,
 			)

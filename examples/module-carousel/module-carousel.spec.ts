@@ -38,9 +38,7 @@ test.describe('module-carousel component', () => {
 	})
 
 	test.describe('Initial State', () => {
-		test('renders carousel with correct initial state', async ({
-			page,
-		}) => {
+		test('renders carousel with correct initial state', async ({ page }) => {
 			const carousel = page.locator('module-carousel')
 			const slides = carousel.locator('[role="tabpanel"]')
 			const dots = carousel.locator('[role="tab"]')
@@ -226,9 +224,7 @@ test.describe('module-carousel component', () => {
 			await expect(secondDot).toHaveAttribute('tabindex', '-1')
 		})
 
-		test('updates component index when dot is clicked', async ({
-			page,
-		}) => {
+		test('updates component index when dot is clicked', async ({ page }) => {
 			const carousel = page.locator('module-carousel')
 			const dots = carousel.locator('[role="tab"]')
 
@@ -329,9 +325,7 @@ test.describe('module-carousel component', () => {
 	})
 
 	test.describe('Scroll-based Navigation', () => {
-		test('updates index when slide is scrolled into view', async ({
-			page,
-		}) => {
+		test('updates index when slide is scrolled into view', async ({ page }) => {
 			const carousel = page.locator('module-carousel')
 			const slides = carousel.locator('[role="tabpanel"]')
 
@@ -424,10 +418,7 @@ test.describe('module-carousel component', () => {
 			await nextButton.click()
 			await page.waitForTimeout(10)
 
-			await expect(slides.first()).toHaveAttribute(
-				'aria-current',
-				'false',
-			)
+			await expect(slides.first()).toHaveAttribute('aria-current', 'false')
 			await expect(slides.nth(1)).toHaveAttribute('aria-current', 'true')
 			await expect(slides.nth(2)).toHaveAttribute('aria-current', 'false')
 
@@ -436,9 +427,7 @@ test.describe('module-carousel component', () => {
 			await expect(dots.nth(2)).toHaveAttribute('aria-selected', 'false')
 		})
 
-		test('maintains proper tabindex for roving tab focus', async ({
-			page,
-		}) => {
+		test('maintains proper tabindex for roving tab focus', async ({ page }) => {
 			const carousel = page.locator('module-carousel')
 			const dots = carousel.locator('[role="tab"]')
 			const nextButton = carousel.locator('button.next')
@@ -465,10 +454,7 @@ test.describe('module-carousel component', () => {
 			const nav = carousel.locator('nav')
 
 			// Check navigation has aria-label
-			await expect(nav).toHaveAttribute(
-				'aria-label',
-				'Carousel Navigation',
-			)
+			await expect(nav).toHaveAttribute('aria-label', 'Carousel Navigation')
 
 			// Check buttons have labels
 			await expect(prevButton).toHaveAttribute('aria-label', 'Previous')
@@ -477,14 +463,8 @@ test.describe('module-carousel component', () => {
 			// Check dots have proper labels and controls
 			for (let i = 0; i < 3; i++) {
 				const dot = dots.nth(i)
-				await expect(dot).toHaveAttribute(
-					'aria-label',
-					`Slide ${i + 1}`,
-				)
-				await expect(dot).toHaveAttribute(
-					'aria-controls',
-					`slide${i + 1}`,
-				)
+				await expect(dot).toHaveAttribute('aria-label', `Slide ${i + 1}`)
+				await expect(dot).toHaveAttribute('aria-controls', `slide${i + 1}`)
 			}
 		})
 	})

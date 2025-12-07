@@ -74,9 +74,7 @@ test.describe('form-checkbox component', () => {
 		await expect(checkboxComponent).not.toHaveAttribute('checked')
 	})
 
-	test('updates label text when changed programmatically', async ({
-		page,
-	}) => {
+	test('updates label text when changed programmatically', async ({ page }) => {
 		const checkboxComponent = page.locator('form-checkbox').first()
 		const label = checkboxComponent.locator('.label')
 

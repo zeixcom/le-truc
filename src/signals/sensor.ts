@@ -73,8 +73,7 @@ const createSensor =
 							target,
 							value,
 						})
-						if (newValue == null || newValue instanceof Promise)
-							return
+						if (newValue == null || newValue instanceof Promise) return
 						if (!Object.is(newValue, value)) {
 							value = newValue
 							if (watchers.size) notify(watchers)

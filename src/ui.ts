@@ -147,8 +147,7 @@ const getHelpers = (
 		if (targets.length)
 			targets.forEach(target => {
 				// Only add to dependencies if element is a custom element that's not yet defined
-				if (isNotYetDefinedComponent(target))
-					dependencies.add(target.localName)
+				if (isNotYetDefinedComponent(target)) dependencies.add(target.localName)
 			})
 		return collection
 	}

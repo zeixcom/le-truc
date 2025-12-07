@@ -23,9 +23,7 @@ test.describe('basic-button component', () => {
 		await expect(badgeSpan).toHaveText('5')
 
 		// Update disabled status
-		await defaultElement.evaluate(node =>
-			node.setAttribute('disabled', 'true'),
-		)
+		await defaultElement.evaluate(node => node.setAttribute('disabled', 'true'))
 		await expect(button).toBeDisabled()
 
 		await defaultElement.evaluate(node => node.removeAttribute('disabled'))

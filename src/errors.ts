@@ -143,9 +143,7 @@ class InvalidCustomElementError extends TypeError {
 	 * @param {string} where - Location where the error occurred
 	 */
 	constructor(target: HTMLElement, where: string) {
-		super(
-			`Target ${elementName(target)} is not a custom element in ${where}.`,
-		)
+		super(`Target ${elementName(target)} is not a custom element in ${where}.`)
 		this.name = 'InvalidCustomElementError'
 	}
 }
