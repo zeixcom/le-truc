@@ -55,21 +55,23 @@ export const asURL =
 		ComponentUI<P, U>
 	> =>
 	(ui: ComponentUI<P, U>, v: string | null | undefined) => {
+		// Get src attribute value if v is not provided
+		const attributeValue = v ?? ui.host.getAttribute('src')
 		let value = ''
 		let error = ''
-		if (!v) {
+		if (!attributeValue) {
 			error = 'No URL provided'
 		} else if (
 			(
-				ui.host.parentElement ||
-				(ui.host.getRootNode() as ShadowRoot).host
-			)?.closest(`${ui.host.localName}[src="${v}"]`)
+				ui.host.parentElement
+				|| (ui.host.getRootNode() as ShadowRoot).host
+			)?.closest(`${ui.host.localName}[src="${attributeValue}"]`)
 		) {
 			error = 'Recursive loading detected'
 		} else {
 			try {
 				// Ensure 'src' attribute is a valid URL
-				const url = new URL(v, location.href)
+				const url = new URL(attributeValue, location.href)
 
 				// Sanity check for cross-origin URLs
 				if (url.origin === location.origin) value = String(url)

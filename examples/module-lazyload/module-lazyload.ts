@@ -1,13 +1,12 @@
 import {
 	type Component,
 	createComputed,
-	createState,
 	dangerouslySetInnerHTML,
 	defineComponent,
+	resolve,
 	setText,
 	show,
 	toggleClass,
-	UNSET,
 } from '../..'
 import { asURL, fetchWithCache } from '../_common/fetch'
 
@@ -40,35 +39,34 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 		error: first('.error', 'Needed to display error messages.'),
 		content: first('.content', 'Needed to display content.'),
 	}),
-	({ host }) => {
-		const error = createState('')
-		const content = createComputed<string>(async (prev, abort) => {
+	ui => {
+		const { host } = ui
+		const response = createComputed<string>(async (_prev, abort) => {
 			const url = host.src.value
-			if (host.src.error || !url) {
-				error.set(host.src.error ?? 'No URL provided')
-				return prev
-			}
-
-			try {
-				error.set('')
-				const { content } = await fetchWithCache(url, abort)
-				return content
-			} catch (err) {
-				error.set(err instanceof Error ? err.message : String(err))
-				return prev
-			}
+			if (host.src.error || !url)
+				throw new Error(host.src.error ?? 'No URL provided')
+			const { content } = await fetchWithCache(url, abort)
+			return content
 		})
+		const result = createComputed(() => resolve({ response }))
+		const hasError = () => !!result.get().errors
 
 		return {
 			callout: [
-				show(() => !!error.get() || content.get() === UNSET),
-				toggleClass('danger', () => !!error.get()),
+				show(() => !result.get().ok),
+				toggleClass('danger', hasError),
 			],
-			loading: [show(() => content.get() === UNSET)],
-			error: [show(() => !!error.get()), setText(error)],
+			loading: [show(() => !!result.get().pending)],
+			error: [
+				show(hasError),
+				setText(() => result.get().errors?.[0].message ?? ''),
+			],
 			content: [
-				show(() => !error.get() && content.get() !== UNSET),
-				dangerouslySetInnerHTML(content),
+				show(() => result.get().ok),
+				dangerouslySetInnerHTML(
+					() => result.get().values?.response ?? '',
+					{ allowScripts: host.hasAttribute('allow-scripts') },
+				),
 			],
 		}
 	},

@@ -1,4 +1,4 @@
-import { MissingElementError } from './errors'
+import { DependencyTimeoutError, MissingElementError } from './errors'
 import { type Collection, createCollection } from './signals/collection'
 import { isNotYetDefinedComponent } from './util'
 
@@ -66,6 +66,10 @@ type ElementQueries = {
 	all: AllElements
 }
 
+/* === Constants === */
+
+const DEPENDENCY_TIMEOUT = 50
+
 /* === Exported Functions === */
 
 /**
@@ -75,7 +79,9 @@ type ElementQueries = {
  * @param {HTMLElement} host - Host component
  * @returns {ElementSelectors<P>} - Helper functions for selecting descendants
  */
-const getHelpers = (host: HTMLElement): [ElementQueries, () => string[]] => {
+const getHelpers = (
+	host: HTMLElement,
+): [ElementQueries, (run: () => void) => void] => {
 	const root = host.shadowRoot ?? host
 	const dependencies: Set<string> = new Set()
 
@@ -147,7 +153,38 @@ const getHelpers = (host: HTMLElement): [ElementQueries, () => string[]] => {
 		return collection
 	}
 
-	return [{ first, all }, () => Array.from(dependencies)]
+	/**
+	 * Resolve dependencies and thereafter run the provided function
+	 *
+	 * @param {() => void} callback - Function to run after resolving dependencies
+	 */
+	const resolveDependencies = (callback: () => void) => {
+		if (dependencies.size) {
+			const deps = Array.from(dependencies)
+			Promise.race([
+				Promise.all(deps.map(dep => customElements.whenDefined(dep))),
+				new Promise((_, reject) => {
+					setTimeout(() => {
+						reject(
+							new DependencyTimeoutError(
+								host,
+								deps.filter(dep => !customElements.get(dep)),
+							),
+						)
+					}, DEPENDENCY_TIMEOUT)
+				}),
+			])
+				.then(callback)
+				.catch(() => {
+					// Error during setup of <${name}>. Trying to run effects anyway.
+					callback()
+				})
+		} else {
+			callback()
+		}
+	}
+
+	return [{ first, all }, resolveDependencies]
 }
 
 export {

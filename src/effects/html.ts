@@ -44,6 +44,9 @@ const dangerouslySetInnerHTML = <P extends ComponentProps, E extends Element>(
 				newScript.appendChild(
 					document.createTextNode(script.textContent ?? ''),
 				)
+				// Safely copy only the type attribute to preserve module/MIME type info
+				const typeAttr = script.getAttribute('type')
+				if (typeAttr) newScript.setAttribute('type', typeAttr)
 				target.appendChild(newScript)
 				script.remove()
 			})

@@ -1169,6 +1169,7 @@ var read = (reader, fallback) => (ui) => {
 };
 
 // src/ui.ts
+var DEPENDENCY_TIMEOUT = 50;
 var getHelpers = (host) => {
   const root = host.shadowRoot ?? host;
   const dependencies = new Set;
@@ -1192,11 +1193,27 @@ var getHelpers = (host) => {
       });
     return collection;
   }
-  return [{ first, all }, () => Array.from(dependencies)];
+  const resolveDependencies = (callback) => {
+    if (dependencies.size) {
+      const deps = Array.from(dependencies);
+      Promise.race([
+        Promise.all(deps.map((dep) => customElements.whenDefined(dep))),
+        new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new DependencyTimeoutError(host, deps.filter((dep) => !customElements.get(dep))));
+          }, DEPENDENCY_TIMEOUT);
+        })
+      ]).then(callback).catch(() => {
+        callback();
+      });
+    } else {
+      callback();
+    }
+  };
+  return [{ first, all }, resolveDependencies];
 };
 
 // src/component.ts
-var DEPENDENCY_TIMEOUT = 50;
 function defineComponent(name, props = {}, select = () => ({}), setup = () => ({})) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
@@ -1208,19 +1225,20 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
 
   class Truc extends HTMLElement {
     debug;
-    #ui = {};
+    #ui;
     #signals = {};
     #cleanup;
     static observedAttributes = Object.entries(props)?.filter(([, initializer]) => isParser(initializer)).map(([prop]) => prop) ?? [];
     connectedCallback() {
-      const [elementQueries, getDependencies] = getHelpers(this);
-      this.#ui = {
+      const [elementQueries, resolveDependencies] = getHelpers(this);
+      const ui = {
         ...select(elementQueries),
         host: this
       };
+      this.#ui = ui;
       Object.freeze(this.#ui);
       const createSignal = (key, initializer) => {
-        const result = isFunction(initializer) ? isParser(initializer) ? initializer(this.#ui, null) : initializer(this.#ui) : initializer;
+        const result = isFunction(initializer) ? isParser(initializer) ? initializer(ui, this.getAttribute(key)) : initializer(ui) : initializer;
         if (result != null)
           this.#setAccessor(key, result);
       };
@@ -1229,32 +1247,16 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
           continue;
         createSignal(prop, initializer);
       }
-      const effects = setup(this.#ui);
-      const deps = getDependencies();
-      const runSetup = () => {
-        this.#cleanup = runEffects(this.#ui, effects);
-      };
-      if (deps.length) {
-        Promise.race([
-          Promise.all(deps.map((dep) => customElements.whenDefined(dep))),
-          new Promise((_, reject) => {
-            setTimeout(() => {
-              reject(new DependencyTimeoutError(this, deps.filter((dep) => !customElements.get(dep))));
-            }, DEPENDENCY_TIMEOUT);
-          })
-        ]).then(runSetup).catch(() => {
-          runSetup();
-        });
-      } else {
-        runSetup();
-      }
+      resolveDependencies(() => {
+        this.#cleanup = runEffects(ui, setup(ui));
+      });
     }
     disconnectedCallback() {
       if (isFunction(this.#cleanup))
         this.#cleanup();
     }
     attributeChangedCallback(name2, oldValue, newValue) {
-      if (newValue === oldValue || isComputed(this.#signals[name2]))
+      if (!this.#ui || newValue === oldValue || isComputed(this.#signals[name2]))
         return;
       const parser = props[name2];
       if (!isParser(parser))
@@ -1424,6 +1426,9 @@ var dangerouslySetInnerHTML = (reactive, options = {}) => updateElement(reactive
     target.querySelectorAll("script").forEach((script) => {
       const newScript = document.createElement("script");
       newScript.appendChild(document.createTextNode(script.textContent ?? ""));
+      const typeAttr = script.getAttribute("type");
+      if (typeAttr)
+        newScript.setAttribute("type", typeAttr);
       target.appendChild(newScript);
       script.remove();
     });

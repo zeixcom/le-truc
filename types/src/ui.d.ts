@@ -25,5 +25,5 @@ type ElementQueries = {
  * @param {HTMLElement} host - Host component
  * @returns {ElementSelectors<P>} - Helper functions for selecting descendants
  */
-declare const getHelpers: (host: HTMLElement) => [ElementQueries, () => string[]];
+declare const getHelpers: (host: HTMLElement) => [ElementQueries, (run: () => void) => void];
 export { type ElementFromKey, type ElementFromSelector, type ElementQueries, getHelpers, type UI, };

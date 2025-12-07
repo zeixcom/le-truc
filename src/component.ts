@@ -15,11 +15,7 @@ import {
 } from '@zeix/cause-effect'
 
 import { type Effects, runEffects } from './effects'
-import {
-	DependencyTimeoutError,
-	InvalidComponentNameError,
-	InvalidPropertyNameError,
-} from './errors'
+import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
 import { isParser, type Parser } from './parsers'
 import { type ElementQueries, getHelpers, type UI } from './ui'
 import { validatePropertyName } from './util'
@@ -59,10 +55,6 @@ type Initializers<P extends ComponentProps, U extends UI> = {
 
 type MaybeSignal<T extends {}> = T | Signal<T> | ComputedCallback<T>
 
-/* === Constants === */
-
-const DEPENDENCY_TIMEOUT = 50
-
 /* === Exported Functions === */
 
 /**
@@ -93,7 +85,7 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 
 	class Truc extends HTMLElement {
 		debug?: boolean
-		#ui = {} as ComponentUI<P, U>
+		#ui: ComponentUI<P, U> | undefined
 		#signals = {} as { [K in keyof P]: Signal<P[K]> }
 		#cleanup: MaybeCleanup
 
@@ -107,11 +99,12 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 		 */
 		connectedCallback() {
 			// Initialize UI
-			const [elementQueries, getDependencies] = getHelpers(this)
-			this.#ui = {
+			const [elementQueries, resolveDependencies] = getHelpers(this)
+			const ui = {
 				...select(elementQueries),
 				host: this as unknown as Component<P>,
 			}
+			this.#ui = ui
 			Object.freeze(this.#ui)
 
 			// Initialize signals
@@ -121,12 +114,15 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 			) => {
 				const result = isFunction(initializer)
 					? isParser(initializer)
-						? (initializer as Parser<P[K], U>)(this.#ui, null)
+						? (initializer as Parser<P[K], U>)(
+								ui,
+								this.getAttribute(key),
+							)
 						: (
 								initializer as (
 									ui: ComponentUI<P, U>,
 								) => MaybeSignal<P[K]> | void
-							)(this.#ui)
+							)(ui)
 					: (initializer as MaybeSignal<P[K]>)
 				if (result != null) this.#setAccessor(key, result)
 			}
@@ -135,41 +131,10 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 				createSignal(prop, initializer)
 			}
 
-			// Initialize effects
-			const effects = setup(this.#ui)
-
 			// Resolve dependencies and run setup function
-			const deps = getDependencies()
-			const runSetup = () => {
-				this.#cleanup = runEffects(this.#ui, effects)
-			}
-
-			if (deps.length) {
-				Promise.race([
-					Promise.all(
-						deps.map(dep => customElements.whenDefined(dep)),
-					),
-					new Promise((_, reject) => {
-						setTimeout(() => {
-							reject(
-								new DependencyTimeoutError(
-									this,
-									deps.filter(
-										dep => !customElements.get(dep),
-									),
-								),
-							)
-						}, DEPENDENCY_TIMEOUT)
-					}),
-				])
-					.then(runSetup)
-					.catch(() => {
-						// Error during setup of <${name}>. Trying to run effects anyway.
-						runSetup()
-					})
-			} else {
-				runSetup()
-			}
+			resolveDependencies(() => {
+				this.#cleanup = runEffects(ui, setup(ui))
+			})
 		}
 
 		/**
@@ -191,8 +156,13 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 			oldValue: string | null,
 			newValue: string | null,
 		) {
-			// Unchanged or controlled by computed
-			if (newValue === oldValue || isComputed(this.#signals[name])) return
+			// Not connected yet, unchanged value or controlled by computed
+			if (
+				!this.#ui ||
+				newValue === oldValue ||
+				isComputed(this.#signals[name])
+			)
+				return
 
 			// Check whether we have a parser for the attribute
 			const parser = props[name]

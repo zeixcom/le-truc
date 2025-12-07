@@ -1,0 +1,20 @@
+<h3>Recursive Content Test</h3>
+<p>
+	This snippet attempts to create recursive loading by including another
+	module-lazyload:
+</p>
+
+<module-lazyload src="/module-lazyload/recursive.html">
+	<card-callout>
+		<p class="loading" role="status">
+			This should not load due to recursion protection...
+		</p>
+		<p class="error" role="alert" aria-live="assertive" hidden></p>
+	</card-callout>
+	<div class="content" hidden></div>
+</module-lazyload>
+
+<p>
+	The above nested module-lazyload should show an error instead of loading
+	content.
+</p>

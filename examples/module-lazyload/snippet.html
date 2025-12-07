@@ -1,0 +1,57 @@
+<h2>Lazy Loaded</h2>
+<p>I come from the server and I bring an additional web component:</p>
+<style>
+	shake-hands {
+		display: inline-block;
+
+		& button {
+			display: flex;
+			flex-direction: row;
+			gap: var(--space-s);
+			border: 1px solid var(--color-orange-50);
+			border-radius: var(--space-xs);
+			background-color: var(--color-orange-20);
+			color: var(--color-text);
+			padding: var(--space-xs) var(--space-s);
+			cursor: pointer;
+			font-size: var(--font-size-m);
+			line-height: var(--line-height-xs);
+			transition: transform var(--transition-short) var(--easing-inout);
+
+			&:hover {
+				background-color: var(--color-orange-30);
+			}
+
+			&:active {
+				background-color: var(--color-orange-40);
+
+				.emoji {
+					transform: scale(1.1);
+				}
+			}
+		}
+	}
+</style>
+<shake-hands aria-label="shake hands">
+	<button type="button">
+		<span class="emoji">🫱🏼‍🫲🏾</span>
+		<span class="count">42</span>
+	</button>
+</shake-hands>
+<script>
+	customElements.get('shake-hands')
+		|| customElements.define(
+			'shake-hands',
+			class extends HTMLElement {
+				connectedCallback() {
+					const countEl = this.querySelector('.count')
+					let count = parseInt(countEl.textContent, 10)
+
+					this.querySelector('button').onclick = () => {
+						count++
+						countEl.textContent = count
+					}
+				}
+			},
+		)
+</script>
