@@ -7,7 +7,7 @@ import {
 	setProperty,
 } from '../..'
 
-type ModuleCarouselProps = {
+export type ModuleCarouselProps = {
 	index: number
 }
 

@@ -10,7 +10,7 @@ import {
 	show,
 } from '../..'
 
-type ModulePaginationProps = {
+export type ModulePaginationProps = {
 	value: number
 	max: number
 }

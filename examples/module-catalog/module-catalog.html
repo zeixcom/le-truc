@@ -1,0 +1,82 @@
+<module-catalog>
+	<header>
+		<p>Shop</p>
+		<basic-button disabled>
+			<button type="button" disabled>
+				<span class="label">🛒 Shopping Cart</span>
+				<span class="badge"></span>
+			</button>
+		</basic-button>
+	</header>
+	<ul>
+		<li>
+			<p>Product 1</p>
+			<form-spinbutton>
+				<button type="button" class="decrement" aria-label="Decrement" hidden>
+					−
+				</button>
+				<input
+					type="number"
+					class="value"
+					name="amount-product1"
+					value="0"
+					min="0"
+					max="10"
+					readonly
+					disabled
+					hidden
+				/>
+				<button type="button" class="increment" aria-label="Increment">
+					<span class="zero">Add to Cart</span>
+					<span class="other" hidden>+</span>
+				</button>
+			</form-spinbutton>
+		</li>
+		<li>
+			<p>Product 2</p>
+			<form-spinbutton>
+				<button type="button" class="decrement" aria-label="Decrement" hidden>
+					−
+				</button>
+				<input
+					type="number"
+					class="value"
+					name="amount-product2"
+					value="0"
+					min="0"
+					max="5"
+					readonly
+					disabled
+					hidden
+				/>
+				<button type="button" class="increment" aria-label="Increment">
+					<span class="zero">Add to Cart</span>
+					<span class="other" hidden>+</span>
+				</button>
+			</form-spinbutton>
+		</li>
+		<li>
+			<p>Product 3</p>
+			<form-spinbutton>
+				<button type="button" class="decrement" aria-label="Decrement" hidden>
+					−
+				</button>
+				<input
+					type="number"
+					class="value"
+					name="amount-product3"
+					value="0"
+					min="0"
+					max="20"
+					readonly
+					disabled
+					hidden
+				/>
+				<button type="button" class="increment" aria-label="Increment">
+					<span class="zero">Add to Cart</span>
+					<span class="other" hidden>+</span>
+				</button>
+			</form-spinbutton>
+		</li>
+	</ul>
+</module-catalog>

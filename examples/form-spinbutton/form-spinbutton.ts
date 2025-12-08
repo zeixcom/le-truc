@@ -10,7 +10,7 @@ import {
 	show,
 } from '../..'
 
-type FormSpinbuttonProps = {
+export type FormSpinbuttonProps = {
 	readonly value: number
 	max: number
 }

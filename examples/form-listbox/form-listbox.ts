@@ -27,12 +27,12 @@ import { highlightMatch } from '../_common/highlight'
  * and automatic form value synchronization via a built-in hidden input element.
  */
 
-type FormListboxOption = {
+export type FormListboxOption = {
 	value: string
 	label: string
 }
 
-type FormListboxGroups = Record<
+export type FormListboxGroups = Record<
 	string,
 	{
 		label: string
@@ -40,7 +40,7 @@ type FormListboxGroups = Record<
 	}
 >
 
-type FormListboxProps = {
+export type FormListboxProps = {
 	value: string
 	filter: string
 	src: string

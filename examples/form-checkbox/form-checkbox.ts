@@ -8,7 +8,7 @@ import {
 	toggleAttribute,
 } from '../..'
 
-type FormCheckboxProps = {
+export type FormCheckboxProps = {
 	readonly checked: boolean
 	label: string
 }
@@ -34,9 +34,9 @@ export default defineComponent<FormCheckboxProps, FormCheckboxUI>(
 		),
 		label: asString(
 			ui =>
-				ui.label?.textContent ??
-				ui.host.querySelector('label')?.textContent ??
-				'',
+				ui.label?.textContent
+				?? ui.host.querySelector('label')?.textContent
+				?? '',
 		),
 	},
 	({ first }) => ({

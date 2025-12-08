@@ -7,7 +7,7 @@ import {
 	setText,
 } from '../..'
 
-type BasicCounterProps = {
+export type BasicCounterProps = {
 	count: number
 }
 

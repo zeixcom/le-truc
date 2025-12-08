@@ -9,7 +9,7 @@ import {
 } from '../..'
 import { manageFocus } from '../_common/focus'
 
-type FormRadiogroupProps = {
+export type FormRadiogroupProps = {
 	readonly value: string
 }
 

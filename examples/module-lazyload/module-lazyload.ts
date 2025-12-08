@@ -10,7 +10,7 @@ import {
 } from '../..'
 import { fetchWithCache, isRecursiveURL, isValidURL } from '../_common/fetch'
 
-type ModuleLazyloadProps = {
+export type ModuleLazyloadProps = {
 	src: string
 }
 

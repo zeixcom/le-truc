@@ -7,7 +7,7 @@ import {
 	setText,
 } from '../..'
 
-type BasicButtonProps = {
+export type BasicButtonProps = {
 	disabled: boolean
 	label: string
 	badge: string

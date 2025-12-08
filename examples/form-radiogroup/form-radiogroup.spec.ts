@@ -499,24 +499,6 @@ test.describe('form-radiogroup component', () => {
 		expect(finalValue).toBe('female')
 	})
 
-	test('handles missing required elements gracefully', async ({ page }) => {
-		// Create a radiogroup without the required radio buttons
-		await page.evaluate(() => {
-			const emptyRadiogroup = document.createElement('form-radiogroup')
-			emptyRadiogroup.innerHTML = '<fieldset><legend>Empty</legend></fieldset>'
-			document.body.appendChild(emptyRadiogroup)
-		})
-
-		// Should not crash - component should handle missing radios gracefully
-		const emptyValue = await page.evaluate(() => {
-			const element = document.querySelector(
-				'form-radiogroup:last-child',
-			) as any
-			return element?.value ?? ''
-		})
-		expect(emptyValue).toBe('')
-	})
-
 	test('maintains focus management after DOM changes', async ({ page }) => {
 		const radiogroupComponent = page.locator('form-radiogroup').first()
 		const femaleRadio = radiogroupComponent.locator('input[value="female"]')

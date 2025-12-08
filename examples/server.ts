@@ -37,10 +37,7 @@ async function serveTestPage(component: string): Promise<Response> {
 			readFile(fragmentPath, 'utf8'),
 		])
 		// Replace marker in layout with fragment
-		const html = layout.replace(
-			/<!--\s*Component HTML fragment.*?-->/,
-			fragment,
-		)
+		const html = layout.replace(/<!-- \{\{content}} -->/, fragment)
 		return new Response(html, {
 			headers: { 'Content-Type': 'text/html; charset=utf-8' },
 		})

@@ -8,7 +8,7 @@ import {
 	show,
 } from '../..'
 
-type ModuleTabgroupProps = {
+export type ModuleTabgroupProps = {
 	readonly selected: string
 }
 

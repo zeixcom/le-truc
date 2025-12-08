@@ -11,7 +11,7 @@ import {
 } from '../..'
 import { clearEffects, clearMethod } from '../_common/clear'
 
-type FormTextboxProps = {
+export type FormTextboxProps = {
 	value: string
 	readonly length: number
 	error: string

@@ -1,6 +1,6 @@
 import { asString, type Component, defineComponent, on, setText } from '../..'
 
-type BasicHelloProps = {
+export type BasicHelloProps = {
 	name: string
 }
 
