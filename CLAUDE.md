@@ -135,7 +135,7 @@ Effects are functions that run reactively and return cleanup functions:
 const effects = {
   button: [
     // Event handling
-    on('click', ({ host, target, event }) => ({ count: host.count + 1 })),
+    on('click', ({ host }) => ({ count: host.count + 1 })),
 
     // Property updates from reactive values
     setProperty('disabled', 'loading'),

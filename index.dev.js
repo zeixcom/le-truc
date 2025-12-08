@@ -1549,31 +1549,41 @@ var asEnum = (valid) => (_, value) => {
 };
 // src/signals/sensor.ts
 var createSensor = (init, key, events) => (ui) => {
+  const { host } = ui;
   const watchers = new Set;
   let value = getFallback(ui, init);
   const targets = isCollection(ui[key]) ? ui[key].get() : [ui[key]];
   const eventMap = new Map;
   let cleanup;
+  const getTarget = (eventTarget) => {
+    for (const t of targets) {
+      if (t.contains(eventTarget))
+        return t;
+    }
+  };
   const listen = () => {
     for (const [type, handler] of Object.entries(events)) {
       const options = { passive: PASSIVE_EVENTS.has(type) };
       const listener = (e) => {
-        const target = e.target;
-        if (!target || !targets.includes(target))
+        const eventTarget = e.target;
+        if (!eventTarget)
+          return;
+        const target = getTarget(eventTarget);
+        if (!target)
           return;
         e.stopPropagation();
         const task = () => {
           try {
-            const newValue = handler({
+            const next = handler({
               event: e,
               ui,
               target,
-              value
+              prev: value
             });
-            if (newValue == null || newValue instanceof Promise)
+            if (next == null || next instanceof Promise)
               return;
-            if (!Object.is(newValue, value)) {
-              value = newValue;
+            if (!Object.is(next, value)) {
+              value = next;
               if (watchers.size)
                 notify(watchers);
               else if (cleanup)
@@ -1585,17 +1595,17 @@ var createSensor = (init, key, events) => (ui) => {
           }
         };
         if (options.passive)
-          schedule(ui.host, task);
+          schedule(host, task);
         else
           task();
       };
       eventMap.set(type, listener);
-      ui.host.addEventListener(type, listener, options);
+      host.addEventListener(type, listener, options);
     }
     cleanup = () => {
       if (eventMap.size) {
         for (const [type, listener] of eventMap)
-          ui.host.removeEventListener(type, listener);
+          host.removeEventListener(type, listener);
         eventMap.clear();
       }
       cleanup = undefined;

@@ -27,7 +27,7 @@ type SensorHandler<
 	event: Evt
 	ui: U
 	target: E
-	value: T
+	prev: T
 }) => T | void | Promise<void>
 
 type SensorEvents<T extends {}, U extends UI, E extends Element> = {
@@ -52,6 +52,7 @@ const createSensor =
 		events: SensorEvents<T, U, ElementFromKey<U, K>>,
 	): ((ui: U & { host: Component<P> }) => Computed<T>) =>
 	(ui: U & { host: Component<P> }) => {
+		const { host } = ui
 		const watchers: Set<Watcher> = new Set()
 		let value: T = getFallback(ui, init)
 		const targets = isCollection(ui[key])
@@ -60,25 +61,33 @@ const createSensor =
 		const eventMap = new Map<string, EventListener>()
 		let cleanup: MaybeCleanup
 
+		const getTarget = (eventTarget: Node): ElementFromKey<U, K> | undefined => {
+			for (const t of targets) {
+				if (t.contains(eventTarget)) return t as ElementFromKey<U, K>
+			}
+		}
+
 		const listen = () => {
 			for (const [type, handler] of Object.entries(events)) {
 				const options = { passive: PASSIVE_EVENTS.has(type) }
 				const listener = (e: Event) => {
-					const target = e.target as ElementFromKey<U, K>
-					if (!target || !targets.includes(target)) return
+					const eventTarget = e.target as Node
+					if (!eventTarget) return
+					const target = getTarget(eventTarget)
+					if (!target) return
 					e.stopPropagation()
 
 					const task = () => {
 						try {
-							const newValue = handler({
+							const next = handler({
 								event: e as any,
 								ui,
 								target,
-								value,
+								prev: value,
 							})
-							if (newValue == null || newValue instanceof Promise) return
-							if (!Object.is(newValue, value)) {
-								value = newValue
+							if (next == null || next instanceof Promise) return
+							if (!Object.is(next, value)) {
+								value = next
 								if (watchers.size) notify(watchers)
 								else if (cleanup) cleanup()
 							}
@@ -87,16 +96,16 @@ const createSensor =
 							throw error
 						}
 					}
-					if (options.passive) schedule(ui.host, task)
+					if (options.passive) schedule(host, task)
 					else task()
 				}
 				eventMap.set(type, listener)
-				ui.host.addEventListener(type, listener, options)
+				host.addEventListener(type, listener, options)
 			}
 			cleanup = () => {
 				if (eventMap.size) {
 					for (const [type, listener] of eventMap)
-						ui.host.removeEventListener(type, listener)
+						host.removeEventListener(type, listener)
 					eventMap.clear()
 				}
 				cleanup = undefined

@@ -7,7 +7,7 @@ type SensorHandler<T extends {}, Evt extends Event, U extends UI, E extends Elem
     event: Evt;
     ui: U;
     target: E;
-    value: T;
+    prev: T;
 }) => T | void | Promise<void>;
 type SensorEvents<T extends {}, U extends UI, E extends Element> = {
     [K in keyof HTMLElementEventMap]?: SensorHandler<T, EventType<K>, U, E>;
