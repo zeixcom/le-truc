@@ -146,8 +146,8 @@ test.describe('basic-number component', () => {
 		await page.waitForTimeout(10) // Allow time for console message
 		const hasUnitError = consoleMessages.some(
 			msg =>
-				msg.includes('unit')
-				&& (msg.includes('liter') || msg.includes('kilometer')),
+				msg.includes('unit') &&
+				(msg.includes('liter') || msg.includes('kilometer')),
 		)
 		expect(hasUnitError).toBe(true)
 	})

@@ -2,7 +2,7 @@ import {
 	type Cleanup,
 	isString,
 	isSymbol,
-	type MaybeCleanup,
+	// type MaybeCleanup,
 	notify,
 	subscribe,
 	type Watcher,
@@ -77,7 +77,7 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 	}
 	let elements: E[] = []
 	let observer: MutationObserver | undefined
-	let cleanup: MaybeCleanup
+	// let cleanup: MaybeCleanup
 
 	const filterMatches = (elements: NodeList) =>
 		Array.from(elements)
@@ -95,14 +95,24 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 	const observe = () => {
 		elements = Array.from(parent.querySelectorAll<E>(selector))
 
-		observer = new MutationObserver(([mutation]) => {
-			if (!watchers.size && !listeners.add.size && !listeners.remove.size) {
+		observer = new MutationObserver(mutations => {
+			/* if (!watchers.size && !listeners.add.size && !listeners.remove.size) {
 				if (cleanup) cleanup()
 				return
+			} */
+
+			const added: E[] = []
+			const removed: E[] = []
+
+			for (const mutation of mutations) {
+				added.push(...filterMatches(mutation.addedNodes))
+				removed.push(...filterMatches(mutation.removedNodes))
+				for (const node of mutation.addedNodes) {
+					if (isElement(node))
+						added.push(...Array.from(node.querySelectorAll<E>(selector)))
+				}
 			}
 
-			const added = filterMatches(mutation.addedNodes)
-			const removed = filterMatches(mutation.removedNodes)
 			if (added.length) {
 				notifyListeners(listeners.add, added)
 				elements = Array.from(parent.querySelectorAll<E>(selector))
@@ -127,10 +137,10 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 		}
 		observer.observe(parent, observerConfig)
 
-		cleanup = () => {
+		/* cleanup = () => {
 			if (observer) observer.disconnect()
 			cleanup = undefined
-		}
+		} */
 	}
 
 	const collection = {} as Collection<E>
@@ -182,14 +192,14 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 			if (Number.isInteger(index)) return elements[index]
 
 			// Reflect array methods from the elements array
-			if (isString(prop) && hasMethod(elements, prop)) {
+			/* if (isString(prop) && hasMethod(elements, prop)) {
 				const method = elements[prop]
 				return (...args: unknown[]) => {
 					subscribe(watchers)
 					if (!observer) observe()
 					return method.apply(elements, args)
 				}
-			}
+			} */
 
 			return undefined
 		},

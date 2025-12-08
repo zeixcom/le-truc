@@ -1,0 +1,12 @@
+<form>
+	<form-listbox id="timezone" src="/form-listbox/timezones.json">
+		<input type="hidden" name="timezone" />
+		<card-callout>
+			<p class="loading" role="status">Loading...</p>
+			<p class="error" role="alert" aria-live="polite" hidden></p>
+		</card-callout>
+		<module-scrollarea orientation="vertical">
+			<div role="listbox" aria-label="Timezones" hidden></div>
+		</module-scrollarea>
+	</form-listbox>
+</form>

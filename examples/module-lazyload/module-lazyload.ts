@@ -49,10 +49,13 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 		}>(
 			async (_prev, abort) => {
 				const url = host.src
-				let error = ''
-				if (!url) error = 'No URL provided'
-				if (!isValidURL(url)) error = 'Invalid URL'
-				if (isRecursiveURL(url, host)) error = 'Recursive URL detected'
+				const error = !url
+					? 'No URL provided'
+					: !isValidURL(url)
+						? 'Invalid URL'
+						: isRecursiveURL(url, host)
+							? 'Recursive URL detected'
+							: ''
 				if (error) return { ok: false, value: '', error, pending: false }
 
 				try {

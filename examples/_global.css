@@ -103,7 +103,11 @@
 	--color-success-active: var(--color-green-90);
 	--color-success-text: var(--color-green-10);
 
+	--color-selection-hover: var(--color-blue-20);
 	--color-selection: var(--color-blue-50);
+	--color-selection-selected: var(--color-blue-70);
+	--color-selection-active: var(--color-blue-80);
+
 	--color-input: var(--color-white);
 	--color-background: var(--color-neutral-10);
 	--color-background-alt: var(--color-neutral-20);
@@ -113,8 +117,8 @@
 	--color-text-inverted: var(--color-white); /* var(--color-purple-10); */
 	--color-shadow: rgb(0 0 0 / 10%);
 
-	--font-family-sans: 'Helvetica Neue', Arial, Roboto, sans-serif;
-	--font-family-mono: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+	--font-family-sans: "Helvetica Neue", Arial, Roboto, sans-serif;
+	--font-family-mono: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
 
 	--font-weight-regular: 400;
 	--font-weight-bold: 700;
@@ -162,6 +166,9 @@
 
 @media (prefers-color-scheme: dark) {
 	:root {
+		--color-selection-hover: var(--color-blue-80);
+		--color-selection-selected: var(--color-blue-30);
+		--color-selection-active: var(--color-blue-20);
 		--color-input: var(--color-black);
 		--color-background: var(--color-neutral-90);
 		--color-background-alt: var(--color-neutral-80);
@@ -429,9 +436,9 @@ a[href] {
 	}
 }
 
-[aria-hidden='true'],
+[aria-hidden="true"],
 [hidden] {
-	display: none;
+	display: none !important;
 }
 
 /* Helper classes */

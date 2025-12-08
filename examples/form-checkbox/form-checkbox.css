@@ -24,7 +24,7 @@ form-checkbox {
 		&::before {
 			display: inline-block;
 			box-sizing: border-box;
-			content: '';
+			content: "";
 			font-size: var(--font-size-l);
 			text-align: center;
 			width: var(--input-height);
@@ -56,7 +56,7 @@ form-checkbox {
 			background-color: var(--color-success);
 			border-color: var(--color-success-active);
 			text-shadow: 0 0 var(--space-xs) var(--color-success-active);
-			content: '✓';
+			content: "✓";
 		}
 
 		&:hover::before {

@@ -58,6 +58,7 @@ async function serveStaticAsset(url: string): Promise<Response> {
 		if (url.endsWith('.js')) contentType = 'application/javascript'
 		if (url.endsWith('.css')) contentType = 'text/css'
 		if (url.endsWith('.html')) contentType = 'text/html'
+		if (url.endsWith('.json')) contentType = 'application/json'
 		return new Response(asset, { headers: { 'Content-Type': contentType } })
 	} catch (_err) {
 		return new Response('Asset not found', { status: 404 })
@@ -79,9 +80,9 @@ serve({
 		if (url.pathname.startsWith('/assets/')) {
 			return await serveStaticAsset('examples' + url.pathname)
 		}
-		// Serve static fragments for manual inspection
+		// Serve static fragments and other files for manual inspection
 		const fragmentMatch = url.pathname.match(
-			/^\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\.html$/,
+			/^\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\.(html|json)$/,
 		)
 		if (fragmentMatch) {
 			return await serveStaticAsset('examples' + url.pathname)

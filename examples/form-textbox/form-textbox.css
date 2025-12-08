@@ -28,7 +28,7 @@ form-textbox {
 		width: 100%;
 		transition: color var(--transition-short) var(--easing-inout);
 
-		&[aria-invalid='true'] {
+		&[aria-invalid="true"] {
 			box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
 		}
 

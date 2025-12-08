@@ -1,13 +1,13 @@
 import {
-	Collection,
+	type Collection,
 	type Component,
 	createSensor,
 	defineComponent,
-	on,
 	read,
 	setProperty,
 	toggleClass,
 } from '../..'
+import { manageFocus } from '../_common/focus'
 
 type FormRadiogroupProps = {
 	readonly value: string
@@ -24,43 +24,8 @@ declare global {
 	}
 }
 
-const DECREMENT_KEYS = ['ArrowLeft', 'ArrowUp']
-const INCREMENT_KEYS = ['ArrowRight', 'ArrowDown']
-const FIRST_KEY = 'Home'
-const LAST_KEY = 'End'
-const HANDLED_KEYS = [...DECREMENT_KEYS, ...INCREMENT_KEYS, FIRST_KEY, LAST_KEY]
-
 const getIndex = (radios: Collection<HTMLInputElement>) =>
 	radios.get().findIndex(radio => radio.checked)
-
-const manageFocus = (
-	radios: Collection<HTMLInputElement>,
-	getCheckedIndex: (radios: Collection<HTMLInputElement>) => number,
-) => {
-	let index = getCheckedIndex(radios)
-
-	return [
-		on('click', () => {
-			index = getCheckedIndex(radios)
-		}),
-		on('focus', ({ target }) => {
-			index = radios.get().findIndex(radio => radio === target)
-		}),
-		on('keydown', ({ event }) => {
-			const { key } = event
-			if (!HANDLED_KEYS.includes(key)) return
-			event.preventDefault()
-			event.stopPropagation()
-			if (key === FIRST_KEY) index = 0
-			else if (key === LAST_KEY) index = radios.length - 1
-			else
-				index =
-					(index + (INCREMENT_KEYS.includes(key) ? 1 : -1) + radios.length)
-					% radios.length
-			if (radios[index]) radios[index].focus()
-		}),
-	]
-}
 
 export default defineComponent<FormRadiogroupProps, FormRadiogroupUI>(
 	'form-radiogroup',
@@ -81,12 +46,9 @@ export default defineComponent<FormRadiogroupProps, FormRadiogroupUI>(
 		labels: all('label', 'Wrap radio buttons with labels.'),
 	}),
 	({ host, radios }) => ({
+		host: [...manageFocus(radios, getIndex)],
 		radios: [
 			setProperty('tabIndex', target => (target.value === host.value ? 0 : -1)),
-			...manageFocus(radios, getIndex),
-			on('keyup', ({ event, target }) => {
-				if (event.key === 'Enter') target.click()
-			}),
 		],
 		labels: [
 			toggleClass(

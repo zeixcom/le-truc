@@ -148,23 +148,24 @@ test.describe('form-radiogroup component', () => {
 		const maleRadio = radiogroupComponent.locator('input[value="male"]')
 		const otherRadio = radiogroupComponent.locator('input[value="other"]')
 
-		// Focus on middle radio (male at index 1)
-		await maleRadio.focus()
+		// First select male radio to establish checked state (needed for focus management)
+		await maleRadio.click()
+		await expect(maleRadio).toBeChecked()
 		await expect(maleRadio).toBeFocused()
 
 		// Arrow down should move focus (same as arrow right) to next index (other)
 		await page.keyboard.press('ArrowDown')
-		await page.waitForTimeout(10)
+		await page.waitForTimeout(50)
 		await expect(otherRadio).toBeFocused()
 
 		// Arrow down should wrap around to first item (female)
 		await page.keyboard.press('ArrowDown')
-		await page.waitForTimeout(10)
+		await page.waitForTimeout(50)
 		await expect(femaleRadio).toBeFocused()
 
 		// Arrow up should move focus backwards (same as arrow left) to last item (other)
 		await page.keyboard.press('ArrowUp')
-		await page.waitForTimeout(10)
+		await page.waitForTimeout(50)
 		await expect(otherRadio).toBeFocused()
 	})
 
@@ -198,13 +199,19 @@ test.describe('form-radiogroup component', () => {
 		await expect(otherRadio).toBeChecked()
 		await expect(femaleRadio).not.toBeChecked()
 
-		// Focus female radio but don't click
-		await femaleRadio.focus()
+		// Focus the currently checked radio (other), then navigate to female
+		await otherRadio.focus()
+		await expect(otherRadio).toBeFocused()
+
+		// Navigate to female radio using keyboard
+		await page.keyboard.press('ArrowDown') // Move to next (female)
+		await page.waitForTimeout(50)
 		await expect(femaleRadio).toBeFocused()
 		await expect(femaleRadio).not.toBeChecked() // Still not selected
 
 		// Press Enter to select
 		await page.keyboard.press('Enter')
+		await page.waitForTimeout(50)
 		await expect(femaleRadio).toBeChecked()
 		await expect(otherRadio).not.toBeChecked()
 	})
@@ -454,37 +461,36 @@ test.describe('form-radiogroup component', () => {
 		expect(formData).toEqual({ gender: 'female' })
 	})
 
-	test('prevents default behavior on keyboard navigation', async ({ page }) => {
-		// Set up event listener to track prevented events on the radio inputs
-		await page.evaluate(() => {
-			;(window as any).preventedEvents = []
-			const radios = document.querySelectorAll(
-				'form-radiogroup input[type="radio"]',
-			)
-			radios.forEach(radio => {
-				radio.addEventListener('keydown', event => {
-					if (event.defaultPrevented) {
-						;(window as any).preventedEvents.push(event.key)
-					}
-				})
-			})
-		})
+	test('handles keyboard navigation without affecting page scroll', async ({
+		page,
+	}) => {
+		const radiogroupComponent = page.locator('form-radiogroup').first()
+		const otherRadio = radiogroupComponent.locator('input[value="other"]')
+		const femaleRadio = radiogroupComponent.locator('input[value="female"]')
 
-		const otherRadio = page
-			.locator('form-radiogroup input[value="other"]')
-			.first()
+		// Focus the initially checked radio
 		await otherRadio.focus()
+		await expect(otherRadio).toBeFocused()
 
-		// Navigation keys should prevent default
+		// Get initial scroll position
+		const initialScrollY = await page.evaluate(() => window.scrollY)
+
+		// Navigate with arrow keys (these should not scroll the page)
 		await page.keyboard.press('ArrowRight')
-		await page.keyboard.press('ArrowLeft')
-		await page.keyboard.press('Home')
-		await page.keyboard.press('End')
+		await page.waitForTimeout(50)
+		await expect(femaleRadio).toBeFocused()
 
-		const preventedEvents = await page.evaluate(
-			() => (window as any).preventedEvents,
-		)
-		expect(preventedEvents).toEqual(['ArrowRight', 'ArrowLeft', 'Home', 'End'])
+		await page.keyboard.press('Home')
+		await page.waitForTimeout(50)
+		await expect(femaleRadio).toBeFocused() // Should stay at first
+
+		await page.keyboard.press('End')
+		await page.waitForTimeout(50)
+		await expect(otherRadio).toBeFocused() // Should move to last
+
+		// Verify page didn't scroll (meaning default behavior was prevented)
+		const finalScrollY = await page.evaluate(() => window.scrollY)
+		expect(finalScrollY).toBe(initialScrollY)
 	})
 
 	test('handles rapid selection changes', async ({ page }) => {

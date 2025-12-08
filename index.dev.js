@@ -836,7 +836,6 @@ var createCollection = (parent, selector) => {
   };
   let elements = [];
   let observer;
-  let cleanup;
   const filterMatches = (elements2) => Array.from(elements2).filter(isElement).filter((element) => element.matches(selector));
   const notifyListeners = (listeners2, elements2) => {
     Object.freeze(elements2);
@@ -845,14 +844,17 @@ var createCollection = (parent, selector) => {
   };
   const observe2 = () => {
     elements = Array.from(parent.querySelectorAll(selector));
-    observer = new MutationObserver(([mutation]) => {
-      if (!watchers.size && !listeners.add.size && !listeners.remove.size) {
-        if (cleanup)
-          cleanup();
-        return;
+    observer = new MutationObserver((mutations) => {
+      const added = [];
+      const removed = [];
+      for (const mutation of mutations) {
+        added.push(...filterMatches(mutation.addedNodes));
+        removed.push(...filterMatches(mutation.removedNodes));
+        for (const node of mutation.addedNodes) {
+          if (isElement(node))
+            added.push(...Array.from(node.querySelectorAll(selector)));
+        }
       }
-      const added = filterMatches(mutation.addedNodes);
-      const removed = filterMatches(mutation.removedNodes);
       if (added.length) {
         notifyListeners(listeners.add, added);
         elements = Array.from(parent.querySelectorAll(selector));
@@ -878,11 +880,6 @@ var createCollection = (parent, selector) => {
       observerConfig.attributeFilter = observedAttributes;
     }
     observer.observe(parent, observerConfig);
-    cleanup = () => {
-      if (observer)
-        observer.disconnect();
-      cleanup = undefined;
-    };
   };
   const collection = {};
   Object.defineProperties(collection, {
@@ -935,15 +932,6 @@ var createCollection = (parent, selector) => {
       const index = Number(prop);
       if (Number.isInteger(index))
         return elements[index];
-      if (isString(prop) && hasMethod(elements, prop)) {
-        const method = elements[prop];
-        return (...args) => {
-          subscribe(watchers);
-          if (!observer)
-            observe2();
-          return method.apply(elements, args);
-        };
-      }
       return;
     },
     has(target, prop) {
