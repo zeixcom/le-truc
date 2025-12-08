@@ -362,7 +362,7 @@ test.describe('module-lazyload component', () => {
 			const error = loader.locator('.error')
 
 			// Wait for component to initialize
-			await page.waitForTimeout(2000)
+			await page.waitForTimeout(50)
 
 			// When card-callout is missing, the component should be stuck in loading state
 			await expect(loading).toBeVisible()
@@ -415,8 +415,6 @@ test.describe('module-lazyload component', () => {
 
 			// Click should increment counter (proves script executed)
 			await button.click()
-			// Wait a bit for script to execute
-			await page.waitForTimeout(100)
 			await expect(counter).toHaveText('43')
 
 			// Multiple clicks should continue incrementing
@@ -491,9 +489,6 @@ test.describe('module-lazyload component', () => {
 			// Wait for content to load
 			await expect(content).toBeVisible({ timeout: 5000 })
 
-			// Wait a bit for scripts to execute
-			await page.waitForTimeout(200)
-
 			// Verify that the module script executed (which requires type="module" to work)
 			const moduleOutput = content.locator('#module-test-output')
 			await expect(moduleOutput).toHaveText(
@@ -564,8 +559,8 @@ test.describe('module-lazyload component', () => {
 				return {
 					exists: !!callout,
 					hidden:
-						callout?.hasAttribute('hidden') ||
-						(callout as HTMLElement).style.display === 'none',
+						callout?.hasAttribute('hidden')
+						|| (callout as HTMLElement).style.display === 'none',
 				}
 			})
 			expect(shadowCallout.exists).toBe(true)
@@ -621,12 +616,10 @@ test.describe('module-lazyload component', () => {
 
 			// Test Shadow DOM functionality
 			await shadowButton.click()
-			await page.waitForTimeout(100)
 			await expect(shadowLoader.locator('shake-hands .count')).toHaveText('43')
 
 			// Test regular DOM functionality
 			await regularButton.click()
-			await page.waitForTimeout(100)
 			await expect(regularLoader.locator('shake-hands .count')).toHaveText('43')
 
 			// Verify style isolation difference
@@ -703,10 +696,6 @@ test.describe('module-lazyload component', () => {
 				// Remove it immediately after adding
 				setTimeout(() => loader.remove(), 100)
 			})
-
-			// Should not cause any console errors
-			// Wait a bit to ensure any async operations complete
-			await page.waitForTimeout(1000)
 		})
 
 		test('handles multiple instances loading simultaneously', async ({

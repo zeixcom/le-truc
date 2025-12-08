@@ -1,18 +1,26 @@
-/* === Types === */
+/* === Constants === */
 
-type Task = () => void
+// High-frequency events that are passive by default and should be scheduled
+const PASSIVE_EVENTS = new Set([
+	'scroll',
+	'resize',
+	'mousewheel',
+	'touchstart',
+	'touchmove',
+	'wheel',
+])
 
 /* === Internal === */
 
-const pendingComponents = new Set<HTMLElement>()
-const tasks = new WeakMap<HTMLElement, Task>()
+const pendingElements = new Set<Element>()
+const tasks = new WeakMap<Element, () => void>()
 let requestId: number | undefined
 
 const runTasks = () => {
 	requestId = undefined
-	const components = Array.from(pendingComponents)
-	pendingComponents.clear()
-	for (const component of components) tasks.get(component)?.()
+	const elements = Array.from(pendingElements)
+	pendingElements.clear()
+	for (const element of elements) tasks.get(element)?.()
 }
 
 const requestTick = () => {
@@ -27,13 +35,13 @@ const requestTick = () => {
  * deduplication per component. If the same component schedules multiple tasks
  * before the next frame, only the latest task will be executed.
  *
- * @param component - Component instance for deduplication
+ * @param element - Element for deduplication
  * @param task - Function to execute (typically calls batch() or sets a signal)
  */
-const schedule = (component: HTMLElement, task: Task) => {
-	tasks.set(component, task)
-	pendingComponents.add(component)
+const schedule = (element: Element, task: () => void) => {
+	tasks.set(element, task)
+	pendingElements.add(element)
 	requestTick()
 }
 
-export { type Task, schedule }
+export { PASSIVE_EVENTS, schedule }

@@ -8,6 +8,7 @@ import {
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from '../component'
 import { getFallback, type ParserOrFallback } from '../parsers'
+import { PASSIVE_EVENTS, schedule } from '../scheduler'
 import type { ElementFromKey, UI } from '../ui'
 import { isCollection } from './collection'
 
@@ -17,7 +18,7 @@ type EventType<K extends string> = K extends keyof HTMLElementEventMap
 	? HTMLElementEventMap[K]
 	: Event
 
-type SensorEvent<
+type SensorHandler<
 	T extends {},
 	Evt extends Event,
 	U extends UI,
@@ -30,7 +31,7 @@ type SensorEvent<
 }) => T | void | Promise<void>
 
 type SensorEvents<T extends {}, U extends UI, E extends Element> = {
-	[K in keyof HTMLElementEventMap]?: SensorEvent<T, EventType<K>, U, E>
+	[K in keyof HTMLElementEventMap]?: SensorHandler<T, EventType<K>, U, E>
 }
 
 /* === Exported Functions === */
@@ -54,38 +55,43 @@ const createSensor =
 		const watchers: Set<Watcher> = new Set()
 		let value: T = getFallback(ui, init)
 		const targets = isCollection(ui[key])
-			? (ui[key].get() as ElementFromKey<U, K>[])
-			: ([ui[key]] as ElementFromKey<U & { host: Component<P> }, K>[])
+			? ui[key].get()
+			: [ui[key] as ElementFromKey<U & { host: Component<P> }, K>]
 		const eventMap = new Map<string, EventListener>()
 		let cleanup: MaybeCleanup
 
 		const listen = () => {
-			for (const [type, transform] of Object.entries(events)) {
+			for (const [type, handler] of Object.entries(events)) {
+				const options = { passive: PASSIVE_EVENTS.has(type) }
 				const listener = (e: Event) => {
 					const target = e.target as ElementFromKey<U, K>
 					if (!target || !targets.includes(target)) return
-
 					e.stopPropagation()
-					try {
-						const newValue = transform({
-							event: e as any,
-							ui,
-							target,
-							value,
-						})
-						if (newValue == null || newValue instanceof Promise) return
-						if (!Object.is(newValue, value)) {
-							value = newValue
-							if (watchers.size) notify(watchers)
-							else if (cleanup) cleanup()
+
+					const task = () => {
+						try {
+							const newValue = handler({
+								event: e as any,
+								ui,
+								target,
+								value,
+							})
+							if (newValue == null || newValue instanceof Promise) return
+							if (!Object.is(newValue, value)) {
+								value = newValue
+								if (watchers.size) notify(watchers)
+								else if (cleanup) cleanup()
+							}
+						} catch (error) {
+							e.stopImmediatePropagation()
+							throw error
 						}
-					} catch (error) {
-						e.stopImmediatePropagation()
-						throw error
 					}
+					if (options.passive) schedule(ui.host, task)
+					else task()
 				}
 				eventMap.set(type, listener)
-				ui.host.addEventListener(type, listener)
+				ui.host.addEventListener(type, listener, options)
 			}
 			cleanup = () => {
 				if (eventMap.size) {

@@ -110,7 +110,7 @@ test.describe('form-textbox component', () => {
 		const input = page.locator('form-textbox input').first()
 
 		// Type some text
-		await input.type('test')
+		await (input as any).type('test')
 		await input.blur()
 
 		// Value works, length is lazy

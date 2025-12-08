@@ -99,7 +99,7 @@ export { asBoolean } from './src/parsers/boolean'
 export { asJSON } from './src/parsers/json'
 export { asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'
-export { schedule, type Task } from './src/scheduler'
+export { schedule } from './src/scheduler'
 export {
 	type Collection,
 	type CollectionListener,

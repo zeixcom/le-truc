@@ -1,6 +1,6 @@
-# Copilot / AI Agent Instructions — le-truc
+# Copilot / AI Agent Instructions — Le Truc
 
-This file gives focused, actionable guidance for AI coding agents working on the `le-truc` repository.
+This file gives focused, actionable guidance for AI coding agents working on the `@zeix/le-truc` repository.
 
 Keep these goals in mind:
 - Preserve the public API surface exported from `index.ts` / `index.js` / `types/index.d.ts`.
@@ -19,11 +19,11 @@ Important patterns & conventions (use these exactly)
   - `name` must include a hyphen and match `/^[a-z][a-z0-9-]*$/` (see validation in `defineComponent`).
   - `props` initializers can be: plain values, `Signal`s, parser functions from `src/parsers/*`, or initializer callbacks.
   - Parsers used for attributes are auto-added to `observedAttributes`. See `static observedAttributes`.
-- Parsers: Implement parser functions following `src/parsers/*` signatures and export them from `src/parsers/index`.
+- Parsers: Implement parser functions following `src/parsers/*` signatures and export them from root `index.ts`.
   - Example builtin parser: `asJSON` in `src/parsers/json.ts` — when used as a prop initializer it will parse attribute strings.
 - UI helpers & dependencies: Use `getHelpers(host)` from `src/ui.ts` to obtain `first`, `all` and automatic dependency detection.
   - If `getHelpers` finds a not-yet-defined custom element, it adds that tag to the dependency list; `defineComponent` waits for `customElements.whenDefined`.
-  - There is a dependency timeout (`DEPENDENCY_TIMEOUT = 50`) in `src/component.ts` — expect code to try running effects even if deps time out.
+  - There is a dependency timeout (`DEPENDENCY_TIMEOUT = 50`) in `src/ui.ts` — expect code to try running effects even if deps time out.
 - Effects & reactive model: This repo uses `@zeix/cause-effect` signals/computed/effects. Keep side-effects inside `runEffects` and cleanup in returned cleanup functions.
 
 Files to consult for examples and authoritative patterns
@@ -31,7 +31,8 @@ Files to consult for examples and authoritative patterns
 - Component implementation & lifecycle: `src/component.ts`
 - Selector helpers & mutation-observer logic: `src/ui.ts`
 - Parser implementations: `src/parsers/*.ts` (e.g. `json.ts`, `number.ts`, `string.ts`)
-- Effects: `src/effects/*.ts` and `src/effects/index` exports
+- Effect implementations: `src/effects/*.ts` (exported from root `index.ts`)
+- Signal helpers: `src/signals/*.ts` (collection, sensor)
 - Examples demonstrating usage: `examples/*` (start from `basic-hello` and `basic-counter`)
 
 Developer workflows (essential commands)
@@ -54,6 +55,8 @@ PR guidance / descriptions
 
 Examples (copyable patterns)
 - Define a component (refer `src/component.ts`):
-  - `defineComponent('my-widget', { count: 0, value: asJSON }, q => ({ btn: q.first('button') }), ui => ({ btn: [on('click', () => ...)] }))`
+  - `defineComponent('my-widget', { count: 0 }, q => ({ btn: q.first('button') }), ui => ({ btn: [on('click', () => ({ count: ui.host.count + 1 }))] }))`
 - Parser signature (refer `src/parsers/json.ts`):
   - `const parser = (ui, value, old) => parsedValue` — return value becomes the property value.
+- Reader pattern (refer `src/parsers.ts`):
+  - `read(ui => ui.input.value, asString())` — read value from DOM with parser fallback.

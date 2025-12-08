@@ -1324,37 +1324,36 @@ var toggleClass = (token, reactive = token) => updateElement(reactive, {
   }
 });
 // src/scheduler.ts
-var pendingComponents = new Set;
+var PASSIVE_EVENTS = new Set([
+  "scroll",
+  "resize",
+  "mousewheel",
+  "touchstart",
+  "touchmove",
+  "wheel"
+]);
+var pendingElements = new Set;
 var tasks = new WeakMap;
 var requestId;
 var runTasks = () => {
   requestId = undefined;
-  const components = Array.from(pendingComponents);
-  pendingComponents.clear();
-  for (const component of components)
-    tasks.get(component)?.();
+  const elements = Array.from(pendingElements);
+  pendingElements.clear();
+  for (const element of elements)
+    tasks.get(element)?.();
 };
 var requestTick = () => {
   if (requestId)
     cancelAnimationFrame(requestId);
   requestId = requestAnimationFrame(runTasks);
 };
-var schedule = (component, task) => {
-  tasks.set(component, task);
-  pendingComponents.add(component);
+var schedule = (element, task) => {
+  tasks.set(element, task);
+  pendingElements.add(element);
   requestTick();
 };
 
 // src/effects/event.ts
-var PASSIVE_EVENTS = new Set([
-  "scroll",
-  "resize",
-  "input",
-  "mousewheel",
-  "touchstart",
-  "touchmove",
-  "wheel"
-]);
 var on = (type, handler, options = {}) => (host, target) => {
   if (!("passive" in options))
     options = { ...options, passive: PASSIVE_EVENTS.has(type) };
@@ -1408,23 +1407,21 @@ var dangerouslySetInnerHTML = (reactive, options = {}) => updateElement(reactive
     if (shadowRootMode && !el.shadowRoot)
       el.attachShadow({ mode: shadowRootMode });
     const target = el.shadowRoot || el;
-    observe(() => {
+    schedule(el, () => {
       target.innerHTML = html;
+      if (allowScripts) {
+        target.querySelectorAll("script").forEach((script) => {
+          const newScript = document.createElement("script");
+          newScript.appendChild(document.createTextNode(script.textContent ?? ""));
+          const typeAttr = script.getAttribute("type");
+          if (typeAttr)
+            newScript.setAttribute("type", typeAttr);
+          target.appendChild(newScript);
+          script.remove();
+        });
+      }
     });
-    if (!allowScripts)
-      return "";
-    observe(() => {
-      target.querySelectorAll("script").forEach((script) => {
-        const newScript = document.createElement("script");
-        newScript.appendChild(document.createTextNode(script.textContent ?? ""));
-        const typeAttr = script.getAttribute("type");
-        if (typeAttr)
-          newScript.setAttribute("type", typeAttr);
-        target.appendChild(newScript);
-        script.remove();
-      });
-    });
-    return " with scripts";
+    return allowScripts ? " with scripts" : "";
   }
 });
 // src/effects/pass.ts
@@ -1558,35 +1555,42 @@ var createSensor = (init, key, events) => (ui) => {
   const eventMap = new Map;
   let cleanup;
   const listen = () => {
-    for (const [type, transform] of Object.entries(events)) {
+    for (const [type, handler] of Object.entries(events)) {
+      const options = { passive: PASSIVE_EVENTS.has(type) };
       const listener = (e) => {
         const target = e.target;
         if (!target || !targets.includes(target))
           return;
         e.stopPropagation();
-        try {
-          const newValue = transform({
-            event: e,
-            ui,
-            target,
-            value
-          });
-          if (newValue == null || newValue instanceof Promise)
-            return;
-          if (!Object.is(newValue, value)) {
-            value = newValue;
-            if (watchers.size)
-              notify(watchers);
-            else if (cleanup)
-              cleanup();
+        const task = () => {
+          try {
+            const newValue = handler({
+              event: e,
+              ui,
+              target,
+              value
+            });
+            if (newValue == null || newValue instanceof Promise)
+              return;
+            if (!Object.is(newValue, value)) {
+              value = newValue;
+              if (watchers.size)
+                notify(watchers);
+              else if (cleanup)
+                cleanup();
+            }
+          } catch (error) {
+            e.stopImmediatePropagation();
+            throw error;
           }
-        } catch (error) {
-          e.stopImmediatePropagation();
-          throw error;
-        }
+        };
+        if (options.passive)
+          schedule(ui.host, task);
+        else
+          task();
       };
       eventMap.set(type, listener);
-      ui.host.addEventListener(type, listener);
+      ui.host.addEventListener(type, listener, options);
     }
     cleanup = () => {
       if (eventMap.size) {

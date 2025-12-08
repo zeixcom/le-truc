@@ -7,7 +7,7 @@ import {
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from '../component'
 import { type Effect, RESET, type Reactive, resolveReactive } from '../effects'
-import { schedule } from '../scheduler'
+import { PASSIVE_EVENTS, schedule } from '../scheduler'
 import { elementName, LOG_ERROR, log } from '../util'
 
 /* === Types === */
@@ -25,19 +25,6 @@ type EventHandler<
 	host: Component<P>
 	target: E
 }) => { [K in keyof P]?: P[K] } | void | Promise<void>
-
-/* === Constants === */
-
-// High-frequency events that are passive by default and should be scheduled
-const PASSIVE_EVENTS = new Set([
-	'scroll',
-	'resize',
-	'input',
-	'mousewheel',
-	'touchstart',
-	'touchmove',
-	'wheel',
-])
 
 /* === Exported Function === */
 

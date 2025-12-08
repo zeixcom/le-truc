@@ -3,14 +3,14 @@ import type { Component, ComponentProps } from '../component';
 import { type ParserOrFallback } from '../parsers';
 import type { ElementFromKey, UI } from '../ui';
 type EventType<K extends string> = K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K] : Event;
-type SensorEvent<T extends {}, Evt extends Event, U extends UI, E extends Element> = (context: {
+type SensorHandler<T extends {}, Evt extends Event, U extends UI, E extends Element> = (context: {
     event: Evt;
     ui: U;
     target: E;
     value: T;
 }) => T | void | Promise<void>;
 type SensorEvents<T extends {}, U extends UI, E extends Element> = {
-    [K in keyof HTMLElementEventMap]?: SensorEvent<T, EventType<K>, U, E>;
+    [K in keyof HTMLElementEventMap]?: SensorHandler<T, EventType<K>, U, E>;
 };
 /**
  * Produce a computed signal from transformed event data

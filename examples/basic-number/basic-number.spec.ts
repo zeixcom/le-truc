@@ -79,7 +79,6 @@ test.describe('basic-number component', () => {
 		await expect(dynamicElement).toHaveText('9,999') // Should fall back to default
 
 		// Verify console error was logged for dynamic creation
-		await page.waitForTimeout(10) // Allow time for console message
 		const hasJsonError = consoleMessages.some(
 			msg => msg.includes('Invalid JSON') || msg.includes('JSON'),
 		)
@@ -111,7 +110,6 @@ test.describe('basic-number component', () => {
 		await expect(dynamicElement).toHaveText('9,999') // Should fall back to default
 
 		// Verify console error was logged for dynamic creation
-		await page.waitForTimeout(10) // Allow time for console message
 		const hasCurrencyError = consoleMessages.some(
 			msg => msg.includes('currency') && msg.includes('CHF'),
 		)
@@ -143,11 +141,10 @@ test.describe('basic-number component', () => {
 		await expect(dynamicElement).toHaveText('9,999') // Should fall back to default
 
 		// Verify console error was logged for dynamic creation
-		await page.waitForTimeout(10) // Allow time for console message
 		const hasUnitError = consoleMessages.some(
 			msg =>
-				msg.includes('unit') &&
-				(msg.includes('liter') || msg.includes('kilometer')),
+				msg.includes('unit')
+				&& (msg.includes('liter') || msg.includes('kilometer')),
 		)
 		expect(hasUnitError).toBe(true)
 	})

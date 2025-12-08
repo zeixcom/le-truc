@@ -31,15 +31,6 @@ import { expect, test } from '@playwright/test'
  * error states, accessibility features, and edge cases. Tests validate both
  * user interactions and programmatic property changes following Le Truc's
  * reactive property model.
- *
- * Test Fixes Applied:
- * - Initial state check handles fast loading scenarios
- * - Invalid URL test uses truly invalid protocol (ftp://)
- * - Focus tests establish initial selection before testing navigation
- * - Filter tests use 'af' instead of 'africa' for text matching
- * - Highlight tests look for <mark> tags instead of <span>
- * - Form integration uses built-in hidden input with reactive value sync
- * - Group visibility tests check CSS-based hiding behavior
  */
 
 test.describe('form-listbox component', () => {
@@ -59,6 +50,9 @@ test.describe('form-listbox component', () => {
 			const error = listbox.locator('.error')
 			const callout = listbox.locator('card-callout')
 			const listboxElement = listbox.locator('[role="listbox"]')
+
+			// Wait for the page to load completely
+			await page.waitForTimeout(50)
 
 			// Component should start in a valid state - check right after it's found
 			// The callout may already be hidden if loading completed very quickly
@@ -412,9 +406,6 @@ test.describe('form-listbox component', () => {
 				element.filter = 'af'
 			})
 
-			// Wait for filtering to apply
-			await page.waitForTimeout(100)
-
 			const visibleOptions = listbox.locator(
 				'button[role="option"]:not([hidden])',
 			)
@@ -444,8 +435,6 @@ test.describe('form-listbox component', () => {
 				element.filter = 'new'
 			})
 
-			await page.waitForTimeout(100)
-
 			const visibleOptions = listbox.locator(
 				'button[role="option"]:not([hidden])',
 			)
@@ -474,8 +463,6 @@ test.describe('form-listbox component', () => {
 				element.filter = 'xyzzyx-nonexistent'
 			})
 
-			await page.waitForTimeout(100)
-
 			const visibleOptions = listbox.locator(
 				'button[role="option"]:not([hidden])',
 			)
@@ -499,8 +486,6 @@ test.describe('form-listbox component', () => {
 				element.filter = 'africa'
 			})
 
-			await page.waitForTimeout(100)
-
 			const filteredCount = await listbox
 				.locator('button[role="option"]:not([hidden])')
 				.count()
@@ -511,8 +496,6 @@ test.describe('form-listbox component', () => {
 				const element = document.querySelector('form-listbox') as any
 				element.filter = ''
 			})
-
-			await page.waitForTimeout(100)
 
 			const clearedCount = await listbox
 				.locator('button[role="option"]:not([hidden])')
@@ -611,7 +594,7 @@ test.describe('form-listbox component', () => {
 			})
 
 			// Wait for new content to load
-			await page.waitForTimeout(1000)
+			await page.waitForTimeout(50)
 
 			const newOptions = listbox.locator('button[role="option"]')
 			const newCount = await newOptions.count()
@@ -727,9 +710,6 @@ test.describe('form-listbox component', () => {
 
 			await firstOption.click()
 
-			// Wait for value to sync to hidden input
-			await page.waitForTimeout(200)
-
 			// Verify hidden input has the value
 			const hiddenInputValue = await page.evaluate(() => {
 				const hiddenInput = document.querySelector(
@@ -806,8 +786,6 @@ test.describe('form-listbox component', () => {
 				element.filter = 'america'
 			})
 
-			await page.waitForTimeout(100)
-
 			filter = await page.evaluate(() => {
 				const element = document.querySelector('form-listbox') as any
 				return element.filter
@@ -854,8 +832,6 @@ test.describe('form-listbox component', () => {
 				element.filter = '' // clear filter
 			})
 
-			await page.waitForTimeout(200)
-
 			// Should show all options when filter is cleared
 			const visibleOptions = listbox.locator(
 				'button[role="option"]:not([hidden])',
@@ -878,8 +854,6 @@ test.describe('form-listbox component', () => {
 				const element = document.querySelector('form-listbox') as any
 				element.filter = 'Zurich' // Only one option
 			})
-
-			await page.waitForTimeout(100)
 
 			// Groups with no visible options should be hidden via CSS
 			// Check that some groups are effectively hidden (either via CSS or JS)
@@ -920,8 +894,6 @@ test.describe('form-listbox component', () => {
 				}
 			})
 
-			await page.waitForTimeout(100)
-
 			const endTime = Date.now()
 			const duration = endTime - startTime
 
@@ -950,7 +922,7 @@ test.describe('form-listbox component', () => {
 			})
 
 			// Wait to ensure no errors occur
-			await page.waitForTimeout(500)
+			await page.waitForTimeout(50)
 
 			// Test should complete without throwing errors
 			expect(true).toBe(true)
