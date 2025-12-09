@@ -358,9 +358,7 @@ test.describe('module-catalog component', () => {
 		const badge = catalog.locator('basic-button .badge')
 
 		// Verify all 3 spinbuttons are found and contribute
-		const spinbuttonCount = await catalog
-			.locator('form-spinbutton')
-			.count()
+		const spinbuttonCount = await catalog.locator('form-spinbutton').count()
 		expect(spinbuttonCount).toBe(3)
 
 		// Add 1 to each spinbutton
@@ -388,14 +386,7 @@ test.describe('module-catalog component', () => {
 		const hasPublicProps = await page.evaluate(() => {
 			const catalog = document.querySelector('module-catalog') as any
 			// Try to access common property names, should all be undefined or internal
-			const props = [
-				'total',
-				'disabled',
-				'badge',
-				'value',
-				'count',
-				'items',
-			]
+			const props = ['total', 'disabled', 'badge', 'value', 'count', 'items']
 			return props.some(prop => catalog[prop] !== undefined)
 		})
 

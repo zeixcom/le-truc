@@ -92,8 +92,8 @@ export default defineComponent<ModuleListProps, ModuleListUI>(
 				on('click', ({ event }) => {
 					const target = event.target
 					if (
-						target instanceof HTMLElement
-						&& target?.closest('basic-button.delete')
+						target instanceof HTMLElement &&
+						target?.closest('basic-button.delete')
 					) {
 						event.stopPropagation()
 						target.closest('[data-key]')?.remove()

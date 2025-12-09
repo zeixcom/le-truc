@@ -737,7 +737,6 @@ var HTML_ELEMENT_PROPS = new Set([
 ]);
 var idString = (id) => id ? `#${id}` : "";
 var classString = (classList) => classList?.length ? `.${Array.from(classList).join(".")}` : "";
-var hasMethod = (obj, methodName) => isString(methodName) && (methodName in obj) && isFunction(obj[methodName]);
 var isElement = (node) => node.nodeType === Node.ELEMENT_NODE;
 var isCustomElement = (element) => element.localName.includes("-");
 var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
@@ -843,7 +842,16 @@ var createCollection = (parent, selector) => {
   };
   let elements = [];
   let observer;
-  const filterMatches = (elements2) => Array.from(elements2).filter(isElement).filter((element) => element.matches(selector));
+  const findMatches = (nodes) => {
+    const elements2 = Array.from(nodes).filter(isElement);
+    const found = [];
+    for (const element of elements2) {
+      if (element.matches(selector))
+        found.push(element);
+      found.push(...Array.from(element.querySelectorAll(selector)));
+    }
+    return found;
+  };
   const notifyListeners = (listeners2, elements2) => {
     Object.freeze(elements2);
     for (const listener of listeners2)
@@ -855,27 +863,31 @@ var createCollection = (parent, selector) => {
       const added = [];
       const removed = [];
       for (const mutation of mutations) {
-        added.push(...filterMatches(mutation.addedNodes));
-        removed.push(...filterMatches(mutation.removedNodes));
-        for (const node of mutation.addedNodes) {
-          if (isElement(node))
-            added.push(...Array.from(node.querySelectorAll(selector)));
+        if (mutation.type === "childList") {
+          if (mutation.addedNodes.length)
+            added.push(...findMatches(mutation.addedNodes));
+          if (mutation.removedNodes.length)
+            removed.push(...findMatches(mutation.removedNodes));
+        } else if (mutation.type === "attributes") {
+          const target = mutation.target;
+          if (isElement(target)) {
+            const wasMatching = elements.includes(target);
+            const isMatching = target.matches(selector);
+            if (wasMatching && !isMatching)
+              removed.push(target);
+            else if (!wasMatching && isMatching)
+              added.push(target);
+          }
         }
       }
-      if (added.length) {
-        notifyListeners(listeners.add, added);
+      if (added.length || removed.length) {
         elements = Array.from(parent.querySelectorAll(selector));
-      }
-      if (removed.length) {
-        notifyListeners(listeners.remove, removed);
-        for (const element of removed) {
-          const index = elements.indexOf(element);
-          if (index !== -1)
-            elements.splice(index, 1);
-        }
-      }
-      if (added.length || removed.length)
         notify(watchers);
+      }
+      if (added.length)
+        notifyListeners(listeners.add, added);
+      if (removed.length)
+        notifyListeners(listeners.remove, removed);
     });
     const observerConfig = {
       childList: true,
@@ -946,7 +958,7 @@ var createCollection = (parent, selector) => {
         return true;
       if (Number.isInteger(Number(prop)))
         return !!elements[Number(prop)];
-      return isString(prop) && hasMethod(elements, prop);
+      return false;
     },
     ownKeys(target) {
       const staticKeys = Reflect.ownKeys(target);
@@ -1015,9 +1027,7 @@ var runCollectionEffects = (host, collection, effects) => {
   };
   const detach = (targets) => {
     for (const target of targets) {
-      const cleanup = cleanups.get(target);
-      if (cleanup)
-        cleanup();
+      cleanups.get(target)?.();
       cleanups.delete(target);
     }
   };
@@ -1097,59 +1107,6 @@ var updateElement = (reactive, updater) => (host, target) => {
         ok("update")();
       } catch (error) {
         err("update")(error);
-      }
-    }
-  });
-};
-var insertOrRemoveElement = (reactive, inserter) => (host, target) => {
-  const ok = (verb) => () => {
-    if (DEV_MODE && host.debug) {
-      log(target, `${verb} element in ${elementName(target)} in ${elementName(host)}`);
-    }
-    if (isFunction(inserter?.resolve)) {
-      inserter.resolve(target);
-    } else {
-      const signal = isSignal(reactive) ? reactive : undefined;
-      if (isState(signal))
-        signal.set(0);
-    }
-  };
-  const err = (verb) => (error) => {
-    log(error, `Failed to ${verb} element in ${elementName(target)} in ${elementName(host)}`, LOG_ERROR);
-    inserter?.reject?.(error);
-  };
-  return createEffect(() => {
-    const diff2 = resolveReactive(reactive, host, target, "insertion or deletion");
-    const resolvedDiff = diff2 === RESET ? 0 : diff2;
-    if (resolvedDiff > 0) {
-      if (!inserter)
-        throw new TypeError(`No inserter provided`);
-      try {
-        for (let i = 0;i < resolvedDiff; i++) {
-          const element = inserter.create(target);
-          if (!element)
-            continue;
-          target.insertAdjacentElement(inserter.position ?? "beforeend", element);
-        }
-        ok("insert")();
-      } catch (error) {
-        err("insert")(error);
-      }
-    } else if (resolvedDiff < 0) {
-      try {
-        if (inserter && (inserter.position === "afterbegin" || inserter.position === "beforeend")) {
-          for (let i = 0;i > resolvedDiff; i--) {
-            if (inserter.position === "afterbegin")
-              target.firstElementChild?.remove();
-            else
-              target.lastElementChild?.remove();
-          }
-        } else {
-          target.remove();
-        }
-        ok("remove")();
-      } catch (error) {
-        err("remove")(error);
       }
     }
   });
@@ -1670,7 +1627,6 @@ export {
   isCollection,
   isAsyncFunction,
   isAbortError,
-  insertOrRemoveElement,
   emit,
   diff,
   defineComponent,

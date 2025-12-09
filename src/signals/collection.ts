@@ -11,7 +11,7 @@ import { hasMethod, isElement } from '../util'
 
 /* === Types === */
 
-type CollectionListener<E extends Element> = (changes: E[]) => void
+type CollectionListener<E extends Element> = (changes: readonly E[]) => void
 
 interface Collection<E extends Element> {
 	readonly [Symbol.toStringTag]: 'Collection'
@@ -76,18 +76,22 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 	}
 	let elements: E[] = []
 	let observer: MutationObserver | undefined
-	// let cleanup: MaybeCleanup
 
-	const filterMatches = (elements: NodeList) =>
-		Array.from(elements)
-			.filter(isElement)
-			.filter(element => element.matches(selector)) as E[]
+	const findMatches = (nodes: NodeList) => {
+		const elements = Array.from(nodes).filter(isElement)
+		const found: E[] = []
+		for (const element of elements) {
+			if (element.matches(selector)) found.push(element as E)
+			found.push(...Array.from(element.querySelectorAll<E>(selector)))
+		}
+		return found
+	}
 
 	const notifyListeners = (
 		listeners: Set<CollectionListener<E>>,
 		elements: E[],
 	) => {
-		Object.freeze(elements) // Immutable snapshot of changed elements
+		Object.freeze(elements)
 		for (const listener of listeners) listener(elements)
 	}
 
@@ -95,35 +99,32 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 		elements = Array.from(parent.querySelectorAll<E>(selector))
 
 		observer = new MutationObserver(mutations => {
-			/* if (!watchers.size && !listeners.add.size && !listeners.remove.size) {
-				if (cleanup) cleanup()
-				return
-			} */
-
 			const added: E[] = []
 			const removed: E[] = []
 
 			for (const mutation of mutations) {
-				added.push(...filterMatches(mutation.addedNodes))
-				removed.push(...filterMatches(mutation.removedNodes))
-				for (const node of mutation.addedNodes) {
-					if (isElement(node))
-						added.push(...Array.from(node.querySelectorAll<E>(selector)))
+				if (mutation.type === 'childList') {
+					if (mutation.addedNodes.length)
+						added.push(...findMatches(mutation.addedNodes))
+					if (mutation.removedNodes.length)
+						removed.push(...findMatches(mutation.removedNodes))
+				} else if (mutation.type === 'attributes') {
+					const target = mutation.target as E
+					if (isElement(target)) {
+						const wasMatching = elements.includes(target)
+						const isMatching = target.matches(selector)
+						if (wasMatching && !isMatching) removed.push(target)
+						else if (!wasMatching && isMatching) added.push(target)
+					}
 				}
 			}
 
-			if (added.length) {
-				notifyListeners(listeners.add, added)
+			if (added.length || removed.length) {
 				elements = Array.from(parent.querySelectorAll<E>(selector))
+				notify(watchers)
 			}
-			if (removed.length) {
-				notifyListeners(listeners.remove, removed)
-				for (const element of removed) {
-					const index = elements.indexOf(element)
-					if (index !== -1) elements.splice(index, 1)
-				}
-			}
-			if (added.length || removed.length) notify(watchers)
+			if (added.length) notifyListeners(listeners.add, added)
+			if (removed.length) notifyListeners(listeners.remove, removed)
 		})
 		const observerConfig: MutationObserverInit = {
 			childList: true,
@@ -135,11 +136,6 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 			observerConfig.attributeFilter = observedAttributes
 		}
 		observer.observe(parent, observerConfig)
-
-		/* cleanup = () => {
-			if (observer) observer.disconnect()
-			cleanup = undefined
-		} */
 	}
 
 	const collection = {} as Collection<E>
@@ -186,26 +182,15 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 			if (prop in target) return Reflect.get(target, prop)
 			if (isSymbol(prop)) return undefined
 
-			// Handle numeric indices
 			const index = Number(prop)
 			if (Number.isInteger(index)) return elements[index]
-
-			// Reflect array methods from the elements array
-			/* if (isString(prop) && hasMethod(elements, prop)) {
-				const method = elements[prop]
-				return (...args: unknown[]) => {
-					subscribe(watchers)
-					if (!observer) observe()
-					return method.apply(elements, args)
-				}
-			} */
 
 			return undefined
 		},
 		has(target, prop) {
 			if (prop in target) return true
 			if (Number.isInteger(Number(prop))) return !!elements[Number(prop)]
-			return isString(prop) && hasMethod(elements, prop)
+			return false
 		},
 		ownKeys(target) {
 			const staticKeys = Reflect.ownKeys(target)

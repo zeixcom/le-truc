@@ -46,7 +46,7 @@ test.describe('module-lazyload component', () => {
 			const callout = loader.locator('card-callout')
 
 			// Wait for content to load successfully
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 
 			// After loading, should hide loading and show content
 			await expect(loading).toBeHidden()
@@ -65,7 +65,7 @@ test.describe('module-lazyload component', () => {
 			const content = loader.locator('.content')
 
 			// Wait for content to load
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 
 			// Verify styled content is present and styles are applied
 			await expect(content).toContainText('Styled Content')
@@ -84,7 +84,7 @@ test.describe('module-lazyload component', () => {
 			const content = loader.locator('.content')
 
 			// Wait for content to load
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 
 			// Verify nested components are present
 			await expect(content).toContainText('Nested Components')
@@ -136,7 +136,7 @@ test.describe('module-lazyload component', () => {
 			const callout = loader.locator('card-callout')
 
 			// Should show error state quickly since URL validation happens immediately
-			await expect(error).toBeVisible({ timeout: 2000 })
+			await expect(error).toBeVisible({ timeout: 1000 })
 			await expect(loading).toBeHidden()
 			await expect(content).toBeHidden()
 			await expect(callout).toBeVisible()
@@ -155,7 +155,7 @@ test.describe('module-lazyload component', () => {
 			const callout = loader.locator('card-callout')
 
 			// Should eventually show error due to 404
-			await expect(error).toBeVisible({ timeout: 5000 })
+			await expect(error).toBeVisible({ timeout: 1000 })
 			await expect(loading).toBeHidden()
 			await expect(content).toBeHidden()
 			await expect(callout).toBeVisible()
@@ -172,7 +172,7 @@ test.describe('module-lazyload component', () => {
 			const callout = loader.locator('card-callout')
 
 			// Should show error for cross-origin URL
-			await expect(error).toBeVisible({ timeout: 2000 })
+			await expect(error).toBeVisible({ timeout: 1000 })
 			await expect(callout).toHaveClass('danger')
 
 			// Verify error message indicates origin problem
@@ -186,7 +186,7 @@ test.describe('module-lazyload component', () => {
 			const callout = loader.locator('card-callout')
 
 			// Should show error immediately for missing src
-			await expect(error).toBeVisible({ timeout: 2000 })
+			await expect(error).toBeVisible({ timeout: 1000 })
 			await expect(callout).toHaveClass('danger')
 
 			// Verify error message indicates missing URL
@@ -202,7 +202,7 @@ test.describe('module-lazyload component', () => {
 			const outerCallout = loader.locator('> card-callout')
 
 			// Wait for outer content to load (should succeed)
-			await expect(outerContent).toBeVisible({ timeout: 5000 })
+			await expect(outerContent).toBeVisible({ timeout: 1000 })
 			await expect(outerLoading).toBeHidden()
 			await expect(outerError).toBeHidden()
 			await expect(outerCallout).toBeHidden()
@@ -232,7 +232,7 @@ test.describe('module-lazyload component', () => {
 			})
 
 			// Should load content successfully
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 			await expect(content).toContainText('Simple Text Content')
 			await expect(error).toBeHidden()
 
@@ -258,7 +258,7 @@ test.describe('module-lazyload component', () => {
 			})
 
 			// Should load content
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 			await expect(content).toContainText('Simple Text Content')
 
 			// Verify property reflects the URL
@@ -277,7 +277,7 @@ test.describe('module-lazyload component', () => {
 			})
 
 			// Wait for content to load
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 
 			// Change to invalid src
 			await loader.evaluate(node => {
@@ -285,7 +285,7 @@ test.describe('module-lazyload component', () => {
 			})
 
 			// Should show error and hide content
-			await expect(error).toBeVisible({ timeout: 2000 })
+			await expect(error).toBeVisible({ timeout: 1000 })
 			await expect(content).toBeHidden()
 		})
 	})
@@ -313,7 +313,7 @@ test.describe('module-lazyload component', () => {
 			const callout = loader.locator('card-callout')
 
 			// Wait for loading to complete
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 			await expect(loading).toBeHidden()
 			await expect(callout).toBeHidden()
 		})
@@ -326,7 +326,7 @@ test.describe('module-lazyload component', () => {
 			const callout = loader.locator('card-callout')
 
 			// During error: loading hidden, content hidden, error visible, callout visible with danger class
-			await expect(error).toBeVisible({ timeout: 2000 })
+			await expect(error).toBeVisible({ timeout: 1000 })
 			await expect(loading).toBeHidden()
 			await expect(content).toBeHidden()
 			await expect(callout).toBeVisible()
@@ -381,7 +381,7 @@ test.describe('module-lazyload component', () => {
 
 			// Wait for content to load successfully
 			const content = loader.locator('.content')
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 
 			// After successful loading, callout should be hidden but still present in DOM
 			await expect(callout).toBeHidden()
@@ -401,7 +401,7 @@ test.describe('module-lazyload component', () => {
 			await expect(loader).toHaveAttribute('allow-scripts')
 
 			// Wait for content to load
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 
 			// Verify shake-hands component is present and functional
 			const shakeHands = content.locator('shake-hands')
@@ -448,7 +448,7 @@ test.describe('module-lazyload component', () => {
 			await expect(loader).not.toHaveAttribute('allow-scripts')
 
 			// Wait for content to load
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 
 			// Verify content loads successfully (the main requirement)
 			await expect(content).toContainText('Lazy Loaded')
@@ -487,7 +487,7 @@ test.describe('module-lazyload component', () => {
 			await expect(loader).toHaveAttribute('allow-scripts')
 
 			// Wait for content to load
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 
 			// Verify that the module script executed (which requires type="module" to work)
 			const moduleOutput = content.locator('#module-test-output')
@@ -536,7 +536,7 @@ test.describe('module-lazyload component', () => {
 
 			// Wait for content to load
 			const content = loader.locator('.content')
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 
 			// Verify shadow root exists
 			const hasShadowRoot = await loader.evaluate(el => !!el.shadowRoot)
@@ -637,7 +637,7 @@ test.describe('module-lazyload component', () => {
 			const content = loader.locator('.content')
 
 			// Wait for content to load
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 
 			// Styles should only affect content within the component
 			const styledContent = content.locator('.styled-content')
@@ -674,7 +674,7 @@ test.describe('module-lazyload component', () => {
 			})
 
 			// Should end up with the final content
-			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(content).toBeVisible({ timeout: 1000 })
 			await expect(content).toContainText('Simple Text Content')
 			await expect(error).toBeHidden()
 		})

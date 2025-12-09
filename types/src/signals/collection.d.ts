@@ -1,6 +1,6 @@
 import { type Cleanup } from '@zeix/cause-effect';
 import type { ElementFromSelector } from '../ui';
-type CollectionListener<E extends Element> = (changes: E[]) => void;
+type CollectionListener<E extends Element> = (changes: readonly E[]) => void;
 interface Collection<E extends Element> {
     readonly [Symbol.toStringTag]: 'Collection';
     readonly [Symbol.isConcatSpreadable]: true;

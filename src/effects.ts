@@ -140,16 +140,15 @@ const runCollectionEffects = <P extends ComponentProps, E extends Element>(
 ): Cleanup => {
 	const cleanups: Map<E, Cleanup> = new Map()
 
-	const attach = (targets: E[]) => {
+	const attach = (targets: readonly E[]) => {
 		for (const target of targets) {
 			const cleanup = runElementEffects(host, target, effects)
 			if (cleanup) cleanups.set(target, cleanup)
 		}
 	}
-	const detach = (targets: E[]) => {
+	const detach = (targets: readonly E[]) => {
 		for (const target of targets) {
-			const cleanup = cleanups.get(target)
-			if (cleanup) cleanup()
+			cleanups.get(target)?.()
 			cleanups.delete(target)
 		}
 	}

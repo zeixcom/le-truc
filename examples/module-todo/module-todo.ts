@@ -80,11 +80,12 @@ export default defineComponent<{}, ModuleTodoUI>(
 			clearCompleted: [
 				pass({
 					disabled: () => !completed.length,
-					badge: () => (completed.length > 0 ? String(completed.length) : ''),
+					badge: () => (completed.length ? String(completed.length) : ''),
 				}),
 				on('click', () => {
 					const items = completed.get()
-					for (let i = items.length - 1; i >= 0; i--) items[i].remove()
+					for (let i = items.length - 1; i >= 0; i--)
+						items[i].closest('li')?.remove()
 				}),
 			],
 		}

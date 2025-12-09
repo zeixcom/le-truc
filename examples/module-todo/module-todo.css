@@ -13,11 +13,11 @@ module-todo {
 	}
 
 	> module-list {
-		&[filter='completed'] li:not(:has([checked])) {
+		&[filter="completed"] li:not(:has([checked])) {
 			display: none;
 		}
 
-		&[filter='active'] li:has([checked]) {
+		&[filter="active"] li:has([checked]) {
 			display: none;
 		}
 	}
@@ -42,7 +42,7 @@ module-todo {
 	> footer {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		grid-template-areas: 'filter filter' 'count clear';
+		grid-template-areas: "filter filter" "count clear";
 		align-items: center;
 		gap: var(--space-m);
 		margin: 0;
@@ -78,7 +78,7 @@ module-todo {
 
 		& footer {
 			grid-template-columns: 1fr 1fr 1fr;
-			grid-template-areas: 'count filter clear';
+			grid-template-areas: "count filter clear";
 		}
 	}
 }

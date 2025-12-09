@@ -86,7 +86,7 @@ test.describe('form-listbox component', () => {
 			const listboxElement = listbox.locator('[role="listbox"]')
 
 			// Wait for content to load
-			await expect(listboxElement).toBeVisible({ timeout: 10000 })
+			await expect(listboxElement).toBeVisible({ timeout: 1000 })
 
 			// After loading, should hide loading and error states
 			await expect(loading).toBeHidden()
@@ -110,7 +110,7 @@ test.describe('form-listbox component', () => {
 			const listbox = page.locator('form-listbox').first()
 			const listboxElement = listbox.locator('[role="listbox"]')
 
-			await expect(listboxElement).toBeVisible({ timeout: 10000 })
+			await expect(listboxElement).toBeVisible({ timeout: 1000 })
 
 			// Check for Africa group
 			const africaGroup = listbox.locator('[role="group"]').first()
@@ -152,7 +152,7 @@ test.describe('form-listbox component', () => {
 			const error = invalidListbox.locator('.error')
 			const callout = invalidListbox.locator('card-callout')
 
-			await expect(callout).toBeVisible({ timeout: 5000 })
+			await expect(callout).toBeVisible({ timeout: 1000 })
 			await expect(error).toBeVisible()
 			await expect(loading).toBeHidden()
 			await expect(callout).toHaveClass(/danger/)
@@ -181,7 +181,7 @@ test.describe('form-listbox component', () => {
 			const error = notFoundListbox.locator('.error')
 			const callout = notFoundListbox.locator('card-callout')
 
-			await expect(error).toBeVisible({ timeout: 5000 })
+			await expect(error).toBeVisible({ timeout: 1000 })
 			await expect(callout).toHaveClass(/danger/)
 		})
 
@@ -217,7 +217,7 @@ test.describe('form-listbox component', () => {
 			const listbox = page.locator('form-listbox').first()
 			const listboxElement = listbox.locator('[role="listbox"]')
 
-			await expect(listboxElement).toBeVisible({ timeout: 10000 })
+			await expect(listboxElement).toBeVisible({ timeout: 1000 })
 
 			// Find and click an option
 			const firstOption = listbox.locator('button[role="option"]').first()
@@ -300,7 +300,7 @@ test.describe('form-listbox component', () => {
 			const listbox = page.locator('form-listbox').first()
 			const listboxElement = listbox.locator('[role="listbox"]')
 
-			await expect(listboxElement).toBeVisible({ timeout: 10000 })
+			await expect(listboxElement).toBeVisible({ timeout: 1000 })
 
 			// First select an option to set up initial focus management
 			const firstOption = listbox.locator('button[role="option"]').first()
@@ -315,7 +315,7 @@ test.describe('form-listbox component', () => {
 			const listbox = page.locator('form-listbox').first()
 			const listboxElement = listbox.locator('[role="listbox"]')
 
-			await expect(listboxElement).toBeVisible({ timeout: 10000 })
+			await expect(listboxElement).toBeVisible({ timeout: 1000 })
 
 			// First select an option to establish focus management
 			const firstOption = listbox.locator('button[role="option"]').first()
@@ -338,7 +338,7 @@ test.describe('form-listbox component', () => {
 			const listbox = page.locator('form-listbox').first()
 			const listboxElement = listbox.locator('[role="listbox"]')
 
-			await expect(listboxElement).toBeVisible({ timeout: 10000 })
+			await expect(listboxElement).toBeVisible({ timeout: 1000 })
 
 			const firstOption = listbox.locator('button[role="option"]').first()
 			const firstValue = await firstOption.getAttribute('value')
@@ -364,7 +364,7 @@ test.describe('form-listbox component', () => {
 			const listbox = page.locator('form-listbox').first()
 			const listboxElement = listbox.locator('[role="listbox"]')
 
-			await expect(listboxElement).toBeVisible({ timeout: 10000 })
+			await expect(listboxElement).toBeVisible({ timeout: 1000 })
 
 			// First establish focus on first option
 			const firstOption = listbox.locator('button[role="option"]').first()
@@ -624,7 +624,7 @@ test.describe('form-listbox component', () => {
 			const error = listbox.locator('.error')
 			const callout = listbox.locator('card-callout')
 
-			await expect(error).toBeVisible({ timeout: 2000 })
+			await expect(error).toBeVisible({ timeout: 1000 })
 			await expect(callout).toHaveClass(/danger/)
 		})
 	})
@@ -634,7 +634,7 @@ test.describe('form-listbox component', () => {
 			const listbox = page.locator('form-listbox').first()
 			const listboxElement = listbox.locator('[role="listbox"]')
 
-			await expect(listboxElement).toBeVisible({ timeout: 10000 })
+			await expect(listboxElement).toBeVisible({ timeout: 1000 })
 
 			// Verify listbox role and aria-label
 			await expect(listboxElement).toHaveAttribute('role', 'listbox')

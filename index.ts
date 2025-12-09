@@ -66,7 +66,6 @@ export {
 	type Effect,
 	type Effects,
 	type ElementEffects,
-	insertOrRemoveElement,
 	type Reactive,
 	runEffects,
 	runElementEffects,

@@ -66,7 +66,6 @@ export {
 	type Effect,
 	type Effects,
 	type ElementEffects,
-	insertOrRemoveElement,
 	type Reactive,
 	runEffects,
 	runElementEffects,
@@ -93,8 +92,8 @@ export {
 	DependencyTimeoutError,
 	InvalidComponentNameError,
 	InvalidCustomElementError,
-	InvalidPropertyNameError,
 	InvalidEffectsError,
+	InvalidPropertyNameError,
 	InvalidReactivesError,
 	MissingElementError,
 } from './src/errors'
