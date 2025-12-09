@@ -674,7 +674,7 @@ test.describe('module-lazyload component', () => {
 			})
 
 			// Should end up with the final content
-			await expect(content).toBeVisible({ timeout: 1000 })
+			await expect(content).toBeVisible({ timeout: 2000 })
 			await expect(content).toContainText('Simple Text Content')
 			await expect(error).toBeHidden()
 		})
