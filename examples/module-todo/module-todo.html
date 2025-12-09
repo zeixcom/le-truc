@@ -1,0 +1,92 @@
+<module-todo>
+	<form action="#">
+		<form-textbox clearable>
+			<label for="add-todo">What needs to be done?</label>
+			<div class="input">
+				<input id="add-todo" type="text" value="" />
+				<button type="button" class="clear" aria-label="Clear input" hidden>
+					✕
+				</button>
+			</div>
+		</form-textbox>
+		<basic-button class="submit">
+			<button type="submit" class="constructive" disabled>
+				<span class="label">Add Todo</span>
+			</button>
+		</basic-button>
+	</form>
+	<module-list filter="all">
+		<ol data-container></ol>
+		<template>
+			<li>
+				<form-checkbox class="todo">
+					<label>
+						<input type="checkbox" class="visually-hidden" />
+						<span class="label">
+							<slot></slot>
+						</span>
+					</label>
+				</form-checkbox>
+				<basic-button class="delete">
+					<button
+						type="button"
+						class="tertiary destructive small"
+						aria-label="Delete"
+					>
+						<span class="label">✕</span>
+					</button>
+				</basic-button>
+			</li>
+		</template>
+	</module-list>
+	<footer>
+		<basic-pluralize>
+			<p class="none">Well done, all done!</p>
+			<p class="some">
+				<span class="count"></span>
+				<span class="one">task</span>
+				<span class="other">tasks</span>
+				remaining
+			</p>
+		</basic-pluralize>
+		<form-radiogroup value="all" class="split-button">
+			<fieldset>
+				<legend class="visually-hidden">Filter</legend>
+				<label class="selected">
+					<input
+						type="radio"
+						class="visually-hidden"
+						name="filter"
+						value="all"
+						checked
+					/>
+					<span>All</span>
+				</label>
+				<label>
+					<input
+						type="radio"
+						class="visually-hidden"
+						name="filter"
+						value="active"
+					/>
+					<span>Active</span>
+				</label>
+				<label>
+					<input
+						type="radio"
+						class="visually-hidden"
+						name="filter"
+						value="completed"
+					/>
+					<span>Completed</span>
+				</label>
+			</fieldset>
+		</form-radiogroup>
+		<basic-button class="clear-completed">
+			<button type="button" class="tertiary destructive">
+				<span class="label">Clear Completed</span>
+				<span class="badge"></span>
+			</button>
+		</basic-button>
+	</footer>
+</module-todo>

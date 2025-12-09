@@ -2,7 +2,6 @@ import {
 	type Cleanup,
 	isString,
 	isSymbol,
-	// type MaybeCleanup,
 	notify,
 	subscribe,
 	type Watcher,

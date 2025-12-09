@@ -89,6 +89,16 @@ export { setProperty, show } from './src/effects/property'
 export { setStyle } from './src/effects/style'
 export { setText } from './src/effects/text'
 export {
+	CircularMutationError,
+	DependencyTimeoutError,
+	InvalidComponentNameError,
+	InvalidCustomElementError,
+	InvalidPropertyNameError,
+	InvalidEffectsError,
+	InvalidReactivesError,
+	MissingElementError,
+} from './src/errors'
+export {
 	isParser,
 	type LooseReader,
 	type Parser,

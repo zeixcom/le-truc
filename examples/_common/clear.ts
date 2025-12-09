@@ -19,8 +19,8 @@ export const clearMethod = <
 	host,
 	textbox,
 }: ComponentUI<P, U>) => {
-	host.value = ''
 	host.clear = () => {
+		host.value = ''
 		textbox.value = ''
 		textbox.setCustomValidity('')
 		textbox.checkValidity()

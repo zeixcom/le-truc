@@ -756,6 +756,13 @@ var validatePropertyName = (prop) => {
 };
 
 // src/errors.ts
+class CircularMutationError extends Error {
+  constructor(host, selector) {
+    super(`Circular dependency detected in selection signal for component ${elementName(host)} with selector "${selector}"`);
+    this.name = "CircularMutationError";
+  }
+}
+
 class InvalidComponentNameError extends TypeError {
   constructor(component) {
     super(`Invalid component name "${component}". Custom element names must contain a hyphen, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens.`);
@@ -1686,7 +1693,15 @@ export {
   StoreKeyRangeError,
   StoreKeyExistsError,
   NullishSignalValueError,
+  MissingElementError,
   InvalidSignalValueError,
+  InvalidReactivesError,
+  InvalidPropertyNameError,
+  InvalidEffectsError,
+  InvalidCustomElementError,
+  InvalidComponentNameError,
   InvalidCallbackError,
+  DependencyTimeoutError,
+  CircularMutationError,
   CircularDependencyError
 };

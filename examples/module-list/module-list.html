@@ -1,0 +1,30 @@
+<module-list>
+	<ul data-container></ul>
+	<template>
+		<li>
+			<slot></slot>
+			<basic-button class="delete">
+				<button type="button" class="destructive">Remove</button>
+			</basic-button>
+		</li>
+	</template>
+	<form>
+		<form-textbox clearable>
+			<label for="new-item-input">New item</label>
+			<div class="input">
+				<input
+					type="text"
+					id="new-item-input"
+					name="new-item"
+					autocomplete="off"
+				/>
+				<button type="button" class="clear" aria-label="Clear input" hidden>
+					✕
+				</button>
+			</div>
+		</form-textbox>
+		<basic-button class="add">
+			<button type="submit" class="constructive">Add</button>
+		</basic-button>
+	</form>
+</module-list>
