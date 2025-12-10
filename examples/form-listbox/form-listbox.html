@@ -3,10 +3,65 @@
 		<input type="hidden" name="timezone" />
 		<card-callout>
 			<p class="loading" role="status">Loading...</p>
-			<p class="error" role="alert" aria-live="polite" hidden></p>
+			<p class="error" role="alert" aria-live="assertive" hidden></p>
 		</card-callout>
 		<module-scrollarea orientation="vertical">
 			<div role="listbox" aria-label="Timezones" hidden></div>
 		</module-scrollarea>
+	</form-listbox>
+</form>
+
+<!-- Declarative inline HTML example -->
+<form>
+	<form-listbox id="colors">
+		<input type="hidden" name="color" />
+		<div role="listbox" aria-label="Colors">
+			<button type="button" role="option" tabindex="-1" value="red">Red</button>
+			<button type="button" role="option" tabindex="-1" value="green">
+				Green
+			</button>
+			<button type="button" role="option" tabindex="-1" value="blue">
+				Blue
+			</button>
+			<button type="button" role="option" tabindex="-1" value="yellow">
+				Yellow
+			</button>
+			<button type="button" role="option" tabindex="-1" value="purple">
+				Purple
+			</button>
+		</div>
+	</form-listbox>
+</form>
+
+<!-- Declarative inline HTML example with groups -->
+<form>
+	<form-listbox id="fruits">
+		<input type="hidden" name="fruit" />
+		<div role="listbox" aria-label="Fruits">
+			<div role="group" aria-labelledby="fruits-citrus">
+				<div role="presentation" id="fruits-citrus">Citrus</div>
+				<button type="button" role="option" tabindex="-1" value="orange">
+					Orange
+				</button>
+				<button type="button" role="option" tabindex="-1" value="lemon">
+					Lemon
+				</button>
+				<button type="button" role="option" tabindex="-1" value="lime">
+					Lime
+				</button>
+			</div>
+			<div role="group" aria-labelledby="fruits-berries">
+				<div role="presentation" id="fruits-berries">Berries</div>
+				<button type="button" role="option" tabindex="-1" value="strawberry">
+					Strawberry
+				</button>
+				<button type="button" role="option" tabindex="-1" value="blueberry">
+					Blueberry
+				</button>
+				<button type="button" role="option" tabindex="-1" value="raspberry">
+					Raspberry
+				</button>
+			</div>
+		</div>
 	</form-listbox>
 </form>

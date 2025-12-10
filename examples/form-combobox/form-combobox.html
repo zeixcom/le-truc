@@ -1,0 +1,74 @@
+<form-combobox clearable>
+	<label for="timezone-input" id="timezone-label">Choose a timezone</label>
+	<div class="input">
+		<input
+			id="timezone-input"
+			type="text"
+			name="timezone"
+			role="combobox"
+			aria-expanded="false"
+			aria-controls="timezone-popup"
+			aria-autocomplete="list"
+			autocomplete="off"
+			required
+		/>
+		<form-listbox id="timezone-popup" src="/form-listbox/timezones.json">
+			<input type="hidden" name="timezone-listbox" />
+			<card-callout>
+				<p class="loading" role="status">Loading...</p>
+				<p class="error" role="alert" aria-live="assertive" hidden></p>
+			</card-callout>
+			<module-scrollarea>
+				<div role="listbox" aria-labelledby="timezone-label" hidden></div>
+			</module-scrollarea>
+		</form-listbox>
+		<button type="button" class="clear" aria-label="Clear input" hidden>
+			✕
+		</button>
+	</div>
+	<p class="error" role="alert" aria-live="assertive" id="timezone-error"></p>
+	<p class="description" aria-live="polite" id="timezone-description">
+		Tell us where you live so we can set your timezone for our calendar and
+		notification features.
+	</p>
+</form-combobox>
+
+<form>
+	<form-combobox>
+		<label for="color-input" id="color-label"
+			>What is your favorite color?</label
+		>
+		<div class="input">
+			<input
+				id="color-input"
+				type="text"
+				name="color"
+				role="combobox"
+				aria-expanded="false"
+				aria-controls="color-popup"
+				aria-autocomplete="list"
+				autocomplete="off"
+			/>
+			<form-listbox id="color-popup">
+				<input type="hidden" name="color-listbox" />
+				<div role="listbox" aria-labelledby="color-label">
+					<button type="button" role="option" tabindex="-1" value="Red">
+						Red
+					</button>
+					<button type="button" role="option" tabindex="-1" value="Green">
+						Green
+					</button>
+					<button type="button" role="option" tabindex="-1" value="Blue">
+						Blue
+					</button>
+					<button type="button" role="option" tabindex="-1" value="Yellow">
+						Yellow
+					</button>
+					<button type="button" role="option" tabindex="-1" value="Purple">
+						Purple
+					</button>
+				</div>
+			</form-listbox>
+		</div>
+	</form-combobox>
+</form>

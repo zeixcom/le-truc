@@ -73,12 +73,7 @@ export {
 } from './src/effects'
 export { setAttribute, toggleAttribute } from './src/effects/attribute'
 export { toggleClass } from './src/effects/class'
-export {
-	type EventHandler,
-	type EventType,
-	emit,
-	on,
-} from './src/effects/event'
+export { type EventHandler, type EventType, on } from './src/effects/event'
 export {
 	type DangerouslySetInnerHTMLOptions,
 	dangerouslySetInnerHTML,

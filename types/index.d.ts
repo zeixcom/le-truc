@@ -8,7 +8,7 @@ export { type Component, type ComponentProp, type ComponentProps, type Component
 export { type Effect, type Effects, type ElementEffects, type Reactive, runEffects, runElementEffects, updateElement, } from './src/effects';
 export { setAttribute, toggleAttribute } from './src/effects/attribute';
 export { toggleClass } from './src/effects/class';
-export { type EventHandler, type EventType, emit, on, } from './src/effects/event';
+export { type EventHandler, type EventType, on } from './src/effects/event';
 export { type DangerouslySetInnerHTMLOptions, dangerouslySetInnerHTML, } from './src/effects/html';
 export { type PassedProp, type PassedProps, pass } from './src/effects/pass';
 export { setProperty, show } from './src/effects/property';

@@ -1348,15 +1348,6 @@ var on = (type, handler, options = {}) => (host, target) => {
   target.addEventListener(type, listener, options);
   return () => target.removeEventListener(type, listener);
 };
-var emit = (type, reactive) => (host, target) => createEffect(() => {
-  const value = resolveReactive(reactive, host, target, `custom event "${type}" detail`);
-  if (value === RESET || value === UNSET)
-    return;
-  target.dispatchEvent(new CustomEvent(type, {
-    detail: value,
-    bubbles: true
-  }));
-});
 // src/effects/html.ts
 var dangerouslySetInnerHTML = (reactive, options = {}) => updateElement(reactive, {
   op: "h",
@@ -1627,7 +1618,6 @@ export {
   isCollection,
   isAsyncFunction,
   isAbortError,
-  emit,
   diff,
   defineComponent,
   dangerouslySetInnerHTML,

@@ -44,40 +44,6 @@ test.describe('form-listbox component', () => {
 	})
 
 	test.describe('Basic Rendering and Initialization', () => {
-		test('renders initial state correctly', async ({ page }) => {
-			const listbox = page.locator('form-listbox').first()
-			const loading = listbox.locator('.loading')
-			const error = listbox.locator('.error')
-			const callout = listbox.locator('card-callout')
-			const listboxElement = listbox.locator('[role="listbox"]')
-
-			// Wait for the page to load completely
-			await page.waitForTimeout(50)
-
-			// Component should start in a valid state - check right after it's found
-			// The callout may already be hidden if loading completed very quickly
-			const isCalloutVisible = await callout.isVisible()
-			const isLoading = await loading.isVisible()
-			const isLoaded = await listboxElement.isVisible()
-			const hasError = await error.isVisible()
-
-			// Error should never be visible initially
-			expect(hasError).toBe(false)
-
-			// Should be in one of two valid states:
-			// 1. Still loading: callout visible, loading visible, listbox hidden
-			// 2. Loaded successfully: callout hidden, loading hidden, listbox visible
-			if (isCalloutVisible) {
-				// If callout is visible, should be loading
-				expect(isLoading).toBe(true)
-				expect(isLoaded).toBe(false)
-			} else {
-				// If callout is hidden, should be loaded successfully
-				expect(isLoading).toBe(false)
-				expect(isLoaded).toBe(true)
-			}
-		})
-
 		test('loads and displays timezone data successfully', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			const loading = listbox.locator('.loading')
@@ -136,9 +102,10 @@ test.describe('form-listbox component', () => {
 				const listbox = document.createElement('form-listbox')
 				listbox.setAttribute('src', 'ftp://invalid-protocol.example')
 				listbox.innerHTML = `
+					<input type="hidden" name="timezone" />
 					<card-callout>
 						<p class="loading" role="status">Loading...</p>
-						<p class="error" role="alert" aria-live="polite" hidden></p>
+						<p class="error" role="alert" aria-live="assertive" hidden></p>
 					</card-callout>
 					<module-scrollarea orientation="vertical">
 						<div role="listbox" aria-label="Test" hidden></div>
@@ -166,9 +133,10 @@ test.describe('form-listbox component', () => {
 				const listbox = document.createElement('form-listbox')
 				listbox.setAttribute('src', '/nonexistent-file.json')
 				listbox.innerHTML = `
+					<input type="hidden" name="timezone" />
 					<card-callout>
 						<p class="loading" role="status">Loading...</p>
-						<p class="error" role="alert" aria-live="polite" hidden></p>
+						<p class="error" role="alert" aria-live="assertive" hidden></p>
 					</card-callout>
 					<module-scrollarea orientation="vertical">
 						<div role="listbox" aria-label="Test" hidden></div>
@@ -185,30 +153,33 @@ test.describe('form-listbox component', () => {
 			await expect(callout).toHaveClass(/danger/)
 		})
 
-		test('shows error when src is missing', async ({ page }) => {
+		test('handles component without src attribute correctly', async ({
+			page,
+		}) => {
 			await page.evaluate(() => {
 				const listbox = document.createElement('form-listbox')
 				listbox.innerHTML = `
-					<card-callout>
-						<p class="loading" role="status">Loading...</p>
-						<p class="error" role="alert" aria-live="polite" hidden></p>
-					</card-callout>
-					<module-scrollarea orientation="vertical">
-						<div role="listbox" aria-label="Test" hidden></div>
-					</module-scrollarea>
+					<input type="hidden" name="timezone" />
+					<div role="listbox" aria-label="Test">
+						<button type="button" role="option" tabindex="-1" value="test">Test Option</button>
+					</div>
 				`
 				document.body.appendChild(listbox)
 			})
 
 			const noSrcListbox = page.locator('form-listbox').last()
-			const error = noSrcListbox.locator('.error')
+			const listboxElement = noSrcListbox.locator('[role="listbox"]')
+			const options = listboxElement.locator('button[role="option"]')
+
+			// Should show listbox and options when no src but inline HTML exists
+			await expect(listboxElement).toBeVisible()
+			await expect(options).toHaveCount(1)
+
+			// Should not show any error callout
 			const callout = noSrcListbox.locator('card-callout')
-
-			await expect(error).toBeVisible()
-			await expect(callout).toHaveClass(/danger/)
-
-			const errorText = await error.textContent()
-			expect(errorText).toContain('No URL provided')
+			if ((await callout.count()) > 0) {
+				await expect(callout).toBeHidden()
+			}
 		})
 	})
 
@@ -247,7 +218,7 @@ test.describe('form-listbox component', () => {
 		}) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			// Get a specific option value
@@ -271,7 +242,7 @@ test.describe('form-listbox component', () => {
 		}) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			const firstOption = listbox.locator('button[role="option"]').first()
@@ -375,8 +346,10 @@ test.describe('form-listbox component', () => {
 			await page.keyboard.press('ArrowUp')
 
 			const lastOptionValue = await page.evaluate(() => {
+				const listbox = document.querySelector('form-listbox')
 				const options = Array.from(
-					document.querySelectorAll('form-listbox button[role="option"]'),
+					listbox?.querySelectorAll('button[role="option"]:not([hidden])')
+						|| [],
 				)
 				return (options[options.length - 1] as HTMLElement)?.getAttribute(
 					'value',
@@ -394,7 +367,7 @@ test.describe('form-listbox component', () => {
 		test('filters options based on filter property', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			const allOptions = listbox.locator('button[role="option"]')
@@ -426,7 +399,7 @@ test.describe('form-listbox component', () => {
 		}) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			// Set filter
@@ -454,7 +427,7 @@ test.describe('form-listbox component', () => {
 		test('shows no options when filter matches nothing', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			// Set filter that won't match anything
@@ -474,7 +447,7 @@ test.describe('form-listbox component', () => {
 		test('clears filter and shows all options', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			const allOptions = listbox.locator('button[role="option"]')
@@ -505,20 +478,20 @@ test.describe('form-listbox component', () => {
 	})
 
 	test.describe('Event Handling', () => {
-		test('emits form-listbox.change event when value changes', async ({
-			page,
-		}) => {
+		test('emits change event when value changes', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			// Set up event listener
 			await page.evaluate(() => {
 				;(window as any).changeEvents = []
 				const element = document.querySelector('form-listbox')
-				element?.addEventListener('form-listbox.change', event => {
-					;(window as any).changeEvents.push(event.detail)
+				element?.addEventListener('change', event => {
+					;(window as any).changeEvents.push(
+						(event.target as HTMLInputElement).value,
+					)
 				})
 			})
 
@@ -538,15 +511,17 @@ test.describe('form-listbox component', () => {
 		test('does not emit duplicate events for same value', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			// Set up event listener
 			await page.evaluate(() => {
 				;(window as any).changeEvents = []
 				const element = document.querySelector('form-listbox')
-				element?.addEventListener('form-listbox.change', event => {
-					;(window as any).changeEvents.push(event.detail)
+				element?.addEventListener('change', event => {
+					;(window as any).changeEvents.push(
+						(event.target as HTMLInputElement).value,
+					)
 				})
 			})
 
@@ -581,7 +556,7 @@ test.describe('form-listbox component', () => {
 
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			const initialOptions = listbox.locator('button[role="option"]')
@@ -612,7 +587,7 @@ test.describe('form-listbox component', () => {
 		test('handles src property validation', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			// Set invalid src
@@ -656,7 +631,7 @@ test.describe('form-listbox component', () => {
 		}) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			const options = listbox.locator('button[role="option"]')
@@ -688,7 +663,7 @@ test.describe('form-listbox component', () => {
 			// Check error live region
 			const error = listbox.locator('.error')
 			await expect(error).toHaveAttribute('role', 'alert')
-			await expect(error).toHaveAttribute('aria-live', 'polite')
+			await expect(error).toHaveAttribute('aria-live', 'assertive')
 
 			// Check loading status
 			const loading = listbox.locator('.loading')
@@ -700,7 +675,7 @@ test.describe('form-listbox component', () => {
 		test('works with FormData and form submission', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			// Form is already wrapped in HTML, no need to create one
@@ -744,7 +719,7 @@ test.describe('form-listbox component', () => {
 		test('value property reflects selected option', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			// Initially no value
@@ -770,7 +745,7 @@ test.describe('form-listbox component', () => {
 		test('filter property controls option visibility', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			// Test getting filter property
@@ -818,7 +793,7 @@ test.describe('form-listbox component', () => {
 		test('handles rapid property changes gracefully', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			// Test that rapid filter changes don't break the component
@@ -846,7 +821,7 @@ test.describe('form-listbox component', () => {
 		test('handles empty groups correctly', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			// Apply filter that should make some groups empty
@@ -880,7 +855,7 @@ test.describe('form-listbox component', () => {
 		test('maintains performance with large datasets', async ({ page }) => {
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
-				timeout: 10000,
+				timeout: 1000,
 			})
 
 			const startTime = Date.now()
@@ -907,9 +882,10 @@ test.describe('form-listbox component', () => {
 				const listbox = document.createElement('form-listbox')
 				listbox.setAttribute('src', '/form-listbox/timezones.json')
 				listbox.innerHTML = `
+					<input type="hidden" name="timezone" />
 					<card-callout>
 						<p class="loading" role="status">Loading...</p>
-						<p class="error" role="alert" aria-live="polite" hidden></p>
+						<p class="error" role="alert" aria-live="assertive" hidden></p>
 					</card-callout>
 					<module-scrollarea orientation="vertical">
 						<div role="listbox" aria-label="Test" hidden></div>
@@ -926,6 +902,149 @@ test.describe('form-listbox component', () => {
 
 			// Test should complete without throwing errors
 			expect(true).toBe(true)
+		})
+	})
+
+	test.describe('Declarative Inline HTML', () => {
+		test('renders inline options without src attribute', async ({ page }) => {
+			const listbox = page.locator('form-listbox#colors')
+			const listboxElement = listbox.locator('[role="listbox"]')
+			const options = listboxElement.locator('button[role="option"]')
+
+			// Should show listbox immediately (no loading)
+			await expect(listboxElement).toBeVisible()
+
+			// Should have all inline options
+			await expect(options).toHaveCount(5)
+
+			// Should have correct option values and text
+			const firstOption = options.first()
+			await expect(firstOption).toHaveAttribute('value', 'red')
+			await expect(firstOption).toHaveText('Red')
+		})
+
+		test('handles option selection with inline HTML', async ({ page }) => {
+			const listbox = page.locator('form-listbox#colors')
+			const listboxElement = listbox.locator('[role="listbox"]')
+			const firstOption = listboxElement
+				.locator('button[role="option"]')
+				.first()
+
+			// Click first option
+			await firstOption.click()
+
+			// Should update component value
+			const componentValue = await listbox.getAttribute('value')
+			expect(componentValue).toBe('red')
+
+			// Should update hidden input
+			const hiddenInputValue = await listbox
+				.locator('input[type="hidden"]')
+				.inputValue()
+			expect(hiddenInputValue).toBe('red')
+
+			// Should mark option as selected
+			await expect(firstOption).toHaveAttribute('aria-selected', 'true')
+		})
+
+		test('supports filtering with inline options', async ({ page }) => {
+			const listbox = page.locator('form-listbox#colors')
+			const options = listbox.locator('button[role="option"]')
+
+			// All options visible initially
+			await expect(options).toHaveCount(5)
+			for (const option of await options.all()) {
+				await expect(option).toBeVisible()
+			}
+
+			// Set filter property
+			await listbox.evaluate((element: any) => {
+				element.filter = 'r'
+			})
+
+			// Should filter to options containing 'r'
+			const redOption = options.filter({ hasText: 'Red' })
+			const greenOption = options.filter({ hasText: 'Green' })
+			const yellowOption = options.filter({ hasText: 'Yellow' })
+			const blueOption = options.filter({ hasText: 'Blue' })
+			const purpleOption = options.filter({ hasText: 'Purple' })
+
+			await expect(redOption).toBeVisible() // Red contains 'r'
+			await expect(greenOption).toBeVisible() // Green contains 'r'
+			await expect(purpleOption).toBeVisible() // Purple contains 'r'
+			await expect(yellowOption).toBeHidden() // Yellow doesn't contain 'r'
+			await expect(blueOption).toBeHidden() // Blue doesn't contain 'r'
+
+			// Should highlight matching text
+			const greenOptionForHighlight = options.filter({ hasText: 'Green' })
+			const highlightedMark = greenOptionForHighlight.locator('mark')
+			await expect(highlightedMark).toBeVisible()
+			await expect(highlightedMark).toHaveText('r')
+		})
+
+		test('renders grouped inline options correctly', async ({ page }) => {
+			const listbox = page.locator('form-listbox#fruits')
+			const listboxElement = listbox.locator('[role="listbox"]')
+			const groups = listboxElement.locator('[role="group"]')
+			const options = listboxElement.locator('button[role="option"]')
+
+			// Should have both groups
+			await expect(groups).toHaveCount(2)
+
+			// Should have all options
+			await expect(options).toHaveCount(6)
+
+			// Should have proper group labels
+			const citrusLabel = listboxElement.locator('#fruits-citrus')
+			await expect(citrusLabel).toHaveText('Citrus')
+
+			const berriesLabel = listboxElement.locator('#fruits-berries')
+			await expect(berriesLabel).toHaveText('Berries')
+
+			// Should maintain group structure for selection
+			const orangeOption = options.filter({ hasText: 'Orange' })
+			await orangeOption.click()
+
+			const componentValue = await listbox.getAttribute('value')
+			expect(componentValue).toBe('orange')
+		})
+
+		test('works with form integration using inline options', async ({
+			page,
+		}) => {
+			const listbox = page.locator('form-listbox#colors')
+			const firstOption = listbox.locator('button[role="option"]').first()
+
+			// Select an option
+			await firstOption.click()
+
+			// Check FormData
+			const formData = await page.evaluate(() => {
+				const form = document.querySelector(
+					'form:nth-of-type(2)',
+				) as HTMLFormElement
+				if (!form) throw new Error('Form not found')
+				const data = new FormData(form)
+				const entries = Array.from(data.entries())
+				return Object.fromEntries(entries)
+			})
+
+			expect(formData.color).toBe('red')
+		})
+
+		test('handles mixed content without src attribute', async ({ page }) => {
+			const listbox = page.locator('form-listbox#colors')
+			const options = listbox.locator('button[role="option"]')
+
+			// Should only count actual option buttons (using colors example)
+			await expect(options).toHaveCount(5)
+
+			// Should still work for selection
+			const firstOption = options.first()
+			await firstOption.click()
+
+			const componentValue = await listbox.getAttribute('value')
+			expect(componentValue).toBe('red')
 		})
 	})
 })

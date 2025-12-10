@@ -6,7 +6,6 @@ import {
 	createComputed,
 	dangerouslySetInnerHTML,
 	defineComponent,
-	emit,
 	on,
 	setAttribute,
 	setProperty,
@@ -42,12 +41,13 @@ export type FormListboxGroups = Record<
 
 export type FormListboxProps = {
 	value: string
+	options: Collection<HTMLButtonElement>
 	filter: string
 	src: string
 }
 
 type FormListboxUI = {
-	input?: HTMLInputElement
+	input: HTMLInputElement
 	callout?: HTMLElement
 	loading?: HTMLElement
 	error?: HTMLElement
@@ -59,20 +59,22 @@ declare global {
 	interface HTMLElementTagNameMap {
 		'form-listbox': Component<FormListboxProps>
 	}
-	interface HTMLElementEventMap {
-		'form-listbox.change': CustomEvent<string>
-	}
 }
 
 export default defineComponent<FormListboxProps, FormListboxUI>(
 	'form-listbox',
 	{
 		value: '',
+		options: ({ listbox }) =>
+			createCollection<
+				'button[role="option"]:not([hidden])',
+				HTMLButtonElement
+			>(listbox, 'button[role="option"]:not([hidden])'),
 		filter: '',
 		src: asString(),
 	},
 	({ first, all }) => ({
-		input: first('input[type="hidden"]'),
+		input: first('input[type="hidden"]', 'Needed to store the selected value.'),
 		callout: first('card-callout'),
 		loading: first('.loading'),
 		error: first('.error'),
@@ -80,12 +82,7 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 		options: all('button[role="option"]'),
 	}),
 	ui => {
-		const { host } = ui
-
-		const visibleOptions = createCollection<
-			'button[role="option"]:not([hidden])',
-			HTMLButtonElement
-		>(host, 'button[role="option"]:not([hidden])')
+		const { host, input } = ui
 
 		const renderOptions = (items: FormListboxOption[]) =>
 			items
@@ -109,6 +106,14 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 			}
 			return html
 		}
+
+		const maybeRender = () =>
+			host.src
+				? [
+						show(() => html.get().ok),
+						dangerouslySetInnerHTML(() => html.get().value),
+					]
+				: []
 
 		const html = createComputed<{
 			ok: boolean
@@ -147,26 +152,34 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 		)
 		const isSelected = (target: HTMLButtonElement) =>
 			host.value === target.value
-		const hasError = () => !!html.get().error
+		const hasError = () => (host.src ? !!html.get().error : false)
 
 		return {
-			host: [setAttribute('value'), emit('form-listbox.change', 'value')],
+			host: [setAttribute('value')],
 			input: [setProperty('value')],
-			callout: [show(() => !html.get().ok), toggleClass('danger', hasError)],
-			loading: [show(() => html.get().pending)],
-			error: [show(hasError), setText(() => html.get().error)],
+			callout: [
+				show(() => (host.src ? !html.get().ok : false)),
+				toggleClass('danger', hasError),
+			],
+			loading: [show(() => (host.src ? html.get().pending : false))],
+			error: [
+				show(hasError),
+				setText(() => (host.src ? html.get().error : '')),
+			],
 			listbox: [
-				...manageFocus(visibleOptions, options =>
+				...manageFocus(host.options, options =>
 					options.get().findIndex(option => option.ariaSelected === 'true'),
 				),
 				on('click', ({ event }) => {
 					const option = (event.target as HTMLElement).closest(
 						'[role="option"]',
 					) as HTMLButtonElement
-					if (option) return { value: option.value }
+					if (option && option.value !== host.value) {
+						host.value = option.value
+						input.dispatchEvent(new Event('change', { bubbles: true }))
+					}
 				}),
-				show(() => html.get().ok),
-				dangerouslySetInnerHTML(() => html.get().value),
+				...maybeRender(),
 			],
 			options: [
 				setProperty('tabIndex', target => (isSelected(target) ? 0 : -1)),
