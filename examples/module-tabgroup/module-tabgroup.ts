@@ -87,7 +87,7 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 			'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
 		),
 	}),
-	({ host, tabs }) => {
+	({ host }) => {
 		const isCurrentTab = (tab: HTMLButtonElement) =>
 			host.selected === getAriaControls(tab)
 

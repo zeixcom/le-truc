@@ -10,8 +10,12 @@
 @import './form-textbox/form-textbox.css';
 @import './module-carousel/module-carousel.css';
 @import './module-catalog/module-catalog.css';
+@import './module-demo/module-demo.css';
 @import './module-dialog/module-dialog.css';
 @import './module-pagination/module-pagination.css';
 @import './module-scrollarea/module-scrollarea.css';
 @import './module-tabgroup/module-tabgroup.css';
+@import './module-toc/module-toc.css';
 @import './module-todo/module-todo.css';
+@import './section-hero/section-hero.css';
+@import './section-menu/section-menu.css';

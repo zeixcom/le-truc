@@ -178,11 +178,12 @@ Here's the example of the `<card-callout>` we're using in this documentation:
 	</div>
 	<details>
 		<summary>Source Code</summary>
-		<module-lazy src="./examples/card-callout.html">
+		<module-lazyload src="./examples/card-callout.html">
 			<card-callout>
 				<p class="loading" role="status" aria-live="polite">Loading...</p>
 				<p class="error" role="alert" aria-live="assertive" hidden></p>
 			</card-callout>
+			<div class="content"></div>
 		</module-lazy>
 	</details>
 </module-demo>

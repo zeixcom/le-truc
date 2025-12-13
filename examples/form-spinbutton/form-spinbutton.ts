@@ -53,8 +53,8 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 					return clamped
 				},
 				click: ({ target, prev }) =>
-					prev +
-					(target.classList.contains('decrement')
+					prev
+					+ (target.classList.contains('decrement')
 						? -1
 						: target.classList.contains('increment')
 							? 1
@@ -88,8 +88,7 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 		zero: first('.zero'),
 		other: first('.other'),
 	}),
-	ui => {
-		const { host, increment, zero } = ui
+	({ host, increment, zero }) => {
 		const nonZero = createComputed(() => host.value !== 0)
 		const incrementLabel = increment.ariaLabel || 'Increment'
 		const ariaLabel = createComputed(() =>

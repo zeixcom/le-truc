@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Getting Started – Le Truc Docs</title>
+		<meta name="description" content="Installation, setup, and first steps" />
+		<link
+			rel="preload"
+			href="./assets/main.css?v=mj3fqrj4"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="./assets/main.js?v=mj3fqrj4"
+		/>
+		<link
+			rel="stylesheet"
+			href="./assets/main.css?v=mj3fqrj4"
+		/>
+		<script
+			type="module"
+			src="./assets/main.js?v=mj3fqrj4"
+		></script>
+	</head>
+	<body class="">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">Le Truc Docs <small>Version 0.15.0</small></h1>
+				<section-menu>
+		<nav>
+			<h2 class="visually-hidden">Main Menu</h2>
+			<ol>
+				<li>
+		<a href="about.html">
+			<span class="icon">🤝</span>
+			<strong>About</strong>
+			<small>License, versioning, getting involved</small>
+		</a>
+	</li><li>
+		<a href="components.html">
+			<span class="icon">🏗️</span>
+			<strong>Components</strong>
+			<small>Anatomy, lifecycle, signals, effects</small>
+		</a>
+	</li><li>
+		<a href="data-flow.html">
+			<span class="icon">🔄</span>
+			<strong>Data Flow</strong>
+			<small>Passing state, events, context</small>
+		</a>
+	</li><li>
+		<a href="getting-started.html">
+			<span class="icon">🚀</span>
+			<strong>Getting Started</strong>
+			<small>Installation, setup, and first steps</small>
+		</a>
+	</li><li>
+		<a href="index.html">
+			<span class="icon">📖</span>
+			<strong>Introduction</strong>
+			<small>Overview and key benefits of Le Truc</small>
+		</a>
+	</li><li>
+		<a href="styling.html">
+			<span class="icon">🎨</span>
+			<strong>Styling</strong>
+			<small>Scoped styles, CSS custom properties</small>
+		</a>
+	</li>
+			</ol>
+		</nav>
+	</section-menu>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<main id="main" class="content-grid"><section-hero>
+
+<h1 id="-getting-started">
+							<a name="-getting-started" class="anchor" href="#-getting-started">
+								<span class="permalink">🔗</span>
+								<span class="title">🚀 Getting Started</span>
+							</a>
+						</h1>
+<div>
+  <p class="lead"><strong>Set up Le Truc in minutes – no build tools required</strong>. Or use any package manager and bundler to take advantage of TypeScript support and optimize frontend assets.</p>
+  <module-toc>
+		<nav>
+			<h2>On This Page</h2>
+			<ol>
+				<li>
+		<a href="#how-to-install-le-truc">How to Install Le Truc</a>
+	</li><li>
+		<a href="#creating-your-first-component">Creating Your First Component</a>
+	</li><li>
+		<a href="#verifying-your-installation">Verifying Your Installation</a>
+	</li><li>
+		<a href="#next-steps">Next Steps</a>
+	</li>
+			</ol>
+		</nav>
+	</module-toc>
+</div>
+</section-hero>
+
+<section>
+
+<h2 id="how-to-install-le-truc">
+							<a name="how-to-install-le-truc" class="anchor" href="#how-to-install-le-truc">
+								<span class="permalink">🔗</span>
+								<span class="title">How to Install Le Truc</span>
+							</a>
+						</h2>
+<p>Le Truc works <strong>without build tools</strong> but also supports <strong>package managers and bundlers</strong> for larger projects. Choose the option that best fits your needs.</p>
+<h3 id="using-a-cdn">
+							<a name="using-a-cdn" class="anchor" href="#using-a-cdn">
+								<span class="permalink">🔗</span>
+								<span class="title">Using a CDN</span>
+							</a>
+						</h3>
+<p>For the easiest setup, include Le Truc via a CDN. This is ideal for <strong>testing or quick projects</strong> where you want lightweight interactivity without additional tooling.</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_0</strong></p>
+</section>
+
+<section>
+
+<h3 id="self-hosting-le-truc">
+							<a name="self-hosting-le-truc" class="anchor" href="#self-hosting-le-truc">
+								<span class="permalink">🔗</span>
+								<span class="title">Self-Hosting Le Truc</span>
+							</a>
+						</h3>
+<p>For production use, you may want to <strong>self-host Le Truc</strong> to avoid relying on a CDN. You can download the latest version from:</p>
+<p><a href="https://github.com/zeixcom/le-truc/blob/main/index.js" target="_blank">Github Repository</a></p>
+<p>Simply host the file on your server and include it like this:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_1</strong></p>
+<p><strong>Why self-host?</strong></p>
+<ul>
+<li>You <strong>control updates</strong> and avoid breaking changes from external CDNs.</li>
+<li>Works for <strong>projects with stricter Content Security Policy rules</strong>.</li>
+</ul>
+<p>Remember to keep the hosted file updated to use the latest features and bug fixes.</p>
+</section>
+
+<section>
+
+<h3 id="installing-via-package-managers">
+							<a name="installing-via-package-managers" class="anchor" href="#installing-via-package-managers">
+								<span class="permalink">🔗</span>
+								<span class="title">Installing via Package Managers</span>
+							</a>
+						</h3>
+<p>If you&#39;re using a <strong>bundler</strong> like <strong>Vite, Webpack, or Rollup</strong>, install Le Truc via NPM or Bun:</p>
+<module-tabgroup>
+<div role="tablist">
+<button role="tab" id="trigger_installation-npm" aria-controls="panel_installation-npm" aria-selected="true" tabindex="0">NPM</button>
+<button role="tab" id="trigger_installation-bun" aria-controls="panel_installation-bun" aria-selected="false" tabindex="-1">Bun</button>
+</div>
+<div role="tabpanel" id="panel_installation-npm" aria-labelledby="trigger_installation-npm">
+
+<p><strong>CODE_BLOCK_PLACEHOLDER_2</strong></p>
+</div>
+<div role="tabpanel" id="panel_installation-bun" aria-labelledby="trigger_installation-bun">
+
+<p><strong>CODE_BLOCK_PLACEHOLDER_3</strong></p>
+</div>
+</module-tabgroup>
+
+<p>Then import the needed functions in your JavaScript:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_4</strong></p>
+</section>
+
+<section>
+
+<h2 id="creating-your-first-component">
+							<a name="creating-your-first-component" class="anchor" href="#creating-your-first-component">
+								<span class="permalink">🔗</span>
+								<span class="title">Creating Your First Component</span>
+							</a>
+						</h2>
+<p>Now, let&#39;s create an interactive Web Component to verify your setup.</p>
+<p><strong>What This Component Does</strong></p>
+<ul>
+<li>Displays <code>Hello, World!</code> by default.</li>
+<li>Updates dynamically when you type into the input field.</li>
+</ul>
+<h3 id="markup">
+							<a name="markup" class="anchor" href="#markup">
+								<span class="permalink">🔗</span>
+								<span class="title">Markup</span>
+							</a>
+						</h3>
+<p>Include the following in your server-rendered HTML:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_5</strong></p>
+<h3 id="component-definition">
+							<a name="component-definition" class="anchor" href="#component-definition">
+								<span class="permalink">🔗</span>
+								<span class="title">Component Definition</span>
+							</a>
+						</h3>
+<p>Save the following inside a <code>&lt;script type=&quot;module&quot;&gt;</code> tag or an external JavaScript file.</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_6</strong></p>
+<h3 id="understanding-your-first-component">
+							<a name="understanding-your-first-component" class="anchor" href="#understanding-your-first-component">
+								<span class="permalink">🔗</span>
+								<span class="title">Understanding Your First Component</span>
+							</a>
+						</h3>
+<p>This component demonstrates Le Truc&#39;s core concepts:</p>
+<ul>
+<li><strong>Reactive Properties</strong>: <code>name: asString(...)</code> creates a reactive property that syncs with the <code>name</code> attribute and falls back to the <code>&lt;output&gt;</code> content</li>
+<li><strong>Effects</strong>: The setup function returns effects that handle user input and update the display text</li>
+<li><strong>Element Selection</strong>: <code>first()</code> selects descendant element to apply effects to</li>
+</ul>
+<p>Learn more about these concepts in the <a href="components.html">Components</a> guide.</p>
+</section>
+
+<section>
+
+<h2 id="verifying-your-installation">
+							<a name="verifying-your-installation" class="anchor" href="#verifying-your-installation">
+								<span class="permalink">🔗</span>
+								<span class="title">Verifying Your Installation</span>
+							</a>
+						</h2>
+<p>If everything is set up correctly, you should see:</p>
+<ul>
+<li>A text input field</li>
+<li>A greeting (<code>Hello, World!</code>)</li>
+<li>The greeting updates as you type</li>
+</ul>
+<module-demo>
+	<div class="preview">
+		<basic-hello>
+			<label>Your name<br>
+				<input name="name" type="text" autocomplete="given-name">
+			</label>
+			<p>Hello, <output>World</output>!</p>
+		</basic-hello>
+	</div>
+</module-demo>
+
+<p>If it&#39;s not working:</p>
+<ul>
+<li>Check the browser console for errors (missing imports, typos).</li>
+<li>Ensure your <code>&lt;script&gt;</code> tag is set to <code>type=&quot;module&quot;</code> when using ES modules.</li>
+<li>If using NPM, confirm Le Truc is installed inside <code>node_modules/@zeix/le-truc</code>.</li>
+</ul>
+</section>
+
+<section>
+
+<h2 id="next-steps">
+							<a name="next-steps" class="anchor" href="#next-steps">
+								<span class="permalink">🔗</span>
+								<span class="title">Next Steps</span>
+							</a>
+						</h2>
+<p>You&#39;ve successfully created your first reactive component! Now you&#39;re ready to dive deeper into Le Truc&#39;s core concepts:</p>
+<p><strong>Next: Building <a href="components.html">Components</a></strong><br>Learn the fundamental building blocks: component anatomy, element selection, basic state management, and event handling patterns.</p>
+</section>
+</main>
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2025 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

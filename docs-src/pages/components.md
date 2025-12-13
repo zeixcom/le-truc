@@ -20,10 +20,10 @@ description: 'Anatomy, lifecycle, signals, effects'
 
 Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built-in state management and reactive updates**.
 
-Le Truc creates components using the `component()` function:
+Le Truc creates components using the `defineComponent()` function:
 
 ```js
-component('my-component', {}, () => [
+defineComponent('my-component', {}, () => [
   // Component setup
 ])
 ```
@@ -43,21 +43,26 @@ Once registered, the component can be used like any native HTML element:
 Let's examine a complete component example to understand how Le Truc works:
 
 ```js
-component(
-  'hello-world',
-  {
-    name: asString(el => el.querySelector('span')?.textContent?.trim() ?? ''),
-  },
-  (el, { first }) => {
-    const fallback = el.name
-    return [
-      first(
-        'input',
-        on('input', ({ target }) => ({ name: target.value || fallback })),
-      ),
-      first('span', setText('name')),
-    ]
-  },
+defineComponent(
+	'basic-hello',
+	{
+		name: asString(ui => ui.output.textContent),
+	},
+	({ first }) => ({
+		input: first('input', 'Needed to enter the name.'),
+		output: first('output', 'Needed to display the name.'),
+	}),
+	({ host }) => {
+		const fallback = host.name
+		return {
+			input: [
+				on('input', ({ target }) => {
+					host.name = target.value || fallback
+				}),
+			],
+			output: [setText('name')],
+		}
+	},
 )
 ```
 
@@ -65,55 +70,60 @@ component(
 
 ```js
 {
-  // Create "name" property from attribute "name" as a string, falling back to server-rendered content
-  name: asString(el => el.querySelector('span')?.textContent?.trim() ?? ''),
+  name: asString(ui => ui.output.textContent),
 }
 ```
 
 This creates a reactive property called `name`:
 
 - `asString()` observes the attribute `name` and assigns its value as a string to the `name` property
-- `el => ...` is an instruction how to get the fallback value in the DOM if there is no name attribute
-- Le Truc automatically reads "World" from the `<span>` element as the initial value
+- `ui => ...` is an instruction how to get the fallback value in the DOM if there is no name attribute
+- Le Truc automatically reads "World" from the `<output>` element as the initial value
 - When `name` changes, any effects that depend on it automatically update
+
+#### Select Function
+
+The select function is used to find descendant elements within the component's DOM:
+
+```js
+({ first }) => ({
+	input: first('input', 'Needed to enter the name.'),
+	output: first('output', 'Needed to display the name.'),
+}),
+```
+
+The select function must return a record of the selected elements, commonly called `ui` to which initializer functions for reactive properties and the setup function for effects have access to. In the above example, the helper function `first()` is used to find the first descendant matching a selector. Also available is `all()` to find all descendants matching a selector, dynamically updating the list of elements when the DOM changes. Both helper functions take a selector string and an optional error message to display if no element is found.
 
 #### Setup Function
 
-The setup function takes two arguments:
-
-1. The component element. In this example we name it `el`.
-2. Helper functions for accessing descendant elements. In this example we use `first` to find the first descendant matching a selector and apply effects to it.
-
-The setup function returns an array of effects:
+The setup function must return a record with an array of effects for properties of the `ui` object that is passed in. The additional `host` key of the `ui` object holds the component element itself.
 
 ```js
-(el, { first }) => {
-  // set the fallback value we want to use instead of an empty string
-  const fallback = el.name
-
-  return [
-    // Handle user input to change the "name" property
-    first(
-      'input',
-      on('input', ({ target }) => ({ name: target.value || fallback })),
-    ),
-
-    // Update content when the "name" property changes
-    first('span', setText('name')),
-  ]
+({ host }) => {
+	const fallback = host.name
+	return {
+		input: [
+			on('input', ({ target }) => {
+				host.name = target.value || fallback
+			}),
+		],
+		output: [setText('name')],
+	}
 },
 ```
 
 Effects define **component behaviors**:
 
-- `first('input', on('input', ...))` finds the first `<input>` and adds an event listener
-- `first('span', setText('name'))` finds the first `<span>` and keeps its text in sync with the `name` property
+- `input: [on('input', ...)]` adds an event listener to the `<input>` element
+- `output: [setText('name')]` keeps its text in sync with the `name` property
 
-Characteristics of Effects:
+Characteristics of effects:
 
 - Effects run when the component is added to the page
 - Effects rerun when their dependencies change
 - Effects may return a cleanup function to be executed when the target element or the component is removed from the page
+
+The bundled effects `on()` and `setText()` in this case are partially applied functions that connect to component properties and the target element and return the appropriate cleanup function.
 
 </section>
 
@@ -123,111 +133,60 @@ Characteristics of Effects:
 
 Le Truc manages the **Web Component lifecycle** from creation to removal. Here's what happens.
 
-### Component Creation
+### Connected to the DOM
 
-In the `constructor()` reactive properties are initialized. You pass a second argument to the `component()` function to defines initial values for **component states**.
+In the `connectedCallback()` reactive properties are initialized. You pass a second argument to the `defineComponent()` function to define initial values for **component states**.
 
 ```js
-component(
+defineComponent(
   'my-component',
   {
     count: 0, // Initial value of "count" signal
     value: asInteger(5), // Parse "value" attribute as integer defaulting to 5
-    isEven: el => () => !(el.count % 2), // Computed signal based on "count" signal
+    isEven: ui => () => !(ui.host.count % 2), // Computed signal based on "count" signal
     name: fromContext('display-name', 'World'), // Consume "display-name" signal from closest context provider
   },
-  () => [
+  () => ({
+    // Component UI
+  }),
+  ui => ({
     // Component setup
-  ],
+  })
 )
 ```
 
 In this example you see all three ways to define a reactive property:
 
-- A **static initial value** for a `State` signal (e.g., `count: 0`)
-- An **attribute parser** that may provide a fallback value (e.g., `value: asInteger(5)`)
-- A **signal producer** function that derives an initial value or a callback function from other properties of the element (e.g., `isEven: el => () => !(el.count % 2)`) or bundled signal producers (e.g. `fromContext(context, fallback)`)
+- A **static initial value** creates a `State` signal with the initial value
+- An **attribute parser** creates a `State` signal may from the attribute or fallback value, updating the state whenever the attribute changes
+- An **initializer** function that creates a `State` or a `Computed` signal depending on the return type of the function. If the function returns a value, it creates a `State` signal. If the function returns a function, it creates a `Computed` signal. Initializer functions have access to the component's `ui` object, allowing them to create signals based on the component's state or descendant elements.
 
-<card-callout class="caution">
+### Disconnected from the DOM
 
-**Caution**: Property initialization runs **before the element is attached to the DOM**. You can't access not yet defined properties or descendant elements here.
+In the `disconnectedCallback()` Le Truc runs all cleanup functions returned by effects during the setup phase in `connectedCallback()`. This will remove all event listeners and unsubscribe all signals the component is subscribed to, so you don't need to worry about memory leaks.
 
-</card-callout>
-
-### Mounted in the DOM
-
-Runs when the component is added to the page (`connectedCallback()`). This is where you:
-
-- **Access sub-elements**
-- **Set up event listeners**
-- **Apply effects**
-- **Emit custom events**
-- **Provide context**
-
-The setup function has two arguments:
-
-1. `el`: The component element instance.
-2. `{ all, first }`: An object containing two functions, `all` and `first`, which can be used to select elements within the component. See [Accessing Sub-elements](#accessing-sub-elements).
-
-Le Truc expects you to return an array of partially applied functions to be executed during the setup phase. The order doesn't matter, as each function targets a specific element or event. So feel free to organize your code in a way that makes sense to you.
-
-Each of these functions will return a cleanup function that will be executed during the `disconnectedCallback()` lifecycle method.
+If you added **event listeners** outside the scope of your component or **subscribed manually to external APIs** in a custom effect, you need to return a cleanup function:
 
 ```js
-component(
-  'my-component',
-  {
-    count: 0,
-  },
-  (el, { first }) => [
-    emit('update-count', el.count), // Emit custom event
-    provide('count'), // Provide context
-    first(
-      '.increment',
-      on('click', () => {
-        el.count++
-      }), // Add click event listener
-    ),
-    first(
-      '.count',
-      setText('count'), // Apply effect to update text
-    ),
-  ],
-)
+defineComponent('my-component', {}, {}, ({ host }) => {
+  host: [
+    // Setup logic
+    () => {
+      const observer = new IntersectionObserver(([entry]) => {
+        // Do something
+      })
+      observer.observe(host)
+
+      // Cleanup logic
+      return () => observer.disconnect()
+    },
+  ]
+})
 ```
-
-### Removed from the DOM
-
-Runs when the component is removed (`disconnectedCallback()`). Le Truc will run all cleanup functions returned by event listeners and effects during the setup phase (`connectedCallback()`). This will unsubscribe all signals the component is subscribed to, so you don't need to worry about memory leaks.
-
-If you added **event listeners** outside the scope of your component or **subscribed manually to external APIs**, you need to return a cleanup function:
-
-```js
-component('my-component', {}, el => [
-  // Setup logic
-  () => {
-    const observer = new IntersectionObserver(([entry]) => {
-      // Do something
-    })
-    observer.observe(el)
-
-    // Cleanup logic
-    return () => observer.disconnect()
-  },
-])
-```
-
-### Observed Attributes
-
-Le Truc automatically observes and converts attributes with an associated **parser function** in the init block and updates them whenever the attribute changes (`attributeChangedCallback()`).
-
-</section>
-
-<section>
 
 ## Managing State with Signals
 
-Le Truc manages state using **signals**, which are atomic reactive states that trigger updates when they change. We use regular properties to access or update them:
+Le Truc manages state using **signals**, which are atomic reactive states that trigger updates when they change. We use regular properties for public component states:
 
 ```js
 console.log('count' in el) // Check if the signal exists
@@ -240,7 +199,7 @@ el.count = 42 // Update the signal value
 Signals in Le Truc are of a **static type** and **non-nullable**. This allows to **simplify the logic** as you will never have to check the type or perform null-checks.
 
 - If you use **TypeScript** (recommended), **you will be warned** that `null` or `undefined` cannot be assigned to a signal or if you try to assign a value of a wrong type.
-- If you use vanilla **JavaScript** without a build step, setting a signal to `null` or `undefined` **will log an error to the console and abort**. However, strict type checking is not enforced at runtime.
+- If you use vanilla **JavaScript** without a build step, setting a signal to `null` or `undefined` **will throw a `NullishSignalValueError`**. However, strict type checking is not enforced at runtime.
 
 Because of the **non-nullable nature of signals** in Le Truc, we need two special values that can be assigned to any signal type:
 
@@ -252,21 +211,24 @@ Because of the **non-nullable nature of signals** in Le Truc, we need two specia
 The standard way to set initial state in Le Truc is via **server-rendered attributes** on the component that needs it. No props drilling as in other frameworks. Le Trucs provides some bundled attribute parsers to convert attribute values to the desired type. And you can also define your own custom parsers.
 
 ```js
-component(
+defineComponent(
   'my-component',
   {
     count: asInteger(), // Bundled parser: Convert '42' -> 42
-    date: (_, v) => new Date(v), // Custom parser: '2025-02-14' -> Date object
+    date: (_, v) => new Date(v), // Custom parser: '2025-12-12' -> Date object
   },
-  () => [
+  () => ({
+    // Component UI
+  })
+  () => ({
     // Component setup
-  ],
+  }),
 )
 ```
 
 <card-callout class="caution">
 
-**Careful**: Attributes **may not be present** on the element or **parsing to the desired type may fail**. To ensure **non-nullability** of signals, Le Truc falls back to neutral defaults:
+**Careful**: Attributes **may not be present** on the element or **parsing to the desired type may fail**. To ensure **non-nullability** of signals, Le Truc falls back to neutral defaults if no fallback value is provided:
 
 - `""` (empty string) for `string`
 - `0` for `number`
@@ -284,62 +246,54 @@ Le Truc provides several built-in parsers for common attribute types. See the [P
 
 ## Selecting Elements
 
-Use the provided selector utilities to find elements within your component:
+Use the provided selector utilities to find descendant elements within your component:
 
 ### first()
 
-Selects the first matching element and applies effects:
+Selects the first matching element:
 
 ```js
-component(
-  'basic-counter',
-  {
-    count: asInteger(),
-  },
-  (el, { first }) => [
-    first('.count', setText('count')),
-    first(
-      'button',
-      on('click', () => {
-        el.count++
-      }),
-    ),
-  ],
+defineComponent(
+	'basic-counter',
+	{
+		// Initialize properties
+	},
+	({ first }) => ({
+		increment: first(
+			'button',
+			'Add a native button element to increment the count.',
+		),
+		count: first('span', 'Add a span to display the count.'),
+	}),
+	ui => ({
+	  // Component setup
+	}),
 )
 ```
 
 ### all()
 
-Selects all matching elements and applies effects to each:
+Selects all matching elements:
 
 ```js
-component(
-  'module-tabgroup',
-  {
-    selected: '',
-  },
-  (el, { all }) => [
-    // Apply click handler to all buttons
-    all(
-      '[role="tab"]',
-      on('click', e => {
-        el.selected = e.currentTarget?.getAttribute('aria-controls') ?? ''
-      }),
-      setProperty(
-        'ariaSelected',
-        target => target?.getAttribute('aria-controls') === el.selected,
-      ),
-      setProperty('tabIndex', target =>
-        target?.getAttribute('aria-controls') === el.selected ? 0 : -1,
-      ),
-    ),
-
-    // Apply hidden property to all tabs
-    all(
-      '[role="tabpanel"]',
-      show(target => el.selected === target.id),
-    ),
-  ],
+defineComponent(
+	'module-tabgroup',
+	{
+	  // Initialize properties
+	},
+	({ all }) => ({
+		tabs: all(
+			'button[role="tab"]',
+			'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
+		),
+		panels: all(
+			'[role="tabpanel"]',
+			'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
+		),
+	}),
+	ui => ({
+	  // Component setup
+	}),
 )
 ```
 
@@ -359,27 +313,35 @@ On the other hand, the `all()` function creates a dynamic array of elements that
 
 ## Adding Event Listeners
 
-Event listeners allow to respond to user interactions. They are the cause of changes in the component's state.
+Event listeners allow to respond to user interactions. They are the the main cause for changes in the component's state. Le Truc provides the `on()` function to add event listeners to elements and remove them when the component is disconnected.
 
 ```js
-component("my-component", {
-	active: 0,
-	value: ''
-}, (el, { all, first }) => [
-	all("button",
-		on("click", e => {
-			// Set "active" signal to value of data-index attribute of button
-			const index = parseInt(e.target.dataset['index'], 10);
-			el.active = Number.isInteger(index) ? index : 0;
-		})
-	),
-	first("input",
-		on("change", e => {
-			// Set "value" signal to value of input element
-			el.value = e.target.value;
-		})
-	)
-]
+defineComponent(
+  'my-component',
+  {
+  	active: 0,
+  	value: ''
+  },
+  ({ all, first }) => ({
+    buttons: all('button'),
+    input: first('input')
+  }),
+  ({ host }) => ({
+    buttons: [
+      on('click', ({ target }) => {
+  			// Set 'active' signal to value of data-index attribute of button
+  			const index = parseInt(target.dataset.index, 10);
+  			host.active = Number.isInteger(index) ? index : 0;
+  		})
+    ],
+    input: [
+      on('change', ({ target }) => {
+  			// Set 'value' signal to value of input element
+  			host.value = target.value;
+  		})
+    ]
+  })
+)
 ```
 
 </section>
@@ -395,20 +357,18 @@ Effects **automatically update the DOM** when signals change, avoiding manual DO
 Apply one or multiple effects in the setup function (for component itself) or in element selector functions:
 
 ```js
-;(_, { first }) => [
+return {
   // On the component itself
-  setAttribute('open', 'isOpen'), // Set "open" attribute according to "isOpen" signal
-
-  // On first element matching ".count"
-  first(
-    '.count',
-    setText('count'), // Update text content according to "count" signal
-    toggleClass('even', 'isEven'), // Toggle "even" class according to "isEven" signal
-  ),
-]
+  host: [setAttribute('open', 'open')], // Set 'open' attribute according to 'open' signal
+  // On element for the 'count' property of the UI object
+  count: [
+    setText('count'), // Update text content according to 'count' signal
+    toggleClass('even', 'isEven') // Toggle 'even' class according to 'isEven' signal
+  ]
+}
 ```
 
-Again, the order of effects is not important. Feel free to apply them in any order that suits your needs.
+The order of effects is not important. Feel free to apply them in any order that suits your needs.
 
 ### Bundled Effects
 
@@ -418,33 +378,42 @@ Le Truc provides many built-in effects for common DOM operations. See the [Effec
 
 For effects that take two arguments, **the second argument can be omitted** if the signal key matches the targeted property name, attribute, class, or style property.
 
-When signal key matches property name:
+The following are equivalent:
 
 ```js
-first('.count', toggleClass('even'))
+// setAttribute('open', 'open')
+setAttribute('open')
 ```
 
-Here, `toggleClass("even")` automatically uses the `"even"` signal.
+Here, `setAttribute('open')` automatically uses the `open` signal.
 
-### Using Local Signals for Protected State
+### Using Local Signals for Private State
 
 Local signals are useful for storing state that should not be exposed to the outside world. They can be used to manage internal state within a component:
 
 ```js
-component('my-component', {}, (_, { first }) => {
-  const count = state(0)
-  const double = count.map(v => v * 2)
-  return [
-    first(
-      '.increment',
-      on('click', () => {
-        count.update(v => ++v)
-      }),
-    ),
-    first('.count', setText(count)),
-    first('.double', setText(double)),
-  ]
-})
+defineComponent(
+  'my-component',
+  {},
+  ({ first }) => ({
+    increment: first('button.increment'),
+    count: first('.count'),
+    double: first('.double')
+  }),
+  () => {
+    const count = createState(0)
+    const double = createComputed(() => count.get() * 2)
+    return {
+      increment: [
+        on('click', () => {
+          count.update(v => ++v)
+        }),
+      ],
+      count: [setText(count)],
+      double: [setText(double)],
+    }
+  }
+)
 ```
 
 Outside components cannot access the `count` or `double` signals.
@@ -454,15 +423,20 @@ Outside components cannot access the `count` or `double` signals.
 Instead of a signal key or a local signal, you can **pass a function** that derives a value dynamically:
 
 ```js
-component("my-component", {
-	count: 0
-}, (el, { first }) => {
-	const double = computed(() => el.count * 2);
-	return [
-		first(".count", toggleClass("even", () => !(el.count % 2)))),
-		first(".double", setText(() => String(double.get())))
-	];
-});
+defineComponent(
+  'my-component',
+  {
+    count: 0,
+  },
+  ({ first }) => ({
+    count: first('.count'),
+    double: first('.double')
+  }),
+  ({ host }) => ({
+    count: [toggleClass('even', () => !(host.count % 2))],
+    double: [setText(() => String(host.count * 2))]
+  })
+)
 ```
 
 <card-callout class="tip">

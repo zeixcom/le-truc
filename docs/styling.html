@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Styling – Le Truc Docs</title>
+		<meta name="description" content="Scoped styles, CSS custom properties" />
+		<link
+			rel="preload"
+			href="./assets/main.css?v=mj3fqrj3"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="./assets/main.js?v=mj3fqrj3"
+		/>
+		<link
+			rel="stylesheet"
+			href="./assets/main.css?v=mj3fqrj3"
+		/>
+		<script
+			type="module"
+			src="./assets/main.js?v=mj3fqrj3"
+		></script>
+	</head>
+	<body class="">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">Le Truc Docs <small>Version 0.15.0</small></h1>
+				<section-menu>
+		<nav>
+			<h2 class="visually-hidden">Main Menu</h2>
+			<ol>
+				<li>
+		<a href="about.html">
+			<span class="icon">🤝</span>
+			<strong>About</strong>
+			<small>License, versioning, getting involved</small>
+		</a>
+	</li><li>
+		<a href="components.html">
+			<span class="icon">🏗️</span>
+			<strong>Components</strong>
+			<small>Anatomy, lifecycle, signals, effects</small>
+		</a>
+	</li><li>
+		<a href="data-flow.html">
+			<span class="icon">🔄</span>
+			<strong>Data Flow</strong>
+			<small>Passing state, events, context</small>
+		</a>
+	</li><li>
+		<a href="getting-started.html">
+			<span class="icon">🚀</span>
+			<strong>Getting Started</strong>
+			<small>Installation, setup, and first steps</small>
+		</a>
+	</li><li>
+		<a href="index.html">
+			<span class="icon">📖</span>
+			<strong>Introduction</strong>
+			<small>Overview and key benefits of Le Truc</small>
+		</a>
+	</li><li>
+		<a href="styling.html">
+			<span class="icon">🎨</span>
+			<strong>Styling</strong>
+			<small>Scoped styles, CSS custom properties</small>
+		</a>
+	</li>
+			</ol>
+		</nav>
+	</section-menu>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<main id="main" class="content-grid"><section-hero>
+
+<h1 id="-styling">
+							<a name="-styling" class="anchor" href="#-styling">
+								<span class="permalink">🔗</span>
+								<span class="title">🎨 Styling</span>
+							</a>
+						</h1>
+<div>
+  <p class="lead"><strong>Keep your components’ styles self-contained while supporting shared design tokens.</strong> Le Truc offers a refreshingly simple approach to create reactive Web Components that enhance your existing HTML.</p>
+  <module-toc>
+		<nav>
+			<h2>On This Page</h2>
+			<ol>
+				<li>
+		<a href="#design-principles">Design Principles</a>
+	</li><li>
+		<a href="#scope-styles-to-custom-element">Scope Styles to Custom Element</a>
+	</li><li>
+		<a href="#encapsulate-styles-with-shadow-dom">Encapsulate Styles with Shadow DOM</a>
+	</li><li>
+		<a href="#shared-design-tokens-with-css-custom-properties">Shared Design Tokens with CSS Custom Properties</a>
+	</li><li>
+		<a href="#defined-variants-with-classes">Defined Variants with Classes</a>
+	</li><li>
+		<a href="#css-only-components">CSS-only Components</a>
+	</li><li>
+		<a href="#next-steps">Next Steps</a>
+	</li>
+			</ol>
+		</nav>
+	</module-toc>
+</div>
+</section-hero>
+
+<section>
+
+<h2 id="design-principles">
+							<a name="design-principles" class="anchor" href="#design-principles">
+								<span class="permalink">🔗</span>
+								<span class="title">Design Principles</span>
+							</a>
+						</h2>
+<p>Le Truc is focused on <strong>state management and reactivity</strong>, not styling. However, to <strong>ensure consistent, maintainable, and reusable styles</strong>, we recommend techniques that <strong>scope component styles properly while allowing shared design tokens</strong> (e.g., spacing, font sizes, colors, layout grids).</p>
+<ul>
+<li><strong>Each component brings along its own specific styles.</strong></li>
+<li>Component styles should be <strong>scoped or encapsulated</strong> so they don&#39;t leak out.</li>
+<li><strong>Allow customizations</strong> via CSS custom properties or pre-defined classes.</li>
+</ul>
+<p>Parent components may apply styles to the wrapper element of known sub-components for layout purposes. But avoid styling inner elements of sub-components directly. This would tightly couple the styles of the outer and inner components.</p>
+</section>
+
+<section>
+
+<h2 id="scope-styles-to-custom-element">
+							<a name="scope-styles-to-custom-element" class="anchor" href="#scope-styles-to-custom-element">
+								<span class="permalink">🔗</span>
+								<span class="title">Scope Styles to Custom Element</span>
+							</a>
+						</h2>
+<p>Use the <strong>custom element name</strong> to scope component styles if <strong>you control the page and the components within</strong>. This protects against component styles leaking out, while still allowing to use the CSS cascade. No need for Shadow DOM, no duplicate style rules.</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_0</strong></p>
+<h3 id="advantages-of-custom-element-names">
+							<a name="advantages-of-custom-element-names" class="anchor" href="#advantages-of-custom-element-names">
+								<span class="permalink">🔗</span>
+								<span class="title">Advantages of Custom Element Names</span>
+							</a>
+						</h3>
+<ul>
+<li>By definition <strong>unique within the document</strong> with a descriptive name.</li>
+<li><strong>Low specificity</strong>, making it easy to override when you need to with a single class.</li>
+</ul>
+<card-callout class="tip">
+
+<p><strong>When to use</strong></p>
+<p><strong>Best when</strong> you control the page and need styles to cascade naturally.<br><strong>Avoid if</strong> you expect style clashes from third-party styles.</p>
+</card-callout>
+
+</section>
+
+<section>
+
+<h2 id="encapsulate-styles-with-shadow-dom">
+							<a name="encapsulate-styles-with-shadow-dom" class="anchor" href="#encapsulate-styles-with-shadow-dom">
+								<span class="permalink">🔗</span>
+								<span class="title">Encapsulate Styles with Shadow DOM</span>
+							</a>
+						</h2>
+<p>Use <strong>Shadow DOM</strong> to encapsulate styles if your component is going to be used in a pages <strong>where you don&#39;t control the styles</strong>. This way you make sure page styles don&#39;t leak in and component styles don&#39;t leak out.</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_1</strong></p>
+<card-callout class="tip">
+
+<p><strong>When to use</strong></p>
+<p><strong>Best when</strong> your component is used in environments where you don’t control styles.<br><strong>Avoid if</strong> you need global styles to apply inside the component.</p>
+</card-callout>
+
+</section>
+
+<section>
+
+<h2 id="shared-design-tokens-with-css-custom-properties">
+							<a name="shared-design-tokens-with-css-custom-properties" class="anchor" href="#shared-design-tokens-with-css-custom-properties">
+								<span class="permalink">🔗</span>
+								<span class="title">Shared Design Tokens with CSS Custom Properties</span>
+							</a>
+						</h2>
+<p>Web Components can&#39;t inherit global styles inside <strong>Shadow DOM</strong>, but CSS custom properties allow components to remain <strong>flexible and themeable</strong>.</p>
+<h3 id="defining-design-tokens">
+							<a name="defining-design-tokens" class="anchor" href="#defining-design-tokens">
+								<span class="permalink">🔗</span>
+								<span class="title">Defining Design Tokens</span>
+							</a>
+						</h3>
+<p>Set global tokens in a stylesheet:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_2</strong></p>
+<h3 id="using-tokens-in-a-component">
+							<a name="using-tokens-in-a-component" class="anchor" href="#using-tokens-in-a-component">
+								<span class="permalink">🔗</span>
+								<span class="title">Using Tokens in a Component</span>
+							</a>
+						</h3>
+<p><strong>CODE_BLOCK_PLACEHOLDER_3</strong></p>
+<h3 id="advantages-of-css-custom-properties">
+							<a name="advantages-of-css-custom-properties" class="anchor" href="#advantages-of-css-custom-properties">
+								<span class="permalink">🔗</span>
+								<span class="title">Advantages of CSS Custom Properties</span>
+							</a>
+						</h3>
+<ul>
+<li><strong>Supports theming</strong> – users can override styles globally.</li>
+<li><strong>Works inside Shadow DOM</strong> – unlike normal CSS, custom properties are inherited inside the shadow tree.</li>
+</ul>
+</section>
+
+<section>
+
+<h2 id="defined-variants-with-classes">
+							<a name="defined-variants-with-classes" class="anchor" href="#defined-variants-with-classes">
+								<span class="permalink">🔗</span>
+								<span class="title">Defined Variants with Classes</span>
+							</a>
+						</h2>
+<p>Use <strong>classes</strong> if your components can appear in a <strong>limited set of specific manifestations</strong>. For example, buttons could come in certain sizes and have primary, secondary and tertiary variants.</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_4</strong></p>
+</section>
+
+<section>
+
+<h2 id="css-only-components">
+							<a name="css-only-components" class="anchor" href="#css-only-components">
+								<span class="permalink">🔗</span>
+								<span class="title">CSS-only Components</span>
+							</a>
+						</h2>
+<p>Just because Le Truc is a JavaScript library doesn&#39;t mean you have to use JavaScript in every component. It&#39;s perfectly fine to use custom elements just for styling purposes.</p>
+<p>Here&#39;s the example of the <code>&lt;card-callout&gt;</code> we&#39;re using in this documentation:</p>
+<module-demo>
+	<div class="preview">
+		<card-callout>This is an informational message.</card-callout>
+		<card-callout class="tip">Remember to hydrate while coding!</card-callout>
+		<card-callout class="caution">Be careful with this operation.</card-callout>
+		<card-callout class="danger">This action is irreversible!</card-callout>
+		<card-callout class="note">This is just a side note.</card-callout>
+	</div>
+	<details>
+		<summary>Source Code</summary>
+		<module-lazyload src="./examples/card-callout.html">
+			<card-callout>
+				<p class="loading" role="status" aria-live="polite">Loading...</p>
+				<p class="error" role="alert" aria-live="assertive" hidden></p>
+			</card-callout>
+			<div class="content"></div>
+		</module-lazy>
+	</details>
+</module-demo>
+
+</section>
+
+<section>
+
+<h2 id="next-steps">
+							<a name="next-steps" class="anchor" href="#next-steps">
+								<span class="permalink">🔗</span>
+								<span class="title">Next Steps</span>
+							</a>
+						</h2>
+<p>Now that you know how to style components, explore:</p>
+<ul>
+<li><a href="data-flow.html">Data Flow</a> – learn about communication between components.</li>
+<li><a href="examples.html">Examples</a> – explore common examples.</li>
+</ul>
+</section>
+</main>
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2025 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

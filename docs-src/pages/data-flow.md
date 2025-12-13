@@ -36,45 +36,53 @@ Although `BasicButton` and `FormSpinbutton` are completely independent, they nee
 
 The **parent component (`ModuleCatalog`) knows about its children**, meaning it can **read state from and pass state to** them.
 
-First, we need to observe the quantities of all `FormSpinbutton` components. For this, we create a signal of all children matching the `form-spinbutton` selector:
+First, we need to observe the quantities of all `FormSpinbutton` components. For this, we create a `Collection` of all children matching the `form-spinbutton` selector using the `all` function:
 
 ```js (module-catalog.js)
-component(
-  'module-catalog',
-  {
-    total: fromDescendants(
-      'form-spinbutton',
-      (sum, item) => sum + item.value,
-      0,
-    ),
-  },
-  () => [],
+defineComponent(
+	'module-catalog',
+	{},
+	({ all, first }) => ({
+		button: first('basic-button', 'Add a button to go go the Shopping Cart'),
+		spinbuttons: all(
+			'form-spinbutton',
+			'Add spinbutton components to calculate sum from.',
+		),
+	}),
+	ui => {
+		// Component setup
+	},
 )
 ```
 
-The `fromDescendants()` function returns a signal of the reduced array of all matching elements. In contrast to a static `querySelectorAll()` call, the `fromDescendants()` function is reactive and updates whenever new elements are added or removed from the DOM.
+In contrast to a static `querySelectorAll()` call, the `Collection` signal returned by `all()` is reactive and updates whenever new elements are added or removed from the DOM.
 
-Then, we need to convert the total of all product quantities to a string and pass it on to the `BasicButton` component. In Le Truc we use the `pass()` function to share state across components:
+Then, we need to convert the total of all product quantities to a string and pass it on to the `BasicButton` component. In Le Truc we use the `pass()` function to share state with descendant components:
 
 ```js (module-catalog.js)
-component(
-  'module-catalog',
-  {
-    total: fromDescendants(
-      'form-spinbutton',
-      (sum, item) => sum + item.value,
-      0,
-    ),
-  },
-  (el, { first }) => [
-    first(
-      'basic-button',
-      pass({
-        badge: () => (el.total > 0 ? String(el.total) : ''),
-        disabled: () => !el.total,
-      }),
-    ),
-  ],
+defineComponent(
+	'module-catalog',
+	{},
+	({ all, first }) => ({
+		button: first('basic-button', 'Add a button to go go the Shopping Cart'),
+		spinbuttons: all(
+			'form-spinbutton',
+			'Add spinbutton components to calculate sum from.',
+		),
+	}),
+	({ spinbuttons }) => {
+		const total = createComputed(() =>
+			spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
+		)
+		return {
+			button: [
+				pass({
+					disabled: () => !total.get(),
+					badge: () => (total.get() > 0 ? String(total.get()) : ''),
+				}),
+			],
+		}
+	},
 )
 ```
 
@@ -88,16 +96,20 @@ Allright, that's it!
 The `BasicButton` component **displays a badge when needed** – it does not know about any other component nor track state itself. It just exposes a reactive properties `badge` of type `string` and `disabled` of type `boolean` and has effects to react to state changes that updates the DOM subtree.
 
 ```js (basic-button.js)
-component(
-  'basic-button',
-  {
-    disabled: asBoolean(),
-    badge: asString(),
-  },
-  (_, { first }) => [
-    first('button', setProperty('disabled')),
-    first('.badge', setText('badge')),
-  ],
+defineComponent(
+	'basic-button',
+	{
+		disabled: asBoolean(),
+		badge: asString(ui => ui.badge?.textContent ?? ''),
+	},
+	({ first }) => ({
+		button: first('button', 'Add a native button as descendant.'),
+		badge: first('span.badge'),
+	}),
+	() => ({
+		button: [setProperty('disabled')],
+		badge: [setText('badge')],
+	}),
 )
 ```
 
@@ -110,56 +122,91 @@ component(
 The `FormSpinbutton` component reacts to user interactions and exposes a reactive property `value` of type `number`. It updates its own internal DOM subtree, but doesn't know about any other component nor where the value is used.
 
 ```js (form-spinbutton.js)
-component(
-  'form-spinbutton',
-  {
-    value: asInteger(),
-  },
-  (el, { all, first }) => {
-    const zeroLabel = el.getAttribute('zero-label') || 'Add to Cart'
-    const incrementLabel = el.getAttribute('increment-label') || 'Increment'
-    const max = asInteger(9)(el, el.getAttribute('max'))
-    const nonZero = () => el.value !== 0
+defineComponent(
+	'form-spinbutton',
+	{
+		value: createSensor(
+			read(ui => ui.input.value, asInteger()),
+			'controls',
+			{
+				change: ({ ui, target, prev }) => {
+					if (!(target instanceof HTMLInputElement)) return prev
 
-    return [
-      first('.value', setText('value'), show(nonZero)),
-      first(
-        '.decrement',
-        show(nonZero),
-        on('click', () => {
-          el.value--
-        }),
-      ),
-      first(
-        '.increment',
-        setText(() => (nonZero() ? '+' : zeroLabel)),
-        setProperty('ariaLabel', () =>
-          nonZero() ? incrementLabel : zeroLabel,
-        ),
-        setProperty('disabled', () => el.value >= max),
-        on('click', () => {
-          el.value++
-        }),
-      ),
-      all(
-        'button',
-        on('keydown', e => {
-          const { key } = e
-          if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
-            e.stopPropagation()
-            e.preventDefault()
-            if (key === 'ArrowDown' || key === '-') el.value--
-            if (key === 'ArrowUp' || key === '+') el.value++
-          }
-        }),
-      ),
-    ]
-  },
+					const resetTo = (next: number) => {
+						target.value = String(next)
+						target.checkValidity()
+						return next
+					}
+
+					const next = Number(target.value)
+					if (!Number.isInteger(next)) return resetTo(prev)
+					const clamped = Math.min(ui.host.max, Math.max(0, next))
+					if (next !== clamped) return resetTo(clamped)
+					return clamped
+				},
+				click: ({ target, prev }) =>
+					prev +
+					(target.classList.contains('decrement')
+						? -1
+						: target.classList.contains('increment')
+							? 1
+							: 0),
+				keydown: ({ ui, event, prev }) => {
+					const { key } = event
+					if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
+						event.stopPropagation()
+						event.preventDefault()
+						const next = prev + (key === 'ArrowDown' || key === '-' ? -1 : 1)
+						return Math.min(ui.host.max, Math.max(0, next))
+					}
+				},
+			},
+		),
+		max: read(ui => ui.input.max, asInteger(10)),
+	},
+	({ all, first }) => ({
+		controls: all(
+			'button, input:not([disabled])',
+		),
+		increment: first(
+			'button.increment',
+			'Add a native button to increment the value',
+		),
+		decrement: first(
+			'button.decrement',
+			'Add a native button to decrement the value',
+		),
+		input: first('input.value', 'Add a native input to display the value'),
+		zero: first('.zero'),
+		other: first('.other'),
+	}),
+	({ host, increment, zero }) => {
+		const nonZero = createComputed(() => host.value !== 0)
+		const incrementLabel = increment.ariaLabel || 'Increment'
+		const ariaLabel = createComputed(() =>
+			nonZero.get() || !zero ? incrementLabel : zero.textContent,
+		)
+
+		return {
+			input: [
+				show(nonZero),
+				setProperty('value'),
+				setProperty('max', () => String(host.max)),
+			],
+			decrement: [show(nonZero)],
+			increment: [
+				setProperty('disabled', () => host.value >= host.max),
+				setProperty('ariaLabel', ariaLabel),
+			],
+			zero: [show(() => !nonZero.get())],
+			other: [show(nonZero)],
+		}
+	},
 )
 ```
 
 - Whenever the user clicks a button or presses a handled key, the value property is updated.
-- The component sets hidden and disabled states of buttons and updates the text of the `.value` element.
+- The component sets hidden and disabled states of buttons and updates the text of the `input` element.
 
 ### Full Example
 
@@ -186,247 +233,107 @@ Here's how everything comes together:
   		<ul>
   			<li>
   				<p>Product 1</p>
-  				<form-spinbutton
-  					value="0"
-  					zero-label="Add to Cart"
-  					increment-label="Increment"
-  				>
-  					<button
-  						type="button"
-  						class="decrement"
-  						aria-label="Decrement"
-  						hidden
-  					>
+  				<form-spinbutton>
+  					<button type="button" class="decrement" aria-label="Decrement" hidden>
   						−
   					</button>
-  					<p class="value" hidden>0</p>
-  					<button type="button" class="increment">Add to Cart</button>
+  					<input
+  						type="number"
+  						class="value"
+  						name="amount-product1"
+  						value="0"
+  						min="0"
+  						max="10"
+  						readonly
+  						disabled
+  						hidden
+  					/>
+  					<button type="button" class="increment" aria-label="Increment">
+  						<span class="zero">Add to Cart</span>
+  						<span class="other" hidden>+</span>
+  					</button>
   				</form-spinbutton>
   			</li>
   			<li>
   				<p>Product 2</p>
-  				<form-spinbutton
-  					value="0"
-  					zero-label="Add to Cart"
-  					increment-label="Increment"
-  				>
-  					<button
-  						type="button"
-  						class="decrement"
-  						aria-label="Decrement"
-  						hidden
-  					>
+  				<form-spinbutton>
+  					<button type="button" class="decrement" aria-label="Decrement" hidden>
   						−
   					</button>
-  					<p class="value" hidden>0</p>
-  					<button type="button" class="increment">Add to Cart</button>
+  					<input
+  						type="number"
+  						class="value"
+  						name="amount-product2"
+  						value="0"
+  						min="0"
+  						max="5"
+  						readonly
+  						disabled
+  						hidden
+  					/>
+  					<button type="button" class="increment" aria-label="Increment">
+  						<span class="zero">Add to Cart</span>
+  						<span class="other" hidden>+</span>
+  					</button>
   				</form-spinbutton>
   			</li>
   			<li>
   				<p>Product 3</p>
-  				<form-spinbutton
-  					value="0"
-  					zero-label="Add to Cart"
-  					increment-label="Increment"
-  				>
-  					<button
-  						type="button"
-  						class="decrement"
-  						aria-label="Decrement"
-  						hidden
-  					>
+  				<form-spinbutton>
+  					<button type="button" class="decrement" aria-label="Decrement" hidden>
   						−
   					</button>
-  					<p class="value" hidden>0</p>
-  					<button type="button" class="increment">Add to Cart</button>
+  					<input
+  						type="number"
+  						class="value"
+  						name="amount-product3"
+  						value="0"
+  						min="0"
+  						max="20"
+  						readonly
+  						disabled
+  						hidden
+  					/>
+  					<button type="button" class="increment" aria-label="Increment">
+  						<span class="zero">Add to Cart</span>
+  						<span class="other" hidden>+</span>
+  					</button>
   				</form-spinbutton>
   			</li>
   		</ul>
-	  </module-catalog>
+    </module-catalog>
 	</div>
 	<details>
 		<summary>ModuleCatalog Source Code</summary>
-		<module-lazy src="./examples/module-catalog.html">
+		<module-lazyload src="./examples/module-catalog.html">
 			<card-callout>
 				<p class="loading" role="status" aria-live="polite">Loading...</p>
 				<p class="error" role="alert" aria-live="assertive" hidden></p>
 			</card-callout>
+			<div class="content"></div>
 		</module-lazy>
 	</details>
 	<details>
 		<summary>BasicButton Source Code</summary>
-		<module-lazy src="./examples/basic-button.html">
+		<module-lazyload src="./examples/basic-button.html">
 			<card-callout>
 				<p class="loading" role="status" aria-live="polite">Loading...</p>
 				<p class="error" role="alert" aria-live="assertive" hidden></p>
 			</card-callout>
+			<div class="content"></div>
 		</module-lazy>
 	</details>
 	<details>
 		<summary>FormSpinbutton Source Code</summary>
-		<module-lazy src="./examples/form-spinbutton.html">
+		<module-lazyload src="./examples/form-spinbutton.html">
 			<card-callout>
 				<p class="loading" role="status" aria-live="polite">Loading...</p>
 				<p class="error" role="alert" aria-live="asserive" hidden></p>
 			</card-callout>
+			<div class="content"></div>
 		</module-lazy>
 	</details>
 </module-demo>
-
-</section>
-
-<section>
-
-## Custom Events
-
-Passing state down works well when a **parent component can directly access child state**, but sometimes a **child needs to notify its parent** about an action **without managing shared state itself**.
-
-Custom events are perfect for this - they allow components to communicate upward through the DOM tree without tight coupling.
-
-### TypeScript Support for Components and Events
-
-To get full TypeScript support, declare your components and custom events globally:
-
-```ts (module-catalog.js)
-// In your component file
-export type ProductCardProps = {
-  productId: string
-  quantity: number
-}
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'product-card': Component<ProductCardProps>
-    'shopping-cart': Component<ShoppingCartProps>
-  }
-  interface HTMLElementEventMap {
-    itemAdded: CustomEvent<{ id: string; quantity: number }>
-    cartUpdated: CustomEvent<{ total: number }>
-  }
-}
-```
-
-This enables full type checking, autocompletion, and access to Le Truc component methods like `.getSignal()` and `.setSignal()`.
-
-### Example: Shopping Cart Events
-
-Consider a **product card** that needs to notify its parent when an item is added:
-
-```js
-// Child component dispatches custom event
-component(
-  'product-card',
-  {
-    productId: asString(),
-    quantity: asInteger(),
-  },
-  (el, { first }) => [
-    first(
-      '.add-button',
-      on('click', () => {
-        // Dispatch custom event with product details
-        el.dispatchEvent(
-          new CustomEvent('itemAdded', {
-            detail: {
-              id: el.productId,
-              quantity: el.quantity,
-            },
-            bubbles: true,
-          }),
-        )
-      }),
-    ),
-  ],
-)
-```
-
-```js
-// Parent component listens for custom events
-component(
-  'shopping-cart',
-  {
-    items: fromEvent(
-      'product-card',
-      'itemAdded',
-      ({ event, source, value }) => {
-        // TypeScript knows 'source' is Component<ProductCardProps>
-        // Can access Le Truc methods like source.getSignal('quantity')
-        const newItem = {
-          id: event.detail.id,
-          quantity: event.detail.quantity,
-          addedAt: Date.now(),
-        }
-        return [...value, newItem]
-      },
-      [],
-    ),
-    total: () => el.items.reduce((sum, item) => sum + item.quantity, 0),
-  },
-  (el, { first }) => [
-    first('.cart-count', setText('total')),
-    first(
-      '.items-list',
-      setText(() =>
-        el.items.map(item => `${item.id}: ${item.quantity}`).join(', '),
-      ),
-    ),
-  ],
-)
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'shopping-cart': Component<ShoppingCartProps>
-  }
-}
-```
-
-### Benefits of Custom Events
-
-- **Decoupling**: Child components don't need to know about parent implementation
-- **Reusability**: Components can be used in different contexts
-- **Standard DOM**: Uses native event system, works with any framework
-- **Bubbling**: Events naturally flow up the DOM tree
-- **Cancellable**: Parent can prevent default behavior if needed
-
-### When to Use Custom Events
-
-- **User Actions**: Button clicks, form submissions, gestures
-- **State Changes**: When a component's internal state affects others
-- **Lifecycle Events**: Component initialization, destruction, errors
-- **Data Flow**: When child needs to send data upward without direct coupling
-
-### Component Type Safety Best Practices
-
-Each Le Truc component should declare its own `HTMLElementTagNameMap` extension:
-
-```ts
-// In my-component.ts
-export type MyComponentProps = {
-  value: string
-  count: number
-}
-
-export default component(
-  'my-component',
-  {
-    /* ... */
-  },
-  () => [],
-)
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'my-component': Component<MyComponentProps>
-  }
-}
-```
-
-This enables:
-
-- **Full type safety** when using signal producers like `fromDescendants('my-component', ...)`
-- **Access to Le Truc methods** like `.getSignal()` and `.setSignal()`
-- **IntelliSense** for component properties and methods
-- **Compile-time validation** of component interactions
 
 </section>
 

@@ -104,13 +104,13 @@ Now, let's create an interactive Web Component to verify your setup.
 Include the following in your server-rendered HTML:
 
 ```html (page.html)
-<hello-world>
+<basic-hello>
   <label>
     Your name<br />
     <input name="name" type="text" autocomplete="given-name" />
   </label>
-  <p>Hello, <span>World</span>!</p>
-</hello-world>
+  <p>Hello, <output>World</output>!</p>
+</basic-hello>
 ```
 
 ### Component Definition
@@ -121,26 +121,31 @@ Save the following inside a `<script type="module">` tag or an external JavaScri
 <script type="module">
   import {
     asString,
-    component,
+    defineComponent,
     on,
     setText,
   } from 'https://cdn.jsdelivr.net/npm/@zeix/le-truc@latest/index.js'
 
-  component(
-    'hello-world',
-    {
-      name: asString(el => el.querySelector('span')?.textContent?.trim() ?? ''),
-    },
-    (el, { first }) => {
-      const fallback = el.name
-      return [
-        first(
-          'input',
-          on('input', ({ target }) => ({ name: target.value || fallback })),
-        ),
-        first('span', setText('name')),
-      ]
-    },
+  defineComponent(
+  	'basic-hello',
+  	{
+  		name: asString(ui => ui.output.textContent),
+  	},
+  	({ first }) => ({
+  		input: first('input', 'Needed to enter the name.'),
+  		output: first('output', 'Needed to display the name.'),
+  	}),
+  	({ host }) => {
+  		const fallback = host.name
+  		return {
+  			input: [
+  				on('input', ({ target }) => {
+  					host.name = target.value || fallback
+  				}),
+  			],
+  			output: [setText('name')],
+  		}
+  	},
   )
 </script>
 ```
@@ -149,9 +154,9 @@ Save the following inside a `<script type="module">` tag or an external JavaScri
 
 This component demonstrates Le Truc's core concepts:
 
-- **Reactive Properties**: `name: asString(...)` creates a reactive property that syncs with the `name` attribute and falls back to the `<span>` content
+- **Reactive Properties**: `name: asString(...)` creates a reactive property that syncs with the `name` attribute and falls back to the `<output>` content
 - **Effects**: The setup function returns effects that handle user input and update the display text
-- **Element Selection**: `first()` selects descendant elements to apply effects to
+- **Element Selection**: `first()` selects descendant element to apply effects to
 
 Learn more about these concepts in the [Components](components.html) guide.
 
@@ -169,12 +174,12 @@ If everything is set up correctly, you should see:
 
 <module-demo>
 	<div class="preview">
-		<hello-world>
+		<basic-hello>
 			<label>Your name<br>
-				<input name="name" type="text"  autocomplete="given-name">
+				<input name="name" type="text" autocomplete="given-name">
 			</label>
-			<p>Hello, <span>World</span>!</p>
-		</hello-world>
+			<p>Hello, <output>World</output>!</p>
+		</basic-hello>
 	</div>
 </module-demo>
 

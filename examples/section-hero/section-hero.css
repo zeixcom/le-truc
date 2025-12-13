@@ -1,0 +1,37 @@
+section-hero {
+	display: grid;
+	grid-column: fullwidth;
+	grid-template-columns: inherit;
+	background-color: var(--color-primary);
+	color: var(--color-primary-text);
+	margin-block: 0;
+	padding-block: var(--space-xxl);
+
+	& h1 {
+		grid-column: content;
+		margin-bottom: var(--space-xl);
+	}
+
+	> div {
+		grid-column: content;
+	}
+
+	.lead {
+		font-size: var(--font-size-l);
+	}
+}
+
+@media screen and (min-width: 48em) {
+	section-hero {
+		& h1 {
+			grid-column: breakout;
+		}
+
+		> div {
+			display: grid;
+			grid-column: breakout;
+			grid-template-columns: 2fr 1fr;
+			gap: var(--space-xl);
+		}
+	}
+}

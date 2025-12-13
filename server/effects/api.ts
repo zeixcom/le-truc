@@ -1,5 +1,6 @@
 import { createEffect, match, resolve } from '@zeix/cause-effect'
 import { execSync } from 'child_process'
+import { API_DIR } from '../config'
 import { libraryScripts } from '../file-signals'
 
 export const apiEffect = () =>
@@ -11,7 +12,7 @@ export const apiEffect = () =>
 
 					// Generate API docs using TypeDoc
 					execSync(
-						'typedoc --plugin typedoc-plugin-markdown --out ./docs-src/pages/api/ index.ts',
+						`typedoc --plugin typedoc-plugin-markdown --out ${API_DIR}/ index.ts`,
 						{ stdio: 'inherit' },
 					)
 

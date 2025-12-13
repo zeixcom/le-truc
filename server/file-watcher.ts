@@ -52,11 +52,13 @@ export function watchFiles(
 			if (!filename || !isMatching(filename)) return
 
 			const filePath = join(directory, filename)
+			console.log('File event:', event, 'for', filePath)
 			if (event === 'rename' && !existsSync(filePath)) {
 				signal.remove(filePath)
 			} else {
 				const fileInfo = await createFileInfo(filePath, filename)
-				signal[filePath].set(fileInfo)
+				if (filePath in signal) signal[filePath].set(fileInfo)
+				else signal.add(filePath, fileInfo)
 			}
 		},
 	)

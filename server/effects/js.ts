@@ -1,5 +1,6 @@
 import { createEffect, match, resolve } from '@zeix/cause-effect'
 import { execSync } from 'child_process'
+import { ASSETS_DIR, TS_FILE } from '../config'
 import { componentScripts, docsScripts, libraryScripts } from '../file-signals'
 
 export const jsEffect = () =>
@@ -15,7 +16,7 @@ export const jsEffect = () =>
 					try {
 						console.log('🔧 Rebuilding JS assets...')
 						execSync(
-							'bun build docs-src/main.ts --outdir ./docs/assets/ --minify --define process.env.DEV_MODE=false --sourcemap=external',
+							`bun build ${TS_FILE} --outdir ${ASSETS_DIR}/ --minify --define process.env.DEV_MODE=false --sourcemap=external`,
 							{ stdio: 'inherit' },
 						)
 						console.log('JS successfully rebuilt')

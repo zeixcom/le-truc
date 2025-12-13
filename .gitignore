@@ -7,8 +7,7 @@ yarn-error.log*
 lerna-debug.log*
 
 # Example build assets
-examples/assets/main.js
-examples/assets/main.css
+examples/assets/
 
 # Playwright test reports
 playwright-report/

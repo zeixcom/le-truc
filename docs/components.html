@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Components – Le Truc Docs</title>
+		<meta name="description" content="Anatomy, lifecycle, signals, effects" />
+		<link
+			rel="preload"
+			href="./assets/main.css?v=mj3fqrj3"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="./assets/main.js?v=mj3fqrj3"
+		/>
+		<link
+			rel="stylesheet"
+			href="./assets/main.css?v=mj3fqrj3"
+		/>
+		<script
+			type="module"
+			src="./assets/main.js?v=mj3fqrj3"
+		></script>
+	</head>
+	<body class="">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">Le Truc Docs <small>Version 0.15.0</small></h1>
+				<section-menu>
+		<nav>
+			<h2 class="visually-hidden">Main Menu</h2>
+			<ol>
+				<li>
+		<a href="about.html">
+			<span class="icon">🤝</span>
+			<strong>About</strong>
+			<small>License, versioning, getting involved</small>
+		</a>
+	</li><li>
+		<a href="components.html">
+			<span class="icon">🏗️</span>
+			<strong>Components</strong>
+			<small>Anatomy, lifecycle, signals, effects</small>
+		</a>
+	</li><li>
+		<a href="data-flow.html">
+			<span class="icon">🔄</span>
+			<strong>Data Flow</strong>
+			<small>Passing state, events, context</small>
+		</a>
+	</li><li>
+		<a href="getting-started.html">
+			<span class="icon">🚀</span>
+			<strong>Getting Started</strong>
+			<small>Installation, setup, and first steps</small>
+		</a>
+	</li><li>
+		<a href="index.html">
+			<span class="icon">📖</span>
+			<strong>Introduction</strong>
+			<small>Overview and key benefits of Le Truc</small>
+		</a>
+	</li><li>
+		<a href="styling.html">
+			<span class="icon">🎨</span>
+			<strong>Styling</strong>
+			<small>Scoped styles, CSS custom properties</small>
+		</a>
+	</li>
+			</ol>
+		</nav>
+	</section-menu>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<main id="main" class="content-grid"><section-hero>
+
+<h1 id="-components">
+							<a name="-components" class="anchor" href="#-components">
+								<span class="permalink">🔗</span>
+								<span class="title">🏗️ Components</span>
+							</a>
+						</h1>
+<div>
+  <p class="lead"><strong>Create lightweight, self-contained Web Components with built-in reactivity</strong>. Le Truc lets you define custom elements that manage state efficiently, update the DOM automatically, and enhance server-rendered pages without an SPA framework.</p>
+  <module-toc>
+		<nav>
+			<h2>On This Page</h2>
+			<ol>
+				<li>
+		<a href="#defining-a-component">Defining a Component</a>
+	</li><li>
+		<a href="#component-lifecycle">Component Lifecycle</a>
+	</li><li>
+		<a href="#managing-state-with-signals">Managing State with Signals</a>
+	</li><li>
+		<a href="#selecting-elements">Selecting Elements</a>
+	</li><li>
+		<a href="#adding-event-listeners">Adding Event Listeners</a>
+	</li><li>
+		<a href="#synchronizing-state-with-effects">Synchronizing State with Effects</a>
+	</li><li>
+		<a href="#next-steps">Next Steps</a>
+	</li>
+			</ol>
+		</nav>
+	</module-toc>
+</div>
+</section-hero>
+
+<section>
+
+<h2 id="defining-a-component">
+							<a name="defining-a-component" class="anchor" href="#defining-a-component">
+								<span class="permalink">🔗</span>
+								<span class="title">Defining a Component</span>
+							</a>
+						</h2>
+<p>Le Truc builds on <strong>Web Components</strong>, extending <code>HTMLElement</code> to provide <strong>built-in state management and reactive updates</strong>.</p>
+<p>Le Truc creates components using the <code>defineComponent()</code> function:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_0</strong></p>
+<p>Every Le Truc component must be registered with a valid custom element tag name (two or more words joined with <code>-</code>) as the first parameter.</p>
+<h3 id="using-the-custom-element-in-html">
+							<a name="using-the-custom-element-in-html" class="anchor" href="#using-the-custom-element-in-html">
+								<span class="permalink">🔗</span>
+								<span class="title">Using the Custom Element in HTML</span>
+							</a>
+						</h3>
+<p>Once registered, the component can be used like any native HTML element:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_1</strong></p>
+<h3 id="anatomy-of-a-component">
+							<a name="anatomy-of-a-component" class="anchor" href="#anatomy-of-a-component">
+								<span class="permalink">🔗</span>
+								<span class="title">Anatomy of a Component</span>
+							</a>
+						</h3>
+<p>Let&#39;s examine a complete component example to understand how Le Truc works:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_2</strong></p>
+<h4 id="reactive-properties">
+							<a name="reactive-properties" class="anchor" href="#reactive-properties">
+								<span class="permalink">🔗</span>
+								<span class="title">Reactive Properties</span>
+							</a>
+						</h4>
+<p><strong>CODE_BLOCK_PLACEHOLDER_3</strong></p>
+<p>This creates a reactive property called <code>name</code>:</p>
+<ul>
+<li><code>asString()</code> observes the attribute <code>name</code> and assigns its value as a string to the <code>name</code> property</li>
+<li><code>ui =&gt; ...</code> is an instruction how to get the fallback value in the DOM if there is no name attribute</li>
+<li>Le Truc automatically reads &quot;World&quot; from the <code>&lt;output&gt;</code> element as the initial value</li>
+<li>When <code>name</code> changes, any effects that depend on it automatically update</li>
+</ul>
+<h4 id="select-function">
+							<a name="select-function" class="anchor" href="#select-function">
+								<span class="permalink">🔗</span>
+								<span class="title">Select Function</span>
+							</a>
+						</h4>
+<p>The select function is used to find descendant elements within the component&#39;s DOM:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_4</strong></p>
+<p>The select function must return a record of the selected elements, commonly called <code>ui</code> to which initializer functions for reactive properties and the setup function for effects have access to. In the above example, the helper function <code>first()</code> is used to find the first descendant matching a selector. Also available is <code>all()</code> to find all descendants matching a selector, dynamically updating the list of elements when the DOM changes. Both helper functions take a selector string and an optional error message to display if no element is found.</p>
+<h4 id="setup-function">
+							<a name="setup-function" class="anchor" href="#setup-function">
+								<span class="permalink">🔗</span>
+								<span class="title">Setup Function</span>
+							</a>
+						</h4>
+<p>The setup function must return a record with an array of effects for properties of the <code>ui</code> object that is passed in. The additional <code>host</code> key of the <code>ui</code> object holds the component element itself.</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_5</strong></p>
+<p>Effects define <strong>component behaviors</strong>:</p>
+<ul>
+<li><code>input: [on(&#39;input&#39;, ...)]</code> adds an event listener to the <code>&lt;input&gt;</code> element</li>
+<li><code>output: [setText(&#39;name&#39;)]</code> keeps its text in sync with the <code>name</code> property</li>
+</ul>
+<p>Characteristics of effects:</p>
+<ul>
+<li>Effects run when the component is added to the page</li>
+<li>Effects rerun when their dependencies change</li>
+<li>Effects may return a cleanup function to be executed when the target element or the component is removed from the page</li>
+</ul>
+<p>The bundled effects <code>on()</code> and <code>setText()</code> in this case are partially applied functions that connect to component properties and the target element and return the appropriate cleanup function.</p>
+</section>
+
+<section>
+
+<h2 id="component-lifecycle">
+							<a name="component-lifecycle" class="anchor" href="#component-lifecycle">
+								<span class="permalink">🔗</span>
+								<span class="title">Component Lifecycle</span>
+							</a>
+						</h2>
+<p>Le Truc manages the <strong>Web Component lifecycle</strong> from creation to removal. Here&#39;s what happens.</p>
+<h3 id="connected-to-the-dom">
+							<a name="connected-to-the-dom" class="anchor" href="#connected-to-the-dom">
+								<span class="permalink">🔗</span>
+								<span class="title">Connected to the DOM</span>
+							</a>
+						</h3>
+<p>In the <code>connectedCallback()</code> reactive properties are initialized. You pass a second argument to the <code>defineComponent()</code> function to define initial values for <strong>component states</strong>.</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_6</strong></p>
+<p>In this example you see all three ways to define a reactive property:</p>
+<ul>
+<li>A <strong>static initial value</strong> creates a <code>State</code> signal with the initial value</li>
+<li>An <strong>attribute parser</strong> creates a <code>State</code> signal may from the attribute or fallback value, updating the state whenever the attribute changes</li>
+<li>An <strong>initializer</strong> function that creates a <code>State</code> or a <code>Computed</code> signal depending on the return type of the function. If the function returns a value, it creates a <code>State</code> signal. If the function returns a function, it creates a <code>Computed</code> signal. Initializer functions have access to the component&#39;s <code>ui</code> object, allowing them to create signals based on the component&#39;s state or descendant elements.</li>
+</ul>
+<h3 id="disconnected-from-the-dom">
+							<a name="disconnected-from-the-dom" class="anchor" href="#disconnected-from-the-dom">
+								<span class="permalink">🔗</span>
+								<span class="title">Disconnected from the DOM</span>
+							</a>
+						</h3>
+<p>In the <code>disconnectedCallback()</code> Le Truc runs all cleanup functions returned by effects during the setup phase in <code>connectedCallback()</code>. This will remove all event listeners and unsubscribe all signals the component is subscribed to, so you don&#39;t need to worry about memory leaks.</p>
+<p>If you added <strong>event listeners</strong> outside the scope of your component or <strong>subscribed manually to external APIs</strong> in a custom effect, you need to return a cleanup function:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_7</strong></p>
+<h2 id="managing-state-with-signals">
+							<a name="managing-state-with-signals" class="anchor" href="#managing-state-with-signals">
+								<span class="permalink">🔗</span>
+								<span class="title">Managing State with Signals</span>
+							</a>
+						</h2>
+<p>Le Truc manages state using <strong>signals</strong>, which are atomic reactive states that trigger updates when they change. We use regular properties for public component states:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_8</strong></p>
+<h3 id="characteristics-and-special-values">
+							<a name="characteristics-and-special-values" class="anchor" href="#characteristics-and-special-values">
+								<span class="permalink">🔗</span>
+								<span class="title">Characteristics and Special Values</span>
+							</a>
+						</h3>
+<p>Signals in Le Truc are of a <strong>static type</strong> and <strong>non-nullable</strong>. This allows to <strong>simplify the logic</strong> as you will never have to check the type or perform null-checks.</p>
+<ul>
+<li>If you use <strong>TypeScript</strong> (recommended), <strong>you will be warned</strong> that <code>null</code> or <code>undefined</code> cannot be assigned to a signal or if you try to assign a value of a wrong type.</li>
+<li>If you use vanilla <strong>JavaScript</strong> without a build step, setting a signal to <code>null</code> or <code>undefined</code> <strong>will throw a <code>NullishSignalValueError</code></strong>. However, strict type checking is not enforced at runtime.</li>
+</ul>
+<p>Because of the <strong>non-nullable nature of signals</strong> in Le Truc, we need two special values that can be assigned to any signal type:</p>
+<ul>
+<li><strong><code>RESET</code></strong>: Will <strong>reset to the server-rendered version</strong> that was there before Le Truc took control. This is what you want to do most of the times when a signal lacks a specific value.</li>
+<li><strong><code>UNSET</code></strong>: Will <strong>delete the signal</strong>, <strong>unsubscribe its watchers</strong> and also <strong>delete related attributes or style properties</strong> in effects. Use this with special care!</li>
+</ul>
+<h3 id="initializing-state-from-attributes">
+							<a name="initializing-state-from-attributes" class="anchor" href="#initializing-state-from-attributes">
+								<span class="permalink">🔗</span>
+								<span class="title">Initializing State from Attributes</span>
+							</a>
+						</h3>
+<p>The standard way to set initial state in Le Truc is via <strong>server-rendered attributes</strong> on the component that needs it. No props drilling as in other frameworks. Le Trucs provides some bundled attribute parsers to convert attribute values to the desired type. And you can also define your own custom parsers.</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_9</strong></p>
+<card-callout class="caution">
+
+<p><strong>Careful</strong>: Attributes <strong>may not be present</strong> on the element or <strong>parsing to the desired type may fail</strong>. To ensure <strong>non-nullability</strong> of signals, Le Truc falls back to neutral defaults if no fallback value is provided:</p>
+<ul>
+<li><code>&quot;&quot;</code> (empty string) for <code>string</code></li>
+<li><code>0</code> for <code>number</code></li>
+<li><code>{}</code> (empty object) for objects of any kind</li>
+</ul>
+</card-callout>
+
+<h3 id="bundled-attribute-parsers">
+							<a name="bundled-attribute-parsers" class="anchor" href="#bundled-attribute-parsers">
+								<span class="permalink">🔗</span>
+								<span class="title">Bundled Attribute Parsers</span>
+							</a>
+						</h3>
+<p>Le Truc provides several built-in parsers for common attribute types. See the <a href="api.html#parsers">Parsers section</a> in the API reference for detailed descriptions and usage examples.</p>
+</section>
+
+<section>
+
+<h2 id="selecting-elements">
+							<a name="selecting-elements" class="anchor" href="#selecting-elements">
+								<span class="permalink">🔗</span>
+								<span class="title">Selecting Elements</span>
+							</a>
+						</h2>
+<p>Use the provided selector utilities to find descendant elements within your component:</p>
+<h3 id="first">
+							<a name="first" class="anchor" href="#first">
+								<span class="permalink">🔗</span>
+								<span class="title">first()</span>
+							</a>
+						</h3>
+<p>Selects the first matching element:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_10</strong></p>
+<h3 id="all">
+							<a name="all" class="anchor" href="#all">
+								<span class="permalink">🔗</span>
+								<span class="title">all()</span>
+							</a>
+						</h3>
+<p>Selects all matching elements:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_11</strong></p>
+<p>The <code>first()</code> function expects the matched element to be present at connection time. If not, it will silently ignore the call.</p>
+<p>On the other hand, the <code>all()</code> function creates a dynamic array of elements that will be updated whenever the matching elements are added or removed from the component&#39;s DOM branch. Le Truc will apply the given setup functions to added elements and run the cleanup functions on removed elements.</p>
+<card-callout class="tip">
+
+<p><strong>Tip</strong>: The <code>all()</code> function is more flexible but also more resource-intensive than <code>first()</code>. Prefer <code>first()</code> when targeting a single element known to be present at connection time.</p>
+</card-callout>
+
+</section>
+
+<section>
+
+<h2 id="adding-event-listeners">
+							<a name="adding-event-listeners" class="anchor" href="#adding-event-listeners">
+								<span class="permalink">🔗</span>
+								<span class="title">Adding Event Listeners</span>
+							</a>
+						</h2>
+<p>Event listeners allow to respond to user interactions. They are the the main cause for changes in the component&#39;s state. Le Truc provides the <code>on()</code> function to add event listeners to elements and remove them when the component is disconnected.</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_12</strong></p>
+</section>
+
+<section>
+
+<h2 id="synchronizing-state-with-effects">
+							<a name="synchronizing-state-with-effects" class="anchor" href="#synchronizing-state-with-effects">
+								<span class="permalink">🔗</span>
+								<span class="title">Synchronizing State with Effects</span>
+							</a>
+						</h2>
+<p>Effects <strong>automatically update the DOM</strong> when signals change, avoiding manual DOM manipulation.</p>
+<h3 id="applying-effects">
+							<a name="applying-effects" class="anchor" href="#applying-effects">
+								<span class="permalink">🔗</span>
+								<span class="title">Applying Effects</span>
+							</a>
+						</h3>
+<p>Apply one or multiple effects in the setup function (for component itself) or in element selector functions:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_13</strong></p>
+<p>The order of effects is not important. Feel free to apply them in any order that suits your needs.</p>
+<h3 id="bundled-effects">
+							<a name="bundled-effects" class="anchor" href="#bundled-effects">
+								<span class="permalink">🔗</span>
+								<span class="title">Bundled Effects</span>
+							</a>
+						</h3>
+<p>Le Truc provides many built-in effects for common DOM operations. See the <a href="api.html#effects">Effects section</a> in the API reference for detailed descriptions and usage examples.</p>
+<h3 id="simplifying-effect-notation">
+							<a name="simplifying-effect-notation" class="anchor" href="#simplifying-effect-notation">
+								<span class="permalink">🔗</span>
+								<span class="title">Simplifying Effect Notation</span>
+							</a>
+						</h3>
+<p>For effects that take two arguments, <strong>the second argument can be omitted</strong> if the signal key matches the targeted property name, attribute, class, or style property.</p>
+<p>The following are equivalent:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_14</strong></p>
+<p>Here, <code>setAttribute(&#39;open&#39;)</code> automatically uses the <code>open</code> signal.</p>
+<h3 id="using-local-signals-for-private-state">
+							<a name="using-local-signals-for-private-state" class="anchor" href="#using-local-signals-for-private-state">
+								<span class="permalink">🔗</span>
+								<span class="title">Using Local Signals for Private State</span>
+							</a>
+						</h3>
+<p>Local signals are useful for storing state that should not be exposed to the outside world. They can be used to manage internal state within a component:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_15</strong></p>
+<p>Outside components cannot access the <code>count</code> or <code>double</code> signals.</p>
+<h3 id="using-functions-for-ad-hoc-derived-state">
+							<a name="using-functions-for-ad-hoc-derived-state" class="anchor" href="#using-functions-for-ad-hoc-derived-state">
+								<span class="permalink">🔗</span>
+								<span class="title">Using Functions for Ad-hoc Derived State</span>
+							</a>
+						</h3>
+<p>Instead of a signal key or a local signal, you can <strong>pass a function</strong> that derives a value dynamically:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_16</strong></p>
+<card-callout class="tip">
+
+<p><strong>When to use</strong></p>
+<ul>
+<li><strong>Use a signal key or a local signal</strong> when the state is part of the component&#39;s public interface or internally reused.</li>
+<li><strong>Use a function</strong> to <strong>derive a value on the fly</strong> when it is needed only in this one place.</li>
+</ul>
+<p>Ad-hoc derived state is more efficient than the overhead of a memoized computed signal for simple functions like converting to a string or boolean, formatting a value or performing a calculation.</p>
+</card-callout>
+
+<h3 id="efficient-fine-grained-updates">
+							<a name="efficient-fine-grained-updates" class="anchor" href="#efficient-fine-grained-updates">
+								<span class="permalink">🔗</span>
+								<span class="title">Efficient &amp; Fine-Grained Updates</span>
+							</a>
+						</h3>
+<p>Unlike some frameworks that <strong>re-render entire components</strong>, Le Truc updates only what changes:</p>
+<ul>
+<li><strong>No virtual DOM</strong> – Le Truc modifies the DOM directly.</li>
+<li><strong>Signals propagate automatically</strong> – no need to track dependencies manually.</li>
+<li><strong>Optimized with a scheduler</strong> – multiple updates are batched efficiently.</li>
+</ul>
+</section>
+
+<section>
+
+<h2 id="next-steps">
+							<a name="next-steps" class="anchor" href="#next-steps">
+								<span class="permalink">🔗</span>
+								<span class="title">Next Steps</span>
+							</a>
+						</h2>
+<p>Now that you understand the basics, explore:</p>
+<ul>
+<li><a href="styling.html">Styling</a> – Learn techniques to apply styles to components.</li>
+<li><a href="data-flow.html">Data Flow</a> – Learn about passing state between components.</li>
+</ul>
+</section>
+</main>
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2025 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

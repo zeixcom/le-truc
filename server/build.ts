@@ -23,7 +23,7 @@ export async function build() {
 
 	try {
 		// Change to project root directory since config paths are relative to it
-		const projectRoot = join(import.meta.dir, '../..')
+		const projectRoot = join(import.meta.dir, '..')
 		process.chdir(projectRoot)
 		console.log(`📁 Working directory: ${process.cwd()}`)
 

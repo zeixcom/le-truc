@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Class: CircularDependencyError – Le Truc Docs</title>
+		<meta name="description" content="" />
+		<link
+			rel="preload"
+			href="../../assets/main.css?v=mj0qeuig"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="../../assets/main.js?v=mj0qeuig"
+		/>
+		<link
+			rel="stylesheet"
+			href="../../assets/main.css?v=mj0qeuig"
+		/>
+		<script
+			type="module"
+			src="../../assets/main.js?v=mj0qeuig"
+		></script>
+	</head>
+	<body class="api">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">Le Truc Docs <small>Version 0.15.0</small></h1>
+				<section-menu>
+		<nav>
+			<h2 class="visually-hidden">Main Menu</h2>
+			<ol>
+				<li>
+		<a href="about.html">
+			<span class="icon">🤝</span>
+			<strong>About</strong>
+			<small>License, versioning, getting involved</small>
+		</a>
+	</li><li>
+		<a href="components.html">
+			<span class="icon">🏗️</span>
+			<strong>Components</strong>
+			<small>Anatomy, lifecycle, signals, effects</small>
+		</a>
+	</li><li>
+		<a href="data-flow.html">
+			<span class="icon">🔄</span>
+			<strong>Data Flow</strong>
+			<small>Passing state, events, context</small>
+		</a>
+	</li><li>
+		<a href="getting-started.html">
+			<span class="icon">🚀</span>
+			<strong>Getting Started</strong>
+			<small>Installation, setup, and first steps</small>
+		</a>
+	</li><li>
+		<a href="index.html">
+			<span class="icon">📖</span>
+			<strong>Introduction</strong>
+			<small>Overview and key benefits of Le Truc</small>
+		</a>
+	</li><li>
+		<a href="styling.html">
+			<span class="icon">🎨</span>
+			<strong>Styling</strong>
+			<small>Scoped styles, CSS custom properties</small>
+		</a>
+	</li>
+			</ol>
+		</nav>
+	</section-menu>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<main id="main" class="content-grid"><section class="api-content">
+<h1 id="class-circulardependencyerror">
+							<a name="class-circulardependencyerror" class="anchor" href="#class-circulardependencyerror">
+								<span class="permalink">🔗</span>
+								<span class="title">Class: CircularDependencyError</span>
+							</a>
+						</h1>
+<p>Defined in: node_modules/@zeix/cause-effect/types/src/errors.d.ts:1</p>
+<h2 id="name">
+							<a name="name" class="anchor" href="#name">
+								<span class="permalink">🔗</span>
+								<span class="title">Name</span>
+							</a>
+						</h2>
+<p>Le Truc</p>
+<h2 id="version">
+							<a name="version" class="anchor" href="#version">
+								<span class="permalink">🔗</span>
+								<span class="title">Version</span>
+							</a>
+						</h2>
+<p>0.15.0</p>
+<h2 id="author">
+							<a name="author" class="anchor" href="#author">
+								<span class="permalink">🔗</span>
+								<span class="title">Author</span>
+							</a>
+						</h2>
+<p>Esther Brunner</p>
+<h2 id="extends">
+							<a name="extends" class="anchor" href="#extends">
+								<span class="permalink">🔗</span>
+								<span class="title">Extends</span>
+							</a>
+						</h2>
+<ul>
+<li><code>Error</code></li>
+</ul>
+<h2 id="constructors">
+							<a name="constructors" class="anchor" href="#constructors">
+								<span class="permalink">🔗</span>
+								<span class="title">Constructors</span>
+							</a>
+						</h2>
+<h3 id="constructor">
+							<a name="constructor" class="anchor" href="#constructor">
+								<span class="permalink">🔗</span>
+								<span class="title">Constructor</span>
+							</a>
+						</h3>
+<blockquote>
+<p><strong>new CircularDependencyError</strong>(<code>where</code>): <code>CircularDependencyError</code></p>
+</blockquote>
+<p>Defined in: node_modules/@zeix/cause-effect/types/src/errors.d.ts:2</p>
+<h4 id="parameters">
+							<a name="parameters" class="anchor" href="#parameters">
+								<span class="permalink">🔗</span>
+								<span class="title">Parameters</span>
+							</a>
+						</h4>
+<h5 id="where">
+							<a name="where" class="anchor" href="#where">
+								<span class="permalink">🔗</span>
+								<span class="title">where</span>
+							</a>
+						</h5>
+<p><code>string</code></p>
+<h4 id="returns">
+							<a name="returns" class="anchor" href="#returns">
+								<span class="permalink">🔗</span>
+								<span class="title">Returns</span>
+							</a>
+						</h4>
+<p><code>CircularDependencyError</code></p>
+<h4 id="overrides">
+							<a name="overrides" class="anchor" href="#overrides">
+								<span class="permalink">🔗</span>
+								<span class="title">Overrides</span>
+							</a>
+						</h4>
+<p><code>Error.constructor</code></p>
+<h2 id="properties">
+							<a name="properties" class="anchor" href="#properties">
+								<span class="permalink">🔗</span>
+								<span class="title">Properties</span>
+							</a>
+						</h2>
+<h3 id="cause">
+							<a name="cause" class="anchor" href="#cause">
+								<span class="permalink">🔗</span>
+								<span class="title">cause?</span>
+							</a>
+						</h3>
+<blockquote>
+<p><code>optional</code> <strong>cause</strong>: <code>unknown</code></p>
+</blockquote>
+<p>Defined in: node_modules/typescript/lib/lib.es2022.error.d.ts:26</p>
+<p>The cause of the error.</p>
+<h4 id="inherited-from">
+							<a name="inherited-from" class="anchor" href="#inherited-from">
+								<span class="permalink">🔗</span>
+								<span class="title">Inherited from</span>
+							</a>
+						</h4>
+<p><code>Error.cause</code></p>
+<hr>
+<h3 id="message">
+							<a name="message" class="anchor" href="#message">
+								<span class="permalink">🔗</span>
+								<span class="title">message</span>
+							</a>
+						</h3>
+<blockquote>
+<p><strong>message</strong>: <code>string</code></p>
+</blockquote>
+<p>Defined in: node_modules/typescript/lib/lib.es5.d.ts:1077</p>
+<h4 id="inherited-from">
+							<a name="inherited-from" class="anchor" href="#inherited-from">
+								<span class="permalink">🔗</span>
+								<span class="title">Inherited from</span>
+							</a>
+						</h4>
+<p><code>Error.message</code></p>
+<hr>
+<h3 id="name">
+							<a name="name" class="anchor" href="#name">
+								<span class="permalink">🔗</span>
+								<span class="title">name</span>
+							</a>
+						</h3>
+<blockquote>
+<p><strong>name</strong>: <code>string</code></p>
+</blockquote>
+<p>Defined in: node_modules/typescript/lib/lib.es5.d.ts:1076</p>
+<h4 id="inherited-from">
+							<a name="inherited-from" class="anchor" href="#inherited-from">
+								<span class="permalink">🔗</span>
+								<span class="title">Inherited from</span>
+							</a>
+						</h4>
+<p><code>Error.name</code></p>
+<hr>
+<h3 id="stack">
+							<a name="stack" class="anchor" href="#stack">
+								<span class="permalink">🔗</span>
+								<span class="title">stack?</span>
+							</a>
+						</h3>
+<blockquote>
+<p><code>optional</code> <strong>stack</strong>: <code>string</code></p>
+</blockquote>
+<p>Defined in: node_modules/typescript/lib/lib.es5.d.ts:1078</p>
+<h4 id="inherited-from">
+							<a name="inherited-from" class="anchor" href="#inherited-from">
+								<span class="permalink">🔗</span>
+								<span class="title">Inherited from</span>
+							</a>
+						</h4>
+<p><code>Error.stack</code></p>
+<hr>
+<h3 id="stacktracelimit">
+							<a name="stacktracelimit" class="anchor" href="#stacktracelimit">
+								<span class="permalink">🔗</span>
+								<span class="title">stackTraceLimit</span>
+							</a>
+						</h3>
+<blockquote>
+<p><code>static</code> <strong>stackTraceLimit</strong>: <code>number</code></p>
+</blockquote>
+<p>Defined in: node_modules/@types/node/globals.d.ts:68</p>
+<p>The <code>Error.stackTraceLimit</code> property specifies the number of stack frames<br>collected by a stack trace (whether generated by <code>new Error().stack</code> or<br><code>Error.captureStackTrace(obj)</code>).</p>
+<p>The default value is <code>10</code> but may be set to any valid JavaScript number. Changes<br>will affect any stack trace captured <em>after</em> the value has been changed.</p>
+<p>If set to a non-number value, or set to a negative number, stack traces will<br>not capture any frames.</p>
+<h4 id="inherited-from">
+							<a name="inherited-from" class="anchor" href="#inherited-from">
+								<span class="permalink">🔗</span>
+								<span class="title">Inherited from</span>
+							</a>
+						</h4>
+<p><code>Error.stackTraceLimit</code></p>
+<h2 id="methods">
+							<a name="methods" class="anchor" href="#methods">
+								<span class="permalink">🔗</span>
+								<span class="title">Methods</span>
+							</a>
+						</h2>
+<h3 id="capturestacktrace">
+							<a name="capturestacktrace" class="anchor" href="#capturestacktrace">
+								<span class="permalink">🔗</span>
+								<span class="title">captureStackTrace()</span>
+							</a>
+						</h3>
+<h4 id="call-signature">
+							<a name="call-signature" class="anchor" href="#call-signature">
+								<span class="permalink">🔗</span>
+								<span class="title">Call Signature</span>
+							</a>
+						</h4>
+<blockquote>
+<p><code>static</code> <strong>captureStackTrace</strong>(<code>targetObject</code>, <code>constructorOpt?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: node_modules/@types/node/globals.d.ts:52</p>
+<p>Creates a <code>.stack</code> property on <code>targetObject</code>, which when accessed returns<br>a string representing the location in the code at which<br><code>Error.captureStackTrace()</code> was called.</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_0</strong></p>
+<p>The first line of the trace will be prefixed with<br><code>${myObject.name}: ${myObject.message}</code>.</p>
+<p>The optional <code>constructorOpt</code> argument accepts a function. If given, all frames<br>above <code>constructorOpt</code>, including <code>constructorOpt</code>, will be omitted from the<br>generated stack trace.</p>
+<p>The <code>constructorOpt</code> argument is useful for hiding implementation<br>details of error generation from the user. For instance:</p>
+<p><strong>CODE_BLOCK_PLACEHOLDER_1</strong></p>
+<h5 id="parameters">
+							<a name="parameters" class="anchor" href="#parameters">
+								<span class="permalink">🔗</span>
+								<span class="title">Parameters</span>
+							</a>
+						</h5>
+<h6 id="targetobject">
+							<a name="targetobject" class="anchor" href="#targetobject">
+								<span class="permalink">🔗</span>
+								<span class="title">targetObject</span>
+							</a>
+						</h6>
+<p><code>object</code></p>
+<h6 id="constructoropt">
+							<a name="constructoropt" class="anchor" href="#constructoropt">
+								<span class="permalink">🔗</span>
+								<span class="title">constructorOpt?</span>
+							</a>
+						</h6>
+<p><code>Function</code></p>
+<h5 id="returns">
+							<a name="returns" class="anchor" href="#returns">
+								<span class="permalink">🔗</span>
+								<span class="title">Returns</span>
+							</a>
+						</h5>
+<p><code>void</code></p>
+<h5 id="inherited-from">
+							<a name="inherited-from" class="anchor" href="#inherited-from">
+								<span class="permalink">🔗</span>
+								<span class="title">Inherited from</span>
+							</a>
+						</h5>
+<p><code>Error.captureStackTrace</code></p>
+<h4 id="call-signature">
+							<a name="call-signature" class="anchor" href="#call-signature">
+								<span class="permalink">🔗</span>
+								<span class="title">Call Signature</span>
+							</a>
+						</h4>
+<blockquote>
+<p><code>static</code> <strong>captureStackTrace</strong>(<code>targetObject</code>, <code>constructorOpt?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: node_modules/bun-types/globals.d.ts:1043</p>
+<p>Create .stack property on a target object</p>
+<h5 id="parameters">
+							<a name="parameters" class="anchor" href="#parameters">
+								<span class="permalink">🔗</span>
+								<span class="title">Parameters</span>
+							</a>
+						</h5>
+<h6 id="targetobject">
+							<a name="targetobject" class="anchor" href="#targetobject">
+								<span class="permalink">🔗</span>
+								<span class="title">targetObject</span>
+							</a>
+						</h6>
+<p><code>object</code></p>
+<h6 id="constructoropt">
+							<a name="constructoropt" class="anchor" href="#constructoropt">
+								<span class="permalink">🔗</span>
+								<span class="title">constructorOpt?</span>
+							</a>
+						</h6>
+<p><code>Function</code></p>
+<h5 id="returns">
+							<a name="returns" class="anchor" href="#returns">
+								<span class="permalink">🔗</span>
+								<span class="title">Returns</span>
+							</a>
+						</h5>
+<p><code>void</code></p>
+<h5 id="inherited-from">
+							<a name="inherited-from" class="anchor" href="#inherited-from">
+								<span class="permalink">🔗</span>
+								<span class="title">Inherited from</span>
+							</a>
+						</h5>
+<p><code>Error.captureStackTrace</code></p>
+<hr>
+<h3 id="iserror">
+							<a name="iserror" class="anchor" href="#iserror">
+								<span class="permalink">🔗</span>
+								<span class="title">isError()</span>
+							</a>
+						</h3>
+<h4 id="call-signature">
+							<a name="call-signature" class="anchor" href="#call-signature">
+								<span class="permalink">🔗</span>
+								<span class="title">Call Signature</span>
+							</a>
+						</h4>
+<blockquote>
+<p><code>static</code> <strong>isError</strong>(<code>error</code>): <code>error is Error</code></p>
+</blockquote>
+<p>Defined in: node_modules/typescript/lib/lib.esnext.error.d.ts:23</p>
+<p>Indicates whether the argument provided is a built-in Error instance or not.</p>
+<h5 id="parameters">
+							<a name="parameters" class="anchor" href="#parameters">
+								<span class="permalink">🔗</span>
+								<span class="title">Parameters</span>
+							</a>
+						</h5>
+<h6 id="error">
+							<a name="error" class="anchor" href="#error">
+								<span class="permalink">🔗</span>
+								<span class="title">error</span>
+							</a>
+						</h6>
+<p><code>unknown</code></p>
+<h5 id="returns">
+							<a name="returns" class="anchor" href="#returns">
+								<span class="permalink">🔗</span>
+								<span class="title">Returns</span>
+							</a>
+						</h5>
+<p><code>error is Error</code></p>
+<h5 id="inherited-from">
+							<a name="inherited-from" class="anchor" href="#inherited-from">
+								<span class="permalink">🔗</span>
+								<span class="title">Inherited from</span>
+							</a>
+						</h5>
+<p><code>Error.isError</code></p>
+<h4 id="call-signature">
+							<a name="call-signature" class="anchor" href="#call-signature">
+								<span class="permalink">🔗</span>
+								<span class="title">Call Signature</span>
+							</a>
+						</h4>
+<blockquote>
+<p><code>static</code> <strong>isError</strong>(<code>value</code>): <code>value is Error</code></p>
+</blockquote>
+<p>Defined in: node_modules/bun-types/globals.d.ts:1038</p>
+<p>Check if a value is an instance of Error</p>
+<h5 id="parameters">
+							<a name="parameters" class="anchor" href="#parameters">
+								<span class="permalink">🔗</span>
+								<span class="title">Parameters</span>
+							</a>
+						</h5>
+<h6 id="value">
+							<a name="value" class="anchor" href="#value">
+								<span class="permalink">🔗</span>
+								<span class="title">value</span>
+							</a>
+						</h6>
+<p><code>unknown</code></p>
+<p>The value to check</p>
+<h5 id="returns">
+							<a name="returns" class="anchor" href="#returns">
+								<span class="permalink">🔗</span>
+								<span class="title">Returns</span>
+							</a>
+						</h5>
+<p><code>value is Error</code></p>
+<p>True if the value is an instance of Error, false otherwise</p>
+<h5 id="inherited-from">
+							<a name="inherited-from" class="anchor" href="#inherited-from">
+								<span class="permalink">🔗</span>
+								<span class="title">Inherited from</span>
+							</a>
+						</h5>
+<p><code>Error.isError</code></p>
+<hr>
+<h3 id="preparestacktrace">
+							<a name="preparestacktrace" class="anchor" href="#preparestacktrace">
+								<span class="permalink">🔗</span>
+								<span class="title">prepareStackTrace()</span>
+							</a>
+						</h3>
+<blockquote>
+<p><code>static</code> <strong>prepareStackTrace</strong>(<code>err</code>, <code>stackTraces</code>): <code>any</code></p>
+</blockquote>
+<p>Defined in: node_modules/@types/node/globals.d.ts:56</p>
+<h4 id="parameters">
+							<a name="parameters" class="anchor" href="#parameters">
+								<span class="permalink">🔗</span>
+								<span class="title">Parameters</span>
+							</a>
+						</h4>
+<h5 id="err">
+							<a name="err" class="anchor" href="#err">
+								<span class="permalink">🔗</span>
+								<span class="title">err</span>
+							</a>
+						</h5>
+<p><code>Error</code></p>
+<h5 id="stacktraces">
+							<a name="stacktraces" class="anchor" href="#stacktraces">
+								<span class="permalink">🔗</span>
+								<span class="title">stackTraces</span>
+							</a>
+						</h5>
+<p><code>CallSite</code>[]</p>
+<h4 id="returns">
+							<a name="returns" class="anchor" href="#returns">
+								<span class="permalink">🔗</span>
+								<span class="title">Returns</span>
+							</a>
+						</h4>
+<p><code>any</code></p>
+<h4 id="see">
+							<a name="see" class="anchor" href="#see">
+								<span class="permalink">🔗</span>
+								<span class="title">See</span>
+							</a>
+						</h4>
+<p><a href="https://v8.dev/docs/stack-trace-api#customizing-stack-traces">https://v8.dev/docs/stack-trace-api#customizing-stack-traces</a></p>
+<h4 id="inherited-from">
+							<a name="inherited-from" class="anchor" href="#inherited-from">
+								<span class="permalink">🔗</span>
+								<span class="title">Inherited from</span>
+							</a>
+						</h4>
+<p><code>Error.prepareStackTrace</code></p>
+
+</section></main>
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2025 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

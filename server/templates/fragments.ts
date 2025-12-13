@@ -8,7 +8,7 @@
 import { createValidator, html } from './utils'
 
 export interface PanelType {
-	type: string
+	type: 'html' | 'css' | 'js' | 'ts'
 	label: string
 	filePath: string
 	content: string
@@ -37,8 +37,8 @@ export function tabButton({ name, panel }: TabButtonProps): string {
 	return html` <button
 		type="button"
 		role="tab"
-		id="trigger_${name}.${panel.type}"
-		aria-controls="panel_${name}.${panel.type}"
+		id="trigger_${name}_${panel.type}"
+		aria-controls="panel_${name}_${panel.type}"
 		aria-selected="${String(panel.selected)}"
 		tabindex="${panel.selected ? '0' : '-1'}"
 	>
@@ -54,8 +54,8 @@ export function tabPanel({ name, panel }: TabPanelProps): string {
 
 	return html` <div
 		role="tabpanel"
-		id="panel_${name}.${panel.type}"
-		aria-labelledby="trigger_${name}.${panel.type}"
+		id="panel_${name}_${panel.type}"
+		aria-labelledby="trigger_${name}_${panel.type}"
 		${hidden}
 	>
 		<module-codeblock

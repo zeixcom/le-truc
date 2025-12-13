@@ -1,0 +1,85 @@
+[**le-truc**](../README.md)
+
+***
+
+[le-truc](../globals.md) / State
+
+# Type Alias: State\<T\>
+
+> **State**\<`T`\> = `object`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:1
+
+## Name
+
+Le Truc
+
+## Version
+
+0.15.0
+
+## Author
+
+Esther Brunner
+
+## Type Parameters
+
+### T
+
+`T` *extends* `object`
+
+## Properties
+
+### \[toStringTag\]
+
+> `readonly` **\[toStringTag\]**: `"State"`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:2
+
+## Methods
+
+### get()
+
+> **get**(): `T`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:3
+
+#### Returns
+
+`T`
+
+***
+
+### set()
+
+> **set**(`newValue`): `void`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:4
+
+#### Parameters
+
+##### newValue
+
+`T`
+
+#### Returns
+
+`void`
+
+***
+
+### update()
+
+> **update**(`updater`): `void`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:5
+
+#### Parameters
+
+##### updater
+
+(`oldValue`) => `T`
+
+#### Returns
+
+`void`

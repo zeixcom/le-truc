@@ -1,5 +1,6 @@
 import { createEffect, match, resolve } from '@zeix/cause-effect'
 import { execSync } from 'child_process'
+import { ASSETS_DIR, CSS_FILE } from '../config'
 import { componentStyles, docsStyles } from '../file-signals'
 
 export const cssEffect = () =>
@@ -14,7 +15,7 @@ export const cssEffect = () =>
 					try {
 						console.log('🎨 Rebuilding CSS assets...')
 						execSync(
-							'bunx lightningcss --minify --bundle --targets ">= 0.25%" docs-src/main.css -o ./docs/assets/main.css',
+							`bunx lightningcss --minify --bundle --targets ">= 0.25%" ${CSS_FILE} -o ${ASSETS_DIR}/main.css`,
 							{ stdio: 'inherit' },
 						)
 						console.log('CSS successfully rebuilt')

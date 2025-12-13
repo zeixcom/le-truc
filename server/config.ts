@@ -14,6 +14,7 @@ export const TEMPLATES_DIR = './server/templates'
 
 export const INPUT_DIR = './docs-src'
 export const PAGES_DIR = './docs-src/pages'
+export const API_DIR = './docs-src/api'
 export const LAYOUT_FILE = './docs-src/layout.html'
 export const INCLUDES_DIR = './docs-src/includes'
 export const MENU_FILE = './docs-src/includes/menu.html'
