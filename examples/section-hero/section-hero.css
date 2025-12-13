@@ -16,7 +16,7 @@ section-hero {
 		grid-column: content;
 	}
 
-	.lead {
+	.lead p {
 		font-size: var(--font-size-l);
 	}
 }

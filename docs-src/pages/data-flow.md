@@ -4,18 +4,13 @@ emoji: '🔄'
 description: 'Passing state, events, context'
 ---
 
-<section-hero>
-
+{% hero %}
 # 🔄 Data Flow
 
-<div>
-  <p class="lead"><strong>Learn how Le Truc components can work together seamlessly.</strong> Start with simple parent-child relationships, then explore advanced patterns like custom events and shared state. Build modular, loosely coupled components that communicate efficiently.</p>
-  {{ toc }}
-</div>
-</section-hero>
+**Learn how Le Truc components can work together seamlessly.** Start with simple parent-child relationships, then explore advanced patterns like custom events and shared state. Build modular, loosely coupled components that communicate efficiently.
+{% /hero %}
 
-<section>
-
+{% section %}
 ## Component Coordination
 
 Let's consider a **product catalog** where users can add items to a shopping cart. We have **three independent components** that work together:
@@ -38,7 +33,7 @@ The **parent component (`ModuleCatalog`) knows about its children**, meaning it 
 
 First, we need to observe the quantities of all `FormSpinbutton` components. For this, we create a `Collection` of all children matching the `form-spinbutton` selector using the `all` function:
 
-```js (module-catalog.js)
+```js#module-catalog.js
 defineComponent(
 	'module-catalog',
 	{},
@@ -59,7 +54,7 @@ In contrast to a static `querySelectorAll()` call, the `Collection` signal retur
 
 Then, we need to convert the total of all product quantities to a string and pass it on to the `BasicButton` component. In Le Truc we use the `pass()` function to share state with descendant components:
 
-```js (module-catalog.js)
+```js#module-catalog.js
 defineComponent(
 	'module-catalog',
 	{},
@@ -95,7 +90,7 @@ Allright, that's it!
 
 The `BasicButton` component **displays a badge when needed** – it does not know about any other component nor track state itself. It just exposes a reactive properties `badge` of type `string` and `disabled` of type `boolean` and has effects to react to state changes that updates the DOM subtree.
 
-```js (basic-button.js)
+```js#basic-button.js
 defineComponent(
 	'basic-button',
 	{
@@ -121,7 +116,7 @@ defineComponent(
 
 The `FormSpinbutton` component reacts to user interactions and exposes a reactive property `value` of type `number`. It updates its own internal DOM subtree, but doesn't know about any other component nor where the value is used.
 
-```js (form-spinbutton.js)
+```js#form-spinbutton.js
 defineComponent(
 	'form-spinbutton',
 	{
@@ -218,126 +213,98 @@ Here's how everything comes together:
 
 **No custom events are needed – state flows naturally!**
 
-<module-demo>
-	<div class="preview">
-  	<module-catalog>
-  		<header>
-  			<p>Shop</p>
-  			<basic-button disabled>
-  				<button type="button" disabled>
-  					<span class="label">🛒 Shopping Cart</span>
-  					<span class="badge"></span>
-  				</button>
-  			</basic-button>
-  		</header>
-  		<ul>
-  			<li>
-  				<p>Product 1</p>
-  				<form-spinbutton>
-  					<button type="button" class="decrement" aria-label="Decrement" hidden>
-  						−
-  					</button>
-  					<input
-  						type="number"
-  						class="value"
-  						name="amount-product1"
-  						value="0"
-  						min="0"
-  						max="10"
-  						readonly
-  						disabled
-  						hidden
-  					/>
-  					<button type="button" class="increment" aria-label="Increment">
-  						<span class="zero">Add to Cart</span>
-  						<span class="other" hidden>+</span>
-  					</button>
-  				</form-spinbutton>
-  			</li>
-  			<li>
-  				<p>Product 2</p>
-  				<form-spinbutton>
-  					<button type="button" class="decrement" aria-label="Decrement" hidden>
-  						−
-  					</button>
-  					<input
-  						type="number"
-  						class="value"
-  						name="amount-product2"
-  						value="0"
-  						min="0"
-  						max="5"
-  						readonly
-  						disabled
-  						hidden
-  					/>
-  					<button type="button" class="increment" aria-label="Increment">
-  						<span class="zero">Add to Cart</span>
-  						<span class="other" hidden>+</span>
-  					</button>
-  				</form-spinbutton>
-  			</li>
-  			<li>
-  				<p>Product 3</p>
-  				<form-spinbutton>
-  					<button type="button" class="decrement" aria-label="Decrement" hidden>
-  						−
-  					</button>
-  					<input
-  						type="number"
-  						class="value"
-  						name="amount-product3"
-  						value="0"
-  						min="0"
-  						max="20"
-  						readonly
-  						disabled
-  						hidden
-  					/>
-  					<button type="button" class="increment" aria-label="Increment">
-  						<span class="zero">Add to Cart</span>
-  						<span class="other" hidden>+</span>
-  					</button>
-  				</form-spinbutton>
-  			</li>
-  		</ul>
-    </module-catalog>
-	</div>
-	<details>
-		<summary>ModuleCatalog Source Code</summary>
-		<module-lazyload src="./examples/module-catalog.html">
-			<card-callout>
-				<p class="loading" role="status" aria-live="polite">Loading...</p>
-				<p class="error" role="alert" aria-live="assertive" hidden></p>
-			</card-callout>
-			<div class="content"></div>
-		</module-lazy>
-	</details>
-	<details>
-		<summary>BasicButton Source Code</summary>
-		<module-lazyload src="./examples/basic-button.html">
-			<card-callout>
-				<p class="loading" role="status" aria-live="polite">Loading...</p>
-				<p class="error" role="alert" aria-live="assertive" hidden></p>
-			</card-callout>
-			<div class="content"></div>
-		</module-lazy>
-	</details>
-	<details>
-		<summary>FormSpinbutton Source Code</summary>
-		<module-lazyload src="./examples/form-spinbutton.html">
-			<card-callout>
-				<p class="loading" role="status" aria-live="polite">Loading...</p>
-				<p class="error" role="alert" aria-live="asserive" hidden></p>
-			</card-callout>
-			<div class="content"></div>
-		</module-lazy>
-	</details>
-</module-demo>
+{% demo %}
+<module-catalog>
+	<header>
+		<p>Shop</p>
+		<basic-button disabled>
+			<button type="button" disabled>
+				<span class="label">🛒 Shopping Cart</span>
+				<span class="badge"></span>
+			</button>
+		</basic-button>
+	</header>
+	<ul>
+		<li>
+			<p>Product 1</p>
+			<form-spinbutton>
+				<button type="button" class="decrement" aria-label="Decrement" hidden>
+					−
+				</button>
+				<input
+					type="number"
+					class="value"
+					name="amount-product1"
+					value="0"
+					min="0"
+					max="10"
+					readonly
+					disabled
+					hidden
+				/>
+				<button type="button" class="increment" aria-label="Increment">
+					<span class="zero">Add to Cart</span>
+					<span class="other" hidden>+</span>
+				</button>
+			</form-spinbutton>
+		</li>
+		<li>
+			<p>Product 2</p>
+			<form-spinbutton>
+				<button type="button" class="decrement" aria-label="Decrement" hidden>
+					−
+				</button>
+				<input
+					type="number"
+					class="value"
+					name="amount-product2"
+					value="0"
+					min="0"
+					max="5"
+					readonly
+					disabled
+					hidden
+				/>
+				<button type="button" class="increment" aria-label="Increment">
+					<span class="zero">Add to Cart</span>
+					<span class="other" hidden>+</span>
+				</button>
+			</form-spinbutton>
+		</li>
+		<li>
+			<p>Product 3</p>
+			<form-spinbutton>
+				<button type="button" class="decrement" aria-label="Decrement" hidden>
+					−
+				</button>
+				<input
+					type="number"
+					class="value"
+					name="amount-product3"
+					value="0"
+					min="0"
+					max="20"
+					readonly
+					disabled
+					hidden
+				/>
+				<button type="button" class="increment" aria-label="Increment">
+					<span class="zero">Add to Cart</span>
+					<span class="other" hidden>+</span>
+				</button>
+			</form-spinbutton>
+		</li>
+	</ul>
+</module-catalog>
+---
+{% source title="ModuleCatalog Source Code" src="./examples/module-catalog.html" /%}
+{% source title="BasicButton Source Code" src="./examples/basic-button.html" /%}
+{% source title="FormSpinbutton Source Code" src="./examples/form-spinbutton.html" /%}
+{% /demo %}
 
-</section>
+{% /section %}
 
-<section>
+{% section %}
 
 ## Providing Context
 
@@ -470,9 +437,9 @@ The provider component wraps your entire application or a section that needs sha
 - **Reactive Updates**: All consumers automatically update when context changes
 - **No Prop Drilling**: Deep components access context directly
 
-</section>
+{% /section %}
 
-<section>
+{% section %}
 
 ## Consuming Context
 
@@ -649,10 +616,10 @@ component(
 - **Shared Resources**: Database connections, cache instances
 - **Cross-cutting Concerns**: Logging, analytics, error handling
 
-</section>
+{% /section %}
 
-<section>
+{% section %}
 
 ## Next Steps
 
-</section>
+{% /section %}

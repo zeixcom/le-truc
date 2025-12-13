@@ -5,6 +5,7 @@ import { ASSETS_DIR, INCLUDES_DIR, LAYOUT_FILE, OUTPUT_DIR } from '../config'
 import { markdownFiles } from '../file-signals'
 import { performanceHints } from '../templates/performance-hints'
 import { toc } from '../templates/toc'
+import type { ProcessedMarkdownFile } from '../types'
 
 const generateAssetHash = (_filePath: string): string => {
 	// Simple timestamp-based hash for development
@@ -61,7 +62,9 @@ const analyzePageForPreloads = (htmlContent: string): string[] => {
 	return preloads
 }
 
-const applyTemplate = async (processedFile: any): Promise<string> => {
+const applyTemplate = async (
+	processedFile: ProcessedMarkdownFile,
+): Promise<string> => {
 	try {
 		let layout = await readFile(LAYOUT_FILE, 'utf8')
 
@@ -73,8 +76,14 @@ const applyTemplate = async (processedFile: any): Promise<string> => {
 		const additionalPreloads = analyzePageForPreloads(processedFile.htmlContent)
 		const performanceHintsHtml = performanceHints(additionalPreloads)
 
+		// Replace TOC placeholders in content with actual TOC HTML
+		const contentWithToc = processedFile.htmlContent.replace(
+			/<div class="toc-placeholder" data-toc="true"><\/div>/g,
+			tocHtml,
+		)
+
 		// Replace content
-		layout = layout.replace('{{ content }}', processedFile.htmlContent)
+		layout = layout.replace('{{ content }}', contentWithToc)
 
 		// Get asset hashes
 		const assetHashes = getAssetHashes()
@@ -90,7 +99,13 @@ const applyTemplate = async (processedFile: any): Promise<string> => {
 			'js-hash': assetHashes.js,
 			'performance-hints': performanceHintsHtml,
 			'additional-preloads': additionalPreloads.join('\n\t\t'),
-			...processedFile.metadata,
+			// Convert metadata values to strings
+			...Object.fromEntries(
+				Object.entries(processedFile.metadata).map(([key, value]) => [
+					key,
+					String(value || ''),
+				]),
+			),
 		}
 
 		return layout.replace(/{{\s*(.*?)\s*}}/g, (_, key) => {
@@ -112,36 +127,41 @@ export const pagesEffect = () =>
 				processedFiles: markdownFiles.fullyProcessed,
 			}),
 			{
-				ok: ({ processedFiles }) => {
+				ok: async ({ processedFiles }) => {
 					try {
 						console.log('📚 Generating HTML pages from processed markdown...')
 
 						// Process all markdown files
-						Array.from(processedFiles.values()).forEach(async processedFile => {
-							try {
-								// Apply template
-								const finalHtml = await applyTemplate(processedFile)
+						const processPromises = Array.from(processedFiles.values()).map(
+							async (processedFile: ProcessedMarkdownFile) => {
+								try {
+									// Apply template
+									const finalHtml = await applyTemplate(processedFile)
 
-								// Write output file
-								const outputPath = join(
-									OUTPUT_DIR,
-									processedFile.relativePath.replace('.md', '.html'),
-								)
-								await mkdir(dirname(outputPath), {
-									recursive: true,
-								})
-								await writeFile(outputPath, finalHtml, 'utf8')
+									// Write output file
+									const outputPath = join(
+										OUTPUT_DIR,
+										processedFile.relativePath.replace('.md', '.html'),
+									)
+									await mkdir(dirname(outputPath), {
+										recursive: true,
+									})
+									await writeFile(outputPath, finalHtml, 'utf8')
 
-								console.log(
-									`📄 Generated ${processedFile.relativePath.replace('.md', '.html')}`,
-								)
-							} catch (error) {
-								console.error(
-									`Failed to generate ${processedFile.relativePath}:`,
-									error,
-								)
-							}
-						})
+									console.log(
+										`📄 Generated ${processedFile.relativePath.replace('.md', '.html')}`,
+									)
+								} catch (error) {
+									console.error(
+										`Failed to generate ${processedFile.relativePath}:`,
+										error,
+									)
+								}
+							},
+						)
+
+						// Wait for all processing to complete
+						await Promise.all(processPromises)
 
 						console.log(
 							`📚 Successfully generated ${processedFiles.size} HTML pages`,

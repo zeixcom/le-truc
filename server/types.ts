@@ -43,12 +43,6 @@ export type ProcessedMarkdownFile = FileInfo & {
 	title: string
 }
 
-export type CodeBlock = {
-	header: string
-	code: string
-	highlightedCode: string
-}
-
 export type WatcherOptions = {
 	recursive?: boolean
 	extensions?: string[]

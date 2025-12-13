@@ -6,7 +6,7 @@
 
 # Interface: Collection\<E\>
 
-Defined in: [src/signals/collection.ts:16](https://github.com/zeixcom/le-truc/blob/30bbcb8816f11237e187c4d8786237ece7d23841/src/signals/collection.ts#L16)
+Defined in: [src/signals/collection.ts:16](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/signals/collection.ts#L16)
 
 ## Type Parameters
 
@@ -24,7 +24,7 @@ Defined in: [src/signals/collection.ts:16](https://github.com/zeixcom/le-truc/bl
 
 > `readonly` **\[isConcatSpreadable\]**: `true`
 
-Defined in: [src/signals/collection.ts:18](https://github.com/zeixcom/le-truc/blob/30bbcb8816f11237e187c4d8786237ece7d23841/src/signals/collection.ts#L18)
+Defined in: [src/signals/collection.ts:18](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/signals/collection.ts#L18)
 
 ***
 
@@ -32,7 +32,7 @@ Defined in: [src/signals/collection.ts:18](https://github.com/zeixcom/le-truc/bl
 
 > `readonly` **\[toStringTag\]**: `"Collection"`
 
-Defined in: [src/signals/collection.ts:17](https://github.com/zeixcom/le-truc/blob/30bbcb8816f11237e187c4d8786237ece7d23841/src/signals/collection.ts#L17)
+Defined in: [src/signals/collection.ts:17](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/signals/collection.ts#L17)
 
 ***
 
@@ -40,7 +40,7 @@ Defined in: [src/signals/collection.ts:17](https://github.com/zeixcom/le-truc/bl
 
 > `readonly` **length**: `number`
 
-Defined in: [src/signals/collection.ts:23](https://github.com/zeixcom/le-truc/blob/30bbcb8816f11237e187c4d8786237ece7d23841/src/signals/collection.ts#L23)
+Defined in: [src/signals/collection.ts:23](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/signals/collection.ts#L23)
 
 ## Methods
 
@@ -48,7 +48,7 @@ Defined in: [src/signals/collection.ts:23](https://github.com/zeixcom/le-truc/bl
 
 > **\[iterator\]**(): `IterableIterator`\<`E`\>
 
-Defined in: [src/signals/collection.ts:19](https://github.com/zeixcom/le-truc/blob/30bbcb8816f11237e187c4d8786237ece7d23841/src/signals/collection.ts#L19)
+Defined in: [src/signals/collection.ts:19](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/signals/collection.ts#L19)
 
 #### Returns
 
@@ -60,7 +60,7 @@ Defined in: [src/signals/collection.ts:19](https://github.com/zeixcom/le-truc/bl
 
 > **get**(): `E`[]
 
-Defined in: [src/signals/collection.ts:21](https://github.com/zeixcom/le-truc/blob/30bbcb8816f11237e187c4d8786237ece7d23841/src/signals/collection.ts#L21)
+Defined in: [src/signals/collection.ts:21](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/signals/collection.ts#L21)
 
 #### Returns
 
@@ -72,7 +72,7 @@ Defined in: [src/signals/collection.ts:21](https://github.com/zeixcom/le-truc/bl
 
 > **on**(`type`, `listener`): [`Cleanup`](../type-aliases/Cleanup.md)
 
-Defined in: [src/signals/collection.ts:22](https://github.com/zeixcom/le-truc/blob/30bbcb8816f11237e187c4d8786237ece7d23841/src/signals/collection.ts#L22)
+Defined in: [src/signals/collection.ts:22](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/signals/collection.ts#L22)
 
 #### Parameters
 

@@ -1,10 +1,10 @@
-# Reactive Build System
+# Reactive Build System with Markdoc
 
-A radically simplified dev server built with [Cause & Effect](https://github.com/zeix/cause-effect) for reactive dependency tracking and Bun 1.3+ capabilities for fast builds and HMR.
+A modern static site generator built with [Cause & Effect](https://github.com/zeix/cause-effect) reactive signals, [Markdoc](https://markdoc.dev/) content processing, and Bun for fast builds and HMR.
 
 ## Overview
 
-This build system uses reactive programming principles to create an elegant, efficient static site generator with automatic dependency tracking. Unlike traditional build tools with complex pipelines, this system uses **reactive signals** and **effects** to declaratively define what should happen when files change.
+This build system uses reactive programming principles to create an efficient documentation site generator with automatic dependency tracking. The system processes Markdown content through Markdoc schemas and generates a complete static site with syntax highlighting, interactive components, and progressive enhancement.
 
 ## Architecture
 
@@ -14,25 +14,25 @@ This build system uses reactive programming principles to create an elegant, eff
 
 - **`watchFiles(directory, options)`**: Creates reactive state that automatically updates when filesystem changes occur
 - Supports recursive watching, file extension filtering, and ignore patterns
-- Returns `State<Map<string, FileInfo>>` that other parts of the system can reactively depend on
+- Returns `Store<Record<string, FileInfo>>` that other parts of the system can reactively depend on
 
 #### 🔄 File Signals (`file-signals.ts`)
 
 Defines reactive signals for different file types:
 
-- **`markdownFiles`**: Tracks markdown files with frontmatter processing
+- **`markdownFiles`**: Tracks markdown files with Markdoc processing
   - `sources`: Raw markdown files from `./docs-src/pages/`
   - `processed`: Computed signal with extracted frontmatter and metadata
   - `pageInfos`: Computed signal generating page navigation data
-  - `fullyProcessed`: Computed signal with complete markdown→HTML transformation
+  - `fullyProcessed`: Computed signal with complete Markdoc→HTML transformation
 
 - **`libraryScripts`**: TypeScript files from `./src/` (Le Truc library source)
 - **`docsScripts`**: TypeScript files from `./docs-src/` (documentation scripts)
-- **`componentScripts`**: Component TypeScript from `./docs-src/components/`
-- **`templateScripts`**: Template functions from `./docs-src/templates/`
+- **`componentScripts`**: Component TypeScript from `./examples/` (component examples)
+- **`templateScripts`**: Template functions from `./server/templates/`
 - **`docsStyles`**: CSS files from `./docs-src/`
-- **`componentStyles`**: Component CSS from `./docs-src/components/`
-- **`componentMarkup`**: HTML template files from `./docs-src/components/`
+- **`componentStyles`**: Component CSS from `./examples/` (component examples)
+- **`componentMarkup`**: HTML template files from `./examples/` (component examples)
 
 #### ⚡ Effects (`effects/`)
 
@@ -42,21 +42,110 @@ Each effect reactively responds to file changes and performs specific build task
 2. **`cssEffect`** - Rebuilds and minifies CSS when stylesheets change
 3. **`jsEffect`** - Bundles and minifies JavaScript when scripts change
 4. **`serviceWorkerEffect`** - Generates service worker after assets are built
-5. **`examplesEffect`** - Creates syntax-highlighted code examples from component files
+5. **`examplesEffect`** - Creates syntax-highlighted component examples from example files
 6. **`menuEffect`** - Generates navigation menu from page metadata
-7. **`pagesEffect`** - Processes markdown files to HTML with full template support
+7. **`pagesEffect`** - Processes markdown files to HTML with Markdoc schemas and template support
 8. **`sitemapEffect`** - Creates XML sitemap for SEO
+
+#### 📄 Markdoc Schemas (`schema/`)
+
+Custom Markdoc schemas for rich content:
+
+- **`carousel.markdoc.ts`** - Interactive carousels with slides (`{% carousel %}`)
+- **`slide.markdoc.ts`** - Individual carousel slides (`{% slide %}`)
+- **`fence.markdoc.ts`** - Enhanced code blocks with syntax highlighting
+- **`heading.markdoc.ts`** - Headings with automatic anchor links
+- **`callout.markdoc.ts`** - Warning/info/tip callout boxes
+- **`demo.markdoc.ts`** - Interactive code demonstrations
+- **`tabgroup.markdoc.ts`** - Tabbed content interfaces
+- **`hero.markdoc.ts`** - Hero sections with table of contents
+- **`section.markdoc.ts`** - Content sections with styling
+- **`source.markdoc.ts`** - Lazy-loaded source code examples
+
+#### 🛠️ Markdoc Helpers (`markdoc-helpers.ts`)
+
+Shared utilities for schema development:
+
+- **Common attributes**: `classAttribute`, `idAttribute`, `styleAttribute`
+- **Children definitions**: `standardChildren`, `richChildren`
+- **Text processing**: `extractTextFromNode()`, `transformChildrenWithConfig()`
+- **HTML generation**: `createNavigationButton()`, `createTabButton()`, `createAccessibleHeading()`
+- **Utilities**: `generateUniqueId()`, `splitContentBySeparator()`
 
 ### Reactive Flow
 
 ```
-File Changes → File Signals → Computed Values → Effects → Output Files
+File Changes → File Signals → Markdoc Processing → Effects → Output Files
 ```
 
 1. **File Watcher** detects changes and updates reactive state
 2. **Computed Signals** automatically recalculate derived data
-3. **Effects** trigger when their dependencies change
-4. **Build Outputs** are generated only when necessary
+3. **Markdoc Processing** transforms markdown with custom schemas
+4. **Effects** trigger when their dependencies change
+5. **Build Outputs** are generated only when necessary
+
+## Markdoc Content System
+
+### Supported Content Types
+
+The system supports rich content through Markdoc schemas:
+
+```markdown
+# Standard Markdown
+- Lists, links, **bold**, *italic*, `code`
+- Code blocks with syntax highlighting
+
+# Custom Components
+{% carousel %}
+{% slide title="Slide Title" style="background: var(--color-green-20);" %}
+Your slide content here...
+{% /slide %}
+{% /carousel %}
+
+{% callout class="tip" title="Pro Tip" %}
+This creates a styled callout box.
+{% /callout %}
+
+{% demo %}
+<button>Interactive demo</button>
+---
+This creates an interactive demonstration.
+{% /demo %}
+```
+
+### Code Block Features
+
+Enhanced code blocks with automatic:
+- **Syntax highlighting** (powered by Shiki)
+- **Copy buttons** with success/error feedback
+- **Language labels** and optional filenames
+- **Expand/collapse** for long code blocks (>10 lines)
+
+```markdown
+```js#example.js
+function hello(name) {
+    console.log(`Hello, ${name}!`);
+}
+``
+```
+
+### Schema Architecture
+
+Schemas use common utilities for consistency:
+
+```typescript
+import { commonAttributes, standardChildren, transformChildrenWithConfig } from '../markdoc-helpers'
+
+const mySchema: Schema = {
+    render: 'my-component',
+    children: standardChildren,
+    attributes: commonAttributes,
+    transform(node: Node) {
+        const content = transformChildrenWithConfig(node.children || [])
+        return new Tag('my-component', node.attributes, content)
+    }
+}
+```
 
 ## Dependencies Tracked
 
@@ -67,11 +156,11 @@ File Changes → File Signals → Computed Values → Effects → Output Files
 | `markdownFiles`    | `./docs-src/pages/`      | `.md`      | ✅        | Site content and API docs |
 | `libraryScripts`   | `./src/`                 | `.ts`      | ✅        | Library source code       |
 | `docsScripts`      | `./docs-src/`            | `.ts`      | 🛑        | Documentation scripts     |
-| `componentScripts` | `./docs-src/components/` | `.ts`      | ✅        | Component logic           |
-| `templateScripts`  | `./docs-src/templates/`  | `.ts`      | ✅        | Template functions        |
+| `componentScripts` | `./examples/`            | `.ts`      | ✅        | Component logic           |
+| `templateScripts`  | `./server/templates/`    | `.ts`      | ✅        | Template functions        |
 | `docsStyles`       | `./docs-src/`            | `.css`     | 🛑        | Main stylesheets          |
-| `componentStyles`  | `./docs-src/components/` | `.css`     | ✅        | Component styles          |
-| `componentMarkup`  | `./docs-src/components/` | `.html`    | ✅        | Component templates       |
+| `componentStyles`  | `./examples/`            | `.css`     | ✅        | Component styles          |
+| `componentMarkup`  | `./examples/`            | `.html`    | ✅        | Component templates       |
 
 ### Effect Dependencies
 
@@ -91,18 +180,14 @@ File Changes → File Signals → Computed Values → Effects → Output Files
 ### Running the Build System
 
 ```bash
-# Development build with file watching (build only)
-bun run docs-src/server/build.ts
+# Development build with file watching
+bun run build:docs
 
 # Development server with HMR (recommended)
-bun run docs-src/server/serve.ts
+bun run serve:docs
 
-# The server will:
-# 1. Initialize the reactive build system
-# 2. Start HTTP server on http://localhost:3000
-# 3. Watch for changes and rebuild incrementally
-# 4. Notify browser clients to reload via WebSocket
-# 5. Keep running until Ctrl+C
+# Production build (one-time)
+bun run build:docs
 ```
 
 ### Development Server Features
@@ -117,7 +202,7 @@ bun run docs-src/server/serve.ts
 
 ```bash
 # Custom port and host
-PORT=8080 HOST=0.0.0.0 bun run docs-src/server/serve.ts
+PORT=8080 HOST=0.0.0.0 bun run serve:docs
 
 # Default: http://localhost:3000
 ```
@@ -135,216 +220,209 @@ PORT=8080 HOST=0.0.0.0 bun run docs-src/server/serve.ts
 | Menu           | `./docs-src/includes/menu.html` | Navigation menu component         | N/A (included)     |
 | Sitemap        | `./docs/sitemap.xml`            | SEO sitemap                       | `/sitemap.xml`     |
 
-### Build Sequence
-
-1. **API Documentation** - Generate TypeDoc markdown from library source
-2. **Asset Building** - CSS and JavaScript minification (parallel)
-3. **Service Worker** - Generate with asset hashes (after CSS/JS)
-4. **Examples** - Create syntax-highlighted code samples
-5. **Navigation** - Generate menu from processed pages
-6. **Pages** - Process all markdown to HTML (uses generated API docs)
-7. **SEO** - Create sitemap from processed pages
-
 ## Extending the System
 
-### Adding New File Types
+### Adding New Markdoc Schemas
 
-1. **Create a new signal** in `file-signals.ts`:
-
-```typescript
-export const newFileType = (() => {
-  const sources = watchFiles('./path/to/files', {
-    recursive: true,
-    extensions: ['.ext'],
-  })
-
-  return { sources }
-})()
-```
-
-2. **Create an effect** in `effects/new-effect.ts`:
+1. **Create schema file** in `server/schema/`:
 
 ```typescript
-import { effect } from '@zeix/cause-effect'
-import { newFileType } from '../file-signals'
+import type { Schema } from '@markdoc/markdoc'
+import { commonAttributes, standardChildren } from '../markdoc-helpers'
 
-export const newEffect = () =>
-  effect({
-    signals: [newFileType.sources],
-    ok: (sources: Map<string, any>): undefined => {
-      // Process files when they change
-      console.log(`Processing ${sources.size} files...`)
-      return undefined
-    },
-    err: (error: Error): undefined => {
-      console.error('Error in new effect:', error.message)
-      return undefined
-    },
-  })
+const myComponent: Schema = {
+    render: 'my-custom-component',
+    children: standardChildren,
+    attributes: {
+        ...commonAttributes,
+        title: { type: String, required: true }
+    }
+}
+
+export default myComponent
 ```
 
-3. **Add to build orchestration** in `build.ts`:
+2. **Add to Markdoc config** in `server/markdoc.config.ts`:
 
 ```typescript
-import { newEffect } from './effects/new-effect'
+import myComponent from './schema/my-component.markdoc'
 
-// In the build function:
-const newEffectCleanup = newEffect()
-
-// In cleanup:
-newEffectCleanup?.()
+export const markdocConfig = {
+    // ... existing config
+    tags: {
+        // ... existing tags
+        'my-component': myComponent,
+    }
+}
 ```
 
-### Adding Computed Preprocessing
+3. **Use in markdown**:
 
-For complex transformations, add computed signals to `file-signals.ts`:
+```markdown
+{% my-component title="Hello World" %}
+Content goes here...
+{% /my-component %}
+```
+
+### Adding Schema Utilities
+
+Add reusable functions to `markdoc-helpers.ts`:
 
 ```typescript
-const processed = computed(async () => {
-  const rawFiles = sources.get()
-  if (rawFiles === UNSET) return UNSET
-
-  const processedFiles = new Map()
-  for (const [path, fileInfo] of rawFiles) {
-    // Transform file content
-    const transformed = await processFile(fileInfo.content)
-    processedFiles.set(path, { ...fileInfo, transformed })
-  }
-  return processedFiles
-})
+// Common pattern for creating buttons
+export function createCustomButton(text: string, className?: string): Tag {
+    return new Tag('button', { 
+        type: 'button', 
+        class: className || 'default' 
+    }, [text])
+}
 ```
 
-### Custom Build Logic
+### Custom Template Functions
 
-Effects can perform any build operations:
+Add template utilities in `server/templates/`:
 
 ```typescript
-effect({
-  signals: [dependency1, dependency2],
-  ok: async (dep1, dep2): Promise<void> => {
-    // Custom build logic
-    await runCustomTool()
-    await generateCustomOutput()
-    console.log('Custom build completed')
-  },
-})
+import { html } from './utils'
+
+export function customTemplate(data: any): string {
+    return html`
+        <div class="custom">
+            ${data.content}
+        </div>
+    `
+}
 ```
+
+## Performance Optimizations
+
+### Markdoc Processing
+
+- **Lazy transformation**: Content only processed when pages are requested
+- **Cached results**: Processed content cached until dependencies change
+- **Syntax highlighting**: Code blocks highlighted asynchronously
+- **Schema reuse**: Common utilities prevent code duplication
+
+### Build Efficiency
+
+- **Incremental builds**: Only changed files trigger rebuilds
+- **Parallel processing**: Independent effects run simultaneously  
+- **Smart caching**: Content hashing prevents unnecessary regeneration
+- **Memory efficiency**: Large files processed in streams
+
+### Asset Optimization
+
+- **Minification**: CSS and JS automatically minified
+- **Source maps**: Generated for development debugging
+- **Compression**: Brotli and Gzip for smaller payloads
+- **Cache headers**: Optimal caching for static assets
 
 ## Benefits
 
-### Reactive Architecture
+### Content Authoring
 
-- **Declarative**: Describe what should happen, not how/when
-- **Efficient**: Only rebuilds what's needed when dependencies change
-- **Automatic**: No manual dependency tracking or build orchestration
-
-### Performance
-
-- **Lazy Evaluation**: Computed signals only run when accessed by effects
-- **Incremental Builds**: Only affected files are processed
-- **Parallel Execution**: Independent effects can run simultaneously
-- **Fast Runtime**: Bun provides excellent performance for file operations
-
-### Maintainability
-
-- **Small Codebase**: ~2000 lines vs 10,000+ in traditional bundlers
-- **Clear Separation**: Each effect handles one concern
-- **Type Safety**: Full TypeScript support with strict checking
-- **Debuggable**: Simple reactive flow is easy to trace
+- **Rich components**: Interactive carousels, tabs, callouts, code demos
+- **Syntax highlighting**: Automatic code highlighting with copy buttons
+- **Type safety**: Markdoc schemas provide validation and IDE support
+- **Reusable patterns**: Common utilities for consistent components
 
 ### Developer Experience
 
-- **Hot Reloading**: Changes trigger immediate rebuilds
-- **Clear Logging**: Each effect reports its progress
-- **Error Isolation**: Failed effects don't crash the entire system
-- **Extensible**: Easy to add new file types and build steps
+- **Hot reloading**: Changes trigger immediate rebuilds and browser refresh
+- **Clear logging**: Each effect reports progress and errors
+- **Error isolation**: Failed builds don't crash the entire system
+- **Extensible**: Easy to add new schemas and content types
 
-## Technical Details
+### Performance
 
-### Async Computed Values
+- **Fast builds**: Bun runtime with reactive dependency tracking
+- **Efficient updates**: Only affected files are processed
+- **Small bundles**: Tree-shaking and minification
+- **Progressive enhancement**: Components work without JavaScript
 
-Async computed signals use the `UNSET` symbol pattern:
+## Migration Guide
 
-```typescript
-const computed = computed(async () => {
-  const dependency = sources.get()
-  if (dependency === UNSET) return UNSET
+### From Traditional Build Tools
 
-  // Process asynchronously
-  return await processData(dependency)
-})
-```
-
-### Effect Async Handling
-
-Effects must be synchronous, but can handle async operations:
-
-```typescript
-effect({
-  signals: [dependency],
-  ok: (data): undefined => {
-    ;(async () => {
-      await doAsyncWork(data)
-    })()
-    return undefined
-  },
-})
-```
-
-### File Watcher Implementation
-
-The file watcher uses Node.js `fs.watch` with proper path handling for cross-platform compatibility and `readdir` with `recursive: true` for initial scanning.
-
-## Migration from Traditional Build Tools
-
-This reactive system replaces:
+This reactive Markdoc system replaces:
 
 - **Webpack/Vite**: Asset bundling and development server
-- **Gulp/Grunt**: Task running and file processing
+- **MDX/Gatsby**: Markdown processing with components
 - **Custom Scripts**: Build orchestration and file watching
-- **Plugin Systems**: Complex configuration and dependency management
+- **Plugin Systems**: Complex configuration management
 
-The reactive approach provides all the same functionality with significantly less complexity and better performance characteristics.
+### Content Migration
+
+Convert existing markdown:
+
+```markdown
+<!-- Old: Raw HTML -->
+<div class="callout tip">
+  <h4>Tip</h4>
+  <p>This is a tip</p>
+</div>
+
+<!-- New: Markdoc schema -->
+{% callout class="tip" title="Tip" %}
+This is a tip
+{% /callout %}
+```
 
 ## Development Workflow
 
 ### Typical Development Session
 
-1. **Start the server**: `bun run docs-src/server/serve.ts`
+1. **Start the server**: `bun run serve:docs`
 2. **Open browser**: Navigate to `http://localhost:3000`
-3. **Edit files**: Make changes to any source files
-4. **Automatic rebuild**: Watch the console for build notifications
+3. **Edit content**: Make changes to markdown files with Markdoc syntax
+4. **Automatic rebuild**: Watch console for Markdoc processing and build notifications
 5. **Browser refresh**: HMR automatically refreshes the page
 
-### File Change Examples
+### Content Development
 
 ```bash
-# Edit a markdown file
-echo "# Updated content" >> docs-src/pages/index.md
-# → Pages effect rebuilds → Menu/sitemap update → Browser refreshes
+# Create new page
+echo '---
+title: New Page
+---
+# New Page
+{% callout class="info" %}
+This is automatically processed by Markdoc!
+{% /callout %}' > docs-src/pages/new-page.md
 
-# Edit library source
-echo "export const newFunction = () => {}" >> src/index.ts
-# → API effect regenerates docs → Pages rebuild → Browser refreshes
+# Edit carousel
+# → Markdoc processes schemas → Pages effect rebuilds → Browser refreshes
 
-# Edit styles
-echo ".new-style { color: red; }" >> docs-src/main.css
-# → CSS effect rebuilds → Service worker updates → Browser refreshes
+# Add new component schema
+# → Markdoc config updates → All content reprocesses → Browser refreshes
 ```
 
-### Debugging
+### Debugging Markdoc
 
-- **Console output**: Each effect reports its progress and errors
-- **Browser DevTools**: Check console for HMR connection status
-- **Network tab**: Verify asset caching and compression
-- **WebSocket**: Monitor `/ws` connection for HMR communication
+- **Validation errors**: Clear schema validation messages in console
+- **Transform issues**: Step-by-step transformation logging
+- **Content rendering**: Inspect generated HTML structure
+- **Schema development**: Hot reloading for schema changes
 
-### Production Build
+## Production Deployment
 
-For production deployment, run the build once without the server:
+For production deployment:
 
 ```bash
-bun run docs-src/server/build.ts
-# Generates optimized static files in ./docs/
+# Build optimized static site
+bun run build:docs
+
 # Deploy ./docs/ directory to any static host
+# - GitHub Pages
+# - Netlify
+# - Vercel
+# - AWS S3 + CloudFront
 ```
+
+The generated `./docs/` directory contains a complete static site with:
+- Optimized HTML with embedded Markdoc-processed content
+- Minified CSS and JavaScript bundles
+- Service worker for offline functionality
+- SEO-optimized sitemap and meta tags
+- Syntax-highlighted code blocks
+- Interactive components with progressive enhancement

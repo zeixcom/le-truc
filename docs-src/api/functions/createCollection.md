@@ -8,7 +8,7 @@
 
 > **createCollection**\<`S`, `E`\>(`parent`, `selector`): [`Collection`](../interfaces/Collection.md)\<`E`\>
 
-Defined in: [src/signals/collection.ts:68](https://github.com/zeixcom/le-truc/blob/30bbcb8816f11237e187c4d8786237ece7d23841/src/signals/collection.ts#L68)
+Defined in: [src/signals/collection.ts:68](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/signals/collection.ts#L68)
 
 Create a collection of elements from a parent node and a CSS selector.
 

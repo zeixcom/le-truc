@@ -66,20 +66,37 @@ export const examplesEffect = () =>
 
 						for (const path in htmlFiles) {
 							const html = htmlFiles[path]
+
+							// Only process main component HTML files (examples/component-name/component-name.html)
+							// Skip test files and other auxiliary HTML files
+							const pathParts = html.path.split('/')
+
+							if (pathParts.length < 3) {
+								continue // Skip files not in component directories
+							}
+
+							const componentName = pathParts[pathParts.length - 2] // Get directory name
+							const fileName = pathParts[pathParts.length - 1].replace(
+								/\.html$/,
+								'',
+							) // Get file name without extension
+
+							// Skip if filename doesn't match component directory name
+							if (componentName !== fileName) {
+								continue
+							}
+
 							const name = html.path.replace(/\.html$/, '')
 							const css = cssFiles[name + '.css']
 							const ts = tsFiles[name + '.ts']
 
 							const panels = await generatePanels(html, css, ts)
-							const componentName = name.split('/').pop() || name
 							const outputPath = `${EXAMPLES_DIR}/${componentName}.html`
-							return writeFileSyncSafe(
-								outputPath,
-								tabGroup(componentName, panels),
-							)
+							writeFileSyncSafe(outputPath, tabGroup(componentName, panels))
 						}
 
 						console.log('Example fragments successfully rebuilt')
+						return
 					} catch (error) {
 						console.error('Example fragments failed to rebuild:', String(error))
 					}

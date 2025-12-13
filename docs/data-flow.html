@@ -7,20 +7,20 @@
 		<meta name="description" content="Passing state, events, context" />
 		<link
 			rel="preload"
-			href="./assets/main.css?v=mj3fqrj3"
+			href="./assets/main.css?v=mj4eqmln"
 			as="style"
 		/>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=mj3fqrj3"
+			href="./assets/main.js?v=mj4eqmln"
 		/>
 		<link
 			rel="stylesheet"
-			href="./assets/main.css?v=mj3fqrj3"
+			href="./assets/main.css?v=mj4eqmln"
 		/>
 		<script
 			type="module"
-			src="./assets/main.js?v=mj3fqrj3"
+			src="./assets/main.js?v=mj4eqmln"
 		></script>
 	</head>
 	<body class="">
@@ -78,17 +78,7 @@
 					<p class="error" role="alert" aria-live="assertive"></p>
 				</card-callout>
 			</header>
-			<main id="main" class="content-grid"><section-hero>
-
-<h1 id="-data-flow">
-							<a name="-data-flow" class="anchor" href="#-data-flow">
-								<span class="permalink">🔗</span>
-								<span class="title">🔄 Data Flow</span>
-							</a>
-						</h1>
-<div>
-  <p class="lead"><strong>Learn how Le Truc components can work together seamlessly.</strong> Start with simple parent-child relationships, then explore advanced patterns like custom events and shared state. Build modular, loosely coupled components that communicate efficiently.</p>
-  <module-toc>
+			<main id="main" class="content-grid"><section-hero><h1 id="-data-flow"><a name="-data-flow" class="anchor" href="#-data-flow"><span class="permalink">🔗</span><span class="title">🔄 Data Flow</span></a></h1><div class="hero-layout"><div class="lead"><p><strong>Learn how Le Truc components can work together seamlessly.</strong> Start with simple parent-child relationships, then explore advanced patterns like custom events and shared state. Build modular, loosely coupled components that communicate efficiently.</p></div><module-toc>
 		<nav>
 			<h2>On This Page</h2>
 			<ol>
@@ -103,335 +93,360 @@
 	</li>
 			</ol>
 		</nav>
-	</module-toc>
-</div>
-</section-hero>
-
-<section>
-
-<h2 id="component-coordination">
-							<a name="component-coordination" class="anchor" href="#component-coordination">
-								<span class="permalink">🔗</span>
-								<span class="title">Component Coordination</span>
-							</a>
-						</h2>
-<p>Let&#39;s consider a <strong>product catalog</strong> where users can add items to a shopping cart. We have <strong>three independent components</strong> that work together:</p>
-<ul>
-<li><code>ModuleCatalog</code> <strong>(Parent)</strong>:<ul>
-<li><strong>Tracks all <code>SpinButton</code> components</strong> in its subtree and calculates the total count of items in the shopping cart.</li>
-<li><strong>Passes that total</strong> to a <code>BasicButton</code>.</li>
-</ul>
-</li>
-<li><code>BasicButton</code> <strong>(Child)</strong>:<ul>
-<li>Displays a <strong>badge</strong> in the top-right corner when the <code>badge</code> property is set.</li>
-<li><strong>Does not track any state</strong> – it simply renders whatever value is passed to it.</li>
-</ul>
-</li>
-<li><code>FormSpinbutton</code> <strong>(Child)</strong>:<ul>
-<li>Displays an <strong>Add to Cart</strong> button initially.</li>
-<li>When an item is added, it transforms into a <strong>stepper</strong> (increment/decrement buttons).</li>
-</ul>
-</li>
-</ul>
-<p>Although <code>BasicButton</code> and <code>FormSpinbutton</code> are completely independent, they need to work together. So <code>ModuleCatalog</code> <strong>coordinates the data flow between them</strong>.</p>
-<h3 id="parent-component-modulecatalog">
-							<a name="parent-component-modulecatalog" class="anchor" href="#parent-component-modulecatalog">
-								<span class="permalink">🔗</span>
-								<span class="title">Parent Component: ModuleCatalog</span>
-							</a>
-						</h3>
-<p>The <strong>parent component (<code>ModuleCatalog</code>) knows about its children</strong>, meaning it can <strong>read state from and pass state to</strong> them.</p>
-<p>First, we need to observe the quantities of all <code>FormSpinbutton</code> components. For this, we create a <code>Collection</code> of all children matching the <code>form-spinbutton</code> selector using the <code>all</code> function:</p>
-<p><strong>CODE_BLOCK_PLACEHOLDER_0</strong></p>
-<p>In contrast to a static <code>querySelectorAll()</code> call, the <code>Collection</code> signal returned by <code>all()</code> is reactive and updates whenever new elements are added or removed from the DOM.</p>
-<p>Then, we need to convert the total of all product quantities to a string and pass it on to the <code>BasicButton</code> component. In Le Truc we use the <code>pass()</code> function to share state with descendant components:</p>
-<p><strong>CODE_BLOCK_PLACEHOLDER_1</strong></p>
-<p>Allright, that&#39;s it!</p>
-<ul>
-<li>Whenever one of the <code>value</code> signals of a <code>&lt;form-spinbutton&gt;</code> updates, the total in the badge of <code>&lt;basic-button&gt;</code> automatically updates.</li>
-<li>No need for event listeners or manual updates!</li>
-</ul>
-<h3 id="child-component-basicbutton">
-							<a name="child-component-basicbutton" class="anchor" href="#child-component-basicbutton">
-								<span class="permalink">🔗</span>
-								<span class="title">Child Component: BasicButton</span>
-							</a>
-						</h3>
-<p>The <code>BasicButton</code> component <strong>displays a badge when needed</strong> – it does not know about any other component nor track state itself. It just exposes a reactive properties <code>badge</code> of type <code>string</code> and <code>disabled</code> of type <code>boolean</code> and has effects to react to state changes that updates the DOM subtree.</p>
-<p><strong>CODE_BLOCK_PLACEHOLDER_2</strong></p>
-<ul>
-<li>Whenever the <code>disabled</code> property is updated by a parent component, the button is disabled or enabled.</li>
-<li>Whenever the <code>badge</code> property is updated by a parent component, the badge text updates.</li>
-<li>If <code>badge</code> is an empty string, the badge indicator is hidden (via CSS).</li>
-</ul>
-<h3 id="child-component-formspinbutton">
-							<a name="child-component-formspinbutton" class="anchor" href="#child-component-formspinbutton">
-								<span class="permalink">🔗</span>
-								<span class="title">Child Component: FormSpinbutton</span>
-							</a>
-						</h3>
-<p>The <code>FormSpinbutton</code> component reacts to user interactions and exposes a reactive property <code>value</code> of type <code>number</code>. It updates its own internal DOM subtree, but doesn&#39;t know about any other component nor where the value is used.</p>
-<p><strong>CODE_BLOCK_PLACEHOLDER_3</strong></p>
-<ul>
-<li>Whenever the user clicks a button or presses a handled key, the value property is updated.</li>
-<li>The component sets hidden and disabled states of buttons and updates the text of the <code>input</code> element.</li>
-</ul>
-<h3 id="full-example">
-							<a name="full-example" class="anchor" href="#full-example">
-								<span class="permalink">🔗</span>
-								<span class="title">Full Example</span>
-							</a>
-						</h3>
-<p>Here&#39;s how everything comes together:</p>
-<ul>
-<li>Each <code>FormSpinbutton</code> tracks its own value.</li>
-<li>The <code>ModuleCatalog</code> sums all quantities and passes the total to <code>BasicButton</code>.</li>
-<li>The <code>BasicButton</code> displays the total if it&#39;s greater than zero.</li>
-</ul>
-<p><strong>No custom events are needed – state flows naturally!</strong></p>
-<module-demo>
-	<div class="preview">
-  	<module-catalog>
-  		<header>
-  			<p>Shop</p>
-  			<basic-button disabled>
-  				<button type="button" disabled>
-  					<span class="label">🛒 Shopping Cart</span>
-  					<span class="badge"></span>
-  				</button>
-  			</basic-button>
-  		</header>
-  		<ul>
-  			<li>
-  				<p>Product 1</p>
-  				<form-spinbutton>
-  					<button type="button" class="decrement" aria-label="Decrement" hidden>
-  						−
-  					</button>
-  					<input
-  						type="number"
-  						class="value"
-  						name="amount-product1"
-  						value="0"
-  						min="0"
-  						max="10"
-  						readonly
-  						disabled
-  						hidden
-  					/>
-  					<button type="button" class="increment" aria-label="Increment">
-  						<span class="zero">Add to Cart</span>
-  						<span class="other" hidden>+</span>
-  					</button>
-  				</form-spinbutton>
-  			</li>
-  			<li>
-  				<p>Product 2</p>
-  				<form-spinbutton>
-  					<button type="button" class="decrement" aria-label="Decrement" hidden>
-  						−
-  					</button>
-  					<input
-  						type="number"
-  						class="value"
-  						name="amount-product2"
-  						value="0"
-  						min="0"
-  						max="5"
-  						readonly
-  						disabled
-  						hidden
-  					/>
-  					<button type="button" class="increment" aria-label="Increment">
-  						<span class="zero">Add to Cart</span>
-  						<span class="other" hidden>+</span>
-  					</button>
-  				</form-spinbutton>
-  			</li>
-  			<li>
-  				<p>Product 3</p>
-  				<form-spinbutton>
-  					<button type="button" class="decrement" aria-label="Decrement" hidden>
-  						−
-  					</button>
-  					<input
-  						type="number"
-  						class="value"
-  						name="amount-product3"
-  						value="0"
-  						min="0"
-  						max="20"
-  						readonly
-  						disabled
-  						hidden
-  					/>
-  					<button type="button" class="increment" aria-label="Increment">
-  						<span class="zero">Add to Cart</span>
-  						<span class="other" hidden>+</span>
-  					</button>
-  				</form-spinbutton>
-  			</li>
-  		</ul>
-    </module-catalog>
-	</div>
-	<details>
-		<summary>ModuleCatalog Source Code</summary>
-		<module-lazyload src="./examples/module-catalog.html">
-			<card-callout>
-				<p class="loading" role="status" aria-live="polite">Loading...</p>
-				<p class="error" role="alert" aria-live="assertive" hidden></p>
-			</card-callout>
-			<div class="content"></div>
-		</module-lazy>
-	</details>
-	<details>
-		<summary>BasicButton Source Code</summary>
-		<module-lazyload src="./examples/basic-button.html">
-			<card-callout>
-				<p class="loading" role="status" aria-live="polite">Loading...</p>
-				<p class="error" role="alert" aria-live="assertive" hidden></p>
-			</card-callout>
-			<div class="content"></div>
-		</module-lazy>
-	</details>
-	<details>
-		<summary>FormSpinbutton Source Code</summary>
-		<module-lazyload src="./examples/form-spinbutton.html">
-			<card-callout>
-				<p class="loading" role="status" aria-live="polite">Loading...</p>
-				<p class="error" role="alert" aria-live="asserive" hidden></p>
-			</card-callout>
-			<div class="content"></div>
-		</module-lazy>
-	</details>
-</module-demo>
-
-</section>
-
-<section>
-
-<h2 id="providing-context">
-							<a name="providing-context" class="anchor" href="#providing-context">
-								<span class="permalink">🔗</span>
-								<span class="title">Providing Context</span>
-							</a>
-						</h2>
-<p>Context allows <strong>parent components to share state</strong> with any descendant components in the DOM tree, <strong>without prop drilling</strong>. This is perfect for application-wide settings like user preferences, theme data, or authentication state.</p>
-<h3 id="creating-context-keys">
-							<a name="creating-context-keys" class="anchor" href="#creating-context-keys">
-								<span class="permalink">🔗</span>
-								<span class="title">Creating Context Keys</span>
-							</a>
-						</h3>
-<p>First, define typed context keys for the values you want to share:</p>
-<p><strong>CODE_BLOCK_PLACEHOLDER_4</strong></p>
-<h3 id="provider-component">
-							<a name="provider-component" class="anchor" href="#provider-component">
-								<span class="permalink">🔗</span>
-								<span class="title">Provider Component</span>
-							</a>
-						</h3>
-<p>The <strong>provider component</strong> creates the shared state and makes it available to descendants:</p>
-<p><strong>CODE_BLOCK_PLACEHOLDER_5</strong></p>
-<h3 id="typescript-support">
-							<a name="typescript-support" class="anchor" href="#typescript-support">
-								<span class="permalink">🔗</span>
-								<span class="title">TypeScript Support</span>
-							</a>
-						</h3>
-<p>For full type safety and autocompletion, declare your contexts globally:</p>
-<p><strong>CODE_BLOCK_PLACEHOLDER_6</strong></p>
-<h3 id="usage-in-html">
-							<a name="usage-in-html" class="anchor" href="#usage-in-html">
-								<span class="permalink">🔗</span>
-								<span class="title">Usage in HTML</span>
-							</a>
-						</h3>
-<p>The provider component wraps your entire application or a section that needs shared state:</p>
-<p><strong>CODE_BLOCK_PLACEHOLDER_7</strong></p>
-<p><strong>Key Benefits:</strong></p>
-<ul>
-<li><strong>Centralized State</strong>: All user preferences managed in one place</li>
-<li><strong>Automatic Persistence</strong>: Changes automatically saved to localStorage</li>
-<li><strong>Type Safety</strong>: Full TypeScript support with autocomplete</li>
-<li><strong>Reactive Updates</strong>: All consumers automatically update when context changes</li>
-<li><strong>No Prop Drilling</strong>: Deep components access context directly</li>
-</ul>
-</section>
-
-<section>
-
-<h2 id="consuming-context">
-							<a name="consuming-context" class="anchor" href="#consuming-context">
-								<span class="permalink">🔗</span>
-								<span class="title">Consuming Context</span>
-							</a>
-						</h2>
-<p><strong>Consumer components</strong> use <code>fromContext()</code> to access shared state from ancestor providers. The context is automatically reactive - when the provider updates the context, all consumers update immediately.</p>
-<h3 id="simple-context-consumer">
-							<a name="simple-context-consumer" class="anchor" href="#simple-context-consumer">
-								<span class="permalink">🔗</span>
-								<span class="title">Simple Context Consumer</span>
-							</a>
-						</h3>
-<p>Here&#39;s a theme toggle that consumes and updates the user theme context:</p>
-<p><strong>CODE_BLOCK_PLACEHOLDER_8</strong></p>
-<h3 id="complex-context-consumer">
-							<a name="complex-context-consumer" class="anchor" href="#complex-context-consumer">
-								<span class="permalink">🔗</span>
-								<span class="title">Complex Context Consumer</span>
-							</a>
-						</h3>
-<p>A settings panel that consumes and modifies user settings:</p>
-<p><strong>CODE_BLOCK_PLACEHOLDER_9</strong></p>
-<h3 id="context-with-computed-values">
-							<a name="context-with-computed-values" class="anchor" href="#context-with-computed-values">
-								<span class="permalink">🔗</span>
-								<span class="title">Context with Computed Values</span>
-							</a>
-						</h3>
-<p>You can also use context to provide computed values derived from multiple sources:</p>
-<p><strong>CODE_BLOCK_PLACEHOLDER_10</strong></p>
-<h3 id="context-with-fallback-functions">
-							<a name="context-with-fallback-functions" class="anchor" href="#context-with-fallback-functions">
-								<span class="permalink">🔗</span>
-								<span class="title">Context with Fallback Functions</span>
-							</a>
-						</h3>
-<p>For more complex fallback logic, use a function:</p>
-<p><strong>CODE_BLOCK_PLACEHOLDER_11</strong></p>
-<h3 id="benefits-of-context">
-							<a name="benefits-of-context" class="anchor" href="#benefits-of-context">
-								<span class="permalink">🔗</span>
-								<span class="title">Benefits of Context</span>
-							</a>
-						</h3>
-<ul>
-<li><strong>Automatic Updates</strong>: All consumers react when context changes</li>
-<li><strong>Type Safety</strong>: Full TypeScript support with proper typing</li>
-<li><strong>Fallback Support</strong>: Graceful degradation when context is unavailable</li>
-<li><strong>Performance</strong>: Only components that use changed context re-render</li>
-<li><strong>Clean Architecture</strong>: Eliminates prop drilling and tight coupling</li>
-</ul>
-<p><strong>When to Use Context:</strong></p>
-<ul>
-<li><strong>Application State</strong>: User preferences, authentication, theme</li>
-<li><strong>Configuration</strong>: API endpoints, feature flags, environment settings</li>
-<li><strong>Shared Resources</strong>: Database connections, cache instances</li>
-<li><strong>Cross-cutting Concerns</strong>: Logging, analytics, error handling</li>
-</ul>
-</section>
-
-<section>
-
-<h2 id="next-steps">
-							<a name="next-steps" class="anchor" href="#next-steps">
-								<span class="permalink">🔗</span>
-								<span class="title">Next Steps</span>
-							</a>
-						</h2>
-</section>
-</main>
+	</module-toc></div></section-hero><section><h2 id="component-coordination"><a name="component-coordination" class="anchor" href="#component-coordination"><span class="permalink">🔗</span><span class="title">Component Coordination</span></a></h2><p>Let's consider a <strong>product catalog</strong> where users can add items to a shopping cart. We have <strong>three independent components</strong> that work together:</p><ul><li><code>ModuleCatalog</code> <strong>(Parent)</strong>:<ul><li><strong>Tracks all <code>SpinButton</code> components</strong> in its subtree and calculates the total count of items in the shopping cart.</li><li><strong>Passes that total</strong> to a <code>BasicButton</code>.</li></ul></li><li><code>BasicButton</code> <strong>(Child)</strong>:<ul><li>Displays a <strong>badge</strong> in the top-right corner when the <code>badge</code> property is set.</li><li><strong>Does not track any state</strong> – it simply renders whatever value is passed to it.</li></ul></li><li><code>FormSpinbutton</code> <strong>(Child)</strong>:<ul><li>Displays an <strong>Add to Cart</strong> button initially.</li><li>When an item is added, it transforms into a <strong>stepper</strong> (increment/decrement buttons).</li></ul></li></ul><p>Although <code>BasicButton</code> and <code>FormSpinbutton</code> are completely independent, they need to work together. So <code>ModuleCatalog</code> <strong>coordinates the data flow between them</strong>.</p><h3 id="parent-component-modulecatalog"><a name="parent-component-modulecatalog" class="anchor" href="#parent-component-modulecatalog"><span class="permalink">🔗</span><span class="title">Parent Component: ModuleCatalog</span></a></h3><p>The <strong>parent component (<code>ModuleCatalog</code>) knows about its children</strong>, meaning it can <strong>read state from and pass state to</strong> them.</p><p>First, we need to observe the quantities of all <code>FormSpinbutton</code> components. For this, we create a <code>Collection</code> of all children matching the <code>form-spinbutton</code> selector using the <code>all</code> function:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="file">module-catalog.js</span><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">	'module-catalog'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{},</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		button: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'basic-button'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a button to go go the Shopping Cart'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		spinbuttons: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'form-spinbutton'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add spinbutton components to calculate sum from.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">	ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#88846F">		// Component setup</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><p>In contrast to a static <code>querySelectorAll()</code> call, the <code>Collection</code> signal returned by <code>all()</code> is reactive and updates whenever new elements are added or removed from the DOM.</p><p>Then, we need to convert the total of all product quantities to a string and pass it on to the <code>BasicButton</code> component. In Le Truc we use the <code>pass()</code> function to share state with descendant components:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="file">module-catalog.js</span><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">	'module-catalog'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{},</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		button: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'basic-button'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a button to go go the Shopping Cart'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		spinbuttons: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'form-spinbutton'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add spinbutton components to calculate sum from.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">spinbuttons</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> total </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createComputed</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">			spinbuttons.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().</span><span style="color:#A6E22E">reduce</span><span style="color:#F8F8F2">((</span><span style="color:#FD971F;font-style:italic">sum</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> sum </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> item.value, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			button: [</span></span>
+<span class="line"><span style="color:#A6E22E">				pass</span><span style="color:#F8F8F2">({</span></span>
+<span class="line"><span style="color:#A6E22E">					disabled</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">total.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#A6E22E">					badge</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (total.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> ?</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(total.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()) </span><span style="color:#F92672">:</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">				}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			],</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><p>Allright, that's it!</p><ul><li>Whenever one of the <code>value</code> signals of a <code>&lt;form-spinbutton&gt;</code> updates, the total in the badge of <code>&lt;basic-button&gt;</code> automatically updates.</li><li>No need for event listeners or manual updates!</li></ul><h3 id="child-component-basicbutton"><a name="child-component-basicbutton" class="anchor" href="#child-component-basicbutton"><span class="permalink">🔗</span><span class="title">Child Component: BasicButton</span></a></h3><p>The <code>BasicButton</code> component <strong>displays a badge when needed</strong> – it does not know about any other component nor track state itself. It just exposes a reactive properties <code>badge</code> of type <code>string</code> and <code>disabled</code> of type <code>boolean</code> and has effects to react to state changes that updates the DOM subtree.</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="file">basic-button.js</span><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">	'basic-button'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{</span></span>
+<span class="line"><span style="color:#F8F8F2">		disabled: </span><span style="color:#A6E22E">asBoolean</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">		badge: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.badge?.textContent </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		button: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a native button as descendant.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		badge: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'span.badge'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">	() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		button: [</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'disabled'</span><span style="color:#F8F8F2">)],</span></span>
+<span class="line"><span style="color:#F8F8F2">		badge: [</span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'badge'</span><span style="color:#F8F8F2">)],</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><ul><li>Whenever the <code>disabled</code> property is updated by a parent component, the button is disabled or enabled.</li><li>Whenever the <code>badge</code> property is updated by a parent component, the badge text updates.</li><li>If <code>badge</code> is an empty string, the badge indicator is hidden (via CSS).</li></ul><h3 id="child-component-formspinbutton"><a name="child-component-formspinbutton" class="anchor" href="#child-component-formspinbutton"><span class="permalink">🔗</span><span class="title">Child Component: FormSpinbutton</span></a></h3><p>The <code>FormSpinbutton</code> component reacts to user interactions and exposes a reactive property <code>value</code> of type <code>number</code>. It updates its own internal DOM subtree, but doesn't know about any other component nor where the value is used.</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="file">form-spinbutton.js</span><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">	'form-spinbutton'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{</span></span>
+<span class="line"><span style="color:#F8F8F2">		value: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#A6E22E">			read</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.input.value, </span><span style="color:#A6E22E">asInteger</span><span style="color:#F8F8F2">()),</span></span>
+<span class="line"><span style="color:#E6DB74">			'controls'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			{</span></span>
+<span class="line"><span style="color:#A6E22E">				change</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">prev</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">(target </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLInputElement</span><span style="color:#F8F8F2">)) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> prev</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#A6E22E"> resetTo</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">next</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">						target.value </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(next)</span></span>
+<span class="line"><span style="color:#F8F8F2">						target.</span><span style="color:#A6E22E">checkValidity</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">						return</span><span style="color:#F8F8F2"> next</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> next </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> Number</span><span style="color:#F8F8F2">(target.value)</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">Number.</span><span style="color:#A6E22E">isInteger</span><span style="color:#F8F8F2">(next)) </span><span style="color:#F92672">return</span><span style="color:#A6E22E"> resetTo</span><span style="color:#F8F8F2">(prev)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> clamped </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Math.</span><span style="color:#A6E22E">min</span><span style="color:#F8F8F2">(ui.host.max, Math.</span><span style="color:#A6E22E">max</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, next))</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (next </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> clamped) </span><span style="color:#F92672">return</span><span style="color:#A6E22E"> resetTo</span><span style="color:#F8F8F2">(clamped)</span></span>
+<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> clamped</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#A6E22E">				click</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">prev</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">					prev </span><span style="color:#F92672">+</span></span>
+<span class="line"><span style="color:#F8F8F2">					(target.classList.</span><span style="color:#A6E22E">contains</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'decrement'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">						?</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span></span>
+<span class="line"><span style="color:#F92672">						:</span><span style="color:#F8F8F2"> target.classList.</span><span style="color:#A6E22E">contains</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'increment'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">							?</span><span style="color:#AE81FF"> 1</span></span>
+<span class="line"><span style="color:#F92672">							:</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#A6E22E">				keydown</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">event</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">prev</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> { key } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> event</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> ([</span><span style="color:#E6DB74">'ArrowUp'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'ArrowDown'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'-'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'+'</span><span style="color:#F8F8F2">].</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(key)) {</span></span>
+<span class="line"><span style="color:#F8F8F2">						event.</span><span style="color:#A6E22E">stopPropagation</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">						event.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> next </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> prev </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowDown'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> '-'</span><span style="color:#F92672"> ?</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F92672"> :</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">						return</span><span style="color:#F8F8F2"> Math.</span><span style="color:#A6E22E">min</span><span style="color:#F8F8F2">(ui.host.max, Math.</span><span style="color:#A6E22E">max</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, next))</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#F8F8F2">			},</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">		max: </span><span style="color:#A6E22E">read</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.input.max, </span><span style="color:#A6E22E">asInteger</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">10</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		controls: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'button, input:not([disabled])'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">		increment: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'button.increment'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add a native button to increment the value'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">		decrement: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'button.decrement'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add a native button to decrement the value'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">		input: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input.value'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a native input to display the value'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		zero: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.zero'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		other: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.other'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">increment</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">zero</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> nonZero </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createComputed</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.value </span><span style="color:#F92672">!==</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> incrementLabel </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> increment.ariaLabel </span><span style="color:#F92672">||</span><span style="color:#E6DB74"> 'Increment'</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> ariaLabel </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createComputed</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">			nonZero.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">||</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">zero </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> incrementLabel </span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> zero.textContent,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			input: [</span></span>
+<span class="line"><span style="color:#A6E22E">				show</span><span style="color:#F8F8F2">(nonZero),</span></span>
+<span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'max'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(host.max)),</span></span>
+<span class="line"><span style="color:#F8F8F2">			],</span></span>
+<span class="line"><span style="color:#F8F8F2">			decrement: [</span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(nonZero)],</span></span>
+<span class="line"><span style="color:#F8F8F2">			increment: [</span></span>
+<span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'disabled'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.value </span><span style="color:#F92672">>=</span><span style="color:#F8F8F2"> host.max),</span></span>
+<span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'ariaLabel'</span><span style="color:#F8F8F2">, ariaLabel),</span></span>
+<span class="line"><span style="color:#F8F8F2">			],</span></span>
+<span class="line"><span style="color:#F8F8F2">			zero: [</span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">nonZero.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">())],</span></span>
+<span class="line"><span style="color:#F8F8F2">			other: [</span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(nonZero)],</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><ul><li>Whenever the user clicks a button or presses a handled key, the value property is updated.</li><li>The component sets hidden and disabled states of buttons and updates the text of the <code>input</code> element.</li></ul><h3 id="full-example"><a name="full-example" class="anchor" href="#full-example"><span class="permalink">🔗</span><span class="title">Full Example</span></a></h3><p>Here's how everything comes together:</p><ul><li>Each <code>FormSpinbutton</code> tracks its own value.</li><li>The <code>ModuleCatalog</code> sums all quantities and passes the total to <code>BasicButton</code>.</li><li>The <code>BasicButton</code> displays the total if it's greater than zero.</li></ul><p><strong>No custom events are needed – state flows naturally!</strong></p><module-demo><div class="preview"><module-catalog><header><p>Shop</p><basic-button disabled><button type="button" disabled><span class="label">🛒 Shopping Cart</span><span class="badge"></span></button></basic-button></header><ul><li><p>Product 1</p><form-spinbutton><button type="button" class="decrement" aria-label="Decrement" hidden> − </button><input type="number" class="value" name="amount-product1" value="0" min="0" max="10" readonly disabled hidden /><button type="button" class="increment" aria-label="Increment"><span class="zero">Add to Cart</span><span class="other" hidden>+</span></button></form-spinbutton></li><li><p>Product 2</p><form-spinbutton><button type="button" class="decrement" aria-label="Decrement" hidden> − </button><input type="number" class="value" name="amount-product2" value="0" min="0" max="5" readonly disabled hidden /><button type="button" class="increment" aria-label="Increment"><span class="zero">Add to Cart</span><span class="other" hidden>+</span></button></form-spinbutton></li><li><p>Product 3</p><form-spinbutton><button type="button" class="decrement" aria-label="Decrement" hidden> − </button><input type="number" class="value" name="amount-product3" value="0" min="0" max="20" readonly disabled hidden /><button type="button" class="increment" aria-label="Increment"><span class="zero">Add to Cart</span><span class="other" hidden>+</span></button></form-spinbutton></li></ul></module-catalog></div><details title="ModuleCatalog Source Code" src="./examples/module-catalog.html"><summary>ModuleCatalog Source Code</summary><module-lazyload src="./examples/module-catalog.html"><card-callout><p class="loading" role="status" aria-live="polite">Loading...</p><p class="error" role="alert" aria-live="assertive" hidden="true"></p></card-callout><div class="content"></div></module-lazyload></details><details title="BasicButton Source Code" src="./examples/basic-button.html"><summary>BasicButton Source Code</summary><module-lazyload src="./examples/basic-button.html"><card-callout><p class="loading" role="status" aria-live="polite">Loading...</p><p class="error" role="alert" aria-live="assertive" hidden="true"></p></card-callout><div class="content"></div></module-lazyload></details><details title="FormSpinbutton Source Code" src="./examples/form-spinbutton.html"><summary>FormSpinbutton Source Code</summary><module-lazyload src="./examples/form-spinbutton.html"><card-callout><p class="loading" role="status" aria-live="polite">Loading...</p><p class="error" role="alert" aria-live="assertive" hidden="true"></p></card-callout><div class="content"></div></module-lazyload></details></module-demo></section><section><h2 id="providing-context"><a name="providing-context" class="anchor" href="#providing-context"><span class="permalink">🔗</span><span class="title">Providing Context</span></a></h2><p>Context allows <strong>parent components to share state</strong> with any descendant components in the DOM tree, <strong>without prop drilling</strong>. This is perfect for application-wide settings like user preferences, theme data, or authentication state.</p><h3 id="creating-context-keys"><a name="creating-context-keys" class="anchor" href="#creating-context-keys"><span class="permalink">🔗</span><span class="title">Creating Context Keys</span></a></h3><p>First, define typed context keys for the values you want to share:</p><module-codeblock language="ts" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">ts</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#88846F">// Define context keys with types</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> USER_THEME </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'user-theme'</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Context</span><span style="color:#F8F8F2">&#x3C;</span></span>
+<span class="line"><span style="color:#E6DB74">  'user-theme'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span>  </span><span style="color:#A6E22E;text-decoration:underline">State</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#E6DB74">'light'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'dark'</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> USER_LANGUAGE </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'user-language'</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Context</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#E6DB74">'user-language'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">State</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#66D9EF;font-style:italic">string</span><span style="color:#F8F8F2">>></span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> USER_SETTINGS </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'user-settings'</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Context</span><span style="color:#F8F8F2">&#x3C;</span></span>
+<span class="line"><span style="color:#E6DB74">  'user-settings'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span>  </span><span style="color:#A6E22E;text-decoration:underline">State</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">UserSettings</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">// Type for user settings</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">UserSettings</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">  notifications</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
+<span class="line"><span style="color:#F8F8F2">  autoSave</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
+<span class="line"><span style="color:#F8F8F2">  fontSize</span><span style="color:#F92672">:</span><span style="color:#E6DB74"> 'small'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'medium'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'large'</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h3 id="provider-component"><a name="provider-component" class="anchor" href="#provider-component"><span class="permalink">🔗</span><span class="title">Provider Component</span></a></h3><p>The <strong>provider component</strong> creates the shared state and makes it available to descendants:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">component</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">  'user-preferences'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">  {</span></span>
+<span class="line"><span style="color:#88846F">    // Create reactive state for each context</span></span>
+<span class="line"><span style="color:#F8F8F2">    [USER_THEME]: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">      const</span><span style="color:#F8F8F2"> savedTheme </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> localStorage.</span><span style="color:#A6E22E">getItem</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'theme'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">||</span><span style="color:#E6DB74"> 'light'</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">      const</span><span style="color:#F8F8F2"> theme </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> state</span><span style="color:#F8F8F2">(savedTheme)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">      // Persist changes to localStorage</span></span>
+<span class="line"><span style="color:#F8F8F2">      theme.</span><span style="color:#A6E22E">subscribe</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">        localStorage.</span><span style="color:#A6E22E">setItem</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'theme'</span><span style="color:#F8F8F2">, value)</span></span>
+<span class="line"><span style="color:#F8F8F2">        document.documentElement.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'data-theme'</span><span style="color:#F8F8F2">, value)</span></span>
+<span class="line"><span style="color:#F8F8F2">      })</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">      return</span><span style="color:#F8F8F2"> theme</span></span>
+<span class="line"><span style="color:#F8F8F2">    },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">    [USER_LANGUAGE]: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">      const</span><span style="color:#F8F8F2"> savedLang </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> localStorage.</span><span style="color:#A6E22E">getItem</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'language'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">||</span><span style="color:#E6DB74"> 'en'</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">      const</span><span style="color:#F8F8F2"> language </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> state</span><span style="color:#F8F8F2">(savedLang)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">      language.</span><span style="color:#A6E22E">subscribe</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">        localStorage.</span><span style="color:#A6E22E">setItem</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'language'</span><span style="color:#F8F8F2">, value)</span></span>
+<span class="line"><span style="color:#F8F8F2">        document.documentElement.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'lang'</span><span style="color:#F8F8F2">, value)</span></span>
+<span class="line"><span style="color:#F8F8F2">      })</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">      return</span><span style="color:#F8F8F2"> language</span></span>
+<span class="line"><span style="color:#F8F8F2">    },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">    [USER_SETTINGS]: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">      const</span><span style="color:#F8F8F2"> defaultSettings </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">        notifications: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">        autoSave: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">        fontSize: </span><span style="color:#E6DB74">'medium'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">      }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">      const</span><span style="color:#F8F8F2"> saved </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> localStorage.</span><span style="color:#A6E22E">getItem</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'userSettings'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">      const</span><span style="color:#F8F8F2"> initial </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> saved </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> JSON.</span><span style="color:#A6E22E">parse</span><span style="color:#F8F8F2">(saved) </span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> defaultSettings</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">      const</span><span style="color:#F8F8F2"> settings </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> state</span><span style="color:#F8F8F2">(initial)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">      settings.</span><span style="color:#A6E22E">subscribe</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">        localStorage.</span><span style="color:#A6E22E">setItem</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'userSettings'</span><span style="color:#F8F8F2">, JSON.</span><span style="color:#A6E22E">stringify</span><span style="color:#F8F8F2">(value))</span></span>
+<span class="line"><span style="color:#F8F8F2">      })</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">      return</span><span style="color:#F8F8F2"> settings</span></span>
+<span class="line"><span style="color:#F8F8F2">    },</span></span>
+<span class="line"><span style="color:#F8F8F2">  },</span></span>
+<span class="line"><span style="color:#F8F8F2">  () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#88846F">    // Provide all contexts to descendant components</span></span>
+<span class="line"><span style="color:#A6E22E">    provideContexts</span><span style="color:#F8F8F2">([USER_THEME, USER_LANGUAGE, USER_SETTINGS]),</span></span>
+<span class="line"><span style="color:#F8F8F2">  ],</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h3 id="typescript-support"><a name="typescript-support" class="anchor" href="#typescript-support"><span class="permalink">🔗</span><span class="title">TypeScript Support</span></a></h3><p>For full type safety and autocompletion, declare your contexts globally:</p><module-codeblock language="ts" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">ts</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">UserPreferencesProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">  'user-theme'</span><span style="color:#F92672">:</span><span style="color:#E6DB74"> 'light'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'dark'</span></span>
+<span class="line"><span style="color:#E6DB74">  'user-language'</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#E6DB74">  'user-settings'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">UserSettings</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">  interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">    'user-preferences'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">UserPreferencesProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">  }</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h3 id="usage-in-html"><a name="usage-in-html" class="anchor" href="#usage-in-html"><span class="permalink">🔗</span><span class="title">Usage in HTML</span></a></h3><p>The provider component wraps your entire application or a section that needs shared state:</p><module-codeblock language="html" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">html</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">user-preferences</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">  &#x3C;</span><span style="color:#F92672">header</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">    &#x3C;</span><span style="color:#F92672">theme-toggle</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">theme-toggle</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">    &#x3C;</span><span style="color:#F92672">language-selector</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">language-selector</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">  &#x3C;/</span><span style="color:#F92672">header</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">  &#x3C;</span><span style="color:#F92672">main</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">    &#x3C;</span><span style="color:#F92672">settings-panel</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">settings-panel</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">    &#x3C;</span><span style="color:#F92672">content-area</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">content-area</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">  &#x3C;/</span><span style="color:#F92672">main</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">user-preferences</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><p><strong>Key Benefits:</strong></p><ul><li><strong>Centralized State</strong>: All user preferences managed in one place</li><li><strong>Automatic Persistence</strong>: Changes automatically saved to localStorage</li><li><strong>Type Safety</strong>: Full TypeScript support with autocomplete</li><li><strong>Reactive Updates</strong>: All consumers automatically update when context changes</li><li><strong>No Prop Drilling</strong>: Deep components access context directly</li></ul></section><section><h2 id="consuming-context"><a name="consuming-context" class="anchor" href="#consuming-context"><span class="permalink">🔗</span><span class="title">Consuming Context</span></a></h2><p><strong>Consumer components</strong> use <code>fromContext()</code> to access shared state from ancestor providers. The context is automatically reactive - when the provider updates the context, all consumers update immediately.</p><h3 id="simple-context-consumer"><a name="simple-context-consumer" class="anchor" href="#simple-context-consumer"><span class="permalink">🔗</span><span class="title">Simple Context Consumer</span></a></h3><p>Here's a theme toggle that consumes and updates the user theme context:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">component</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">  'theme-toggle'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">  {</span></span>
+<span class="line"><span style="color:#88846F">    // Consume the theme context with fallback</span></span>
+<span class="line"><span style="color:#F8F8F2">    theme: </span><span style="color:#A6E22E">fromContext</span><span style="color:#F8F8F2">(USER_THEME, </span><span style="color:#E6DB74">'light'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">  },</span></span>
+<span class="line"><span style="color:#F8F8F2">  (</span><span style="color:#FD971F;font-style:italic">el</span><span style="color:#F8F8F2">, { </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">    first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button'</span><span style="color:#F8F8F2">, [</span></span>
+<span class="line"><span style="color:#A6E22E">      setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (el.theme </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'light'</span><span style="color:#F92672"> ?</span><span style="color:#E6DB74"> '🌙 Dark'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> '☀️ Light'</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#A6E22E">      setProperty</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">        'ariaLabel'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">        () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#E6DB74"> `Switch to </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">el.theme </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'light'</span><span style="color:#F92672"> ?</span><span style="color:#E6DB74"> 'dark'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'light'</span><span style="color:#F92672">}</span><span style="color:#E6DB74"> theme`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">      ),</span></span>
+<span class="line"><span style="color:#A6E22E">      on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#88846F">        // Update the context - all consumers will react</span></span>
+<span class="line"><span style="color:#F8F8F2">        el.theme </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> el.theme </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'light'</span><span style="color:#F92672"> ?</span><span style="color:#E6DB74"> 'dark'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'light'</span></span>
+<span class="line"><span style="color:#F8F8F2">      }),</span></span>
+<span class="line"><span style="color:#F8F8F2">    ]),</span></span>
+<span class="line"><span style="color:#F8F8F2">  ],</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h3 id="complex-context-consumer"><a name="complex-context-consumer" class="anchor" href="#complex-context-consumer"><span class="permalink">🔗</span><span class="title">Complex Context Consumer</span></a></h3><p>A settings panel that consumes and modifies user settings:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">component</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">  'settings-panel'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">  {</span></span>
+<span class="line"><span style="color:#88846F">    // Consume multiple contexts</span></span>
+<span class="line"><span style="color:#F8F8F2">    theme: </span><span style="color:#A6E22E">fromContext</span><span style="color:#F8F8F2">(USER_THEME, </span><span style="color:#E6DB74">'light'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">    language: </span><span style="color:#A6E22E">fromContext</span><span style="color:#F8F8F2">(USER_LANGUAGE, </span><span style="color:#E6DB74">'en'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">    settings: </span><span style="color:#A6E22E">fromContext</span><span style="color:#F8F8F2">(USER_SETTINGS, {</span></span>
+<span class="line"><span style="color:#F8F8F2">      notifications: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">      autoSave: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">      fontSize: </span><span style="color:#E6DB74">'medium'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">    }),</span></span>
+<span class="line"><span style="color:#F8F8F2">  },</span></span>
+<span class="line"><span style="color:#F8F8F2">  (</span><span style="color:#FD971F;font-style:italic">el</span><span style="color:#F8F8F2">, { </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">    return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#88846F">      // Theme section</span></span>
+<span class="line"><span style="color:#A6E22E">      first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.theme-setting'</span><span style="color:#F8F8F2">, [</span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#E6DB74"> `Current theme: </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">el.theme</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">)]),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">      first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.theme-buttons button[data-theme="light"]'</span><span style="color:#F8F8F2">, [</span></span>
+<span class="line"><span style="color:#A6E22E">        toggleClass</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'active'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> el.theme </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'light'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#A6E22E">        on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">          el.theme </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'light'</span></span>
+<span class="line"><span style="color:#F8F8F2">        }),</span></span>
+<span class="line"><span style="color:#F8F8F2">      ]),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">      first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.theme-buttons button[data-theme="dark"]'</span><span style="color:#F8F8F2">, [</span></span>
+<span class="line"><span style="color:#A6E22E">        toggleClass</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'active'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> el.theme </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'dark'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#A6E22E">        on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">          el.theme </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'dark'</span></span>
+<span class="line"><span style="color:#F8F8F2">        }),</span></span>
+<span class="line"><span style="color:#F8F8F2">      ]),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">      // Language selection</span></span>
+<span class="line"><span style="color:#A6E22E">      first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'select[name="language"]'</span><span style="color:#F8F8F2">, [</span></span>
+<span class="line"><span style="color:#A6E22E">        setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'language'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#A6E22E">        on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">          el.language </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> e.target.value</span></span>
+<span class="line"><span style="color:#F8F8F2">        }),</span></span>
+<span class="line"><span style="color:#F8F8F2">      ]),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">      // Settings toggles</span></span>
+<span class="line"><span style="color:#A6E22E">      first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input[name="notifications"]'</span><span style="color:#F8F8F2">, [</span></span>
+<span class="line"><span style="color:#A6E22E">        setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'checked'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> el.settings.notifications),</span></span>
+<span class="line"><span style="color:#A6E22E">        on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">          el.settings </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">            ...</span><span style="color:#F8F8F2">el.settings,</span></span>
+<span class="line"><span style="color:#F8F8F2">            notifications: e.target.checked,</span></span>
+<span class="line"><span style="color:#F8F8F2">          }</span></span>
+<span class="line"><span style="color:#F8F8F2">        }),</span></span>
+<span class="line"><span style="color:#F8F8F2">      ]),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">      first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input[name="autoSave"]'</span><span style="color:#F8F8F2">, [</span></span>
+<span class="line"><span style="color:#A6E22E">        setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'checked'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> el.settings.autoSave),</span></span>
+<span class="line"><span style="color:#A6E22E">        on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">          el.settings </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">            ...</span><span style="color:#F8F8F2">el.settings,</span></span>
+<span class="line"><span style="color:#F8F8F2">            autoSave: e.target.checked,</span></span>
+<span class="line"><span style="color:#F8F8F2">          }</span></span>
+<span class="line"><span style="color:#F8F8F2">        }),</span></span>
+<span class="line"><span style="color:#F8F8F2">      ]),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">      // Font size selector</span></span>
+<span class="line"><span style="color:#A6E22E">      all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input[name="fontSize"]'</span><span style="color:#F8F8F2">, [</span></span>
+<span class="line"><span style="color:#A6E22E">        setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'checked'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> el.settings.fontSize </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> target.value),</span></span>
+<span class="line"><span style="color:#A6E22E">        on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">          el.settings </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">            ...</span><span style="color:#F8F8F2">el.settings,</span></span>
+<span class="line"><span style="color:#F8F8F2">            fontSize: e.target.value,</span></span>
+<span class="line"><span style="color:#F8F8F2">          }</span></span>
+<span class="line"><span style="color:#F8F8F2">        }),</span></span>
+<span class="line"><span style="color:#F8F8F2">      ]),</span></span>
+<span class="line"><span style="color:#F8F8F2">    ]</span></span>
+<span class="line"><span style="color:#F8F8F2">  },</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h3 id="context-with-computed-values"><a name="context-with-computed-values" class="anchor" href="#context-with-computed-values"><span class="permalink">🔗</span><span class="title">Context with Computed Values</span></a></h3><p>You can also use context to provide computed values derived from multiple sources:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">component</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">  'user-status'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">  {</span></span>
+<span class="line"><span style="color:#F8F8F2">    theme: </span><span style="color:#A6E22E">fromContext</span><span style="color:#F8F8F2">(USER_THEME, </span><span style="color:#E6DB74">'light'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">    settings: </span><span style="color:#A6E22E">fromContext</span><span style="color:#F8F8F2">(USER_SETTINGS, { fontSize: </span><span style="color:#E6DB74">'medium'</span><span style="color:#F8F8F2"> }),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">    // Computed property based on context</span></span>
+<span class="line"><span style="color:#A6E22E">    statusMessage</span><span style="color:#F8F8F2">: </span><span style="color:#FD971F;font-style:italic">el</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
+<span class="line"><span style="color:#E6DB74">      `Theme: </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">el.theme</span><span style="color:#F92672">}</span><span style="color:#E6DB74">, Font: </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">el.settings.fontSize</span><span style="color:#F92672">}</span><span style="color:#E6DB74">, Notifications: </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">el.settings.notifications </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'on'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'off'</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">  },</span></span>
+<span class="line"><span style="color:#F8F8F2">  (</span><span style="color:#FD971F;font-style:italic">el</span><span style="color:#F8F8F2">, { </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> [</span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.status'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'statusMessage'</span><span style="color:#F8F8F2">))],</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h3 id="context-with-fallback-functions"><a name="context-with-fallback-functions" class="anchor" href="#context-with-fallback-functions"><span class="permalink">🔗</span><span class="title">Context with Fallback Functions</span></a></h3><p>For more complex fallback logic, use a function:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">component</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">  'localized-content'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">  {</span></span>
+<span class="line"><span style="color:#F8F8F2">    language: </span><span style="color:#A6E22E">fromContext</span><span style="color:#F8F8F2">(USER_LANGUAGE, </span><span style="color:#FD971F;font-style:italic">el</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#88846F">      // Fallback logic: detect browser language or use 'en'</span></span>
+<span class="line"><span style="color:#F92672">      return</span><span style="color:#F8F8F2"> navigator.language.</span><span style="color:#A6E22E">split</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'-'</span><span style="color:#F8F8F2">)[</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">] </span><span style="color:#F92672">||</span><span style="color:#E6DB74"> 'en'</span></span>
+<span class="line"><span style="color:#F8F8F2">    }),</span></span>
+<span class="line"><span style="color:#F8F8F2">  },</span></span>
+<span class="line"><span style="color:#F8F8F2">  (</span><span style="color:#FD971F;font-style:italic">el</span><span style="color:#F8F8F2">, { </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">    first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">      '.greeting'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#A6E22E">      setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        const</span><span style="color:#F8F8F2"> greetings </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">          en: </span><span style="color:#E6DB74">'Hello!'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">          es: </span><span style="color:#E6DB74">'¡Hola!'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">          fr: </span><span style="color:#E6DB74">'Bonjour!'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">          de: </span><span style="color:#E6DB74">'Hallo!'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#F92672">        return</span><span style="color:#F8F8F2"> greetings[el.language] </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> greetings.en</span></span>
+<span class="line"><span style="color:#F8F8F2">      }),</span></span>
+<span class="line"><span style="color:#F8F8F2">    ),</span></span>
+<span class="line"><span style="color:#F8F8F2">  ],</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h3 id="benefits-of-context"><a name="benefits-of-context" class="anchor" href="#benefits-of-context"><span class="permalink">🔗</span><span class="title">Benefits of Context</span></a></h3><ul><li><strong>Automatic Updates</strong>: All consumers react when context changes</li><li><strong>Type Safety</strong>: Full TypeScript support with proper typing</li><li><strong>Fallback Support</strong>: Graceful degradation when context is unavailable</li><li><strong>Performance</strong>: Only components that use changed context re-render</li><li><strong>Clean Architecture</strong>: Eliminates prop drilling and tight coupling</li></ul><p><strong>When to Use Context:</strong></p><ul><li><strong>Application State</strong>: User preferences, authentication, theme</li><li><strong>Configuration</strong>: API endpoints, feature flags, environment settings</li><li><strong>Shared Resources</strong>: Database connections, cache instances</li><li><strong>Cross-cutting Concerns</strong>: Logging, analytics, error handling</li></ul></section><section><h2 id="next-steps"><a name="next-steps" class="anchor" href="#next-steps"><span class="permalink">🔗</span><span class="title">Next Steps</span></a></h2></section></main>
 			<footer class="content-grid">
 				<div class="content">
 					<h2 class="visually-hidden">Footer</h2>

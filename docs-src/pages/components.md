@@ -4,18 +4,13 @@ emoji: '🏗️'
 description: 'Anatomy, lifecycle, signals, effects'
 ---
 
-<section-hero>
-
+{% hero %}
 # 🏗️ Components
 
-<div>
-  <p class="lead"><strong>Create lightweight, self-contained Web Components with built-in reactivity</strong>. Le Truc lets you define custom elements that manage state efficiently, update the DOM automatically, and enhance server-rendered pages without an SPA framework.</p>
-  {{ toc }}
-</div>
-</section-hero>
+**Create lightweight, self-contained Web Components with built-in reactivity**. Le Truc lets you define custom elements that manage state efficiently, update the DOM automatically, and enhance server-rendered pages without an SPA framework.
+{% /hero %}
 
-<section>
-
+{% section %}
 ## Defining a Component
 
 Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built-in state management and reactive updates**.
@@ -125,10 +120,9 @@ Characteristics of effects:
 
 The bundled effects `on()` and `setText()` in this case are partially applied functions that connect to component properties and the target element and return the appropriate cleanup function.
 
-</section>
+{% /section %}
 
-<section>
-
+{% section %}
 ## Component Lifecycle
 
 Le Truc manages the **Web Component lifecycle** from creation to removal. Here's what happens.
@@ -226,23 +220,21 @@ defineComponent(
 )
 ```
 
-<card-callout class="caution">
-
+{% callout class="caution" %}
 **Careful**: Attributes **may not be present** on the element or **parsing to the desired type may fail**. To ensure **non-nullability** of signals, Le Truc falls back to neutral defaults if no fallback value is provided:
 
 - `""` (empty string) for `string`
 - `0` for `number`
 - `{}` (empty object) for objects of any kind
-
-</card-callout>
+{% /callout %}
 
 ### Bundled Attribute Parsers
 
 Le Truc provides several built-in parsers for common attribute types. See the [Parsers section](api.html#parsers) in the API reference for detailed descriptions and usage examples.
 
-</section>
+{% /section %}
 
-<section>
+{% section %}
 
 ## Selecting Elements
 
@@ -301,15 +293,13 @@ The `first()` function expects the matched element to be present at connection t
 
 On the other hand, the `all()` function creates a dynamic array of elements that will be updated whenever the matching elements are added or removed from the component's DOM branch. Le Truc will apply the given setup functions to added elements and run the cleanup functions on removed elements.
 
-<card-callout class="tip">
-
+{% callout class="tip" %}
 **Tip**: The `all()` function is more flexible but also more resource-intensive than `first()`. Prefer `first()` when targeting a single element known to be present at connection time.
+{% /callout %}
 
-</card-callout>
+{% /section %}
 
-</section>
-
-<section>
+{% section %}
 
 ## Adding Event Listeners
 
@@ -344,9 +334,9 @@ defineComponent(
 )
 ```
 
-</section>
+{% /section %}
 
-<section>
+{% section %}
 
 ## Synchronizing State with Effects
 
@@ -439,16 +429,14 @@ defineComponent(
 )
 ```
 
-<card-callout class="tip">
-
+{% callout class="tip" %}
 **When to use**
 
 - **Use a signal key or a local signal** when the state is part of the component's public interface or internally reused.
 - **Use a function** to **derive a value on the fly** when it is needed only in this one place.
 
 Ad-hoc derived state is more efficient than the overhead of a memoized computed signal for simple functions like converting to a string or boolean, formatting a value or performing a calculation.
-
-</card-callout>
+{% /callout %}
 
 ### Efficient & Fine-Grained Updates
 
@@ -458,9 +446,9 @@ Unlike some frameworks that **re-render entire components**, Le Truc updates onl
 - **Signals propagate automatically** – no need to track dependencies manually.
 - **Optimized with a scheduler** – multiple updates are batched efficiently.
 
-</section>
+{% /section %}
 
-<section>
+{% section %}
 
 ## Next Steps
 
@@ -469,4 +457,4 @@ Now that you understand the basics, explore:
 - [Styling](styling.html) – Learn techniques to apply styles to components.
 - [Data Flow](data-flow.html) – Learn about passing state between components.
 
-</section>
+{% /section %}

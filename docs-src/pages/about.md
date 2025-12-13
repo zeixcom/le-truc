@@ -4,18 +4,13 @@ emoji: '🤝'
 description: 'License, versioning, getting involved'
 ---
 
-<section-hero>
-
+{% hero %}
 # 🤝 About
 
-<div>
-  <p class="lead"><strong>Join the Le Truc community!</strong> This page covers the people behind Le Truc, how you can contribute, versioning details, and licensing. Whether you’re a developer, designer, or sponsor, there are many ways to get involved.</p>
-  {{ toc }}
-</div>
-</section-hero>
+**Join the Le Truc community!** This page covers the people behind Le Truc, how you can contribute, versioning details, and licensing. Whether you're a developer, designer, or sponsor, there are many ways to get involved.
+{% /hero %}
 
-<section>
-
+{% section %}
 ## Who's Behind Le Truc?
 
 Le Truc is an **open-source project**, actively developed by [Zeix AG](https://zeix.com), a Switzerland-based agency for User-Centered Design, committed to enhancing accessibility and usability in web technologies.
@@ -28,43 +23,40 @@ Le Truc is an **open-source project**, actively developed by [Zeix AG](https://z
 
 ### Sponsors
 
-<card-callout class="note">
-
+{% callout class="note" %}
 **Become a Sponsor**
 
 Le Truc is free and open-source. If your organization finds it valuable, consider [sponsoring its development](info@zeix.com) to help make web development **lightweight, accessible, and fun** again!
+{% /callout %}
 
-</card-callout>
+{% /section %}
 
-</section>
-
-<section>
-
+{% section %}
 ## License
 
 This project is licensed under the [MIT License](https://opensource.org/licenses/MIT), which means you can **use, modify, and distribute** it freely – even in commercial projects.
 
 A copy of the license can be found in the [LICENSE](https://github.com/zeixcom/le-truc/blob/main/LICENSE) file of the repository.
 
-</section>
+{% /section %}
 
-<section>
+{% section %}
 
 ## Version History
 
 ### Current Version: 0.15.0
 
-<card-callout class="caution">
+{% callout class="caution" %}
 
 **Release candidate**
 
 This version is a **pre-release** of Le Truc, meaning **breaking changes** may still occur before the official release of version 1.0. Please check the [release notes](https://github.com/zeixcom/le-truc/releases) before updating.
 
-</card-callout>
+{% /callout %}
 
 ### Versioning Scheme
 
-Le Truc follows [Semantic Versioning](https://semver.org/) (SemVer), which is structured as <code>MAJOR.MINOR.PATCH</code>.
+Le Truc follows [Semantic Versioning](https://semver.org/) (SemVer), which is structured as `MAJOR.MINOR.PATCH`.
 
 - **MAJOR**: Breaking changes that require migrations.
 - **MINOR**: New features that are backwards compatible.
@@ -74,10 +66,9 @@ Le Truc follows [Semantic Versioning](https://semver.org/) (SemVer), which is st
 
 View all releases and associated notes on [Github Releases](https://github.com/zeixcom/le-truc/releases).
 
-</section>
+{% /section %}
 
-<section>
-
+{% section %}
 ## Getting Involved
 
 Le Truc is **an open-source project**, and contributions are always welcome! Whether you’re **reporting bugs, improving documentation, or suggesting features**, here's how you can help:
@@ -95,4 +86,4 @@ Le Truc is **an open-source project**, and contributions are always welcome! Whe
 
 We strive for a welcoming and inclusive environment. Please follow our [Code of Conduct](https://github.com/zeixcom/le-truc/blob/main/CODE_OF_CONDUCT.md) when contributing.
 
-</section>
+{% /section %}

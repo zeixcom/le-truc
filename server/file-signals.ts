@@ -1,11 +1,10 @@
+import Markdoc from '@markdoc/markdoc'
 import {
 	type Computed,
 	createComputed,
 	type Store,
 	UNSET,
 } from '@zeix/cause-effect'
-import matter from 'gray-matter'
-import { marked } from 'marked'
 import { codeToHtml } from 'shiki'
 import {
 	COMPONENTS_DIR,
@@ -16,68 +15,14 @@ import {
 } from './config'
 import { watchFiles } from './file-watcher'
 import { extractFrontmatter, getRelativePath } from './io'
-import { generateSlug } from './templates/utils'
+import markdocConfig from './markdoc.config'
+import { postProcessHtml } from './markdoc-helpers'
 import type {
-	CodeBlock,
 	FileInfo,
 	PageInfo,
 	PageMetadata,
 	ProcessedMarkdownFile,
 } from './types'
-
-// Configure marked for GitHub Flavored Markdown
-marked.setOptions({
-	gfm: true,
-	breaks: true,
-})
-
-const createCodeBlockPlaceholder = (index: number): string =>
-	`__CODE_BLOCK_PLACEHOLDER_${index}__`
-
-const createCodeBlockMap = (codeBlocks: CodeBlock[]): Map<string, string> => {
-	const map = new Map<string, string>()
-	codeBlocks.forEach((block, index) => {
-		const placeholder = createCodeBlockPlaceholder(index)
-		const html = `<module-codeblock language="${block.header}" copy-success="Copied!" copy-error="Error trying to copy to clipboard!">${block.highlightedCode}</module-codeblock>`
-		map.set(placeholder, html)
-	})
-	return map
-}
-
-const transformCodeBlocks = async (
-	markdown: string,
-): Promise<{
-	processedMarkdown: string
-	codeBlockMap: Map<string, string>
-}> => {
-	const codeBlocks: CodeBlock[] = []
-	let processedMarkdown = markdown
-	const codeBlockRegex = /```(\w+)(?:\s\(([^)]+)\))?\n(.*?)```/gs
-	let match: RegExpExecArray | null
-
-	while ((match = codeBlockRegex.exec(markdown)) !== null) {
-		const [fullMatch, lang, filename, code] = match
-		const header = filename ? `${lang} (${filename})` : lang
-
-		try {
-			const highlighted = await codeToHtml(code, {
-				lang,
-				theme: 'monokai',
-			})
-
-			codeBlocks.push({ header, code, highlightedCode: highlighted })
-			const placeholder = createCodeBlockPlaceholder(codeBlocks.length - 1)
-			processedMarkdown = processedMarkdown.replace(fullMatch, placeholder)
-		} catch (error) {
-			console.warn(`Failed to highlight ${lang} code block:`, error)
-		}
-	}
-
-	return {
-		processedMarkdown,
-		codeBlockMap: createCodeBlockMap(codeBlocks),
-	}
-}
 
 export const markdownFiles: {
 	sources: Store<Record<string, FileInfo>>
@@ -146,14 +91,14 @@ export const markdownFiles: {
 					.replace(pagesDir + '/', '')
 					.replace(/\\/g, '/')
 
-				// Parse frontmatter again to get clean content
-				const { data: frontmatter, content } = matter(file.content)
-
 				// Calculate path info
 				const pathParts = relativePath.split('/')
 				const section = pathParts.length > 1 ? pathParts[0] : undefined
 				const depth = pathParts.length - 1
 				const basePath = depth > 0 ? '../'.repeat(depth) : './'
+
+				// Extract frontmatter and content
+				const { metadata: frontmatter, content } = file
 
 				// Clean API content (remove everything above first H1)
 				let processedContent = content
@@ -165,49 +110,79 @@ export const markdownFiles: {
 					}
 				}
 
-				// Transform code blocks
-				const { processedMarkdown, codeBlockMap } =
-					await transformCodeBlocks(processedContent)
+				// Parse with Markdoc
+				const ast = Markdoc.parse(processedContent)
 
-				// Convert markdown to HTML
-				let htmlContent = await marked.parse(processedMarkdown)
+				// Validate the document
+				const errors = Markdoc.validate(ast, markdocConfig)
+				if (errors.length > 0) {
+					console.warn(`Markdoc validation errors for ${path}:`, errors)
+				}
 
-				// Add permalinks to headings
+				// Transform the AST
+				const transformed = Markdoc.transform(ast, markdocConfig)
+
+				// Render to HTML
+				let htmlContent = Markdoc.renderers.html(transformed)
+
+				// Remove automatic <article> wrapper added by Markdoc
 				htmlContent = htmlContent.replace(
-					/<h([1-6])>(.+?)<\/h[1-6]>/g,
-					(_, level, text) => {
-						const textForSlug = text
+					/^<article>([\s\S]*)<\/article>$/m,
+					'$1',
+				)
+
+				// Process code blocks with syntax highlighting
+				const codeBlockRegex =
+					/<pre data-language="([^"]*)" data-code="([^"]*)"><code class="language-[^"]*">[\s\S]*?<\/code><\/pre>/g
+				let match: RegExpExecArray | null
+
+				while ((match = codeBlockRegex.exec(htmlContent)) !== null) {
+					const [fullMatch, lang, encodedCode] = match
+
+					// Decode HTML entities
+					const code = encodedCode
+						.replace(/&quot;/g, '"')
+						.replace(/&#39;/g, "'")
+						.replace(/&lt;/g, '<')
+						.replace(/&gt;/g, '>')
+						.replace(/&amp;/g, '&')
+
+					try {
+						const highlighted = await codeToHtml(code, {
+							lang: lang || 'text',
+							theme: 'monokai',
+						})
+
+						htmlContent = htmlContent.replace(fullMatch, highlighted)
+					} catch (error) {
+						console.warn(`Failed to highlight ${lang} code block:`, error)
+						// Keep the original code block as fallback
+					}
+				}
+
+				// Process module-demo components with raw HTML
+				htmlContent = htmlContent.replace(
+					/<module-demo([^>]*) preview-html="([^"]*)"([^>]*)>([\s\S]*?)<\/module-demo>/g,
+					(fullMatch, beforeAttrs, encodedHtml, afterAttrs, content) => {
+						// Decode HTML entities that may have been encoded
+						const previewHtml = encodedHtml
 							.replace(/&quot;/g, '"')
 							.replace(/&#39;/g, "'")
+							.replace(/&lt;/g, '<')
+							.replace(/&gt;/g, '>')
 							.replace(/&amp;/g, '&')
-						const slug = generateSlug(textForSlug)
-						return `<h${level} id="${slug}">
-							<a name="${slug}" class="anchor" href="#${slug}">
-								<span class="permalink">🔗</span>
-								<span class="title">${text}</span>
-							</a>
-						</h${level}>`
+							.replace(/>\s{2,}</g, '><')
+							.replace(/\s{2,}/g, ' ')
+							.trim()
+
+						// Build the complete module-demo structure
+						const previewDiv = `<div class="preview">${previewHtml}</div>`
+						return `<module-demo${beforeAttrs}${afterAttrs}>${previewDiv}${content}</module-demo>`
 					},
 				)
 
-				// Fix internal links (.md -> .html)
-				htmlContent = htmlContent.replace(
-					/href="([^"]*\.md)"/g,
-					(_, href) => `href="${href.replace(/\.md$/, '.html')}"`,
-				)
-
-				// Replace code block placeholders
-				codeBlockMap.forEach((code, placeholder) => {
-					htmlContent = htmlContent.replace(
-						new RegExp(`(<p>\\s*${placeholder}\\s*</p>)`, 'g'),
-						code,
-					)
-				})
-
-				// Wrap API pages
-				if (section === 'api') {
-					htmlContent = `<section class="api-content">\n${htmlContent}\n</section>`
-				}
+				// Post-process HTML (fix links, wrap API content)
+				htmlContent = postProcessHtml(htmlContent, section)
 
 				// Extract title
 				let title = frontmatter.title
@@ -321,7 +296,6 @@ export const componentMarkup = (() => {
 	const sources = watchFiles(COMPONENTS_DIR, {
 		recursive: true,
 		extensions: ['.html'],
-		ignore: ['-test.html'],
 	})
 
 	return {
