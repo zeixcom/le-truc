@@ -65,7 +65,7 @@ export default defineComponent<FormTextboxProps, FormTextboxUI>(
 		clear: clearMethod,
 	},
 	({ first }) => ({
-		textbox: first<HTMLInputElement | HTMLTextAreaElement>(
+		textbox: first(
 			'input, textarea',
 			'Add a native input or textarea as descendant element.',
 		),

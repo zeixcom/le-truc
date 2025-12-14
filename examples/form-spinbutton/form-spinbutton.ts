@@ -73,9 +73,7 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 		max: read(ui => ui.input.max, asInteger(10)),
 	},
 	({ all, first }) => ({
-		controls: all<HTMLButtonElement | HTMLInputElement>(
-			'button, input:not([disabled])',
-		),
+		controls: all('button, input:not([disabled])'),
 		increment: first(
 			'button.increment',
 			'Add a native button to increment the value',

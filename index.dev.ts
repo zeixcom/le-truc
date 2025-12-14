@@ -51,6 +51,7 @@ export {
 	UNSET,
 	valueString,
 } from '@zeix/cause-effect'
+
 export {
 	type Component,
 	type ComponentProp,
@@ -63,9 +64,19 @@ export {
 	type ReservedWords,
 } from './src/component'
 export {
+	CONTEXT_REQUEST,
+	type Context,
+	ContextRequestEvent,
+	type ContextType,
+	provideContexts,
+	requestContext,
+	type UnknownContext,
+} from './src/context'
+export {
 	type Effect,
 	type Effects,
 	type ElementEffects,
+	type ElementUpdater,
 	type Reactive,
 	runEffects,
 	runElementEffects,
@@ -93,9 +104,11 @@ export {
 	MissingElementError,
 } from './src/errors'
 export {
+	type Fallback,
 	isParser,
 	type LooseReader,
 	type Parser,
+	type ParserOrFallback,
 	type Reader,
 	read,
 } from './src/parsers'
@@ -110,5 +123,5 @@ export {
 	createCollection,
 	isCollection,
 } from './src/signals/collection'
-export { createSensor } from './src/signals/sensor'
-export type { UI } from './src/ui'
+export { createSensor, type SensorEvents } from './src/signals/sensor'
+export type { ElementFromKey, ElementQueries, UI } from './src/ui'

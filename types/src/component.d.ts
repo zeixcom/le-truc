@@ -1,6 +1,6 @@
 import { type ComputedCallback, type Signal } from '@zeix/cause-effect';
 import { type Effects } from './effects';
-import { type Parser } from './parsers';
+import { type Parser, type Reader } from './parsers';
 import { type ElementQueries, type UI } from './ui';
 type ReservedWords = 'constructor' | 'prototype' | '__proto__' | 'toString' | 'valueOf' | 'hasOwnProperty' | 'isPrototypeOf' | 'propertyIsEnumerable' | 'toLocaleString';
 type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>;
@@ -10,8 +10,11 @@ type ComponentUI<P extends ComponentProps, U extends UI> = U & {
     host: Component<P>;
 };
 type ComponentSetup<P extends ComponentProps, U extends UI> = (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>>;
+type MethodProducer<P extends ComponentProps, U extends UI> = (ui: U & {
+    host: Component<P>;
+}) => void;
 type Initializers<P extends ComponentProps, U extends UI> = {
-    [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K], ComponentUI<P, U>> | ((ui: ComponentUI<P, U>) => MaybeSignal<P[K]> | void);
+    [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K], ComponentUI<P, U>> | Reader<MaybeSignal<P[K]>, ComponentUI<P, U>> | MethodProducer<P, ComponentUI<P, U>>;
 };
 type MaybeSignal<T extends {}> = T | Signal<T> | ComputedCallback<T>;
 /**

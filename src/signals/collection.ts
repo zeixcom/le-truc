@@ -1,19 +1,18 @@
 import {
 	type Cleanup,
-	isString,
 	isSymbol,
 	notify,
 	subscribe,
 	type Watcher,
 } from '@zeix/cause-effect'
 import type { ElementFromSelector } from '../ui'
-import { hasMethod, isElement } from '../util'
+import { isElement } from '../util'
 
 /* === Types === */
 
 type CollectionListener<E extends Element> = (changes: readonly E[]) => void
 
-interface Collection<E extends Element> {
+type Collection<E extends Element> = {
 	readonly [Symbol.toStringTag]: 'Collection'
 	readonly [Symbol.isConcatSpreadable]: true
 	[Symbol.iterator](): IterableIterator<E>
@@ -65,42 +64,57 @@ const extractAttributes = (selector: string): string[] => {
  * @param selector - The CSS selector to match elements
  * @returns A collection signal of elements
  */
-const createCollection = <S extends string, E extends ElementFromSelector<S>>(
+function createCollection<S extends string>(
 	parent: ParentNode,
 	selector: S,
-): Collection<E> => {
+): Collection<ElementFromSelector<S>>
+function createCollection<E extends Element>(
+	parent: ParentNode,
+	selector: string,
+): Collection<E>
+function createCollection<S extends string>(
+	parent: ParentNode,
+	selector: S,
+): Collection<ElementFromSelector<S>> {
 	const watchers: Set<Watcher> = new Set()
 	const listeners = {
-		add: new Set<CollectionListener<E>>(),
-		remove: new Set<CollectionListener<E>>(),
+		add: new Set<CollectionListener<ElementFromSelector<S>>>(),
+		remove: new Set<CollectionListener<ElementFromSelector<S>>>(),
 	}
-	let elements: E[] = []
+	let elements: ElementFromSelector<S>[] = []
 	let observer: MutationObserver | undefined
 
 	const findMatches = (nodes: NodeList) => {
 		const elements = Array.from(nodes).filter(isElement)
-		const found: E[] = []
+		const found: ElementFromSelector<S>[] = []
 		for (const element of elements) {
-			if (element.matches(selector)) found.push(element as E)
-			found.push(...Array.from(element.querySelectorAll<E>(selector)))
+			if (element.matches(selector))
+				found.push(element as ElementFromSelector<S>)
+			found.push(
+				...Array.from(
+					element.querySelectorAll<ElementFromSelector<S>>(selector),
+				),
+			)
 		}
 		return found
 	}
 
 	const notifyListeners = (
-		listeners: Set<CollectionListener<E>>,
-		elements: E[],
+		listeners: Set<CollectionListener<ElementFromSelector<S>>>,
+		elements: ElementFromSelector<S>[],
 	) => {
 		Object.freeze(elements)
 		for (const listener of listeners) listener(elements)
 	}
 
 	const observe = () => {
-		elements = Array.from(parent.querySelectorAll<E>(selector))
+		elements = Array.from(
+			parent.querySelectorAll<ElementFromSelector<S>>(selector),
+		)
 
 		observer = new MutationObserver(mutations => {
-			const added: E[] = []
-			const removed: E[] = []
+			const added: ElementFromSelector<S>[] = []
+			const removed: ElementFromSelector<S>[] = []
 
 			for (const mutation of mutations) {
 				if (mutation.type === 'childList') {
@@ -109,7 +123,7 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 					if (mutation.removedNodes.length)
 						removed.push(...findMatches(mutation.removedNodes))
 				} else if (mutation.type === 'attributes') {
-					const target = mutation.target as E
+					const target = mutation.target as ElementFromSelector<S>
 					if (isElement(target)) {
 						const wasMatching = elements.includes(target)
 						const isMatching = target.matches(selector)
@@ -120,7 +134,9 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 			}
 
 			if (added.length || removed.length) {
-				elements = Array.from(parent.querySelectorAll<E>(selector))
+				elements = Array.from(
+					parent.querySelectorAll<ElementFromSelector<S>>(selector),
+				)
 				notify(watchers)
 			}
 			if (added.length) notifyListeners(listeners.add, added)
@@ -138,7 +154,7 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 		observer.observe(parent, observerConfig)
 	}
 
-	const collection = {} as Collection<E>
+	const collection = {} as Collection<ElementFromSelector<S>>
 	Object.defineProperties(collection, {
 		[Symbol.toStringTag]: {
 			value: TYPE_COLLECTION,
@@ -159,7 +175,10 @@ const createCollection = <S extends string, E extends ElementFromSelector<S>>(
 			},
 		},
 		on: {
-			value: (type: 'add' | 'remove', listener: CollectionListener<E>) => {
+			value: (
+				type: 'add' | 'remove',
+				listener: CollectionListener<ElementFromSelector<S>>,
+			) => {
 				const listenerSet = listeners[type]
 				if (!listenerSet)
 					throw new TypeError(`Invalid change notification type: ${type}`)

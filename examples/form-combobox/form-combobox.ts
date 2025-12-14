@@ -91,9 +91,9 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 				on('input', () => {
 					textbox.checkValidity()
 					batch(() => {
-						showPopup.set(true)
 						host.value = textbox.value
 						host.error = textbox.validationMessage ?? ''
+						showPopup.set(true)
 					})
 				}),
 				on('keydown', ({ event }) => {

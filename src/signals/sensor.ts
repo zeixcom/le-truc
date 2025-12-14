@@ -128,4 +128,4 @@ const createSensor =
 		return sensor
 	}
 
-export { createSensor }
+export { createSensor, type SensorEvents }

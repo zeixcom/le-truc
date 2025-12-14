@@ -1,7 +1,7 @@
 import { type Cleanup } from '@zeix/cause-effect';
 import type { ElementFromSelector } from '../ui';
 type CollectionListener<E extends Element> = (changes: readonly E[]) => void;
-interface Collection<E extends Element> {
+type Collection<E extends Element> = {
     readonly [Symbol.toStringTag]: 'Collection';
     readonly [Symbol.isConcatSpreadable]: true;
     [Symbol.iterator](): IterableIterator<E>;
@@ -9,7 +9,7 @@ interface Collection<E extends Element> {
     get(): E[];
     on(type: 'add' | 'remove', listener: CollectionListener<E>): Cleanup;
     readonly length: number;
-}
+};
 declare const TYPE_COLLECTION = "Collection";
 /**
  * Create a collection of elements from a parent node and a CSS selector.
@@ -19,7 +19,8 @@ declare const TYPE_COLLECTION = "Collection";
  * @param selector - The CSS selector to match elements
  * @returns A collection signal of elements
  */
-declare const createCollection: <S extends string, E extends ElementFromSelector<S>>(parent: ParentNode, selector: S) => Collection<E>;
+declare function createCollection<S extends string>(parent: ParentNode, selector: S): Collection<ElementFromSelector<S>>;
+declare function createCollection<E extends Element>(parent: ParentNode, selector: string): Collection<E>;
 /**
  * Check if a value is a collection signal
  *
