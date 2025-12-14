@@ -93,13 +93,3 @@ Le Truc shines when you want:
 - Progressive enhancement friendly
 
 {% /section %}
-
-{% section %}
-
-## Next Steps
-
-Now that you understand what Le Truc is and its core philosophy, you're ready to:
-
-- Move on to [Getting Started](getting-started.html) to install the library and build your first component
-
-{% /section %}

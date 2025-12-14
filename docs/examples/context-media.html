@@ -1,0 +1,200 @@
+<module-tabgroup>
+		<div role="tablist">
+		<button
+		type="button"
+		role="tab"
+		id="trigger_context-media_html"
+		aria-controls="panel_context-media_html"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		HTML
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_context-media_ts"
+		aria-controls="panel_context-media_ts"
+		aria-selected="true"
+		tabindex="0"
+	>
+		TypeScript
+	</button>
+	</div> <div
+		role="tabpanel"
+		id="panel_context-media_html"
+		aria-labelledby="trigger_context-media_html"
+		 hidden
+	>
+		<module-codeblock
+			language="html"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">context-media.html</span>
+				<span class="language">html</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">context-media</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#88846F">	&#x3C;!-- Arbitrarily nested HTML with one or many context consumers --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">context-media</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_context-media_ts"
+		aria-labelledby="trigger_context-media_ts"
+		
+	>
+		<module-codeblock
+			language="ts"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">context-media.ts</span>
+				<span class="language">ts</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Context,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createState,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F8F8F2">	provideContexts,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaMotion</span><span style="color:#F92672"> =</span><span style="color:#E6DB74"> 'no-preference'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'reduce'</span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaTheme</span><span style="color:#F92672"> =</span><span style="color:#E6DB74"> 'light'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'dark'</span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaViewport</span><span style="color:#F92672"> =</span><span style="color:#E6DB74"> 'xs'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'sm'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'md'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'lg'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'xl'</span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaOrientation</span><span style="color:#F92672"> =</span><span style="color:#E6DB74"> 'portrait'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'landscape'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#E6DB74"> 'media-motion'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaMotion</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#E6DB74"> 'media-theme'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaTheme</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#E6DB74"> 'media-viewport'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaViewport</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#E6DB74"> 'media-orientation'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaOrientation</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'context-media'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ContextMediaProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">/* === Exported Contexts === */</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> const</span><span style="color:#F8F8F2"> MEDIA_MOTION </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'media-motion'</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Context</span><span style="color:#F8F8F2">&#x3C;</span></span>
+<span class="line"><span style="color:#E6DB74">	'media-motion'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	() </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaMotion</span></span>
+<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> const</span><span style="color:#F8F8F2"> MEDIA_THEME </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'media-theme'</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Context</span><span style="color:#F8F8F2">&#x3C;</span></span>
+<span class="line"><span style="color:#E6DB74">	'media-theme'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	() </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaTheme</span></span>
+<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> const</span><span style="color:#F8F8F2"> MEDIA_VIEWPORT </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'media-viewport'</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Context</span><span style="color:#F8F8F2">&#x3C;</span></span>
+<span class="line"><span style="color:#E6DB74">	'media-viewport'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	() </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaViewport</span></span>
+<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> const</span><span style="color:#F8F8F2"> MEDIA_ORIENTATION </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'media-orientation'</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Context</span><span style="color:#F8F8F2">&#x3C;</span></span>
+<span class="line"><span style="color:#E6DB74">	'media-orientation'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	() </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaOrientation</span></span>
+<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">/* === Component === */</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ContextMediaProps</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#E6DB74">	'context-media'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{</span></span>
+<span class="line"><span style="color:#88846F">		// Context for motion preference; true for no-preference, false for reduce</span></span>
+<span class="line"><span style="color:#F8F8F2">		[MEDIA_MOTION]: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> mql </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'(prefers-reduced-motion: reduce)'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> motion </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(mql.matches </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'reduce'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'no-preference'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			mql.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				motion.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(e.matches </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'reduce'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'no-preference'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			})</span></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> motion</span></span>
+<span class="line"><span style="color:#F8F8F2">		},</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Context for preferred color scheme</span></span>
+<span class="line"><span style="color:#F8F8F2">		[MEDIA_THEME]: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> mql </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'(prefers-color-scheme: dark)'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> theme </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(mql.matches </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'dark'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'light'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			mql.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				theme.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(e.matches </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'dark'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'light'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			})</span></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> theme</span></span>
+<span class="line"><span style="color:#F8F8F2">		},</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Context for screen viewport size</span></span>
+<span class="line"><span style="color:#F8F8F2">		[MEDIA_VIEWPORT]: (</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> { host</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#A6E22E"> getBreakpoint</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">attr</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">fallback</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> ui.host.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(attr)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> trimmed </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value?.</span><span style="color:#A6E22E">trim</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">trimmed) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> fallback</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> unit </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> trimmed.</span><span style="color:#A6E22E">match</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">/em</span><span style="color:#F92672">$</span><span style="color:#E6DB74">/</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'em'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'px'</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> v </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> parseFloat</span><span style="color:#F8F8F2">(trimmed)</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> Number.</span><span style="color:#A6E22E">isFinite</span><span style="color:#F8F8F2">(v) </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> v </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> unit </span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> fallback</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> mqlSM </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`(min-width: </span><span style="color:#F92672">${</span><span style="color:#A6E22E">getBreakpoint</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'sm'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'32em'</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">)`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> mqlMD </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`(min-width: </span><span style="color:#F92672">${</span><span style="color:#A6E22E">getBreakpoint</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'md'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'48em'</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">)`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> mqlLG </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`(min-width: </span><span style="color:#F92672">${</span><span style="color:#A6E22E">getBreakpoint</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'lg'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'72em'</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">)`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> mqlXL </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`(min-width: </span><span style="color:#F92672">${</span><span style="color:#A6E22E">getBreakpoint</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'xl'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'104em'</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">)`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#A6E22E"> getViewport</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (mqlXL.matches) </span><span style="color:#F92672">return</span><span style="color:#E6DB74"> 'xl'</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (mqlLG.matches) </span><span style="color:#F92672">return</span><span style="color:#E6DB74"> 'lg'</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (mqlMD.matches) </span><span style="color:#F92672">return</span><span style="color:#E6DB74"> 'md'</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (mqlSM.matches) </span><span style="color:#F92672">return</span><span style="color:#E6DB74"> 'sm'</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#E6DB74"> 'xs'</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> viewport </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(</span><span style="color:#A6E22E">getViewport</span><span style="color:#F8F8F2">())</span></span>
+<span class="line"><span style="color:#F8F8F2">			mqlSM.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				viewport.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#A6E22E">getViewport</span><span style="color:#F8F8F2">())</span></span>
+<span class="line"><span style="color:#F8F8F2">			})</span></span>
+<span class="line"><span style="color:#F8F8F2">			mqlMD.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				viewport.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#A6E22E">getViewport</span><span style="color:#F8F8F2">())</span></span>
+<span class="line"><span style="color:#F8F8F2">			})</span></span>
+<span class="line"><span style="color:#F8F8F2">			mqlLG.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				viewport.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#A6E22E">getViewport</span><span style="color:#F8F8F2">())</span></span>
+<span class="line"><span style="color:#F8F8F2">			})</span></span>
+<span class="line"><span style="color:#F8F8F2">			mqlXL.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				viewport.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#A6E22E">getViewport</span><span style="color:#F8F8F2">())</span></span>
+<span class="line"><span style="color:#F8F8F2">			})</span></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> viewport</span></span>
+<span class="line"><span style="color:#F8F8F2">		},</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Context for screen orientation</span></span>
+<span class="line"><span style="color:#F8F8F2">		[MEDIA_ORIENTATION]: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> mql </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'(orientation: landscape)'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> orientation </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(mql.matches </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'landscape'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'portrait'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			mql.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				orientation.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(e.matches </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'landscape'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'portrait'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			})</span></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> orientation</span></span>
+<span class="line"><span style="color:#F8F8F2">		},</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#AE81FF">	undefined</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		host: [</span></span>
+<span class="line"><span style="color:#A6E22E">			provideContexts</span><span style="color:#F8F8F2">([</span></span>
+<span class="line"><span style="color:#F8F8F2">				MEDIA_MOTION,</span></span>
+<span class="line"><span style="color:#F8F8F2">				MEDIA_THEME,</span></span>
+<span class="line"><span style="color:#F8F8F2">				MEDIA_VIEWPORT,</span></span>
+<span class="line"><span style="color:#F8F8F2">				MEDIA_ORIENTATION,</span></span>
+<span class="line"><span style="color:#F8F8F2">			]),</span></span>
+<span class="line"><span style="color:#F8F8F2">		],</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+	</module-tabgroup>

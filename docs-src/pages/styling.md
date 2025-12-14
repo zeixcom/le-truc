@@ -163,12 +163,3 @@ Here's the example of the `<card-callout>` we're using in this documentation:
 {% /demo %}
 
 {% /section %}
-
-{% section %}
-## Next Steps
-
-Now that you know how to style components, explore:
-
-- [Data Flow](data-flow.html) – learn about communication between components.
-- [Examples](examples.html) – explore common examples.
-{% /section %}

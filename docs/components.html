@@ -7,20 +7,20 @@
 		<meta name="description" content="Anatomy, lifecycle, signals, effects" />
 		<link
 			rel="preload"
-			href="./assets/main.css?v=mj5ufwg6"
+			href="./assets/main.css?v=mj5xpd2i"
 			as="style"
 		/>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=mj5ufwg6"
+			href="./assets/main.js?v=mj5xpd2i"
 		/>
 		<link
 			rel="stylesheet"
-			href="./assets/main.css?v=mj5ufwg6"
+			href="./assets/main.css?v=mj5xpd2i"
 		/>
 		<script
 			type="module"
-			src="./assets/main.js?v=mj5ufwg6"
+			src="./assets/main.js?v=mj5xpd2i"
 		></script>
 	</head>
 	<body class="">
@@ -94,8 +94,6 @@
 		<a href="#adding-event-listeners">Adding Event Listeners</a>
 	</li><li>
 		<a href="#synchronizing-state-with-effects">Synchronizing State with Effects</a>
-	</li><li>
-		<a href="#next-steps">Next Steps</a>
 	</li>
 			</ol>
 		</nav>
@@ -104,43 +102,43 @@
 <span class="line"><span style="color:#F8F8F2">])</span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>Every Le Truc component must be registered with a valid custom element tag name (two or more words joined with <code>-</code>) as the first parameter.</p><h3 id="using-the-custom-element-in-html"><a name="using-the-custom-element-in-html" class="anchor" href="#using-the-custom-element-in-html"><span class="permalink">🔗</span><span class="title">Using the Custom Element in HTML</span></a></h3><p>Once registered, the component can be used like any native HTML element:</p><module-codeblock language="html" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">html</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">my-component</span><span style="color:#F8F8F2">>Content goes here&#x3C;/</span><span style="color:#F92672">my-component</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><h3 id="anatomy-of-a-component"><a name="anatomy-of-a-component" class="anchor" href="#anatomy-of-a-component"><span class="permalink">🔗</span><span class="title">Anatomy of a Component</span></a></h3><p>Let's examine a complete component example to understand how Le Truc works:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">	'basic-hello'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	{</span></span>
-<span class="line"><span style="color:#F8F8F2">		name: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.output.textContent),</span></span>
-<span class="line"><span style="color:#F8F8F2">	},</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">		input: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to enter the name.'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		output: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'output'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to display the name.'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">	}),</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> fallback </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.name</span></span>
-<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">			input: [</span></span>
-<span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">					host.name </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.value </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> fallback</span></span>
-<span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			],</span></span>
-<span class="line"><span style="color:#F8F8F2">			output: [</span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2">)],</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span></span>
-<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#E6DB74">  'basic-hello'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">  {</span></span>
+<span class="line"><span style="color:#F8F8F2">    name: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.output.textContent),</span></span>
+<span class="line"><span style="color:#F8F8F2">  },</span></span>
+<span class="line"><span style="color:#F8F8F2">  ({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">    input: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to enter the name.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">    output: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'output'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to display the name.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">  }),</span></span>
+<span class="line"><span style="color:#F8F8F2">  ({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">    const</span><span style="color:#F8F8F2"> fallback </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.name</span></span>
+<span class="line"><span style="color:#F92672">    return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">      input: [</span></span>
+<span class="line"><span style="color:#A6E22E">        on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">          host.name </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.value </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> fallback</span></span>
+<span class="line"><span style="color:#F8F8F2">        }),</span></span>
+<span class="line"><span style="color:#F8F8F2">      ],</span></span>
+<span class="line"><span style="color:#F8F8F2">      output: [</span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2">)],</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"><span style="color:#F8F8F2">  },</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h4 id="reactive-properties"><a name="reactive-properties" class="anchor" href="#reactive-properties"><span class="permalink">🔗</span><span class="title">Reactive Properties</span></a></h4><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">{</span></span>
 <span class="line"><span style="color:#F8F8F2">  name: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.output.textContent),</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>This creates a reactive property called <code>name</code>:</p><ul><li><code>asString()</code> observes the attribute <code>name</code> and assigns its value as a string to the <code>name</code> property</li><li><code>ui =&gt; ...</code> is an instruction how to get the fallback value in the DOM if there is no name attribute</li><li>Le Truc automatically reads &quot;World&quot; from the <code>&lt;output&gt;</code> element as the initial value</li><li>When <code>name</code> changes, any effects that depend on it automatically update</li></ul><h4 id="select-function"><a name="select-function" class="anchor" href="#select-function"><span class="permalink">🔗</span><span class="title">Select Function</span></a></h4><p>The select function is used to find descendant elements within the component's DOM:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">	input: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to enter the name.'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">	output: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'output'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to display the name.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">  input: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to enter the name.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">  output: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'output'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to display the name.'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">}),</span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>The select function must return a record of the selected elements, commonly called <code>ui</code> to which initializer functions for reactive properties and the setup function for effects have access to. In the above example, the helper function <code>first()</code> is used to find the first descendant matching a selector. Also available is <code>all()</code> to find all descendants matching a selector, dynamically updating the list of elements when the DOM changes. Both helper functions take a selector string and an optional error message to display if no element is found.</p><h4 id="setup-function"><a name="setup-function" class="anchor" href="#setup-function"><span class="permalink">🔗</span><span class="title">Setup Function</span></a></h4><p>The setup function must return a record with an array of effects for properties of the <code>ui</code> object that is passed in. The additional <code>host</code> key of the <code>ui</code> object holds the component element itself.</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> fallback </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.name</span></span>
-<span class="line"><span style="color:#F92672">	return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">		input: [</span></span>
-<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">				host.name </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.value </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> fallback</span></span>
-<span class="line"><span style="color:#F8F8F2">			}),</span></span>
-<span class="line"><span style="color:#F8F8F2">		],</span></span>
-<span class="line"><span style="color:#F8F8F2">		output: [</span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2">)],</span></span>
-<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">  const</span><span style="color:#F8F8F2"> fallback </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.name</span></span>
+<span class="line"><span style="color:#F92672">  return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">    input: [</span></span>
+<span class="line"><span style="color:#A6E22E">      on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">        host.name </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.value </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> fallback</span></span>
+<span class="line"><span style="color:#F8F8F2">      }),</span></span>
+<span class="line"><span style="color:#F8F8F2">    ],</span></span>
+<span class="line"><span style="color:#F8F8F2">    output: [</span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2">)],</span></span>
+<span class="line"><span style="color:#F8F8F2">  }</span></span>
 <span class="line"><span style="color:#F8F8F2">},</span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><p>Effects define <strong>component behaviors</strong>:</p><ul><li><code>input: [on('input', ...)]</code> adds an event listener to the <code>&lt;input&gt;</code> element</li><li><code>output: [setText('name')]</code> keeps its text in sync with the <code>name</code> property</li></ul><p>Characteristics of effects:</p><ul><li>Effects run when the component is added to the page</li><li>Effects rerun when their dependencies change</li><li>Effects may return a cleanup function to be executed when the target element or the component is removed from the page</li></ul><p>The bundled effects <code>on()</code> and <code>setText()</code> in this case are partially applied functions that connect to component properties and the target element and return the appropriate cleanup function.</p></section><section><h2 id="component-lifecycle"><a name="component-lifecycle" class="anchor" href="#component-lifecycle"><span class="permalink">🔗</span><span class="title">Component Lifecycle</span></a></h2><p>Le Truc manages the <strong>Web Component lifecycle</strong> from creation to removal. Here's what happens.</p><h3 id="connected-to-the-dom"><a name="connected-to-the-dom" class="anchor" href="#connected-to-the-dom"><span class="permalink">🔗</span><span class="title">Connected to the DOM</span></a></h3><p>In the <code>connectedCallback()</code> reactive properties are initialized. You pass a second argument to the <code>defineComponent()</code> function to define initial values for <strong>component states</strong>.</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">  'my-component'</span><span style="color:#F8F8F2">,</span></span>
@@ -188,45 +186,45 @@
 <span class="line"><span style="color:#F8F8F2">  }),</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><card-callout class="caution"><p><strong>Careful</strong>: Attributes <strong>may not be present</strong> on the element or <strong>parsing to the desired type may fail</strong>. To ensure <strong>non-nullability</strong> of signals, Le Truc falls back to neutral defaults if no fallback value is provided:</p><ul><li><code>&quot;&quot;</code> (empty string) for <code>string</code></li><li><code>0</code> for <code>number</code></li><li><code>{}</code> (empty object) for objects of any kind</li></ul></card-callout><h3 id="bundled-attribute-parsers"><a name="bundled-attribute-parsers" class="anchor" href="#bundled-attribute-parsers"><span class="permalink">🔗</span><span class="title">Bundled Attribute Parsers</span></a></h3><p>Le Truc provides several built-in parsers for common attribute types. See the <a href="api.html#parsers">Parsers section</a> in the API reference for detailed descriptions and usage examples.</p></section><section><h2 id="selecting-elements"><a name="selecting-elements" class="anchor" href="#selecting-elements"><span class="permalink">🔗</span><span class="title">Selecting Elements</span></a></h2><p>Use the provided selector utilities to find descendant elements within your component:</p><h3 id="first"><a name="first" class="anchor" href="#first"><span class="permalink">🔗</span><span class="title">first()</span></a></h3><p>Selects the first matching element:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">	'basic-counter'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	{</span></span>
-<span class="line"><span style="color:#88846F">		// Initialize properties</span></span>
-<span class="line"><span style="color:#F8F8F2">	},</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">		increment: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">			'button'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">			'Add a native button element to increment the count.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">		count: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'span'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a span to display the count.'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">	}),</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">	ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#88846F">	  // Component setup</span></span>
-<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#E6DB74">  'basic-counter'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">  {</span></span>
+<span class="line"><span style="color:#88846F">    // Initialize properties</span></span>
+<span class="line"><span style="color:#F8F8F2">  },</span></span>
+<span class="line"><span style="color:#F8F8F2">  ({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">    increment: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">      'button'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">      'Add a native button element to increment the count.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">    ),</span></span>
+<span class="line"><span style="color:#F8F8F2">    count: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'span'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a span to display the count.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">  }),</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">  ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#88846F">    // Component setup</span></span>
+<span class="line"><span style="color:#F8F8F2">  }),</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h3 id="all"><a name="all" class="anchor" href="#all"><span class="permalink">🔗</span><span class="title">all()</span></a></h3><p>Selects all matching elements:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">	'module-tabgroup'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	{</span></span>
-<span class="line"><span style="color:#88846F">	  // Initialize properties</span></span>
-<span class="line"><span style="color:#F8F8F2">	},</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">		tabs: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">			'button[role="tab"]'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">			'At least 2 tabs as children of a &#x3C;[role="tablist"]> element are needed. Each tab must reference a unique id of a &#x3C;[role="tabpanel"]> element.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">		panels: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">			'[role="tabpanel"]'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">			'At least 2 tabpanels are needed. Each tabpanel must have a unique id.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">	}),</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">	ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#88846F">	  // Component setup</span></span>
-<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#E6DB74">  'module-tabgroup'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">  {</span></span>
+<span class="line"><span style="color:#88846F">    // Initialize properties</span></span>
+<span class="line"><span style="color:#F8F8F2">  },</span></span>
+<span class="line"><span style="color:#F8F8F2">  ({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">    tabs: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">      'button[role="tab"]'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">      'At least 2 tabs as children of a &#x3C;[role="tablist"]> element are needed. Each tab must reference a unique id of a &#x3C;[role="tabpanel"]> element.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">    ),</span></span>
+<span class="line"><span style="color:#F8F8F2">    panels: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">      '[role="tabpanel"]'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">      'At least 2 tabpanels are needed. Each tabpanel must have a unique id.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">    ),</span></span>
+<span class="line"><span style="color:#F8F8F2">  }),</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">  ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#88846F">    // Component setup</span></span>
+<span class="line"><span style="color:#F8F8F2">  }),</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><p>The <code>first()</code> function expects the matched element to be present at connection time. If not, it will silently ignore the call.</p><p>On the other hand, the <code>all()</code> function creates a dynamic array of elements that will be updated whenever the matching elements are added or removed from the component's DOM branch. Le Truc will apply the given setup functions to added elements and run the cleanup functions on removed elements.</p><card-callout class="tip"><p><strong>Tip</strong>: The <code>all()</code> function is more flexible but also more resource-intensive than <code>first()</code>. Prefer <code>first()</code> when targeting a single element known to be present at connection time.</p></card-callout></section><section><h2 id="adding-event-listeners"><a name="adding-event-listeners" class="anchor" href="#adding-event-listeners"><span class="permalink">🔗</span><span class="title">Adding Event Listeners</span></a></h2><p>Event listeners allow to respond to user interactions. They are the the main cause for changes in the component's state. Le Truc provides the <code>on()</code> function to add event listeners to elements and remove them when the component is disconnected.</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">  'my-component'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">  {</span></span>
-<span class="line"><span style="color:#F8F8F2">  	active: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">  	value: </span><span style="color:#E6DB74">''</span></span>
+<span class="line"><span style="color:#F8F8F2">    active: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">    value: </span><span style="color:#E6DB74">''</span></span>
 <span class="line"><span style="color:#F8F8F2">  },</span></span>
 <span class="line"><span style="color:#F8F8F2">  ({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
 <span class="line"><span style="color:#F8F8F2">    buttons: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button'</span><span style="color:#F8F8F2">),</span></span>
@@ -235,16 +233,16 @@
 <span class="line"><span style="color:#F8F8F2">  ({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
 <span class="line"><span style="color:#F8F8F2">    buttons: [</span></span>
 <span class="line"><span style="color:#A6E22E">      on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#88846F">  			// Set 'active' signal to value of data-index attribute of button</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">  			const</span><span style="color:#F8F8F2"> index </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> parseInt</span><span style="color:#F8F8F2">(target.dataset.index, </span><span style="color:#AE81FF">10</span><span style="color:#F8F8F2">);</span></span>
-<span class="line"><span style="color:#F8F8F2">  			host.active </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Number.</span><span style="color:#A6E22E">isInteger</span><span style="color:#F8F8F2">(index) </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> index </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">;</span></span>
-<span class="line"><span style="color:#F8F8F2">  		})</span></span>
+<span class="line"><span style="color:#88846F">        // Set 'active' signal to value of data-index attribute of button</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        const</span><span style="color:#F8F8F2"> index </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> parseInt</span><span style="color:#F8F8F2">(target.dataset.index, </span><span style="color:#AE81FF">10</span><span style="color:#F8F8F2">);</span></span>
+<span class="line"><span style="color:#F8F8F2">        host.active </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Number.</span><span style="color:#A6E22E">isInteger</span><span style="color:#F8F8F2">(index) </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> index </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">      })</span></span>
 <span class="line"><span style="color:#F8F8F2">    ],</span></span>
 <span class="line"><span style="color:#F8F8F2">    input: [</span></span>
 <span class="line"><span style="color:#A6E22E">      on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#88846F">  			// Set 'value' signal to value of input element</span></span>
-<span class="line"><span style="color:#F8F8F2">  			host.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.value;</span></span>
-<span class="line"><span style="color:#F8F8F2">  		})</span></span>
+<span class="line"><span style="color:#88846F">        // Set 'value' signal to value of input element</span></span>
+<span class="line"><span style="color:#F8F8F2">        host.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.value;</span></span>
+<span class="line"><span style="color:#F8F8F2">      })</span></span>
 <span class="line"><span style="color:#F8F8F2">    ]</span></span>
 <span class="line"><span style="color:#F8F8F2">  })</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
@@ -295,7 +293,7 @@
 <span class="line"><span style="color:#F8F8F2">    double: [</span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(host.count </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 2</span><span style="color:#F8F8F2">))]</span></span>
 <span class="line"><span style="color:#F8F8F2">  })</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
-<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><card-callout class="tip"><p><strong>When to use</strong></p><ul><li><strong>Use a signal key or a local signal</strong> when the state is part of the component's public interface or internally reused.</li><li><strong>Use a function</strong> to <strong>derive a value on the fly</strong> when it is needed only in this one place.</li></ul><p>Ad-hoc derived state is more efficient than the overhead of a memoized computed signal for simple functions like converting to a string or boolean, formatting a value or performing a calculation.</p></card-callout><h3 id="efficient-fine-grained-updates"><a name="efficient-fine-grained-updates" class="anchor" href="#efficient-fine-grained-updates"><span class="permalink">🔗</span><span class="title">Efficient &amp; Fine-Grained Updates</span></a></h3><p>Unlike some frameworks that <strong>re-render entire components</strong>, Le Truc updates only what changes:</p><ul><li><strong>No virtual DOM</strong> – Le Truc modifies the DOM directly.</li><li><strong>Signals propagate automatically</strong> – no need to track dependencies manually.</li><li><strong>Optimized with a scheduler</strong> – multiple updates are batched efficiently.</li></ul></section><section><h2 id="next-steps"><a name="next-steps" class="anchor" href="#next-steps"><span class="permalink">🔗</span><span class="title">Next Steps</span></a></h2><p>Now that you understand the basics, explore:</p><ul><li><a href="styling.html">Styling</a> – Learn techniques to apply styles to components.</li><li><a href="data-flow.html">Data Flow</a> – Learn about passing state between components.</li></ul></section></main>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><card-callout class="tip"><p><strong>When to use</strong></p><ul><li><strong>Use a signal key or a local signal</strong> when the state is part of the component's public interface or internally reused.</li><li><strong>Use a function</strong> to <strong>derive a value on the fly</strong> when it is needed only in this one place.</li></ul><p>Ad-hoc derived state is more efficient than the overhead of a memoized computed signal for simple functions like converting to a string or boolean, formatting a value or performing a calculation.</p></card-callout><h3 id="efficient-fine-grained-updates"><a name="efficient-fine-grained-updates" class="anchor" href="#efficient-fine-grained-updates"><span class="permalink">🔗</span><span class="title">Efficient &amp; Fine-Grained Updates</span></a></h3><p>Unlike some frameworks that <strong>re-render entire components</strong>, Le Truc updates only what changes:</p><ul><li><strong>No virtual DOM</strong> – Le Truc modifies the DOM directly.</li><li><strong>Signals propagate automatically</strong> – no need to track dependencies manually.</li><li><strong>Optimized with a scheduler</strong> – multiple updates are batched efficiently.</li></ul></section></main>
 			<footer class="content-grid">
 				<div class="content">
 					<h2 class="visually-hidden">Footer</h2>

@@ -39,25 +39,25 @@ Let's examine a complete component example to understand how Le Truc works:
 
 ```js
 defineComponent(
-	'basic-hello',
-	{
-		name: asString(ui => ui.output.textContent),
-	},
-	({ first }) => ({
-		input: first('input', 'Needed to enter the name.'),
-		output: first('output', 'Needed to display the name.'),
-	}),
-	({ host }) => {
-		const fallback = host.name
-		return {
-			input: [
-				on('input', ({ target }) => {
-					host.name = target.value || fallback
-				}),
-			],
-			output: [setText('name')],
-		}
-	},
+  'basic-hello',
+  {
+    name: asString(ui => ui.output.textContent),
+  },
+  ({ first }) => ({
+    input: first('input', 'Needed to enter the name.'),
+    output: first('output', 'Needed to display the name.'),
+  }),
+  ({ host }) => {
+    const fallback = host.name
+    return {
+      input: [
+        on('input', ({ target }) => {
+          host.name = target.value || fallback
+        }),
+      ],
+      output: [setText('name')],
+    }
+  },
 )
 ```
 
@@ -82,8 +82,8 @@ The select function is used to find descendant elements within the component's D
 
 ```js
 ({ first }) => ({
-	input: first('input', 'Needed to enter the name.'),
-	output: first('output', 'Needed to display the name.'),
+  input: first('input', 'Needed to enter the name.'),
+  output: first('output', 'Needed to display the name.'),
 }),
 ```
 
@@ -95,15 +95,15 @@ The setup function must return a record with an array of effects for properties 
 
 ```js
 ({ host }) => {
-	const fallback = host.name
-	return {
-		input: [
-			on('input', ({ target }) => {
-				host.name = target.value || fallback
-			}),
-		],
-		output: [setText('name')],
-	}
+  const fallback = host.name
+  return {
+    input: [
+      on('input', ({ target }) => {
+        host.name = target.value || fallback
+      }),
+    ],
+    output: [setText('name')],
+  }
 },
 ```
 
@@ -246,20 +246,20 @@ Selects the first matching element:
 
 ```js
 defineComponent(
-	'basic-counter',
-	{
-		// Initialize properties
-	},
-	({ first }) => ({
-		increment: first(
-			'button',
-			'Add a native button element to increment the count.',
-		),
-		count: first('span', 'Add a span to display the count.'),
-	}),
-	ui => ({
-	  // Component setup
-	}),
+  'basic-counter',
+  {
+    // Initialize properties
+  },
+  ({ first }) => ({
+    increment: first(
+      'button',
+      'Add a native button element to increment the count.',
+    ),
+    count: first('span', 'Add a span to display the count.'),
+  }),
+  ui => ({
+    // Component setup
+  }),
 )
 ```
 
@@ -269,23 +269,23 @@ Selects all matching elements:
 
 ```js
 defineComponent(
-	'module-tabgroup',
-	{
-	  // Initialize properties
-	},
-	({ all }) => ({
-		tabs: all(
-			'button[role="tab"]',
-			'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
-		),
-		panels: all(
-			'[role="tabpanel"]',
-			'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
-		),
-	}),
-	ui => ({
-	  // Component setup
-	}),
+  'module-tabgroup',
+  {
+    // Initialize properties
+  },
+  ({ all }) => ({
+    tabs: all(
+      'button[role="tab"]',
+      'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
+    ),
+    panels: all(
+      '[role="tabpanel"]',
+      'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
+    ),
+  }),
+  ui => ({
+    // Component setup
+  }),
 )
 ```
 
@@ -309,8 +309,8 @@ Event listeners allow to respond to user interactions. They are the the main cau
 defineComponent(
   'my-component',
   {
-  	active: 0,
-  	value: ''
+    active: 0,
+    value: ''
   },
   ({ all, first }) => ({
     buttons: all('button'),
@@ -319,16 +319,16 @@ defineComponent(
   ({ host }) => ({
     buttons: [
       on('click', ({ target }) => {
-  			// Set 'active' signal to value of data-index attribute of button
-  			const index = parseInt(target.dataset.index, 10);
-  			host.active = Number.isInteger(index) ? index : 0;
-  		})
+        // Set 'active' signal to value of data-index attribute of button
+        const index = parseInt(target.dataset.index, 10);
+        host.active = Number.isInteger(index) ? index : 0;
+      })
     ],
     input: [
       on('change', ({ target }) => {
-  			// Set 'value' signal to value of input element
-  			host.value = target.value;
-  		})
+        // Set 'value' signal to value of input element
+        host.value = target.value;
+      })
     ]
   })
 )
@@ -445,16 +445,5 @@ Unlike some frameworks that **re-render entire components**, Le Truc updates onl
 - **No virtual DOM** – Le Truc modifies the DOM directly.
 - **Signals propagate automatically** – no need to track dependencies manually.
 - **Optimized with a scheduler** – multiple updates are batched efficiently.
-
-{% /section %}
-
-{% section %}
-
-## Next Steps
-
-Now that you understand the basics, explore:
-
-- [Styling](styling.html) – Learn techniques to apply styles to components.
-- [Data Flow](data-flow.html) – Learn about passing state between components.
 
 {% /section %}

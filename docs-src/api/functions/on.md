@@ -8,7 +8,7 @@
 
 > **on**\<`K`, `P`, `E`\>(`type`, `handler`, `options`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/event.ts:36](https://github.com/zeixcom/le-truc/blob/adc7f347d870e640578165aa28996ebdcb7a5c42/src/effects/event.ts#L36)
+Defined in: [src/effects/event.ts:36](https://github.com/zeixcom/le-truc/blob/35f95281922c6ad609e7dde9daf1bc77ac8d3f7a/src/effects/event.ts#L36)
 
 Effect for attaching an event listener to an element.
 Provides proper cleanup when the effect is disposed.

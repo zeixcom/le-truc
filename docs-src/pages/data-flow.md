@@ -35,18 +35,18 @@ First, we need to observe the quantities of all `FormSpinbutton` components. For
 
 ```js#module-catalog.js
 defineComponent(
-	'module-catalog',
-	{},
-	({ all, first }) => ({
-		button: first('basic-button', 'Add a button to go go the Shopping Cart'),
-		spinbuttons: all(
-			'form-spinbutton',
-			'Add spinbutton components to calculate sum from.',
-		),
-	}),
-	ui => {
-		// Component setup
-	},
+  'module-catalog',
+  {},
+  ({ all, first }) => ({
+    button: first('basic-button', 'Add a button to go go the Shopping Cart'),
+    spinbuttons: all(
+      'form-spinbutton',
+      'Add spinbutton components to calculate sum from.',
+    ),
+  }),
+  ui => {
+    // Component setup
+  },
 )
 ```
 
@@ -56,28 +56,28 @@ Then, we need to convert the total of all product quantities to a string and pas
 
 ```js#module-catalog.js
 defineComponent(
-	'module-catalog',
-	{},
-	({ all, first }) => ({
-		button: first('basic-button', 'Add a button to go go the Shopping Cart'),
-		spinbuttons: all(
-			'form-spinbutton',
-			'Add spinbutton components to calculate sum from.',
-		),
-	}),
-	({ spinbuttons }) => {
-		const total = createComputed(() =>
-			spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
-		)
-		return {
-			button: [
-				pass({
-					disabled: () => !total.get(),
-					badge: () => (total.get() > 0 ? String(total.get()) : ''),
-				}),
-			],
-		}
-	},
+  'module-catalog',
+  {},
+  ({ all, first }) => ({
+    button: first('basic-button', 'Add a button to go go the Shopping Cart'),
+    spinbuttons: all(
+      'form-spinbutton',
+      'Add spinbutton components to calculate sum from.',
+    ),
+  }),
+  ({ spinbuttons }) => {
+    const total = createComputed(() =>
+      spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
+    )
+    return {
+      button: [
+        pass({
+          disabled: () => !total.get(),
+          badge: () => (total.get() > 0 ? String(total.get()) : ''),
+        }),
+      ],
+    }
+  },
 )
 ```
 
@@ -92,19 +92,19 @@ The `BasicButton` component **displays a badge when needed** – it does not kno
 
 ```js#basic-button.js
 defineComponent(
-	'basic-button',
-	{
-		disabled: asBoolean(),
-		badge: asString(ui => ui.badge?.textContent ?? ''),
-	},
-	({ first }) => ({
-		button: first('button', 'Add a native button as descendant.'),
-		badge: first('span.badge'),
-	}),
-	() => ({
-		button: [setProperty('disabled')],
-		badge: [setText('badge')],
-	}),
+  'basic-button',
+  {
+    disabled: asBoolean(),
+    badge: asString(ui => ui.badge?.textContent ?? ''),
+  },
+  ({ first }) => ({
+    button: first('button', 'Add a native button as descendant.'),
+    badge: first('span.badge'),
+  }),
+  () => ({
+    button: [setProperty('disabled')],
+    badge: [setText('badge')],
+  }),
 )
 ```
 
@@ -118,85 +118,85 @@ The `FormSpinbutton` component reacts to user interactions and exposes a reactiv
 
 ```js#form-spinbutton.js
 defineComponent(
-	'form-spinbutton',
-	{
-		value: createSensor(
-			read(ui => ui.input.value, asInteger()),
-			'controls',
-			{
-				change: ({ ui, target, prev }) => {
-					if (!(target instanceof HTMLInputElement)) return prev
+  'form-spinbutton',
+  {
+    value: createSensor(
+      read(ui => ui.input.value, asInteger()),
+      'controls',
+      {
+        change: ({ ui, target, prev }) => {
+          if (!(target instanceof HTMLInputElement)) return prev
 
-					const resetTo = (next: number) => {
-						target.value = String(next)
-						target.checkValidity()
-						return next
-					}
+          const resetTo = (next: number) => {
+            target.value = String(next)
+            target.checkValidity()
+            return next
+          }
 
-					const next = Number(target.value)
-					if (!Number.isInteger(next)) return resetTo(prev)
-					const clamped = Math.min(ui.host.max, Math.max(0, next))
-					if (next !== clamped) return resetTo(clamped)
-					return clamped
-				},
-				click: ({ target, prev }) =>
-					prev +
-					(target.classList.contains('decrement')
-						? -1
-						: target.classList.contains('increment')
-							? 1
-							: 0),
-				keydown: ({ ui, event, prev }) => {
-					const { key } = event
-					if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
-						event.stopPropagation()
-						event.preventDefault()
-						const next = prev + (key === 'ArrowDown' || key === '-' ? -1 : 1)
-						return Math.min(ui.host.max, Math.max(0, next))
-					}
-				},
-			},
-		),
-		max: read(ui => ui.input.max, asInteger(10)),
-	},
-	({ all, first }) => ({
-		controls: all(
-			'button, input:not([disabled])',
-		),
-		increment: first(
-			'button.increment',
-			'Add a native button to increment the value',
-		),
-		decrement: first(
-			'button.decrement',
-			'Add a native button to decrement the value',
-		),
-		input: first('input.value', 'Add a native input to display the value'),
-		zero: first('.zero'),
-		other: first('.other'),
-	}),
-	({ host, increment, zero }) => {
-		const nonZero = createComputed(() => host.value !== 0)
-		const incrementLabel = increment.ariaLabel || 'Increment'
-		const ariaLabel = createComputed(() =>
-			nonZero.get() || !zero ? incrementLabel : zero.textContent,
-		)
+          const next = Number(target.value)
+          if (!Number.isInteger(next)) return resetTo(prev)
+          const clamped = Math.min(ui.host.max, Math.max(0, next))
+          if (next !== clamped) return resetTo(clamped)
+          return clamped
+        },
+        click: ({ target, prev }) =>
+          prev +
+          (target.classList.contains('decrement')
+            ? -1
+            : target.classList.contains('increment')
+              ? 1
+              : 0),
+        keydown: ({ ui, event, prev }) => {
+          const { key } = event
+          if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
+            event.stopPropagation()
+            event.preventDefault()
+            const next = prev + (key === 'ArrowDown' || key === '-' ? -1 : 1)
+            return Math.min(ui.host.max, Math.max(0, next))
+          }
+        },
+      },
+    ),
+    max: read(ui => ui.input.max, asInteger(10)),
+  },
+  ({ all, first }) => ({
+    controls: all(
+      'button, input:not([disabled])',
+    ),
+    increment: first(
+      'button.increment',
+      'Add a native button to increment the value',
+    ),
+    decrement: first(
+      'button.decrement',
+      'Add a native button to decrement the value',
+    ),
+    input: first('input.value', 'Add a native input to display the value'),
+    zero: first('.zero'),
+    other: first('.other'),
+  }),
+  ({ host, increment, zero }) => {
+    const nonZero = createComputed(() => host.value !== 0)
+    const incrementLabel = increment.ariaLabel || 'Increment'
+    const ariaLabel = createComputed(() =>
+      nonZero.get() || !zero ? incrementLabel : zero.textContent,
+    )
 
-		return {
-			input: [
-				show(nonZero),
-				setProperty('value'),
-				setProperty('max', () => String(host.max)),
-			],
-			decrement: [show(nonZero)],
-			increment: [
-				setProperty('disabled', () => host.value >= host.max),
-				setProperty('ariaLabel', ariaLabel),
-			],
-			zero: [show(() => !nonZero.get())],
-			other: [show(nonZero)],
-		}
-	},
+    return {
+      input: [
+        show(nonZero),
+        setProperty('value'),
+        setProperty('max', () => String(host.max)),
+      ],
+      decrement: [show(nonZero)],
+      increment: [
+        setProperty('disabled', () => host.value >= host.max),
+        setProperty('ariaLabel', ariaLabel),
+      ],
+      zero: [show(() => !nonZero.get())],
+      other: [show(nonZero)],
+    }
+  },
 )
 ```
 
@@ -215,91 +215,91 @@ Here's how everything comes together:
 
 {% demo %}
 <module-catalog>
-	<header>
-		<p>Shop</p>
-		<basic-button disabled>
-			<button type="button" disabled>
-				<span class="label">🛒 Shopping Cart</span>
-				<span class="badge"></span>
-			</button>
-		</basic-button>
-	</header>
-	<ul>
-		<li>
-			<p>Product 1</p>
-			<form-spinbutton>
-				<button type="button" class="decrement" aria-label="Decrement" hidden>
-					−
-				</button>
-				<input
-					type="number"
-					class="value"
-					name="amount-product1"
-					value="0"
-					min="0"
-					max="10"
-					readonly
-					disabled
-					hidden
-				/>
-				<button type="button" class="increment" aria-label="Increment">
-					<span class="zero">Add to Cart</span>
-					<span class="other" hidden>+</span>
-				</button>
-			</form-spinbutton>
-		</li>
-		<li>
-			<p>Product 2</p>
-			<form-spinbutton>
-				<button type="button" class="decrement" aria-label="Decrement" hidden>
-					−
-				</button>
-				<input
-					type="number"
-					class="value"
-					name="amount-product2"
-					value="0"
-					min="0"
-					max="5"
-					readonly
-					disabled
-					hidden
-				/>
-				<button type="button" class="increment" aria-label="Increment">
-					<span class="zero">Add to Cart</span>
-					<span class="other" hidden>+</span>
-				</button>
-			</form-spinbutton>
-		</li>
-		<li>
-			<p>Product 3</p>
-			<form-spinbutton>
-				<button type="button" class="decrement" aria-label="Decrement" hidden>
-					−
-				</button>
-				<input
-					type="number"
-					class="value"
-					name="amount-product3"
-					value="0"
-					min="0"
-					max="20"
-					readonly
-					disabled
-					hidden
-				/>
-				<button type="button" class="increment" aria-label="Increment">
-					<span class="zero">Add to Cart</span>
-					<span class="other" hidden>+</span>
-				</button>
-			</form-spinbutton>
-		</li>
-	</ul>
+  <header>
+    <p>Shop</p>
+    <basic-button disabled>
+      <button type="button" disabled>
+        <span class="label">🛒 Shopping Cart</span>
+        <span class="badge"></span>
+      </button>
+    </basic-button>
+  </header>
+  <ul>
+    <li>
+      <p>Product 1</p>
+      <form-spinbutton>
+        <button type="button" class="decrement" aria-label="Decrement" hidden>
+          −
+        </button>
+        <input
+          type="number"
+          class="value"
+          name="amount-product1"
+          value="0"
+          min="0"
+          max="10"
+          readonly
+          disabled
+          hidden
+        />
+        <button type="button" class="increment" aria-label="Increment">
+          <span class="zero">Add to Cart</span>
+          <span class="other" hidden>+</span>
+        </button>
+      </form-spinbutton>
+    </li>
+    <li>
+      <p>Product 2</p>
+      <form-spinbutton>
+        <button type="button" class="decrement" aria-label="Decrement" hidden>
+          −
+        </button>
+        <input
+          type="number"
+          class="value"
+          name="amount-product2"
+          value="0"
+          min="0"
+          max="5"
+          readonly
+          disabled
+          hidden
+        />
+        <button type="button" class="increment" aria-label="Increment">
+          <span class="zero">Add to Cart</span>
+          <span class="other" hidden>+</span>
+        </button>
+      </form-spinbutton>
+    </li>
+    <li>
+      <p>Product 3</p>
+      <form-spinbutton>
+        <button type="button" class="decrement" aria-label="Decrement" hidden>
+          −
+        </button>
+        <input
+          type="number"
+          class="value"
+          name="amount-product3"
+          value="0"
+          min="0"
+          max="20"
+          readonly
+          disabled
+          hidden
+        />
+        <button type="button" class="increment" aria-label="Increment">
+          <span class="zero">Add to Cart</span>
+          <span class="other" hidden>+</span>
+        </button>
+      </form-spinbutton>
+    </li>
+  </ul>
 </module-catalog>
 ---
-{% source title="ModuleCatalog Source Code" src="./examples/module-catalog.html" /%}
-{% source title="BasicButton Source Code" src="./examples/basic-button.html" /%}
-{% source title="FormSpinbutton Source Code" src="./examples/form-spinbutton.html" /%}
+{% source title="ModuleCatalog source code" src="./examples/module-catalog.html" /%}
+{% source title="BasicButton source code" src="./examples/basic-button.html" /%}
+{% source title="FormSpinbutton source code" src="./examples/form-spinbutton.html" /%}
 {% /demo %}
 
 {% /section %}
@@ -314,125 +314,86 @@ Context allows **parent components to share state** with any descendant componen
 
 First, define typed context keys for the values you want to share:
 
-```ts
+```ts#context-media.ts
 // Define context keys with types
-const USER_THEME = 'user-theme' as Context<
-  'user-theme',
-  State<'light' | 'dark'>
+export const MEDIA_MOTION = 'media-motion' as Context<
+  'media-motion',
+  () => 'no-preference' | 'reduce'
 >
-const USER_LANGUAGE = 'user-language' as Context<'user-language', State<string>>
-const USER_SETTINGS = 'user-settings' as Context<
-  'user-settings',
-  State<UserSettings>
+export const MEDIA_THEME = 'media-theme' as Context<
+  'media-theme',
+  () => 'light' | 'dark'
 >
-
-// Type for user settings
-type UserSettings = {
-  notifications: boolean
-  autoSave: boolean
-  fontSize: 'small' | 'medium' | 'large'
-}
 ```
 
 ### Provider Component
 
 The **provider component** creates the shared state and makes it available to descendants:
 
-```js
-component(
-  'user-preferences',
-  {
-    // Create reactive state for each context
-    [USER_THEME]: () => {
-      const savedTheme = localStorage.getItem('theme') || 'light'
-      const theme = state(savedTheme)
-
-      // Persist changes to localStorage
-      theme.subscribe(value => {
-        localStorage.setItem('theme', value)
-        document.documentElement.setAttribute('data-theme', value)
-      })
-
-      return theme
-    },
-
-    [USER_LANGUAGE]: () => {
-      const savedLang = localStorage.getItem('language') || 'en'
-      const language = state(savedLang)
-
-      language.subscribe(value => {
-        localStorage.setItem('language', value)
-        document.documentElement.setAttribute('lang', value)
-      })
-
-      return language
-    },
-
-    [USER_SETTINGS]: () => {
-      const defaultSettings = {
-        notifications: true,
-        autoSave: true,
-        fontSize: 'medium',
-      }
-
-      const saved = localStorage.getItem('userSettings')
-      const initial = saved ? JSON.parse(saved) : defaultSettings
-      const settings = state(initial)
-
-      settings.subscribe(value => {
-        localStorage.setItem('userSettings', JSON.stringify(value))
-      })
-
-      return settings
-    },
-  },
-  () => [
-    // Provide all contexts to descendant components
-    provideContexts([USER_THEME, USER_LANGUAGE, USER_SETTINGS]),
-  ],
-)
-```
-
-### TypeScript Support
-
-For full type safety and autocompletion, declare your contexts globally:
-
-```ts
-export type UserPreferencesProps = {
-  'user-theme': 'light' | 'dark'
-  'user-language': string
-  'user-settings': UserSettings
+```ts#context-media.ts
+export type ContextMediaProps = {
+  readonly 'media-motion': 'no-preference' | 'reduce'
+  readonly 'media-theme': 'light' | 'dark'
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'user-preferences': Component<UserPreferencesProps>
+    'context-media': Component<ContextMediaProps>
   }
 }
+
+export default defineComponent<ContextMediaProps>(
+  'context-media',
+  {
+    [MEDIA_MOTION]: () => {
+      const mql = matchMedia('(prefers-reduced-motion: reduce)')
+      const motion = createState(mql.matches ? 'reduce' : 'no-preference')
+      mql.addEventListener('change', e => {
+        motion.set(e.matches ? 'reduce' : 'no-preference')
+      })
+      return motion
+    },
+    [MEDIA_THEME]: () => {
+      const mql = matchMedia('(prefers-color-scheme: dark)')
+      const theme = createState(mql.matches ? 'dark' : 'light')
+      mql.addEventListener('change', e => {
+        theme.set(e.matches ? 'dark' : 'light')
+      })
+      return theme
+    },
+  },
+  undefined, // Component has no own descendant elements
+  () => ({
+    host: [
+      provideContexts([MEDIA_MOTION, MEDIA_THEME]),
+    ],
+  }),
+)
 ```
 
 ### Usage in HTML
 
 The provider component wraps your entire application or a section that needs shared state:
 
-```html
-<user-preferences>
-  <header>
-    <theme-toggle></theme-toggle>
-    <language-selector></language-selector>
-  </header>
-
+```html#index.html
+<context-media>
+  <!-- Arbitrarily nested HTML with one or many context consumers -->
   <main>
-    <settings-panel></settings-panel>
-    <content-area></content-area>
+    <card-mediaqueries>
+      <dl>
+        <dt>Motion Preference:</dt>
+         <dd class="motion"></dd>
+        <dt>Theme Preference:</dt>
+        <dd class="theme"></dd>
+      </dl>
+    </card-mediaqueries>
   </main>
-</user-preferences>
+</context-media>
 ```
 
 **Key Benefits:**
 
-- **Centralized State**: All user preferences managed in one place
-- **Automatic Persistence**: Changes automatically saved to localStorage
+- **Centralized State**: All global state is managed in one place
 - **Type Safety**: Full TypeScript support with autocomplete
 - **Reactive Updates**: All consumers automatically update when context changes
 - **No Prop Drilling**: Deep components access context directly
@@ -443,183 +404,50 @@ The provider component wraps your entire application or a section that needs sha
 
 ## Consuming Context
 
-**Consumer components** use `fromContext()` to access shared state from ancestor providers. The context is automatically reactive - when the provider updates the context, all consumers update immediately.
+**Consumer components** use `requestContext()` to access shared state from ancestor providers. The context is automatically reactive - when the provider updates the context, all consumers update immediately.
 
-### Simple Context Consumer
+### Consumer Component
 
-Here's a theme toggle that consumes and updates the user theme context:
+Here's a simple card that displays the current motion and theme preferences:
 
-```js
-component(
-  'theme-toggle',
+```js#card-mediaqueries.js
+export default defineComponent(
+  'card-mediaqueries',
   {
-    // Consume the theme context with fallback
-    theme: fromContext(USER_THEME, 'light'),
+    motion: requestContext(MEDIA_MOTION, 'unknown'),
+    theme: requestContext(MEDIA_THEME, 'unknown'),
   },
-  (el, { first }) => [
-    first('button', [
-      setText(() => (el.theme === 'light' ? '🌙 Dark' : '☀️ Light')),
-      setProperty(
-        'ariaLabel',
-        () => `Switch to ${el.theme === 'light' ? 'dark' : 'light'} theme`,
-      ),
-      on('click', () => {
-        // Update the context - all consumers will react
-        el.theme = el.theme === 'light' ? 'dark' : 'light'
-      }),
-    ]),
-  ],
+  ({ first }) => ({
+    motion: first('.motion'),
+    theme: first('.theme'),
+  }),
+  () => ({
+    motion: [setText('motion')],
+    theme: [setText('theme')],
+  }),
 )
 ```
 
-### Complex Context Consumer
+### Full Example
 
-A settings panel that consumes and modifies user settings:
-
-```js
-component(
-  'settings-panel',
-  {
-    // Consume multiple contexts
-    theme: fromContext(USER_THEME, 'light'),
-    language: fromContext(USER_LANGUAGE, 'en'),
-    settings: fromContext(USER_SETTINGS, {
-      notifications: true,
-      autoSave: true,
-      fontSize: 'medium',
-    }),
-  },
-  (el, { all, first }) => {
-    return [
-      // Theme section
-      first('.theme-setting', [setText(() => `Current theme: ${el.theme}`)]),
-
-      first('.theme-buttons button[data-theme="light"]', [
-        toggleClass('active', () => el.theme === 'light'),
-        on('click', () => {
-          el.theme = 'light'
-        }),
-      ]),
-
-      first('.theme-buttons button[data-theme="dark"]', [
-        toggleClass('active', () => el.theme === 'dark'),
-        on('click', () => {
-          el.theme = 'dark'
-        }),
-      ]),
-
-      // Language selection
-      first('select[name="language"]', [
-        setProperty('value', 'language'),
-        on('change', e => {
-          el.language = e.target.value
-        }),
-      ]),
-
-      // Settings toggles
-      first('input[name="notifications"]', [
-        setProperty('checked', () => el.settings.notifications),
-        on('change', e => {
-          el.settings = {
-            ...el.settings,
-            notifications: e.target.checked,
-          }
-        }),
-      ]),
-
-      first('input[name="autoSave"]', [
-        setProperty('checked', () => el.settings.autoSave),
-        on('change', e => {
-          el.settings = {
-            ...el.settings,
-            autoSave: e.target.checked,
-          }
-        }),
-      ]),
-
-      // Font size selector
-      all('input[name="fontSize"]', [
-        setProperty('checked', target => el.settings.fontSize === target.value),
-        on('change', e => {
-          el.settings = {
-            ...el.settings,
-            fontSize: e.target.value,
-          }
-        }),
-      ]),
-    ]
-  },
-)
-```
-
-### Context with Computed Values
-
-You can also use context to provide computed values derived from multiple sources:
-
-```js
-component(
-  'user-status',
-  {
-    theme: fromContext(USER_THEME, 'light'),
-    settings: fromContext(USER_SETTINGS, { fontSize: 'medium' }),
-
-    // Computed property based on context
-    statusMessage: el =>
-      `Theme: ${el.theme}, Font: ${el.settings.fontSize}, Notifications: ${el.settings.notifications ? 'on' : 'off'}`,
-  },
-  (el, { first }) => [first('.status', setText('statusMessage'))],
-)
-```
-
-### Context with Fallback Functions
-
-For more complex fallback logic, use a function:
-
-```js
-component(
-  'localized-content',
-  {
-    language: fromContext(USER_LANGUAGE, el => {
-      // Fallback logic: detect browser language or use 'en'
-      return navigator.language.split('-')[0] || 'en'
-    }),
-  },
-  (el, { first }) => [
-    first(
-      '.greeting',
-      setText(() => {
-        const greetings = {
-          en: 'Hello!',
-          es: '¡Hola!',
-          fr: 'Bonjour!',
-          de: 'Hallo!',
-        }
-        return greetings[el.language] || greetings.en
-      }),
-    ),
-  ],
-)
-```
-
-### Benefits of Context
-
-- **Automatic Updates**: All consumers react when context changes
-- **Type Safety**: Full TypeScript support with proper typing
-- **Fallback Support**: Graceful degradation when context is unavailable
-- **Performance**: Only components that use changed context re-render
-- **Clean Architecture**: Eliminates prop drilling and tight coupling
-
-**When to Use Context:**
-
-- **Application State**: User preferences, authentication, theme
-- **Configuration**: API endpoints, feature flags, environment settings
-- **Shared Resources**: Database connections, cache instances
-- **Cross-cutting Concerns**: Logging, analytics, error handling
-
-{% /section %}
-
-{% section %}
-
-## Next Steps
+{% demo %}
+<context-media>
+	<card-mediaqueries>
+		<dl>
+			<dt>Motion Preference:</dt>
+			<dd class="motion"></dd>
+			<dt>Theme Preference:</dt>
+			<dd class="theme"></dd>
+			<dt>Device Viewport:</dt>
+			<dd class="viewport"></dd>
+			<dt>Device Orientation:</dt>
+			<dd class="orientation"></dd>
+		</dl>
+	</card-mediaqueries>
+</context-media>
+---
+{% source title="ContextMedia source code" src="./examples/context-media.html" /%}
+{% source title="CardMediaqueries source code" src="./examples/card-mediaqueries.html" /%}
+{% /demo %}
 
 {% /section %}

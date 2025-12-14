@@ -109,25 +109,25 @@ Save the following inside a `<script type="module">` tag or an external JavaScri
   } from 'https://cdn.jsdelivr.net/npm/@zeix/le-truc@latest/index.js'
 
   defineComponent(
-  	'basic-hello',
-  	{
-  		name: asString(ui => ui.output.textContent),
-  	},
-  	({ first }) => ({
-  		input: first('input', 'Needed to enter the name.'),
-  		output: first('output', 'Needed to display the name.'),
-  	}),
-  	({ host }) => {
-  		const fallback = host.name
-  		return {
-  			input: [
-  				on('input', ({ target }) => {
-  					host.name = target.value || fallback
-  				}),
-  			],
-  			output: [setText('name')],
-  		}
-  	},
+    'basic-hello',
+    {
+      name: asString(ui => ui.output.textContent),
+    },
+    ({ first }) => ({
+      input: first('input', 'Needed to enter the name.'),
+      output: first('output', 'Needed to display the name.'),
+    }),
+    ({ host }) => {
+      const fallback = host.name
+      return {
+        input: [
+          on('input', ({ target }) => {
+            host.name = target.value || fallback
+          }),
+        ],
+        output: [setText('name')],
+      }
+    },
   )
 </script>
 ```
@@ -155,12 +155,12 @@ If everything is set up correctly, you should see:
 - The greeting updates as you type
 
 {% demo %}
-	<basic-hello>
-		<label>Your name<br>
-			<input name="name" type="text" autocomplete="given-name">
-		</label>
-		<p>Hello, <output>World</output>!</p>
-	</basic-hello>
+<basic-hello>
+  <label>Your name<br>
+    <input name="name" type="text" autocomplete="given-name">
+  </label>
+  <p>Hello, <output>World</output>!</p>
+</basic-hello>
 {% /demo %}
 
 If it's not working:
@@ -168,16 +168,5 @@ If it's not working:
 - Check the browser console for errors (missing imports, typos).
 - Ensure your `<script>` tag is set to `type="module"` when using ES modules.
 - If using NPM, confirm Le Truc is installed inside `node_modules/@zeix/le-truc`.
-
-{% /section %}
-
-{% section %}
-
-## Next Steps
-
-You've successfully created your first reactive component! Now you're ready to dive deeper into Le Truc's core concepts:
-
-**Next: Building [Components](components.html)**
-Learn the fundamental building blocks: component anatomy, element selection, basic state management, and event handling patterns.
 
 {% /section %}

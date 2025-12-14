@@ -45,7 +45,7 @@ export const MEDIA_ORIENTATION = 'media-orientation' as Context<
 
 /* === Component === */
 
-export default defineComponent<ContextMediaProps, {}>(
+export default defineComponent<ContextMediaProps>(
 	'context-media',
 	{
 		// Context for motion preference; true for no-preference, false for reduce

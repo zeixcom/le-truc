@@ -7,20 +7,20 @@
 		<meta name="description" content="Installation, setup, and first steps" />
 		<link
 			rel="preload"
-			href="./assets/main.css?v=mj5ufwg5"
+			href="./assets/main.css?v=mj5xpd2i"
 			as="style"
 		/>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=mj5ufwg5"
+			href="./assets/main.js?v=mj5xpd2i"
 		/>
 		<link
 			rel="stylesheet"
-			href="./assets/main.css?v=mj5ufwg5"
+			href="./assets/main.css?v=mj5xpd2i"
 		/>
 		<script
 			type="module"
-			src="./assets/main.js?v=mj5ufwg5"
+			src="./assets/main.js?v=mj5xpd2i"
 		></script>
 	</head>
 	<body class="">
@@ -88,8 +88,6 @@
 		<a href="#creating-your-first-component">Creating Your First Component</a>
 	</li><li>
 		<a href="#verifying-your-installation">Verifying Your Installation</a>
-	</li><li>
-		<a href="#next-steps">Next Steps</a>
 	</li>
 			</ol>
 		</nav>
@@ -114,28 +112,28 @@
 <span class="line"><span style="color:#F8F8F2">  } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> 'https://cdn.jsdelivr.net/npm/@zeix/le-truc@latest/index.js'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#A6E22E">  defineComponent</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">  	'basic-hello'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">  	{</span></span>
-<span class="line"><span style="color:#F8F8F2">  		name: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.output.textContent),</span></span>
-<span class="line"><span style="color:#F8F8F2">  	},</span></span>
-<span class="line"><span style="color:#F8F8F2">  	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">  		input: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to enter the name.'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">  		output: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'output'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to display the name.'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">  	}),</span></span>
-<span class="line"><span style="color:#F8F8F2">  	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">  		const</span><span style="color:#F8F8F2"> fallback </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.name</span></span>
-<span class="line"><span style="color:#F92672">  		return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">  			input: [</span></span>
-<span class="line"><span style="color:#A6E22E">  				on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">  					host.name </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.value </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> fallback</span></span>
-<span class="line"><span style="color:#F8F8F2">  				}),</span></span>
-<span class="line"><span style="color:#F8F8F2">  			],</span></span>
-<span class="line"><span style="color:#F8F8F2">  			output: [</span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2">)],</span></span>
-<span class="line"><span style="color:#F8F8F2">  		}</span></span>
-<span class="line"><span style="color:#F8F8F2">  	},</span></span>
+<span class="line"><span style="color:#E6DB74">    'basic-hello'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">    {</span></span>
+<span class="line"><span style="color:#F8F8F2">      name: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.output.textContent),</span></span>
+<span class="line"><span style="color:#F8F8F2">    },</span></span>
+<span class="line"><span style="color:#F8F8F2">    ({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">      input: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to enter the name.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">      output: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'output'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to display the name.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">    }),</span></span>
+<span class="line"><span style="color:#F8F8F2">    ({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">      const</span><span style="color:#F8F8F2"> fallback </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.name</span></span>
+<span class="line"><span style="color:#F92672">      return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">        input: [</span></span>
+<span class="line"><span style="color:#A6E22E">          on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">            host.name </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.value </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> fallback</span></span>
+<span class="line"><span style="color:#F8F8F2">          }),</span></span>
+<span class="line"><span style="color:#F8F8F2">        ],</span></span>
+<span class="line"><span style="color:#F8F8F2">        output: [</span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2">)],</span></span>
+<span class="line"><span style="color:#F8F8F2">      }</span></span>
+<span class="line"><span style="color:#F8F8F2">    },</span></span>
 <span class="line"><span style="color:#F8F8F2">  )</span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">script</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h3 id="understanding-your-first-component"><a name="understanding-your-first-component" class="anchor" href="#understanding-your-first-component"><span class="permalink">🔗</span><span class="title">Understanding Your First Component</span></a></h3><p>This component demonstrates Le Truc's core concepts:</p><ul><li><strong>Reactive Properties</strong>: <code>name: asString(...)</code> creates a reactive property that syncs with the <code>name</code> attribute and falls back to the <code>&lt;output&gt;</code> content</li><li><strong>Effects</strong>: The setup function returns effects that handle user input and update the display text</li><li><strong>Element Selection</strong>: <code>first()</code> selects descendant element to apply effects to</li></ul><p>Learn more about these concepts in the <a href="components.html">Components</a> guide.</p></section><section><h2 id="verifying-your-installation"><a name="verifying-your-installation" class="anchor" href="#verifying-your-installation"><span class="permalink">🔗</span><span class="title">Verifying Your Installation</span></a></h2><p>If everything is set up correctly, you should see:</p><ul><li>A text input field</li><li>A greeting (<code>Hello, World!</code>)</li><li>The greeting updates as you type</li></ul><module-demo><div class="preview"><basic-hello><label>Your name<br><input name="name" type="text" autocomplete="given-name"></label><p>Hello, <output>World</output>!</p></basic-hello></div></module-demo><p>If it's not working:</p><ul><li>Check the browser console for errors (missing imports, typos).</li><li>Ensure your <code>&lt;script&gt;</code> tag is set to <code>type=&quot;module&quot;</code> when using ES modules.</li><li>If using NPM, confirm Le Truc is installed inside <code>node_modules/@zeix/le-truc</code>.</li></ul></section><section><h2 id="next-steps"><a name="next-steps" class="anchor" href="#next-steps"><span class="permalink">🔗</span><span class="title">Next Steps</span></a></h2><p>You've successfully created your first reactive component! Now you're ready to dive deeper into Le Truc's core concepts:</p><p><strong>Next: Building <a href="components.html">Components</a></strong> Learn the fundamental building blocks: component anatomy, element selection, basic state management, and event handling patterns.</p></section></main>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h3 id="understanding-your-first-component"><a name="understanding-your-first-component" class="anchor" href="#understanding-your-first-component"><span class="permalink">🔗</span><span class="title">Understanding Your First Component</span></a></h3><p>This component demonstrates Le Truc's core concepts:</p><ul><li><strong>Reactive Properties</strong>: <code>name: asString(...)</code> creates a reactive property that syncs with the <code>name</code> attribute and falls back to the <code>&lt;output&gt;</code> content</li><li><strong>Effects</strong>: The setup function returns effects that handle user input and update the display text</li><li><strong>Element Selection</strong>: <code>first()</code> selects descendant element to apply effects to</li></ul><p>Learn more about these concepts in the <a href="components.html">Components</a> guide.</p></section><section><h2 id="verifying-your-installation"><a name="verifying-your-installation" class="anchor" href="#verifying-your-installation"><span class="permalink">🔗</span><span class="title">Verifying Your Installation</span></a></h2><p>If everything is set up correctly, you should see:</p><ul><li>A text input field</li><li>A greeting (<code>Hello, World!</code>)</li><li>The greeting updates as you type</li></ul><module-demo><div class="preview"><basic-hello><label>Your name<br><input name="name" type="text" autocomplete="given-name"></label><p>Hello, <output>World</output>!</p></basic-hello></div></module-demo><p>If it's not working:</p><ul><li>Check the browser console for errors (missing imports, typos).</li><li>Ensure your <code>&lt;script&gt;</code> tag is set to <code>type=&quot;module&quot;</code> when using ES modules.</li><li>If using NPM, confirm Le Truc is installed inside <code>node_modules/@zeix/le-truc</code>.</li></ul></section></main>
 			<footer class="content-grid">
 				<div class="content">
 					<h2 class="visually-hidden">Footer</h2>
