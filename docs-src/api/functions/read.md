@@ -1,0 +1,47 @@
+[**le-truc**](../README.md)
+
+***
+
+[le-truc](../globals.md) / read
+
+# Function: read()
+
+> **read**\<`T`, `U`\>(`reader`, `fallback`): [`Reader`](../type-aliases/Reader.md)\<`T`, `U`\>
+
+Defined in: [src/parsers.ts:58](https://github.com/zeixcom/le-truc/blob/35f95281922c6ad609e7dde9daf1bc77ac8d3f7a/src/parsers.ts#L58)
+
+Read a value from a UI element
+
+## Type Parameters
+
+### T
+
+`T` *extends* `object`
+
+### U
+
+`U` *extends* [`UI`](../type-aliases/UI.md)
+
+## Parameters
+
+### reader
+
+[`LooseReader`](../type-aliases/LooseReader.md)\<`T`, `U`\>
+
+Reader function returning T | string | null | undefined
+
+### fallback
+
+[`ParserOrFallback`](../type-aliases/ParserOrFallback.md)\<`T`, `U`\>
+
+Fallback value or parser function
+
+## Returns
+
+[`Reader`](../type-aliases/Reader.md)\<`T`, `U`\>
+
+Parsed value or fallback value
+
+## Since
+
+0.15.0

@@ -23,9 +23,9 @@ export default defineComponent<{}, ModuleCatalogUI>(
 			'Add spinbutton components to calculate sum from.',
 		),
 	}),
-	ui => {
+	({ spinbuttons }) => {
 		const total = createComputed(() =>
-			ui.spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
+			spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
 		)
 		return {
 			button: [

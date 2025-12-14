@@ -1,0 +1,13 @@
+module-demo {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-m);
+	margin-block-end: var(--space-l);
+
+	.preview {
+		border: 1px dotted var(--color-border);
+		border-radius: var(--space-s);
+		padding: var(--space-s);
+		container: preview / inline-size;
+	}
+}

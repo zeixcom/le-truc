@@ -4,7 +4,6 @@ import {
 	isFunction,
 	isRecord,
 	isSignal,
-	isState,
 	isString,
 	type MaybeCleanup,
 	type Signal,

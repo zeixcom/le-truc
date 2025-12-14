@@ -1,0 +1,304 @@
+import Markdoc from '@markdoc/markdoc'
+import {
+	type Computed,
+	createComputed,
+	type Store,
+	UNSET,
+} from '@zeix/cause-effect'
+import { codeToHtml } from 'shiki'
+import {
+	COMPONENTS_DIR,
+	INPUT_DIR,
+	PAGES_DIR,
+	SRC_DIR,
+	TEMPLATES_DIR,
+} from './config'
+import { watchFiles } from './file-watcher'
+import { extractFrontmatter, getRelativePath } from './io'
+import markdocConfig from './markdoc.config'
+import { postProcessHtml } from './markdoc-helpers'
+import type {
+	FileInfo,
+	PageInfo,
+	PageMetadata,
+	ProcessedMarkdownFile,
+} from './types'
+
+export const markdownFiles: {
+	sources: Store<Record<string, FileInfo>>
+	processed: Computed<Map<string, FileInfo & { metadata: PageMetadata }>>
+	pageInfos: Computed<PageInfo[]>
+	fullyProcessed: Computed<Map<string, ProcessedMarkdownFile>>
+} = (() => {
+	const sources = watchFiles(PAGES_DIR, {
+		recursive: true,
+		extensions: ['.md'],
+		ignore: ['README.md'],
+	})
+
+	const processed = createComputed(async () => {
+		const rawFiles = sources.get()
+		if (rawFiles === UNSET) return UNSET
+
+		const files = new Map<string, FileInfo & { metadata: PageMetadata }>()
+		for (const path in rawFiles) {
+			const fileInfo = rawFiles[path]
+			if (!fileInfo) continue
+			const { metadata, content } = extractFrontmatter(fileInfo.content)
+			files.set(path, {
+				...fileInfo,
+				content, // Content without frontmatter
+				metadata,
+			})
+		}
+		return files
+	})
+
+	const pageInfos = createComputed(async () => {
+		const pageInfos: PageInfo[] = []
+		const files = processed.get()
+		if (files === UNSET) return UNSET
+
+		for (const [path, file] of files) {
+			const relativePath = getRelativePath(PAGES_DIR, path)
+			if (!relativePath) continue
+			pageInfos.push({
+				url: relativePath.replace('.md', '.html'),
+				title: file.metadata.title || file.filename.replace('.md', ''),
+				emoji: file.metadata.emoji || '📄',
+				description: file.metadata.description || '',
+				filename: file.filename,
+				relativePath,
+				lastModified: file.lastModified,
+				section: relativePath.includes('/') ? relativePath.split('/')[0] : '',
+			})
+		}
+		return pageInfos
+	})
+
+	const fullyProcessed = createComputed(async () => {
+		const files = processed.get()
+		if (files === UNSET) return UNSET
+
+		const processedFiles = new Map<string, ProcessedMarkdownFile>()
+
+		for (const [path, file] of files) {
+			try {
+				// Calculate relative path from pages directory
+				const pagesDir = PAGES_DIR.replace(/^\.\//, '')
+				const relativePath = path
+					.replace(PAGES_DIR + '/', '')
+					.replace(pagesDir + '/', '')
+					.replace(/\\/g, '/')
+
+				// Calculate path info
+				const pathParts = relativePath.split('/')
+				const section = pathParts.length > 1 ? pathParts[0] : undefined
+				const depth = pathParts.length - 1
+				const basePath = depth > 0 ? '../'.repeat(depth) : './'
+
+				// Extract frontmatter and content
+				const { metadata: frontmatter, content } = file
+
+				// Clean API content (remove everything above first H1)
+				let processedContent = content
+				if (section === 'api') {
+					const h1Match = content.match(/^(#\s+.+)$/m)
+					if (h1Match) {
+						const h1Index = content.indexOf(h1Match[0])
+						processedContent = content.substring(h1Index)
+					}
+				}
+
+				// Parse with Markdoc
+				const ast = Markdoc.parse(processedContent)
+
+				// Validate the document
+				const errors = Markdoc.validate(ast, markdocConfig)
+				if (errors.length > 0) {
+					console.warn(`Markdoc validation errors for ${path}:`, errors)
+				}
+
+				// Transform the AST
+				const transformed = Markdoc.transform(ast, markdocConfig)
+
+				// Render to HTML
+				let htmlContent = Markdoc.renderers.html(transformed)
+
+				// Remove automatic <article> wrapper added by Markdoc
+				htmlContent = htmlContent.replace(
+					/^<article>([\s\S]*)<\/article>$/m,
+					'$1',
+				)
+
+				// Process code blocks with syntax highlighting
+				const codeBlockRegex =
+					/<pre data-language="([^"]*)" data-code="([^"]*)"><code class="language-[^"]*">[\s\S]*?<\/code><\/pre>/g
+				let match: RegExpExecArray | null
+
+				while ((match = codeBlockRegex.exec(htmlContent)) !== null) {
+					const [fullMatch, lang, encodedCode] = match
+
+					// Decode HTML entities
+					const code = encodedCode
+						.replace(/&quot;/g, '"')
+						.replace(/&#39;/g, "'")
+						.replace(/&lt;/g, '<')
+						.replace(/&gt;/g, '>')
+						.replace(/&amp;/g, '&')
+
+					try {
+						const highlighted = await codeToHtml(code, {
+							lang: lang || 'text',
+							theme: 'monokai',
+						})
+
+						htmlContent = htmlContent.replace(fullMatch, highlighted)
+					} catch (error) {
+						console.warn(`Failed to highlight ${lang} code block:`, error)
+						// Keep the original code block as fallback
+					}
+				}
+
+				// Process module-demo components with raw HTML
+				htmlContent = htmlContent.replace(
+					/<module-demo([^>]*) preview-html="([^"]*)"([^>]*)>([\s\S]*?)<\/module-demo>/g,
+					(fullMatch, beforeAttrs, encodedHtml, afterAttrs, content) => {
+						// Decode HTML entities that may have been encoded
+						const previewHtml = encodedHtml
+							.replace(/&quot;/g, '"')
+							.replace(/&#39;/g, "'")
+							.replace(/&lt;/g, '<')
+							.replace(/&gt;/g, '>')
+							.replace(/&amp;/g, '&')
+							.replace(/>\s{2,}</g, '><')
+							.replace(/\s{2,}/g, ' ')
+							.trim()
+
+						// Build the complete module-demo structure
+						const previewDiv = `<div class="preview">${previewHtml}</div>`
+						return `<module-demo${beforeAttrs}${afterAttrs}>${previewDiv}${content}</module-demo>`
+					},
+				)
+
+				// Post-process HTML (fix links, wrap API content)
+				htmlContent = postProcessHtml(htmlContent, section)
+
+				// Extract title
+				let title = frontmatter.title
+				if (!title && section === 'api') {
+					const headingMatch = processedContent.match(
+						/^#\s+(Function|Type Alias|Variable):\s*(.+?)(?:\(\))?$/m,
+					)
+					if (headingMatch) {
+						title = headingMatch[2].trim()
+					} else {
+						const fallbackMatch = processedContent.match(/^#\s+(.+)$/m)
+						if (fallbackMatch) {
+							title = fallbackMatch[1].replace(/\(.*?\)$/, '').trim()
+						}
+					}
+				}
+
+				processedFiles.set(path, {
+					...file,
+					processedContent,
+					htmlContent,
+					section,
+					depth,
+					relativePath,
+					basePath,
+					title: title || 'Untitled',
+				})
+			} catch (error) {
+				console.error(`Failed to process markdown file ${path}:`, error)
+			}
+		}
+
+		return processedFiles
+	})
+
+	return {
+		sources,
+		processed,
+		pageInfos,
+		fullyProcessed,
+	}
+})()
+
+export const libraryScripts = (() => {
+	const sources = watchFiles(SRC_DIR, {
+		recursive: true,
+		extensions: ['.ts'],
+	})
+
+	return {
+		sources,
+	}
+})()
+
+export const docsScripts = (() => {
+	const sources = watchFiles(INPUT_DIR, {
+		recursive: false,
+		extensions: ['.ts'],
+	})
+
+	return {
+		sources,
+	}
+})()
+
+export const componentScripts = (() => {
+	const sources = watchFiles(COMPONENTS_DIR, {
+		recursive: true,
+		extensions: ['.ts'],
+	})
+
+	return {
+		sources,
+	}
+})()
+
+export const templateScripts = (() => {
+	const sources = watchFiles(TEMPLATES_DIR, {
+		recursive: true,
+		extensions: ['.ts'],
+	})
+
+	return {
+		sources,
+	}
+})()
+
+export const docsStyles = (() => {
+	const sources = watchFiles(INPUT_DIR, {
+		recursive: false,
+		extensions: ['.css'],
+	})
+
+	return {
+		sources,
+	}
+})()
+
+export const componentStyles = (() => {
+	const sources = watchFiles(COMPONENTS_DIR, {
+		recursive: true,
+		extensions: ['.css'],
+	})
+
+	return {
+		sources,
+	}
+})()
+
+export const componentMarkup = (() => {
+	const sources = watchFiles(COMPONENTS_DIR, {
+		recursive: true,
+		extensions: ['.html'],
+	})
+
+	return {
+		sources,
+	}
+})()

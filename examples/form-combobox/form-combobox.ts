@@ -42,13 +42,9 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 	'form-combobox',
 	{
 		value: read(ui => ui.textbox.value, ''),
-		length: createSensor(
-			read(ui => ui.textbox.value.length, 0),
-			'textbox',
-			{
-				input: ({ target }) => target.value.length,
-			},
-		),
+		length: createSensor(ui => ui.textbox.value.length, 'textbox', {
+			input: ({ target }) => target.value.length,
+		}),
 		error: '',
 		description: read(ui => ui.description?.textContent, ''),
 		clear: clearMethod,

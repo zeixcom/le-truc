@@ -1273,7 +1273,7 @@ var requestContext = (context, fallback) => (ui) => {
   ui.host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
     consumed = getter;
   }));
-  return consumed;
+  return createComputed(consumed);
 };
 // src/effects/attribute.ts
 var isSafeURL = (value) => {
@@ -1497,11 +1497,11 @@ var setText = (reactive) => updateElement(reactive, {
 // src/parsers/boolean.ts
 var asBoolean = () => (_, value) => value != null && value !== "false";
 // src/parsers/json.ts
-var asJSON = (fallback) => (host, value) => {
+var asJSON = (fallback) => (ui, value) => {
   if ((value ?? fallback) == null)
     throw new TypeError("asJSON: Value and fallback are both null or undefined");
   if (value == null)
-    return getFallback(host, fallback);
+    return getFallback(ui, fallback);
   if (value === "")
     throw new TypeError("Empty string is not valid JSON");
   let result;
@@ -1512,7 +1512,7 @@ var asJSON = (fallback) => (host, value) => {
       cause: error
     });
   }
-  return result ?? getFallback(host, fallback);
+  return result ?? getFallback(ui, fallback);
 };
 // src/parsers/number.ts
 var parseNumber = (parseFn, value) => {
