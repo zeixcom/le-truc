@@ -52,12 +52,12 @@ type ElementUpdater<E extends Element, T> = {
 	reject?: (error: unknown) => void
 }
 
-type ElementInserter<E extends Element> = {
+/* type ElementInserter<E extends Element> = {
 	position?: InsertPosition
 	create: (parent: E) => Element | null
 	resolve?: (parent: E) => void
 	reject?: (error: unknown) => void
-}
+} */
 
 /* === Constants === */
 
@@ -326,7 +326,7 @@ const updateElement =
  * @param {Reactive<number, P, E>} reactive - Reactive value determining number of elements to insert (positive) or remove (negative)
  * @param {ElementInserter<E>} inserter - Configuration object defining how to create and position elements
  * @returns {Effect<P, E>} Effect function that manages element insertion and removal
- */
+ * /
 const insertOrRemoveElement =
 	<P extends ComponentProps, E extends Element = HTMLElement>(
 		reactive: Reactive<number, P, E>,
@@ -403,17 +403,17 @@ const insertOrRemoveElement =
 				}
 			}
 		})
-	}
+		} */
 
 export {
 	type Effect,
 	type Effects,
 	type ElementEffects,
+	type ElementUpdater,
 	type Reactive,
 	runEffects,
 	runElementEffects,
 	resolveReactive,
 	updateElement,
-	insertOrRemoveElement,
 	RESET,
 }

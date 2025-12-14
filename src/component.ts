@@ -16,7 +16,7 @@ import {
 
 import { type Effects, runEffects } from './effects'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
-import { isParser, type Parser } from './parsers'
+import { isParser, type Parser, type Reader } from './parsers'
 import { type ElementQueries, getHelpers, type UI } from './ui'
 import { validatePropertyName } from './util'
 
@@ -45,12 +45,17 @@ type ComponentSetup<P extends ComponentProps, U extends UI> = (
 	ui: ComponentUI<P, U>,
 ) => Effects<P, ComponentUI<P, U>>
 
+type MethodProducer<P extends ComponentProps, U extends UI> = (
+	ui: U & { host: Component<P> },
+) => void
+
 type Initializers<P extends ComponentProps, U extends UI> = {
 	[K in keyof P]?:
 		| P[K]
 		| Signal<P[K]>
 		| Parser<P[K], ComponentUI<P, U>>
-		| ((ui: ComponentUI<P, U>) => MaybeSignal<P[K]> | void)
+		| Reader<MaybeSignal<P[K]>, ComponentUI<P, U>>
+		| MethodProducer<P, ComponentUI<P, U>>
 }
 
 type MaybeSignal<T extends {}> = T | Signal<T> | ComputedCallback<T>
@@ -106,19 +111,22 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 			Object.freeze(this.#ui)
 
 			// Initialize signals
+			const isReaderOrMethodProducer = <K extends keyof P & string>(
+				value: unknown,
+			): value is
+				| Reader<P[K], ComponentUI<P, U>>
+				| MethodProducer<P, ComponentUI<P, U>> => {
+				return isFunction(value)
+			}
 			const createSignal = <K extends keyof P & string>(
 				key: K,
 				initializer: Initializers<P, U>[K],
 			) => {
-				const result = isFunction(initializer)
-					? isParser(initializer)
-						? (initializer as Parser<P[K], U>)(ui, this.getAttribute(key))
-						: (
-								initializer as (
-									ui: ComponentUI<P, U>,
-								) => MaybeSignal<P[K]> | void
-							)(ui)
-					: (initializer as MaybeSignal<P[K]>)
+				const result = isParser<P[K], ComponentUI<P, U>>(initializer)
+					? initializer(ui, this.getAttribute(key))
+					: isReaderOrMethodProducer<K>(initializer)
+						? initializer(ui)
+						: (initializer as MaybeSignal<P[K]>)
 				if (result != null) this.#setAccessor(key, result)
 			}
 			for (const [prop, initializer] of Object.entries(props)) {

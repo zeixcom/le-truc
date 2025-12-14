@@ -5,11 +5,11 @@ type Reader<T extends {}, U extends UI> = (ui: U) => T;
 type Fallback<T extends {}, U extends UI> = T | Reader<T, U>;
 type ParserOrFallback<T extends {}, U extends UI> = Parser<T, U> | Fallback<T, U>;
 /**
- * Check if a value is a string parser
+ * Check if a value is a parser
  *
  * @since 0.14.0
- * @param {unknown} value - Value to check if it is a string parser
- * @returns {boolean} True if the value is a string parser, false otherwise
+ * @param {unknown} value - Value to check if it is a parser
+ * @returns {boolean} True if the value is a parser, false otherwise
  */
 declare const isParser: <T extends {}, U extends UI>(value: unknown) => value is Parser<T, U>;
 /**

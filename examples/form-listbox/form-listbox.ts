@@ -66,10 +66,7 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 	{
 		value: '',
 		options: ({ listbox }) =>
-			createCollection<
-				'button[role="option"]:not([hidden])',
-				HTMLButtonElement
-			>(listbox, 'button[role="option"]:not([hidden])'),
+			createCollection(listbox, 'button[role="option"]:not([hidden])'),
 		filter: '',
 		src: asString(),
 	},

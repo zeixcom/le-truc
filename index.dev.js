@@ -834,7 +834,7 @@ var extractAttributes = (selector) => {
   }
   return [...attributes];
 };
-var createCollection = (parent, selector) => {
+function createCollection(parent, selector) {
   const watchers = new Set;
   const listeners = {
     add: new Set,
@@ -977,7 +977,7 @@ var createCollection = (parent, selector) => {
       } : undefined;
     }
   });
-};
+}
 var isCollection = (value) => Object.prototype.toString.call(value) === `[object Collection]`;
 
 // src/effects.ts
@@ -1189,8 +1189,11 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
       };
       this.#ui = ui;
       Object.freeze(this.#ui);
+      const isReaderOrMethodProducer = (value) => {
+        return isFunction(value);
+      };
       const createSignal = (key, initializer) => {
-        const result = isFunction(initializer) ? isParser(initializer) ? initializer(ui, this.getAttribute(key)) : initializer(ui) : initializer;
+        const result = isParser(initializer) ? initializer(ui, this.getAttribute(key)) : isReaderOrMethodProducer(initializer) ? initializer(ui) : initializer;
         if (result != null)
           this.#setAccessor(key, result);
       };
@@ -1237,6 +1240,41 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
   customElements.define(name, Truc);
   return customElements.get(name);
 }
+// src/context.ts
+var CONTEXT_REQUEST = "context-request";
+
+class ContextRequestEvent extends Event {
+  context;
+  callback;
+  subscribe;
+  constructor(context, callback, subscribe2 = false) {
+    super(CONTEXT_REQUEST, {
+      bubbles: true,
+      composed: true
+    });
+    this.context = context;
+    this.callback = callback;
+    this.subscribe = subscribe2;
+  }
+}
+var provideContexts = (contexts) => (host) => {
+  const listener = (e) => {
+    const { context, callback } = e;
+    if (isString(context) && contexts.includes(context) && isFunction(callback)) {
+      e.stopImmediatePropagation();
+      callback(() => host[context]);
+    }
+  };
+  host.addEventListener(CONTEXT_REQUEST, listener);
+  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
+};
+var requestContext = (context, fallback) => (ui) => {
+  let consumed = () => getFallback(ui, fallback);
+  ui.host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
+    consumed = getter;
+  }));
+  return consumed;
+};
 // src/effects/attribute.ts
 var isSafeURL = (value) => {
   if (/^(mailto|tel):/i.test(value))
@@ -1598,7 +1636,9 @@ export {
   runElementEffects,
   runEffects,
   resolve,
+  requestContext,
   read,
+  provideContexts,
   pass,
   on,
   match,
@@ -1648,6 +1688,8 @@ export {
   InvalidComponentNameError,
   InvalidCallbackError,
   DependencyTimeoutError,
+  ContextRequestEvent,
   CircularMutationError,
-  CircularDependencyError
+  CircularDependencyError,
+  CONTEXT_REQUEST
 };

@@ -53,8 +53,8 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 					return clamped
 				},
 				click: ({ target, prev }) =>
-					prev +
-					(target.classList.contains('decrement')
+					prev
+					+ (target.classList.contains('decrement')
 						? -1
 						: target.classList.contains('increment')
 							? 1
@@ -73,9 +73,7 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 		max: read(ui => ui.input.max, asInteger(10)),
 	},
 	({ all, first }) => ({
-		controls: all<HTMLButtonElement | HTMLInputElement>(
-			'button, input:not([disabled])',
-		),
+		controls: all('button, input:not([disabled])'),
 		increment: first(
 			'button.increment',
 			'Add a native button to increment the value',

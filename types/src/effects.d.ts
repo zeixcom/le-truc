@@ -19,12 +19,6 @@ type ElementUpdater<E extends Element, T> = {
     resolve?: (element: E) => void;
     reject?: (error: unknown) => void;
 };
-type ElementInserter<E extends Element> = {
-    position?: InsertPosition;
-    create: (parent: E) => Element | null;
-    resolve?: (parent: E) => void;
-    reject?: (error: unknown) => void;
-};
 declare const RESET: any;
 /**
  * Run element effects
@@ -78,6 +72,82 @@ declare const updateElement: <T extends {}, P extends ComponentProps, E extends 
  * @param {Reactive<number, P, E>} reactive - Reactive value determining number of elements to insert (positive) or remove (negative)
  * @param {ElementInserter<E>} inserter - Configuration object defining how to create and position elements
  * @returns {Effect<P, E>} Effect function that manages element insertion and removal
- */
-declare const insertOrRemoveElement: <P extends ComponentProps, E extends Element = HTMLElement>(reactive: Reactive<number, P, E>, inserter?: ElementInserter<E>) => Effect<P, E>;
-export { type Effect, type Effects, type ElementEffects, type Reactive, runEffects, runElementEffects, resolveReactive, updateElement, insertOrRemoveElement, RESET, };
+ * /
+const insertOrRemoveElement =
+    <P extends ComponentProps, E extends Element = HTMLElement>(
+        reactive: Reactive<number, P, E>,
+        inserter?: ElementInserter<E>,
+    ): Effect<P, E> =>
+    (host, target) => {
+        const ok = (verb: string) => () => {
+            if (DEV_MODE && host.debug) {
+                log(
+                    target,
+                    `${verb} element in ${elementName(target)} in ${elementName(host)}`,
+                )
+            }
+            if (isFunction(inserter?.resolve)) {
+                inserter.resolve(target)
+            } else {
+                const signal = isSignal<number>(reactive) ? reactive : undefined
+                if (isState(signal)) signal.set(0)
+            }
+        }
+
+        const err = (verb: string) => (error: unknown) => {
+            log(
+                error,
+                `Failed to ${verb} element in ${elementName(target)} in ${elementName(host)}`,
+                LOG_ERROR,
+            )
+            inserter?.reject?.(error)
+        }
+
+        return createEffect(() => {
+            const diff = resolveReactive(
+                reactive,
+                host,
+                target,
+                'insertion or deletion',
+            )
+            const resolvedDiff = diff === RESET ? 0 : diff
+
+            if (resolvedDiff > 0) {
+                // Positive diff => insert element
+                if (!inserter) throw new TypeError(`No inserter provided`)
+                try {
+                    for (let i = 0; i < resolvedDiff; i++) {
+                        const element = inserter.create(target)
+                        if (!element) continue
+                        target.insertAdjacentElement(
+                            inserter.position ?? 'beforeend',
+                            element,
+                        )
+                    }
+                    ok('insert')()
+                } catch (error) {
+                    err('insert')(error)
+                }
+            } else if (resolvedDiff < 0) {
+                try {
+                    if (
+                        inserter &&
+                        (inserter.position === 'afterbegin' ||
+                            inserter.position === 'beforeend')
+                    ) {
+                        for (let i = 0; i > resolvedDiff; i--) {
+                            if (inserter.position === 'afterbegin')
+                                target.firstElementChild?.remove()
+                            else target.lastElementChild?.remove()
+                        }
+                    } else {
+                        target.remove()
+                    }
+                    ok('remove')()
+                } catch (error) {
+                    err('remove')(error)
+                }
+            }
+        })
+        } */
+export { type Effect, type Effects, type ElementEffects, type ElementUpdater, type Reactive, runEffects, runElementEffects, resolveReactive, updateElement, RESET, };

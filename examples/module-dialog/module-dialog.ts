@@ -29,7 +29,7 @@ export default defineComponent<ModuleDialogProps, ModuleDialogUI>(
 			'Add a button to open the dialog.',
 		),
 		dialog: first('dialog', 'Add a native dialog element.'),
-		closeButton: first<HTMLButtonElement>(
+		closeButton: first(
 			'dialog button.close',
 			'Add a close button in the dialog.',
 		),

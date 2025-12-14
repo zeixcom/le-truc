@@ -4,18 +4,48 @@ import { isNotYetDefinedComponent } from './util'
 
 /* === Types === */
 
-// Pull the part before the first ".", "#", ":", or "[".
-type ExtractTag<S extends string> = S extends `${infer T}.${string}`
-	? T
-	: S extends `${infer T}#${string}`
-		? T
-		: S extends `${infer T}:${string}`
-			? T
-			: S extends `${infer T}[${string}`
-				? T
-				: S
+// Split a comma-separated selector into individual selectors
+type SplitByComma<S extends string> = S extends `${infer First},${infer Rest}`
+	? [TrimWhitespace<First>, ...SplitByComma<Rest>]
+	: [TrimWhitespace<S>]
 
-// Normalize to lowercase and ensure it's a known HTML tag.
+// Trim leading/trailing whitespace from a string
+type TrimWhitespace<S extends string> = S extends ` ${infer Rest}`
+	? TrimWhitespace<Rest>
+	: S extends `${infer Rest} `
+		? TrimWhitespace<Rest>
+		: S
+
+// Extract the rightmost selector part from combinator selectors (space, >, +, ~)
+type ExtractRightmostSelector<S extends string> =
+	S extends `${string} ${infer Rest}`
+		? ExtractRightmostSelector<Rest>
+		: S extends `${string}>${infer Rest}`
+			? ExtractRightmostSelector<Rest>
+			: S extends `${string}+${infer Rest}`
+				? ExtractRightmostSelector<Rest>
+				: S extends `${string}~${infer Rest}`
+					? ExtractRightmostSelector<Rest>
+					: S
+
+// Extract tag name from a simple selector (without combinators)
+type ExtractTagFromSimpleSelector<S extends string> =
+	S extends `${infer T}.${string}`
+		? T
+		: S extends `${infer T}#${string}`
+			? T
+			: S extends `${infer T}:${string}`
+				? T
+				: S extends `${infer T}[${string}`
+					? T
+					: S
+
+// Main extraction logic for a single selector
+type ExtractTag<S extends string> = ExtractTagFromSimpleSelector<
+	ExtractRightmostSelector<S>
+>
+
+// Normalize to lowercase and ensure it's a known HTML tag
 type KnownTag<S extends string> =
 	Lowercase<ExtractTag<S>> extends
 		| keyof HTMLElementTagNameMap
@@ -24,9 +54,8 @@ type KnownTag<S extends string> =
 		? Lowercase<ExtractTag<S>>
 		: never
 
-// Map the selector string to the concrete element type.
-// If we can't statically prove the tag is known, fall back to HTMLElement.
-type ElementFromSelector<S extends string> =
+// Get element type from a single selector
+type ElementFromSingleSelector<S extends string> =
 	KnownTag<S> extends never
 		? HTMLElement
 		: KnownTag<S> extends keyof HTMLElementTagNameMap
@@ -36,6 +65,18 @@ type ElementFromSelector<S extends string> =
 				: KnownTag<S> extends keyof MathMLElementTagNameMap
 					? MathMLElementTagNameMap[KnownTag<S>]
 					: HTMLElement
+
+// Map a tuple of selectors to a union of their element types
+type ElementsFromSelectorArray<Selectors extends readonly string[]> = {
+	[K in keyof Selectors]: Selectors[K] extends string
+		? ElementFromSingleSelector<Selectors[K]>
+		: never
+}[number]
+
+// Main type: handle both single selectors and comma-separated selectors
+type ElementFromSelector<S extends string> = S extends `${string},${string}`
+	? ElementsFromSelectorArray<SplitByComma<S>>
+	: ElementFromSingleSelector<S>
 
 type FirstElement = {
 	<S extends string>(selector: S, required: string): ElementFromSelector<S>
