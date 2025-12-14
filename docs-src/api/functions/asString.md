@@ -8,7 +8,7 @@
 
 > **asString**\<`U`\>(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`string`, `U`\>
 
-Defined in: [src/parsers/string.ts:12](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/parsers/string.ts#L12)
+Defined in: [src/parsers/string.ts:12](https://github.com/zeixcom/le-truc/blob/adc7f347d870e640578165aa28996ebdcb7a5c42/src/parsers/string.ts#L12)
 
 Pass through string with a fallback
 
@@ -22,7 +22,7 @@ Pass through string with a fallback
 
 ### fallback?
 
-`Fallback`\<`string`, `U`\> = `''`
+[`Fallback`](../type-aliases/Fallback.md)\<`string`, `U`\> = `''`
 
 Fallback value or reader function
 

@@ -8,7 +8,7 @@
 
 > **LooseReader**\<`T`, `U`\> = (`ui`) => `T` \| `string` \| `null` \| `undefined`
 
-Defined in: [src/parsers.ts:12](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/parsers.ts#L12)
+Defined in: [src/parsers.ts:12](https://github.com/zeixcom/le-truc/blob/adc7f347d870e640578165aa28996ebdcb7a5c42/src/parsers.ts#L12)
 
 ## Type Parameters
 

@@ -8,7 +8,7 @@
 
 > **runElementEffects**\<`P`, `E`\>(`host`, `target`, `effects`): [`MaybeCleanup`](../type-aliases/MaybeCleanup.md)
 
-Defined in: [src/effects.ts:98](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/effects.ts#L98)
+Defined in: [src/effects.ts:97](https://github.com/zeixcom/le-truc/blob/adc7f347d870e640578165aa28996ebdcb7a5c42/src/effects.ts#L97)
 
 Run element effects
 

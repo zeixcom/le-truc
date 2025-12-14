@@ -201,16 +201,14 @@
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormCheckboxProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">FormCheckboxUI</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'form-checkbox'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	{</span></span>
-<span class="line"><span style="color:#F8F8F2">		checked: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#A6E22E">			read</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.checkbox.checked, </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#E6DB74">			'checkbox'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">			{ </span><span style="color:#A6E22E">change</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> target.checked },</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">		checked: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.checkbox.checked, </span><span style="color:#E6DB74">'checkbox'</span><span style="color:#F8F8F2">, {</span></span>
+<span class="line"><span style="color:#A6E22E">			change</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> target.checked,</span></span>
+<span class="line"><span style="color:#F8F8F2">		}),</span></span>
 <span class="line"><span style="color:#F8F8F2">		label: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#FD971F;font-style:italic">			ui</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
-<span class="line"><span style="color:#F8F8F2">				ui.label?.textContent </span><span style="color:#F92672">??</span></span>
-<span class="line"><span style="color:#F8F8F2">				ui.host.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'label'</span><span style="color:#F8F8F2">)?.textContent </span><span style="color:#F92672">??</span></span>
-<span class="line"><span style="color:#E6DB74">				''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">				ui.label?.textContent</span></span>
+<span class="line"><span style="color:#F92672">				??</span><span style="color:#F8F8F2"> ui.host.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'label'</span><span style="color:#F8F8F2">)?.textContent</span></span>
+<span class="line"><span style="color:#F92672">				??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">		),</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>

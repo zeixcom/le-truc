@@ -165,7 +165,7 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 
 			// Check whether we have a parser for the attribute
 			const parser = props[name]
-			if (!isParser<P[K], U>(parser)) return
+			if (!isParser<P[K], ComponentUI<P, U>>(parser)) return
 
 			const parsed = parser(this.#ui, newValue, oldValue)
 			if (name in this) (this as unknown as P)[name] = parsed

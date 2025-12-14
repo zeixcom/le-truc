@@ -4,8 +4,8 @@ import type { UI } from '../ui';
  * Parse a string as a JSON serialized object with a fallback
  *
  * @since 0.11.0
- * @param {Fallback<T, C>} fallback - Fallback value or reader function
- * @returns {Parser<T, C>} Parser function
+ * @param {Fallback<T, U>} fallback - Fallback value or reader function
+ * @returns {Parser<T, U>} Parser function
  * @throws {TypeError} If the value and fallback are both null or undefined
  * @throws {SyntaxError} If value is not a valid JSON string
  */

@@ -5,19 +5,19 @@ import type { UI } from '../ui'
  * Parse a string as a JSON serialized object with a fallback
  *
  * @since 0.11.0
- * @param {Fallback<T, C>} fallback - Fallback value or reader function
- * @returns {Parser<T, C>} Parser function
+ * @param {Fallback<T, U>} fallback - Fallback value or reader function
+ * @returns {Parser<T, U>} Parser function
  * @throws {TypeError} If the value and fallback are both null or undefined
  * @throws {SyntaxError} If value is not a valid JSON string
  */
 const asJSON =
 	<T extends {}, U extends UI>(fallback: Fallback<T, U>): Parser<T, U> =>
-	(host: U, value: string | null | undefined) => {
+	(ui: U, value: string | null | undefined) => {
 		if ((value ?? fallback) == null)
 			throw new TypeError(
 				'asJSON: Value and fallback are both null or undefined',
 			)
-		if (value == null) return getFallback(host, fallback)
+		if (value == null) return getFallback(ui, fallback)
 		if (value === '') throw new TypeError('Empty string is not valid JSON')
 		let result: T | undefined
 		try {
@@ -27,7 +27,7 @@ const asJSON =
 				cause: error,
 			})
 		}
-		return result ?? getFallback(host, fallback)
+		return result ?? getFallback(ui, fallback)
 	}
 
 export { asJSON }

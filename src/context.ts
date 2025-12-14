@@ -1,4 +1,10 @@
-import { type Cleanup, isFunction, isString } from '@zeix/cause-effect'
+import {
+	type Cleanup,
+	type Computed,
+	createComputed,
+	isFunction,
+	isString,
+} from '@zeix/cause-effect'
 
 import type { Component, ComponentProps } from './component'
 import { type Fallback, getFallback, type Reader } from './parsers'
@@ -117,30 +123,26 @@ const provideContexts =
 	}
 
 /**
- * Consume a context value for a component.
+ * Consume a context value for a component
  *
- * @since 0.13.1
+ * @since 0.15.0
  * @param {Context<string, () => T>} context - Context key to consume
- * @param {Fallback<T, U>} fallback - Fallback value or fallback
- * @returns {Extractor<() => T, C>} Function that returns the consumed context getter or a signal of the fallback value
+ * @param {Fallback<T, U>} fallback - Fallback value or reader function for fallback
+ * @returns {Reader<Computed<T>, U>} Computed signal that returns the consumed context the fallback value
  */
 const requestContext =
-	<
-		T extends {},
-		P extends ComponentProps,
-		U extends UI & { host: Component<P> },
-	>(
+	<T extends {}, P extends ComponentProps, U extends UI>(
 		context: Context<string, () => T>,
-		fallback: Fallback<T, U>,
-	): Reader<() => T, U> =>
-	(ui: U) => {
+		fallback: Fallback<T, U & { host: Component<P> }>,
+	): Reader<Computed<T>, U & { host: Component<P> }> =>
+	(ui: U & { host: Component<P> }) => {
 		let consumed = () => getFallback(ui, fallback)
 		ui.host.dispatchEvent(
 			new ContextRequestEvent(context, (getter: () => T) => {
 				consumed = getter
 			}),
 		)
-		return consumed
+		return createComputed(consumed)
 	}
 
 export {

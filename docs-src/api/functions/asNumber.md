@@ -8,7 +8,7 @@
 
 > **asNumber**\<`U`\>(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`number`, `U`\>
 
-Defined in: [src/parsers/number.ts:51](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/parsers/number.ts#L51)
+Defined in: [src/parsers/number.ts:51](https://github.com/zeixcom/le-truc/blob/adc7f347d870e640578165aa28996ebdcb7a5c42/src/parsers/number.ts#L51)
 
 Parse a string as a number with a fallback
 
@@ -22,7 +22,7 @@ Parse a string as a number with a fallback
 
 ### fallback?
 
-`Fallback`\<`number`, `U`\> = `0`
+[`Fallback`](../type-aliases/Fallback.md)\<`number`, `U`\> = `0`
 
 Fallback value or reader function
 

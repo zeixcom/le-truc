@@ -325,13 +325,9 @@
 <span class="line"><span style="color:#E6DB74">	'form-combobox'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	{</span></span>
 <span class="line"><span style="color:#F8F8F2">		value: </span><span style="color:#A6E22E">read</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.textbox.value, </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		length: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#A6E22E">			read</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.textbox.value.length, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#E6DB74">			'textbox'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">			{</span></span>
-<span class="line"><span style="color:#A6E22E">				input</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> target.value.length,</span></span>
-<span class="line"><span style="color:#F8F8F2">			},</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">		length: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.textbox.value.length, </span><span style="color:#E6DB74">'textbox'</span><span style="color:#F8F8F2">, {</span></span>
+<span class="line"><span style="color:#A6E22E">			input</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> target.value.length,</span></span>
+<span class="line"><span style="color:#F8F8F2">		}),</span></span>
 <span class="line"><span style="color:#F8F8F2">		error: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">		description: </span><span style="color:#A6E22E">read</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.description?.textContent, </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">		clear: clearMethod,</span></span>
@@ -374,9 +370,9 @@
 <span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">					textbox.</span><span style="color:#A6E22E">checkValidity</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#A6E22E">					batch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">						showPopup.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F8F8F2">						host.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> textbox.value</span></span>
 <span class="line"><span style="color:#F8F8F2">						host.error </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> textbox.validationMessage </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#F8F8F2">						showPopup.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F8F8F2">					})</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
 <span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'keydown'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">event</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

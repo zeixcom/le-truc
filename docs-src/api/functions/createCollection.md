@@ -6,42 +6,78 @@
 
 # Function: createCollection()
 
-> **createCollection**\<`S`, `E`\>(`parent`, `selector`): [`Collection`](../interfaces/Collection.md)\<`E`\>
+## Call Signature
 
-Defined in: [src/signals/collection.ts:68](https://github.com/zeixcom/le-truc/blob/7eb796fc51c6c6d925620eed67782e8b7b2d9151/src/signals/collection.ts#L68)
+> **createCollection**\<`S`\>(`parent`, `selector`): [`Collection`](../type-aliases/Collection.md)\<`ElementFromSelector`\<`S`\>\>
+
+Defined in: [src/signals/collection.ts:67](https://github.com/zeixcom/le-truc/blob/adc7f347d870e640578165aa28996ebdcb7a5c42/src/signals/collection.ts#L67)
 
 Create a collection of elements from a parent node and a CSS selector.
 
-## Type Parameters
+### Type Parameters
 
-### S
+#### S
 
 `S` *extends* `string`
 
-### E
+### Parameters
 
-`E`
-
-## Parameters
-
-### parent
+#### parent
 
 `ParentNode`
 
 The parent node to search within
 
-### selector
+#### selector
 
 `S`
 
 The CSS selector to match elements
 
-## Returns
+### Returns
 
-[`Collection`](../interfaces/Collection.md)\<`E`\>
+[`Collection`](../type-aliases/Collection.md)\<`ElementFromSelector`\<`S`\>\>
 
 A collection signal of elements
 
-## Since
+### Since
+
+0.15.0
+
+## Call Signature
+
+> **createCollection**\<`E`\>(`parent`, `selector`): [`Collection`](../type-aliases/Collection.md)\<`E`\>
+
+Defined in: [src/signals/collection.ts:71](https://github.com/zeixcom/le-truc/blob/adc7f347d870e640578165aa28996ebdcb7a5c42/src/signals/collection.ts#L71)
+
+Create a collection of elements from a parent node and a CSS selector.
+
+### Type Parameters
+
+#### E
+
+`E` *extends* `Element`
+
+### Parameters
+
+#### parent
+
+`ParentNode`
+
+The parent node to search within
+
+#### selector
+
+`string`
+
+The CSS selector to match elements
+
+### Returns
+
+[`Collection`](../type-aliases/Collection.md)\<`E`\>
+
+A collection signal of elements
+
+### Since
 
 0.15.0
