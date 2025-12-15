@@ -55,7 +55,7 @@ PR guidance / descriptions
 
 Examples (copyable patterns)
 - Define a component (refer `src/component.ts`):
-  - `defineComponent('my-widget', { count: 0 }, q => ({ btn: q.first('button') }), ui => ({ btn: [on('click', () => ({ count: ui.host.count + 1 }))] }))`
+  - `defineComponent('my-widget', { count: 0 }, q => ({ btn: q.first('button') }), ui => ({ btn: on('click', () => ({ count: ui.host.count + 1 })) }))`
 - Parser signature (refer `src/parsers/json.ts`):
   - `const parser = (ui, value, old) => parsedValue` — return value becomes the property value.
 - Reader pattern (refer `src/parsers.ts`):

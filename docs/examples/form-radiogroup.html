@@ -275,16 +275,14 @@
 <span class="line"><span style="color:#F8F8F2">		labels: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'label'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Wrap radio buttons with labels.'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">	}),</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">radios</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">		host: [</span><span style="color:#F92672">...</span><span style="color:#A6E22E">manageFocus</span><span style="color:#F8F8F2">(radios, getIndex)],</span></span>
-<span class="line"><span style="color:#F8F8F2">		radios: [</span></span>
-<span class="line"><span style="color:#A6E22E">			setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'tabIndex'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> (target.value </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> host.value </span><span style="color:#F92672">?</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> :</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">)),</span></span>
-<span class="line"><span style="color:#F8F8F2">		],</span></span>
-<span class="line"><span style="color:#F8F8F2">		labels: [</span></span>
-<span class="line"><span style="color:#A6E22E">			toggleClass</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">				'selected'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">				target</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> host.value </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> target.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">)?.value,</span></span>
-<span class="line"><span style="color:#F8F8F2">			),</span></span>
-<span class="line"><span style="color:#F8F8F2">		],</span></span>
+<span class="line"><span style="color:#F8F8F2">		host: </span><span style="color:#A6E22E">manageFocus</span><span style="color:#F8F8F2">(radios, getIndex),</span></span>
+<span class="line"><span style="color:#F8F8F2">		radios: </span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'tabIndex'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
+<span class="line"><span style="color:#F8F8F2">			target.value </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> host.value </span><span style="color:#F92672">?</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> :</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">		labels: </span><span style="color:#A6E22E">toggleClass</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'selected'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">			target</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> host.value </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> target.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">)?.value,</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
 <span class="line"><span style="color:#F8F8F2">	}),</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre>

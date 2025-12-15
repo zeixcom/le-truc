@@ -38,8 +38,8 @@ export default defineComponent<BasicButtonProps, BasicButtonUI>(
 		badge: first('span.badge'),
 	}),
 	() => ({
-		button: [setProperty('disabled')],
-		label: [setText('label')],
-		badge: [setText('badge')],
+		button: setProperty('disabled'),
+		label: setText('label'),
+		badge: setText('badge'),
 	}),
 )

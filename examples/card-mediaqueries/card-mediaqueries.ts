@@ -33,9 +33,9 @@ export default defineComponent<CardMediaqueriesProps, CardMediaqueriesUI>(
 		orientation: first('.orientation'),
 	}),
 	() => ({
-		motion: [setText('motion')],
-		theme: [setText('theme')],
-		viewport: [setText('viewport')],
-		orientation: [setText('orientation')],
+		motion: setText('motion'),
+		theme: setText('theme'),
+		viewport: setText('viewport'),
+		orientation: setText('orientation'),
 	}),
 )

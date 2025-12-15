@@ -117,15 +117,13 @@ Save the following inside a `<script type="module">` tag or an external JavaScri
       input: first('input', 'Needed to enter the name.'),
       output: first('output', 'Needed to display the name.'),
     }),
-    ({ host }) => {
+    ({ host, input }) => {
       const fallback = host.name
       return {
-        input: [
-          on('input', ({ target }) => {
-            host.name = target.value || fallback
-          }),
-        ],
-        output: [setText('name')],
+        input: on('input', () => {
+          host.name = input.value || fallback
+        }),
+        output: setText('name'),
       }
     },
   )

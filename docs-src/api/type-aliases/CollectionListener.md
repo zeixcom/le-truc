@@ -8,7 +8,7 @@
 
 > **CollectionListener**\<`E`\> = (`changes`) => `void`
 
-Defined in: [src/signals/collection.ts:13](https://github.com/zeixcom/le-truc/blob/35f95281922c6ad609e7dde9daf1bc77ac8d3f7a/src/signals/collection.ts#L13)
+Defined in: [src/signals/collection.ts:13](https://github.com/zeixcom/le-truc/blob/3e8d7e7aaa7f4bbc3cb1d68aecab6664ca6352cb/src/signals/collection.ts#L13)
 
 ## Type Parameters
 

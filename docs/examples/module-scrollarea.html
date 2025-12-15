@@ -360,31 +360,32 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> MIN_INTERSECTION_RATIO </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> MAX_INTERSECTION_RATIO </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0.99</span><span style="color:#88846F"> // ignore rounding errors of fraction pixels</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#A6E22E"> observeOverflow</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">	container</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">	content</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Element</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#A6E22E">	overflowCallback</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> void</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#A6E22E">	noOverflowCallback</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> void</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> observer </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> IntersectionObserver</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#F8F8F2">		([</span><span style="color:#FD971F;font-style:italic">entry</span><span style="color:#F8F8F2">]) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span></span>
-<span class="line"><span style="color:#F8F8F2">				entry.intersectionRatio </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> MIN_INTERSECTION_RATIO </span><span style="color:#F92672">&#x26;&#x26;</span></span>
-<span class="line"><span style="color:#F8F8F2">				entry.intersectionRatio </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> MAX_INTERSECTION_RATIO</span></span>
-<span class="line"><span style="color:#F8F8F2">			)</span></span>
-<span class="line"><span style="color:#A6E22E">				overflowCallback</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F92672">			else</span><span style="color:#A6E22E"> batch</span><span style="color:#F8F8F2">(noOverflowCallback)</span></span>
-<span class="line"><span style="color:#F8F8F2">		},</span></span>
-<span class="line"><span style="color:#F8F8F2">		{</span></span>
-<span class="line"><span style="color:#F8F8F2">			root: container,</span></span>
-<span class="line"><span style="color:#F8F8F2">			threshold: [MIN_INTERSECTION_RATIO, MAX_INTERSECTION_RATIO],</span></span>
-<span class="line"><span style="color:#F8F8F2">		},</span></span>
-<span class="line"><span style="color:#F8F8F2">	)</span></span>
-<span class="line"><span style="color:#F8F8F2">	observer.</span><span style="color:#A6E22E">observe</span><span style="color:#F8F8F2">(content)</span></span>
-<span class="line"><span style="color:#F92672">	return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">		observer.</span><span style="color:#A6E22E">disconnect</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> observeOverflow </span><span style="color:#F92672">=</span></span>
+<span class="line"><span style="color:#F8F8F2">	(</span></span>
+<span class="line"><span style="color:#F8F8F2">		content: Element,</span></span>
+<span class="line"><span style="color:#F8F8F2">		overflowCallback: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> void</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		noOverflowCallback: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> void</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">	(</span><span style="color:#FD971F;font-style:italic">container</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> observer </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> IntersectionObserver</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">			([</span><span style="color:#FD971F;font-style:italic">entry</span><span style="color:#F8F8F2">]) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span></span>
+<span class="line"><span style="color:#F8F8F2">					entry.intersectionRatio </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> MIN_INTERSECTION_RATIO</span></span>
+<span class="line"><span style="color:#F92672">					&#x26;&#x26;</span><span style="color:#F8F8F2"> entry.intersectionRatio </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> MAX_INTERSECTION_RATIO</span></span>
+<span class="line"><span style="color:#F8F8F2">				)</span></span>
+<span class="line"><span style="color:#A6E22E">					overflowCallback</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">				else</span><span style="color:#A6E22E"> batch</span><span style="color:#F8F8F2">(noOverflowCallback)</span></span>
+<span class="line"><span style="color:#F8F8F2">			},</span></span>
+<span class="line"><span style="color:#F8F8F2">			{</span></span>
+<span class="line"><span style="color:#F8F8F2">				root: container,</span></span>
+<span class="line"><span style="color:#F8F8F2">				threshold: [MIN_INTERSECTION_RATIO, MAX_INTERSECTION_RATIO],</span></span>
+<span class="line"><span style="color:#F8F8F2">			},</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#F8F8F2">		observer.</span><span style="color:#A6E22E">observe</span><span style="color:#F8F8F2">(content)</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			observer.</span><span style="color:#A6E22E">disconnect</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
-<span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">	'module-scrollarea'</span><span style="color:#F8F8F2">,</span></span>
@@ -418,18 +419,16 @@
 <span class="line"><span style="color:#A6E22E">				toggleClass</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'overflow'</span><span style="color:#F8F8F2">, hasOverflow),</span></span>
 <span class="line"><span style="color:#A6E22E">				toggleClass</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'overflow-start'</span><span style="color:#F8F8F2">, overflowStart),</span></span>
 <span class="line"><span style="color:#A6E22E">				toggleClass</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'overflow-end'</span><span style="color:#F8F8F2">, overflowEnd),</span></span>
-<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
-<span class="line"><span style="color:#A6E22E">					observeOverflow</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#F8F8F2">						host,</span></span>
-<span class="line"><span style="color:#F8F8F2">						child,</span></span>
-<span class="line"><span style="color:#F8F8F2">						() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">							overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">						},</span></span>
-<span class="line"><span style="color:#F8F8F2">						() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">							overflowStart.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">							overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">						},</span></span>
-<span class="line"><span style="color:#F8F8F2">					),</span></span>
+<span class="line"><span style="color:#A6E22E">				observeOverflow</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">					child,</span></span>
+<span class="line"><span style="color:#F8F8F2">					() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">						overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					},</span></span>
+<span class="line"><span style="color:#F8F8F2">					() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">						overflowStart.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">						overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					},</span></span>
+<span class="line"><span style="color:#F8F8F2">				),</span></span>
 <span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'scroll'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">hasOverflow</span><span style="color:#F8F8F2">()) </span><span style="color:#A6E22E">batch</span><span style="color:#F8F8F2">(scrollCallback)</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>

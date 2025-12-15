@@ -18,16 +18,16 @@ export const manageFocus = <E extends HTMLInputElement | HTMLButtonElement>(
 	let index = getSelectedIndex(collection)
 
 	return [
-		on('click', ({ event }) => {
-			const target = event.target as HTMLElement
+		on('click', ({ target }) => {
+			if (!(target instanceof HTMLElement)) return
 			if (target && target.hasAttribute('value'))
 				index = collection.get().findIndex(item => item === target)
 		}),
-		on('keydown', ({ event }) => {
-			const { key } = event
+		on('keydown', e => {
+			const { key } = e
 			if (!HANDLED_KEYS.includes(key)) return
-			event.preventDefault()
-			event.stopPropagation()
+			e.preventDefault()
+			e.stopPropagation()
 			if (key === FIRST_KEY) index = 0
 			else if (key === LAST_KEY) index = collection.length - 1
 			else
@@ -36,9 +36,8 @@ export const manageFocus = <E extends HTMLInputElement | HTMLButtonElement>(
 					% collection.length
 			if (collection[index]) collection[index].focus()
 		}),
-		on('keyup', ({ event }) => {
-			if (event.key === ENTER_KEY)
-				if (collection[index]) collection[index].click()
+		on('keyup', ({ key }) => {
+			if (key === ENTER_KEY && collection[index]) collection[index].click()
 		}),
 	]
 }

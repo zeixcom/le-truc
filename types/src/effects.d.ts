@@ -2,7 +2,7 @@ import { type Cleanup, type MaybeCleanup, type Signal } from '@zeix/cause-effect
 import type { Component, ComponentProps } from './component';
 import type { ElementFromKey, UI } from './ui';
 type Effect<P extends ComponentProps, E extends Element> = (host: Component<P>, target: E) => MaybeCleanup;
-type ElementEffects<P extends ComponentProps, E extends Element> = Awaited<Effect<P, E>>[];
+type ElementEffects<P extends ComponentProps, E extends Element> = Effect<P, E> | Effect<P, E>[];
 type Effects<P extends ComponentProps, U extends UI & {
     host: Component<P>;
 }> = {

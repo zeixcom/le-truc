@@ -42,9 +42,13 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 	'form-combobox',
 	{
 		value: read(ui => ui.textbox.value, ''),
-		length: createSensor(ui => ui.textbox.value.length, 'textbox', {
-			input: ({ target }) => target.value.length,
-		}),
+		length: createSensor(
+			read(ui => ui.textbox.value.length, 0),
+			'textbox',
+			{
+				input: ({ target }) => target.value.length,
+			},
+		),
 		error: '',
 		description: read(ui => ui.description?.textContent, ''),
 		clear: clearMethod,
@@ -69,8 +73,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 		return {
 			host: [
 				setAttribute('value'),
-				on('keyup', ({ event }) => {
-					const { key } = event
+				on('keyup', ({ key }) => {
 					if (key === 'Escape') showPopup.set(false)
 					if (key === 'Delete') host.clear()
 				}),
@@ -92,8 +95,8 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 						showPopup.set(true)
 					})
 				}),
-				on('keydown', ({ event }) => {
-					const { key, altKey } = event
+				on('keydown', e => {
+					const { key, altKey } = e
 					if (key === 'ArrowDown') {
 						if (altKey) showPopup.set(true)
 						if (isExpanded.get()) listbox.options[0]?.focus()
@@ -105,8 +108,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 				pass({
 					filter: () => host.value,
 				}),
-				on('change', ({ event }) => {
-					const { target } = event
+				on('change', ({ target }) => {
 					if (target instanceof HTMLInputElement) {
 						textbox.value = target.value
 						textbox.checkValidity()

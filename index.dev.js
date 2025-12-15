@@ -996,25 +996,21 @@ var getUpdateDescription = (op, name = "") => {
   return ops[op] + name;
 };
 var runElementEffects = (host, target, effects) => {
-  try {
-    if (effects instanceof Promise)
-      throw effects;
-    const cleanups = [];
-    for (const fn of effects) {
-      const cleanup = fn(host, target);
-      if (cleanup)
-        cleanups.push(cleanup);
-    }
-    return () => {
-      cleanups.forEach((cleanup) => cleanup());
-      cleanups.length = 0;
-    };
-  } catch (error) {
-    if (error instanceof Promise)
-      error.then(() => runElementEffects(host, target, effects));
-    else
-      throw new InvalidEffectsError(host, error instanceof Error ? error : new Error(String(error)));
-  }
+  const cleanups = [];
+  const run = (fn) => {
+    const cleanup = fn(host, target);
+    if (cleanup)
+      cleanups.push(cleanup);
+  };
+  if (Array.isArray(effects))
+    for (const fn of effects)
+      run(fn);
+  else
+    run(effects);
+  return () => {
+    cleanups.forEach((cleanup) => cleanup());
+    cleanups.length = 0;
+  };
 };
 var runCollectionEffects = (host, collection, effects) => {
   const cleanups = new Map;
@@ -1114,7 +1110,8 @@ var updateElement = (reactive, updater) => (host, target) => {
 
 // src/parsers.ts
 var isParser = (value) => isFunction(value) && value.length >= 2;
-var getFallback = (ui, fallback) => isFunction(fallback) ? fallback(ui) : fallback;
+var isReader = (value) => isFunction(value);
+var getFallback = (ui, fallback) => isReader(fallback) ? fallback(ui) : fallback;
 var read = (reader, fallback) => (ui) => {
   const value = reader(ui);
   return isString(value) && isParser(fallback) ? fallback(ui, value) : value ?? getFallback(ui, fallback);
@@ -1361,11 +1358,7 @@ var on = (type, handler, options = {}) => (host, target) => {
     options = { ...options, passive: PASSIVE_EVENTS.has(type) };
   const listener = (e) => {
     const task = () => {
-      const result = handler({
-        host,
-        target,
-        event: e
-      });
+      const result = handler(e);
       if (!isRecord(result))
         return;
       batch(() => {
@@ -1379,7 +1372,7 @@ var on = (type, handler, options = {}) => (host, target) => {
       });
     };
     if (options.passive)
-      schedule(host, task);
+      schedule(target, task);
     else
       task();
   };

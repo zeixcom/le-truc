@@ -117,13 +117,11 @@ export default defineComponent<ContextMediaProps>(
 	},
 	undefined,
 	() => ({
-		host: [
-			provideContexts([
-				MEDIA_MOTION,
-				MEDIA_THEME,
-				MEDIA_VIEWPORT,
-				MEDIA_ORIENTATION,
-			]),
-		],
+		host: provideContexts([
+			MEDIA_MOTION,
+			MEDIA_THEME,
+			MEDIA_VIEWPORT,
+			MEDIA_ORIENTATION,
+		]),
 	}),
 )

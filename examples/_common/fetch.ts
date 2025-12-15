@@ -1,5 +1,3 @@
-import type { ComponentProps, ComponentUI, Parser, UI } from '../..'
-
 /* === Types === */
 
 type CacheEntry<T = unknown> = {
@@ -62,8 +60,8 @@ export const isRecursiveURL = (
 	host: HTMLElement,
 	attr: string = 'src',
 ): boolean =>
-	!!value &&
-	!!(host.parentElement || (host.getRootNode() as ShadowRoot).host)?.closest(
+	!!value
+	&& !!(host.parentElement || (host.getRootNode() as ShadowRoot).host)?.closest(
 		`${host.localName}[${attr}="${value}"]`,
 	)
 
@@ -111,7 +109,7 @@ export const fetchWithCache = async <T = string>(
 	if (response.status === 304 && cached)
 		return { content: cached.content, fromCache: true }
 
-	if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`)
+	if (!response.ok) throw new Error(`HTTP error: ${response.statusText}`)
 
 	const content = await parseResponse(response)
 	const cacheControl = response.headers.get('cache-control')

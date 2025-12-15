@@ -39,49 +39,43 @@ export default defineComponent<ModuleDialogProps, ModuleDialogUI>(
 		let activeElement: HTMLElement | null = null
 
 		return {
-			host: [
-				() =>
-					createEffect(() => {
-						if (host.open) {
-							scrollTop = document.documentElement.scrollTop
-							activeElement = document.activeElement as HTMLElement | null
-							dialog.showModal()
-							document.body.classList.add(SCROLL_LOCK_CLASS)
-							document.body.style.setProperty('top', `-${scrollTop}px`)
-						} else {
-							document.body.classList.remove(SCROLL_LOCK_CLASS)
-							window.scrollTo({
-								top: scrollTop,
-								left: 0,
-								behavior: 'instant',
-							})
-							document.body.style.removeProperty('top')
-							dialog.close()
-							if (activeElement) activeElement.focus()
-						}
-						return () => {
-							host.open = false
-						}
-					}),
-			],
-			openButton: [
-				on('click', () => {
-					host.open = true
+			host: () =>
+				createEffect(() => {
+					if (host.open) {
+						scrollTop = document.documentElement.scrollTop
+						activeElement = document.activeElement as HTMLElement | null
+						dialog.showModal()
+						document.body.classList.add(SCROLL_LOCK_CLASS)
+						document.body.style.setProperty('top', `-${scrollTop}px`)
+					} else {
+						document.body.classList.remove(SCROLL_LOCK_CLASS)
+						window.scrollTo({
+							top: scrollTop,
+							left: 0,
+							behavior: 'instant',
+						})
+						document.body.style.removeProperty('top')
+						dialog.close()
+						if (activeElement) activeElement.focus()
+					}
+					return () => {
+						host.open = false
+					}
 				}),
-			],
+			openButton: on('click', () => {
+				host.open = true
+			}),
 			dialog: [
-				on('click', ({ event }) => {
-					if (event.target === dialog) host.open = false
+				on('click', ({ target }) => {
+					if (target === dialog) host.open = false
 				}),
-				on('keydown', ({ event }) => {
-					if (event.key === 'Escape') host.open = false
-				}),
-			],
-			closeButton: [
-				on('click', () => {
-					host.open = false
+				on('keydown', ({ key }) => {
+					if (key === 'Escape') host.open = false
 				}),
 			],
+			closeButton: on('click', () => {
+				host.open = false
+			}),
 		}
 	},
 )

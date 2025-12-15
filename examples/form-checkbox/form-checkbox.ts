@@ -27,14 +27,16 @@ declare global {
 export default defineComponent<FormCheckboxProps, FormCheckboxUI>(
 	'form-checkbox',
 	{
-		checked: createSensor(ui => ui.checkbox.checked, 'checkbox', {
-			change: ({ target }) => target.checked,
-		}),
+		checked: createSensor(
+			read(ui => ui.checkbox.checked, false),
+			'checkbox',
+			{
+				change: ({ target }) => target.checked,
+			},
+		),
 		label: asString(
-			ui =>
-				ui.label?.textContent
-				?? ui.host.querySelector('label')?.textContent
-				?? '',
+			({ host, label }) =>
+				label?.textContent ?? host.querySelector('label')?.textContent ?? '',
 		),
 	},
 	({ first }) => ({
@@ -42,7 +44,7 @@ export default defineComponent<FormCheckboxProps, FormCheckboxUI>(
 		label: first('.label'),
 	}),
 	() => ({
-		host: [toggleAttribute('checked')],
-		label: [setText('label')],
+		host: toggleAttribute('checked'),
+		label: setText('label'),
 	}),
 )

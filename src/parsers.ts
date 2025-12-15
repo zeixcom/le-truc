@@ -34,6 +34,17 @@ const isParser = <T extends {}, U extends UI>(
 ): value is Parser<T, U> => isFunction<T>(value) && value.length >= 2
 
 /**
+ * Check if a value is a reader
+ *
+ * @since 0.15.0
+ * @param {unknown} value - Value to check if it is a reader
+ * @returns {boolean} True if the value is a reader, false otherwise
+ */
+const isReader = <T extends {}, U extends UI>(
+	value: unknown,
+): value is Reader<T, U> => isFunction<T>(value)
+
+/**
  * Get a fallback value for an element
  *
  * @since 0.14.0
@@ -44,7 +55,7 @@ const isParser = <T extends {}, U extends UI>(
 const getFallback = <T extends {}, U extends UI>(
 	ui: U,
 	fallback: ParserOrFallback<T, U>,
-): T => (isFunction<T>(fallback) ? fallback(ui) : fallback) as T
+): T => (isReader<T, U>(fallback) ? fallback(ui) : (fallback as T))
 
 /**
  * Read a value from a UI element
@@ -73,6 +84,7 @@ export {
 	type Fallback,
 	type ParserOrFallback,
 	isParser,
+	isReader,
 	getFallback,
 	read,
 }

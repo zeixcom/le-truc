@@ -28,12 +28,10 @@ export default defineComponent<{}, ModuleCatalogUI>(
 			spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
 		)
 		return {
-			button: [
-				pass({
-					disabled: () => !total.get(),
-					badge: () => (total.get() > 0 ? String(total.get()) : ''),
-				}),
-			],
+			button: pass({
+				disabled: () => !total.get(),
+				badge: () => (total.get() > 0 ? String(total.get()) : ''),
+			}),
 		}
 	},
 )

@@ -63,20 +63,18 @@ export default defineComponent<{}, ModuleTodoUI>(
 		const completed = createCollection(list, 'form-checkbox[checked]')
 
 		return {
-			form: [
-				on('submit', ({ event }) => {
-					event.preventDefault()
-					const value = textbox.value.trim()
-					if (!value) return
-					list.add(item => {
-						item.querySelector('slot')?.replaceWith(value)
-					})
-					textbox.clear()
-				}),
-			],
-			submit: [pass({ disabled: () => !textbox.length })],
-			list: [setAttribute('filter', () => filter?.value || 'all')],
-			count: [pass({ count: () => active.length })],
+			form: on('submit', e => {
+				e.preventDefault()
+				const value = textbox.value.trim()
+				if (!value) return
+				list.add(item => {
+					item.querySelector('slot')?.replaceWith(value)
+				})
+				textbox.clear()
+			}),
+			submit: pass({ disabled: () => !textbox.length }),
+			list: setAttribute('filter', () => filter?.value || 'all'),
+			count: pass({ count: () => active.length }),
 			clearCompleted: [
 				pass({
 					disabled: () => !completed.length,

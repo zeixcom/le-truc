@@ -180,9 +180,9 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> drops</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">[] </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> []</span></span>
 <span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (style </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'currency'</span><span style="color:#F8F8F2">) {</span></span>
 <span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (</span></span>
-<span class="line"><span style="color:#F92672">			!</span><span style="color:#F8F8F2">o.currency </span><span style="color:#F92672">||</span></span>
-<span class="line"><span style="color:#F92672">			typeof</span><span style="color:#F8F8F2"> o.currency </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> 'string'</span><span style="color:#F92672"> ||</span></span>
-<span class="line"><span style="color:#F8F8F2">			o.currency.length </span><span style="color:#F92672">!==</span><span style="color:#AE81FF"> 3</span></span>
+<span class="line"><span style="color:#F92672">			!</span><span style="color:#F8F8F2">o.currency</span></span>
+<span class="line"><span style="color:#F92672">			||</span><span style="color:#F92672"> typeof</span><span style="color:#F8F8F2"> o.currency </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> 'string'</span></span>
+<span class="line"><span style="color:#F92672">			||</span><span style="color:#F8F8F2"> o.currency.length </span><span style="color:#F92672">!==</span><span style="color:#AE81FF"> 3</span></span>
 <span class="line"><span style="color:#F8F8F2">		) {</span></span>
 <span class="line"><span style="color:#A6E22E">			onError</span><span style="color:#F8F8F2">?.(</span></span>
 <span class="line"><span style="color:#E6DB74">				`style="currency" requires a 3-letter ISO currency (e.g. "CHF").`</span><span style="color:#F8F8F2">,</span></span>
@@ -256,7 +256,7 @@
 <span class="line"><span style="color:#F8F8F2">			host.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'options'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">			host: [</span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> formatter.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(host.value))],</span></span>
+<span class="line"><span style="color:#F8F8F2">			host: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> formatter.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(host.value)),</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>

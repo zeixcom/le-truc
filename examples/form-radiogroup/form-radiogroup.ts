@@ -46,15 +46,13 @@ export default defineComponent<FormRadiogroupProps, FormRadiogroupUI>(
 		labels: all('label', 'Wrap radio buttons with labels.'),
 	}),
 	({ host, radios }) => ({
-		host: [...manageFocus(radios, getIndex)],
-		radios: [
-			setProperty('tabIndex', target => (target.value === host.value ? 0 : -1)),
-		],
-		labels: [
-			toggleClass(
-				'selected',
-				target => host.value === target.querySelector('input')?.value,
-			),
-		],
+		host: manageFocus(radios, getIndex),
+		radios: setProperty('tabIndex', target =>
+			target.value === host.value ? 0 : -1,
+		),
+		labels: toggleClass(
+			'selected',
+			target => host.value === target.querySelector('input')?.value,
+		),
 	}),
 )

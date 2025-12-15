@@ -7,6 +7,7 @@ import {
 	isString,
 	type MaybeCleanup,
 	type Signal,
+	toError,
 	UNSET,
 	valueString,
 } from '@zeix/cause-effect'
@@ -23,9 +24,9 @@ type Effect<P extends ComponentProps, E extends Element> = (
 	target: E,
 ) => MaybeCleanup
 
-type ElementEffects<P extends ComponentProps, E extends Element> = Awaited<
-	Effect<P, E>
->[]
+type ElementEffects<P extends ComponentProps, E extends Element> =
+	| Effect<P, E>
+	| Effect<P, E>[]
 
 type Effects<
 	P extends ComponentProps,
@@ -99,26 +100,19 @@ const runElementEffects = <P extends ComponentProps, E extends Element>(
 	target: E,
 	effects: ElementEffects<P, E>,
 ): MaybeCleanup => {
-	try {
-		if (effects instanceof Promise) throw effects
+	const cleanups: Cleanup[] = []
 
-		const cleanups: Cleanup[] = []
-		for (const fn of effects) {
-			const cleanup = fn(host, target)
-			if (cleanup) cleanups.push(cleanup)
-		}
-		return () => {
-			cleanups.forEach(cleanup => cleanup())
-			cleanups.length = 0
-		}
-	} catch (error) {
-		if (error instanceof Promise)
-			error.then(() => runElementEffects(host, target, effects))
-		else
-			throw new InvalidEffectsError(
-				host,
-				error instanceof Error ? error : new Error(String(error)),
-			)
+	const run = (fn: Effect<P, E>) => {
+		const cleanup = fn(host, target)
+		if (cleanup) cleanups.push(cleanup)
+	}
+
+	if (Array.isArray(effects)) for (const fn of effects) run(fn)
+	else run(effects)
+
+	return () => {
+		cleanups.forEach(cleanup => cleanup())
+		cleanups.length = 0
 	}
 }
 

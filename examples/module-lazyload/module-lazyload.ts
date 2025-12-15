@@ -76,7 +76,7 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 
 		return {
 			callout: [show(() => !result.get().ok), toggleClass('danger', hasError)],
-			loading: [show(() => !!result.get().pending)],
+			loading: show(() => !!result.get().pending),
 			error: [show(hasError), setText(() => result.get().error ?? '')],
 			content: [
 				show(() => result.get().ok),

@@ -1,5 +1,5 @@
 import { batch, type Cleanup, isRecord } from '@zeix/cause-effect'
-import type { Component, ComponentProps } from '../component'
+import type { ComponentProps } from '../component'
 import { type Effect } from '../effects'
 import { PASSIVE_EVENTS, schedule } from '../scheduler'
 import { elementName, LOG_ERROR, log } from '../util'
@@ -10,15 +10,9 @@ type EventType<K extends string> = K extends keyof HTMLElementEventMap
 	? HTMLElementEventMap[K]
 	: Event
 
-type EventHandler<
-	P extends ComponentProps,
-	E extends Element,
-	Evt extends Event,
-> = (context: {
-	event: Evt
-	host: Component<P>
-	target: E
-}) => { [K in keyof P]?: P[K] } | void | Promise<void>
+type EventHandler<P extends ComponentProps, Evt extends Event> = (
+	event: Evt,
+) => { [K in keyof P]?: P[K] } | void | Promise<void>
 
 /* === Exported Function === */
 
@@ -39,7 +33,7 @@ const on =
 		E extends Element = HTMLElement,
 	>(
 		type: K,
-		handler: EventHandler<P, E, EventType<K>>,
+		handler: EventHandler<P, EventType<K>>,
 		options: AddEventListenerOptions = {},
 	): Effect<P, E> =>
 	(host, target): Cleanup => {
@@ -47,11 +41,7 @@ const on =
 			options = { ...options, passive: PASSIVE_EVENTS.has(type) }
 		const listener = (e: Event) => {
 			const task = () => {
-				const result = handler({
-					host,
-					target,
-					event: e as EventType<K>,
-				})
+				const result = handler(e as EventType<K>)
 				if (!isRecord(result)) return
 				batch(() => {
 					for (const [key, value] of Object.entries(result)) {
@@ -67,7 +57,7 @@ const on =
 					}
 				})
 			}
-			if (options.passive) schedule(host, task)
+			if (options.passive) schedule(target, task)
 			else task()
 		}
 		target.addEventListener(type, listener, options)

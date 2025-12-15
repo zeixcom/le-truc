@@ -152,13 +152,13 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 		const hasError = () => (host.src ? !!html.get().error : false)
 
 		return {
-			host: [setAttribute('value')],
-			input: [setProperty('value')],
+			host: setAttribute('value'),
+			input: setProperty('value'),
 			callout: [
 				show(() => (host.src ? !html.get().ok : false)),
 				toggleClass('danger', hasError),
 			],
-			loading: [show(() => (host.src ? html.get().pending : false))],
+			loading: show(() => (host.src ? html.get().pending : false)),
 			error: [
 				show(hasError),
 				setText(() => (host.src ? html.get().error : '')),
@@ -167,8 +167,8 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 				...manageFocus(host.options, options =>
 					options.get().findIndex(option => option.ariaSelected === 'true'),
 				),
-				on('click', ({ event }) => {
-					const option = (event.target as HTMLElement).closest(
+				on('click', ({ target }) => {
+					const option = (target as HTMLElement).closest(
 						'[role="option"]',
 					) as HTMLButtonElement
 					if (option && option.value !== host.value) {

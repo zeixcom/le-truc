@@ -96,7 +96,7 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 				setProperty('ariaSelected', target => String(isCurrentTab(target))),
 				setProperty('tabIndex', target => (isCurrentTab(target) ? 0 : -1)),
 			],
-			panels: [show(target => host.selected === target.id)],
+			panels: show(target => host.selected === target.id),
 		}
 	},
 )

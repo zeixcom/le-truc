@@ -6,9 +6,9 @@
 
 # Type Alias: ElementEffects\<P, E\>
 
-> **ElementEffects**\<`P`, `E`\> = `Awaited`\<[`Effect`](Effect.md)\<`P`, `E`\>\>[]
+> **ElementEffects**\<`P`, `E`\> = [`Effect`](Effect.md)\<`P`, `E`\> \| [`Effect`](Effect.md)\<`P`, `E`\>[]
 
-Defined in: [src/effects.ts:26](https://github.com/zeixcom/le-truc/blob/35f95281922c6ad609e7dde9daf1bc77ac8d3f7a/src/effects.ts#L26)
+Defined in: [src/effects.ts:27](https://github.com/zeixcom/le-truc/blob/3e8d7e7aaa7f4bbc3cb1d68aecab6664ca6352cb/src/effects.ts#L27)
 
 ## Type Parameters
 

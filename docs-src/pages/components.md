@@ -18,7 +18,7 @@ Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built
 Le Truc creates components using the `defineComponent()` function:
 
 ```js
-defineComponent('my-component', {}, () => [
+defineComponent('my-component', {}, {}, () => [
   // Component setup
 ])
 ```
@@ -47,15 +47,13 @@ defineComponent(
     input: first('input', 'Needed to enter the name.'),
     output: first('output', 'Needed to display the name.'),
   }),
-  ({ host }) => {
+  ({ host, input }) => {
     const fallback = host.name
     return {
-      input: [
-        on('input', ({ target }) => {
-          host.name = target.value || fallback
-        }),
-      ],
-      output: [setText('name')],
+      input: on('input', () => {
+        host.name = input.value || fallback
+      }),
+      output: setText('name'),
     }
   },
 )
@@ -94,23 +92,21 @@ The select function must return a record of the selected elements, commonly call
 The setup function must return a record with an array of effects for properties of the `ui` object that is passed in. The additional `host` key of the `ui` object holds the component element itself.
 
 ```js
-({ host }) => {
+({ host, input }) => {
   const fallback = host.name
   return {
-    input: [
-      on('input', ({ target }) => {
-        host.name = target.value || fallback
-      }),
-    ],
-    output: [setText('name')],
+    input: on('input', () => {
+      host.name = input.value || fallback
+    }),
+    output: setText('name'),
   }
 },
 ```
 
 Effects define **component behaviors**:
 
-- `input: [on('input', ...)]` adds an event listener to the `<input>` element
-- `output: [setText('name')]` keeps its text in sync with the `name` property
+- `input: on('input', ...)` adds an event listener to the `<input>` element
+- `output: setText('name')` keeps its text in sync with the `name` property
 
 Characteristics of effects:
 
@@ -163,18 +159,16 @@ If you added **event listeners** outside the scope of your component or **subscr
 
 ```js
 defineComponent('my-component', {}, {}, ({ host }) => {
-  host: [
-    // Setup logic
-    () => {
-      const observer = new IntersectionObserver(([entry]) => {
-        // Do something
-      })
-      observer.observe(host)
+  // Setup logic
+  host: () => {
+    const observer = new IntersectionObserver(([entry]) => {
+      // Do something
+    })
+    observer.observe(host)
 
-      // Cleanup logic
-      return () => observer.disconnect()
-    },
-  ]
+    // Cleanup logic
+    return () => observer.disconnect()
+  },
 })
 ```
 
@@ -316,20 +310,16 @@ defineComponent(
     buttons: all('button'),
     input: first('input')
   }),
-  ({ host }) => ({
-    buttons: [
-      on('click', ({ target }) => {
-        // Set 'active' signal to value of data-index attribute of button
-        const index = parseInt(target.dataset.index, 10);
-        host.active = Number.isInteger(index) ? index : 0;
-      })
-    ],
-    input: [
-      on('change', ({ target }) => {
-        // Set 'value' signal to value of input element
-        host.value = target.value;
-      })
-    ]
+  ({ host, input }) => ({
+    buttons: on('click', ({ target }) => {
+      // Set 'active' signal to value of data-index attribute of button
+      const index = parseInt(target.dataset.index, 10);
+      host.active = Number.isInteger(index) ? index : 0;
+    })
+    input: on('change', () => {
+      // Set 'value' signal to value of input element
+      host.value = target.value;
+    })
   })
 )
 ```
@@ -349,7 +339,7 @@ Apply one or multiple effects in the setup function (for component itself) or in
 ```js
 return {
   // On the component itself
-  host: [setAttribute('open', 'open')], // Set 'open' attribute according to 'open' signal
+  host: setAttribute('open', 'open'), // Set 'open' attribute according to 'open' signal
   // On element for the 'count' property of the UI object
   count: [
     setText('count'), // Update text content according to 'count' signal
@@ -394,13 +384,11 @@ defineComponent(
     const count = createState(0)
     const double = createComputed(() => count.get() * 2)
     return {
-      increment: [
-        on('click', () => {
-          count.update(v => ++v)
-        }),
-      ],
-      count: [setText(count)],
-      double: [setText(double)],
+      increment: on('click', () => {
+        count.update(v => ++v)
+      }),
+      count: setText(count),
+      double: setText(double),
     }
   }
 )
@@ -423,8 +411,8 @@ defineComponent(
     double: first('.double')
   }),
   ({ host }) => ({
-    count: [toggleClass('even', () => !(host.count % 2))],
-    double: [setText(() => String(host.count * 2))]
+    count: toggleClass('even', () => !(host.count % 2)),
+    double: setText(() => String(host.count * 2))
   })
 )
 ```

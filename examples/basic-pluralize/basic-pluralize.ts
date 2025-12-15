@@ -68,17 +68,15 @@ export default defineComponent<BasicPluralizeProps, BasicPluralizeUI>(
 
 		// Basic effects
 		const effects = {
-			count: [setText(() => String(host.count))],
-			none: [show(() => host.count === 0)],
-			some: [show(() => host.count > 0)],
+			count: setText(() => String(host.count)),
+			none: show(() => host.count === 0),
+			some: show(() => host.count > 0),
 		}
 
 		// Subset of plural categories for applicable pluralizer: ['zero', 'one', 'two', 'few', 'many', 'other']
 		const categories = pluralizer.resolvedOptions().pluralCategories
 		for (const category of categories)
-			effects[category] = [
-				show(() => pluralizer.select(host.count) === category),
-			]
+			effects[category] = show(() => pluralizer.select(host.count) === category)
 		return effects
 	},
 )

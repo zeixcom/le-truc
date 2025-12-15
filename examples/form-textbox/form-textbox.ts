@@ -74,17 +74,17 @@ export default defineComponent<FormTextboxProps, FormTextboxUI>(
 		description: first('.description'),
 	}),
 	ui => {
-		const { host, error, description } = ui
+		const { host, textbox, error, description } = ui
 		const errorId = error?.id
 		const descriptionId = description?.id
 
 		return {
 			textbox: [
-				on('change', ({ target }) => {
-					target.checkValidity()
+				on('change', () => {
+					textbox.checkValidity()
 					return {
-						value: target.value,
-						error: target.validationMessage,
+						value: textbox.value,
+						error: textbox.validationMessage,
 					}
 				}),
 				setProperty('value'),
@@ -96,9 +96,9 @@ export default defineComponent<FormTextboxProps, FormTextboxUI>(
 					description && descriptionId ? descriptionId : null,
 				),
 			],
-			clear: [...clearEffects(ui)],
-			error: [setText('error')],
-			description: [setText('description')],
+			clear: clearEffects(ui),
+			error: setText('error'),
+			description: setText('description'),
 		}
 	},
 )

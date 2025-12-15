@@ -99,13 +99,13 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 				setProperty('value'),
 				setProperty('max', () => String(host.max)),
 			],
-			decrement: [show(nonZero)],
+			decrement: show(nonZero),
 			increment: [
 				setProperty('disabled', () => host.value >= host.max),
 				setProperty('ariaLabel', ariaLabel),
 			],
-			zero: [show(() => !nonZero.get())],
-			other: [show(nonZero)],
+			zero: show(() => !nonZero.get()),
+			other: show(nonZero),
 		}
 	},
 )

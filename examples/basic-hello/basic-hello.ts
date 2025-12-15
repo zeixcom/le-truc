@@ -24,15 +24,13 @@ export default defineComponent<BasicHelloProps, BasicHelloUI>(
 		input: first('input', 'Needed to enter the name.'),
 		output: first('output', 'Needed to display the name.'),
 	}),
-	({ host }) => {
+	({ host, input }) => {
 		const fallback = host.name
 		return {
-			input: [
-				on('input', ({ target }) => {
-					host.name = target.value || fallback
-				}),
-			],
-			output: [setText('name')],
+			input: on('input', () => {
+				host.name = input.value || fallback
+			}),
+			output: setText('name'),
 		}
 	},
 )

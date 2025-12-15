@@ -43,10 +43,13 @@ This means better SEO, faster initial page loads, and progressive enhancement th
 Progressively enhance the user experience by adding interactivity:
 
 ```js
-import { asString, component, setText } from '@zeix/le-truc'
+import { asString, defineComponent, setText } from '@zeix/le-truc'
 
-component('hello-world', { name: asString() }, (_, { first }) => [
-  first('span', setText('name')),
+defineComponent(
+  'hello-world',
+  { name: asString() },
+  q => ({ span: q.first('span') }),
+  () => ({ span: setText('name') }),
 ])
 ```
 
@@ -62,7 +65,7 @@ Le Truc augments what the platform already provides. It leverages the Web Compon
 {% /slide %}
 
 {% slide title="Minimal Size." style="background: var(--color-blue-20);" %}
-Because we add less abstractions, we can keep the library small (approximately 5kB gzipped).
+Because we add less abstractions, we can keep the library small (approximately 8kB gzipped).
 
 Le Truc is a lightweight library that provides a simple and efficient way to build reactive user interfaces. It is designed to be easy to use and understand, while still providing powerful features for building complex applications.
 

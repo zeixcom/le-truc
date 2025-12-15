@@ -381,13 +381,13 @@
 <span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'max'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(host.max)),</span></span>
 <span class="line"><span style="color:#F8F8F2">			],</span></span>
-<span class="line"><span style="color:#F8F8F2">			decrement: [</span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(nonZero)],</span></span>
+<span class="line"><span style="color:#F8F8F2">			decrement: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(nonZero),</span></span>
 <span class="line"><span style="color:#F8F8F2">			increment: [</span></span>
 <span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'disabled'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.value </span><span style="color:#F92672">>=</span><span style="color:#F8F8F2"> host.max),</span></span>
 <span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'ariaLabel'</span><span style="color:#F8F8F2">, ariaLabel),</span></span>
 <span class="line"><span style="color:#F8F8F2">			],</span></span>
-<span class="line"><span style="color:#F8F8F2">			zero: [</span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">nonZero.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">())],</span></span>
-<span class="line"><span style="color:#F8F8F2">			other: [</span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(nonZero)],</span></span>
+<span class="line"><span style="color:#F8F8F2">			zero: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">nonZero.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()),</span></span>
+<span class="line"><span style="color:#F8F8F2">			other: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(nonZero),</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>

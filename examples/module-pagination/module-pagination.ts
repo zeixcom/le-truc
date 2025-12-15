@@ -48,22 +48,21 @@ export default defineComponent<ModulePaginationProps, ModulePaginationUI>(
 		value: first('.value'),
 		max: first('.max'),
 	}),
-	({ host }) => ({
+	({ host, input }) => ({
 		host: [
 			show(() => host.max > 1),
 			setAttribute('value', () => String(host.value)),
 			setAttribute('max', () => String(host.max)),
-			on('keyup', ({ event }) => {
-				if ((event.target as HTMLElement)?.localName === 'input') return
-				const key = event.key
+			on('keyup', ({ target, key }) => {
+				if (target instanceof HTMLInputElement) return
 				if ((key === 'ArrowLeft' || key === '-') && host.value > 1) host.value--
 				else if ((key === 'ArrowRight' || key === '+') && host.value < host.max)
 					host.value++
 			}),
 		],
 		input: [
-			on('change', ({ target }) => {
-				const numValue = target.valueAsNumber
+			on('change', () => {
+				const numValue = input.valueAsNumber
 				host.value = Number.isNaN(numValue)
 					? 1
 					: Math.max(1, Math.min(numValue, host.max))
@@ -83,7 +82,7 @@ export default defineComponent<ModulePaginationProps, ModulePaginationUI>(
 			}),
 			setProperty('disabled', () => host.value >= host.max),
 		],
-		value: [setText(() => String(host.value))],
-		max: [setText(() => String(host.max))],
+		value: setText(() => String(host.value)),
+		max: setText(() => String(host.max)),
 	}),
 )

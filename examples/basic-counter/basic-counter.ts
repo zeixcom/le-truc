@@ -35,11 +35,9 @@ export default defineComponent<BasicCounterProps, BasicCounterUI>(
 		count: first('span', 'Add a span to display the count.'),
 	}),
 	({ host }) => ({
-		increment: [
-			on('click', () => {
-				host.count++
-			}),
-		],
-		count: [setText('count')],
+		increment: on('click', () => {
+			host.count++
+		}),
+		count: setText('count'),
 	}),
 )

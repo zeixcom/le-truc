@@ -70,36 +70,30 @@ export default defineComponent<ModuleListProps, ModuleListUI>(
 		const max = asInteger(MAX_ITEMS)(ui, host.getAttribute('max'))
 
 		return {
-			form: [
-				on('submit', ({ event }) => {
-					event.preventDefault()
-					const content = textbox?.value
-					if (content) {
-						host.add(item => {
-							item.querySelector('slot')?.replaceWith(content)
-						})
-						textbox.clear()
-					}
-				}),
-			],
-			add: [
-				pass({
-					disabled: () =>
-						(textbox && !textbox.length) || container.children.length >= max,
-				}),
-			],
-			host: [
-				on('click', ({ event }) => {
-					const target = event.target
-					if (
-						target instanceof HTMLElement &&
-						target?.closest('basic-button.delete')
-					) {
-						event.stopPropagation()
-						target.closest('[data-key]')?.remove()
-					}
-				}),
-			],
+			form: on('submit', e => {
+				e.preventDefault()
+				const content = textbox?.value
+				if (content) {
+					host.add(item => {
+						item.querySelector('slot')?.replaceWith(content)
+					})
+					textbox.clear()
+				}
+			}),
+			add: pass({
+				disabled: () =>
+					(textbox && !textbox.length) || container.children.length >= max,
+			}),
+			host: on('click', e => {
+				const { target } = e
+				if (
+					target instanceof HTMLElement
+					&& target.closest('basic-button.delete')
+				) {
+					e.stopPropagation()
+					target.closest('[data-key]')?.remove()
+				}
+			}),
 		}
 	},
 )

@@ -70,12 +70,10 @@ defineComponent(
       spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
     )
     return {
-      button: [
-        pass({
-          disabled: () => !total.get(),
-          badge: () => (total.get() > 0 ? String(total.get()) : ''),
-        }),
-      ],
+      button: pass({
+        disabled: () => !total.get(),
+        badge: () => (total.get() > 0 ? String(total.get()) : ''),
+      }),
     }
   },
 )
@@ -102,8 +100,8 @@ defineComponent(
     badge: first('span.badge'),
   }),
   () => ({
-    button: [setProperty('disabled')],
-    badge: [setText('badge')],
+    button: setProperty('disabled'),
+    badge: setText('badge'),
   }),
 )
 ```
@@ -188,13 +186,13 @@ defineComponent(
         setProperty('value'),
         setProperty('max', () => String(host.max)),
       ],
-      decrement: [show(nonZero)],
+      decrement: show(nonZero),
       increment: [
         setProperty('disabled', () => host.value >= host.max),
         setProperty('ariaLabel', ariaLabel),
       ],
-      zero: [show(() => !nonZero.get())],
-      other: [show(nonZero)],
+      zero: show(() => !nonZero.get()),
+      other: show(nonZero),
     }
   },
 )
@@ -364,9 +362,7 @@ export default defineComponent<ContextMediaProps>(
   },
   undefined, // Component has no own descendant elements
   () => ({
-    host: [
-      provideContexts([MEDIA_MOTION, MEDIA_THEME]),
-    ],
+    host: provideContexts([MEDIA_MOTION, MEDIA_THEME]),
   }),
 )
 ```
@@ -422,8 +418,8 @@ export default defineComponent(
     theme: first('.theme'),
   }),
   () => ({
-    motion: [setText('motion')],
-    theme: [setText('theme')],
+    motion: setText('motion'),
+    theme: setText('theme'),
   }),
 )
 ```

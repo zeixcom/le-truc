@@ -1,6 +1,6 @@
 import {
 	asInteger,
-	Collection,
+	type Collection,
 	type Component,
 	defineComponent,
 	on,
@@ -82,6 +82,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 			// Handle navigation button click and keyup events
 			buttons: [
 				on('click', ({ target }) => {
+					if (!(target instanceof HTMLElement)) return
 					const total = slides.length
 					const nextIndex = target.classList.contains('prev')
 						? host.index - 1
@@ -93,11 +94,11 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 						: 0
 					scrollToCurrentSlide()
 				}),
-				on('keyup', ({ event }) => {
-					const key = event.key
+				on('keyup', e => {
+					const { key } = e
 					if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) {
-						event.preventDefault()
-						event.stopPropagation()
+						e.preventDefault()
+						e.stopPropagation()
 						const total = slides.length
 						const nextIndex =
 							key === 'Home'
@@ -122,11 +123,9 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 			],
 
 			// Set the active slide in the slides
-			slides: [
-				setProperty('ariaCurrent', target =>
-					String(target.id === slides[host.index].id),
-				),
-			],
+			slides: setProperty('ariaCurrent', target =>
+				String(target.id === slides[host.index].id),
+			),
 		}
 	},
 )
