@@ -1,5 +1,4 @@
 import { createEffect, match, resolve } from '@zeix/cause-effect'
-import { join } from 'path'
 import { OUTPUT_DIR } from '../config'
 import {
 	componentScripts,
@@ -8,7 +7,7 @@ import {
 	docsStyles,
 	libraryScripts,
 } from '../file-signals'
-import { writeFileSyncSafe } from '../io'
+import { getFilePath, writeFileSyncSafe } from '../io'
 import {
 	type ServiceWorkerConfig,
 	serviceWorker,
@@ -40,11 +39,10 @@ export const serviceWorkerEffect = () =>
 							cacheName: `le-truc-docs-v${Date.now()}`,
 							staticAssets: ['/', '/index.html'],
 						}
-
-						const swContent = serviceWorker(config)
-						const swPath = join(OUTPUT_DIR, 'sw.js')
-
-						writeFileSyncSafe(swPath, swContent)
+						writeFileSyncSafe(
+							getFilePath(OUTPUT_DIR, 'sw.js'),
+							serviceWorker(config),
+						)
 						console.log('🔧 Service worker generated successfully')
 					} catch (error) {
 						console.error('Failed to generate service worker:', error)

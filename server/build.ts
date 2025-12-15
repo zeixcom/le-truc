@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
 
-import { join } from 'path'
 import { apiEffect } from './effects/api'
 import { cssEffect } from './effects/css'
 import { examplesEffect } from './effects/examples'
@@ -9,6 +8,7 @@ import { menuEffect } from './effects/menu'
 import { pagesEffect } from './effects/pages'
 import { serviceWorkerEffect } from './effects/service-worker'
 import { sitemapEffect } from './effects/sitemap'
+import { getFilePath } from './io'
 
 /**
  * Simple reactive build system orchestration
@@ -23,7 +23,7 @@ export async function build() {
 
 	try {
 		// Change to project root directory since config paths are relative to it
-		const projectRoot = join(import.meta.dir, '..')
+		const projectRoot = getFilePath(import.meta.dir, '..')
 		process.chdir(projectRoot)
 		console.log(`📁 Working directory: ${process.cwd()}`)
 

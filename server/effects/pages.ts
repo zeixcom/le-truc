@@ -1,11 +1,11 @@
 import { createEffect, match, resolve } from '@zeix/cause-effect'
-import { mkdir, readFile, writeFile } from 'fs/promises'
-import { dirname, join } from 'path'
 import { ASSETS_DIR, INCLUDES_DIR, LAYOUT_FILE, OUTPUT_DIR } from '../config'
-import { markdownFiles } from '../file-signals'
+import { markdownFiles, type ProcessedMarkdownFile } from '../file-signals'
 import { performanceHints } from '../templates/performance-hints'
 import { toc } from '../templates/toc'
-import type { ProcessedMarkdownFile } from '../types'
+import { getFileContent, getFilePath, writeFileSyncSafe } from '../io'
+
+/* === Internal Functionals === */
 
 const generateAssetHash = (_filePath: string): string => {
 	// Simple timestamp-based hash for development
@@ -16,8 +16,8 @@ const generateAssetHash = (_filePath: string): string => {
 const getAssetHashes = (): { css: string; js: string } => {
 	try {
 		return {
-			css: generateAssetHash(join(ASSETS_DIR, 'main.css')),
-			js: generateAssetHash(join(ASSETS_DIR, 'main.js')),
+			css: generateAssetHash(getFilePath(ASSETS_DIR, 'main.css')),
+			js: generateAssetHash(getFilePath(ASSETS_DIR, 'main.js')),
 		}
 	} catch {
 		return { css: 'dev', js: 'dev' }
@@ -32,8 +32,9 @@ const loadIncludes = async (html: string): Promise<string> => {
 	while ((match = includeRegex.exec(html)) !== null) {
 		const [fullMatch, filename] = match
 		try {
-			const includePath = join(INCLUDES_DIR, filename)
-			const includeContent = await readFile(includePath, 'utf8')
+			const includeContent = await getFileContent(
+				getFilePath(INCLUDES_DIR, filename),
+			)
 			result = result.replace(fullMatch, includeContent)
 		} catch (error) {
 			console.warn(`Failed to load include ${filename}:`, error)
@@ -66,7 +67,7 @@ const applyTemplate = async (
 	processedFile: ProcessedMarkdownFile,
 ): Promise<string> => {
 	try {
-		let layout = await readFile(LAYOUT_FILE, 'utf8')
+		let layout = await getFileContent(LAYOUT_FILE)
 
 		// Load includes first
 		layout = await loadIncludes(layout)
@@ -139,14 +140,13 @@ export const pagesEffect = () =>
 									const finalHtml = await applyTemplate(processedFile)
 
 									// Write output file
-									const outputPath = join(
-										OUTPUT_DIR,
-										processedFile.relativePath.replace('.md', '.html'),
+									writeFileSyncSafe(
+										getFilePath(
+											OUTPUT_DIR,
+											processedFile.relativePath.replace('.md', '.html'),
+										),
+										finalHtml,
 									)
-									await mkdir(dirname(outputPath), {
-										recursive: true,
-									})
-									await writeFile(outputPath, finalHtml, 'utf8')
 
 									console.log(
 										`📄 Generated ${processedFile.relativePath.replace('.md', '.html')}`,

@@ -5,10 +5,10 @@ import {
 	componentMarkup,
 	componentScripts,
 	componentStyles,
+	type FileInfo,
 } from '../file-signals'
 import { writeFileSyncSafe } from '../io'
 import { type PanelType, tabGroup } from '../templates/fragments'
-import { FileInfo } from '../types'
 
 const highlightCode = async (content: string, type: string) =>
 	await codeToHtml(content, {

@@ -14,15 +14,114 @@ import {
 	TEMPLATES_DIR,
 } from './config'
 import { watchFiles } from './file-watcher'
-import { extractFrontmatter, getRelativePath } from './io'
+import { getRelativePath } from './io'
 import markdocConfig from './markdoc.config'
 import { postProcessHtml } from './markdoc-helpers'
-import type {
-	FileInfo,
-	PageInfo,
-	PageMetadata,
-	ProcessedMarkdownFile,
-} from './types'
+
+/* === Types === */
+
+export type FileInfo = {
+	path: string
+	filename: string
+	content: string
+	hash: string
+	lastModified: number
+	size: number
+	exists: boolean
+}
+
+export type PageInfo = {
+	title: string
+	emoji: string
+	description: string
+	url: string
+	filename: string
+	relativePath: string
+	lastModified: number
+	section?: string
+}
+
+export type PageMetadata = {
+	title?: string
+	description?: string
+	emoji?: string
+	url?: string
+	section?: string
+	order?: number
+	draft?: boolean
+	tags?: string[]
+	created?: Date
+	updated?: Date
+}
+
+export type ProcessedMarkdownFile = FileInfo & {
+	metadata: PageMetadata
+	processedContent: string
+	htmlContent: string
+	section?: string
+	depth: number
+	relativePath: string
+	basePath: string
+	title: string
+}
+
+/* === Internal Functions === */
+
+function extractFrontmatter(content: string): {
+	metadata: PageMetadata
+	content: string
+} {
+	const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/
+	const match = content.match(frontmatterRegex)
+
+	if (!match) {
+		return { metadata: {}, content }
+	}
+
+	try {
+		// Simple YAML-like parsing for basic frontmatter
+		const yamlContent = match[1]
+		const metadata: PageMetadata = {}
+
+		const lines = yamlContent.split('\n')
+		for (const line of lines) {
+			const colonIndex = line.indexOf(':')
+			if (colonIndex === -1) continue
+
+			const key = line.slice(0, colonIndex).trim()
+			const value = line
+				.slice(colonIndex + 1)
+				.trim()
+				.replace(/^['"]|['"]$/g, '')
+
+			// Parse common metadata fields
+			switch (key) {
+				case 'title':
+				case 'description':
+				case 'emoji':
+				case 'section':
+					metadata[key] = value
+					break
+				case 'order':
+					metadata.order = parseInt(value, 10)
+					break
+				case 'draft':
+					metadata.draft = value === 'true'
+					break
+				case 'tags':
+					metadata.tags = value.split(',').map(t => t.trim())
+					break
+			}
+		}
+
+		return { metadata, content: match[2] }
+	} catch (error) {
+		console.warn(`Failed to parse frontmatter in content:`, error)
+		return { metadata: {}, content: match[2] || content }
+	}
+}
+
+/* === Exported Functions === */
 
 export const markdownFiles: {
 	sources: Store<Record<string, FileInfo>>

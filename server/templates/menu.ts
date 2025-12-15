@@ -1,13 +1,8 @@
-/**
- * Menu Template
- *
- * Tagged template literal for generating navigation menu HTML.
- * Provides syntax highlighting and automatic escaping.
- */
-
 import { PAGE_ORDER } from '../config'
-import type { PageInfo } from '../types'
+import { type PageInfo } from '../file-signals'
 import { createOrderedSort, html, type SortableItem } from './utils'
+
+/* === Exported Functions === */
 
 // Menu item template
 export function menuItem(page: PageInfo): string {

@@ -1,6 +1,6 @@
 import { serve } from 'bun'
 import { readdir, readFile } from 'fs/promises'
-import { basename, join } from 'path'
+import { join } from 'path'
 
 // Directory containing example fragments
 const EXAMPLES_DIR = './examples'

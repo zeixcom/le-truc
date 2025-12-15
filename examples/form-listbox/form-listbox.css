@@ -6,12 +6,12 @@ form-listbox {
 		max-height: 40rem;
 		background-color: var(--color-background);
 
-		&:has([role='group']) {
+		&:has([role="group"]) {
 			scroll-padding-block-start: var(--space-xl);
 		}
 	}
 
-	[role='listbox'] {
+	[role="listbox"] {
 		display: flex;
 		flex-direction: column;
 		gap: 0;
@@ -21,7 +21,7 @@ form-listbox {
 		background: var(--color-input);
 	}
 
-	[role='group'] {
+	[role="group"] {
 		margin-block-end: var(--space-xs);
 
 		&:not(:has(button:not([hidden]))) {
@@ -29,7 +29,7 @@ form-listbox {
 		}
 	}
 
-	[role='presentation'] {
+	[role="presentation"] {
 		position: sticky;
 		top: 0;
 		background-color: var(--color-background);
@@ -41,7 +41,7 @@ form-listbox {
 		margin-block-end: var(--space-xxs);
 	}
 
-	[role='option'] {
+	[role="option"] {
 		display: block;
 		width: 100%;
 		text-align: left;
@@ -55,7 +55,7 @@ form-listbox {
 		cursor: pointer;
 		transition: background var(--transition-short) var(--easing-inout);
 
-		&[aria-selected='true'] {
+		&[aria-selected="true"] {
 			background: var(--color-selection-selected);
 			color: var(--color-text-inverted);
 		}
@@ -63,7 +63,7 @@ form-listbox {
 		&:hover {
 			background: var(--color-selection-hover);
 
-			&[aria-selected='true'] {
+			&[aria-selected="true"] {
 				background: var(--color-selection-active);
 			}
 		}
