@@ -1,8 +1,7 @@
 {
 	"name": "@zeix/le-truc",
 	"version": "0.15.0",
-	"license": "MIT",
-	"author": "Esther Brunner",
+	"description": "Le Truc - the thing for type-safe reactive web components",
 	"keywords": [
 		"Le Truc",
 		"Web Components",
@@ -12,10 +11,24 @@
 		"Signals",
 		"Effects"
 	],
-	"module": "index.ts",
+	"homepage": "https://github.com/zeixcom/le-truc#readme",
+	"bugs": {
+		"url": "https://github.com/zeixcom/le-truc/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/zeixcom/le-truc.git"
+	},
+	"license": "MIT",
+	"author": "Esther Brunner",
 	"type": "module",
 	"main": "index.js",
+	"module": "index.ts",
 	"types": "types/index.d.ts",
+	"directories": {
+		"doc": "docs",
+		"example": "examples"
+	},
 	"scripts": {
 		"build:prod": "bun build index.ts --outdir ./ --minify --define process.env.DEV_MODE=false --sourcemap=external",
 		"build:dev": "BUN_ENV=development bun build index.dev.ts --outdir ./ --define process.env.DEV_MODE=true",
@@ -32,6 +45,9 @@
 		"serve": "bun server/serve.ts --mode unified --build-first",
 		"test": "bunx playwright test examples"
 	},
+	"dependencies": {
+		"@zeix/cause-effect": "^0.16.1"
+	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.8",
 		"@markdoc/markdoc": "^0.5.4",
@@ -44,8 +60,5 @@
 	},
 	"peerDependencies": {
 		"typescript": "^5.9.3"
-	},
-	"dependencies": {
-		"@zeix/cause-effect": "^0.16.1"
 	}
 }
