@@ -1,8 +1,17 @@
 {
-	"name": "le-truc",
+	"name": "@zeix/le-truc",
 	"version": "0.15.0",
 	"license": "MIT",
 	"author": "Esther Brunner",
+	"keywords": [
+		"Le Truc",
+		"Web Components",
+		"Custom Elements",
+		"Reactivity",
+		"State Management",
+		"Signals",
+		"Effects"
+	],
 	"module": "index.ts",
 	"type": "module",
 	"main": "index.js",
