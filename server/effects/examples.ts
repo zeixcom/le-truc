@@ -5,10 +5,10 @@ import {
 	componentMarkup,
 	componentScripts,
 	componentStyles,
+	type FileInfo,
 } from '../file-signals'
-import { writeFileSyncSafe } from '../io'
+import { writeFileSafe } from '../io'
 import { type PanelType, tabGroup } from '../templates/fragments'
-import { FileInfo } from '../types'
 
 const highlightCode = async (content: string, type: string) =>
 	await codeToHtml(content, {
@@ -92,7 +92,7 @@ export const examplesEffect = () =>
 
 							const panels = await generatePanels(html, css, ts)
 							const outputPath = `${EXAMPLES_DIR}/${componentName}.html`
-							writeFileSyncSafe(outputPath, tabGroup(componentName, panels))
+							await writeFileSafe(outputPath, tabGroup(componentName, panels))
 						}
 
 						console.log('Example fragments successfully rebuilt')

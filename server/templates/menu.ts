@@ -1,13 +1,8 @@
-/**
- * Menu Template
- *
- * Tagged template literal for generating navigation menu HTML.
- * Provides syntax highlighting and automatic escaping.
- */
-
 import { PAGE_ORDER } from '../config'
-import type { PageInfo } from '../types'
-import { createOrderedSort, html, type SortableItem } from './utils'
+import { type PageInfo } from '../file-signals'
+import { createOrderedSort, html } from './utils'
+
+/* === Exported Functions === */
 
 // Menu item template
 export function menuItem(page: PageInfo): string {
@@ -25,7 +20,7 @@ export function menu(pages: PageInfo[]): string {
 	// Get only root pages (no section) and sort them using common utility
 	const rootPages = pages
 		.filter(p => !p.section)
-		.sort(createOrderedSort<PageInfo & SortableItem>(PAGE_ORDER))
+		.sort(createOrderedSort<PageInfo>(PAGE_ORDER))
 
 	return html` <section-menu>
 		<nav>

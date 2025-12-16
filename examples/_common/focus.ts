@@ -32,8 +32,10 @@ export const manageFocus = <E extends HTMLInputElement | HTMLButtonElement>(
 			else if (key === LAST_KEY) index = collection.length - 1
 			else
 				index =
-					(index + (INCREMENT_KEYS.includes(key) ? 1 : -1) + collection.length)
-					% collection.length
+					(index +
+						(INCREMENT_KEYS.includes(key) ? 1 : -1) +
+						collection.length) %
+					collection.length
 			if (collection[index]) collection[index].focus()
 		}),
 		on('keyup', ({ key }) => {

@@ -40,8 +40,8 @@ export default defineComponent<ModuleCodeblockProps, ModuleCodeblockUI>(
 		copy: copyToClipboard(code, {
 			success: copy?.getAttribute('copy-success') || 'Copied!',
 			error:
-				copy?.getAttribute('copy-error')
-				|| 'Error trying to copy to clipboard!',
+				copy?.getAttribute('copy-error') ||
+				'Error trying to copy to clipboard!',
 		}),
 	}),
 )

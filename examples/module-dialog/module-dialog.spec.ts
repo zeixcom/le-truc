@@ -6,7 +6,7 @@ test.describe('module-dialog component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:4173/test/module-dialog.html')
+		await page.goto('http://localhost:3000/test/module-dialog.html')
 		await page.waitForSelector('module-dialog')
 	})
 
@@ -71,12 +71,12 @@ test.describe('module-dialog component', () => {
 			const openButton = dialog.locator('button[aria-haspopup="dialog"]')
 
 			// Check initial body state
-			await expect(page.locator('body')).not.toHaveClass('scroll-lock')
+			await expect(page.locator('body.scroll-lock')).toHaveCount(0)
 
 			await openButton.click()
 
 			// Check that scroll lock is applied
-			await expect(page.locator('body')).toHaveClass('scroll-lock')
+			await expect(page.locator('body.scroll-lock')).toHaveCount(1)
 		})
 
 		test('focuses close button when dialog opens', async ({ page }) => {
@@ -182,11 +182,11 @@ test.describe('module-dialog component', () => {
 			const closeButton = dialog.locator('dialog button.close')
 
 			await openButton.click()
-			await expect(page.locator('body')).toHaveClass('scroll-lock')
+			await expect(page.locator('body.scroll-lock')).toHaveCount(1)
 
 			await closeButton.click()
 
-			await expect(page.locator('body')).not.toHaveClass('scroll-lock')
+			await expect(page.locator('body.scroll-lock')).toHaveCount(0)
 		})
 
 		test('updates component open property when dialog closes', async ({
@@ -281,15 +281,15 @@ test.describe('module-dialog component', () => {
 			const closeButton = dialog.locator('dialog button.close')
 
 			// Initial state - no scroll lock
-			await expect(page.locator('body')).not.toHaveClass('scroll-lock')
+			await expect(page.locator('body.scroll-lock')).toHaveCount(0)
 
 			// Open dialog - scroll lock should be applied
 			await openButton.click()
-			await expect(page.locator('body')).toHaveClass('scroll-lock')
+			await expect(page.locator('body.scroll-lock')).toHaveCount(1)
 
 			// Close dialog - scroll lock should be removed
 			await closeButton.click()
-			await expect(page.locator('body')).not.toHaveClass('scroll-lock')
+			await expect(page.locator('body.scroll-lock')).toHaveCount(0)
 		})
 
 		test('manages body positioning for scroll lock', async ({ page }) => {
@@ -446,7 +446,7 @@ test.describe('module-dialog component', () => {
 			})
 
 			await expect(dialogElement).toBeVisible()
-			await expect(page.locator('body')).toHaveClass('scroll-lock')
+			await expect(page.locator('body.scroll-lock')).toHaveCount(1)
 		})
 
 		test('can be closed programmatically', async ({ page }) => {

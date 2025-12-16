@@ -6,7 +6,7 @@ test.describe('form-radiogroup component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:4173/test/form-radiogroup.html')
+		await page.goto('http://localhost:3000/test/form-radiogroup.html')
 		await page.waitForSelector('form-radiogroup')
 	})
 

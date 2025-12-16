@@ -1,0 +1,36 @@
+{{ extends 'base.html' }}
+
+<head>
+	<title>{{ title }} – Le Truc Docs</title>
+	<meta name="description" content="{{ description }}" />
+</head>
+
+<body class="{{ section }} {{ body-class }}">
+	<a href="#main" class="skiplink visually-hidden">Skip to main content</a>
+
+	<context-router>
+		<header class="content-grid">
+			<h1 class="content">Le Truc Docs <small>Version 0.15.0</small></h1>
+
+			<!-- Optional shared navigation include -->
+			{{ include 'menu.html' }}
+
+			<!-- Page-level callout used by client scripts (hidden by default) -->
+			<card-callout class="content danger" hidden>
+				<p class="error" role="alert" aria-live="assertive"></p>
+			</card-callout>
+		</header>
+
+		<main id="main" class="content-grid">
+			<!-- Rendered page content or child-layout inner body -->
+			{{ content }}
+		</main>
+
+		<footer class="content-grid">
+			<div class="content">
+				<h2 class="visually-hidden">Footer</h2>
+				<p>© 2024 – 2025 Zeix AG</p>
+			</div>
+		</footer>
+	</context-router>
+</body>

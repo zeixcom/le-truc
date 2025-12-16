@@ -14,27 +14,122 @@ import {
 	TEMPLATES_DIR,
 } from './config'
 import { watchFiles } from './file-watcher'
-import { extractFrontmatter, getRelativePath } from './io'
+import { getRelativePath } from './io'
 import markdocConfig from './markdoc.config'
 import { postProcessHtml } from './markdoc-helpers'
-import type {
-	FileInfo,
-	PageInfo,
-	PageMetadata,
-	ProcessedMarkdownFile,
-} from './types'
 
-export const markdownFiles: {
+/* === Types === */
+
+export type FileInfo = {
+	path: string
+	filename: string
+	content: string
+	hash: string
+	lastModified: number
+	size: number
+	exists: boolean
+}
+
+export type PageInfo = {
+	title: string
+	emoji: string
+	description: string
+	url: string
+	filename: string
+	relativePath: string
+	lastModified: number
+	section?: string
+}
+
+export type PageMetadata = {
+	title?: string
+	description?: string
+	emoji?: string
+	url?: string
+	section?: string
+	order?: number
+	draft?: boolean
+	tags?: string[]
+	created?: Date
+	updated?: Date
+}
+
+export type ProcessedMarkdownFile = FileInfo & {
+	metadata: PageMetadata
+	processedContent: string
+	htmlContent: string
+	section?: string
+	depth: number
+	relativePath: string
+	basePath: string
+	title: string
+}
+
+/* === Internal Functions === */
+
+function extractFrontmatter(content: string): {
+	metadata: PageMetadata
+	content: string
+} {
+	const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/
+	const match = content.match(frontmatterRegex)
+
+	if (!match) {
+		return { metadata: {}, content }
+	}
+
+	try {
+		// Simple YAML-like parsing for basic frontmatter
+		const yamlContent = match[1]
+		const metadata: PageMetadata = {}
+
+		const lines = yamlContent.split('\n')
+		for (const line of lines) {
+			const colonIndex = line.indexOf(':')
+			if (colonIndex === -1) continue
+
+			const key = line.slice(0, colonIndex).trim()
+			const value = line
+				.slice(colonIndex + 1)
+				.trim()
+				.replace(/^['"]|['"]$/g, '')
+
+			// Parse common metadata fields
+			switch (key) {
+				case 'title':
+				case 'description':
+				case 'emoji':
+				case 'section':
+					metadata[key] = value
+					break
+				case 'order':
+					metadata.order = parseInt(value, 10)
+					break
+				case 'draft':
+					metadata.draft = value === 'true'
+					break
+				case 'tags':
+					metadata.tags = value.split(',').map(t => t.trim())
+					break
+			}
+		}
+
+		return { metadata, content: match[2] }
+	} catch (error) {
+		console.warn(`Failed to parse frontmatter in content:`, error)
+		return { metadata: {}, content: match[2] || content }
+	}
+}
+
+/* === Exported Signals === */
+
+const docsMarkdown: {
 	sources: Store<Record<string, FileInfo>>
 	processed: Computed<Map<string, FileInfo & { metadata: PageMetadata }>>
 	pageInfos: Computed<PageInfo[]>
 	fullyProcessed: Computed<Map<string, ProcessedMarkdownFile>>
-} = (() => {
-	const sources = watchFiles(PAGES_DIR, {
-		recursive: true,
-		extensions: ['.md'],
-		ignore: ['README.md'],
-	})
+} = await (async () => {
+	const sources = await watchFiles(PAGES_DIR, '**/*.md')
 
 	const processed = createComputed(async () => {
 		const rawFiles = sources.get()
@@ -226,79 +321,41 @@ export const markdownFiles: {
 	}
 })()
 
-export const libraryScripts = (() => {
-	const sources = watchFiles(SRC_DIR, {
-		recursive: true,
-		extensions: ['.ts'],
-	})
+const libraryScripts = {
+	sources: await watchFiles(SRC_DIR, '**/*.ts'),
+}
 
-	return {
-		sources,
-	}
-})()
+const componentMarkup = {
+	sources: await watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'),
+}
 
-export const docsScripts = (() => {
-	const sources = watchFiles(INPUT_DIR, {
-		recursive: false,
-		extensions: ['.ts'],
-	})
+const componentStyles = {
+	sources: await watchFiles(COMPONENTS_DIR, '**/*.css'),
+}
 
-	return {
-		sources,
-	}
-})()
+const componentScripts = {
+	sources: await watchFiles(COMPONENTS_DIR, '**/*.ts'),
+}
 
-export const componentScripts = (() => {
-	const sources = watchFiles(COMPONENTS_DIR, {
-		recursive: true,
-		extensions: ['.ts'],
-	})
+const docsStyles = {
+	sources: await watchFiles(INPUT_DIR, '*.css'),
+}
 
-	return {
-		sources,
-	}
-})()
+const docsScripts = {
+	sources: await watchFiles(INPUT_DIR, '*.ts'),
+}
 
-export const templateScripts = (() => {
-	const sources = watchFiles(TEMPLATES_DIR, {
-		recursive: true,
-		extensions: ['.ts'],
-	})
+const templateScripts = {
+	sources: await watchFiles(TEMPLATES_DIR, '**/*.ts'),
+}
 
-	return {
-		sources,
-	}
-})()
-
-export const docsStyles = (() => {
-	const sources = watchFiles(INPUT_DIR, {
-		recursive: false,
-		extensions: ['.css'],
-	})
-
-	return {
-		sources,
-	}
-})()
-
-export const componentStyles = (() => {
-	const sources = watchFiles(COMPONENTS_DIR, {
-		recursive: true,
-		extensions: ['.css'],
-	})
-
-	return {
-		sources,
-	}
-})()
-
-export const componentMarkup = (() => {
-	const sources = watchFiles(COMPONENTS_DIR, {
-		recursive: true,
-		extensions: ['.html'],
-	})
-
-	return {
-		sources,
-	}
-})()
+export {
+	componentMarkup,
+	componentScripts,
+	componentStyles,
+	libraryScripts,
+	docsMarkdown,
+	docsScripts,
+	docsStyles,
+	templateScripts,
+}

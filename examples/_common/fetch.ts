@@ -60,8 +60,8 @@ export const isRecursiveURL = (
 	host: HTMLElement,
 	attr: string = 'src',
 ): boolean =>
-	!!value
-	&& !!(host.parentElement || (host.getRootNode() as ShadowRoot).host)?.closest(
+	!!value &&
+	!!(host.parentElement || (host.getRootNode() as ShadowRoot).host)?.closest(
 		`${host.localName}[${attr}="${value}"]`,
 	)
 

@@ -1,67 +1,77 @@
-import { createStore, Store, UNSET } from '@zeix/cause-effect'
-import { existsSync, watch } from 'fs'
-import { readdir } from 'fs/promises'
-import { extname, join } from 'path'
-import { createFileInfo } from './io'
-import { FileInfo, WatcherOptions } from './types'
+import { createStore, type Store, UNSET } from '@zeix/cause-effect'
+import { Glob } from 'bun'
+import { FileInfo } from './file-signals'
+import {
+	createFileInfo,
+	getFilePath,
+	isPlaywrightRunning,
+	watchDirectory,
+} from './io'
 
-export function watchFiles(
+/* === Exported Functions === */
+
+export const watchFiles = async (
 	directory: string,
-	options: WatcherOptions,
-): Store<Record<string, FileInfo>> {
-	const { recursive = false, extensions = [], ignore = [] } = options
-	const signal = createStore<Record<string, FileInfo>>(UNSET)
+	inlclude: string,
+	exclude?: string,
+): Promise<Store<Record<string, FileInfo>>> => {
+	const glob = new Glob(inlclude)
+	const excludeGlob = exclude ? new Glob(exclude) : null
+	const store = createStore<Record<string, FileInfo>>(UNSET)
+	const playwrightDetected = isPlaywrightRunning()
 
 	const isMatching = (file: string): boolean => {
-		if (ignore.some(pattern => file.includes(pattern))) return false
-		if (extensions.length > 0) {
-			const ext = extname(file)
-			return extensions.includes(ext)
-		}
+		if (!glob.match(file)) return false
+		if (excludeGlob && excludeGlob.match(file)) return false
 		return true
 	}
 
-	;(async () => {
-		const files: Record<string, FileInfo> = {}
+	const files: Record<string, FileInfo> = {}
+	try {
+		for await (const file of glob.scan(directory)) {
+			// Apply exclusion filter
+			if (excludeGlob && excludeGlob.match(file)) continue
 
-		try {
-			const entries = await readdir(directory, {
-				withFileTypes: true,
-				recursive,
-			})
-
-			for (const entry of entries) {
-				if (entry.isFile() && isMatching(entry.name)) {
-					const filePath = join(entry.parentPath, entry.name)
-					const fileInfo = await createFileInfo(filePath, entry.name)
-					files[filePath] = fileInfo
-				}
-			}
-			signal.set(files)
-		} catch (error) {
-			console.error(`Error listing files in ${directory}:`, error)
+			const filename = file.split(/[\\/]/).pop() || ''
+			const filePath = getFilePath(directory, file)
+			const fileInfo = await createFileInfo(filePath, filename)
+			if (fileInfo.exists) files[filePath] = fileInfo
 		}
-	})()
+		store.set(files)
+	} catch (error) {
+		console.error(`Error listing files in ${directory}:`, error)
+	}
 
-	console.log('Watching files in directory:', directory)
-
-	watch(
-		directory,
-		{ recursive: options.recursive, persistent: true },
-		async (event, filename) => {
-			if (!filename || !isMatching(filename)) return
-
-			const filePath = join(directory, filename)
-			console.log('File event:', event, 'for', filePath)
-			if (event === 'rename' && !existsSync(filePath)) {
-				signal.remove(filePath)
-			} else {
+	if (playwrightDetected) {
+		console.log(
+			'🎭 Skipping file watching for directory (Playwright detected):',
+			directory,
+		)
+	} else {
+		console.log('Watching files in directory:', directory)
+		watchDirectory(
+			directory,
+			inlclude.includes('**/'),
+			isMatching,
+			async (filePath, filename) => {
 				const fileInfo = await createFileInfo(filePath, filename)
-				if (filePath in signal) signal[filePath].set(fileInfo)
-				else signal.add(filePath, fileInfo)
-			}
-		},
-	)
+				const currentFiles = store.get()
+				if (currentFiles !== UNSET) {
+					const updatedFiles = { ...currentFiles }
+					updatedFiles[filePath] = fileInfo
+					store.set(updatedFiles)
+				}
+			},
+			filePath => {
+				const currentFiles = store.get()
+				if (currentFiles !== UNSET) {
+					const updatedFiles = { ...currentFiles }
+					delete updatedFiles[filePath]
+					store.set(updatedFiles)
+				}
+			},
+		)
+	}
 
-	return signal
+	return store
 }

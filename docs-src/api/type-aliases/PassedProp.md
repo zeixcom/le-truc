@@ -8,7 +8,7 @@
 
 > **PassedProp**\<`T`, `P`, `E`\> = [`Reactive`](Reactive.md)\<`T`, `P`, `E`\> \| \[[`Reactive`](Reactive.md)\<`T`, `P`, `E`\>, (`value`) => `void`\]
 
-Defined in: [src/effects/pass.ts:18](https://github.com/zeixcom/le-truc/blob/3e8d7e7aaa7f4bbc3cb1d68aecab6664ca6352cb/src/effects/pass.ts#L18)
+Defined in: [src/effects/pass.ts:18](https://github.com/zeixcom/le-truc/blob/5bd629bc02429c8193f06a75f94397faf30ed891/src/effects/pass.ts#L18)
 
 ## Type Parameters
 

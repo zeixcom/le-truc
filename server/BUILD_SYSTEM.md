@@ -20,7 +20,7 @@ This build system uses reactive programming principles to create an efficient do
 
 Defines reactive signals for different file types:
 
-- **`markdownFiles`**: Tracks markdown files with Markdoc processing
+- **`pagesMarkdown`**: Tracks markdown files with Markdoc processing
   - `sources`: Raw markdown files from `./docs-src/pages/`
   - `processed`: Computed signal with extracted frontmatter and metadata
   - `pageInfos`: Computed signal generating page navigation data
@@ -153,7 +153,7 @@ const mySchema: Schema = {
 
 | Signal             | Watches                  | Extensions | Recursive | Purpose                   |
 | ------------------ | ------------------------ | ---------- | --------- | ------------------------- |
-| `markdownFiles`    | `./docs-src/pages/`      | `.md`      | ✅        | Site content and API docs |
+| `pagesMarkdown`    | `./docs-src/pages/`      | `.md`      | ✅        | Site content and API docs |
 | `libraryScripts`   | `./src/`                 | `.ts`      | ✅        | Library source code       |
 | `docsScripts`      | `./docs-src/`            | `.ts`      | 🛑        | Documentation scripts     |
 | `componentScripts` | `./examples/`            | `.ts`      | ✅        | Component logic           |
@@ -171,9 +171,9 @@ const mySchema: Schema = {
 | `jsEffect`            | `docsScripts.sources`, `libraryScripts.sources`, `componentScripts.sources`      | Any TypeScript files change                |
 | `serviceWorkerEffect` | All style and script sources                                                     | CSS/JS source files change                 |
 | `examplesEffect`      | `componentMarkup.sources`, `componentStyles.sources`, `componentScripts.sources` | Component files change                     |
-| `pagesEffect`         | `markdownFiles.fullyProcessed`                                                   | Markdown files or their processing changes |
-| `menuEffect`          | `markdownFiles.pageInfos`                                                        | Page metadata changes                      |
-| `sitemapEffect`       | `markdownFiles.pageInfos`                                                        | Page metadata changes                      |
+| `pagesEffect`         | `pagesMarkdown.fullyProcessed`                                                   | Markdown files or their processing changes |
+| `menuEffect`          | `pagesMarkdown.pageInfos`                                                        | Page metadata changes                      |
+| `sitemapEffect`       | `pagesMarkdown.pageInfos`                                                        | Page metadata changes                      |
 
 ## Usage
 
@@ -271,9 +271,9 @@ Add reusable functions to `markdoc-helpers.ts`:
 ```typescript
 // Common pattern for creating buttons
 export function createCustomButton(text: string, className?: string): Tag {
-    return new Tag('button', { 
-        type: 'button', 
-        class: className || 'default' 
+    return new Tag('button', {
+        type: 'button',
+        class: className || 'default'
     }, [text])
 }
 ```
@@ -306,7 +306,7 @@ export function customTemplate(data: any): string {
 ### Build Efficiency
 
 - **Incremental builds**: Only changed files trigger rebuilds
-- **Parallel processing**: Independent effects run simultaneously  
+- **Parallel processing**: Independent effects run simultaneously
 - **Smart caching**: Content hashing prevents unnecessary regeneration
 - **Memory efficiency**: Large files processed in streams
 

@@ -33,7 +33,7 @@ test.describe('module-carousel component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:4173/test/module-carousel.html')
+		await page.goto('http://localhost:3000/test/module-carousel.html')
 		await page.waitForSelector('module-carousel')
 	})
 

@@ -39,7 +39,7 @@ test.describe('form-listbox component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:4173/test/form-listbox.html')
+		await page.goto('http://localhost:3000/test/form-listbox.html')
 		await page.waitForSelector('form-listbox')
 	})
 
@@ -773,7 +773,7 @@ test.describe('form-listbox component', () => {
 				const element = document.querySelector('form-listbox') as any
 				return element.src
 			})
-			expect(src).toBe('/form-listbox/timezones.json')
+			expect(src).toBe('/form-listbox/mocks/timezones.json')
 
 			// Change src property
 			await page.evaluate(() => {

@@ -133,8 +133,8 @@ export function createOrderedSort<T extends SortableItem>(
 	order: string[],
 ): (a: T, b: T) => number {
 	return (a, b) => {
-		const aName = a.filename.replace('.html', '')
-		const bName = b.filename.replace('.html', '')
+		const aName = a.filename.replace('.html', '').replace('.md', '')
+		const bName = b.filename.replace('.html', '').replace('.md', '')
 
 		const aIndex = order.indexOf(aName)
 		const bIndex = order.indexOf(bName)
