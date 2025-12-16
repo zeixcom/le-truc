@@ -7,7 +7,7 @@ import {
 	docsStyles,
 	libraryScripts,
 } from '../file-signals'
-import { getFilePath, writeFileSyncSafe } from '../io'
+import { getFilePath, writeFileSafe } from '../io'
 import {
 	type ServiceWorkerConfig,
 	serviceWorker,
@@ -24,7 +24,7 @@ export const serviceWorkerEffect = () =>
 				libraryScripts: libraryScripts.sources,
 			}),
 			{
-				ok: () => {
+				ok: async () => {
 					try {
 						console.log('🔧 Generating service worker...')
 
@@ -39,7 +39,7 @@ export const serviceWorkerEffect = () =>
 							cacheName: `le-truc-docs-v${Date.now()}`,
 							staticAssets: ['/', '/index.html'],
 						}
-						writeFileSyncSafe(
+						await writeFileSafe(
 							getFilePath(OUTPUT_DIR, 'sw.js'),
 							serviceWorker(config),
 						)

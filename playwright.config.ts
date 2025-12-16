@@ -24,7 +24,7 @@ export default defineConfig({
 	],
 	webServer: {
 		command: 'bun run serve:examples',
-		port: 4173,
+		port: 3000,
 		reuseExistingServer: true,
 	},
 	reporter: [['list'], ['html', { outputFolder: 'playwright-report' }]],

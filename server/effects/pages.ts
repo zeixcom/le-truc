@@ -1,9 +1,9 @@
 import { createEffect, match, resolve } from '@zeix/cause-effect'
 import { ASSETS_DIR, INCLUDES_DIR, LAYOUT_FILE, OUTPUT_DIR } from '../config'
-import { markdownFiles, type ProcessedMarkdownFile } from '../file-signals'
+import { docsMarkdown, type ProcessedMarkdownFile } from '../file-signals'
 import { performanceHints } from '../templates/performance-hints'
 import { toc } from '../templates/toc'
-import { getFileContent, getFilePath, writeFileSyncSafe } from '../io'
+import { getFileContent, getFilePath, writeFileSafe } from '../io'
 
 /* === Internal Functionals === */
 
@@ -125,7 +125,7 @@ export const pagesEffect = () =>
 	createEffect(() => {
 		match(
 			resolve({
-				processedFiles: markdownFiles.fullyProcessed,
+				processedFiles: docsMarkdown.fullyProcessed,
 			}),
 			{
 				ok: async ({ processedFiles }) => {
@@ -140,7 +140,7 @@ export const pagesEffect = () =>
 									const finalHtml = await applyTemplate(processedFile)
 
 									// Write output file
-									writeFileSyncSafe(
+									await writeFileSafe(
 										getFilePath(
 											OUTPUT_DIR,
 											processedFile.relativePath.replace('.md', '.html'),

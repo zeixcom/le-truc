@@ -121,19 +121,15 @@ function extractFrontmatter(content: string): {
 	}
 }
 
-/* === Exported Functions === */
+/* === Exported Signals === */
 
-export const markdownFiles: {
+const docsMarkdown: {
 	sources: Store<Record<string, FileInfo>>
 	processed: Computed<Map<string, FileInfo & { metadata: PageMetadata }>>
 	pageInfos: Computed<PageInfo[]>
 	fullyProcessed: Computed<Map<string, ProcessedMarkdownFile>>
-} = (() => {
-	const sources = watchFiles(PAGES_DIR, {
-		recursive: true,
-		extensions: ['.md'],
-		ignore: ['README.md'],
-	})
+} = await (async () => {
+	const sources = await watchFiles(PAGES_DIR, '**/*.md')
 
 	const processed = createComputed(async () => {
 		const rawFiles = sources.get()
@@ -325,79 +321,41 @@ export const markdownFiles: {
 	}
 })()
 
-export const libraryScripts = (() => {
-	const sources = watchFiles(SRC_DIR, {
-		recursive: true,
-		extensions: ['.ts'],
-	})
+const libraryScripts = {
+	sources: await watchFiles(SRC_DIR, '**/*.ts'),
+}
 
-	return {
-		sources,
-	}
-})()
+const componentMarkup = {
+	sources: await watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'),
+}
 
-export const docsScripts = (() => {
-	const sources = watchFiles(INPUT_DIR, {
-		recursive: false,
-		extensions: ['.ts'],
-	})
+const componentStyles = {
+	sources: await watchFiles(COMPONENTS_DIR, '**/*.css'),
+}
 
-	return {
-		sources,
-	}
-})()
+const componentScripts = {
+	sources: await watchFiles(COMPONENTS_DIR, '**/*.ts'),
+}
 
-export const componentScripts = (() => {
-	const sources = watchFiles(COMPONENTS_DIR, {
-		recursive: true,
-		extensions: ['.ts'],
-	})
+const docsStyles = {
+	sources: await watchFiles(INPUT_DIR, '*.css'),
+}
 
-	return {
-		sources,
-	}
-})()
+const docsScripts = {
+	sources: await watchFiles(INPUT_DIR, '*.ts'),
+}
 
-export const templateScripts = (() => {
-	const sources = watchFiles(TEMPLATES_DIR, {
-		recursive: true,
-		extensions: ['.ts'],
-	})
+const templateScripts = {
+	sources: await watchFiles(TEMPLATES_DIR, '**/*.ts'),
+}
 
-	return {
-		sources,
-	}
-})()
-
-export const docsStyles = (() => {
-	const sources = watchFiles(INPUT_DIR, {
-		recursive: false,
-		extensions: ['.css'],
-	})
-
-	return {
-		sources,
-	}
-})()
-
-export const componentStyles = (() => {
-	const sources = watchFiles(COMPONENTS_DIR, {
-		recursive: true,
-		extensions: ['.css'],
-	})
-
-	return {
-		sources,
-	}
-})()
-
-export const componentMarkup = (() => {
-	const sources = watchFiles(COMPONENTS_DIR, {
-		recursive: true,
-		extensions: ['.html'],
-	})
-
-	return {
-		sources,
-	}
-})()
+export {
+	componentMarkup,
+	componentScripts,
+	componentStyles,
+	libraryScripts,
+	docsMarkdown,
+	docsScripts,
+	docsStyles,
+	templateScripts,
+}

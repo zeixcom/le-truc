@@ -33,7 +33,7 @@ test.describe('module-lazyload component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:4173/test/module-lazyload.html')
+		await page.goto('http://localhost:3000/test/module-lazyload.html')
 		await page.waitForSelector('module-lazyload')
 	})
 
@@ -208,11 +208,13 @@ test.describe('module-lazyload component', () => {
 			await expect(outerCallout).toBeHidden()
 
 			// The inner module-lazyload should show error due to recursion detection
-			const innerError = outerContent.locator('module-lazyload .error')
-			const innerCallout = outerContent.locator('module-lazyload card-callout')
+			const innerError = outerContent.locator('module-lazyload .error:visible')
+			const innerCallout = outerContent.locator(
+				'module-lazyload card-callout.danger',
+			)
 
 			await expect(innerError).toBeVisible()
-			await expect(innerCallout).toHaveClass('danger')
+			await expect(innerCallout).toBeVisible()
 
 			// Verify error message indicates recursion problem
 			const errorText = await innerError.textContent()
@@ -559,8 +561,8 @@ test.describe('module-lazyload component', () => {
 				return {
 					exists: !!callout,
 					hidden:
-						callout?.hasAttribute('hidden') ||
-						(callout as HTMLElement).style.display === 'none',
+						callout?.hasAttribute('hidden')
+						|| (callout as HTMLElement).style.display === 'none',
 				}
 			})
 			expect(shadowCallout.exists).toBe(true)

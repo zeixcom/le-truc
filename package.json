@@ -19,9 +19,9 @@
 		"lint": "bunx biome check --write ./src",
 		"lint:examples": "bunx biome check --write ./examples",
 		"serve:docs": "bun server/serve.ts --mode docs --build-first",
-		"serve:examples": "bun run build:examples && bun server/serve.ts --mode examples",
+		"serve:examples": "bun run build:examples && PLAYWRIGHT=1 bun server/serve.ts --no-hmr --no-watch",
 		"serve": "bun server/serve.ts --mode unified --build-first",
-		"test:examples": "bunx playwright test examples"
+		"test": "bunx playwright test examples"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.8",

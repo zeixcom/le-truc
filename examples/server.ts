@@ -64,7 +64,7 @@ async function serveStaticAsset(url: string): Promise<Response> {
 
 // Main server
 serve({
-	port: 4173,
+	port: 3000,
 	async fetch(req) {
 		const url = new URL(req.url)
 		// Serve /test/{component}.html
@@ -92,4 +92,4 @@ serve({
 	},
 })
 
-console.log('Bun example server running at http://localhost:4173/')
+console.log('Bun example server running at http://localhost:3000/')

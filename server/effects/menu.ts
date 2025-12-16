@@ -1,13 +1,13 @@
 import { createEffect, match, resolve } from '@zeix/cause-effect'
 import { MENU_FILE } from '../config'
-import { markdownFiles } from '../file-signals'
-import { writeFileSyncSafe } from '../io'
+import { docsMarkdown } from '../file-signals'
+import { writeFileSafe } from '../io'
 import { menu } from '../templates/menu'
 
 export const menuEffect = () =>
 	createEffect(() => {
-		match(resolve({ pageInfos: markdownFiles.pageInfos }), {
-			ok: ({ pageInfos }) => {
+		match(resolve({ pageInfos: docsMarkdown.pageInfos }), {
+			ok: async ({ pageInfos }) => {
 				console.log(`📄 Generated ${pageInfos.length} page infos`)
 
 				// Filter for root pages (files directly in pages directory, not in subdirectories)
@@ -19,7 +19,7 @@ export const menuEffect = () =>
 				)
 
 				if (rootPages.length > 0) {
-					writeFileSyncSafe(MENU_FILE, menu(rootPages))
+					await writeFileSafe(MENU_FILE, menu(rootPages))
 					console.log(
 						`Menu file written successfully with ${rootPages.length} pages`,
 					)

@@ -1,51 +1,37 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Page title/description (child layouts may override the title when extending) -->
-  <title>{{ title }} – Le Truc Docs</title>
-  <meta name="description" content="{{ description }}" />
+		<!-- Page title/description (child layouts may override the title when extending) -->
+		<title>{{ title }} – Le Truc Docs</title>
+		<meta name="description" content="{{ description }}" />
 
-  <!-- Core assets (server provides `base-path`, `css-hash` and `js-hash`) -->
-  <link rel="preload" href="{{ base-path }}assets/main.css?v={{ css-hash }}" as="style" />
-  <link rel="modulepreload" href="{{ base-path }}assets/main.js?v={{ js-hash }}" />
-  <link rel="stylesheet" href="{{ base-path }}assets/main.css?v={{ css-hash }}" />
-  <script type="module" src="{{ base-path }}assets/main.js?v={{ js-hash }}"></script>
+		<!-- Core assets (server provides `base-path`, `css-hash` and `js-hash`) -->
+		<link
+			rel="preload"
+			href="{{ base-path }}assets/main.css?v={{ css-hash }}"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="{{ base-path }}assets/main.js?v={{ js-hash }}"
+		/>
+		<link
+			rel="stylesheet"
+			href="{{ base-path }}assets/main.css?v={{ css-hash }}"
+		/>
+		<script
+			type="module"
+			src="{{ base-path }}assets/main.js?v={{ js-hash }}"
+		></script>
 
-  <!-- Additional per-layout head fragment injected by child layouts -->
-  {{ head }}
-</head>
+		<!-- Additional per-layout head fragment injected by child layouts -->
+		{{ head }}
+	</head>
 
-<body class="{{ section }} {{ body-class }}">
-  <a href="#main" class="skiplink visually-hidden">Skip to main content</a>
-
-  <context-router>
-    <header class="content-grid">
-      <h1 class="content">Le Truc Docs <small></small>Version 0.15.0</small></h1>
-
-      <!-- Optional shared navigation include -->
-      {{ include 'menu.html' }}
-
-      <!-- Page-level callout used by client scripts (hidden by default) -->
-      <card-callout class="content danger" hidden>
-        <p class="error" role="alert" aria-live="assertive"></p>
-      </card-callout>
-    </header>
-
-    <main id="main" class="content-grid">
-      <!-- Rendered page content or child-layout inner body -->
-      {{ content }}
-    </main>
-
-    <footer class="content-grid">
-      <div class="content">
-        <h2 class="visually-hidden">Footer</h2>
-        <p>© 2024 – 2025 Zeix AG</p>
-      </div>
-    </footer>
-  </context-router>
-</body>
+	<body class="{{ section }} {{ body-class }}">
+		{{ content }}
+	</body>
 </html>
-</card-callout></p>

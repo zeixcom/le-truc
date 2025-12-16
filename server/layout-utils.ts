@@ -5,13 +5,8 @@ import {
 	type LayoutConfig,
 	ROUTE_LAYOUT_MAP,
 } from './config'
+import { fileExists, getFileContent, getFilePath, writeFileSafe } from './io'
 import { DEFAULT_LAYOUTS, LayoutEngine } from './layout-engine'
-import {
-	fileExists,
-	getFileContent,
-	getFilePath,
-	writeFileSyncSafe,
-} from './io'
 
 /**
  * Layout development utilities
@@ -166,7 +161,7 @@ export class LayoutUtils {
 		}
 
 		const content = template || this.generateLayoutTemplate(name, options)
-		writeFileSyncSafe(layoutPath, content)
+		await writeFileSafe(layoutPath, content)
 
 		console.log(`✅ Created layout: ${name} at ${layoutPath}`)
 	}

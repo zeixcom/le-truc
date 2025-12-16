@@ -6,7 +6,7 @@ test.describe('basic-number component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:4173/test/basic-number.html')
+		await page.goto('http://localhost:3000/test/basic-number.html')
 		await page.waitForSelector('basic-number')
 	})
 
@@ -143,8 +143,8 @@ test.describe('basic-number component', () => {
 		// Verify console error was logged for dynamic creation
 		const hasUnitError = consoleMessages.some(
 			msg =>
-				msg.includes('unit') &&
-				(msg.includes('liter') || msg.includes('kilometer')),
+				msg.includes('unit')
+				&& (msg.includes('liter') || msg.includes('kilometer')),
 		)
 		expect(hasUnitError).toBe(true)
 	})

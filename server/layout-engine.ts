@@ -284,7 +284,19 @@ export class LayoutEngine {
 			// Final parent layout becomes the effective layout, and child's inner body
 			// becomes the content to render.
 			layoutContent = parentLayout
-			content = childBodyInner || content
+
+			// Process template variables in child content before merging
+			const childContent = childBodyInner || content
+			const tempContext = {
+				...this.getDefaultContext(),
+				...context,
+				content, // Original content passed to the function
+			}
+			const processedChildContent = this.replaceTemplateVariables(
+				childContent,
+				tempContext,
+			)
+			content = processedChildContent
 		}
 
 		// Prepare full context with content

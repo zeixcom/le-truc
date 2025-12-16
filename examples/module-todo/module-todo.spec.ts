@@ -36,7 +36,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('module-todo component', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:4173/test/module-todo.html')
+		await page.goto('http://localhost:3000/test/module-todo.html')
 		await page.waitForSelector('module-todo')
 	})
 

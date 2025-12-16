@@ -24,6 +24,19 @@ export const ASSETS_DIR = './docs/assets'
 export const EXAMPLES_DIR = './docs/examples'
 export const SITEMAP_FILE = './docs/sitemap.xml'
 
+// Page ordering configuration
+export const PAGE_ORDER = [
+	'index',
+	'getting-started',
+	'components',
+	'styling',
+	'data-flow',
+	'examples',
+	'api',
+	'blog',
+	'about',
+]
+
 // Layout system configuration
 export const LAYOUTS_DIR = './server/layouts'
 export const CONTENT_MARKER = '{{ content }}'
@@ -55,27 +68,12 @@ export const ROUTE_LAYOUT_MAP = {
 
 // Server configuration
 export const SERVER_CONFIG = {
-	DEFAULT_PORT: 3000,
-	EXAMPLES_PORT: 4173,
-	UNIFIED_PORT: 5000,
+	PORT: 3000,
 	HOST: 'localhost',
 	ENABLE_HMR: true,
 	ENABLE_COMPRESSION: true,
 	DEPENDENCY_TIMEOUT: 50,
 } as const
-
-// Page ordering configuration
-export const PAGE_ORDER = [
-	'index',
-	'getting-started',
-	'components',
-	'styling',
-	'data-flow',
-	'examples',
-	'api',
-	'blog',
-	'about',
-]
 
 // Layout configuration interface
 export interface LayoutConfig {

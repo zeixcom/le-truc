@@ -3,27 +3,22 @@
 <head>
 	<title>{{ title }} – Le Truc Component Test</title>
 	<meta name="description" content="Testing {{ component-name }} component" />
-
-	<!-- Per-layout test assets (optional) -->
-	<link
-		rel="stylesheet"
-		href="{{ base-path }}examples/test.css?v={{ css-hash }}"
-	/>
-	<script
-		type="module"
-		src="{{ base-path }}examples/test-runner.js?v={{ js-hash }}"
-	></script>
 </head>
 
-<body class="test-page">
-	<header class="test-header">
-		<h1 class="content">{{ title }}</h1>
-		<div class="subtitle">Component Test Environment</div>
+<body class="test">
+	<header class="content-grid">
+		<a href="#main" class="skiplink visually-hidden">Skip to main content</a>
+		<h1 class="content">{{ title }} <small>Le Truc 0.15.0</small></h1>
+		<card-callout class="content danger" hidden>
+			<p class="error" role="alert" aria-live="assertive"></p>
+		</card-callout>
 	</header>
-
-	<main class="test-content">{{ content }}</main>
-
-	<card-callout class="content danger" hidden>
-		<p class="error" role="alert" aria-live="assertive"></p>
-	</card-callout>
+	<main id="main" class="content-grid">
+		<section class="content">{{content}}</section>
+	</main>
+	<footer class="content-grid">
+		<div class="content">
+			<h2 class="visually-hidden">Footer</h2>
+		</div>
+	</footer>
 </body>

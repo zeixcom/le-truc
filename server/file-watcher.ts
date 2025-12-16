@@ -1,69 +1,77 @@
 import { createStore, type Store, UNSET } from '@zeix/cause-effect'
+import { Glob } from 'bun'
+import { FileInfo } from './file-signals'
 import {
 	createFileInfo,
-	getDirectoryEntries,
-	getFileExtension,
 	getFilePath,
+	isPlaywrightRunning,
 	watchDirectory,
 } from './io'
-import { FileInfo } from './file-signals'
-
-/* === Types === */
-
-type WatcherOptions = {
-	recursive?: boolean
-	extensions?: string[]
-	ignore?: string[]
-}
 
 /* === Exported Functions === */
 
-export function watchFiles(
+export const watchFiles = async (
 	directory: string,
-	options: WatcherOptions,
-): Store<Record<string, FileInfo>> {
-	const { recursive = false, extensions = [], ignore = [] } = options
+	inlclude: string,
+	exclude?: string,
+): Promise<Store<Record<string, FileInfo>>> => {
+	const glob = new Glob(inlclude)
+	const excludeGlob = exclude ? new Glob(exclude) : null
 	const store = createStore<Record<string, FileInfo>>(UNSET)
+	const playwrightDetected = isPlaywrightRunning()
 
 	const isMatching = (file: string): boolean => {
-		if (ignore.some(pattern => file.includes(pattern))) return false
-		if (extensions.length) return extensions.includes(getFileExtension(file))
+		if (!glob.match(file)) return false
+		if (excludeGlob && excludeGlob.match(file)) return false
 		return true
 	}
 
-	;(async () => {
-		const files: Record<string, FileInfo> = {}
+	const files: Record<string, FileInfo> = {}
+	try {
+		for await (const file of glob.scan(directory)) {
+			// Apply exclusion filter
+			if (excludeGlob && excludeGlob.match(file)) continue
 
-		try {
-			const entries = await getDirectoryEntries(directory, recursive)
-
-			for (const entry of entries) {
-				if (entry.isFile() && isMatching(entry.name)) {
-					const filePath = getFilePath(entry.parentPath, entry.name)
-					const fileInfo = await createFileInfo(filePath, entry.name)
-					files[filePath] = fileInfo
-				}
-			}
-			store.set(files)
-		} catch (error) {
-			console.error(`Error listing files in ${directory}:`, error)
-		}
-	})()
-
-	console.log('Watching files in directory:', directory)
-	watchDirectory(
-		directory,
-		recursive,
-		isMatching,
-		async (filePath, filename) => {
+			const filename = file.split(/[\\/]/).pop() || ''
+			const filePath = getFilePath(directory, file)
 			const fileInfo = await createFileInfo(filePath, filename)
-			if (filePath in store) store[filePath].set(fileInfo)
-			else store.add(filePath, fileInfo)
-		},
-		filePath => {
-			if (filePath in store) store.remove(filePath)
-		},
-	)
+			if (fileInfo.exists) files[filePath] = fileInfo
+		}
+		store.set(files)
+	} catch (error) {
+		console.error(`Error listing files in ${directory}:`, error)
+	}
+
+	if (playwrightDetected) {
+		console.log(
+			'🎭 Skipping file watching for directory (Playwright detected):',
+			directory,
+		)
+	} else {
+		console.log('Watching files in directory:', directory)
+		watchDirectory(
+			directory,
+			inlclude.includes('**/'),
+			isMatching,
+			async (filePath, filename) => {
+				const fileInfo = await createFileInfo(filePath, filename)
+				const currentFiles = store.get()
+				if (currentFiles !== UNSET) {
+					const updatedFiles = { ...currentFiles }
+					updatedFiles[filePath] = fileInfo
+					store.set(updatedFiles)
+				}
+			},
+			filePath => {
+				const currentFiles = store.get()
+				if (currentFiles !== UNSET) {
+					const updatedFiles = { ...currentFiles }
+					delete updatedFiles[filePath]
+					store.set(updatedFiles)
+				}
+			},
+		)
+	}
 
 	return store
 }

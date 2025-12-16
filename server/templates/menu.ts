@@ -1,6 +1,6 @@
 import { PAGE_ORDER } from '../config'
 import { type PageInfo } from '../file-signals'
-import { createOrderedSort, html, type SortableItem } from './utils'
+import { createOrderedSort, html } from './utils'
 
 /* === Exported Functions === */
 
@@ -20,7 +20,7 @@ export function menu(pages: PageInfo[]): string {
 	// Get only root pages (no section) and sort them using common utility
 	const rootPages = pages
 		.filter(p => !p.section)
-		.sort(createOrderedSort<PageInfo & SortableItem>(PAGE_ORDER))
+		.sort(createOrderedSort<PageInfo>(PAGE_ORDER))
 
 	return html` <section-menu>
 		<nav>

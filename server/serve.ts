@@ -4,10 +4,10 @@ import { build } from './build'
 import {
 	COMPONENTS_DIR,
 	COMPRESSIBLE_TYPES,
+	type LayoutConfig,
 	MIME_TYPES,
 	OUTPUT_DIR,
 	SERVER_CONFIG,
-	type LayoutConfig,
 } from './config'
 import {
 	fileExists,
@@ -15,9 +15,12 @@ import {
 	getDirectoryEntries,
 	getFileContent,
 	getFilePath,
+	isPlaywrightRunning,
 } from './io'
-import { LayoutEngine, DEFAULT_LAYOUTS } from './layout-engine'
+import { DEFAULT_LAYOUTS, LayoutEngine } from './layout-engine'
 import { hmrScriptTag } from './templates/hmr'
+import { componentMarkup } from './file-signals'
+import { UNSET } from '@zeix/cause-effect'
 
 /* === Types === */
 
@@ -37,11 +40,11 @@ export type RequestContext = {
 export type ServerOptions = {
 	port?: number
 	host?: string
-	mode?: 'docs' | 'examples' | 'unified'
 	layouts?: LayoutConfig[]
 	enableHMR?: boolean
 	enableCompression?: boolean
 	buildFirst?: boolean
+	disableFileWatching?: boolean
 }
 
 /* === Internal Functions === */
@@ -90,40 +93,24 @@ const getMimeType = (
 const generateAssetHash = (): string => Date.now().toString(36)
 
 /**
- * Get component fragments from examples directory
+ * Get component content from componentMarkup signal
  */
-const getComponentFragments = async (
-	examplesDir: string,
-): Promise<Record<string, string>> => {
+const getComponentContent = (componentName: string): string | null => {
 	try {
-		const dirs = await getDirectoryEntries(examplesDir)
-		const fragments: Record<string, string> = {}
+		const markupSources = componentMarkup.sources.get()
+		if (markupSources === UNSET) return null
 
-		for (const dir of dirs) {
-			if (
-				!dir.isDirectory()
-				|| dir.name === 'assets'
-				|| dir.name === '_common'
-			) {
-				continue
-			}
-
-			const files = await getDirectoryEntries(
-				getFilePath(examplesDir, dir.name),
-			)
-			for (const file of files) {
-				if (!file.isFile) continue
-				if (file.name.endsWith('.html')) {
-					const component = file.name.replace(/\.html$/, '')
-					fragments[component] = getFilePath(examplesDir, dir.name, file.name)
-				}
+		// Look for component HTML file in the markup sources
+		for (const [path, fileInfo] of Object.entries(markupSources)) {
+			if (fileInfo.filename === `${componentName}.html`) {
+				return fileInfo.content
 			}
 		}
 
-		return fragments
+		return null
 	} catch (error) {
-		console.warn('Failed to get component fragments:', error)
-		return {}
+		console.warn('Failed to get component content:', error)
+		return null
 	}
 }
 
@@ -144,33 +131,37 @@ export class DevServer {
 	private options: Required<ServerOptions>
 
 	constructor(options: ServerOptions = {}) {
+		const playwrightDetected = isPlaywrightRunning()
+
 		this.options = {
-			port: options.port || SERVER_CONFIG.DEFAULT_PORT,
+			port: options.port || SERVER_CONFIG.PORT,
 			host: options.host || SERVER_CONFIG.HOST,
-			mode: options.mode || 'unified',
 			layouts: options.layouts || DEFAULT_LAYOUTS,
-			enableHMR: options.enableHMR ?? SERVER_CONFIG.ENABLE_HMR,
+			enableHMR:
+				options.enableHMR
+				?? (playwrightDetected ? false : SERVER_CONFIG.ENABLE_HMR),
 			enableCompression:
 				options.enableCompression ?? SERVER_CONFIG.ENABLE_COMPRESSION,
 			buildFirst: options.buildFirst ?? false,
+			disableFileWatching: options.disableFileWatching ?? playwrightDetected,
 		}
 
 		this.layoutEngine = new LayoutEngine(this.options.layouts)
+
+		if (playwrightDetected) {
+			console.log('🎭 Playwright detected - HMR and file watching disabled')
+		}
 	}
 
 	async start(): Promise<void> {
 		try {
 			console.log('🚀 Starting unified development server...')
-			console.log(`📋 Mode: ${this.options.mode}`)
 			console.log(
 				`🎨 Layouts: ${this.layoutEngine.getAvailableLayouts().join(', ')}`,
 			)
 
 			// Build documentation first if requested
-			if (
-				this.options.buildFirst
-				&& (this.options.mode === 'docs' || this.options.mode === 'unified')
-			) {
+			if (this.options.buildFirst) {
 				console.log('🏗️ Building documentation first...')
 				this.buildCleanup = await build()
 				console.log('✅ Documentation build complete')
@@ -214,6 +205,8 @@ export class DevServer {
 			)
 			if (this.options.enableHMR) {
 				console.log('🔥 Hot Module Reloading enabled')
+			} else if (this.options.disableFileWatching) {
+				console.log('📱 File watching disabled for testing')
 			}
 			console.log(`📁 Serving from: ${OUTPUT_DIR}`)
 		} catch (error) {
@@ -244,6 +237,15 @@ export class DevServer {
 		console.log('✅ Server stopped')
 	}
 
+	private isMockFileRequest(path: string): boolean {
+		// Check if this matches the pattern /component-name/file.html or /component-name/file.json
+		// that should be served from component-name/mocks/ directory
+		return !!(
+			path.match(/^\/[a-zA-Z0-9-]+\/[^\/]+\.(html|json)$/)
+			&& !path.includes('/mocks/')
+		)
+	}
+
 	private createRequestContext(req: Request): RequestContext {
 		const url = new URL(req.url)
 		const acceptEncoding = req.headers.get('accept-encoding') || ''
@@ -272,17 +274,18 @@ export class DevServer {
 
 			// Handle component test pages: /test/{component}.html
 			const testMatch = context.path.match(/^\/test\/([a-zA-Z0-9_-]+)\.html$/)
+			if (testMatch) return this.handleExampleTestPage(testMatch[1], context)
+
+			// Handle mock files as static files (before HTML handling)
+			// This includes both direct /component/mocks/file paths and fallback /component/file paths
 			if (
-				testMatch
-				&& (this.options.mode === 'examples' || this.options.mode === 'unified')
-			) {
-				return this.handleExampleTestPage(testMatch[1], context)
-			}
+				context.path.includes('/mocks/')
+				|| this.isMockFileRequest(context.path)
+			)
+				return this.handleStaticFile(context)
 
 			// Handle HTML pages (documentation or examples)
-			if (isHTMLPath(context.path)) {
-				return this.handleHTMLFile(context)
-			}
+			if (isHTMLPath(context.path)) return this.handleHTMLFile(context)
 
 			// Handle static files
 			return this.handleStaticFile(context)
@@ -297,20 +300,21 @@ export class DevServer {
 		context: RequestContext,
 	): Promise<Response> {
 		try {
-			const fragments = await getComponentFragments(String(COMPONENTS_DIR))
-			const fragmentPath = fragments[component]
+			const fragmentContent = getComponentContent(component)
 
-			if (!fragmentPath) {
+			if (!fragmentContent) {
 				return new Response('Component not found', { status: 404 })
 			}
-
-			const fragmentContent = await getFileContent(fragmentPath)
 
 			// Use test layout with component-specific context
 			const templateContext = {
 				title: `${component} Component Test`,
 				'component-name': component,
 				section: 'test',
+				'base-path': '../',
+				'css-hash': generateAssetHash(),
+				'js-hash': generateAssetHash(),
+				description: `Testing ${component} component`,
 			}
 
 			let html = await this.layoutEngine.renderWithLayout(
@@ -377,23 +381,26 @@ export class DevServer {
 
 	private async handleStaticFile(context: RequestContext): Promise<Response> {
 		// Try multiple possible paths based on mode
-		const possiblePaths: string[] = []
+		const possiblePaths = [
+			// Try examples directory first for test assets (main.css, main.js, etc.)
+			`${process.cwd()}/${String(COMPONENTS_DIR)}${context.path}`,
+			// Try built output directory
+			`${process.cwd()}/${String(OUTPUT_DIR)}/${context.path.slice(1)}`,
+			// Try output assets directory directly
+			`${process.cwd()}/${String(OUTPUT_DIR)}/assets/${context.path.replace(/^\/assets\//, '')}`,
+			// Try examples subdirectories for specific component assets and mocks
+			`${process.cwd()}/${String(COMPONENTS_DIR)}/${context.path.slice(1)}`,
+		]
 
-		// Examples assets
-		if (
-			context.path.startsWith('/assets/')
-			&& (this.options.mode === 'examples' || this.options.mode === 'unified')
-		) {
-			possiblePaths.push(
-				`${process.cwd()}/${String(COMPONENTS_DIR)}${context.path}`,
-			)
-		}
-
-		// Documentation assets
-		if (this.options.mode === 'docs' || this.options.mode === 'unified') {
-			possiblePaths.push(
-				`${process.cwd()}/${String(OUTPUT_DIR)}/${context.path.slice(1)}`,
-			)
+		// Add fallback for component mock files with different path patterns
+		// Handle cases like /component-name/file.html -> component-name/mocks/file.html
+		if (context.path.match(/^\/[a-zA-Z0-9-]+\/[^\/]+\.(html|json)$/)) {
+			const pathParts = context.path.slice(1).split('/')
+			if (pathParts.length === 2) {
+				const [componentName, fileName] = pathParts
+				const mockPath = `${process.cwd()}/${String(COMPONENTS_DIR)}/${componentName}/mocks/${fileName}`
+				possiblePaths.push(mockPath)
+			}
 		}
 
 		for (const fullPath of possiblePaths) {
@@ -550,33 +557,6 @@ export class DevServer {
 	}
 }
 
-// Predefined server configurations
-export const SERVER_PRESETS = {
-	docs: (port?: number): ServerOptions => ({
-		port: port || SERVER_CONFIG.DEFAULT_PORT,
-		mode: 'docs',
-		buildFirst: true,
-		enableHMR: true,
-		enableCompression: true,
-	}),
-
-	examples: (port?: number): ServerOptions => ({
-		port: port || SERVER_CONFIG.EXAMPLES_PORT,
-		mode: 'examples',
-		buildFirst: false,
-		enableHMR: false,
-		enableCompression: false,
-	}),
-
-	unified: (port?: number): ServerOptions => ({
-		port: port || SERVER_CONFIG.UNIFIED_PORT,
-		mode: 'unified',
-		buildFirst: true,
-		enableHMR: true,
-		enableCompression: true,
-	}),
-}
-
 // CLI interface
 async function main(): Promise<void> {
 	const args = process.argv.slice(2)
@@ -588,9 +568,6 @@ async function main(): Promise<void> {
 		const arg = args[i]
 
 		switch (arg) {
-			case '--mode':
-				options.mode = args[++i] as 'docs' | 'examples' | 'unified'
-				break
 			case '--port':
 				options.port = parseInt(args[++i], 10)
 				break
@@ -606,36 +583,28 @@ async function main(): Promise<void> {
 			case '--build-first':
 				options.buildFirst = true
 				break
+			case '--no-watch':
+				options.disableFileWatching = true
+				break
 			case '--help':
 				console.log(`
 Usage: bun server/serve.ts [options]
 
 Options:
-  --mode <mode>           Server mode: docs, examples, unified (default: unified)
-  --port <port>           Port number (default: 5000 for unified, 3000 for docs, 4173 for examples)
+  --port <port>           Port number (default: 3000)
   --host <host>           Host address (default: localhost)
   --no-hmr                Disable Hot Module Reloading
   --no-compression        Disable response compression
   --build-first           Build documentation before starting server
+  --no-watch              Disable file watching
   --help                  Show this help message
 
 Examples:
-  bun server/serve.ts --mode docs --build-first
-  bun server/serve.ts --mode examples --port 4000
-  bun server/serve.ts --mode unified --port 5000
+  bun server/serve.ts --build-first
+  bun server/serve.ts --port 4444
+  bun server/serve.ts --no-watch --no-hmr
 				`)
 				process.exit(0)
-				break
-		}
-	}
-
-	// Apply preset if no specific options provided
-	if (!options.mode && Object.keys(options).length === 0) {
-		Object.assign(options, SERVER_PRESETS.unified())
-	} else if (options.mode && Object.keys(options).length === 1) {
-		const preset = SERVER_PRESETS[options.mode]
-		if (preset) {
-			Object.assign(options, preset(), options)
 		}
 	}
 

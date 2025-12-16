@@ -1,12 +1,24 @@
 import { createHash } from 'crypto'
-import { existsSync, mkdirSync, watch, writeFileSync } from 'fs'
-import { readFile, readdir, stat } from 'fs/promises'
+import { existsSync, watch } from 'node:fs'
+import { mkdir, readdir, stat } from 'node:fs/promises'
 import { basename, dirname, extname, join, relative } from 'path'
 import { brotliCompressSync, gzipSync } from 'zlib'
-import type { RequestContext } from './serve'
 import type { FileInfo } from './file-signals'
+import type { RequestContext } from './serve'
 
 /* === Exported Functions === */
+
+/**
+ * Detect if we're running under Playwright
+ */
+const isPlaywrightRunning = (): boolean => {
+	return !!(
+		process.env.PLAYWRIGHT_TEST_BASE_URL
+		|| process.env.PLAYWRIGHT
+		|| process.env.PWTEST_SKIP_TEST_OUTPUT
+		|| process.argv.some(arg => arg.includes('playwright'))
+	)
+}
 
 const calculateFileHash = (content: string): string =>
 	createHash('sha256').update(content, 'utf8').digest('hex').slice(0, 16)
@@ -29,7 +41,7 @@ const createFileInfo = async (
 		if (!existsSync(filePath)) return fallback
 
 		const [content, stats] = await Promise.all([
-			readFile(filePath, 'utf-8'),
+			Bun.file(filePath).text(),
 			stat(filePath),
 		])
 
@@ -69,7 +81,7 @@ const getDirectoryEntries = async (directoryPath: string, recursive = false) =>
 	})
 
 const getFileContent = async (filePath: string): Promise<string> =>
-	await readFile(filePath, 'utf-8')
+	await Bun.file(filePath).text()
 
 const getFileExtension = (filePath: string): string => extname(filePath)
 
@@ -123,15 +135,21 @@ const watchDirectory = async (
 	)
 }
 
-const writeFileSyncSafe = (filePath: string, content: string): boolean => {
+/**
+ * Write file asynchronously and safely (ensure parent dir exists) using Bun.write.
+ */
+const writeFileSafe = async (
+	filePath: string,
+	content: string,
+): Promise<boolean> => {
 	try {
 		// Ensure directory exists
 		const dir = dirname(filePath)
 		if (!existsSync(dir)) {
-			mkdirSync(dir, { recursive: true })
+			await mkdir(dir, { recursive: true })
 		}
 
-		writeFileSync(filePath, content, 'utf-8')
+		await Bun.write(filePath, content)
 		return true
 	} catch (error) {
 		console.error(`Error writing file ${filePath}:`, error)
@@ -150,6 +168,7 @@ export {
 	getFileInfo,
 	getFilePath,
 	getRelativePath,
+	isPlaywrightRunning,
 	watchDirectory,
-	writeFileSyncSafe,
+	writeFileSafe,
 }

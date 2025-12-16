@@ -145,7 +145,7 @@ All layouts support template variable substitution using `{{ variable-name }}` s
 - Serves component test pages from `./examples`
 - Handles `/test/{component}.html` routes
 - Serves example assets from `/assets/`
-- Default port: 4173
+- Default port: 3000
 
 ### `unified` Mode (Default)
 - Combines both docs and examples functionality
