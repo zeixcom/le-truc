@@ -428,18 +428,18 @@ export default defineComponent(
 
 {% demo %}
 <context-media>
-	<card-mediaqueries>
-		<dl>
-			<dt>Motion Preference:</dt>
-			<dd class="motion"></dd>
-			<dt>Theme Preference:</dt>
-			<dd class="theme"></dd>
-			<dt>Device Viewport:</dt>
-			<dd class="viewport"></dd>
-			<dt>Device Orientation:</dt>
-			<dd class="orientation"></dd>
-		</dl>
-	</card-mediaqueries>
+  <card-mediaqueries>
+    <dl>
+      <dt>Motion Preference:</dt>
+      <dd class="motion"></dd>
+      <dt>Theme Preference:</dt>
+      <dd class="theme"></dd>
+      <dt>Device Viewport:</dt>
+      <dd class="viewport"></dd>
+      <dt>Device Orientation:</dt>
+      <dd class="orientation"></dd>
+    </dl>
+  </card-mediaqueries>
 </context-media>
 ---
 {% source title="ContextMedia source code" src="./examples/context-media.html" /%}
