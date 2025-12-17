@@ -1,286 +1,453 @@
-# Development Server
+# Development Server with Hot Module Replacement
 
-The unified server system provides a flexible, layout-driven development server that can handle both documentation and component testing with automatic layout selection based on routes.
+The Le Truc development server provides a unified serving solution for documentation, component testing, and development with integrated Hot Module Replacement (HMR) for live reloading.
 
-## Features
+## Overview
 
-- **Flexible Layout System**: Automatic layout selection based on URL patterns
-- **Multiple Server Modes**: Documentation, examples, or unified (both)
-- **Hot Module Reloading**: Live updates during development
-- **Template Variables**: Full template variable substitution
-- **Include Support**: Template includes for shared content
-- **Compression**: Automatic response compression
-- **Asset Handling**: Smart asset serving with caching
+The server system combines multiple serving modes into a single, flexible solution that automatically adapts based on routes and environment variables. It supports documentation serving, component testing, and full development workflows with live reloading.
 
 ## Quick Start
 
 ```bash
-# Start unified server (documentation + examples)
+# Full development server with HMR
+bun run dev
+
+# Basic production-like server
 bun run serve
 
-# Documentation only
+# Documentation server with build
 bun run serve:docs
 
-# Examples only
+# Examples server for testing (Playwright)
 bun run serve:examples
-
-# Custom configuration
-bun server/serve-unified.ts --mode unified --port 8000
 ```
 
-## Layout System
+## Server Scripts
 
-### Automatic Layout Selection
+### Development Scripts
 
-The server automatically selects layouts based on URL patterns:
-
-| URL Pattern | Layout | Description |
-|-------------|--------|-------------|
-| `/test/{component}.html` | `test` | Component testing pages |
-| `/api/classes/{id}.html` | `api` | API documentation (classes) |
-| `/api/functions/{id}.html` | `api` | API documentation (functions) |
-| `/api/type-aliases/{id}.html` | `api` | API documentation (types) |
-| `/api/variables/{id}.html` | `api` | API documentation (variables) |
-| `/examples/{example}.html` | `example` | Example showcase pages |
-| `/blog/{article}.html` | `blog` | Blog articles |
-| `/api/`, `/examples/`, `/blog/` | `overview` | Index/listing pages |
-| All other pages | `page` | Default documentation layout |
-
-### Available Layouts
-
-#### 1. **page** - Default Documentation Layout
-- Full navigation and header
-- Template variable support
-- Include processing
-- Used for: Regular documentation pages
-
-#### 2. **test** - Component Testing Layout
-- Minimal chrome for testing
-- Error display component
-- Asset loading for components
-- Used for: `/test/{component}.html` routes
-
-#### 3. **api** - API Documentation Layout
-- Breadcrumb navigation
-- Sidebar table of contents
-- API-specific styling and metadata
-- Used for: API reference pages
-
-#### 4. **example** - Example Showcase Layout
-- Hero header with example metadata
-- Live demo and source code links
-- Navigation between examples
-- Used for: Example documentation pages
-
-#### 5. **blog** - Blog Article Layout
-- Article-focused design
-- Author information
-- Reading time and metadata
-- Navigation between posts
-- Used for: Blog articles
-
-#### 6. **overview** - Listing/Index Layout
-- Grid-based content display
-- Search and filter functionality
-- Pagination support
-- Statistics display
-- Used for: Index pages and overviews
-
-## Template Variables
-
-All layouts support template variable substitution using `{{ variable-name }}` syntax:
-
-### Common Variables
-- `{{ content }}` - Main content area
-- `{{ title }}` - Page title
-- `{{ description }}` - Page description
-- `{{ section }}` - Current section (docs, api, examples, etc.)
-- `{{ base-path }}` - Base URL path
-- `{{ css-hash }}` - CSS asset hash for cache busting
-- `{{ js-hash }}` - JS asset hash for cache busting
-
-### Layout-Specific Variables
-
-#### Test Layout
-- `{{ component-name }}` - Name of the component being tested
-
-#### API Layout
-- `{{ api-category }}` - API category (classes, functions, etc.)
-- `{{ api-name }}` - API item name
-- `{{ api-kind }}` - API item kind
-- `{{ toc }}` - Table of contents
-
-#### Example Layout
-- `{{ example-name }}` - Example name
-- `{{ example-description }}` - Example description
-- `{{ example-difficulty }}` - Difficulty level
-- `{{ example-slug }}` - URL-safe example identifier
-- `{{ example-tags }}` - Example tags
-- `{{ example-source }}` - Source code URL
-
-#### Blog Layout
-- `{{ author }}` - Article author
-- `{{ published-date }}` - Publication date
-- `{{ reading-time }}` - Estimated reading time
-- `{{ blog-tags }}` - Article tags
-- `{{ prev-post }}` - Previous post URL
-- `{{ next-post }}` - Next post URL
-
-#### Overview Layout
-- `{{ overview-title }}` - Overview page title
-- `{{ overview-description }}` - Overview description
-- `{{ overview-stats }}` - Statistics display
-- `{{ search-placeholder }}` - Search input placeholder
-- `{{ filter-options }}` - Filter dropdown options
-
-## Server Modes
-
-### `docs` Mode
-- Serves built documentation from `./docs`
-- Enables HMR and compression
-- Builds documentation on startup
-- Default port: 3000
-
-### `examples` Mode
-- Serves component test pages from `./examples`
-- Handles `/test/{component}.html` routes
-- Serves example assets from `/assets/`
-- Default port: 3000
-
-### `unified` Mode (Default)
-- Combines both docs and examples functionality
-- Supports all route types and layouts
-- Full feature set enabled
-- Default port: 5000
-
-## Configuration
-
-### Environment Variables
-- `PORT` - Server port (overrides defaults)
-- `HOST` - Server hostname (default: localhost)
-
-### Command Line Options
+#### `bun run dev`
+**Full Development Server with HMR**
 ```bash
-bun server/serve.ts [options]
-
-Options:
-  --mode <mode>           Server mode: docs, examples, unified
-  --port <port>           Port number
-  --host <host>           Host address
-  --no-hmr                Disable Hot Module Reloading
-  --no-compression        Disable response compression
-  --build-first           Build documentation before starting
-  --help                  Show help message
+NODE_ENV=development bun --watch server/dev.ts
 ```
 
-### Programmatic Usage
+**Use when:**
+- Active development of components, documentation, or examples
+- You want automatic rebuilding and live reloading
+- Working on the build system or server code
 
+**Features:**
+- ✅ Hot Module Replacement (HMR)
+- ✅ File watching and automatic rebuilds
+- ✅ WebSocket-based live reloading
+- ✅ Build error display in browser
+- ✅ Automatic server restart on code changes
+
+**What it does:**
+1. Starts the build system in watch mode
+2. Monitors `src/`, `examples/`, `docs-src/`, etc. for changes
+3. Rebuilds automatically when files change
+4. Serves content with HMR script injection
+5. Broadcasts reload signals to connected browsers
+
+### Serving Scripts
+
+#### `bun run serve`
+**Basic Production-like Server**
+```bash
+bun server/serve.ts
+```
+
+**Use when:**
+- Testing production-like behavior
+- Serving pre-built content without development features
+- Quick server startup without build watching
+
+**Features:**
+- ❌ No HMR or live reloading
+- ❌ No file watching
+- ❌ No automatic rebuilds
+- ✅ Fast startup
+- ✅ Production-like serving
+
+#### `bun run serve:docs`
+**Documentation Server with Build**
+```bash
+bun server/serve.ts --mode docs --build-first
+```
+
+**Use when:**
+- Serving documentation site
+- Need to build docs before serving
+- Production documentation deployment
+
+**Features:**
+- ✅ Runs build before starting server
+- ❌ No HMR (unless NODE_ENV=development)
+- ✅ Documentation-specific configuration
+- ✅ One-time build execution
+
+#### `bun run serve:examples`
+**Examples Server for Testing**
+```bash
+bun run build:examples && PLAYWRIGHT=1 bun server/serve.ts
+```
+
+**Use when:**
+- Running Playwright tests
+- Need stable server without HMR interference
+- Testing examples in isolation
+
+**Features:**
+- ✅ Builds examples first
+- ❌ HMR explicitly disabled (`PLAYWRIGHT=1`)
+- ❌ No file watching
+- ✅ Test-optimized serving
+
+### Testing Scripts
+
+#### `bun run test`
+**Run All Component Tests**
+```bash
+bunx playwright test examples
+```
+
+**Use when:**
+- Running full test suite
+- CI/CD pipeline execution
+- Comprehensive testing before releases
+
+#### `bun run test:component <component-name>`
+**Run Individual Component Tests**
+```bash
+bun scripts/test-component.js <component-name>
+```
+
+**Use when:**
+- Developing or debugging a specific component
+- Faster feedback during development
+- Focused testing on component changes
+
+**Examples:**
+```bash
+# Test specific components
+bun run test:component module-carousel
+bun run test:component basic-hello
+bun run test:component form-combobox
+
+# With Playwright options
+bun run test:component module-carousel --headed --debug
+bun run test:component basic-hello -- --reporter=html
+
+# List available components
+bun run test:component --help
+```
+
+**Features:**
+- ✅ Auto-discovery of component tests
+- ✅ Helpful error messages with suggestions
+- ✅ Pass-through of Playwright arguments
+- ✅ Lists all available components
+
+## Server Architecture
+
+### Route Handling
+
+The server handles multiple route patterns:
+
+| Route Pattern | Purpose | Example |
+|---------------|---------|---------|
+| `/api/status` | Server health check | Health monitoring |
+| `/assets/:file` | Static assets | CSS, JS, images |
+| `/examples/:component` | Component source code | Example files |
+| `/:component/:file` | Component mock files | `/module-lazyload/simple-text.html` |
+| `/test/:component/mocks/:mock` | Test mock files | Test resources |
+| `/test/:component` | Component test pages | Interactive testing |
+| `/:page` | Documentation pages | Static content |
+| `/` | Index page | Home page |
+
+### File Serving
+
+The server uses a `handleStaticFile` function that:
+- Checks file existence before serving
+- Returns proper 404 responses for missing files
+- Injects HMR scripts in development mode for HTML files
+- Handles proper MIME types and caching headers
+
+### Component Mock File Resolution
+
+Special handling for component mock files with fallback patterns:
+- Direct path: `/test/component/mocks/file.html`
+- Fallback pattern: `/component/file.html` → `component/mocks/file.html`
+
+This allows tests to request `/module-lazyload/simple-text.html` and automatically resolve to `examples/module-lazyload/mocks/simple-text.html`.
+
+## Hot Module Replacement (HMR)
+
+### HMR System Components
+
+#### WebSocket Server
+- **Endpoint**: `/ws`
+- **Protocol**: JSON messages over WebSocket
+- **Client Management**: Tracks connected browsers
+- **Broadcasting**: Sends reload signals to all clients
+
+#### File Watching
+- **Directories**: `src/`, `examples/`, `docs-src/`, `server/layouts/`, etc.
+- **Recursive**: Watches subdirectories automatically
+- **Debouncing**: Prevents excessive rebuilds from rapid changes
+- **Cache Clearing**: Invalidates layout cache on template changes
+
+#### Client Script Injection
+- **Automatic**: Injected into HTML responses in development
+- **Conditional**: Only when `NODE_ENV !== 'production'` and `!PLAYWRIGHT`
+- **Placement**: Before `</head>` or `</body>` tags
+
+### HMR Configuration
+
+The HMR client is configured with:
 ```typescript
-import { UnifiedDevServer } from './server/serve'
-
-const server = new UnifiedDevServer({
-  mode: 'unified',
-  port: 8000,
-  enableHMR: true,
-  buildFirst: true,
+hmrScriptTag({
+  enableLogging: true,          // Console logging for debugging
+  maxReconnectAttempts: 10,     // Connection retry limit
+  reconnectInterval: 1000,      // Base reconnection delay (ms)
+  pingInterval: 30000,          // Keep-alive ping frequency (ms)
 })
-
-await server.start()
 ```
 
-## Adding New Layouts
+### HMR Message Protocol
 
-1. Create the layout file in `server/layouts/`:
-```html
-<!doctype html>
-<html lang="en">
-  <head>
-    <title>{{ title }}</title>
-    <!-- ... -->
-  </head>
-  <body>
-    {{ content }}
-  </body>
-</html>
+#### Server → Client Messages
+```json
+// Simple reload trigger
+"reload"
+
+// Structured messages
+{"type": "build-success"}
+{"type": "build-error", "message": "Error details"}
+{"type": "file-changed", "path": "src/component.ts"}
+{"type": "pong"}  // Keep-alive response
 ```
 
-2. Add the layout path to `server/config.ts`:
-```typescript
-export const LAYOUT_PATHS = {
-  // existing layouts...
-  'my-layout': `${LAYOUTS_DIR}/my-layout.html`,
-} as const
+#### Client → Server Messages
+```json
+{"type": "ping"}  // Keep-alive request
 ```
 
-3. Add route mapping:
-```typescript
-export const ROUTE_LAYOUT_MAP = {
-  // existing routes...
-  '/my-section/': 'my-layout',
-} as const
+### HMR Client Features
+
+- **Auto-reconnection**: Exponential backoff on connection loss
+- **Error Display**: Shows build errors directly in browser
+- **Keep-alive**: Prevents connection drops with ping-pong
+- **Debug API**: Exposes `window.__HMR__` for debugging
+- **Visibility Handling**: Reconnects when tab becomes active
+
+## Environment Variables
+
+### `NODE_ENV`
+- `development` - Enables HMR, file watching, debug features
+- `production` - Disables HMR, optimizes for serving
+- `undefined` - Defaults to production-like behavior
+
+### `PLAYWRIGHT=1`
+- Explicitly disables HMR even in development
+- Used by test runner for stability
+- Prevents WebSocket connections and script injection
+
+### `DEBUG=1`
+- Enables verbose logging
+- Shows detailed file watching events
+- Useful for debugging build and server issues
+
+## Command Line Arguments
+
+### `--mode docs`
+- Configures server for documentation serving
+- May enable doc-specific features in the future
+
+### `--build-first`
+- Runs a complete build before starting the server
+- Useful for ensuring fresh content
+- Blocks server startup until build completes
+
+## Development Workflow
+
+### Which Script to Use?
+
+```
+Are you actively developing?
+├── Yes: Use `bun run dev`
+│   └── Need full development experience with HMR
+│
+└── No: Continue...
+    │
+    Are you running tests?
+    ├── Yes: Use `bun run serve:examples` (via `bun run test`)
+    │   └── Stable server without HMR interference
+    │
+    └── No: Continue...
+        │
+        Are you serving documentation?
+        ├── Yes: Use `bun run serve:docs`
+        │   └── Builds docs and serves them
+        │
+        └── No: Use `bun run serve`
+            └── Basic server for production-like testing
 ```
 
-4. Add to default layouts in `server/layout-engine.ts`:
-```typescript
-export const DEFAULT_LAYOUTS: LayoutConfig[] = [
-  // existing layouts...
-  {
-    name: 'my-layout',
-    path: LAYOUT_PATHS['my-layout'],
-    type: 'template',
-    contentMarker: CONTENT_MARKER,
-    defaultContext: {
-      section: 'my-section',
-    }
-  }
-]
+### Development Session
+
+1. **Start the development server**: `bun run dev`
+2. **Open browser**: Navigate to `http://localhost:3000`
+3. **Edit files**: Make changes to any watched file
+4. **Automatic rebuild**: Watch console for build notifications
+5. **Automatic reload**: Browser refreshes when build completes
+
+### File Watching Patterns
+
+The development server watches:
+- `src/` - Component source code
+- `examples/` - Component examples and tests
+- `docs-src/` - Documentation source
+- `server/layouts/` - HTML layout templates
+- `server/effects/` - Build system effects
+- `server/templates/` - Template files
+- `index.ts` - Main entry point
+- `package.json` - Dependencies
+
+## Server Configuration
+
+### Default Ports
+- Development server (`dev`): Assigned by `Bun.serve()` (typically 3000)
+- All other modes: Same as development
+
+### Custom Configuration
+```bash
+# Environment variables (not directly supported, modify server code)
+# PORT=8080 bun run dev
+
+# Command line arguments
+bun server/serve.ts --mode docs --build-first
 ```
-
-## Architecture
-
-The unified server is built on top of the existing build system and integrates with:
-
-- **Build System**: Uses existing `server/build.ts` for documentation building
-- **Template Engine**: Leverages `server/templates/` utilities
-- **File Watching**: Inherits from existing file watching system
-- **Layout Engine**: New flexible layout processing system
-- **Asset Handling**: Smart asset resolution across multiple directories
-
-## Migration from Old Servers
-
-### From `server/serve.ts` (Documentation)
-- Replace `bun server/serve.ts` with `bun run serve:docs`
-- All existing functionality preserved
-- Additional layout flexibility added
-
-### From `examples/server.ts` (Component Testing)
-- Replace `bun examples/server.ts` with `bun run serve:examples`
-- Test pages now use proper layout system
-- Enhanced styling and error handling
-
-### Combined Usage
-- Use `bun run serve` for unified development
-- Single server handles both use cases
-- Consistent development experience
 
 ## Troubleshooting
 
-### Layout Not Found
-- Check that layout file exists in `server/layouts/`
-- Verify layout is added to `LAYOUT_PATHS` in config
-- Ensure route mapping exists in `ROUTE_LAYOUT_MAP`
+### HMR Issues
 
-### Template Variables Not Working
-- Verify variable names match exactly (case-sensitive)
-- Check that layout type is set to `'template'` not `'simple'`
-- Ensure context is being passed correctly
+**HMR not working**:
+- Check that `NODE_ENV=development` is set
+- Verify WebSocket connection in browser console
+- Look for `🔥 HMR:` messages in browser console
+- Ensure no firewall blocking WebSocket connections
 
-### Assets Not Loading
-- Check asset paths in layout files
-- Verify assets exist in expected directories (`docs/assets/`, `examples/assets/`)
-- Check browser network tab for 404 errors
-
-### HMR Not Working
-- Ensure WebSocket connection is established
+**WebSocket connection fails**:
+- Check if server is running
+- Verify `/ws` endpoint is accessible
 - Check browser console for connection errors
-- Verify `enableHMR` option is true
+
+**Files not reloading**:
+- Verify file is in watched directories
+- Check file watcher permissions
+- Look for build errors in console
+
+### Testing Issues
+
+**Tests failing with HMR interference**:
+- Verify `PLAYWRIGHT=1` is set in test script
+- Check that no HMR scripts are injected in test pages
+- Look for WebSocket connection attempts in test logs
+
+**Component tests not loading**:
+- Check component HTML files exist
+- Verify mock files are in correct directories
+- Test direct URLs like `/test/basic-hello`
+
+### Server Issues
+
+**Server not starting**:
+- Check for port conflicts
+- Verify file permissions for watched directories
+- Look for missing dependencies or TypeScript errors
+
+**Build errors during development**:
+- Build errors are displayed in the browser during development
+- Check server console for detailed error messages
+- File watching continues even after build failures
+
+**Static files not found**:
+- Verify file exists in expected location
+- Check file permissions
+- Look for 404 errors in browser network tab
+
+## Production Deployment
+
+### HMR in Production
+
+- HMR is automatically disabled when `NODE_ENV !== 'production'`
+- WebSocket endpoint returns 404 in production
+- HMR scripts are not injected in production builds
+- File watching is disabled in production
+
+### Server Deployment
+
+For production deployment:
+
+```bash
+# Build static assets first
+bun run build:docs
+
+# Start production server
+NODE_ENV=production bun server/serve.ts --build-first
+
+# Or serve static files with any web server
+# The ./docs/ directory contains complete static site
+```
+
+## Integration with Build System
+
+The server integrates tightly with the build system:
+
+- **File watching**: Reuses build system file watchers
+- **Build notifications**: Receives build status updates
+- **Error handling**: Displays build errors in browser
+- **Asset serving**: Serves generated build outputs
+
+This integration provides a seamless development experience where code changes trigger builds, and completed builds trigger browser reloads.
+
+## Performance Considerations
+
+### File Watching Efficiency
+- Uses native `fs.watch()` for performance
+- Recursive watching with selective directory monitoring
+- Debouncing prevents excessive rebuilds
+- Memory efficient client connection management
+
+### Network Efficiency
+- WebSocket connections for real-time communication
+- JSON message protocol for structured data
+- Keep-alive pings prevent connection drops
+- Automatic cleanup of disconnected clients
+
+### Asset Serving
+- Static file caching with proper headers
+- Efficient file existence checking
+- MIME type detection and proper responses
+- Compression support for better performance
+
+## Migration from Previous Systems
+
+### Script Changes
+- `serve:dev` → `dev` (full development server)
+- `serve:production` → `serve` (basic server)
+- `serve:docs` → `serve:docs` (unchanged)
+- `serve:test` → `serve:examples` (for tests)
+
+### Feature Improvements
+- Unified server architecture
+- Better HMR integration
+- Improved error handling
+- More reliable WebSocket connections
+- Enhanced development experience
+
+The new server system provides a more robust, feature-complete development environment while maintaining compatibility with existing workflows.

@@ -2,6 +2,7 @@ import {
 	asInteger,
 	type Collection,
 	type Component,
+	createEffect,
 	defineComponent,
 	on,
 	setProperty,
@@ -23,6 +24,8 @@ declare global {
 	}
 }
 
+const SCROLL_TIMEOUT = 500
+
 const wrapAround = (index: number, total: number) => (index + total) % total
 
 export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
@@ -41,41 +44,68 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 		buttons: all('nav button'),
 	}),
 	({ host, slides }) => {
-		const isCurrentDot = (target: HTMLElement) =>
-			target.dataset.index === String(host.index)
-		const scrollToCurrentSlide = () => {
-			slides[host.index].scrollIntoView({
+		let isNavigating: ReturnType<typeof setTimeout> | null = null
+		let isScrolling = false
+
+		const scrollToSlide = (index: number) => {
+			const slide = slides[index]
+			if (!slide) return
+
+			host.index = index
+			if (isNavigating) clearTimeout(isNavigating)
+			isNavigating = setTimeout(() => {
+				isNavigating = null
+			}, SCROLL_TIMEOUT)
+			slide.scrollIntoView({
 				behavior: 'smooth',
 				block: 'nearest',
 			})
 		}
 
+		const isCurrentDot = (target: HTMLElement) =>
+			target.dataset.index === String(host.index)
+
 		return {
-			// Register IntersectionObserver to update index based on scroll position
 			host: [
 				() => {
-					const observer = new IntersectionObserver(
-						entries => {
-							for (const entry of entries) {
-								if (entry.isIntersecting) {
-									host.index = slides
-										.get()
-										.findIndex(slide => slide === entry.target)
-									break
+					const config = {
+						root: host,
+						threshold: 0.5,
+					}
+					const observer = new IntersectionObserver(entries => {
+						for (const entry of entries) {
+							if (entry.intersectionRatio > config.threshold) {
+								const slideIndex = slides
+									.get()
+									.findIndex(slide => slide === entry.target)
+								if (isNavigating) {
+									// Determine if we arrived at the destination of programmatic navigation
+									if (slideIndex === host.index) {
+										clearTimeout(isNavigating)
+										isNavigating = null
+									}
+								} else {
+									// Set the index to current slide after user scroll
+									isScrolling = true
+									host.index = slideIndex
+									isScrolling = false
 								}
+								break
 							}
-						},
-						{
-							root: host,
-							threshold: 0.5,
-						},
-					)
-					slides.get().forEach(slide => {
-						observer.observe(slide)
-					})
+						}
+					}, config)
+					for (const slide of slides) observer.observe(slide)
 					return () => {
 						observer.disconnect()
 					}
+				},
+				() => {
+					let prevIndex = host.index
+					return createEffect(() => {
+						if (prevIndex === host.index) return
+						prevIndex = host.index
+						if (!isScrolling) scrollToSlide(host.index)
+					})
 				},
 			],
 
@@ -92,7 +122,6 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 					host.index = Number.isInteger(nextIndex)
 						? wrapAround(nextIndex, total)
 						: 0
-					scrollToCurrentSlide()
 				}),
 				on('keyup', e => {
 					const { key } = e
@@ -109,9 +138,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 											host.index + (key === 'ArrowLeft' ? -1 : 1),
 											total,
 										)
-						slides[nextIndex].focus()
 						host.index = nextIndex
-						scrollToCurrentSlide()
 					}
 				}),
 			],

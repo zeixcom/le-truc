@@ -469,6 +469,52 @@ export default defineComponent(
 )
 ```
 
+## Testing
+
+Le Truc components come with comprehensive Playwright tests to ensure reliability and compatibility across browsers.
+
+### Running All Tests
+
+```bash
+# Run all component tests
+bun run test
+
+# Run all tests with specific options
+bunx playwright test examples --headed --reporter=html
+```
+
+### Running Individual Component Tests
+
+For faster development and debugging, you can run tests for specific components:
+
+```bash
+# Run tests for a single component
+bun run test:component module-carousel
+bun run test:component basic-hello
+bun run test:component form-combobox
+
+# Run with Playwright options
+bun run test:component module-carousel --headed --debug
+bun run test:component basic-hello -- --reporter=html
+
+# See all available components
+bun run test:component --help
+```
+
+### Test Structure
+
+Each component has its own test file following the pattern:
+- `examples/[component-name]/[component-name].spec.ts`
+- Tests cover functionality, accessibility, and edge cases
+- Tests run against actual component implementations in browsers
+
+### Development Server for Testing
+
+The test runner uses a specialized server that:
+- Builds examples automatically before testing
+- Disables HMR for test stability (via `PLAYWRIGHT=1`)
+- Serves component test pages at `/test/[component-name]`
+
 ## Contributing & License
 
 Feel free to contribute, report issues, or suggest improvements.
