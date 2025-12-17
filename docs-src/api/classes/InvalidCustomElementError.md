@@ -1,12 +1,12 @@
-[**le-truc**](../README.md)
+[**@zeix/le-truc**](../README.md)
 
 ***
 
-[le-truc](../globals.md) / InvalidCustomElementError
+[@zeix/le-truc](../globals.md) / InvalidCustomElementError
 
 # Class: InvalidCustomElementError
 
-Defined in: [src/errors.ts:140](https://github.com/zeixcom/le-truc/blob/5bd629bc02429c8193f06a75f94397faf30ed891/src/errors.ts#L140)
+Defined in: [src/errors.ts:140](https://github.com/zeixcom/le-truc/blob/e99be2f0bb117eaf05d9289fac0c46cf9055e672/src/errors.ts#L140)
 
 Error thrown when target element is not a custom element as expected
 
@@ -24,7 +24,7 @@ Error thrown when target element is not a custom element as expected
 
 > **new InvalidCustomElementError**(`target`, `where`): `InvalidCustomElementError`
 
-Defined in: [src/errors.ts:145](https://github.com/zeixcom/le-truc/blob/5bd629bc02429c8193f06a75f94397faf30ed891/src/errors.ts#L145)
+Defined in: [src/errors.ts:145](https://github.com/zeixcom/le-truc/blob/e99be2f0bb117eaf05d9289fac0c46cf9055e672/src/errors.ts#L145)
 
 #### Parameters
 

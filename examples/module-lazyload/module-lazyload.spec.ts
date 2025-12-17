@@ -33,7 +33,7 @@ test.describe('module-lazyload component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/module-lazyload.html')
+		await page.goto('http://localhost:3000/test/module-lazyload')
 		await page.waitForSelector('module-lazyload')
 	})
 
@@ -230,7 +230,7 @@ test.describe('module-lazyload component', () => {
 
 			// Set src attribute to start loading
 			await loader.evaluate(node => {
-				node.setAttribute('src', '/module-lazyload/simple-text.html')
+				node.setAttribute('src', '/test/module-lazyload/mocks/simple-text.html')
 			})
 
 			// Should load content successfully
@@ -240,7 +240,7 @@ test.describe('module-lazyload component', () => {
 
 			// Change to different content
 			await loader.evaluate(node => {
-				node.setAttribute('src', '/module-lazyload/with-styles.html')
+				node.setAttribute('src', '/test/module-lazyload/mocks/with-styles.html')
 			})
 
 			// Should load new content
@@ -256,7 +256,7 @@ test.describe('module-lazyload component', () => {
 			// Set src property programmatically
 			await loader.evaluate(node => {
 				// Also set attribute to ensure reactivity
-				node.setAttribute('src', '/module-lazyload/simple-text.html')
+				node.setAttribute('src', '/test/module-lazyload/mocks/simple-text.html')
 			})
 
 			// Should load content
@@ -275,7 +275,7 @@ test.describe('module-lazyload component', () => {
 
 			// Set valid src first
 			await loader.evaluate(node => {
-				node.setAttribute('src', '/module-lazyload/simple-text.html')
+				node.setAttribute('src', '/test/module-lazyload/mocks/simple-text.html')
 			})
 
 			// Wait for content to load
@@ -432,7 +432,7 @@ test.describe('module-lazyload component', () => {
 			await page.evaluate(() => {
 				const testContainer = document.createElement('div')
 				testContainer.innerHTML = `
-					<module-lazyload id="no-scripts-test" src="/module-lazyload/snippet.html">
+					<module-lazyload id="no-scripts-test" src="/test/module-lazyload/mocks/snippet.html">
 						<card-callout>
 							<p class="loading" role="status">Loading...</p>
 							<p class="error" role="alert" aria-live="assertive" hidden></p>
@@ -471,7 +471,7 @@ test.describe('module-lazyload component', () => {
 			await page.evaluate(() => {
 				const testContainer = document.createElement('div')
 				testContainer.innerHTML = `
-					<module-lazyload id="module-script-test" src="/module-lazyload/module-with-type.html" allow-scripts>
+					<module-lazyload id="module-script-test" src="/test/module-lazyload/mocks/module-with-type.html" allow-scripts>
 						<card-callout>
 							<p class="loading" role="status">Loading module script test...</p>
 							<p class="error" role="alert" aria-live="assertive" hidden></p>
@@ -582,7 +582,7 @@ test.describe('module-lazyload component', () => {
 			await page.evaluate(() => {
 				const testContainer = document.createElement('div')
 				testContainer.innerHTML = `
-					<module-lazyload id="regular-dom-test" src="/module-lazyload/snippet.html" allow-scripts>
+					<module-lazyload id="regular-dom-test" src="/test/module-lazyload/mocks/snippet.html" allow-scripts>
 						<card-callout>
 							<p class="loading" role="status">Loading regular DOM...</p>
 							<p class="error" role="alert" aria-live="assertive" hidden></p>
@@ -664,15 +664,15 @@ test.describe('module-lazyload component', () => {
 
 			// Rapidly change src multiple times
 			await loader.evaluate(node => {
-				node.setAttribute('src', '/module-lazyload/simple-text.html')
+				node.setAttribute('src', '/test/module-lazyload/mocks/simple-text.html')
 			})
 
 			await loader.evaluate(node => {
-				node.setAttribute('src', '/module-lazyload/with-styles.html')
+				node.setAttribute('src', '/test/module-lazyload/mocks/with-styles.html')
 			})
 
 			await loader.evaluate(node => {
-				node.setAttribute('src', '/module-lazyload/simple-text.html')
+				node.setAttribute('src', '/test/module-lazyload/mocks/simple-text.html')
 			})
 
 			// Should end up with the final content
@@ -685,7 +685,10 @@ test.describe('module-lazyload component', () => {
 			// Create a new loader element dynamically
 			await page.evaluate(() => {
 				const loader = document.createElement('module-lazyload')
-				loader.setAttribute('src', '/module-lazyload/simple-text.html')
+				loader.setAttribute(
+					'src',
+					'/test/module-lazyload/mocks/simple-text.html',
+				)
 				loader.innerHTML = `
 					<card-callout>
 						<p class="loading" role="status">Loading...</p>

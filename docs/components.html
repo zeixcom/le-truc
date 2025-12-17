@@ -1,28 +1,29 @@
 <!doctype html>
 <html lang="en">
 	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Components – Le Truc Docs</title>
 		<meta name="description" content="Anatomy, lifecycle, signals, effects" />
 		<link
 			rel="preload"
-			href="./assets/main.css?v=mj7yz3d3"
+			href="./assets/main.css?v=mj9vk64s"
 			as="style"
 		/>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=mj7yz3d3"
+			href="./assets/main.js?v=mj9vk64s"
 		/>
 		<link
 			rel="stylesheet"
-			href="./assets/main.css?v=mj7yz3d3"
+			href="./assets/main.css?v=mj9vk64s"
 		/>
 		<script
 			type="module"
-			src="./assets/main.js?v=mj7yz3d3"
+			src="./assets/main.js?v=mj9vk64s"
 		></script>
 	</head>
+
 	<body class="">
 		<context-router>
 			<header class="content-grid">
@@ -78,6 +79,7 @@
 					<p class="error" role="alert" aria-live="assertive"></p>
 				</card-callout>
 			</header>
+
 			<main id="main" class="content-grid"><section-hero><h1 id="-components"><a name="-components" class="anchor" href="#-components"><span class="permalink">🔗</span><span class="title">🏗️ Components</span></a></h1><div class="hero-layout"><div class="lead"><p><strong>Create lightweight, self-contained Web Components with built-in reactivity</strong>. Le Truc lets you define custom elements that manage state efficiently, update the DOM automatically, and enhance server-rendered pages without an SPA framework.</p></div><module-toc>
 		<nav>
 			<h2>On This Page</h2>
@@ -282,6 +284,7 @@
 <span class="line"><span style="color:#F8F8F2">  })</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><card-callout class="tip"><p><strong>When to use</strong></p><ul><li><strong>Use a signal key or a local signal</strong> when the state is part of the component's public interface or internally reused.</li><li><strong>Use a function</strong> to <strong>derive a value on the fly</strong> when it is needed only in this one place.</li></ul><p>Ad-hoc derived state is more efficient than the overhead of a memoized computed signal for simple functions like converting to a string or boolean, formatting a value or performing a calculation.</p></card-callout><h3 id="efficient-fine-grained-updates"><a name="efficient-fine-grained-updates" class="anchor" href="#efficient-fine-grained-updates"><span class="permalink">🔗</span><span class="title">Efficient &amp; Fine-Grained Updates</span></a></h3><p>Unlike some frameworks that <strong>re-render entire components</strong>, Le Truc updates only what changes:</p><ul><li><strong>No virtual DOM</strong> – Le Truc modifies the DOM directly.</li><li><strong>Signals propagate automatically</strong> – no need to track dependencies manually.</li><li><strong>Optimized with a scheduler</strong> – multiple updates are batched efficiently.</li></ul></section></main>
+
 			<footer class="content-grid">
 				<div class="content">
 					<h2 class="visually-hidden">Footer</h2>

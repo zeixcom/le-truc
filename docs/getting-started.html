@@ -1,28 +1,29 @@
 <!doctype html>
 <html lang="en">
 	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Getting Started – Le Truc Docs</title>
 		<meta name="description" content="Installation, setup, and first steps" />
 		<link
 			rel="preload"
-			href="./assets/main.css?v=mj7yz3d2"
+			href="./assets/main.css?v=mj9vk64t"
 			as="style"
 		/>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=mj7yz3d2"
+			href="./assets/main.js?v=mj9vk64t"
 		/>
 		<link
 			rel="stylesheet"
-			href="./assets/main.css?v=mj7yz3d2"
+			href="./assets/main.css?v=mj9vk64t"
 		/>
 		<script
 			type="module"
-			src="./assets/main.js?v=mj7yz3d2"
+			src="./assets/main.js?v=mj9vk64t"
 		></script>
 	</head>
+
 	<body class="">
 		<context-router>
 			<header class="content-grid">
@@ -78,6 +79,7 @@
 					<p class="error" role="alert" aria-live="assertive"></p>
 				</card-callout>
 			</header>
+
 			<main id="main" class="content-grid"><section-hero><h1 id="-getting-started"><a name="-getting-started" class="anchor" href="#-getting-started"><span class="permalink">🔗</span><span class="title">🚀 Getting Started</span></a></h1><div class="hero-layout"><div class="lead"><p><strong>Set up Le Truc in minutes – no build tools required</strong>. Or use any package manager and bundler to take advantage of TypeScript support and optimize frontend assets.</p></div><module-toc>
 		<nav>
 			<h2>On This Page</h2>
@@ -132,6 +134,7 @@
 <span class="line"><span style="color:#F8F8F2">  )</span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">script</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h3 id="understanding-your-first-component"><a name="understanding-your-first-component" class="anchor" href="#understanding-your-first-component"><span class="permalink">🔗</span><span class="title">Understanding Your First Component</span></a></h3><p>This component demonstrates Le Truc's core concepts:</p><ul><li><strong>Reactive Properties</strong>: <code>name: asString(...)</code> creates a reactive property that syncs with the <code>name</code> attribute and falls back to the <code>&lt;output&gt;</code> content</li><li><strong>Effects</strong>: The setup function returns effects that handle user input and update the display text</li><li><strong>Element Selection</strong>: <code>first()</code> selects descendant element to apply effects to</li></ul><p>Learn more about these concepts in the <a href="components.html">Components</a> guide.</p></section><section><h2 id="verifying-your-installation"><a name="verifying-your-installation" class="anchor" href="#verifying-your-installation"><span class="permalink">🔗</span><span class="title">Verifying Your Installation</span></a></h2><p>If everything is set up correctly, you should see:</p><ul><li>A text input field</li><li>A greeting (<code>Hello, World!</code>)</li><li>The greeting updates as you type</li></ul><module-demo><div class="preview"><basic-hello><label>Your name<br><input name="name" type="text" autocomplete="given-name"></label><p>Hello, <output>World</output>!</p></basic-hello></div></module-demo><p>If it's not working:</p><ul><li>Check the browser console for errors (missing imports, typos).</li><li>Ensure your <code>&lt;script&gt;</code> tag is set to <code>type=&quot;module&quot;</code> when using ES modules.</li><li>If using NPM, confirm Le Truc is installed inside <code>node_modules/@zeix/le-truc</code>.</li></ul></section></main>
+
 			<footer class="content-grid">
 				<div class="content">
 					<h2 class="visually-hidden">Footer</h2>

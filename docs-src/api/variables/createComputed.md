@@ -1,8 +1,8 @@
-[**le-truc**](../README.md)
+[**@zeix/le-truc**](../README.md)
 
 ***
 
-[le-truc](../globals.md) / createComputed
+[@zeix/le-truc](../globals.md) / createComputed
 
 # Variable: createComputed()
 

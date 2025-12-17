@@ -1,8 +1,8 @@
-[**le-truc**](../README.md)
+[**@zeix/le-truc**](../README.md)
 
 ***
 
-[le-truc](../globals.md) / Signal
+[@zeix/le-truc](../globals.md) / Signal
 
 # Type Alias: Signal\<T\>
 

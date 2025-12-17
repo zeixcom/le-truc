@@ -6,7 +6,7 @@ test.describe('module-dialog component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/module-dialog.html')
+		await page.goto('http://localhost:3000/test/module-dialog')
 		await page.waitForSelector('module-dialog')
 	})
 

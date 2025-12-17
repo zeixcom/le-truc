@@ -1,31 +1,31 @@
 /**
  * Development server configuration
  */
-export const BASE_URL = 'https://zeixcom.github.io/le-truc'
+const BASE_URL = 'https://zeixcom.github.io/le-truc'
 
 // Path constants
-export const SRC_DIR = './src'
+const SRC_DIR = './src'
 
-export const COMPONENTS_DIR = './examples'
-export const CSS_FILE = './examples/main.css'
-export const TS_FILE = './examples/main.ts'
+const COMPONENTS_DIR = './examples'
+const CSS_FILE = './examples/main.css'
+const TS_FILE = './examples/main.ts'
 
-export const TEMPLATES_DIR = './server/templates'
+const TEMPLATES_DIR = './server/templates'
 
-export const INPUT_DIR = './docs-src'
-export const PAGES_DIR = './docs-src/pages'
-export const API_DIR = './docs-src/api'
-export const LAYOUT_FILE = './docs-src/layout.html'
-export const INCLUDES_DIR = './docs-src/includes'
-export const MENU_FILE = './docs-src/includes/menu.html'
+const INPUT_DIR = './docs-src'
+const PAGES_DIR = './docs-src/pages'
+const API_DIR = './docs-src/api'
+const LAYOUTS_DIR = './docs-src/layouts'
+const INCLUDES_DIR = './docs-src/includes'
+const MENU_FILE = './docs-src/includes/menu.html'
 
-export const OUTPUT_DIR = './docs'
-export const ASSETS_DIR = './docs/assets'
-export const EXAMPLES_DIR = './docs/examples'
-export const SITEMAP_FILE = './docs/sitemap.xml'
+const OUTPUT_DIR = './docs'
+const ASSETS_DIR = './docs/assets'
+const EXAMPLES_DIR = './docs/examples'
+const SITEMAP_FILE = './docs/sitemap.xml'
 
 // Page ordering configuration
-export const PAGE_ORDER = [
+const PAGE_ORDER = [
 	'index',
 	'getting-started',
 	'components',
@@ -38,18 +38,7 @@ export const PAGE_ORDER = [
 ]
 
 // Layout system configuration
-export const LAYOUTS_DIR = './server/layouts'
 export const CONTENT_MARKER = '{{ content }}'
-
-// Layout file paths
-export const LAYOUT_PATHS = {
-	page: `${LAYOUTS_DIR}/page.html`,
-	test: `${LAYOUTS_DIR}/test.html`,
-	api: `${LAYOUTS_DIR}/api.html`,
-	example: `${LAYOUTS_DIR}/example.html`,
-	blog: `${LAYOUTS_DIR}/blog.html`,
-	overview: `${LAYOUTS_DIR}/overview.html`,
-} as const
 
 // Route patterns for automatic layout selection
 export const ROUTE_LAYOUT_MAP = {
@@ -67,7 +56,7 @@ export const ROUTE_LAYOUT_MAP = {
 } as const
 
 // Server configuration
-export const SERVER_CONFIG = {
+const SERVER_CONFIG = {
 	PORT: 3000,
 	HOST: 'localhost',
 	ENABLE_HMR: true,
@@ -75,17 +64,8 @@ export const SERVER_CONFIG = {
 	DEPENDENCY_TIMEOUT: 50,
 } as const
 
-// Layout configuration interface
-export interface LayoutConfig {
-	name: string
-	path: string
-	type: 'simple' | 'template'
-	contentMarker: string
-	defaultContext?: Record<string, string>
-}
-
 // MIME types for static file serving
-export const MIME_TYPES = {
+const MIME_TYPES = {
 	html: 'text/html',
 	css: 'text/css',
 	js: 'application/javascript',
@@ -109,7 +89,7 @@ export const MIME_TYPES = {
 } as const
 
 // Compressible file types
-export const COMPRESSIBLE_TYPES = [
+const COMPRESSIBLE_TYPES = [
 	'.html',
 	'.css',
 	'.js',
@@ -119,12 +99,25 @@ export const COMPRESSIBLE_TYPES = [
 	'.txt',
 ] as const
 
-// Helper function to get layout for route
-export function getLayoutForRoute(path: string): keyof typeof LAYOUT_PATHS {
-	for (const [routePrefix, layoutName] of Object.entries(ROUTE_LAYOUT_MAP)) {
-		if (path.startsWith(routePrefix)) {
-			return layoutName as keyof typeof LAYOUT_PATHS
-		}
-	}
-	return 'page' // Default fallback
+export {
+	BASE_URL,
+	SRC_DIR,
+	COMPONENTS_DIR,
+	CSS_FILE,
+	TS_FILE,
+	TEMPLATES_DIR,
+	INPUT_DIR,
+	PAGES_DIR,
+	API_DIR,
+	LAYOUTS_DIR,
+	INCLUDES_DIR,
+	MENU_FILE,
+	OUTPUT_DIR,
+	ASSETS_DIR,
+	EXAMPLES_DIR,
+	SITEMAP_FILE,
+	PAGE_ORDER,
+	SERVER_CONFIG,
+	COMPRESSIBLE_TYPES,
+	MIME_TYPES,
 }

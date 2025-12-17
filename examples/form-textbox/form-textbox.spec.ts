@@ -41,7 +41,7 @@ test.describe('form-textbox component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/form-textbox.html')
+		await page.goto('http://localhost:3000/test/form-textbox')
 		await page.waitForSelector('form-textbox')
 	})
 

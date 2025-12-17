@@ -35,7 +35,7 @@
 				<span class="language">html</span>
 			</p>
 			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#88846F">&#x3C;!-- Default example - tests basic loading functionality --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span><span style="color:#A6E22E"> src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/module-lazyload/mocks/simple-text.html"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span><span style="color:#A6E22E"> src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/simple-text.html"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
@@ -46,7 +46,7 @@
 <span class="line"><span style="color:#88846F">&#x3C;!-- Complex content test - tests loading of components and styles --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
 <span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"complex-content-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/module-lazyload/with-styles.html"</span></span>
+<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/with-styles.html"</span></span>
 <span class="line"><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading styled content...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
@@ -58,7 +58,7 @@
 <span class="line"><span style="color:#88846F">&#x3C;!-- Nested components test - tests initialization of nested custom components --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
 <span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"nested-components-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/module-lazyload/mocks/nested-components.html"</span></span>
+<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/nested-components.html"</span></span>
 <span class="line"><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading nested components...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
@@ -70,7 +70,7 @@
 <span class="line"><span style="color:#88846F">&#x3C;!-- Empty content test - tests handling of empty/whitespace responses --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
 <span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"empty-content-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/module-lazyload/mocks/empty.html"</span></span>
+<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/empty.html"</span></span>
 <span class="line"><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading empty content...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
@@ -82,7 +82,7 @@
 <span class="line"><span style="color:#88846F">&#x3C;!-- Original complex snippet test - tests the existing shake-hands component --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
 <span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"original-snippet-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/module-lazyload/mocks/snippet.html"</span></span>
+<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/snippet.html"</span></span>
 <span class="line"><span style="color:#A6E22E">	allow-scripts</span></span>
 <span class="line"><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">template</span><span style="color:#A6E22E"> shadowrootmode</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"open"</span><span style="color:#F8F8F2">></span></span>
@@ -108,7 +108,7 @@
 <span class="line"><span style="color:#88846F">&#x3C;!-- 404 error test - tests error handling for missing files --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
 <span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"not-found-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/module-lazyload/mocks/does-not-exist.html"</span></span>
+<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/does-not-exist.html"</span></span>
 <span class="line"><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading non-existent file...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
@@ -147,7 +147,7 @@
 <span class="line"><span style="color:#88846F">&#x3C;!-- Missing elements test - tests graceful handling when required elements are missing --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
 <span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"missing-elements-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/module-lazyload/simple-text.html"</span></span>
+<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/simple-text.html"</span></span>
 <span class="line"><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#88846F">	&#x3C;!-- No card-callout wrapper --></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading without wrapper...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
@@ -158,7 +158,7 @@
 <span class="line"><span style="color:#88846F">&#x3C;!-- Recursive loading test - tests prevention of recursive loading --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
 <span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"recursive-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/module-lazyload/mocks/recursive.html"</span></span>
+<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/recursive.html"</span></span>
 <span class="line"><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading recursive content...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>

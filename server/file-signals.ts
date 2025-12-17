@@ -7,8 +7,11 @@ import {
 } from '@zeix/cause-effect'
 import { codeToHtml } from 'shiki'
 import {
+	// API_DIR,
 	COMPONENTS_DIR,
+	// INCLUDES_DIR,
 	INPUT_DIR,
+	// LAYOUTS_DIR,
 	PAGES_DIR,
 	SRC_DIR,
 	TEMPLATES_DIR,
@@ -321,9 +324,33 @@ const docsMarkdown: {
 	}
 })()
 
+const docsStyles = {
+	sources: await watchFiles(INPUT_DIR, '*.css'),
+}
+
+const docsScripts = {
+	sources: await watchFiles(INPUT_DIR, '*.ts'),
+}
+
+/* const layoutFiles = {
+	sources: await watchFiles(LAYOUTS_DIR, '*.html'),
+}
+
+const includeFiles = {
+	sources: await watchFiles(INCLUDES_DIR, '*.html'),
+} */
+
+const templateScripts = {
+	sources: await watchFiles(TEMPLATES_DIR, '**/*.ts'),
+}
+
 const libraryScripts = {
 	sources: await watchFiles(SRC_DIR, '**/*.ts'),
 }
+
+/* const apiMarkdown = {
+	sources: await watchFiles(API_DIR, '** /*.md'),
+} */
 
 const componentMarkup = {
 	sources: await watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'),
@@ -337,25 +364,16 @@ const componentScripts = {
 	sources: await watchFiles(COMPONENTS_DIR, '**/*.ts'),
 }
 
-const docsStyles = {
-	sources: await watchFiles(INPUT_DIR, '*.css'),
-}
-
-const docsScripts = {
-	sources: await watchFiles(INPUT_DIR, '*.ts'),
-}
-
-const templateScripts = {
-	sources: await watchFiles(TEMPLATES_DIR, '**/*.ts'),
-}
-
 export {
+	// apiMarkdown,
 	componentMarkup,
 	componentScripts,
 	componentStyles,
-	libraryScripts,
 	docsMarkdown,
 	docsScripts,
 	docsStyles,
+	// includeFiles,
+	// layoutFiles,
+	libraryScripts,
 	templateScripts,
 }

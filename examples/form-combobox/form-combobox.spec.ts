@@ -49,7 +49,7 @@ test.describe('form-combobox component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/form-combobox.html')
+		await page.goto('http://localhost:3000/test/form-combobox')
 		await page.waitForSelector('form-combobox')
 	})
 
@@ -129,7 +129,7 @@ test.describe('form-combobox component', () => {
 			// Listbox should have src attribute for loading
 			await expect(listbox).toHaveAttribute(
 				'src',
-				'/form-listbox/timezones.json',
+				'/test/form-listbox/mocks/timezones.json',
 			)
 		})
 	})

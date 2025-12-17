@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en">
 	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>{{ title }} – Le Truc API</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{{ title }} – Le Truc Docs</title>
 		<meta name="description" content="{{ description }}" />
 		<link
 			rel="preload"
@@ -23,7 +23,8 @@
 			src="{{ base-path }}assets/main.js?v={{ js-hash }}"
 		></script>
 	</head>
-	<body class="api">
+
+	<body class="{{ section }}">
 		<context-router>
 			<header class="content-grid">
 				<a href="#main" class="skiplink visually-hidden">
@@ -35,36 +36,9 @@
 					<p class="error" role="alert" aria-live="assertive"></p>
 				</card-callout>
 			</header>
-			<div class="api-header">
-				<div class="content-grid">
-					<div class="content">
-						<nav class="api-breadcrumb" aria-label="Breadcrumb">
-							<a href="/api/">API</a> ›
-							<a href="/api/{{ api-category }}/">{{ api-category }}</a> ›
-							{{ api-name }}
-						</nav>
-						<h1 class="api-title">
-							{{ api-name }}
-							<span class="api-kind {{ api-kind }}">{{ api-kind }}</span>
-						</h1>
-					</div>
-				</div>
-			</div>
-			<main id="main" class="content-grid">
-				<div class="content api-content">
-					<div class="grid" style="grid-template-columns: 1fr 300px; gap: 2rem;">
-						<article></article>
-							{{ content }}
-						</article>
-						<aside class="api-sidebar">
-							<nav class="api-nav" aria-label="Page contents">
-								<h3>On this page</h3>
-								{{ toc }}
-							</nav>
-						</aside>
-					</div>
-				</div>
-			</main>
+
+			<main id="main" class="content-grid">{{ content }}</main>
+
 			<footer class="content-grid">
 				<div class="content">
 					<h2 class="visually-hidden">Footer</h2>

@@ -1,14 +1,14 @@
-[**le-truc**](../README.md)
+[**@zeix/le-truc**](../README.md)
 
 ***
 
-[le-truc](../globals.md) / isCollection
+[@zeix/le-truc](../globals.md) / isCollection
 
 # Function: isCollection()
 
 > **isCollection**\<`E`\>(`value`): `value is Collection<E>`
 
-Defined in: [src/signals/collection.ts:242](https://github.com/zeixcom/le-truc/blob/5bd629bc02429c8193f06a75f94397faf30ed891/src/signals/collection.ts#L242)
+Defined in: [src/signals/collection.ts:242](https://github.com/zeixcom/le-truc/blob/e99be2f0bb117eaf05d9289fac0c46cf9055e672/src/signals/collection.ts#L242)
 
 Check if a value is a collection signal
 

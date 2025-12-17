@@ -52,7 +52,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 
 		return {
 			// Register IntersectionObserver to update index based on scroll position
-			component: [
+			host: [
 				() => {
 					const observer = new IntersectionObserver(
 						entries => {
