@@ -14,8 +14,14 @@ async function waitForStableIndex(
 	while (Date.now() - startTime < maxWait) {
 		const currentIndex = await carousel.evaluate((el: any) => el.index)
 
-		if (currentIndex === expectedIndex) {
-			// Give one extra tick to ensure DOM is updated
+		// Also check DOM state for extra reliability
+		const slideAtIndex = carousel
+			.locator('[role="tabpanel"]')
+			.nth(expectedIndex)
+		const hasAriaCurrent = await slideAtIndex.getAttribute('aria-current')
+
+		if (currentIndex === expectedIndex && hasAriaCurrent === 'true') {
+			// Give one extra tick to ensure all updates are complete
 			await new Promise(resolve => setTimeout(resolve, 10))
 			return
 		}
@@ -23,7 +29,9 @@ async function waitForStableIndex(
 		await new Promise(resolve => setTimeout(resolve, 25))
 	}
 
-	throw new Error(`Index did not reach ${expectedIndex} within ${maxWait}ms`)
+	throw new Error(
+		`Index did not stabilize at ${expectedIndex} within ${maxWait}ms`,
+	)
 }
 
 /**
@@ -156,12 +164,13 @@ test.describe('module-carousel component', () => {
 			await prevButton.click()
 			await waitForStableIndex(carousel, 0)
 
-			// First slide should be current
+			// First slide should be current again
 			const firstSlide = slides.first()
 			await expect(firstSlide).toHaveAttribute('aria-current', 'true')
 
-			// Component index should be 0
-			expect(carousel).toHaveJSProperty('index', 0)
+			// Component index should be 0 - check both ways
+			const indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(0)
 		})
 
 		test('wraps around from last to first slide', async ({ page }) => {
@@ -204,7 +213,9 @@ test.describe('module-carousel component', () => {
 			const thirdSlide = slides.nth(2)
 			await expect(thirdSlide).toHaveAttribute('aria-current', 'true')
 
-			expect(carousel).toHaveJSProperty('index', 2)
+			// Check property value directly for reliability
+			const indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(2)
 		})
 	})
 
@@ -247,7 +258,13 @@ test.describe('module-carousel component', () => {
 			await secondDot.click()
 			await waitForStableIndex(carousel, 1)
 
-			expect(carousel).toHaveJSProperty('index', 1)
+			// Check both property and DOM state for maximum reliability
+			const indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(1)
+
+			// Verify DOM state as well
+			const secondSlide = carousel.locator('[role="tabpanel"]').nth(1)
+			await expect(secondSlide).toHaveAttribute('aria-current', 'true')
 		})
 	})
 
