@@ -360,7 +360,8 @@ test.describe('module-carousel component', () => {
 			// await waitForStableIndex(carousel, 1)
 
 			// Component index should be updated
-			expect(carousel).toHaveJSProperty('index', 1)
+			const indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(1)
 
 			// Second slide should have aria-current="true"
 			const secondSlide = slides.nth(1)
@@ -530,20 +531,23 @@ test.describe('module-carousel component', () => {
 			await nextButton.click()
 			// await waitForStableIndex(carousel, 1)
 
-			expect(carousel).toHaveJSProperty('index', 1)
+			let indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(1)
 
 			// Use dot navigation
 			await dots.nth(2).click()
 			// await waitForStableIndex(carousel, 2)
 
-			expect(carousel).toHaveJSProperty('index', 2)
+			indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(2)
 
 			// Use keyboard navigation
 			await nextButton.focus()
 			await page.keyboard.press('Home')
 			// await waitForStableIndex(carousel, 0)
 
-			expect(carousel).toHaveJSProperty('index', 0)
+			indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(0)
 
 			// Verify all UI elements are in sync
 			await expect(slides.first()).toHaveAttribute('aria-current', 'true')

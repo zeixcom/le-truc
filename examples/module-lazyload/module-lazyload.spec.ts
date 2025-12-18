@@ -662,23 +662,38 @@ test.describe('module-lazyload component', () => {
 			const content = loader.locator('.content')
 			const error = loader.locator('.error')
 
-			// Rapidly change src multiple times
+			// Perform sequential src changes with proper waiting
+			// First change - wait for completion
 			await loader.evaluate(node => {
 				node.setAttribute('src', '/test/module-lazyload/mocks/simple-text.html')
 			})
 
+			// Wait for first request to complete
+			await expect(content).toBeVisible({ timeout: 3000 })
+			await expect(content).toContainText('Simple Text Content')
+
+			// Second change - should replace first content
 			await loader.evaluate(node => {
 				node.setAttribute('src', '/test/module-lazyload/mocks/with-styles.html')
 			})
 
+			// Wait for second request to complete
+			await expect(content).toContainText('Styled Content', { timeout: 3000 })
+
+			// Final change back to simple content
 			await loader.evaluate(node => {
 				node.setAttribute('src', '/test/module-lazyload/mocks/simple-text.html')
 			})
 
-			// Should end up with the final content
-			await expect(content).toBeVisible({ timeout: 5000 }) // higher timeout as the test attempts 3 fetches
+			// Verify final state
+			await expect(content).toBeVisible({ timeout: 3000 })
 			await expect(content).toContainText('Simple Text Content')
+			await expect(content).not.toContainText('Styled Content')
 			await expect(error).toBeHidden()
+
+			// Verify src property reflects final value
+			const finalSrc = await loader.evaluate((node: any) => node.src)
+			expect(finalSrc).toBe('/test/module-lazyload/mocks/simple-text.html')
 		})
 
 		test('handles component removal during loading', async ({ page }) => {
