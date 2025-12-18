@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 /**
  * Helper function to wait for carousel index to reach expected value.
  * With improved component logic, this should be much faster and more reliable.
- * /
+ */
 async function waitForStableIndex(
 	carousel: any,
 	expectedIndex: number,
@@ -32,7 +32,7 @@ async function waitForStableIndex(
 	throw new Error(
 		`Index did not stabilize at ${expectedIndex} within ${maxWait}ms`,
 	)
-} */
+}
 
 /**
  * Test Suite: module-carousel Component
@@ -190,7 +190,7 @@ test.describe('module-carousel component', () => {
 
 			// Click next again to wrap around
 			await nextButton.click()
-			// await waitForStableIndex(carousel, 0)
+			await waitForStableIndex(carousel, 0)
 
 			// Should wrap to first slide
 			const firstSlide = slides.first()
@@ -207,7 +207,7 @@ test.describe('module-carousel component', () => {
 
 			// Click prev from first slide to wrap around
 			await prevButton.click()
-			// await waitForStableIndex(carousel, 2)
+			await waitForStableIndex(carousel, 2)
 
 			// Should wrap to last slide
 			const thirdSlide = slides.nth(2)
@@ -511,9 +511,10 @@ test.describe('module-carousel component', () => {
 			for (let i = 0; i < 5; i++) {
 				await nextButton.click()
 				expectedIndex = (expectedIndex + 1) % 3 // Wrap around at 3
-				// await waitForStableIndex(carousel, expectedIndex)
+				await waitForStableIndex(carousel, expectedIndex)
 
-				expect(carousel).toHaveJSProperty('index', expectedIndex)
+				const indexValue = await carousel.evaluate((el: any) => el.index)
+				expect(indexValue).toBe(expectedIndex)
 			}
 		})
 
