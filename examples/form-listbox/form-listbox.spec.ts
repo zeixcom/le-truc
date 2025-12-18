@@ -541,28 +541,6 @@ test.describe('form-listbox component', () => {
 
 	test.describe('Dynamic Behavior', () => {
 		test('updates content when src property changes', async ({ page }) => {
-			const mockData = [
-				{ value: 'opt1', label: 'Option 1' },
-				{ value: 'opt2', label: 'Option 2' },
-				{ value: 'opt3', label: 'Option 3' },
-			]
-
-			// Set up route before any navigation with cache-busting headers
-			let routeHandled = false
-			await page.route('**/simple-options.json', route => {
-				routeHandled = true
-				route.fulfill({
-					status: 200,
-					contentType: 'application/json',
-					body: JSON.stringify(mockData),
-					headers: {
-						'Cache-Control': 'no-cache, no-store, must-revalidate',
-						Pragma: 'no-cache',
-						Expires: '0',
-					},
-				})
-			})
-
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
 				timeout: 1000,
@@ -571,59 +549,33 @@ test.describe('form-listbox component', () => {
 			const initialOptions = listbox.locator('button[role="option"]')
 			const initialCount = await initialOptions.count()
 
-			// Change src and clear any existing cache
+			// Change src to static mock file (more reliable than route mocking)
 			await page.evaluate(() => {
-				// Clear any caches first
-				if ('caches' in window) {
-					caches.keys().then(names => {
-						names.forEach(name => caches.delete(name))
-					})
-				}
-
 				const element = document.querySelector('form-listbox') as any
-				element.src = '/simple-options.json'
+				element.src = '/test/form-listbox/mocks/simple-options.json'
 			})
 
-			// Wait for network request with timeout
-			try {
-				await page.waitForResponse('**/simple-options.json', { timeout: 3000 })
-			} catch {
-				// Network response timeout is handled below
-			}
-
-			// Wait for loading state changes
+			// Wait for loading indicator to appear and disappear
 			const loading = listbox.locator('.loading')
 			try {
 				await expect(loading).toBeVisible({ timeout: 1000 })
-				await expect(loading).not.toBeVisible({ timeout: 2000 })
+				await expect(loading).not.toBeVisible({ timeout: 3000 })
 			} catch {
-				// Loading states might be too fast to catch
+				// Loading might be too fast or slow, continue with content check
 			}
 
-			// Try multiple strategies to wait for content update
-			let newCount = 0
-			let attempts = 0
-			const maxAttempts = 20
+			// Wait for exactly 3 options to be present
+			await expect(listbox.locator('button[role="option"]')).toHaveCount(3, {
+				timeout: 5000,
+			})
 
-			while (attempts < maxAttempts && newCount !== 3) {
-				await page.waitForTimeout(100)
-				const newOptions = listbox.locator('button[role="option"]')
-				newCount = await newOptions.count()
-				attempts++
-			}
-
-			// If WebKit route mocking failed, skip the strict assertion
-			if (newCount === initialCount && !routeHandled) {
-				// Just verify that we have some options (the original ones)
-				expect(newCount).toBeGreaterThan(0)
-				return
-			}
+			const newOptions = listbox.locator('button[role="option"]')
+			const newCount = await newOptions.count()
 
 			expect(newCount).toBe(3)
 			expect(newCount).not.toBe(initialCount)
 
-			const finalOptions = listbox.locator('button[role="option"]')
-			await expect(finalOptions).toContainText([
+			await expect(newOptions).toContainText([
 				'Option 1',
 				'Option 2',
 				'Option 3',
