@@ -196,7 +196,8 @@ test.describe('module-carousel component', () => {
 			const firstSlide = slides.first()
 			await expect(firstSlide).toHaveAttribute('aria-current', 'true')
 
-			expect(carousel).toHaveJSProperty('index', 0)
+			const indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(0)
 		})
 
 		test('wraps around from first to last slide', async ({ page }) => {

@@ -285,8 +285,6 @@
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> SCROLL_TIMEOUT </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 500</span></span>
-<span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#A6E22E"> wrapAround</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">index</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">total</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (index </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> total) </span><span style="color:#F92672">%</span><span style="color:#F8F8F2"> total</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleCarouselProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">ModuleCarouselUI</span><span style="color:#F8F8F2">>(</span></span>
@@ -305,18 +303,14 @@
 <span class="line"><span style="color:#F8F8F2">		buttons: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'nav button'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">	}),</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">slides</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> isNavigating</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ReturnType</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">typeof</span><span style="color:#F8F8F2"> setTimeout> </span><span style="color:#F92672">|</span><span style="color:#66D9EF;font-style:italic"> null</span><span style="color:#F92672"> =</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> isNavigating </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> isScrolling </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> scrollToSlide</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">index</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> slide </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slides[index]</span></span>
 <span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">slide) </span><span style="color:#F92672">return</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">			host.index </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> index</span></span>
-<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (isNavigating) </span><span style="color:#A6E22E">clearTimeout</span><span style="color:#F8F8F2">(isNavigating)</span></span>
-<span class="line"><span style="color:#F8F8F2">			isNavigating </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> setTimeout</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">				isNavigating </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> null</span></span>
-<span class="line"><span style="color:#F8F8F2">			}, SCROLL_TIMEOUT)</span></span>
+<span class="line"><span style="color:#F8F8F2">			isNavigating </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
 <span class="line"><span style="color:#F8F8F2">			slide.</span><span style="color:#A6E22E">scrollIntoView</span><span style="color:#F8F8F2">({</span></span>
 <span class="line"><span style="color:#F8F8F2">				behavior: </span><span style="color:#E6DB74">'smooth'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">				block: </span><span style="color:#E6DB74">'nearest'</span><span style="color:#F8F8F2">,</span></span>
@@ -339,14 +333,10 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">								const</span><span style="color:#F8F8F2"> slideIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slides</span></span>
 <span class="line"><span style="color:#F8F8F2">									.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">									.</span><span style="color:#A6E22E">findIndex</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">slide</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> slide </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> entry.target)</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#F92672">								if</span><span style="color:#F8F8F2"> (isNavigating) {</span></span>
-<span class="line"><span style="color:#88846F">									// Determine if we arrived at the destination of programmatic navigation</span></span>
-<span class="line"><span style="color:#F92672">									if</span><span style="color:#F8F8F2"> (slideIndex </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> host.index) {</span></span>
-<span class="line"><span style="color:#A6E22E">										clearTimeout</span><span style="color:#F8F8F2">(isNavigating)</span></span>
-<span class="line"><span style="color:#F8F8F2">										isNavigating </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> null</span></span>
-<span class="line"><span style="color:#F8F8F2">									}</span></span>
-<span class="line"><span style="color:#F8F8F2">								} </span><span style="color:#F92672">else</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#88846F">									// Set the index to current slide after user scroll</span></span>
+<span class="line"><span style="color:#F92672">									if</span><span style="color:#F8F8F2"> (slideIndex </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> host.index) isNavigating </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">								} </span><span style="color:#F92672">else</span><span style="color:#F92672"> if</span><span style="color:#F8F8F2"> (slideIndex </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> host.index </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> slideIndex </span><span style="color:#F92672">>=</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">) {</span></span>
 <span class="line"><span style="color:#F8F8F2">									isScrolling </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
 <span class="line"><span style="color:#F8F8F2">									host.index </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slideIndex</span></span>
 <span class="line"><span style="color:#F8F8F2">									isScrolling </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
@@ -355,6 +345,7 @@
 <span class="line"><span style="color:#F8F8F2">							}</span></span>
 <span class="line"><span style="color:#F8F8F2">						}</span></span>
 <span class="line"><span style="color:#F8F8F2">					}, config)</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#F92672">					for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> slide </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> slides) observer.</span><span style="color:#A6E22E">observe</span><span style="color:#F8F8F2">(slide)</span></span>
 <span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">						observer.</span><span style="color:#A6E22E">disconnect</span><span style="color:#F8F8F2">()</span></span>
@@ -364,8 +355,13 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">					let</span><span style="color:#F8F8F2"> prevIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.index</span></span>
 <span class="line"><span style="color:#F92672">					return</span><span style="color:#A6E22E"> createEffect</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (prevIndex </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> host.index) </span><span style="color:#F92672">return</span></span>
-<span class="line"><span style="color:#F8F8F2">						prevIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.index</span></span>
-<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">isScrolling) </span><span style="color:#A6E22E">scrollToSlide</span><span style="color:#F8F8F2">(host.index)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> newIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.index</span></span>
+<span class="line"><span style="color:#F8F8F2">						prevIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> newIndex</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">						// Only scroll if this change wasn't from user scroll</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">isScrolling) {</span></span>
+<span class="line"><span style="color:#A6E22E">							scrollToSlide</span><span style="color:#F8F8F2">(newIndex)</span></span>
+<span class="line"><span style="color:#F8F8F2">						}</span></span>
 <span class="line"><span style="color:#F8F8F2">					})</span></span>
 <span class="line"><span style="color:#F8F8F2">				},</span></span>
 <span class="line"><span style="color:#F8F8F2">			],</span></span>

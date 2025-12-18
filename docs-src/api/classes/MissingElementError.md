@@ -6,7 +6,7 @@
 
 # Class: MissingElementError
 
-Defined in: [src/errors.ts:84](https://github.com/zeixcom/le-truc/blob/4749c9b4f33eb880ace4f2b7198b83131037c93e/src/errors.ts#L84)
+Defined in: [src/errors.ts:84](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/errors.ts#L84)
 
 Error thrown when a required desacendent element does not exist in a component's DOM subtree
 
@@ -24,7 +24,7 @@ Error thrown when a required desacendent element does not exist in a component's
 
 > **new MissingElementError**(`host`, `selector`, `required`): `MissingElementError`
 
-Defined in: [src/errors.ts:90](https://github.com/zeixcom/le-truc/blob/4749c9b4f33eb880ace4f2b7198b83131037c93e/src/errors.ts#L90)
+Defined in: [src/errors.ts:90](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/errors.ts#L90)
 
 #### Parameters
 
