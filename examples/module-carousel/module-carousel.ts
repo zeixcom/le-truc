@@ -24,8 +24,6 @@ declare global {
 	}
 }
 
-const SCROLL_TIMEOUT = 500
-
 const wrapAround = (index: number, total: number) => (index + total) % total
 
 export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
@@ -44,22 +42,39 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 		buttons: all('nav button'),
 	}),
 	({ host, slides }) => {
-		let isNavigating: ReturnType<typeof setTimeout> | null = null
+		let activeScrollPromise: Promise<void> | null = null
 		let isScrolling = false
 
-		const scrollToSlide = (index: number) => {
+		const scrollToSlide = async (index: number): Promise<void> => {
 			const slide = slides[index]
 			if (!slide) return
 
-			host.index = index
-			if (isNavigating) clearTimeout(isNavigating)
-			isNavigating = setTimeout(() => {
-				isNavigating = null
-			}, SCROLL_TIMEOUT)
-			slide.scrollIntoView({
-				behavior: 'smooth',
-				block: 'nearest',
+			// Wait for any existing scroll to complete
+			if (activeScrollPromise) {
+				await activeScrollPromise
+			}
+
+			// Create new scroll promise
+			activeScrollPromise = new Promise<void>(resolve => {
+				// Set the target index immediately
+				host.index = index
+
+				// Use instant scroll for reliability
+				slide.scrollIntoView({
+					behavior: 'instant',
+					block: 'nearest',
+				})
+
+				// Use requestAnimationFrame to ensure DOM update completes
+				requestAnimationFrame(() => {
+					requestAnimationFrame(() => {
+						activeScrollPromise = null
+						resolve()
+					})
+				})
 			})
+
+			return activeScrollPromise
 		}
 
 		const isCurrentDot = (target: HTMLElement) =>
@@ -70,22 +85,20 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 				() => {
 					const config = {
 						root: host,
-						threshold: 0.5,
+						threshold: 0.7,
 					}
 					const observer = new IntersectionObserver(entries => {
+						// Don't interfere during programmatic scrolling
+						if (activeScrollPromise) return
+
 						for (const entry of entries) {
 							if (entry.intersectionRatio > config.threshold) {
 								const slideIndex = slides
 									.get()
 									.findIndex(slide => slide === entry.target)
-								if (isNavigating) {
-									// Determine if we arrived at the destination of programmatic navigation
-									if (slideIndex === host.index) {
-										clearTimeout(isNavigating)
-										isNavigating = null
-									}
-								} else {
-									// Set the index to current slide after user scroll
+
+								// Only update for user scroll if it's a different slide
+								if (slideIndex !== host.index && slideIndex >= 0) {
 									isScrolling = true
 									host.index = slideIndex
 									isScrolling = false
@@ -94,6 +107,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 							}
 						}
 					}, config)
+
 					for (const slide of slides) observer.observe(slide)
 					return () => {
 						observer.disconnect()
@@ -103,8 +117,13 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 					let prevIndex = host.index
 					return createEffect(() => {
 						if (prevIndex === host.index) return
-						prevIndex = host.index
-						if (!isScrolling) scrollToSlide(host.index)
+						const newIndex = host.index
+						prevIndex = newIndex
+
+						// Only scroll if this change wasn't from user scroll
+						if (!isScrolling) {
+							scrollToSlide(newIndex)
+						}
 					})
 				},
 			],

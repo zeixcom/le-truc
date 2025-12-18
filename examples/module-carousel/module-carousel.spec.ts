@@ -1,43 +1,29 @@
 import { expect, test } from '@playwright/test'
 
 /**
- * Helper function to wait for carousel index to stabilize after navigation.
- * This handles the race condition between programmatic navigation and IntersectionObserver.
+ * Helper function to wait for carousel index to reach expected value.
+ * With improved component logic, this should be much faster and more reliable.
  */
 async function waitForStableIndex(
 	carousel: any,
 	expectedIndex: number,
-	maxWait = 2000,
+	maxWait = 1000,
 ) {
 	const startTime = Date.now()
-	let lastIndex = -1
-	let stableCount = 0
-	const requiredStableCount = 3 // Number of consecutive checks that must match
 
 	while (Date.now() - startTime < maxWait) {
 		const currentIndex = await carousel.evaluate((el: any) => el.index)
 
 		if (currentIndex === expectedIndex) {
-			if (currentIndex === lastIndex) {
-				stableCount++
-				if (stableCount >= requiredStableCount) {
-					return // Index is stable at expected value
-				}
-			} else {
-				stableCount = 1
-			}
-			lastIndex = currentIndex
-		} else {
-			stableCount = 0
-			lastIndex = currentIndex
+			// Give one extra tick to ensure DOM is updated
+			await new Promise(resolve => setTimeout(resolve, 10))
+			return
 		}
 
-		await new Promise(resolve => setTimeout(resolve, 50))
+		await new Promise(resolve => setTimeout(resolve, 25))
 	}
 
-	throw new Error(
-		`Index did not stabilize at ${expectedIndex} within ${maxWait}ms`,
-	)
+	throw new Error(`Index did not reach ${expectedIndex} within ${maxWait}ms`)
 }
 
 /**
