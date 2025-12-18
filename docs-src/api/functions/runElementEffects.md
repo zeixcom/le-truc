@@ -1,14 +1,14 @@
-[**le-truc**](../README.md)
+[**@zeix/le-truc**](../README.md)
 
 ***
 
-[le-truc](../globals.md) / runElementEffects
+[@zeix/le-truc](../globals.md) / runElementEffects
 
 # Function: runElementEffects()
 
 > **runElementEffects**\<`P`, `E`\>(`host`, `target`, `effects`): [`MaybeCleanup`](../type-aliases/MaybeCleanup.md)
 
-Defined in: [src/effects.ts:98](https://github.com/zeixcom/le-truc/blob/5bd629bc02429c8193f06a75f94397faf30ed891/src/effects.ts#L98)
+Defined in: [src/effects.ts:98](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/effects.ts#L98)
 
 Run element effects
 

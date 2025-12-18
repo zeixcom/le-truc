@@ -22,7 +22,7 @@ description: 'Overview and key benefits of Le Truc'
 - Use any server-side technology to render HTML
 - Have components
 - Have reactivity
-- Have type safety
+- Have type-safety
 - Have optimal performance
 - Have fun!
 {% /slide %}

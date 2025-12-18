@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{{ title }} – Le Truc Component Test</title>
+		<meta name="description" content="Testing {{ title }} component" />
+
+		<link rel="preload" href="/assets/main.css" as="style" />
+		<link rel="modulepreload" href="/assets/main.js" />
+		<link rel="stylesheet" href="/assets/main.css" />
+		<script type="module" src="/assets/main.js"></script>
+	</head>
+
+	<body class="test">
+		<header class="content-grid">
+			<a href="#main" class="skiplink visually-hidden">Skip to main content</a>
+			<h1 class="content">{{ title }} Test <small>Le Truc 0.15.0</small></h1>
+		</header>
+		<main id="main" class="content-grid">
+			<section class="content">{{ content }}</section>
+		</main>
+		<footer class="content-grid">
+			<div class="content">
+				<h2 class="visually-hidden">Footer</h2>
+			</div>
+		</footer>
+	</body>
+</html>

@@ -34,7 +34,7 @@ test.describe('module-pagination component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/module-pagination.html')
+		await page.goto('http://localhost:3000/test/module-pagination')
 		await page.waitForSelector('module-pagination')
 	})
 

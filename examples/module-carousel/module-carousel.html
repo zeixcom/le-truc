@@ -3,170 +3,19 @@
 	<div class="slides">
 		<div id="slide1" role="tabpanel" aria-current="true">
 			<h3>Slide 1</h3>
-			<hello-world>
+			<basic-hello>
 				<label>
 					Your name<br />
 					<input type="text" name="name" autocomplete="given-name" />
 				</label>
-				<p>Hello, <span>World</span>!</p>
-			</hello-world>
+				<p>Hello, <output>World</output>!</p>
+			</basic-hello>
 		</div>
 		<div id="slide2" role="tabpanel" aria-current="false">
 			<h3>Slide 2</h3>
-			<calc-table rows="3" columns="3">
-				<div class="rows">
-					<p>Number of rows:</p>
-					<form-spinbutton
-						value="3"
-						zero-label="Add Row"
-						increment-label="Increment"
-					>
-						<button type="button" class="decrement" aria-label="Decrement">
-							−
-						</button>
-						<p class="value">3</p>
-						<button type="button" class="increment" aria-label="Increment">
-							+
-						</button>
-					</form-spinbutton>
-				</div>
-				<div class="columns">
-					<p>Number of columns:</p>
-					<form-spinbutton
-						value="3"
-						zero-label="Add Column"
-						increment-label="Increment"
-					>
-						<button type="button" class="decrement" aria-label="Decrement">
-							−
-						</button>
-						<p class="value">3</p>
-						<button type="button" class="increment" aria-label="Increment">
-							+
-						</button>
-					</form-spinbutton>
-				</div>
-				<table>
-					<thead>
-						<tr>
-							<th scope="col">Row</th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-					<tfoot>
-						<tr>
-							<th scope="row">Sum</th>
-						</tr>
-					</tfoot>
-				</table>
-				<template class="calc-table-row">
-					<tr>
-						<th scope="row"><slot></slot></th>
-					</tr>
-				</template>
-				<template class="calc-table-colhead">
-					<th scope="col"><slot></slot></th>
-				</template>
-				<template class="calc-table-cell">
-					<td>
-						<label>
-							<span class="visually-hidden"><slot></slot></span>
-							<input type="number" min="0" max="100" step="1" value="" />
-						</label>
-					</td>
-				</template>
-			</calc-table>
 		</div>
 		<div id="slide3" role="tabpanel" aria-current="false">
 			<h3>Slide 3</h3>
-			<rating-feedback>
-				<form>
-					<rating-stars>
-						<fieldset>
-							<legend class="visually-hidden">Rate</legend>
-							<label>
-								<input
-									type="radio"
-									class="visually-hidden"
-									name="rating"
-									value="1"
-								/>
-								<span class="label">☆</span>
-							</label>
-							<label>
-								<input
-									type="radio"
-									class="visually-hidden"
-									name="rating"
-									value="2"
-								/>
-								<span class="label">☆</span>
-							</label>
-							<label>
-								<input
-									type="radio"
-									class="visually-hidden"
-									name="rating"
-									value="3"
-								/>
-								<span class="label">☆</span>
-							</label>
-							<label>
-								<input
-									type="radio"
-									class="visually-hidden"
-									name="rating"
-									value="4"
-								/>
-								<span class="label">☆</span>
-							</label>
-							<label>
-								<input
-									type="radio"
-									class="visually-hidden"
-									name="rating"
-									value="5"
-								/>
-								<span class="label">☆</span>
-							</label>
-						</fieldset>
-					</rating-stars>
-					<div class="feedback" hidden>
-						<header>
-							<button button="button" class="hide" aria-label="Hide">×</button>
-							<p hidden>
-								We're sorry to hear that! Your feedback is important, and we'd
-								love to improve. Let us know how we can do better.
-							</p>
-							<p hidden>
-								Thank you for your honesty. We appreciate your feedback and will
-								work on making things better.
-							</p>
-							<p hidden>
-								Thanks for your rating! If there's anything we can improve, we'd
-								love to hear your thoughts.
-							</p>
-							<p hidden>
-								We're glad you had a good experience! If there's anything that
-								could make it even better, let us know.
-							</p>
-							<p hidden>
-								Thank you for your support! We're thrilled you had a great
-								experience. Your feedback keeps us motivated!
-							</p>
-						</header>
-						<fieldset>
-							<label for="rating-feedback"
-								>Describe your experience (optional)</label
-							>
-							<textarea id="rating-feedback"></textarea>
-							<basic-button disabled>
-								<button type="submit" class="primary" disabled>Submit</button>
-							</basic-button>
-						</fieldset>
-					</div>
-				</form>
-			</rating-feedback>
 		</div>
 	</div>
 	<nav aria-label="Carousel Navigation">

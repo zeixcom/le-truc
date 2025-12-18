@@ -1,6 +1,40 @@
 import { expect, test } from '@playwright/test'
 
 /**
+ * Helper function to wait for carousel index to reach expected value.
+ * With improved component logic, this should be much faster and more reliable.
+ */
+async function waitForStableIndex(
+	carousel: any,
+	expectedIndex: number,
+	maxWait = 1000,
+) {
+	const startTime = Date.now()
+
+	while (Date.now() - startTime < maxWait) {
+		const currentIndex = await carousel.evaluate((el: any) => el.index)
+
+		// Also check DOM state for extra reliability
+		const slideAtIndex = carousel
+			.locator('[role="tabpanel"]')
+			.nth(expectedIndex)
+		const hasAriaCurrent = await slideAtIndex.getAttribute('aria-current')
+
+		if (currentIndex === expectedIndex && hasAriaCurrent === 'true') {
+			// Give one extra tick to ensure all updates are complete
+			await new Promise(resolve => setTimeout(resolve, 10))
+			return
+		}
+
+		await new Promise(resolve => setTimeout(resolve, 25))
+	}
+
+	throw new Error(
+		`Index did not stabilize at ${expectedIndex} within ${maxWait}ms`,
+	)
+}
+
+/**
  * Test Suite: module-carousel Component
  *
  * Comprehensive tests for the Le Truc module-carousel component, which provides
@@ -33,7 +67,7 @@ test.describe('module-carousel component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/module-carousel.html')
+		await page.goto('http://localhost:3000/test/module-carousel')
 		await page.waitForSelector('module-carousel')
 	})
 
@@ -94,8 +128,7 @@ test.describe('module-carousel component', () => {
 
 			// Click next button
 			await nextButton.click()
-
-			// Wait for navigation
+			// await waitForStableIndex(carousel, 1)
 
 			// Second slide should be current
 			const secondSlide = slides.nth(1)
@@ -124,20 +157,19 @@ test.describe('module-carousel component', () => {
 
 			// Go to second slide first
 			await nextButton.click()
+			// await waitForStableIndex(carousel, 1)
 
 			// Click prev button
 			await prevButton.click()
+			// await waitForStableIndex(carousel, 0)
 
 			// First slide should be current again
 			const firstSlide = slides.first()
 			await expect(firstSlide).toHaveAttribute('aria-current', 'true')
 
-			// Component index should be 0
-			const currentIndex = await page.evaluate(() => {
-				const carousel = document.querySelector('module-carousel')
-				return carousel?.index
-			})
-			expect(currentIndex).toBe(0)
+			// Component index should be 0 - check both ways
+			const indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(0)
 		})
 
 		test('wraps around from last to first slide', async ({ page }) => {
@@ -146,8 +178,11 @@ test.describe('module-carousel component', () => {
 			const slides = carousel.locator('[role="tabpanel"]')
 
 			// Navigate to last slide (index 2)
+			// Navigate to last slide by clicking next twice
 			await nextButton.click()
+			// await waitForStableIndex(carousel, 1)
 			await nextButton.click()
+			// await waitForStableIndex(carousel, 2)
 
 			// Third slide should be current
 			const thirdSlide = slides.nth(2)
@@ -155,16 +190,14 @@ test.describe('module-carousel component', () => {
 
 			// Click next again to wrap around
 			await nextButton.click()
+			await waitForStableIndex(carousel, 0)
 
 			// Should wrap to first slide
 			const firstSlide = slides.first()
 			await expect(firstSlide).toHaveAttribute('aria-current', 'true')
 
-			const currentIndex = await page.evaluate(() => {
-				const carousel = document.querySelector('module-carousel')
-				return carousel?.index
-			})
-			expect(currentIndex).toBe(0)
+			const indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(0)
 		})
 
 		test('wraps around from first to last slide', async ({ page }) => {
@@ -174,16 +207,15 @@ test.describe('module-carousel component', () => {
 
 			// Click prev from first slide to wrap around
 			await prevButton.click()
+			await waitForStableIndex(carousel, 2)
 
 			// Should wrap to last slide
 			const thirdSlide = slides.nth(2)
 			await expect(thirdSlide).toHaveAttribute('aria-current', 'true')
 
-			const currentIndex = await page.evaluate(() => {
-				const carousel = document.querySelector('module-carousel')
-				return carousel?.index
-			})
-			expect(currentIndex).toBe(2)
+			// Check property value directly for reliability
+			const indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(2)
 		})
 	})
 
@@ -198,6 +230,7 @@ test.describe('module-carousel component', () => {
 			// Click third dot (index 2)
 			const thirdDot = dots.nth(2)
 			await thirdDot.click()
+			// await waitForStableIndex(carousel, 2)
 
 			// Third slide should be current
 			const thirdSlide = slides.nth(2)
@@ -223,12 +256,15 @@ test.describe('module-carousel component', () => {
 			// Click second dot
 			const secondDot = dots.nth(1)
 			await secondDot.click()
+			// await waitForStableIndex(carousel, 1)
 
-			const currentIndex = await page.evaluate(() => {
-				const carousel = document.querySelector('module-carousel')
-				return carousel?.index
-			})
-			expect(currentIndex).toBe(1)
+			// Check both property and DOM state for maximum reliability
+			const indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(1)
+
+			// Verify DOM state as well
+			const secondSlide = carousel.locator('[role="tabpanel"]').nth(1)
+			await expect(secondSlide).toHaveAttribute('aria-current', 'true')
 		})
 	})
 
@@ -263,10 +299,12 @@ test.describe('module-carousel component', () => {
 
 			// Go to middle slide first
 			await nextButton.click()
+			// await waitForStableIndex(carousel, 1)
 
 			// Focus and press End key
 			await nextButton.focus()
 			await page.keyboard.press('End')
+			// await waitForStableIndex(carousel, 2)
 
 			// Last slide should be current
 			const thirdSlide = slides.nth(2)
@@ -274,6 +312,7 @@ test.describe('module-carousel component', () => {
 
 			// Press Home key
 			await page.keyboard.press('Home')
+			// await waitForStableIndex(carousel, 0)
 
 			// First slide should be current
 			const firstSlide = slides.first()
@@ -287,18 +326,22 @@ test.describe('module-carousel component', () => {
 
 			// Navigate to last slide
 			await nextButton.click()
+			// await waitForStableIndex(carousel, 1)
 			await nextButton.click()
+			// await waitForStableIndex(carousel, 2)
 
 			// Focus and press right arrow to wrap around
 			await nextButton.focus()
 			await page.keyboard.press('ArrowRight')
+			// await waitForStableIndex(carousel, 0)
 
 			// Should wrap to first slide
 			const firstSlide = slides.first()
 			await expect(firstSlide).toHaveAttribute('aria-current', 'true')
 
-			// Press left arrow to wrap around backwards
+			// Press left arrow to wrap to last slide
 			await page.keyboard.press('ArrowLeft')
+			// await waitForStableIndex(carousel, 2)
 
 			// Should wrap to last slide
 			const thirdSlide = slides.nth(2)
@@ -314,13 +357,11 @@ test.describe('module-carousel component', () => {
 			// Use button navigation to trigger scroll behavior
 			const nextButton = carousel.locator('button.next')
 			await nextButton.click()
+			// await waitForStableIndex(carousel, 1)
 
 			// Component index should be updated
-			const currentIndex = await page.evaluate(() => {
-				const carousel = document.querySelector('module-carousel')
-				return carousel?.index
-			})
-			expect(currentIndex).toBe(1)
+			const indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(1)
 
 			// Second slide should have aria-current="true"
 			const secondSlide = slides.nth(1)
@@ -367,6 +408,7 @@ test.describe('module-carousel component', () => {
 			// Click different dots and verify index updates
 			for (let i = 0; i < 3; i++) {
 				await dots.nth(i).click()
+				// await waitForStableIndex(carousel, i)
 
 				const currentIndex = await page.evaluate(() => {
 					const carousel = document.querySelector('module-carousel')
@@ -395,6 +437,7 @@ test.describe('module-carousel component', () => {
 
 			// Navigate and check ARIA states update
 			await nextButton.click()
+			// await waitForStableIndex(carousel, 1)
 
 			await expect(slides.first()).toHaveAttribute('aria-current', 'false')
 			await expect(slides.nth(1)).toHaveAttribute('aria-current', 'true')
@@ -417,6 +460,7 @@ test.describe('module-carousel component', () => {
 
 			// Navigate and check tabindex updates
 			await nextButton.click()
+			// await waitForStableIndex(carousel, 1)
 
 			await expect(dots.first()).toHaveAttribute('tabindex', '-1')
 			await expect(dots.nth(1)).toHaveAttribute('tabindex', '0')
@@ -467,14 +511,11 @@ test.describe('module-carousel component', () => {
 			// Navigate through all slides sequentially
 			for (let i = 0; i < 5; i++) {
 				await nextButton.click()
-
 				expectedIndex = (expectedIndex + 1) % 3 // Wrap around at 3
+				await waitForStableIndex(carousel, expectedIndex)
 
-				const currentIndex = await page.evaluate(() => {
-					const carousel = document.querySelector('module-carousel')
-					return carousel?.index
-				})
-				expect(currentIndex).toBe(expectedIndex)
+				const indexValue = await carousel.evaluate((el: any) => el.index)
+				expect(indexValue).toBe(expectedIndex)
 			}
 		})
 
@@ -488,31 +529,25 @@ test.describe('module-carousel component', () => {
 
 			// Use button navigation
 			await nextButton.click()
+			// await waitForStableIndex(carousel, 1)
 
-			let currentIndex = await page.evaluate(() => {
-				const carousel = document.querySelector('module-carousel')
-				return carousel?.index
-			})
-			expect(currentIndex).toBe(1)
+			let indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(1)
 
 			// Use dot navigation
 			await dots.nth(2).click()
+			// await waitForStableIndex(carousel, 2)
 
-			currentIndex = await page.evaluate(() => {
-				const carousel = document.querySelector('module-carousel')
-				return carousel?.index
-			})
-			expect(currentIndex).toBe(2)
+			indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(2)
 
 			// Use keyboard navigation
 			await nextButton.focus()
 			await page.keyboard.press('Home')
+			// await waitForStableIndex(carousel, 0)
 
-			currentIndex = await page.evaluate(() => {
-				const carousel = document.querySelector('module-carousel')
-				return carousel?.index
-			})
-			expect(currentIndex).toBe(0)
+			indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(0)
 
 			// Verify all UI elements are in sync
 			await expect(slides.first()).toHaveAttribute('aria-current', 'true')

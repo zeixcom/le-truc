@@ -1,8 +1,8 @@
-[**le-truc**](../README.md)
+[**@zeix/le-truc**](../README.md)
 
 ***
 
-[le-truc](../globals.md) / isRecord
+[@zeix/le-truc](../globals.md) / isRecord
 
 # Variable: isRecord()
 

@@ -1,28 +1,29 @@
 <!doctype html>
 <html lang="en">
 	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Styling – Le Truc Docs</title>
 		<meta name="description" content="Scoped styles, CSS custom properties" />
 		<link
 			rel="preload"
-			href="./assets/main.css?v=mj7yz3d2"
+			href="./assets/main.css?v=mjarbk4w"
 			as="style"
 		/>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=mj7yz3d2"
+			href="./assets/main.js?v=mjarbk4w"
 		/>
 		<link
 			rel="stylesheet"
-			href="./assets/main.css?v=mj7yz3d2"
+			href="./assets/main.css?v=mjarbk4w"
 		/>
 		<script
 			type="module"
-			src="./assets/main.js?v=mj7yz3d2"
+			src="./assets/main.js?v=mjarbk4w"
 		></script>
 	</head>
+
 	<body class="">
 		<context-router>
 			<header class="content-grid">
@@ -78,6 +79,7 @@
 					<p class="error" role="alert" aria-live="assertive"></p>
 				</card-callout>
 			</header>
+
 			<main id="main" class="content-grid"><section-hero><h1 id="-styling"><a name="-styling" class="anchor" href="#-styling"><span class="permalink">🔗</span><span class="title">🎨 Styling</span></a></h1><div class="hero-layout"><div class="lead"><p><strong>Keep your components' styles self-contained while supporting shared design tokens.</strong> Le Truc offers a refreshingly simple approach to create reactive Web Components that enhance your existing HTML.</p></div><module-toc>
 		<nav>
 			<h2>On This Page</h2>
@@ -149,6 +151,7 @@
 <span class="line"><span style="color:#F8F8F2">  }</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock></section><section><h2 id="css-only-components"><a name="css-only-components" class="anchor" href="#css-only-components"><span class="permalink">🔗</span><span class="title">CSS-only Components</span></a></h2><p>Just because Le Truc is a JavaScript library doesn't mean you have to use JavaScript in every component. It's perfectly fine to use custom elements just for styling purposes.</p><p>Here's the example of the <code>&lt;card-callout&gt;</code> we're using in this documentation:</p><module-demo><div class="preview"><card-callout>This is an informational message.</card-callout><card-callout class="tip">Remember to hydrate while coding!</card-callout><card-callout class="caution">Be careful with this operation.</card-callout><card-callout class="danger">This action is irreversible!</card-callout><card-callout class="note">This is just a side note.</card-callout></div><details title="Source code" src="./examples/card-callout.html"><summary>Source code</summary><module-lazyload src="./examples/card-callout.html"><card-callout><p class="loading" role="status" aria-live="polite">Loading...</p><p class="error" role="alert" aria-live="assertive" hidden="true"></p></card-callout><div class="content"></div></module-lazyload></details></module-demo></section></main>
+
 			<footer class="content-grid">
 				<div class="content">
 					<h2 class="visually-hidden">Footer</h2>

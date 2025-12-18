@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('card-mediaqueries component', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/card-mediaqueries.html')
+		await page.goto('http://localhost:3000/test/card-mediaqueries')
 		await page.waitForSelector('card-mediaqueries')
 	})
 

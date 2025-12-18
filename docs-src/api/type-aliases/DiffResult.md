@@ -1,8 +1,8 @@
-[**le-truc**](../README.md)
+[**@zeix/le-truc**](../README.md)
 
 ***
 
-[le-truc](../globals.md) / DiffResult
+[@zeix/le-truc](../globals.md) / DiffResult
 
 # Type Alias: DiffResult\<T\>
 

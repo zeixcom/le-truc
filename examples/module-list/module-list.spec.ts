@@ -38,7 +38,7 @@ test.describe('module-list component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/module-list.html')
+		await page.goto('http://localhost:3000/test/module-list')
 		await page.waitForSelector('module-list')
 	})
 

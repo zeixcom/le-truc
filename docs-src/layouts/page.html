@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{{ title }} – Le Truc Docs</title>
+		<meta name="description" content="{{ description }}" />
+		<link
+			rel="preload"
+			href="{{ base-path }}assets/main.css?v={{ css-hash }}"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="{{ base-path }}assets/main.js?v={{ js-hash }}"
+		/>
+		<link
+			rel="stylesheet"
+			href="{{ base-path }}assets/main.css?v={{ css-hash }}"
+		/>
+		<script
+			type="module"
+			src="{{ base-path }}assets/main.js?v={{ js-hash }}"
+		></script>
+	</head>
+
+	<body class="{{ section }}">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">Le Truc Docs <small>Version 0.15.0</small></h1>
+				{{ include 'menu.html' }}
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+
+			<main id="main" class="content-grid">{{ content }}</main>
+
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2025 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

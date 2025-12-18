@@ -1,14 +1,14 @@
-[**le-truc**](../README.md)
+[**@zeix/le-truc**](../README.md)
 
 ***
 
-[le-truc](../globals.md) / ElementEffects
+[@zeix/le-truc](../globals.md) / ElementEffects
 
 # Type Alias: ElementEffects\<P, E\>
 
 > **ElementEffects**\<`P`, `E`\> = [`Effect`](Effect.md)\<`P`, `E`\> \| [`Effect`](Effect.md)\<`P`, `E`\>[]
 
-Defined in: [src/effects.ts:27](https://github.com/zeixcom/le-truc/blob/5bd629bc02429c8193f06a75f94397faf30ed891/src/effects.ts#L27)
+Defined in: [src/effects.ts:27](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/effects.ts#L27)
 
 ## Type Parameters
 

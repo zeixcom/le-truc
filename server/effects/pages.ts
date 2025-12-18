@@ -1,9 +1,9 @@
 import { createEffect, match, resolve } from '@zeix/cause-effect'
-import { ASSETS_DIR, INCLUDES_DIR, LAYOUT_FILE, OUTPUT_DIR } from '../config'
+import { ASSETS_DIR, INCLUDES_DIR, LAYOUTS_DIR, OUTPUT_DIR } from '../config'
 import { docsMarkdown, type ProcessedMarkdownFile } from '../file-signals'
+import { getFileContent, getFilePath, writeFileSafe } from '../io'
 import { performanceHints } from '../templates/performance-hints'
 import { toc } from '../templates/toc'
-import { getFileContent, getFilePath, writeFileSafe } from '../io'
 
 /* === Internal Functionals === */
 
@@ -67,7 +67,7 @@ const applyTemplate = async (
 	processedFile: ProcessedMarkdownFile,
 ): Promise<string> => {
 	try {
-		let layout = await getFileContent(LAYOUT_FILE)
+		let layout = await getFileContent(getFilePath(LAYOUTS_DIR, 'page.html'))
 
 		// Load includes first
 		layout = await loadIncludes(layout)

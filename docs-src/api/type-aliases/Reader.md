@@ -1,14 +1,14 @@
-[**le-truc**](../README.md)
+[**@zeix/le-truc**](../README.md)
 
 ***
 
-[le-truc](../globals.md) / Reader
+[@zeix/le-truc](../globals.md) / Reader
 
 # Type Alias: Reader()\<T, U\>
 
 > **Reader**\<`T`, `U`\> = (`ui`) => `T`
 
-Defined in: [src/parsers.ts:15](https://github.com/zeixcom/le-truc/blob/5bd629bc02429c8193f06a75f94397faf30ed891/src/parsers.ts#L15)
+Defined in: [src/parsers.ts:15](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/parsers.ts#L15)
 
 ## Type Parameters
 

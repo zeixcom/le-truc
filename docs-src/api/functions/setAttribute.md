@@ -1,14 +1,14 @@
-[**le-truc**](../README.md)
+[**@zeix/le-truc**](../README.md)
 
 ***
 
-[le-truc](../globals.md) / setAttribute
+[@zeix/le-truc](../globals.md) / setAttribute
 
 # Function: setAttribute()
 
 > **setAttribute**\<`P`, `E`\>(`name`, `reactive`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/attribute.ts:41](https://github.com/zeixcom/le-truc/blob/5bd629bc02429c8193f06a75f94397faf30ed891/src/effects/attribute.ts#L41)
+Defined in: [src/effects/attribute.ts:41](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/effects/attribute.ts#L41)
 
 Effect for setting an attribute on an element.
 Sets the specified attribute with security validation for unsafe values.

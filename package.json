@@ -35,15 +35,17 @@
 		"build": "bun run build:prod && bun run build:dev && bunx tsc && bun run lint",
 		"build:docs": "bun ./server/build.ts",
 		"build:docs:watch": "bun ./server/build.ts --watch",
-		"build:examples:js": "bun run build && bun build examples/main.ts --outdir examples/assets --target browser --define process.env.DEV_MODE=true --minify",
-		"build:examples:css": "bun build examples/main.css --outdir examples/assets --target browser --minify",
+		"build:examples:js": "bun run build && bun build examples/main.ts --outdir docs/assets --target browser --define process.env.DEV_MODE=true --minify",
+		"build:examples:css": "bun build examples/main.css --outdir docs/assets --target browser --minify",
 		"build:examples": "bun run build:examples:js && bun run build:examples:css",
+		"dev": "NODE_ENV=development bun --watch server/dev.ts",
 		"lint": "bunx biome check --write ./src",
 		"lint:examples": "bunx biome check --write ./examples",
-		"serve:docs": "bun server/serve.ts --mode docs --build-first",
-		"serve:examples": "bun run build:examples && PLAYWRIGHT=1 bun server/serve.ts --no-hmr --no-watch",
-		"serve": "bun server/serve.ts --mode unified --build-first",
-		"test": "bunx playwright test examples"
+		"serve": "bun server/serve.ts",
+		"serve:docs": "bun server/serve.ts --build-first",
+		"serve:examples": "bun run build:examples && PLAYWRIGHT=1 bun server/serve.ts",
+		"test": "bunx playwright test examples",
+		"test:component": "bun scripts/test-component.ts"
 	},
 	"dependencies": {
 		"@zeix/cause-effect": "^0.16.1"

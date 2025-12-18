@@ -39,7 +39,7 @@ test.describe('form-listbox component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/form-listbox.html')
+		await page.goto('http://localhost:3000/test/form-listbox')
 		await page.waitForSelector('form-listbox')
 	})
 
@@ -541,19 +541,6 @@ test.describe('form-listbox component', () => {
 
 	test.describe('Dynamic Behavior', () => {
 		test('updates content when src property changes', async ({ page }) => {
-			// Create a simple JSON endpoint response simulation
-			await page.route('**/simple-options.json', route => {
-				route.fulfill({
-					status: 200,
-					contentType: 'application/json',
-					body: JSON.stringify([
-						{ value: 'opt1', label: 'Option 1' },
-						{ value: 'opt2', label: 'Option 2' },
-						{ value: 'opt3', label: 'Option 3' },
-					]),
-				})
-			})
-
 			const listbox = page.locator('form-listbox').first()
 			await expect(listbox.locator('[role="listbox"]')).toBeVisible({
 				timeout: 1000,
@@ -562,14 +549,25 @@ test.describe('form-listbox component', () => {
 			const initialOptions = listbox.locator('button[role="option"]')
 			const initialCount = await initialOptions.count()
 
-			// Change src to simple options
+			// Change src to static mock file (more reliable than route mocking)
 			await page.evaluate(() => {
 				const element = document.querySelector('form-listbox') as any
-				element.src = '/simple-options.json'
+				element.src = '/test/form-listbox/mocks/simple-options.json'
 			})
 
-			// Wait for new content to load
-			await page.waitForTimeout(50)
+			// Wait for loading indicator to appear and disappear
+			const loading = listbox.locator('.loading')
+			try {
+				await expect(loading).toBeVisible({ timeout: 1000 })
+				await expect(loading).not.toBeVisible({ timeout: 3000 })
+			} catch {
+				// Loading might be too fast or slow, continue with content check
+			}
+
+			// Wait for exactly 3 options to be present
+			await expect(listbox.locator('button[role="option"]')).toHaveCount(3, {
+				timeout: 5000,
+			})
 
 			const newOptions = listbox.locator('button[role="option"]')
 			const newCount = await newOptions.count()
@@ -773,19 +771,19 @@ test.describe('form-listbox component', () => {
 				const element = document.querySelector('form-listbox') as any
 				return element.src
 			})
-			expect(src).toBe('/form-listbox/mocks/timezones.json')
+			expect(src).toBe('/test/form-listbox/mocks/timezones.json')
 
 			// Change src property
 			await page.evaluate(() => {
 				const element = document.querySelector('form-listbox') as any
-				element.src = '/different-url.json'
+				element.src = '/test/form-listbox/mocks/different-url.json'
 			})
 
 			const newSrc = await page.evaluate(() => {
 				const element = document.querySelector('form-listbox') as any
 				return element.src
 			})
-			expect(newSrc).toBe('/different-url.json')
+			expect(newSrc).toBe('/test/form-listbox/mocks/different-url.json')
 		})
 	})
 

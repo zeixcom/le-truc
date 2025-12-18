@@ -6,7 +6,7 @@ test.describe('basic-number component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/basic-number.html')
+		await page.goto('http://localhost:3000/test/basic-number')
 		await page.waitForSelector('basic-number')
 	})
 
