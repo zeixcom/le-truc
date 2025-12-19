@@ -1,0 +1,271 @@
+<module-tabgroup>
+		<div role="tablist">
+		<button
+		type="button"
+		role="tab"
+		id="trigger_basic-number_html"
+		aria-controls="panel_basic-number_html"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		HTML
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_basic-number_ts"
+		aria-controls="panel_basic-number_ts"
+		aria-selected="true"
+		tabindex="0"
+	>
+		TypeScript
+	</button>
+	</div> <div
+		role="tabpanel"
+		id="panel_basic-number_html"
+		aria-labelledby="trigger_basic-number_html"
+		 hidden
+	>
+		<module-codeblock
+			language="html"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">basic-number.html</span>
+				<span class="language">html</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#88846F">&#x3C;!-- Default example --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">	value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"25678.9"</span></span>
+<span class="line"><span style="color:#A6E22E">	options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"unit","unit":"liter","unitDisplay":"long"}'</span></span>
+<span class="line"><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Currency examples --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"german-swiss"</span></span>
+<span class="line"><span style="color:#A6E22E">	lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"de-CH"</span></span>
+<span class="line"><span style="color:#A6E22E">	value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"25678.9"</span></span>
+<span class="line"><span style="color:#A6E22E">	options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"currency","currency":"CHF"}'</span></span>
+<span class="line"><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"french-swiss"</span></span>
+<span class="line"><span style="color:#A6E22E">	lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"fr-CH"</span></span>
+<span class="line"><span style="color:#A6E22E">	value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"25678.9"</span></span>
+<span class="line"><span style="color:#A6E22E">	options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"currency","currency":"CHF"}'</span></span>
+<span class="line"><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- International examples --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"arabic-speed"</span></span>
+<span class="line"><span style="color:#A6E22E">	lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"ar-EG"</span></span>
+<span class="line"><span style="color:#A6E22E">	value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"25678.9"</span></span>
+<span class="line"><span style="color:#A6E22E">	options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"unit","unit":"kilometer-per-hour","unitDisplay":"long"}'</span></span>
+<span class="line"><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chinese-time"</span></span>
+<span class="line"><span style="color:#A6E22E">	lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"zh-Hans-CN-u-nu-hanidec"</span></span>
+<span class="line"><span style="color:#A6E22E">	value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"25678.9"</span></span>
+<span class="line"><span style="color:#A6E22E">	options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"unit","unit":"second","unitDisplay":"long"}'</span></span>
+<span class="line"><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Decimal formatting example --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"decimal-test"</span></span>
+<span class="line"><span style="color:#A6E22E">	value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"1234.56789"</span></span>
+<span class="line"><span style="color:#A6E22E">	options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"decimal","minimumFractionDigits":2,"maximumFractionDigits":3}'</span></span>
+<span class="line"><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Inheritance example --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"de-DE"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">		id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"inherit-test"</span></span>
+<span class="line"><span style="color:#A6E22E">		value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"1234.5"</span></span>
+<span class="line"><span style="color:#A6E22E">		options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"currency","currency":"EUR"}'</span></span>
+<span class="line"><span style="color:#F8F8F2">	>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Zero and negative examples --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-number</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"zero-test"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-number</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"negative-test"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1234.5"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Invalid configuration examples - should log console errors on page load --></span></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- These demonstrate proper error reporting to help developers debug configuration issues --></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Invalid JSON syntax - logs "Invalid JSON: SyntaxError..." --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"invalid-json-html"</span></span>
+<span class="line"><span style="color:#A6E22E">	value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"1234.5"</span></span>
+<span class="line"><span style="color:#A6E22E">	options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"{ invalid json }"</span></span>
+<span class="line"><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Missing required currency for style="currency" - logs "style='currency' requires a 3-letter ISO currency..." --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"missing-currency-html"</span></span>
+<span class="line"><span style="color:#A6E22E">	value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"1000"</span></span>
+<span class="line"><span style="color:#A6E22E">	options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"currency"}'</span></span>
+<span class="line"><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Missing required unit for style="unit" - logs "style='unit' requires a 'unit'..." --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"missing-unit-html"</span></span>
+<span class="line"><span style="color:#A6E22E">	value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"500"</span></span>
+<span class="line"><span style="color:#A6E22E">	options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"unit"}'</span></span>
+<span class="line"><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_basic-number_ts"
+		aria-labelledby="trigger_basic-number_ts"
+		
+	>
+		<module-codeblock
+			language="ts"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">basic-number.ts</span>
+				<span class="language">ts</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asNumber, </span><span style="color:#F92672">type</span><span style="color:#F8F8F2"> Component, defineComponent, setText } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicNumberProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'basic-number'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicNumberProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Logger</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">	onWarn</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">message</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> void</span></span>
+<span class="line"><span style="color:#A6E22E">	onError</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">message</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> void</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> FALLBACK_LOCALE </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'en'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">function</span><span style="color:#A6E22E"> getNumberFormatter</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">	locale</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">	rawOptions</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> null</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">	logger</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Logger</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">		onWarn: console.warn,</span></span>
+<span class="line"><span style="color:#F8F8F2">		onError: console.error,</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#A6E22E"> useFallback</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> new</span><span style="color:#F8F8F2"> Intl.</span><span style="color:#A6E22E">NumberFormat</span><span style="color:#F8F8F2">(locale)</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">rawOptions) </span><span style="color:#F92672">return</span><span style="color:#A6E22E"> useFallback</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> { onWarn, onError } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> logger</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	let</span><span style="color:#F8F8F2"> o</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Intl</span><span style="color:#F8F8F2">.</span><span style="color:#A6E22E;text-decoration:underline">NumberFormatOptions</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {}</span></span>
+<span class="line"><span style="color:#F92672">	try</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">		o </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> JSON.</span><span style="color:#A6E22E">parse</span><span style="color:#F8F8F2">(rawOptions)</span></span>
+<span class="line"><span style="color:#F8F8F2">	} </span><span style="color:#F92672">catch</span><span style="color:#F8F8F2"> (error) {</span></span>
+<span class="line"><span style="color:#A6E22E">		onError</span><span style="color:#F8F8F2">?.(</span><span style="color:#E6DB74">`Invalid JSON: </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">error</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#A6E22E"> useFallback</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> style </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> o.style </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> 'decimal'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> drops</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">[] </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> []</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (style </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'currency'</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (</span></span>
+<span class="line"><span style="color:#F92672">			!</span><span style="color:#F8F8F2">o.currency </span><span style="color:#F92672">||</span></span>
+<span class="line"><span style="color:#F92672">			typeof</span><span style="color:#F8F8F2"> o.currency </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> 'string'</span><span style="color:#F92672"> ||</span></span>
+<span class="line"><span style="color:#F8F8F2">			o.currency.length </span><span style="color:#F92672">!==</span><span style="color:#AE81FF"> 3</span></span>
+<span class="line"><span style="color:#F8F8F2">		) {</span></span>
+<span class="line"><span style="color:#A6E22E">			onError</span><span style="color:#F8F8F2">?.(</span></span>
+<span class="line"><span style="color:#E6DB74">				`style="currency" requires a 3-letter ISO currency (e.g. "CHF").`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			)</span></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#A6E22E"> useFallback</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	} </span><span style="color:#F92672">else</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">		drops.</span><span style="color:#A6E22E">push</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'currency'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'currencyDisplay'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'currencySign'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (style </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'unit'</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">o.unit </span><span style="color:#F92672">||</span><span style="color:#F92672"> typeof</span><span style="color:#F8F8F2"> o.unit </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> 'string'</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#A6E22E">			onError</span><span style="color:#F8F8F2">?.(</span></span>
+<span class="line"><span style="color:#E6DB74">				`style="unit" requires a "unit" (e.g. "liter", "kilometer-per-hour").`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			)</span></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#A6E22E"> useFallback</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	} </span><span style="color:#F92672">else</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">		drops.</span><span style="color:#A6E22E">push</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'unit'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'unitDisplay'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (o.notation </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> o.notation </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> 'compact'</span><span style="color:#F8F8F2">) drops.</span><span style="color:#A6E22E">push</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'compactDisplay'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> sanitized</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Intl</span><span style="color:#F8F8F2">.</span><span style="color:#A6E22E;text-decoration:underline">NumberFormatOptions</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {}</span></span>
+<span class="line"><span style="color:#F92672">	for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> [k, v] </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> Object.</span><span style="color:#A6E22E">entries</span><span style="color:#F8F8F2">(o)) {</span></span>
+<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">drops.</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(k)) sanitized[k] </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> v</span></span>
+<span class="line"><span style="color:#F92672">		else</span><span style="color:#A6E22E"> onWarn</span><span style="color:#F8F8F2">?.(</span><span style="color:#E6DB74">`Option "</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">k</span><span style="color:#F92672">}</span><span style="color:#E6DB74">" is ignored for style="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">style</span><span style="color:#F92672">}</span><span style="color:#E6DB74">".`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> { minimumFractionDigits: minFD, maximumFractionDigits: maxFD } </span><span style="color:#F92672">=</span></span>
+<span class="line"><span style="color:#F8F8F2">		sanitized</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (minFD </span><span style="color:#F92672">!=</span><span style="color:#AE81FF"> null</span><span style="color:#F92672"> &#x26;&#x26;</span><span style="color:#F8F8F2"> maxFD </span><span style="color:#F92672">!=</span><span style="color:#AE81FF"> null</span><span style="color:#F92672"> &#x26;&#x26;</span><span style="color:#F8F8F2"> minFD </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> maxFD) {</span></span>
+<span class="line"><span style="color:#A6E22E">		onWarn</span><span style="color:#F8F8F2">?.(</span></span>
+<span class="line"><span style="color:#E6DB74">			`minimumFractionDigits (</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">minFD</span><span style="color:#F92672">}</span><span style="color:#E6DB74">) > maximumFractionDigits (</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">maxFD</span><span style="color:#F92672">}</span><span style="color:#E6DB74">); swapping.`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#F8F8F2">		sanitized.minimumFractionDigits </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> maxFD</span></span>
+<span class="line"><span style="color:#F8F8F2">		sanitized.maximumFractionDigits </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> minFD</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> { minimumSignificantDigits: minSD, maximumSignificantDigits: maxSD } </span><span style="color:#F92672">=</span></span>
+<span class="line"><span style="color:#F8F8F2">		sanitized</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (minSD </span><span style="color:#F92672">!=</span><span style="color:#AE81FF"> null</span><span style="color:#F92672"> &#x26;&#x26;</span><span style="color:#F8F8F2"> maxSD </span><span style="color:#F92672">!=</span><span style="color:#AE81FF"> null</span><span style="color:#F92672"> &#x26;&#x26;</span><span style="color:#F8F8F2"> minSD </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> maxSD) {</span></span>
+<span class="line"><span style="color:#A6E22E">		onWarn</span><span style="color:#F8F8F2">?.(</span></span>
+<span class="line"><span style="color:#E6DB74">			`minimumSignificantDigits (</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">minSD</span><span style="color:#F92672">}</span><span style="color:#E6DB74">) > maximumSignificantDigits (</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">maxSD</span><span style="color:#F92672">}</span><span style="color:#E6DB74">); swapping.`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#F8F8F2">		sanitized.minimumSignificantDigits </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> maxSD</span></span>
+<span class="line"><span style="color:#F8F8F2">		sanitized.maximumSignificantDigits </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> minSD</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">	try</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> formatter </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#F8F8F2"> Intl.</span><span style="color:#A6E22E">NumberFormat</span><span style="color:#F8F8F2">(locale, sanitized)</span></span>
+<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (formatter.</span><span style="color:#A6E22E">resolvedOptions</span><span style="color:#F8F8F2">().locale </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> locale)</span></span>
+<span class="line"><span style="color:#A6E22E">			onWarn</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">				`Fall back to locale </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">formatter.</span><span style="color:#A6E22E">resolvedOptions</span><span style="color:#F8F8F2">().locale</span><span style="color:#F92672">}</span><span style="color:#E6DB74"> instead of </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">locale</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			)</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> formatter</span></span>
+<span class="line"><span style="color:#F8F8F2">	} </span><span style="color:#F92672">catch</span><span style="color:#F8F8F2"> (e) {</span></span>
+<span class="line"><span style="color:#A6E22E">		onError</span><span style="color:#F8F8F2">?.(</span></span>
+<span class="line"><span style="color:#E6DB74">			`Options rejected by Intl.NumberFormat: </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">e </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Error</span><span style="color:#F92672"> ?</span><span style="color:#F8F8F2"> e.message </span><span style="color:#F92672">:</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(e)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#A6E22E"> useFallback</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicNumberProps</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#E6DB74">	'basic-number'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{ value: </span><span style="color:#A6E22E">asNumber</span><span style="color:#F8F8F2">() },</span></span>
+<span class="line"><span style="color:#AE81FF">	undefined</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> formatter </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> getNumberFormatter</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">			host.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'[lang]'</span><span style="color:#F8F8F2">)?.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'lang'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> FALLBACK_LOCALE,</span></span>
+<span class="line"><span style="color:#F8F8F2">			host.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'options'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			host: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> formatter.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(host.value)),</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+	</module-tabgroup>

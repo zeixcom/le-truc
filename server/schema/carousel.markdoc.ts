@@ -1,26 +1,10 @@
-import { type Node, type Schema, Tag } from '@markdoc/markdoc'
-import {
-	commonAttributes,
-	createNavigationButton,
-	createTabButton,
-	createVisuallyHiddenHeading,
-	transformChildrenWithConfig,
-} from '../markdoc-helpers'
+import { type Node, type Schema } from '@markdoc/markdoc'
+import { commonAttributes, html, renderChildren } from '../markdoc-helpers'
 
 const carousel: Schema = {
 	render: 'module-carousel',
 	children: ['slide', 'tag'],
-	attributes: {
-		...commonAttributes,
-		'auto-play': {
-			type: Boolean,
-			default: false,
-		},
-		interval: {
-			type: Number,
-			default: 5000,
-		},
-	},
+	attributes: commonAttributes,
 	transform(node: Node) {
 		// Extract slides from children
 		const slideNodes =
@@ -34,84 +18,58 @@ const carousel: Schema = {
 
 		// Transform each slide
 		const slides = slideNodes.map((slideNode, index) => {
-			const title = slideNode.attributes?.title
-			const style = slideNode.attributes?.style
+			const { title, style } = slideNode.attributes || {}
 
 			if (!title) {
 				throw new Error('Slide must have a title attribute')
 			}
 
-			// Transform slide content
-			const slideContent = transformChildrenWithConfig(slideNode.children || [])
-
-			// Create slide title as h3
-			const slideTitle = new Tag('h3', {}, [title])
-
-			// Wrap content in slide-content div
-			const slideContentDiv = new Tag(
-				'div',
-				{ class: 'slide-content' },
-				slideContent,
-			)
-
 			// Create slide div with proper attributes
 			const slideId = `slide${index + 1}`
-			const slideAttributes: Record<string, string> = {
-				id: slideId,
-				role: 'tabpanel',
-				'aria-current': index === 0 ? 'true' : 'false',
-			}
-
-			if (style) {
-				slideAttributes.style = style
-			}
 
 			return {
-				slide: new Tag('div', slideAttributes, [slideTitle, slideContentDiv]),
+				slide: html`<div
+					id="${slideId}"
+					role="tabpanel"
+					aria-current="${String(index === 0)}"
+					${style && `style="${style}"`}
+				>
+					<h3>${title}</h3>
+					<div class="slide-content">
+						${renderChildren(slideNode.children || [])}
+					</div>
+				</div>`,
 				title,
 				id: slideId,
 			}
 		})
 
-		// Create slides container
-		const slidesContainer = new Tag(
-			'div',
-			{ class: 'slides' },
-			slides.map(s => s.slide),
-		)
-
-		// Create navigation buttons
-		const prevButton = createNavigationButton('prev')
-		const nextButton = createNavigationButton('next')
-
-		// Create tab buttons for navigation
-		const tabButtons = slides.map((slide, index) => {
-			return createTabButton({
-				id: `tab_${slide.id}`,
-				label: slide.title,
-				controls: slide.id,
-				selected: index === 0,
-				index,
-			})
-		})
-
-		const tablist = new Tag('div', { role: 'tablist' }, tabButtons)
-
-		// Create navigation container
-		const navigation = new Tag('nav', { 'aria-label': 'Carousel Navigation' }, [
-			prevButton,
-			nextButton,
-			tablist,
-		])
-
-		// Add visually hidden heading for accessibility
-		const hiddenHeading = createVisuallyHiddenHeading('Slides')
-
-		return new Tag('module-carousel', node.attributes, [
-			hiddenHeading,
-			slidesContainer,
-			navigation,
-		])
+		return html`<module-carousel>
+			<h2 class="visually-hidden">Slides</h2>
+			<div class="slides">${slides.map(s => s.slide)}</div>
+			<nav aria-label="Carousel Navigation">
+				<button type="button" class="prev" aria-label="Previous slide">
+					❮
+				</button>
+				<button type="button" class="next" aria-label="Next slide">❯</button>
+				<div role="tablist">
+					${slides.map((slide, index) => {
+						const isSelected = index === 0
+						return html`<button
+							role="tab"
+							id="${slide.id}"
+							aria-controls="${slide.id}"
+							aria-label="${slide.title}"
+							aria-selected="${String(isSelected)}"
+							data-index="${String(index)}"
+							tabindex="${isSelected ? '0' : '-1'}"
+						>
+							●
+						</button>`
+					})}
+				</div>
+			</nav>
+		</module-carousel>`
 	},
 }
 

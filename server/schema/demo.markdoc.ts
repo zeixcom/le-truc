@@ -1,9 +1,11 @@
-import Markdoc, { type Node, type Schema } from '@markdoc/markdoc'
+import { type Node, type Schema } from '@markdoc/markdoc'
 import {
 	commonAttributes,
+	h,
 	richChildren,
 	splitContentBySeparator,
-	transformChildrenWithConfig,
+	renderChildren,
+	extractTextFromNode,
 } from '../markdoc-helpers'
 
 const demo: Schema = {
@@ -24,51 +26,25 @@ const demo: Schema = {
 
 			// Extract raw HTML from preview section
 			previewContent = previewSection
-				.map((child: Node) => extractRawContent(child))
+				.map((child: Node) => extractTextFromNode(child))
 				.join('\n')
 		} else if (sections.length === 1) {
 			// No separator found, treat all content as HTML preview
 			previewContent = sections[0]
-				.map((child: Node) => extractRawContent(child))
+				.map((child: Node) => extractTextFromNode(child))
 				.join('\n')
 		}
 
-		// Transform the markdown nodes after the separator
-		const transformedMarkdown =
-			transformChildrenWithConfig(markdownNodes).filter(Boolean)
-
 		// Store raw HTML as attribute for post-processing, similar to module-codeblock
-		return new Markdoc.Tag(
+		return h(
 			'module-demo',
 			{
 				...node.attributes,
 				'preview-html': previewContent,
 			},
-			transformedMarkdown,
+			renderChildren(markdownNodes).filter(Boolean),
 		)
 	},
-}
-
-function extractRawContent(node: Node): string {
-	if (node.type === 'text') {
-		const content = node.attributes.content || ''
-		// Normalize whitespace: replace line breaks and multiple spaces with single spaces
-		return content.replace(/\s+/g, ' ')
-	}
-
-	if (node.type === 'paragraph') {
-		return node.children?.map(extractRawContent).join(' ') || ''
-	}
-
-	if (node.type === 'inline') {
-		return node.children?.map(extractRawContent).join(' ') || ''
-	}
-
-	if (node.children && node.children.length > 0) {
-		return node.children.map(extractRawContent).join(' ')
-	}
-
-	return node.attributes?.content || ''
 }
 
 export default demo

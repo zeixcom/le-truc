@@ -2,12 +2,12 @@
 
 import { apiEffect } from './effects/api'
 import { cssEffect } from './effects/css'
-import { examplesEffect } from './effects/examples'
 import { jsEffect } from './effects/js'
 import { menuEffect } from './effects/menu'
 import { pagesEffect } from './effects/pages'
 import { serviceWorkerEffect } from './effects/service-worker'
 import { sitemapEffect } from './effects/sitemap'
+import { sourcesEffect } from './effects/sources'
 import { getFilePath } from './io'
 
 /**
@@ -60,43 +60,38 @@ export async function build(
 		// API docs should be generated first, then CSS/JS, then pages processing
 		console.log('🚀 Initializing effects...')
 
-		let buildError: Error | null = null
+		// let buildError: Error | null = null
 
-		try {
-			const apiCleanup = apiEffect()
-			const cssCleanup = cssEffect()
-			const jsCleanup = jsEffect()
-			const serviceWorkerCleanup = serviceWorkerEffect()
-			const examplesCleanup = examplesEffect()
-			const pagesCleanup = pagesEffect()
-			const menuCleanup = menuEffect()
-			const sitemapCleanup = sitemapEffect()
+		const apiCleanup = apiEffect()
+		const cssCleanup = cssEffect()
+		const jsCleanup = jsEffect()
+		const serviceWorkerCleanup = serviceWorkerEffect()
+		const examplesCleanup = sourcesEffect()
+		const pagesCleanup = pagesEffect()
+		const menuCleanup = menuEffect()
+		const sitemapCleanup = sitemapEffect()
 
-			// Wait a moment for initial processing to complete
-			await new Promise(resolve => setTimeout(resolve, 500))
+		// Wait a moment for initial processing to complete
+		await new Promise(resolve => setTimeout(resolve, 500))
 
-			const duration = performance.now() - startTime
-			console.log(`✅ Build completed in ${duration.toFixed(2)}ms`)
+		const duration = performance.now() - startTime
+		console.log(`✅ Build completed in ${duration.toFixed(2)}ms`)
 
-			// Notify HMR clients of successful build
-			if (watch) {
-				notifyHMR('build-success')
-			}
+		// Notify HMR clients of successful build
+		if (watch) {
+			notifyHMR('build-success')
+		}
 
-			// Return cleanup function for graceful shutdown
-			return () => {
-				apiCleanup?.()
-				cssCleanup?.()
-				jsCleanup?.()
-				serviceWorkerCleanup?.()
-				examplesCleanup?.()
-				pagesCleanup?.()
-				menuCleanup?.()
-				sitemapCleanup?.()
-			}
-		} catch (error) {
-			buildError = error as Error
-			throw error
+		// Return cleanup function for graceful shutdown
+		return () => {
+			apiCleanup?.()
+			cssCleanup?.()
+			jsCleanup?.()
+			serviceWorkerCleanup?.()
+			examplesCleanup?.()
+			pagesCleanup?.()
+			menuCleanup?.()
+			sitemapCleanup?.()
 		}
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)

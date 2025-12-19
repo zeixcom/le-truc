@@ -4,6 +4,7 @@ import demo from './schema/demo.markdoc'
 import fence from './schema/fence.markdoc'
 import heading from './schema/heading.markdoc'
 import hero from './schema/hero.markdoc'
+import link from './schema/link.markdoc'
 import section from './schema/section.markdoc'
 import slide from './schema/slide.markdoc'
 import source from './schema/source.markdoc'
@@ -13,6 +14,7 @@ export const markdocConfig = {
 	nodes: {
 		fence,
 		heading,
+		link,
 	},
 	tags: {
 		callout,

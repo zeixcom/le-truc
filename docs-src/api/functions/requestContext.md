@@ -8,7 +8,7 @@
 
 > **requestContext**\<`T`, `P`, `U`\>(`context`, `fallback`): [`Reader`](../type-aliases/Reader.md)\<[`Computed`](../type-aliases/Computed.md)\<`T`\>, `U` & `object`\>
 
-Defined in: [src/context.ts:134](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/context.ts#L134)
+Defined in: [src/context.ts:134](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/context.ts#L134)
 
 Consume a context value for a component
 

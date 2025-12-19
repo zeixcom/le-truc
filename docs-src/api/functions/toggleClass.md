@@ -8,7 +8,7 @@
 
 > **toggleClass**\<`P`, `E`\>(`token`, `reactive`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/class.ts:15](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/effects/class.ts#L15)
+Defined in: [src/effects/class.ts:15](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/effects/class.ts#L15)
 
 Effect for toggling a CSS class token on an element.
 When the reactive value is true, the class is added; when false, it's removed.

@@ -21,7 +21,7 @@ const MENU_FILE = './docs-src/includes/menu.html'
 
 const OUTPUT_DIR = './docs'
 const ASSETS_DIR = './docs/assets'
-const EXAMPLES_DIR = './docs/examples'
+const SOURCES_DIR = './docs/sources'
 const SITEMAP_FILE = './docs/sitemap.xml'
 
 // Page ordering configuration
@@ -114,7 +114,7 @@ export {
 	MENU_FILE,
 	OUTPUT_DIR,
 	ASSETS_DIR,
-	EXAMPLES_DIR,
+	SOURCES_DIR,
 	SITEMAP_FILE,
 	PAGE_ORDER,
 	SERVER_CONFIG,

@@ -1,14 +1,14 @@
 import { createEffect, match, resolve } from '@zeix/cause-effect'
 import { codeToHtml } from 'shiki'
-import { EXAMPLES_DIR } from '../config'
+import { SOURCES_DIR } from '../config'
 import {
 	componentMarkup,
 	componentScripts,
 	componentStyles,
 	type FileInfo,
 } from '../file-signals'
-import { writeFileSafe } from '../io'
-import { type PanelType, tabGroup } from '../templates/fragments'
+import { getFilePath, writeFileSafe } from '../io'
+import { PanelType, tabGroup } from '../templates/fragments'
 
 const highlightCode = async (content: string, type: string) =>
 	await codeToHtml(content, {
@@ -51,7 +51,7 @@ const generatePanels = async (
 	return panels
 }
 
-export const examplesEffect = () =>
+export const sourcesEffect = () =>
 	createEffect(() => {
 		match(
 			resolve({
@@ -91,7 +91,10 @@ export const examplesEffect = () =>
 							const ts = tsFiles[name + '.ts']
 
 							const panels = await generatePanels(html, css, ts)
-							const outputPath = `${EXAMPLES_DIR}/${componentName}.html`
+							const outputPath = getFilePath(
+								SOURCES_DIR,
+								`${componentName}.html`,
+							)
 							await writeFileSafe(outputPath, tabGroup(componentName, panels))
 						}
 

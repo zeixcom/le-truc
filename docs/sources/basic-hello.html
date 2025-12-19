@@ -1,0 +1,138 @@
+<module-tabgroup>
+		<div role="tablist">
+		<button
+		type="button"
+		role="tab"
+		id="trigger_basic-hello_html"
+		aria-controls="panel_basic-hello_html"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		HTML
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_basic-hello_ts"
+		aria-controls="panel_basic-hello_ts"
+		aria-selected="true"
+		tabindex="0"
+	>
+		TypeScript
+	</button>
+	</div> <div
+		role="tabpanel"
+		id="panel_basic-hello_html"
+		aria-labelledby="trigger_basic-hello_html"
+		 hidden
+	>
+		<module-codeblock
+			language="html"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">basic-hello.html</span>
+				<span class="language">html</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#88846F">&#x3C;!-- Default example --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-hello</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name"</span><span style="color:#F8F8F2">>Your name&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name"</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"text"</span><span style="color:#A6E22E"> autocomplete</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"given-name"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Hello, &#x3C;</span><span style="color:#F92672">output</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name"</span><span style="color:#F8F8F2">>World&#x3C;/</span><span style="color:#F92672">output</span><span style="color:#F8F8F2">>!&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-hello</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Initial name attribute example - tests that name="Alice" shows initially --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-hello</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"initial-name-test"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Alice"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name2"</span><span style="color:#F8F8F2">>Your name&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name2"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name"</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"text"</span><span style="color:#A6E22E"> autocomplete</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"given-name"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Hello, &#x3C;</span><span style="color:#F92672">output</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name2"</span><span style="color:#F8F8F2">>World&#x3C;/</span><span style="color:#F92672">output</span><span style="color:#F8F8F2">>!&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-hello</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Programmatic changes example - tests property and attribute changes --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-hello</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"programmatic-test"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name3"</span><span style="color:#F8F8F2">>Your name&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name3"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name"</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"text"</span><span style="color:#A6E22E"> autocomplete</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"given-name"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Hello, &#x3C;</span><span style="color:#F92672">output</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name3"</span><span style="color:#F8F8F2">>World&#x3C;/</span><span style="color:#F92672">output</span><span style="color:#F8F8F2">>!&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-hello</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Input preservation example - tests that input value is preserved when switching between user input and programmatic changes --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-hello</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"preservation-test"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name4"</span><span style="color:#F8F8F2">>Your name&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name4"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name"</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"text"</span><span style="color:#A6E22E"> autocomplete</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"given-name"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Hello, &#x3C;</span><span style="color:#F92672">output</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name4"</span><span style="color:#F8F8F2">>World&#x3C;/</span><span style="color:#F92672">output</span><span style="color:#F8F8F2">>!&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-hello</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Special characters and unicode example - tests José María, emojis, and HTML-sensitive characters --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-hello</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"unicode-test"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name5"</span><span style="color:#F8F8F2">>Your name&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name5"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name"</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"text"</span><span style="color:#A6E22E"> autocomplete</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"given-name"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Hello, &#x3C;</span><span style="color:#F92672">output</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name5"</span><span style="color:#F8F8F2">>World&#x3C;/</span><span style="color:#F92672">output</span><span style="color:#F8F8F2">>!&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-hello</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_basic-hello_ts"
+		aria-labelledby="trigger_basic-hello_ts"
+		
+	>
+		<module-codeblock
+			language="ts"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">basic-hello.ts</span>
+				<span class="language">ts</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asString, </span><span style="color:#F92672">type</span><span style="color:#F8F8F2"> Component, defineComponent, on, setText } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicHelloProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	name</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicHelloUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	input</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLInputElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	output</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLOutputElement</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'basic-hello'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicHelloProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicHelloProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">BasicHelloUI</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#E6DB74">	'basic-hello'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{</span></span>
+<span class="line"><span style="color:#F8F8F2">		name: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.output.textContent),</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		input: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to enter the name.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		output: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'output'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to display the name.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">input</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> fallback </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.name</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			input: </span><span style="color:#A6E22E">on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				host.name </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> input.value </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> fallback</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			output: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+	</module-tabgroup>

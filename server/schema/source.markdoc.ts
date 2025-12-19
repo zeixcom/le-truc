@@ -1,4 +1,5 @@
-import Markdoc, { type Node, type Schema } from '@markdoc/markdoc'
+import { type Node, type Schema } from '@markdoc/markdoc'
+import { html } from '../markdoc-helpers'
 
 const source: Schema = {
 	render: 'details',
@@ -16,37 +17,17 @@ const source: Schema = {
 	transform(node: Node) {
 		const { title, src } = node.attributes
 
-		// Create the summary element
-		const summary = new Markdoc.Tag('summary', {}, [title])
-
-		// Create the module-lazyload structure
-		const loadingCallout = new Markdoc.Tag('card-callout', {}, [
-			new Markdoc.Tag(
-				'p',
-				{ class: 'loading', role: 'status', 'aria-live': 'polite' },
-				['Loading...'],
-			),
-			new Markdoc.Tag(
-				'p',
-				{
-					class: 'error',
-					role: 'alert',
-					'aria-live': 'assertive',
-					hidden: true,
-				},
-				[],
-			),
-		])
-
-		const contentDiv = new Markdoc.Tag('div', { class: 'content' }, [])
-
-		const lazyload = new Markdoc.Tag('module-lazyload', { src }, [
-			loadingCallout,
-			contentDiv,
-		])
-
 		// Return the complete details structure
-		return new Markdoc.Tag('details', node.attributes, [summary, lazyload])
+		return html`<details>
+			<summary>${title}</summary>
+			<module-lazyload src="${src}">
+				<card-callout>
+					<p class="loading" role="status" aria-live="polite">Loading...</p>
+					<p class="error" role="alert" aria-live="assertive" hidden></p>
+				</card-callout>
+				<div class="content"></div>
+			</module-lazyload>
+		</details>`
 	},
 }
 

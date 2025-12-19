@@ -159,7 +159,7 @@ Here's the example of the `<card-callout>` we're using in this documentation:
 <card-callout class="danger">This action is irreversible!</card-callout>
 <card-callout class="note">This is just a side note.</card-callout>
 ---
-{% source title="Source code" src="./examples/card-callout.html" /%}
+{% source title="Source code" src="./sources/card-callout.html" /%}
 {% /demo %}
 
 {% /section %}

@@ -1,4 +1,5 @@
-import Markdoc, { type Node, type Schema, Tag } from '@markdoc/markdoc'
+import Markdoc, { type Node, type Schema, type Tag } from '@markdoc/markdoc'
+import { html } from '../markdoc-helpers'
 
 const fence: Schema = {
 	render: 'module-codeblock',
@@ -20,64 +21,32 @@ const fence: Schema = {
 
 		// Determine if code should be collapsed (>10 lines)
 		const collapsed = code.split('\n').length > 10
-		const collapsedAttr = collapsed ? { collapsed: '' } : {}
 
-		// Create meta section
-		const metaContent: Tag[] = []
-		if (filename) {
-			metaContent.push(new Tag('span', { class: 'file' }, [filename]))
-		}
-		metaContent.push(new Tag('span', { class: 'language' }, [language]))
-		const metaSection = new Tag('p', { class: 'meta' }, metaContent)
-
-		// Create placeholder for syntax highlighted code that will be processed by file-signals
-		const codePlaceholder = new Tag(
-			'pre',
-			{ 'data-language': language, 'data-code': code },
-			[new Tag('code', { class: `language-${language}` }, [code])],
-		)
-
-		// Create copy button
-		const copyButton = new Tag(
-			'basic-button',
-			{
-				class: 'copy',
-				'copy-success': 'Copied!',
-				'copy-error': 'Error trying to copy to clipboard!',
-			},
-			[
-				new Tag('button', { type: 'button', class: 'secondary small' }, [
-					new Tag('span', { class: 'label' }, ['Copy']),
-				]),
-			],
-		)
-
-		// Create expand button if collapsed
-		const expandButton = collapsed
-			? new Tag(
-					'button',
-					{ type: 'button', class: 'overlay', 'aria-expanded': 'false' },
-					['Expand'],
-				)
-			: null
-
-		// Build children array
-		const children: (Tag | null)[] = [metaSection, codePlaceholder, copyButton]
-		if (expandButton) {
-			children.push(expandButton)
-		}
-
-		// Return complete module-codeblock structure
-		return new Tag(
-			'module-codeblock',
-			{
-				language: language,
-				'copy-success': 'Copied!',
-				'copy-error': 'Error trying to copy to clipboard!',
-				...collapsedAttr,
-			},
-			children.filter(Boolean),
-		)
+		return html`<module-codeblock
+			language="${language}"
+			${collapsed ? 'collapsed' : ''}
+		>
+			<p class="meta">
+				${filename && html`<span class="file">${filename}</span>`}
+				<span class="language">${language}</span>
+			</p>
+			<pre
+				data-language="${language}"
+			><code class="language-${language}">${code}</code></pre>
+			<basic-button
+				class="copy"
+				copy-success="Copied!"
+				copy-error="Error trying to copy to clipboard!"
+			>
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+			${collapsed
+			&& html`<button type="button" class="overlay" aria-expanded="false">
+				Expand
+			</button>`}
+		</module-codeblock>`
 	},
 }
 

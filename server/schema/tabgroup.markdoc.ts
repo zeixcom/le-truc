@@ -2,9 +2,11 @@ import { type Node, type Schema, Tag } from '@markdoc/markdoc'
 import {
 	commonAttributes,
 	extractTextFromNode,
+	fragment,
+	html,
 	splitContentBySeparator,
 	standardChildren,
-	transformChildrenWithConfig,
+	renderChildren,
 } from '../markdoc-helpers'
 
 const tabgroup: Schema = {
@@ -44,58 +46,47 @@ const tabgroup: Schema = {
 
 			// Transform the remaining content (everything except the heading)
 			const contentNodes = section.slice(1)
-			const transformedContent = transformChildrenWithConfig(contentNodes)
 
 			// Generate unique ID based on label
-			const baseId = label
+			const id = label
 				.toLowerCase()
 				.replace(/[^a-z0-9]+/g, '-')
 				.replace(/^-|-$/g, '')
-			const id = `panel_${baseId}`
 
 			tabs.push({
 				label,
-				content: new Tag(undefined, {}, transformedContent),
+				content: fragment(renderChildren(contentNodes)),
 				id,
 			})
 		}
 
-		// Generate the HTML structure using Tags
-		const tablistButtons = tabs.map((tab, index) => {
-			const isSelected = index === 0
-			const triggerId = tab.id.replace('panel_', 'trigger_')
-			return new Tag(
-				'button',
-				{
-					role: 'tab',
-					id: triggerId,
-					'aria-controls': tab.id,
-					'aria-selected': String(isSelected),
-					tabindex: isSelected ? '0' : '-1',
-				},
-				[tab.label],
-			)
-		})
-
-		const tablist = new Tag('div', { role: 'tablist' }, tablistButtons)
-
-		const tabpanels = tabs.map((tab, index) => {
-			const isSelected = index === 0
-			const triggerId = tab.id.replace('panel_', 'trigger_')
-			const attributes: Record<string, string> = {
-				role: 'tabpanel',
-				id: tab.id,
-				'aria-labelledby': triggerId,
-			}
-
-			if (!isSelected) {
-				attributes.hidden = ''
-			}
-
-			return new Tag('div', attributes, [tab.content])
-		})
-
-		return new Tag('module-tabgroup', node.attributes, [tablist, ...tabpanels])
+		return html`<module-tabgroup>
+			<div role="tablist">
+				${tabs.map((tab, index) => {
+					const isSelected = index === 0
+					return html`<button
+						role="tab"
+						id="trigger_${tab.id}"
+						aria-controls="panel_${tab.id}"
+						aria-selected="${String(isSelected)}"
+						tabindex="${isSelected ? '0' : '-1'}"
+					>
+						${tab.label}
+					</button>`
+				})}
+			</div>
+			${tabs.map(
+				(tab, index) =>
+					html`<div
+						role="tabpanel"
+						id="panel_${tab.id}"
+						aria-labelledby="trigger_${tab.id}"
+						${index === 0 ? '' : 'hidden'}
+					>
+						${tab.content}
+					</div>`,
+			)}
+		</module-tabgroup>`
 	},
 }
 

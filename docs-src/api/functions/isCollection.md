@@ -8,7 +8,7 @@
 
 > **isCollection**\<`E`\>(`value`): `value is Collection<E>`
 
-Defined in: [src/signals/collection.ts:242](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/signals/collection.ts#L242)
+Defined in: [src/signals/collection.ts:242](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/signals/collection.ts#L242)
 
 Check if a value is a collection signal
 

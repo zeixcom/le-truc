@@ -8,7 +8,7 @@
 
 > **createSensor**\<`T`, `P`, `U`, `K`\>(`init`, `key`, `events`): (`ui`) => [`Computed`](../type-aliases/Computed.md)\<`T`\>
 
-Defined in: [src/signals/sensor.ts:49](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/signals/sensor.ts#L49)
+Defined in: [src/signals/sensor.ts:49](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/signals/sensor.ts#L49)
 
 Produce a computed signal from transformed event data
 

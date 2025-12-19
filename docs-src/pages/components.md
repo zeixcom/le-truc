@@ -172,6 +172,9 @@ defineComponent('my-component', {}, {}, ({ host }) => {
 })
 ```
 
+{% /section %}
+
+{% section %}
 ## Managing State with Signals
 
 Le Truc manages state using **signals**, which are atomic reactive states that trigger updates when they change. We use regular properties for public component states:
@@ -229,7 +232,6 @@ Le Truc provides several built-in parsers for common attribute types. See the [P
 {% /section %}
 
 {% section %}
-
 ## Selecting Elements
 
 Use the provided selector utilities to find descendant elements within your component:
@@ -294,7 +296,6 @@ On the other hand, the `all()` function creates a dynamic array of elements that
 {% /section %}
 
 {% section %}
-
 ## Adding Event Listeners
 
 Event listeners allow to respond to user interactions. They are the the main cause for changes in the component's state. Le Truc provides the `on()` function to add event listeners to elements and remove them when the component is disconnected.
@@ -327,7 +328,6 @@ defineComponent(
 {% /section %}
 
 {% section %}
-
 ## Synchronizing State with Effects
 
 Effects **automatically update the DOM** when signals change, avoiding manual DOM manipulation.

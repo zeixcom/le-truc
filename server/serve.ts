@@ -1,14 +1,14 @@
 import { watch } from 'node:fs'
+import { buildOnce } from './build'
 import {
 	ASSETS_DIR,
 	COMPONENTS_DIR,
-	EXAMPLES_DIR,
 	LAYOUTS_DIR,
 	OUTPUT_DIR,
+	SOURCES_DIR,
 } from './config'
 import { fileExists, getFilePath } from './io'
 import { hmrScriptTag } from './templates/hmr'
-import { buildOnce } from './build'
 
 /* === Command Line Args === */
 
@@ -145,31 +145,6 @@ const handleStaticFile = async (filePath: string): Promise<Response> => {
 	}
 }
 
-const handleComponentMock = async (filePath: string): Promise<Response> => {
-	if (!fileExists(filePath)) {
-		// Try fallback pattern: /component-name/file.html -> component-name/mocks/file.html
-		const pathSegments = filePath.split('/')
-		const fileName = pathSegments.pop()
-		const componentName = pathSegments.pop()
-
-		if (componentName && fileName) {
-			const fallbackPath = getFilePath(
-				COMPONENTS_DIR,
-				componentName,
-				'mocks',
-				fileName,
-			)
-			if (fileExists(fallbackPath)) {
-				return handleStaticFile(fallbackPath)
-			}
-		}
-
-		return new Response('Not Found', { status: 404 })
-	}
-
-	return handleStaticFile(filePath)
-}
-
 /* === HMR Functions === */
 
 const broadcastToHMRClients = (message: HMRMessage | string) => {
@@ -255,8 +230,8 @@ const server = Bun.serve({
 			handleStaticFile(getFilePath(ASSETS_DIR, req.params.file)),
 
 		// Example component's source code
-		'/examples/:component': req =>
-			handleStaticFile(getFilePath(EXAMPLES_DIR, req.params.component)),
+		'/sources/:component': req =>
+			handleStaticFile(getFilePath(SOURCES_DIR, req.params.component)),
 
 		// Component tests mock files
 		'/test/:component/mocks/:mock': req =>
@@ -279,11 +254,11 @@ const server = Bun.serve({
 		'/:page': req => handleStaticFile(getFilePath(OUTPUT_DIR, req.params.page)),
 
 		// Serve favicon
-		'/favicon.ico': req =>
+		'/favicon.ico': () =>
 			handleStaticFile(getFilePath(OUTPUT_DIR, 'favicon.ico')),
 
 		// Index
-		'/': req => handleStaticFile(getFilePath(OUTPUT_DIR, 'index.html')),
+		'/': () => handleStaticFile(getFilePath(OUTPUT_DIR, 'index.html')),
 	},
 
 	websocket: {
@@ -293,7 +268,7 @@ const server = Bun.serve({
 				if (data.type === 'ping') {
 					ws.send(JSON.stringify({ type: 'pong' }))
 				}
-			} catch (error) {
+			} catch {
 				// Ignore non-JSON messages
 			}
 		},

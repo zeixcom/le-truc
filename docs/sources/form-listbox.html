@@ -1,0 +1,434 @@
+<module-tabgroup>
+		<div role="tablist">
+		<button
+		type="button"
+		role="tab"
+		id="trigger_form-listbox_html"
+		aria-controls="panel_form-listbox_html"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		HTML
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_form-listbox_css"
+		aria-controls="panel_form-listbox_css"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		CSS
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_form-listbox_ts"
+		aria-controls="panel_form-listbox_ts"
+		aria-selected="true"
+		tabindex="0"
+	>
+		TypeScript
+	</button>
+	</div> <div
+		role="tabpanel"
+		id="panel_form-listbox_html"
+		aria-labelledby="trigger_form-listbox_html"
+		 hidden
+	>
+		<module-codeblock
+			language="html"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">form-listbox.html</span>
+				<span class="language">html</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">form</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">form-listbox</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"timezone"</span><span style="color:#A6E22E"> src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/form-listbox/mocks/timezones.json"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hidden"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"timezone"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">module-scrollarea</span><span style="color:#A6E22E"> orientation</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"vertical"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"listbox"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Timezones"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">module-scrollarea</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">form-listbox</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">form</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Declarative inline HTML example --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">form</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">form-listbox</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"colors"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hidden"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"color"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"listbox"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Colors"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"option"</span><span style="color:#A6E22E"> tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"red"</span><span style="color:#F8F8F2">>Red&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"option"</span><span style="color:#A6E22E"> tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"green"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				Green</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"option"</span><span style="color:#A6E22E"> tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"blue"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				Blue</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"option"</span><span style="color:#A6E22E"> tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"yellow"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				Yellow</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"option"</span><span style="color:#A6E22E"> tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"purple"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				Purple</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">form-listbox</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">form</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Declarative inline HTML example with groups --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">form</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">form-listbox</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"fruits"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hidden"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"fruit"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"listbox"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Fruits"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"group"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"fruits-citrus"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"presentation"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"fruits-citrus"</span><span style="color:#F8F8F2">>Citrus&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"option"</span><span style="color:#A6E22E"> tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"orange"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					Orange</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"option"</span><span style="color:#A6E22E"> tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lemon"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					Lemon</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"option"</span><span style="color:#A6E22E"> tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lime"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					Lime</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"group"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"fruits-berries"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"presentation"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"fruits-berries"</span><span style="color:#F8F8F2">>Berries&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"option"</span><span style="color:#A6E22E"> tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"strawberry"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					Strawberry</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"option"</span><span style="color:#A6E22E"> tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"blueberry"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					Blueberry</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"option"</span><span style="color:#A6E22E"> tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"raspberry"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					Raspberry</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">form-listbox</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">form</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_form-listbox_css"
+		aria-labelledby="trigger_form-listbox_css"
+		 hidden
+	>
+		<module-codeblock
+			language="css"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">form-listbox.css</span>
+				<span class="language">css</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">form-listbox</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">block</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	margin</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	module-scrollarea {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		max-height</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">40</span><span style="color:#F92672">rem</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-background);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;:has([role=</span><span style="color:#E6DB74">"group"</span><span style="color:#F8F8F2">]) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			scroll-padding-block-start</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xl);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	[</span><span style="color:#A6E22E">role</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"listbox"</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">flex</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		flex-direction</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">column</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		gap</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		list-style</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		padding</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		margin</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-input);</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	[</span><span style="color:#A6E22E">role</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"group"</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		margin-block-end</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;:not(:has(button:not([</span><span style="color:#66D9EF">hidden</span><span style="color:#F8F8F2">]))) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	[</span><span style="color:#A6E22E">role</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"presentation"</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">sticky</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		top</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-background);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		padding</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-xs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		font-weight</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-weight-bold);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		text-transform</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">uppercase</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		letter-spacing</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">px</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		margin-block-end</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xxs);</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	[</span><span style="color:#A6E22E">role</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"option"</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">block</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		width</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">100</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		text-align</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">left</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		margin</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		padding</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		border</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		line-height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--line-height-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">transparent</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		cursor</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">pointer</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		transition</span><span style="color:#F8F8F2">: </span><span style="color:#F44747">background</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--transition-short) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--easing-inout);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;[aria-selected="true"] {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-selection-selected);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text-inverted);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">:hover</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-selection-hover);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;[aria-selected="true"] {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-selection-active);</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_form-listbox_ts"
+		aria-labelledby="trigger_form-listbox_ts"
+		
+	>
+		<module-codeblock
+			language="ts"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">form-listbox.ts</span>
+				<span class="language">ts</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	asString,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Collection,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createCollection,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createComputed,</span></span>
+<span class="line"><span style="color:#F8F8F2">	dangerouslySetInnerHTML,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F8F8F2">	on,</span></span>
+<span class="line"><span style="color:#F8F8F2">	setAttribute,</span></span>
+<span class="line"><span style="color:#F8F8F2">	setProperty,</span></span>
+<span class="line"><span style="color:#F8F8F2">	setText,</span></span>
+<span class="line"><span style="color:#F8F8F2">	show,</span></span>
+<span class="line"><span style="color:#F8F8F2">	toggleClass,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { fetchWithCache, isRecursiveURL, isValidURL } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/fetch'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { manageFocus } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/focus'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { highlightMatch } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/highlight'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * Form-aware Listbox Component</span></span>
+<span class="line"><span style="color:#88846F"> *</span></span>
+<span class="line"><span style="color:#88846F"> * A filterable listbox that loads options from remote JSON sources and integrates</span></span>
+<span class="line"><span style="color:#88846F"> * seamlessly with HTML forms. Includes keyboard navigation, accessibility features,</span></span>
+<span class="line"><span style="color:#88846F"> * and automatic form value synchronization via a built-in hidden input element.</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormListboxOption</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">	label</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormListboxGroups</span><span style="color:#F92672"> =</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Record</span><span style="color:#F8F8F2">&#x3C;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	string</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{</span></span>
+<span class="line"><span style="color:#F8F8F2">		label</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">		items</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormListboxOption</span><span style="color:#F8F8F2">[]</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormListboxProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">	options</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Collection</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	filter</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">	src</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormListboxUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	input</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLInputElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	callout</span><span style="color:#F92672">?:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	loading</span><span style="color:#F92672">?:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	error</span><span style="color:#F92672">?:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	listbox</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	options</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Collection</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'form-listbox'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormListboxProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormListboxProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">FormListboxUI</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#E6DB74">	'form-listbox'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{</span></span>
+<span class="line"><span style="color:#F8F8F2">		value: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#A6E22E">		options</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">listbox</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#A6E22E">			createCollection</span><span style="color:#F8F8F2">(listbox, </span><span style="color:#E6DB74">'button[role="option"]:not([hidden])'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		filter: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		src: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		input: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input[type="hidden"]'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to store the selected value.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		callout: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'card-callout'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		loading: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.loading'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		error: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.error'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		listbox: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'[role="listbox"]'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to display list of options.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		options: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button[role="option"]'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">	ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> { host, input } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> ui</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> renderOptions</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">items</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormListboxOption</span><span style="color:#F8F8F2">[]) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">			items</span></span>
+<span class="line"><span style="color:#F8F8F2">				.</span><span style="color:#A6E22E">map</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">					item</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#E6DB74"> `</span></span>
+<span class="line"><span style="color:#E6DB74">					&#x3C;button type="button" role="option" tabindex="-1" value="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">item.value</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"></span></span>
+<span class="line"><span style="color:#F92672">						${</span><span style="color:#F8F8F2">item.label</span><span style="color:#F92672">}</span></span>
+<span class="line"><span style="color:#E6DB74">					&#x3C;/button>`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">				)</span></span>
+<span class="line"><span style="color:#F8F8F2">				.</span><span style="color:#A6E22E">join</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> renderGroups</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">items</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormListboxGroups</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> id </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.id</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			let</span><span style="color:#F8F8F2"> html </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#F92672">			for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> [key, value] </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> Object.</span><span style="color:#A6E22E">entries</span><span style="color:#F8F8F2">(items)) {</span></span>
+<span class="line"><span style="color:#F8F8F2">				html </span><span style="color:#F92672">+=</span><span style="color:#E6DB74"> `</span></span>
+<span class="line"><span style="color:#E6DB74">				&#x3C;div role="group" aria-labelledby="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">id</span><span style="color:#F92672">}</span><span style="color:#E6DB74">-</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">key</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"></span></span>
+<span class="line"><span style="color:#E6DB74">					&#x3C;div role="presentation" id="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">id</span><span style="color:#F92672">}</span><span style="color:#E6DB74">-</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">key</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"></span><span style="color:#F92672">${</span><span style="color:#F8F8F2">value.label</span><span style="color:#F92672">}</span><span style="color:#E6DB74">&#x3C;/div></span></span>
+<span class="line"><span style="color:#F92672">					${</span><span style="color:#A6E22E">renderOptions</span><span style="color:#F8F8F2">(value.items)</span><span style="color:#F92672">}</span></span>
+<span class="line"><span style="color:#E6DB74">				&#x3C;/div>`</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> html</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> maybeRender</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">			host.src</span></span>
+<span class="line"><span style="color:#F92672">				?</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">						show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> html.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().ok),</span></span>
+<span class="line"><span style="color:#A6E22E">						dangerouslySetInnerHTML</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> html.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().value),</span></span>
+<span class="line"><span style="color:#F8F8F2">					]</span></span>
+<span class="line"><span style="color:#F92672">				:</span><span style="color:#F8F8F2"> []</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> html </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createComputed</span><span style="color:#F8F8F2">&#x3C;{</span></span>
+<span class="line"><span style="color:#F8F8F2">			ok</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
+<span class="line"><span style="color:#F8F8F2">			value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">			error</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">			pending</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
+<span class="line"><span style="color:#F8F8F2">		}>(</span></span>
+<span class="line"><span style="color:#F92672">			async</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">_prev</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">abort</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> url </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.src</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> error </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">url</span></span>
+<span class="line"><span style="color:#F92672">					?</span><span style="color:#E6DB74"> 'No URL provided'</span></span>
+<span class="line"><span style="color:#F92672">					:</span><span style="color:#F92672"> !</span><span style="color:#A6E22E">isValidURL</span><span style="color:#F8F8F2">(url)</span></span>
+<span class="line"><span style="color:#F92672">						?</span><span style="color:#E6DB74"> 'Invalid URL'</span></span>
+<span class="line"><span style="color:#F92672">						:</span><span style="color:#A6E22E"> isRecursiveURL</span><span style="color:#F8F8F2">(url, host)</span></span>
+<span class="line"><span style="color:#F92672">							?</span><span style="color:#E6DB74"> 'Recursive URL detected'</span></span>
+<span class="line"><span style="color:#F92672">							:</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (error) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> { ok: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">, value: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, error, pending: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2"> }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">				try</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> { content } </span><span style="color:#F92672">=</span><span style="color:#F92672"> await</span><span style="color:#A6E22E"> fetchWithCache</span><span style="color:#F8F8F2">(url, abort, </span><span style="color:#FD971F;font-style:italic">response</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
+<span class="line"><span style="color:#F8F8F2">						response.</span><span style="color:#A6E22E">json</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">					)</span></span>
+<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">						ok: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">						value: Array.</span><span style="color:#A6E22E">isArray</span><span style="color:#F8F8F2">(content)</span></span>
+<span class="line"><span style="color:#F92672">							?</span><span style="color:#A6E22E"> renderOptions</span><span style="color:#F8F8F2">(content)</span></span>
+<span class="line"><span style="color:#F92672">							:</span><span style="color:#A6E22E"> renderGroups</span><span style="color:#F8F8F2">(content),</span></span>
+<span class="line"><span style="color:#F8F8F2">						error: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">						pending: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">				} </span><span style="color:#F92672">catch</span><span style="color:#F8F8F2"> (err) {</span></span>
+<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> { ok: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">, value: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, error: </span><span style="color:#A6E22E">String</span><span style="color:#F8F8F2">(err), pending: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2"> }</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			},</span></span>
+<span class="line"><span style="color:#F8F8F2">			{ ok: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">, value: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, error: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, pending: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> },</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> isSelected</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">			host.value </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> target.value</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> hasError</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.src </span><span style="color:#F92672">?</span><span style="color:#F92672"> !!</span><span style="color:#F8F8F2">html.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().error </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			host: </span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">			input: </span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">			callout: [</span></span>
+<span class="line"><span style="color:#A6E22E">				show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.src </span><span style="color:#F92672">?</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">html.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().ok </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#A6E22E">				toggleClass</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'danger'</span><span style="color:#F8F8F2">, hasError),</span></span>
+<span class="line"><span style="color:#F8F8F2">			],</span></span>
+<span class="line"><span style="color:#F8F8F2">			loading: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.src </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> html.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().pending </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#F8F8F2">			error: [</span></span>
+<span class="line"><span style="color:#A6E22E">				show</span><span style="color:#F8F8F2">(hasError),</span></span>
+<span class="line"><span style="color:#A6E22E">				setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.src </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> html.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().error </span><span style="color:#F92672">:</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#F8F8F2">			],</span></span>
+<span class="line"><span style="color:#F8F8F2">			listbox: [</span></span>
+<span class="line"><span style="color:#F92672">				...</span><span style="color:#A6E22E">manageFocus</span><span style="color:#F8F8F2">(host.options, </span><span style="color:#FD971F;font-style:italic">options</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
+<span class="line"><span style="color:#F8F8F2">					options.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().</span><span style="color:#A6E22E">findIndex</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">option</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> option.ariaSelected </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'true'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">				),</span></span>
+<span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> option </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (target </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">).</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">						'[role="option"]'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					) </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (option </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> option.value </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> host.value) {</span></span>
+<span class="line"><span style="color:#F8F8F2">						host.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> option.value</span></span>
+<span class="line"><span style="color:#F8F8F2">						input.</span><span style="color:#A6E22E">dispatchEvent</span><span style="color:#F8F8F2">(</span><span style="color:#F92672">new</span><span style="color:#A6E22E"> Event</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, { bubbles: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> }))</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">				}),</span></span>
+<span class="line"><span style="color:#F92672">				...</span><span style="color:#A6E22E">maybeRender</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">			],</span></span>
+<span class="line"><span style="color:#F8F8F2">			options: [</span></span>
+<span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'tabIndex'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">isSelected</span><span style="color:#F8F8F2">(target) </span><span style="color:#F92672">?</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> :</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#A6E22E">				show</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
+<span class="line"><span style="color:#F8F8F2">					target.textContent</span></span>
+<span class="line"><span style="color:#F8F8F2">						?.</span><span style="color:#A6E22E">trim</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">						.</span><span style="color:#A6E22E">toLowerCase</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">						.</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(host.filter.</span><span style="color:#A6E22E">toLowerCase</span><span style="color:#F8F8F2">()),</span></span>
+<span class="line"><span style="color:#F8F8F2">				),</span></span>
+<span class="line"><span style="color:#A6E22E">				dangerouslySetInnerHTML</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
+<span class="line"><span style="color:#A6E22E">					highlightMatch</span><span style="color:#F8F8F2">(target.textContent </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">, host.filter),</span></span>
+<span class="line"><span style="color:#F8F8F2">				),</span></span>
+<span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'ariaSelected'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(</span><span style="color:#A6E22E">isSelected</span><span style="color:#F8F8F2">(target))),</span></span>
+<span class="line"><span style="color:#F8F8F2">			],</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+	</module-tabgroup>

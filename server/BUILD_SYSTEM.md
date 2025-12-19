@@ -42,7 +42,7 @@ Each effect reactively responds to file changes and performs specific build task
 2. **`cssEffect`** - Rebuilds and minifies CSS when stylesheets change
 3. **`jsEffect`** - Bundles and minifies JavaScript when scripts change
 4. **`serviceWorkerEffect`** - Generates service worker after assets are built
-5. **`examplesEffect`** - Creates syntax-highlighted component examples from example files
+5. **`sourcesEffect`** - Creates syntax-highlighted component examples from example files
 6. **`menuEffect`** - Generates navigation menu from page metadata
 7. **`pagesEffect`** - Processes markdown files to HTML with Markdoc schemas and template support
 8. **`sitemapEffect`** - Creates XML sitemap for SEO
@@ -328,7 +328,7 @@ const mySchema: Schema = {
 | CSS            | `./docs/assets/main.css`        | Minified CSS bundle               | `/assets/main.css` |
 | JavaScript     | `./docs/assets/main.js`         | Minified JS bundle with sourcemap | `/assets/main.js`  |
 | Service Worker | `./docs/sw.js`                  | PWA caching service worker        | `/sw.js`           |
-| Examples       | `./docs/examples/*.html`        | Syntax-highlighted code examples  | `/examples/`       |
+| Source Code    | `./docs/sources/*.html`         | Syntax-highlighted code examples  | `/sources/`        |
 | Pages          | `./docs/**/*.html`              | Complete HTML pages from markdown | `/` (all routes)   |
 | Menu           | `./docs-src/includes/menu.html` | Navigation menu component         | N/A (included)     |
 | Sitemap        | `./docs/sitemap.xml`            | SEO sitemap                       | `/sitemap.xml`     |

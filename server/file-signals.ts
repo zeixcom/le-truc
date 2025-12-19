@@ -19,7 +19,6 @@ import {
 import { watchFiles } from './file-watcher'
 import { getRelativePath } from './io'
 import markdocConfig from './markdoc.config'
-import { postProcessHtml } from './markdoc-helpers'
 
 /* === Types === */
 
@@ -132,7 +131,7 @@ const docsMarkdown: {
 	pageInfos: Computed<PageInfo[]>
 	fullyProcessed: Computed<Map<string, ProcessedMarkdownFile>>
 } = await (async () => {
-	const sources = await watchFiles(PAGES_DIR, '**/*.md')
+	const sources = await watchFiles(PAGES_DIR, '*.md')
 
 	const processed = createComputed(async () => {
 		const rawFiles = sources.get()
@@ -231,14 +230,14 @@ const docsMarkdown: {
 
 				// Process code blocks with syntax highlighting
 				const codeBlockRegex =
-					/<pre data-language="([^"]*)" data-code="([^"]*)"><code class="language-[^"]*">[\s\S]*?<\/code><\/pre>/g
+					/<pre data-language="([^"]*)"><code class="language-[^"]*">([\s\S]*?)<\/code><\/pre>/g
 				let match: RegExpExecArray | null
 
 				while ((match = codeBlockRegex.exec(htmlContent)) !== null) {
-					const [fullMatch, lang, encodedCode] = match
+					const [fullMatch, lang, code] = match
 
-					// Decode HTML entities
-					const code = encodedCode
+					// Decode HTML entities since code comes from HTML content
+					const decodedCode = code
 						.replace(/&quot;/g, '"')
 						.replace(/&#39;/g, "'")
 						.replace(/&lt;/g, '<')
@@ -246,7 +245,7 @@ const docsMarkdown: {
 						.replace(/&amp;/g, '&')
 
 					try {
-						const highlighted = await codeToHtml(code, {
+						const highlighted = await codeToHtml(decodedCode, {
 							lang: lang || 'text',
 							theme: 'monokai',
 						})
@@ -278,9 +277,6 @@ const docsMarkdown: {
 						return `<module-demo${beforeAttrs}${afterAttrs}>${previewDiv}${content}</module-demo>`
 					},
 				)
-
-				// Post-process HTML (fix links, wrap API content)
-				htmlContent = postProcessHtml(htmlContent, section)
 
 				// Extract title
 				let title = frontmatter.title

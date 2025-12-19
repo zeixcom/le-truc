@@ -1,0 +1,214 @@
+<module-tabgroup>
+		<div role="tablist">
+		<button
+		type="button"
+		role="tab"
+		id="trigger_basic-pluralize_html"
+		aria-controls="panel_basic-pluralize_html"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		HTML
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_basic-pluralize_ts"
+		aria-controls="panel_basic-pluralize_ts"
+		aria-selected="true"
+		tabindex="0"
+	>
+		TypeScript
+	</button>
+	</div> <div
+		role="tabpanel"
+		id="panel_basic-pluralize_html"
+		aria-labelledby="trigger_basic-pluralize_html"
+		 hidden
+	>
+		<module-codeblock
+			language="html"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">basic-pluralize.html</span>
+				<span class="language">html</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#88846F">&#x3C;!-- Default example --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>Well done, all done!&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"some"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"count"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		task&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"other"</span><span style="color:#F8F8F2">>s&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		remaining</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Test example with plural categories --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"plural-test"</span><span style="color:#A6E22E"> count</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"1"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>Nobody&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"some"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"count"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"one"</span><span style="color:#F8F8F2">>person&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"other"</span><span style="color:#F8F8F2">>people&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Welsh locale example - demonstrates complex pluralization rules</span></span>
+<span class="line"><span style="color:#88846F">     Welsh has 6 plural categories: zero, one, two, few, many, other</span></span>
+<span class="line"><span style="color:#88846F">     Example: "dog" in Welsh</span></span>
+<span class="line"><span style="color:#88846F">     0 = cŵn (zero), 1 = ci (one), 2 = gi (two), 3 = chi (few), 6 = chi (many), 4/5/7+ = ci (other) --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"cy"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"welsh-test"</span><span style="color:#A6E22E"> count</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>Dim anifeiliaid!&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"some"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"count"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"zero"</span><span style="color:#F8F8F2">>cŵn&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"one"</span><span style="color:#F8F8F2">>ci&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"two"</span><span style="color:#F8F8F2">>gi&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"few"</span><span style="color:#F8F8F2">>chi&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"many"</span><span style="color:#F8F8F2">>chi&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"other"</span><span style="color:#F8F8F2">>ci&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Ordinal example --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"ordinal-test"</span><span style="color:#A6E22E"> count</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"1"</span><span style="color:#A6E22E"> ordinal</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>None&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"some"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"count"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">>&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"one"</span><span style="color:#F8F8F2">>st&#x3C;/</span><span style="color:#F92672">span</span></span>
+<span class="line"><span style="color:#F8F8F2">		>&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"two"</span><span style="color:#F8F8F2">>nd&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">>&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"few"</span><span style="color:#F8F8F2">>rd&#x3C;/</span><span style="color:#F92672">span</span></span>
+<span class="line"><span style="color:#F8F8F2">		>&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"other"</span><span style="color:#F8F8F2">>th&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Multiple instances example --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"pluralize-1"</span><span style="color:#A6E22E"> count</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>No items&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"some"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"count"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">> item&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"other"</span><span style="color:#F8F8F2">>s&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"pluralize-2"</span><span style="color:#A6E22E"> count</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"5"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>No filters&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"some"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"count"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">> filter criteri&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"one"</span><span style="color:#F8F8F2">>on&#x3C;/</span><span style="color:#F92672">span</span></span>
+<span class="line"><span style="color:#F8F8F2">		>&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"other"</span><span style="color:#F8F8F2">>a&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_basic-pluralize_ts"
+		aria-labelledby="trigger_basic-pluralize_ts"
+		
+	>
+		<module-codeblock
+			language="ts"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">basic-pluralize.ts</span>
+				<span class="language">ts</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	asInteger,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F8F8F2">	setText,</span></span>
+<span class="line"><span style="color:#F8F8F2">	show,</span></span>
+<span class="line"><span style="color:#F8F8F2">	UI,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicPluralizeProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	count</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicPluralizeUI</span><span style="color:#F92672"> =</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Partial</span><span style="color:#F8F8F2">&#x3C;</span></span>
+<span class="line"><span>	</span><span style="color:#A6E22E;text-decoration:underline">Record</span><span style="color:#F8F8F2">&#x3C;</span></span>
+<span class="line"><span style="color:#F92672">		|</span><span style="color:#E6DB74"> 'count'</span></span>
+<span class="line"><span style="color:#F92672">		|</span><span style="color:#E6DB74"> 'none'</span></span>
+<span class="line"><span style="color:#F92672">		|</span><span style="color:#E6DB74"> 'some'</span></span>
+<span class="line"><span style="color:#F92672">		|</span><span style="color:#E6DB74"> 'zero'</span></span>
+<span class="line"><span style="color:#F92672">		|</span><span style="color:#E6DB74"> 'one'</span></span>
+<span class="line"><span style="color:#F92672">		|</span><span style="color:#E6DB74"> 'two'</span></span>
+<span class="line"><span style="color:#F92672">		|</span><span style="color:#E6DB74"> 'few'</span></span>
+<span class="line"><span style="color:#F92672">		|</span><span style="color:#E6DB74"> 'many'</span></span>
+<span class="line"><span style="color:#F92672">		|</span><span style="color:#E6DB74"> 'other'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span>		</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	></span></span>
+<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'basic-pluralize'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicPluralizeProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> FALLBACK_LOCALE </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'en'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * Parse a string as a positive integer (>= 0), falling back to 0 for negative values</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> asPositiveInteger </span><span style="color:#F92672">=</span></span>
+<span class="line"><span style="color:#F8F8F2">	() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">U</span><span style="color:#F92672"> extends</span><span> </span><span style="color:#A6E22E;text-decoration:underline">UI</span><span style="color:#F8F8F2">>(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">U</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> null</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> undefined</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> parsed </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> asInteger</span><span style="color:#F8F8F2">()(ui, value)</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> parsed </span><span style="color:#F92672">&#x3C;</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> ?</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> :</span><span style="color:#F8F8F2"> parsed</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicPluralizeProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">BasicPluralizeUI</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#E6DB74">	'basic-pluralize'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{</span></span>
+<span class="line"><span style="color:#F8F8F2">		count: </span><span style="color:#A6E22E">asPositiveInteger</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		count: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.count'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		none: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.none'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		some: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.some'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		zero: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.zero'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		one: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.one'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		two: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.two'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		few: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.few'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		many: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.many'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		other: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.other'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> pluralizer </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#F8F8F2"> Intl.</span><span style="color:#A6E22E">PluralRules</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">			host.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'[lang]'</span><span style="color:#F8F8F2">)?.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'lang'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> FALLBACK_LOCALE,</span></span>
+<span class="line"><span style="color:#F8F8F2">			host.</span><span style="color:#A6E22E">hasAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'ordinal'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> { type: </span><span style="color:#E6DB74">'ordinal'</span><span style="color:#F8F8F2"> } </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> undefined</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Basic effects</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> effects </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			count: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(host.count)),</span></span>
+<span class="line"><span style="color:#F8F8F2">			none: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.count </span><span style="color:#F92672">===</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">			some: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.count </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Subset of plural categories for applicable pluralizer: ['zero', 'one', 'two', 'few', 'many', 'other']</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> categories </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> pluralizer.</span><span style="color:#A6E22E">resolvedOptions</span><span style="color:#F8F8F2">().pluralCategories</span></span>
+<span class="line"><span style="color:#F92672">		for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> category </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> categories)</span></span>
+<span class="line"><span style="color:#F8F8F2">			effects[category] </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> pluralizer.</span><span style="color:#A6E22E">select</span><span style="color:#F8F8F2">(host.count) </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> category)</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> effects</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+	</module-tabgroup>
