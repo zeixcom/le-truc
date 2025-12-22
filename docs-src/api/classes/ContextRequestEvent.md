@@ -6,7 +6,7 @@
 
 # Class: ContextRequestEvent\<T\>
 
-Defined in: [src/context.ts:78](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/context.ts#L78)
+Defined in: [src/context.ts:78](https://github.com/zeixcom/le-truc/blob/e2435e222ab83bf3d7406922f98523eb60eae450/src/context.ts#L78)
 
 Class for context-request events
 
@@ -37,7 +37,7 @@ function to the callback which requesters can invoke to indicate they no longer 
 
 > **new ContextRequestEvent**\<`T`\>(`context`, `callback`, `subscribe`): `ContextRequestEvent`\<`T`\>
 
-Defined in: [src/context.ts:83](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/context.ts#L83)
+Defined in: [src/context.ts:83](https://github.com/zeixcom/le-truc/blob/e2435e222ab83bf3d7406922f98523eb60eae450/src/context.ts#L83)
 
 #### Parameters
 
@@ -107,7 +107,7 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11463
 
 > `readonly` **callback**: `ContextCallback`\<[`ContextType`](../type-aliases/ContextType.md)\<`T`\>\>
 
-Defined in: [src/context.ts:80](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/context.ts#L80)
+Defined in: [src/context.ts:80](https://github.com/zeixcom/le-truc/blob/e2435e222ab83bf3d7406922f98523eb60eae450/src/context.ts#L80)
 
 callback function for value getter and unsubscribe function
 
@@ -179,7 +179,7 @@ The read-only **`composed`** property of the or not the event will propagate acr
 
 > `readonly` **context**: `T`
 
-Defined in: [src/context.ts:79](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/context.ts#L79)
+Defined in: [src/context.ts:79](https://github.com/zeixcom/le-truc/blob/e2435e222ab83bf3d7406922f98523eb60eae450/src/context.ts#L79)
 
 context key
 
@@ -301,7 +301,7 @@ The deprecated **`Event.srcElement`** is an alias for the Event.target property.
 
 > `readonly` **subscribe**: `boolean`
 
-Defined in: [src/context.ts:81](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/context.ts#L81)
+Defined in: [src/context.ts:81](https://github.com/zeixcom/le-truc/blob/e2435e222ab83bf3d7406922f98523eb60eae450/src/context.ts#L81)
 
 whether to subscribe to context changes
 

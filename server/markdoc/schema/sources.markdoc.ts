@@ -1,7 +1,7 @@
-import { type Node, type Schema } from '@markdoc/markdoc'
-import { html } from '../markdoc-helpers'
+import type { Node, Schema } from '@markdoc/markdoc'
+import { html } from '../utils'
 
-const source: Schema = {
+const sources: Schema = {
 	render: 'details',
 	selfClosing: true,
 	attributes: {
@@ -31,4 +31,4 @@ const source: Schema = {
 	},
 }
 
-export default source
+export default sources

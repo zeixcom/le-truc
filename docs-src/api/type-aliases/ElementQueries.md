@@ -8,7 +8,7 @@
 
 > **ElementQueries** = `object`
 
-Defined in: [src/ui.ts:105](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/ui.ts#L105)
+Defined in: [src/ui.ts:105](https://github.com/zeixcom/le-truc/blob/e2435e222ab83bf3d7406922f98523eb60eae450/src/ui.ts#L105)
 
 ## Properties
 
@@ -16,7 +16,7 @@ Defined in: [src/ui.ts:105](https://github.com/zeixcom/le-truc/blob/57d8adfa0b36
 
 > **all**: `AllElements`
 
-Defined in: [src/ui.ts:107](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/ui.ts#L107)
+Defined in: [src/ui.ts:107](https://github.com/zeixcom/le-truc/blob/e2435e222ab83bf3d7406922f98523eb60eae450/src/ui.ts#L107)
 
 ***
 
@@ -24,4 +24,4 @@ Defined in: [src/ui.ts:107](https://github.com/zeixcom/le-truc/blob/57d8adfa0b36
 
 > **first**: `FirstElement`
 
-Defined in: [src/ui.ts:106](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/ui.ts#L106)
+Defined in: [src/ui.ts:106](https://github.com/zeixcom/le-truc/blob/e2435e222ab83bf3d7406922f98523eb60eae450/src/ui.ts#L106)

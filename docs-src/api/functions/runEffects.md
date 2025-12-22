@@ -8,7 +8,7 @@
 
 > **runEffects**\<`P`, `U`\>(`ui`, `effects`): [`Cleanup`](../type-aliases/Cleanup.md)
 
-Defined in: [src/effects.ts:167](https://github.com/zeixcom/le-truc/blob/57d8adfa0b364545519021819d84b3a84ac4d1e1/src/effects.ts#L167)
+Defined in: [src/effects.ts:167](https://github.com/zeixcom/le-truc/blob/e2435e222ab83bf3d7406922f98523eb60eae450/src/effects.ts#L167)
 
 Run component effects
 

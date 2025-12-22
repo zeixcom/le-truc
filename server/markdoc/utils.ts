@@ -2,33 +2,24 @@ import Markdoc, {
 	type Node,
 	type RenderableTreeNode,
 	Tag,
+	type ValidationError,
 } from '@markdoc/markdoc'
+import { ClassAttribute, IdAttribute } from './attributes'
 import markdocConfig from './markdoc.config'
 
-// Common attribute definitions for reuse across schemas
-const classAttribute = {
-	type: String,
+/* === Types === */
+
+type ParsedElement = {
+	tagName: string
+	attributes: Record<string, any>
+	children: (ParsedElement | string)[]
+	isSelfClosing: boolean
 }
 
-const idAttribute = {
-	type: String,
-}
-
-const styleAttribute = {
-	type: String,
-}
-
-const titleAttribute = {
-	type: String,
-}
-
-const requiredTitleAttribute = {
-	type: String,
-	required: true,
-}
+/* === Constants === */
 
 // Common children arrays for different content types
-const standardChildren = [
+const STANDARD_CHILDREN = [
 	'paragraph',
 	'heading',
 	'list',
@@ -40,17 +31,9 @@ const standardChildren = [
 	'inline',
 ]
 
-const richChildren = [
-	'paragraph',
-	'heading',
-	'list',
+const RICH_CHILDREN = [
+	...STANDARD_CHILDREN,
 	'item',
-	'blockquote',
-	'hr',
-	'fence',
-	'callout',
-	'tag',
-	'inline',
 	'text',
 	'strong',
 	'em',
@@ -58,12 +41,7 @@ const richChildren = [
 	'link',
 ]
 
-// Common attribute sets
-const commonAttributes = {
-	class: classAttribute,
-	id: idAttribute,
-	style: styleAttribute,
-}
+/* === Exported Functions === */
 
 // Text extraction utility used by multiple schemas
 const extractTextFromNode = (node: Node): string => {
@@ -120,6 +98,24 @@ const createErrorCallout = (
 	return new Tag('card-callout', { class: 'danger', title }, children)
 }
 
+// Render Markdoc validation errors as card-callout components
+const renderValidationErrors = (
+	errors: ValidationError[],
+	title: string = 'Validation Errors',
+): RenderableTreeNode => {
+	const errorMessages = errors.map(
+		error => html`<p><strong>${error.id}:</strong> ${error.message}</p>`,
+	)
+
+	return html`<card-callout class="danger" title="${title}">
+		${errorMessages}
+	</card-callout>` as RenderableTreeNode
+}
+
+// Check if validation errors contain critical errors
+/* const hasCriticalErrors = (errors: ValidationError[]): boolean =>
+	errors.some(error => error.level === 'critical') */
+
 // Hyperscript-style helper functions for creating Markdoc Tags
 // These provide a JSX-like syntax that's more readable than `new Tag(...)`
 
@@ -148,12 +144,12 @@ const h = (
 /**
  * Fragment helper - creates a Tag with no wrapper element (undefined tagName)
  * Usage: fragment(['child1', 'child2'])
- */
+ * /
 const fragment = (
 	children: RenderableTreeNode[] | RenderableTreeNode | string,
 ): Tag => {
 	return h(undefined as any, null, children)
-}
+} */
 
 // HTML template literal parser for Markdoc Tags
 // This allows writing HTML-like syntax that gets converted to Markdoc Tag objects
@@ -162,13 +158,6 @@ const fragment = (
 // Examples:
 //   Single element: html`<p>Hello ${name}</p>`
 //   Nested: html`<div><span>Nested ${content}</span></div>`
-
-type ParsedElement = {
-	tagName: string | null // null for fragments
-	attributes: Record<string, any>
-	children: (ParsedElement | string)[]
-	isSelfClosing: boolean
-}
 
 /**
  * Parse HTML template literal into Markdoc Tags
@@ -507,16 +496,14 @@ const convertToTag = (
 }
 
 export {
-	commonAttributes,
+	ClassAttribute,
+	IdAttribute,
 	extractTextFromNode,
-	fragment,
 	h,
 	html,
+	renderValidationErrors,
 	splitContentBySeparator,
-	standardChildren,
-	styleAttribute,
+	STANDARD_CHILDREN,
 	renderChildren,
-	requiredTitleAttribute,
-	richChildren,
-	titleAttribute,
+	RICH_CHILDREN,
 }

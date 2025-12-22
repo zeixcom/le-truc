@@ -18,7 +18,7 @@ import {
 } from './config'
 import { watchFiles } from './file-watcher'
 import { getRelativePath } from './io'
-import markdocConfig from './markdoc.config'
+import markdocConfig from './markdoc/markdoc.config'
 
 /* === Types === */
 

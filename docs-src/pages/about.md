@@ -23,7 +23,7 @@ Le Truc is an **open-source project**, actively developed by [Zeix AG](https://z
 
 ### Sponsors
 
-{% callout class="note" %}
+{% callout .note %}
 **Become a Sponsor**
 
 Le Truc is free and open-source. If your organization finds it valuable, consider [sponsoring its development](info@zeix.com) to help make web development **lightweight, accessible, and fun** again!
@@ -46,7 +46,7 @@ A copy of the license can be found in the [LICENSE](https://github.com/zeixcom/l
 
 ### Current Version: 0.15.0
 
-{% callout class="caution" %}
+{% callout .caution %}
 
 **Release candidate**
 

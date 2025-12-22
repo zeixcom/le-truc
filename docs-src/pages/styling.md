@@ -43,7 +43,7 @@ my-component {
 - By definition **unique within the document** with a descriptive name.
 - **Low specificity**, making it easy to override when you need to with a single class.
 
-{% callout class="tip" %}
+{% callout .tip %}
 **When to use**
 
 **Best when** you control the page and need styles to cascade naturally.
@@ -72,7 +72,7 @@ Use **Shadow DOM** to encapsulate styles if your component is going to be used i
 </my-component>
 ```
 
-{% callout class="tip" %}
+{% callout .tip %}
 **When to use**
 
 **Best when** your component is used in environments where you don’t control styles.
@@ -159,7 +159,7 @@ Here's the example of the `<card-callout>` we're using in this documentation:
 <card-callout class="danger">This action is irreversible!</card-callout>
 <card-callout class="note">This is just a side note.</card-callout>
 ---
-{% source title="Source code" src="./sources/card-callout.html" /%}
+{% sources title="Source code" src="./sources/card-callout.html" /%}
 {% /demo %}
 
 {% /section %}

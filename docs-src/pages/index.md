@@ -11,7 +11,7 @@ description: 'Overview and key benefits of Le Truc'
 **Web development doesn't need to be complicated**. Le Truc lets you create reactive Web Components that enhance your existing HTML.
 {% /hero %}
 
-{% section class="breakout" %}
+{% section .breakout %}
 
 ## What is Le Truc?
 

@@ -3,12 +3,8 @@ import Markdoc, { type Node, type Schema, Tag } from '@markdoc/markdoc'
 const link: Schema = {
 	...Markdoc.nodes.link,
 	transform(node: Node, config) {
-		// Get the base transform result first
 		const base = Markdoc.nodes.link.transform?.(node, config) as Tag
-
-		if (!base || base.name !== 'a') {
-			return base
-		}
+		if (!base || base.name !== 'a') return base
 
 		// Get the href attribute
 		const href = base.attributes?.href

@@ -1,5 +1,5 @@
-import Markdoc, { type Node, type Schema, type Tag } from '@markdoc/markdoc'
-import { html } from '../markdoc-helpers'
+import Markdoc, { type Node, type Schema } from '@markdoc/markdoc'
+import { html } from '../utils'
 
 const fence: Schema = {
 	render: 'module-codeblock',

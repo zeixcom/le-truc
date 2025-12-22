@@ -7,7 +7,7 @@ import hero from './schema/hero.markdoc'
 import link from './schema/link.markdoc'
 import section from './schema/section.markdoc'
 import slide from './schema/slide.markdoc'
-import source from './schema/source.markdoc'
+import sources from './schema/sources.markdoc'
 import tabgroup from './schema/tabgroup.markdoc'
 
 export const markdocConfig = {
@@ -20,7 +20,7 @@ export const markdocConfig = {
 		callout,
 		carousel,
 		demo,
-		source,
+		sources,
 		slide,
 		section,
 		hero,

@@ -4,12 +4,13 @@ import Markdoc, {
 	type RenderableTreeNode,
 	type Schema,
 } from '@markdoc/markdoc'
-import { commonAttributes, html, standardChildren } from '../markdoc-helpers'
+import { COMMON_ATTRIBUTES } from '../attributes'
+import { html, STANDARD_CHILDREN } from '../utils'
 
 const hero: Schema = {
 	render: 'section-hero',
-	children: standardChildren,
-	attributes: commonAttributes,
+	children: STANDARD_CHILDREN,
+	attributes: COMMON_ATTRIBUTES,
 	transform(node: Node, config: Config) {
 		// Separate title from other content
 		let title: RenderableTreeNode | null = null

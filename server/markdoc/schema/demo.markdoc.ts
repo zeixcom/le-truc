@@ -1,17 +1,17 @@
-import { type Node, type Schema } from '@markdoc/markdoc'
+import type { Node, Schema } from '@markdoc/markdoc'
+import { COMMON_ATTRIBUTES } from '../attributes'
 import {
-	commonAttributes,
-	h,
-	richChildren,
-	splitContentBySeparator,
-	renderChildren,
 	extractTextFromNode,
-} from '../markdoc-helpers'
+	h,
+	RICH_CHILDREN,
+	renderChildren,
+	splitContentBySeparator,
+} from '../utils'
 
 const demo: Schema = {
 	render: 'module-demo',
-	children: [...richChildren, 'document', 'source'],
-	attributes: commonAttributes,
+	children: [...RICH_CHILDREN, 'document', 'sources'],
+	attributes: COMMON_ATTRIBUTES,
 	transform(node: Node) {
 		// Split content by HR separator
 		const sections = splitContentBySeparator(node.children || [])

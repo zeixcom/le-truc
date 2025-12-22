@@ -2,9 +2,9 @@ import Markdoc, {
 	type Config,
 	type Node,
 	type Schema,
-	Tag,
+	type Tag,
 } from '@markdoc/markdoc'
-import { html } from '../markdoc-helpers'
+import { html } from '../utils'
 
 function generateSlug(text: string): string {
 	// Decode HTML entities first
@@ -27,8 +27,24 @@ const heading: Schema = {
 	...Markdoc.nodes.heading,
 	transform(node: Node, config: Config) {
 		if (!Markdoc.nodes.heading.transform) {
-			throw new Error('Markdoc.nodes.heading.transform is not defined')
+			// Fallback to basic heading rendering if built-in transform is missing
+			const level = node.attributes.level ?? 1
+			const text =
+				node.children
+					?.map(child =>
+						typeof child === 'string' ? child : child.children?.join(' ') || '',
+					)
+					.join(' ') || ''
+			const slug = generateSlug(text)
+
+			return html`<h${level} id="${slug}">
+				<a name="${slug}" class="anchor" href="#${slug}">
+					<span class="permalink">🔗</span>
+					<span class="title">${text}</span>
+				</a>
+			</h${level}>`
 		}
+
 		const base = Markdoc.nodes.heading.transform(node, config) as Tag
 		const level = node.attributes.level ?? base.attributes?.level ?? 1
 

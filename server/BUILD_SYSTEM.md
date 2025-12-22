@@ -247,7 +247,7 @@ Your slide content here...
 {% /slide %}
 {% /carousel %}
 
-{% callout class="tip" title="Pro Tip" %}
+{% callout .tip title="Pro Tip" %}
 This creates a styled callout box.
 {% /callout %}
 
@@ -560,7 +560,7 @@ Convert existing markdown:
 </div>
 
 <!-- New: Markdoc schema -->
-{% callout class="tip" title="Tip" %}
+{% callout .tip title="Tip" %}
 This is a tip
 {% /callout %}
 ```

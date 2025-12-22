@@ -217,7 +217,7 @@ defineComponent(
 )
 ```
 
-{% callout class="caution" %}
+{% callout .caution %}
 **Careful**: Attributes **may not be present** on the element or **parsing to the desired type may fail**. To ensure **non-nullability** of signals, Le Truc falls back to neutral defaults if no fallback value is provided:
 
 - `""` (empty string) for `string`
@@ -289,7 +289,7 @@ The `first()` function expects the matched element to be present at connection t
 
 On the other hand, the `all()` function creates a dynamic array of elements that will be updated whenever the matching elements are added or removed from the component's DOM branch. Le Truc will apply the given setup functions to added elements and run the cleanup functions on removed elements.
 
-{% callout class="tip" %}
+{% callout .tip %}
 **Tip**: The `all()` function is more flexible but also more resource-intensive than `first()`. Prefer `first()` when targeting a single element known to be present at connection time.
 {% /callout %}
 
@@ -417,7 +417,7 @@ defineComponent(
 )
 ```
 
-{% callout class="tip" %}
+{% callout .tip %}
 **When to use**
 
 - **Use a signal key or a local signal** when the state is part of the component's public interface or internally reused.

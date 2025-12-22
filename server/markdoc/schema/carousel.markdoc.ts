@@ -1,28 +1,64 @@
-import { type Node, type Schema } from '@markdoc/markdoc'
-import { commonAttributes, html, renderChildren } from '../markdoc-helpers'
+import type { Node, Schema, ValidationError } from '@markdoc/markdoc'
+import { COMMON_ATTRIBUTES } from '../attributes'
+import { html, renderChildren, renderValidationErrors } from '../utils'
 
 const carousel: Schema = {
 	render: 'module-carousel',
 	children: ['slide', 'tag'],
-	attributes: commonAttributes,
-	transform(node: Node) {
-		// Extract slides from children
+	attributes: COMMON_ATTRIBUTES,
+	validate(node: Node) {
+		const errors: ValidationError[] = []
+
 		const slideNodes =
 			node.children?.filter(
 				child => child.type === 'tag' && child.tag === 'slide',
 			) || []
 
 		if (slideNodes.length === 0) {
-			throw new Error('Carousel must contain at least one slide')
+			errors.push({
+				id: 'carousel-no-slides',
+				level: 'critical' as const,
+				message: 'Carousel must contain at least one slide',
+			})
+		}
+
+		// Validate each slide
+		slideNodes.forEach((slideNode, index) => {
+			if (!slideNode.attributes?.title) {
+				errors.push({
+					id: 'slide-no-title',
+					level: 'error' as const,
+					message: `Slide ${index + 1} must have a title attribute`,
+				})
+			}
+		})
+
+		return errors
+	},
+	transform(node: Node, config) {
+		// Extract slides from children first to check for critical issues
+		const slideNodes =
+			node.children?.filter(
+				child => child.type === 'tag' && child.tag === 'slide',
+			) || []
+
+		// If no slides, render error callout
+		if (slideNodes.length === 0) {
+			return renderValidationErrors(
+				[
+					{
+						id: 'carousel-no-slides',
+						level: 'critical',
+						message: 'Carousel must contain at least one slide',
+					},
+				],
+				'Carousel Error',
+			)
 		}
 
 		// Transform each slide
 		const slides = slideNodes.map((slideNode, index) => {
 			const { title, style } = slideNode.attributes || {}
-
-			if (!title) {
-				throw new Error('Slide must have a title attribute')
-			}
 
 			// Create slide div with proper attributes
 			const slideId = `slide${index + 1}`
