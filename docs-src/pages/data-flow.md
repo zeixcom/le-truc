@@ -212,6 +212,7 @@ Here's how everything comes together:
 **No custom events are needed – state flows naturally!**
 
 {% demo %}
+```html
 <module-catalog>
   <header>
     <p>Shop</p>
@@ -294,7 +295,8 @@ Here's how everything comes together:
     </li>
   </ul>
 </module-catalog>
----
+```
+
 {% sources title="ModuleCatalog source code" src="./sources/module-catalog.html" /%}
 {% sources title="BasicButton source code" src="./sources/basic-button.html" /%}
 {% sources title="FormSpinbutton source code" src="./sources/form-spinbutton.html" /%}
@@ -427,6 +429,7 @@ export default defineComponent(
 ### Full Example
 
 {% demo %}
+```html
 <context-media>
   <card-mediaqueries>
     <dl>
@@ -441,7 +444,8 @@ export default defineComponent(
     </dl>
   </card-mediaqueries>
 </context-media>
----
+```
+
 {% sources title="ContextMedia source code" src="./sources/context-media.html" /%}
 {% sources title="CardMediaqueries source code" src="./sources/card-mediaqueries.html" /%}
 {% /demo %}

@@ -2,6 +2,14 @@
 
 A simple component that displays a pluralized text according to `Intl.PluralRules` and the `lang` context for different plural forms.
 
+#### Preview
+
+{% demo %}
+{{content}}
+
+{% sources title="Source code" src="./sources/basic-pluralize.html" /%}
+{% /demo %}
+
 #### Tag Name
 
 `basic-pluralize`
@@ -30,11 +38,3 @@ Arbitrary `HTMLElement`s with the following classes, that will be hidden or show
 - `.other`: shown if count is other.
 
 Depending on locales, a different set of classes may be used. For example, `new Intl.PluralRules('en').resolvedOptions().pluralCategories` only includes `one` and `other`.
-
-#### Preview
-
-{% demo %}
-{{content}}
----
-{% sources title="Source code" src="./sources/basic-pluralize.html" /%}
-{% /demo %}

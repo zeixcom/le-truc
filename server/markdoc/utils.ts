@@ -16,6 +16,17 @@ type ParsedElement = {
 	isSelfClosing: boolean
 }
 
+type RawTextMarker = {
+	__rawText: true
+	content: string
+}
+
+type HeadingInfo = {
+	level: number
+	title: string
+	id: string
+}
+
 /* === Constants === */
 
 // Common children arrays for different content types
@@ -43,10 +54,21 @@ const RICH_CHILDREN = [
 
 /* === Exported Functions === */
 
+// Global storage for headings collected during AST transformation
+const collectedHeadings: HeadingInfo[] = []
+
 // Text extraction utility used by multiple schemas
-const extractTextFromNode = (node: Node): string => {
+// When skipLists is true, skips text content from nested list nodes
+const extractTextFromNode = (
+	node: Node,
+	skipLists: boolean = false,
+): string => {
 	if (node.type === 'text') return node.attributes.content || ''
-	if (node.children) return node.children.map(extractTextFromNode).join('')
+	if (skipLists && node.type === 'list') return ''
+	if (node.children)
+		return node.children
+			.map(child => extractTextFromNode(child, skipLists))
+			.join('')
 	return node.attributes?.content || ''
 }
 
@@ -141,16 +163,6 @@ const h = (
 	return new Tag(tagName, attributes || {}, childrenArray)
 }
 
-/**
- * Fragment helper - creates a Tag with no wrapper element (undefined tagName)
- * Usage: fragment(['child1', 'child2'])
- * /
-const fragment = (
-	children: RenderableTreeNode[] | RenderableTreeNode | string,
-): Tag => {
-	return h(undefined as any, null, children)
-} */
-
 // HTML template literal parser for Markdoc Tags
 // This allows writing HTML-like syntax that gets converted to Markdoc Tag objects
 // Usage: html`<div class="container">${content}</div>`
@@ -173,6 +185,7 @@ const html = (
 		if (i < values.length) {
 			const value = values[i]
 			if (typeof value === 'string') htmlString += value
+			else if (isRawTextMarker(value)) htmlString += `__RAWTEXT_${i}__`
 			else htmlString += `__PLACEHOLDER_${i}__`
 		}
 	}
@@ -444,12 +457,28 @@ const convertToTag = (
 		let result: RenderableTreeNode | string = parsed
 		for (let index = 0; index < values.length; index++) {
 			const placeholder = `__PLACEHOLDER_${index}__`
+			const rawTextPlaceholder = `__RAWTEXT_${index}__`
+
 			if (typeof result === 'string' && result.includes(placeholder)) {
 				const value = values[index]
 				// If the entire string is just a placeholder, return the value directly
 				if (result === placeholder) return value
 				// Otherwise, replace placeholder with string representation
 				result = result.replace(placeholder, String(value))
+			}
+
+			if (typeof result === 'string' && result.includes(rawTextPlaceholder)) {
+				const value = values[index]
+				const textContent = isRawTextMarker(value)
+					? value.content
+					: String(value)
+				// If the entire string is just a raw text placeholder, use the content directly
+				if (result === rawTextPlaceholder) {
+					result = textContent
+					break
+				}
+				// Otherwise, replace placeholder with raw text content
+				result = result.replace(rawTextPlaceholder, textContent)
 			}
 		}
 		return result
@@ -475,6 +504,8 @@ const convertToTag = (
 			let attrValue: any = value
 			for (let index = 0; index < values.length; index++) {
 				const placeholder = `__PLACEHOLDER_${index}__`
+				const rawTextPlaceholder = `__RAWTEXT_${index}__`
+
 				if (attrValue.includes(placeholder)) {
 					const val = values[index]
 					// If the entire attribute is just a placeholder, use the value directly
@@ -484,6 +515,18 @@ const convertToTag = (
 					}
 					// Otherwise, replace placeholder with string representation
 					attrValue = attrValue.replace(placeholder, String(val))
+				}
+
+				if (attrValue.includes(rawTextPlaceholder)) {
+					const val = values[index]
+					const textContent = isRawTextMarker(val) ? val.content : String(val)
+					// If the entire attribute is just a raw text placeholder, use the content directly
+					if (attrValue === rawTextPlaceholder) {
+						attrValue = textContent
+						break
+					}
+					// Otherwise, replace placeholder with raw text content
+					attrValue = attrValue.replace(rawTextPlaceholder, textContent)
 				}
 			}
 			attributes[key] = attrValue
@@ -495,15 +538,106 @@ const convertToTag = (
 	return new Tag(parsed.tagName, attributes, children)
 }
 
+const generateId = (text: string = ''): string => {
+	if (!text) return Math.random().toString(36).substring(2, 9)
+
+	// Decode HTML entities first
+	const decoded = text
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.replace(/&amp;/g, '&')
+
+	// Generate URL-friendly slug from text
+	return decoded
+		.toLowerCase()
+		.replace(/[^\w\s-]/g, '')
+		.replace(/\s+/g, '-')
+		.replace(/-+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.trim()
+}
+
+const rawText = (content: string): RawTextMarker => ({
+	__rawText: true,
+	content,
+})
+
+const isRawTextMarker = (value: any): value is RawTextMarker => {
+	return value && typeof value === 'object' && value.__rawText === true
+}
+
+const findLinkNode = (node: Node): Node | null => {
+	if (node.type === 'link') {
+		return node
+	}
+
+	if (node.children) {
+		for (const child of node.children) {
+			const found = findLinkNode(child)
+			if (found) return found
+		}
+	}
+
+	return null
+}
+
+const extractNavigationItem = (
+	item: Node,
+): { label: string; src: string } | null => {
+	// Find the link node in the item
+	const linkNode = findLinkNode(item)
+	if (!linkNode) return null
+
+	const label = extractTextFromNode(item)
+	const src = linkNode.attributes?.href || ''
+
+	return { label, src }
+}
+
+/**
+ * Collect headings from Markdoc AST during transformation
+ */
+const collectHeadings = (node: any, sections: HeadingInfo[] = []) => {
+	if (node) {
+		// Match heading nodes in the original Markdoc AST
+		if (node.type === 'heading') {
+			const level = node.attributes?.level || 1
+			const title = extractTextFromNode(node)
+			const id = generateId(title)
+
+			if (title && title.trim()) {
+				collectedHeadings.push({
+					level,
+					title: title.trim(),
+					id,
+				})
+			}
+		}
+
+		// Recursively process children
+		if (node.children) {
+			for (const child of node.children) {
+				collectHeadings(child, sections)
+			}
+		}
+	}
+}
+
 export {
 	ClassAttribute,
 	IdAttribute,
+	extractNavigationItem,
 	extractTextFromNode,
+	findLinkNode,
+	generateId,
 	h,
 	html,
+	rawText,
 	renderValidationErrors,
 	splitContentBySeparator,
 	STANDARD_CHILDREN,
 	renderChildren,
 	RICH_CHILDREN,
+	collectHeadings,
+	collectedHeadings,
 }

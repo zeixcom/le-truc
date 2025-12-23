@@ -2,6 +2,14 @@
 
 A button component with a label, a disabled state, and an optional badge, intended to be controlled by a parent component.
 
+#### Preview
+
+{% demo %}
+{{content}}
+
+{% sources title="Source code" src="../sources/basic-button.html" /%}
+{% /demo %}
+
 #### Tag Name
 
 `basic-button`
@@ -53,11 +61,3 @@ A button component with a label, a disabled state, and an optional badge, intend
 * optional
 * Setting `label` property has no effect if the element is missing
 {% /table %}
-
-#### Preview
-
-{% demo %}
-{{content}}
----
-{% sources title="Source code" src="../sources/basic-button.html" /%}
-{% /demo %}

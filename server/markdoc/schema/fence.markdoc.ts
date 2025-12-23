@@ -1,5 +1,5 @@
 import Markdoc, { type Node, type Schema } from '@markdoc/markdoc'
-import { html } from '../utils'
+import { html, rawText } from '../utils'
 
 const fence: Schema = {
 	render: 'module-codeblock',
@@ -32,7 +32,7 @@ const fence: Schema = {
 			</p>
 			<pre
 				data-language="${language}"
-			><code class="language-${language}">${code}</code></pre>
+			><code class="language-${language}">${rawText(code)}</code></pre>
 			<basic-button
 				class="copy"
 				copy-success="Copied!"

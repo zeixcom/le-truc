@@ -4,24 +4,7 @@ import Markdoc, {
 	type Schema,
 	type Tag,
 } from '@markdoc/markdoc'
-import { html } from '../utils'
-
-function generateSlug(text: string): string {
-	// Decode HTML entities first
-	const decoded = text
-		.replace(/&quot;/g, '"')
-		.replace(/&#39;/g, "'")
-		.replace(/&amp;/g, '&')
-
-	// Generate URL-friendly slug from text
-	return decoded
-		.toLowerCase()
-		.replace(/[^\w\s-]/g, '')
-		.replace(/\s+/g, '-')
-		.replace(/-+/g, '-')
-		.replace(/^-+|-+$/g, '')
-		.trim()
-}
+import { generateId, html } from '../utils'
 
 const heading: Schema = {
 	...Markdoc.nodes.heading,
@@ -35,7 +18,7 @@ const heading: Schema = {
 						typeof child === 'string' ? child : child.children?.join(' ') || '',
 					)
 					.join(' ') || ''
-			const slug = generateSlug(text)
+			const slug = generateId(text)
 
 			return html`<h${level} id="${slug}">
 				<a name="${slug}" class="anchor" href="#${slug}">
@@ -50,12 +33,12 @@ const heading: Schema = {
 
 		const text =
 			base.children?.filter(child => typeof child === 'string').join(' ') || ''
-		const slug = generateSlug(text)
+		const slug = generateId(text)
 
 		return html`<h${level} id="${slug}">
 			<a name="${slug}" class="anchor" href="#${slug}">
-				<span class="permalink">🔗</span>
 				<span class="title">${text}</span>
+				<span class="permalink">#</span>
 			</a>
 		</h${level}>`
 	},

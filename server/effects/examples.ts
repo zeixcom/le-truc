@@ -87,10 +87,10 @@ const processedExamples: Computed<Map<string, string>> = createComputed(
 					componentHtml = await htmlFile.text()
 				}
 
-				// Replace {{content}} placeholder with actual HTML
+				// Replace {{content}} placeholder with actual HTML wrapped in a fence block
 				const processedContent = example.content.replace(
 					/\{\{\s*content\s*\}\}/g,
-					componentHtml,
+					`\`\`\`html\n${componentHtml}\n\`\`\``,
 				)
 
 				// Process with Markdoc

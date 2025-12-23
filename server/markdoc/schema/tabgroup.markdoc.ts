@@ -37,16 +37,16 @@ const tabgroup: Schema = {
 			if (section.length === 0) continue
 
 			const firstNode = section[0]
-			if (firstNode.type !== 'heading' || firstNode.attributes.level !== 4) {
+			if (firstNode.type !== 'heading') {
 				errors.push({
 					id: `tabgroup-section-${index}-invalid-heading`,
 					level: 'error' as const,
-					message: `Section ${index + 1} must start with a level 4 heading (#### Label)`,
+					message: `Section ${index + 1} must start with a heading`,
 				})
 				continue
 			}
 
-			const label = firstNode.children?.map(extractTextFromNode).join('').trim()
+			const label = extractTextFromNode(firstNode)
 			if (!label) {
 				errors.push({
 					id: `tabgroup-section-${index}-empty-label`,
@@ -85,8 +85,7 @@ const tabgroup: Schema = {
 			if (section.length === 0) continue
 
 			// First node should be a heading
-			const firstNode = section[0]
-			const label = firstNode.children?.map(extractTextFromNode).join('').trim()
+			const label = extractTextFromNode(section[0])
 
 			// Transform the remaining content (everything except the heading)
 			const contentNodes = section.slice(1)

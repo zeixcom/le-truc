@@ -5,7 +5,46 @@ import Markdoc, {
 	type Schema,
 } from '@markdoc/markdoc'
 import { COMMON_ATTRIBUTES } from '../attributes'
-import { html, STANDARD_CHILDREN } from '../utils'
+import { collectedHeadings, html, STANDARD_CHILDREN } from '../utils'
+
+/* === Internal Functions === */
+
+/**
+ * Generate TOC HTML from collected headings
+ */
+const generateTocFromCollected = (
+	levels: number[] = [2],
+	title: string = 'On This Page',
+	minCount: number = 3,
+) => {
+	const filteredHeadings = collectedHeadings.filter(heading =>
+		levels.includes(heading.level),
+	)
+
+	if (filteredHeadings.length < minCount) {
+		return ''
+	}
+
+	const tocItems = filteredHeadings
+		.map(
+			({ id, title: headingTitle }) =>
+				`<li>
+					<a href="#${id}">${headingTitle}</a>
+				</li>`,
+		)
+		.join('')
+
+	return html`<module-toc>
+		<nav>
+			<h2>${title}</h2>
+			<ol>
+				${tocItems}
+			</ol>
+		</nav>
+	</module-toc>`
+}
+
+/* === Exported Schema === */
 
 const hero: Schema = {
 	render: 'section-hero',
@@ -25,12 +64,15 @@ const hero: Schema = {
 			}
 		}
 
-		// Create two-column layout with lead content and TOC placeholder
+		// Generate TOC from collected headings (only if 3+ H2 headings)
+		const tocHtml = generateTocFromCollected([2], 'On This Page', 3)
+
+		// Create two-column layout with lead content and conditional TOC
 		return html`<section-hero>
 			${title}
 			<div class="hero-layout">
 				<div class="lead">${leadContent}</div>
-				<div class="toc-placeholder" data-toc="true"></div>
+				${tocHtml}
 			</div>
 		</section-hero>`
 	},

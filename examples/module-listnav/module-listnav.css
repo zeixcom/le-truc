@@ -1,7 +1,7 @@
 module-listnav {
 	display: grid;
 	grid-template-columns: 1fr 2fr;
-	gap: var(--space-l);
+	gap: var(--space-xl);
 
 	module-lazyload {
 		h1,

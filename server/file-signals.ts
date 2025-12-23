@@ -19,6 +19,7 @@ import {
 import { watchFiles } from './file-watcher'
 import { getRelativePath } from './io'
 import markdocConfig from './markdoc/markdoc.config'
+import { collectHeadings } from './markdoc/utils'
 
 /* === Types === */
 
@@ -215,6 +216,9 @@ const docsMarkdown: {
 				if (errors.length > 0) {
 					console.warn(`Markdoc validation errors for ${path}:`, errors)
 				}
+
+				// Collect from original AST
+				collectHeadings(ast)
 
 				// Transform the AST
 				const transformed = Markdoc.transform(ast, markdocConfig)

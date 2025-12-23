@@ -2,6 +2,14 @@
 
 A Hello World component with an input field to enter the name and a greeting message.
 
+#### Preview
+
+{% demo %}
+{{content}}
+
+{% sources title="Source code" src="./sources/basic-hello.html" /%}
+{% /demo %}
+
 #### Tag Name
 
 `basic-hello`
@@ -14,11 +22,3 @@ A Hello World component with an input field to enter the name and a greeting mes
 
 - `input`: `input`, required. `HTMLInputElement` to enter the name.
 - `output`: `output`, required. `HTMLOutputElement` to display the name.
-
-#### Preview
-
-{% demo %}
-{{content}}
----
-{% sources title="Source code" src="./sources/basic-hello.html" /%}
-{% /demo %}

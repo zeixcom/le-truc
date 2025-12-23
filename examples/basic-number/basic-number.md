@@ -2,6 +2,14 @@
 
 A component that displays a formatted number according to `Intl.NumberFormat` and the `lang` context for decimals, units, and currencies.
 
+#### Preview
+
+{% demo %}
+{{content}}
+
+{% sources title="Source code" src="./sources/basic-number.html" /%}
+{% /demo %}
+
 #### Tag Name
 
 `basic-number`
@@ -18,11 +26,3 @@ A component that displays a formatted number according to `Intl.NumberFormat` an
 #### Descendant Elements
 
 None. The formatted number is displayed directly in the host element.
-
-#### Preview
-
-{% demo %}
-{{content}}
----
-{% sources title="Source code" src="./sources/basic-number.html" /%}
-{% /demo %}

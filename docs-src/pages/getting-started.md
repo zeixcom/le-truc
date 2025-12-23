@@ -153,12 +153,14 @@ If everything is set up correctly, you should see:
 - The greeting updates as you type
 
 {% demo %}
+```html
 <basic-hello>
   <label>Your name<br>
     <input name="name" type="text" autocomplete="given-name">
   </label>
   <p>Hello, <output>World</output>!</p>
 </basic-hello>
+```
 {% /demo %}
 
 If it's not working:

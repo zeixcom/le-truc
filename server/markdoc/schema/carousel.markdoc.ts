@@ -35,7 +35,7 @@ const carousel: Schema = {
 
 		return errors
 	},
-	transform(node: Node, config) {
+	transform(node: Node) {
 		// Extract slides from children first to check for critical issues
 		const slideNodes =
 			node.children?.filter(
