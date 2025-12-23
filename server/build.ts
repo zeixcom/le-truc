@@ -2,6 +2,7 @@
 
 import { apiEffect } from './effects/api'
 import { cssEffect } from './effects/css'
+import { examplesEffect } from './effects/examples'
 import { jsEffect } from './effects/js'
 import { menuEffect } from './effects/menu'
 import { pagesEffect } from './effects/pages'
@@ -66,7 +67,8 @@ export async function build(
 		const cssCleanup = cssEffect()
 		const jsCleanup = jsEffect()
 		const serviceWorkerCleanup = serviceWorkerEffect()
-		const examplesCleanup = sourcesEffect()
+		const sourcesCleanup = sourcesEffect()
+		const examplesCleanup = examplesEffect()
 		const pagesCleanup = pagesEffect()
 		const menuCleanup = menuEffect()
 		const sitemapCleanup = sitemapEffect()
@@ -88,6 +90,7 @@ export async function build(
 			cssCleanup?.()
 			jsCleanup?.()
 			serviceWorkerCleanup?.()
+			sourcesCleanup?.()
 			examplesCleanup?.()
 			pagesCleanup?.()
 			menuCleanup?.()

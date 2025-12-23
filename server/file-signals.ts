@@ -352,6 +352,10 @@ const componentMarkup = {
 	sources: await watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'),
 }
 
+const componentMarkdown = {
+	sources: await watchFiles(COMPONENTS_DIR, '**/*.md'),
+}
+
 const componentStyles = {
 	sources: await watchFiles(COMPONENTS_DIR, '**/*.css'),
 }
@@ -362,6 +366,7 @@ const componentScripts = {
 
 export {
 	// apiMarkdown,
+	componentMarkdown,
 	componentMarkup,
 	componentScripts,
 	componentStyles,

@@ -64,7 +64,7 @@ declare global {
 export default defineComponent<FormListboxProps, FormListboxUI>(
 	'form-listbox',
 	{
-		value: '',
+		value: asString(),
 		options: ({ listbox }) =>
 			createCollection(listbox, 'button[role="option"]:not([hidden])'),
 		filter: '',

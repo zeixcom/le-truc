@@ -8,7 +8,7 @@
 
 > **SensorEvents**\<`T`, `U`, `E`\> = `{ [K in keyof HTMLElementEventMap]?: SensorHandler<T, EventType<K>, U, E> }`
 
-Defined in: [src/signals/sensor.ts:33](https://github.com/zeixcom/le-truc/blob/e2435e222ab83bf3d7406922f98523eb60eae450/src/signals/sensor.ts#L33)
+Defined in: [src/signals/sensor.ts:33](https://github.com/zeixcom/le-truc/blob/d42fb28a360f26c2ef62cbc9c1f4f11dd0f59654/src/signals/sensor.ts#L33)
 
 ## Type Parameters
 

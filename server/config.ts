@@ -13,6 +13,8 @@ const TS_FILE = './examples/main.ts'
 const TEMPLATES_DIR = './server/templates'
 
 const INPUT_DIR = './docs-src'
+const EXAMPLES_DOCS_DIR = './examples'
+const EXAMPLES_OUTPUT_DIR = './docs/examples'
 const PAGES_DIR = './docs-src/pages'
 const API_DIR = './docs-src/api'
 const LAYOUTS_DIR = './docs-src/layouts'
@@ -107,6 +109,8 @@ export {
 	TS_FILE,
 	TEMPLATES_DIR,
 	INPUT_DIR,
+	EXAMPLES_DOCS_DIR,
+	EXAMPLES_OUTPUT_DIR,
 	PAGES_DIR,
 	API_DIR,
 	LAYOUTS_DIR,

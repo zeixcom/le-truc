@@ -10,7 +10,7 @@
 
 > **createCollection**\<`S`\>(`parent`, `selector`): [`Collection`](../type-aliases/Collection.md)\<`ElementFromSelector`\<`S`\>\>
 
-Defined in: [src/signals/collection.ts:67](https://github.com/zeixcom/le-truc/blob/e2435e222ab83bf3d7406922f98523eb60eae450/src/signals/collection.ts#L67)
+Defined in: [src/signals/collection.ts:67](https://github.com/zeixcom/le-truc/blob/d42fb28a360f26c2ef62cbc9c1f4f11dd0f59654/src/signals/collection.ts#L67)
 
 Create a collection of elements from a parent node and a CSS selector.
 
@@ -48,7 +48,7 @@ A collection signal of elements
 
 > **createCollection**\<`E`\>(`parent`, `selector`): [`Collection`](../type-aliases/Collection.md)\<`E`\>
 
-Defined in: [src/signals/collection.ts:71](https://github.com/zeixcom/le-truc/blob/e2435e222ab83bf3d7406922f98523eb60eae450/src/signals/collection.ts#L71)
+Defined in: [src/signals/collection.ts:71](https://github.com/zeixcom/le-truc/blob/d42fb28a360f26c2ef62cbc9c1f4f11dd0f59654/src/signals/collection.ts#L71)
 
 Create a collection of elements from a parent node and a CSS selector.
 
