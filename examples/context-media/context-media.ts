@@ -48,7 +48,7 @@ export const MEDIA_ORIENTATION = 'media-orientation' as Context<
 export default defineComponent<ContextMediaProps>(
 	'context-media',
 	{
-		// Context for motion preference; true for no-preference, false for reduce
+		// Context for motion preference
 		[MEDIA_MOTION]: () => {
 			const mql = matchMedia('(prefers-reduced-motion: reduce)')
 			const motion = createState(mql.matches ? 'reduce' : 'no-preference')
@@ -71,11 +71,10 @@ export default defineComponent<ContextMediaProps>(
 		// Context for screen viewport size
 		[MEDIA_VIEWPORT]: (ui: { host: HTMLElement }) => {
 			const getBreakpoint = (attr: string, fallback: string) => {
-				const value = ui.host.getAttribute(attr)
-				const trimmed = value?.trim()
-				if (!trimmed) return fallback
-				const unit = trimmed.match(/em$/) ? 'em' : 'px'
-				const v = parseFloat(trimmed)
+				const value = ui.host.getAttribute(attr)?.trim()
+				if (!value) return fallback
+				const unit = value.match(/em$/) ? 'em' : 'px'
+				const v = parseFloat(value)
 				return Number.isFinite(v) ? v + unit : fallback
 			}
 			const mqlSM = matchMedia(`(min-width: ${getBreakpoint('sm', '32em')})`)

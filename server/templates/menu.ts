@@ -22,7 +22,7 @@ export function menu(pages: PageInfo[]): string {
 		.filter(p => !p.section)
 		.sort(createOrderedSort<PageInfo>(PAGE_ORDER))
 
-	return html` <section-menu>
+	return html`<section-menu>
 		<nav>
 			<h2 class="visually-hidden">Main Menu</h2>
 			<ol>

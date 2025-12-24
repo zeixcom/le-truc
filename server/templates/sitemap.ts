@@ -6,7 +6,7 @@
  */
 
 import { BASE_URL } from '../config'
-import type { PageInfo } from '../types'
+import type { PageInfo } from '../file-signals'
 import { SITEMAP_PRIORITIES, XML_NAMESPACES } from './constants'
 import { xml } from './utils'
 

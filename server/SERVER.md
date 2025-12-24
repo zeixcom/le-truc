@@ -160,7 +160,7 @@ The server handles multiple route patterns:
 |---------------|---------|---------|
 | `/api/status` | Server health check | Health monitoring |
 | `/assets/:file` | Static assets | CSS, JS, images |
-| `/examples/:component` | Component source code | Example files |
+| `/sources/:component` | Component source code | Example files |
 | `/:component/:file` | Component mock files | `/module-lazyload/simple-text.html` |
 | `/test/:component/mocks/:mock` | Test mock files | Test resources |
 | `/test/:component` | Component test pages | Interactive testing |

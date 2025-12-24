@@ -212,6 +212,7 @@ Here's how everything comes together:
 **No custom events are needed – state flows naturally!**
 
 {% demo %}
+```html
 <module-catalog>
   <header>
     <p>Shop</p>
@@ -294,10 +295,11 @@ Here's how everything comes together:
     </li>
   </ul>
 </module-catalog>
----
-{% source title="ModuleCatalog source code" src="./examples/module-catalog.html" /%}
-{% source title="BasicButton source code" src="./examples/basic-button.html" /%}
-{% source title="FormSpinbutton source code" src="./examples/form-spinbutton.html" /%}
+```
+
+{% sources title="ModuleCatalog source code" src="./sources/module-catalog.html" /%}
+{% sources title="BasicButton source code" src="./sources/basic-button.html" /%}
+{% sources title="FormSpinbutton source code" src="./sources/form-spinbutton.html" /%}
 {% /demo %}
 
 {% /section %}
@@ -427,6 +429,7 @@ export default defineComponent(
 ### Full Example
 
 {% demo %}
+```html
 <context-media>
   <card-mediaqueries>
     <dl>
@@ -441,9 +444,10 @@ export default defineComponent(
     </dl>
   </card-mediaqueries>
 </context-media>
----
-{% source title="ContextMedia source code" src="./examples/context-media.html" /%}
-{% source title="CardMediaqueries source code" src="./examples/card-mediaqueries.html" /%}
+```
+
+{% sources title="ContextMedia source code" src="./sources/context-media.html" /%}
+{% sources title="CardMediaqueries source code" src="./sources/card-mediaqueries.html" /%}
 {% /demo %}
 
 {% /section %}

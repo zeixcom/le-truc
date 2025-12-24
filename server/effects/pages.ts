@@ -3,7 +3,6 @@ import { ASSETS_DIR, INCLUDES_DIR, LAYOUTS_DIR, OUTPUT_DIR } from '../config'
 import { docsMarkdown, type ProcessedMarkdownFile } from '../file-signals'
 import { getFileContent, getFilePath, writeFileSafe } from '../io'
 import { performanceHints } from '../templates/performance-hints'
-import { toc } from '../templates/toc'
 
 /* === Internal Functionals === */
 
@@ -72,19 +71,12 @@ const applyTemplate = async (
 		// Load includes first
 		layout = await loadIncludes(layout)
 
-		// Generate TOC and performance hints
-		const tocHtml = toc(processedFile.processedContent)
+		// Generate performance hints
 		const additionalPreloads = analyzePageForPreloads(processedFile.htmlContent)
 		const performanceHintsHtml = performanceHints(additionalPreloads)
 
-		// Replace TOC placeholders in content with actual TOC HTML
-		const contentWithToc = processedFile.htmlContent.replace(
-			/<div class="toc-placeholder" data-toc="true"><\/div>/g,
-			tocHtml,
-		)
-
 		// Replace content
-		layout = layout.replace('{{ content }}', contentWithToc)
+		layout = layout.replace('{{ content }}', processedFile.htmlContent)
 
 		// Get asset hashes
 		const assetHashes = getAssetHashes()
@@ -95,7 +87,6 @@ const applyTemplate = async (
 			section: processedFile.section || '',
 			'base-path': processedFile.basePath,
 			title: processedFile.title,
-			toc: tocHtml,
 			'css-hash': assetHashes.css,
 			'js-hash': assetHashes.js,
 			'performance-hints': performanceHintsHtml,

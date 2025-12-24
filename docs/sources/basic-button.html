@@ -1,0 +1,384 @@
+<module-tabgroup>
+		<div role="tablist">
+		<button
+		type="button"
+		role="tab"
+		id="trigger_basic-button_html"
+		aria-controls="panel_basic-button_html"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		HTML
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_basic-button_css"
+		aria-controls="panel_basic-button_css"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		CSS
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_basic-button_ts"
+		aria-controls="panel_basic-button_ts"
+		aria-selected="true"
+		tabindex="0"
+	>
+		TypeScript
+	</button>
+	</div> <div
+		role="tabpanel"
+		id="panel_basic-button_html"
+		aria-labelledby="trigger_basic-button_html"
+		 hidden
+	>
+		<module-codeblock
+			language="html"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">basic-button.html</span>
+				<span class="language">html</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Try changing the &#x3C;</span><span style="color:#F92672">code</span><span style="color:#F8F8F2">>badge&#x3C;/</span><span style="color:#F92672">code</span><span style="color:#F8F8F2">>, &#x3C;</span><span style="color:#F92672">code</span><span style="color:#F8F8F2">>disabled&#x3C;/</span><span style="color:#F92672">code</span><span style="color:#F8F8F2">>, or</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">code</span><span style="color:#F8F8F2">>label&#x3C;/</span><span style="color:#F92672">code</span><span style="color:#F8F8F2">> attributes in the inspector.</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Default example - tests initial state and dynamic updates --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">>🛒 Shopping Cart&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"badge"</span><span style="color:#F8F8F2">>5&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Initial attributes example - tests disabled="true", label="Delete Item", badge="99" --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-button</span></span>
+<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"initial-attrs-test"</span></span>
+<span class="line"><span style="color:#A6E22E">	disabled</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"true"</span></span>
+<span class="line"><span style="color:#A6E22E">	label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Delete Item"</span></span>
+<span class="line"><span style="color:#A6E22E">	badge</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"99"</span></span>
+<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">>Default Label&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"badge"</span><span style="color:#F8F8F2">>0&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Property changes example - tests direct property manipulation --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-button</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"property-test"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">>🛒 Shopping Cart&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"badge"</span><span style="color:#F8F8F2">>5&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Missing elements example - tests graceful handling when .label/.badge spans are missing --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-button</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"missing-elements-test"</span><span style="color:#A6E22E"> label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"No Spans"</span><span style="color:#A6E22E"> badge</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Missing"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#F8F8F2">>Just Button Text&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Text fallback example - tests label property fallback to button text content --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-button</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"text-fallback-test"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#F8F8F2">>Button Text Only&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Boolean attribute variations example - tests '', 'false', 'disabled', '0', and removeAttribute --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-button</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"boolean-test"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">>Boolean Test&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"badge"</span><span style="color:#F8F8F2">>Test&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_basic-button_css"
+		aria-labelledby="trigger_basic-button_css"
+		 hidden
+	>
+		<module-codeblock
+			language="css"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">basic-button.css</span>
+				<span class="language">css</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">basic-button</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">relative</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">inline-block</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	flex</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	&#x26; button {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		min-width</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		border-radius</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-secondary);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		border</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> solid</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-border);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		padding</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		line-height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--line-height-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		white-space</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">nowrap</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-dimmed);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		transition</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">all</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--transition-shorter) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--easing-inout);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;:</span><span style="color:#66D9EF">disabled</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			opacity: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-translucent);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">:not</span><span style="color:#F8F8F2">(</span><span style="color:#A6E22E">:disabled</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			cursor</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">pointer</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-solid);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;:hover {</span></span>
+<span class="line"><span style="color:#F8F8F2">				background-color: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-secondary-hover);</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;</span><span style="color:#A6E22E">:active</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-secondary-active);</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.primary</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-primary-text);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-primary);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			border-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-primary-active);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;:not(:</span><span style="color:#66D9EF">disabled</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-solid);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">				&#x26;:hover {</span></span>
+<span class="line"><span style="color:#F8F8F2">					background-color: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-primary-hover);</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">				&#x26;</span><span style="color:#A6E22E">:active</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-primary-active);</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.destructive</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-error-text);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-error);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			border-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-error-active);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;:not(:</span><span style="color:#66D9EF">disabled</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-solid);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">				&#x26;:hover {</span></span>
+<span class="line"><span style="color:#F8F8F2">					background-color: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-error-hover);</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">				&#x26;</span><span style="color:#A6E22E">:active</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-error-active);</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.constructive</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-success-text);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-success);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			border-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-success-active);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;:not(:</span><span style="color:#66D9EF">disabled</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-solid);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">				&#x26;:hover {</span></span>
+<span class="line"><span style="color:#F8F8F2">					background-color: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-success-hover);</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">				&#x26;</span><span style="color:#A6E22E">:active</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-success-active);</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.tertiary</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">transparent</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			border</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#66D9EF"> solid</span><span style="color:#66D9EF"> transparent</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			padding</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">auto</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-primary);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;:not(:</span><span style="color:#66D9EF">disabled</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-solid);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">				&#x26;:hover {</span></span>
+<span class="line"><span style="color:#F8F8F2">					background-color: </span><span style="color:#66D9EF">rgba</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, </span><span style="color:#AE81FF">0.05</span><span style="color:#F8F8F2">);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-primary-hover);</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">				&#x26;</span><span style="color:#A6E22E">:active</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">rgba</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, </span><span style="color:#AE81FF">0.1</span><span style="color:#F8F8F2">);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-primary-active);</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;</span><span style="color:#A6E22E">.constructive</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-success);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">				&#x26;:not(:</span><span style="color:#66D9EF">disabled</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-solid);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">					&#x26;:hover {</span></span>
+<span class="line"><span style="color:#66D9EF">						color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-success-hover);</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">					&#x26;</span><span style="color:#A6E22E">:active</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-success-active);</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;</span><span style="color:#A6E22E">.destructive</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-error);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">				&#x26;:not(:</span><span style="color:#66D9EF">disabled</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-solid);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">					&#x26;:hover {</span></span>
+<span class="line"><span style="color:#66D9EF">						color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-error-hover);</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">					&#x26;</span><span style="color:#A6E22E">:active</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-error-active);</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.small</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			--input-height: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-l);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-xs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			padding-inline</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.large</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			--input-height: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xl);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-m);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			padding-inline</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">	.badge</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">absolute</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		box-sizing</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">border-box</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		top</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">calc</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">-1</span><span style="color:#F92672"> *</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-s));</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		right</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">calc</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">-1</span><span style="color:#F92672"> *</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-s));</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-xs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		line-height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--line-height-xs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-primary);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text-inverted);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		padding</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xxs) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">calc</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">2</span><span style="color:#F92672"> *</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-s));</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		min-width</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">calc</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">2</span><span style="color:#F92672"> *</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-s));</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		border-radius</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-s);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;:empty {</span></span>
+<span class="line"><span style="color:#F8F8F2">			display: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_basic-button_ts"
+		aria-labelledby="trigger_basic-button_ts"
+		
+	>
+		<module-codeblock
+			language="ts"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">basic-button.ts</span>
+				<span class="language">ts</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	asBoolean,</span></span>
+<span class="line"><span style="color:#F8F8F2">	asString,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F8F8F2">	setProperty,</span></span>
+<span class="line"><span style="color:#F8F8F2">	setText,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicButtonProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	disabled</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
+<span class="line"><span style="color:#F8F8F2">	label</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">	badge</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicButtonUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	button</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	label</span><span style="color:#F92672">?:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLSpanElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	badge</span><span style="color:#F92672">?:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLSpanElement</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'basic-button'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicButtonProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicButtonProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">BasicButtonUI</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#E6DB74">	'basic-button'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{</span></span>
+<span class="line"><span style="color:#F8F8F2">		disabled: </span><span style="color:#A6E22E">asBoolean</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">		label: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.label?.textContent </span><span style="color:#F92672">??</span><span style="color:#F8F8F2"> ui.button.textContent),</span></span>
+<span class="line"><span style="color:#F8F8F2">		badge: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.badge?.textContent </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		button: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a native button as descendant.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		label: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'span.label'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		badge: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'span.badge'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">	() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		button: </span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'disabled'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		label: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'label'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		badge: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'badge'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+	</module-tabgroup>

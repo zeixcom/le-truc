@@ -1,4 +1,9 @@
+<card-callout>
+	<p>Try changing the <code>count</code> attribute in the inspector.</p>
+</card-callout>
+
 <!-- Default example -->
+<p>Remaining tasks:</p>
 <basic-pluralize>
 	<p class="none">Well done, all done!</p>
 	<p class="some">
@@ -8,21 +13,26 @@
 	</p>
 </basic-pluralize>
 
+<hr />
+
 <!-- Test example with plural categories -->
+<p>Number of people:</p>
 <basic-pluralize id="plural-test" count="1">
 	<p class="none">Nobody</p>
 	<p class="some">
-		<span class="count"></span>
-		<span class="one">person</span>
-		<span class="other">people</span>
+		<span class="count"></span> <span class="one">person</span
+		><span class="other">people</span>
 	</p>
 </basic-pluralize>
+
+<hr />
 
 <!-- Welsh locale example - demonstrates complex pluralization rules
      Welsh has 6 plural categories: zero, one, two, few, many, other
      Example: "dog" in Welsh
      0 = cŵn (zero), 1 = ci (one), 2 = gi (two), 3 = chi (few), 6 = chi (many), 4/5/7+ = ci (other) -->
 <div lang="cy">
+	<p>Number of dogs in Welsh:</p>
 	<basic-pluralize id="welsh-test" count="0">
 		<p class="none">Dim anifeiliaid!</p>
 		<p class="some">
@@ -37,7 +47,10 @@
 	</basic-pluralize>
 </div>
 
+<hr />
+
 <!-- Ordinal example -->
+<p>Item selected (ordinal number):</p>
 <basic-pluralize id="ordinal-test" count="1" ordinal>
 	<p class="none">None</p>
 	<p class="some">
@@ -47,7 +60,10 @@
 	</p>
 </basic-pluralize>
 
+<hr />
+
 <!-- Multiple instances example -->
+<p>Number of items:</p>
 <basic-pluralize id="pluralize-1" count="0">
 	<p class="none">No items</p>
 	<p class="some">
@@ -55,10 +71,13 @@
 	</p>
 </basic-pluralize>
 
+<hr />
+
+<p>Number of filter criteria (irregular plural):</p>
 <basic-pluralize id="pluralize-2" count="5">
 	<p class="none">No filters</p>
 	<p class="some">
-		<span class="count"></span> filter criteri<span class="one">on</span
-		><span class="other">a</span>
+		<span class="count"></span>
+		filter criteri<span class="one">on</span><span class="other">a</span>
 	</p>
 </basic-pluralize>

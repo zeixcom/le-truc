@@ -1,79 +1,142 @@
+<card-callout>
+	<p>Try changing the <code>value</code> attribute in the inspector.</p>
+</card-callout>
+
 <!-- Default example -->
-<basic-number
-	value="25678.9"
-	options='{"style":"unit","unit":"liter","unitDisplay":"long"}'
-></basic-number>
+<p>
+	Volume unit, default (English) locale:<br />
+	<basic-number
+		value="25678.9"
+		options='{"style":"unit","unit":"liter","unitDisplay":"long"}'
+	></basic-number>
+</p>
+
+<hr />
 
 <!-- Currency examples -->
-<basic-number
-	id="german-swiss"
-	lang="de-CH"
-	value="25678.9"
-	options='{"style":"currency","currency":"CHF"}'
-></basic-number>
+<p>
+	Swiss Francs currency, German (Switzerland) locale:<br />
+	<basic-number
+		id="german-swiss"
+		lang="de-CH"
+		value="25678.9"
+		options='{"style":"currency","currency":"CHF"}'
+	></basic-number>
+</p>
 
-<basic-number
-	id="french-swiss"
-	lang="fr-CH"
-	value="25678.9"
-	options='{"style":"currency","currency":"CHF"}'
-></basic-number>
+<hr />
+
+<p>
+	Swiss Francs currency, French (Switzerland) locale:<br />
+	<basic-number
+		id="french-swiss"
+		lang="fr-CH"
+		value="25678.9"
+		options='{"style":"currency","currency":"CHF"}'
+	></basic-number>
+</p>
+
+<hr />
 
 <!-- International examples -->
-<basic-number
-	id="arabic-speed"
-	lang="ar-EG"
-	value="25678.9"
-	options='{"style":"unit","unit":"kilometer-per-hour","unitDisplay":"long"}'
-></basic-number>
+<p>
+	Arabic speed unit:<br />
+	<basic-number
+		id="arabic-speed"
+		lang="ar-EG"
+		value="25678.9"
+		options='{"style":"unit","unit":"kilometer-per-hour","unitDisplay":"long"}'
+	></basic-number>
+</p>
 
-<basic-number
-	id="chinese-time"
-	lang="zh-Hans-CN-u-nu-hanidec"
-	value="25678.9"
-	options='{"style":"unit","unit":"second","unitDisplay":"long"}'
-></basic-number>
+<hr />
+<p>
+	Chinese time unit:<br />
+	<basic-number
+		id="chinese-time"
+		lang="zh-Hans-CN-u-nu-hanidec"
+		value="25678.9"
+		options='{"style":"unit","unit":"second","unitDisplay":"long"}'
+	></basic-number>
+</p>
+
+<hr />
 
 <!-- Decimal formatting example -->
-<basic-number
-	id="decimal-test"
-	value="1234.56789"
-	options='{"style":"decimal","minimumFractionDigits":2,"maximumFractionDigits":3}'
-></basic-number>
+<p>
+	Decimal number with min 2, max 3 fraction digits:<br />
+	<basic-number
+		id="decimal-test"
+		value="1234.56789"
+		options='{"style":"decimal","minimumFractionDigits":2,"maximumFractionDigits":3}'
+	></basic-number>
+</p>
+
+<hr />
 
 <!-- Inheritance example -->
 <div lang="de-DE">
-	<basic-number
-		id="inherit-test"
-		value="1234.5"
-		options='{"style":"currency","currency":"EUR"}'
-	></basic-number>
+	<p>
+		Euro currency, inherited German (Germany) locale:<br />
+		<basic-number
+			id="inherit-test"
+			value="1234.5"
+			options='{"style":"currency","currency":"EUR"}'
+		></basic-number>
+	</p>
 </div>
 
+<hr />
+
 <!-- Zero and negative examples -->
-<basic-number id="zero-test" value="0"></basic-number>
-<basic-number id="negative-test" value="-1234.5"></basic-number>
+<p>Zero: <basic-number id="zero-test" value="0"></basic-number></p>
+<p>
+	Negative number:
+	<basic-number id="negative-test" value="-1234.5"></basic-number>
+</p>
+
+<hr />
 
 <!-- Invalid configuration examples - should log console errors on page load -->
 <!-- These demonstrate proper error reporting to help developers debug configuration issues -->
 
+<card-callout class="caution">
+	<p>
+		The following examples log errors to the console due to invalid
+		configuration options. Do not copy. Intended to test error reporting.
+	</p>
+</card-callout>
+
 <!-- Invalid JSON syntax - logs "Invalid JSON: SyntaxError..." -->
-<basic-number
-	id="invalid-json-html"
-	value="1234.5"
-	options="{ invalid json }"
-></basic-number>
+<p>
+	Invalid JSON:<br />
+	<basic-number
+		id="invalid-json-html"
+		value="1234.5"
+		options="{ invalid json }"
+	></basic-number>
+</p>
+
+<hr />
 
 <!-- Missing required currency for style="currency" - logs "style='currency' requires a 3-letter ISO currency..." -->
-<basic-number
-	id="missing-currency-html"
-	value="1000"
-	options='{"style":"currency"}'
-></basic-number>
+<p>
+	Missing currency:<br />
+	<basic-number
+		id="missing-currency-html"
+		value="1000"
+		options='{"style":"currency"}'
+	></basic-number>
+</p>
+
+<hr />
 
 <!-- Missing required unit for style="unit" - logs "style='unit' requires a 'unit'..." -->
-<basic-number
-	id="missing-unit-html"
-	value="500"
-	options='{"style":"unit"}'
-></basic-number>
+<p>
+	Missing unit:<br />
+	<basic-number
+		id="missing-unit-html"
+		value="500"
+		options='{"style":"unit"}'
+	></basic-number>
+</p>

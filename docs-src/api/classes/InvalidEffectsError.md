@@ -6,7 +6,7 @@
 
 # Class: InvalidEffectsError
 
-Defined in: [src/errors.ts:65](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/errors.ts#L65)
+Defined in: [src/errors.ts:65](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/errors.ts#L65)
 
 Error thrown when setup function does not return effects
 
@@ -24,7 +24,7 @@ Error thrown when setup function does not return effects
 
 > **new InvalidEffectsError**(`host`, `cause?`): `InvalidEffectsError`
 
-Defined in: [src/errors.ts:70](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/errors.ts#L70)
+Defined in: [src/errors.ts:70](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/errors.ts#L70)
 
 #### Parameters
 

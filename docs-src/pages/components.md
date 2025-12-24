@@ -172,6 +172,9 @@ defineComponent('my-component', {}, {}, ({ host }) => {
 })
 ```
 
+{% /section %}
+
+{% section %}
 ## Managing State with Signals
 
 Le Truc manages state using **signals**, which are atomic reactive states that trigger updates when they change. We use regular properties for public component states:
@@ -214,7 +217,7 @@ defineComponent(
 )
 ```
 
-{% callout class="caution" %}
+{% callout .caution %}
 **Careful**: Attributes **may not be present** on the element or **parsing to the desired type may fail**. To ensure **non-nullability** of signals, Le Truc falls back to neutral defaults if no fallback value is provided:
 
 - `""` (empty string) for `string`
@@ -229,7 +232,6 @@ Le Truc provides several built-in parsers for common attribute types. See the [P
 {% /section %}
 
 {% section %}
-
 ## Selecting Elements
 
 Use the provided selector utilities to find descendant elements within your component:
@@ -287,14 +289,13 @@ The `first()` function expects the matched element to be present at connection t
 
 On the other hand, the `all()` function creates a dynamic array of elements that will be updated whenever the matching elements are added or removed from the component's DOM branch. Le Truc will apply the given setup functions to added elements and run the cleanup functions on removed elements.
 
-{% callout class="tip" %}
+{% callout .tip %}
 **Tip**: The `all()` function is more flexible but also more resource-intensive than `first()`. Prefer `first()` when targeting a single element known to be present at connection time.
 {% /callout %}
 
 {% /section %}
 
 {% section %}
-
 ## Adding Event Listeners
 
 Event listeners allow to respond to user interactions. They are the the main cause for changes in the component's state. Le Truc provides the `on()` function to add event listeners to elements and remove them when the component is disconnected.
@@ -327,7 +328,6 @@ defineComponent(
 {% /section %}
 
 {% section %}
-
 ## Synchronizing State with Effects
 
 Effects **automatically update the DOM** when signals change, avoiding manual DOM manipulation.
@@ -417,7 +417,7 @@ defineComponent(
 )
 ```
 
-{% callout class="tip" %}
+{% callout .tip %}
 **When to use**
 
 - **Use a signal key or a local signal** when the state is part of the component's public interface or internally reused.
