@@ -5,7 +5,7 @@ A Hello World component with an input field to enter the name and a greeting mes
 #### Preview
 
 {% demo %}
-{{content}}
+{{ content }}
 
 {% sources title="Source code" src="./sources/basic-hello.html" /%}
 {% /demo %}
@@ -16,9 +16,33 @@ A Hello World component with an input field to enter the name and a greeting mes
 
 #### Reactive Properties
 
-- `name`: `string` indicating the name of the person to greet.
+{% table %}
+* Name
+* Type
+* Default
+* Description
+---
+* `name`
+* `string`
+* `''`
+* Name of the person to greet
+{% /table %}
 
 #### Descendant Elements
 
-- `input`: `input`, required. `HTMLInputElement` to enter the name.
-- `output`: `output`, required. `HTMLOutputElement` to display the name.
+{% table %}
+* Selector
+* Type
+* Required
+* Description
+---
+* `first('input')`
+* `HTMLInputElement`
+* **required**
+* Text field to enter the name
+---
+* `first('output')`
+* `HTMLOutputElement`
+* **required**
+* Display the name
+{% /table %}

@@ -3,7 +3,7 @@ import { buildOnce } from './build'
 import {
 	ASSETS_DIR,
 	COMPONENTS_DIR,
-	EXAMPLES_OUTPUT_DIR,
+	EXAMPLES_DIR,
 	LAYOUTS_DIR,
 	OUTPUT_DIR,
 	SOURCES_DIR,
@@ -236,7 +236,7 @@ const server = Bun.serve({
 
 		// Example component documentation
 		'/examples/:component': req =>
-			handleStaticFile(getFilePath(EXAMPLES_OUTPUT_DIR, req.params.component)),
+			handleStaticFile(getFilePath(EXAMPLES_DIR, req.params.component)),
 
 		// Component tests mock files
 		'/test/:component/mocks/:mock': req =>

@@ -5,7 +5,7 @@ A button component with a label, a disabled state, and an optional badge, intend
 #### Preview
 
 {% demo %}
-{{content}}
+{{ content }}
 
 {% sources title="Source code" src="../sources/basic-button.html" /%}
 {% /demo %}

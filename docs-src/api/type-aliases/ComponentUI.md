@@ -8,7 +8,7 @@
 
 > **ComponentUI**\<`P`, `U`\> = `U` & `object`
 
-Defined in: [src/component.ts:40](https://github.com/zeixcom/le-truc/blob/97c33707458c1ba34fa25436c665f488718b79cf/src/component.ts#L40)
+Defined in: [src/component.ts:40](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/component.ts#L40)
 
 ## Type Declaration
 

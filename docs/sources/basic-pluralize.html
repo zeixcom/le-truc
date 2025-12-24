@@ -34,7 +34,12 @@
 				<span class="file">basic-pluralize.html</span>
 				<span class="language">html</span>
 			</p>
-			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#88846F">&#x3C;!-- Default example --></span></span>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Try changing the &#x3C;</span><span style="color:#F92672">code</span><span style="color:#F8F8F2">>count&#x3C;/</span><span style="color:#F92672">code</span><span style="color:#F8F8F2">> attribute in the inspector.&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Default example --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Remaining tasks:&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>Well done, all done!&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"some"</span><span style="color:#F8F8F2">></span></span>
@@ -44,21 +49,26 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Test example with plural categories --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Number of people:&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"plural-test"</span><span style="color:#A6E22E"> count</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"1"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>Nobody&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"some"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"count"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"one"</span><span style="color:#F8F8F2">>person&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"other"</span><span style="color:#F8F8F2">>people&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"count"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">> &#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"one"</span><span style="color:#F8F8F2">>person&#x3C;/</span><span style="color:#F92672">span</span></span>
+<span class="line"><span style="color:#F8F8F2">		>&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"other"</span><span style="color:#F8F8F2">>people&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Welsh locale example - demonstrates complex pluralization rules</span></span>
 <span class="line"><span style="color:#88846F">     Welsh has 6 plural categories: zero, one, two, few, many, other</span></span>
 <span class="line"><span style="color:#88846F">     Example: "dog" in Welsh</span></span>
 <span class="line"><span style="color:#88846F">     0 = cŵn (zero), 1 = ci (one), 2 = gi (two), 3 = chi (few), 6 = chi (many), 4/5/7+ = ci (other) --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"cy"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Number of dogs in Welsh:&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"welsh-test"</span><span style="color:#A6E22E"> count</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>Dim anifeiliaid!&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"some"</span><span style="color:#F8F8F2">></span></span>
@@ -73,7 +83,10 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Ordinal example --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Item selected (ordinal number):&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"ordinal-test"</span><span style="color:#A6E22E"> count</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"1"</span><span style="color:#A6E22E"> ordinal</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>None&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"some"</span><span style="color:#F8F8F2">></span></span>
@@ -83,7 +96,10 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Multiple instances example --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Number of items:&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"pluralize-1"</span><span style="color:#A6E22E"> count</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>No items&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"some"</span><span style="color:#F8F8F2">></span></span>
@@ -91,11 +107,14 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Number of filter criteria (irregular plural):&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"pluralize-2"</span><span style="color:#A6E22E"> count</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"5"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>No filters&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"some"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"count"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">> filter criteri&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"one"</span><span style="color:#F8F8F2">>on&#x3C;/</span><span style="color:#F92672">span</span></span>
-<span class="line"><span style="color:#F8F8F2">		>&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"other"</span><span style="color:#F8F8F2">>a&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"count"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		filter criteri&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"one"</span><span style="color:#F8F8F2">>on&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">>&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"other"</span><span style="color:#F8F8F2">>a&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span></code></pre>

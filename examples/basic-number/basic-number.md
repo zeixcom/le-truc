@@ -5,7 +5,7 @@ A component that displays a formatted number according to `Intl.NumberFormat` an
 #### Preview
 
 {% demo %}
-{{content}}
+{{ content }}
 
 {% sources title="Source code" src="./sources/basic-number.html" /%}
 {% /demo %}
@@ -16,12 +16,24 @@ A component that displays a formatted number according to `Intl.NumberFormat` an
 
 #### Reactive Properties
 
-- `value`: `number` indicating the number to format.
+{% table %}
+* Name
+* Type
+* Default
+* Description
+---
+* `value`
+* `number` (float)
+* `0`
+* Number to format
+{% /table %}
 
 #### Attributes
 
-- `lang`: `string` language code to use as locale. If omitted, inherited from ancestor elements.
-- `options`: `JSON` options for `Intl.NumberFormat` to use.
+| Name      | Description                                                                  |
+| ---       | ---                                                                          |
+| `lang`    | Language code to use as locale; if omitted, inherited from ancestor elements |
+| `options` | Options for `Intl.NumberFormat` as JSON                                      |
 
 #### Descendant Elements
 

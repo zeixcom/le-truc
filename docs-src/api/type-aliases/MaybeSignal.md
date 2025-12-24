@@ -8,7 +8,7 @@
 
 > **MaybeSignal**\<`T`\> = `T` \| [`Signal`](Signal.md)\<`T`\> \| [`ComputedCallback`](ComputedCallback.md)\<`T`\>
 
-Defined in: [src/component.ts:61](https://github.com/zeixcom/le-truc/blob/97c33707458c1ba34fa25436c665f488718b79cf/src/component.ts#L61)
+Defined in: [src/component.ts:61](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/component.ts#L61)
 
 ## Type Parameters
 

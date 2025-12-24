@@ -5,7 +5,7 @@ A simple component that displays a pluralized text according to `Intl.PluralRule
 #### Preview
 
 {% demo %}
-{{content}}
+{{ content }}
 
 {% sources title="Source code" src="./sources/basic-pluralize.html" /%}
 {% /demo %}
@@ -16,25 +16,39 @@ A simple component that displays a pluralized text according to `Intl.PluralRule
 
 #### Reactive Properties
 
-- `count`: Positive integer `number` indicating the count as basis for pluralization.
+{% table %}
+* Name
+* Type
+* Default
+* Description
+---
+* `count`
+* `number` (positive integer)
+* `0`
+* Current count
+{% /table %}
 
 #### Attributes
 
-- `lang`: `string` language code to use as locale. If omitted, inherited from ancestor elements.
-- `ordinal`: `boolean` indicating whether to use ordinal plural rules.
+| Name      | Description                                                                              |
+| ---       | ---                                                                                      |
+| `lang`    | Language code to use as locale; if omitted, inherited from ancestor elements             |
+| `ordinal` | Boolean attribute indicating whether to use ordinal type. If omitted, uses cardinal type |
 
 #### Descendant Elements
 
-Arbitrary `HTMLElement`s with the following classes, that will be hidden or shown according to the plural rules that apply:
+Arbitrary `HTMLElement`s with the following classes, all optional:
 
-- `.count`: will hold the count value.
-- `.none`: shown if count is 0.
-- `.some`: shown if count is greater than 0.
-- `.zero`: shown if count is 0 if locale has plural rules for zero.
-- `.one`: shown if count is 1.
-- `.two`: shown if count is 2 if locale has plural rules for two.
-- `.few`: shown if count is few according to plural rules.
-- `.many`: shown if count is many according to plural rules.
-- `.other`: shown if count is other.
+| Selector           | Description                                    |
+| ---                | ---                                            |
+| `first('.count')`  | Displays the count value                       |
+| `first('.none')`   | Shown if count is 0                            |
+| `first('.some')`   | Shown if count is greater than 0               |
+| `first('.zero')`   | Shown if count matches `zero` plural category  |
+| `first('.one')`    | Shown if count matches `one` plural category   |
+| `first('.two')`    | Shown if count matches `two` plural category   |
+| `first('.few')`    | Shown if count matches `few` plural category   |
+| `first('.many')`   | Shown if count matches `many` plural category  |
+| `first('.other')`  | Shown if count matches `other` plural category |
 
-Depending on locales, a different set of classes may be used. For example, `new Intl.PluralRules('en').resolvedOptions().pluralCategories` only includes `one` and `other`.
+The component has effects for classes `count`, `none` and `some` regardless of plural categories. All other classes toggle visibility only if they are part of the plural categories for the given locale. For example, `new Intl.PluralRules('en').resolvedOptions().pluralCategories` only includes `one` and `other`, or for ordinal type: `one`, `two`, `few`, and `other`.

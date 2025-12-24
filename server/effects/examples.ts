@@ -5,7 +5,7 @@ import {
 	createEffect,
 	UNSET,
 } from '@zeix/cause-effect'
-import { COMPONENTS_DIR, EXAMPLES_OUTPUT_DIR } from '../config'
+import { COMPONENTS_DIR, CONTENT_MARKER, EXAMPLES_DIR } from '../config'
 import { componentMarkdown } from '../file-signals'
 import { fileExists, getFilePath, writeFileSafe } from '../io'
 import markdocConfig from '../markdoc/markdoc.config'
@@ -15,7 +15,7 @@ import markdocConfig from '../markdoc/markdoc.config'
  *
  * This effect:
  * 1. Watches for component documentation markdown files (*.md)
- * 2. Processes them with Markdoc, replacing {{content}} with component HTML
+ * 2. Processes them with Markdoc, replacing {{ content }} with component HTML
  * 3. Outputs HTML fragments to docs/examples/ for lazy loading
  */
 
@@ -55,10 +55,7 @@ const componentExamples: Computed<Map<string, ExampleFile>> = createComputed(
 			}
 
 			// Output path in docs/examples/
-			const outputPath = getFilePath(
-				EXAMPLES_OUTPUT_DIR,
-				`${componentName}.html`,
-			)
+			const outputPath = getFilePath(EXAMPLES_DIR, `${componentName}.html`)
 
 			exampleFiles.set(componentName, {
 				componentName,
@@ -89,7 +86,7 @@ const processedExamples: Computed<Map<string, string>> = createComputed(
 
 				// Replace {{content}} placeholder with actual HTML wrapped in a fence block
 				const processedContent = example.content.replace(
-					/\{\{\s*content\s*\}\}/g,
+					CONTENT_MARKER,
 					`\`\`\`html\n${componentHtml}\n\`\`\``,
 				)
 
