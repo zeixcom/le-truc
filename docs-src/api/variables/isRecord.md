@@ -8,7 +8,7 @@
 
 > `const` **isRecord**: \<`T`\>(`value`) => `value is T`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:8
+Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:11
 
 ## Type Parameters
 
@@ -32,7 +32,7 @@ Le Truc
 
 ## Version
 
-0.15.0
+0.15.1
 
 ## Author
 

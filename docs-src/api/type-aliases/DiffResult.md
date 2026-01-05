@@ -4,11 +4,11 @@
 
 [@zeix/le-truc](../globals.md) / DiffResult
 
-# Type Alias: DiffResult\<T\>
+# Type Alias: DiffResult
 
-> **DiffResult**\<`T`\> = `object`
+> **DiffResult** = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:7
+Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:3
 
 ## Name
 
@@ -16,33 +16,27 @@ Le Truc
 
 ## Version
 
-0.15.0
+0.15.1
 
 ## Author
 
 Esther Brunner
 
-## Type Parameters
-
-### T
-
-`T` *extends* `UnknownRecord` \| `UnknownArray` = `UnknownRecord`
-
 ## Properties
 
 ### add
 
-> **add**: `PartialRecord`\<`T`\>
+> **add**: `UnknownRecord`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:9
+Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:5
 
 ***
 
 ### change
 
-> **change**: `PartialRecord`\<`T`\>
+> **change**: `UnknownRecord`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:10
+Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:6
 
 ***
 
@@ -50,12 +44,12 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:10
 
 > **changed**: `boolean`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:8
+Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:4
 
 ***
 
 ### remove
 
-> **remove**: `PartialRecord`\<`T`\>
+> **remove**: `UnknownRecord`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:11
+Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:7

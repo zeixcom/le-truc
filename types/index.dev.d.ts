@@ -1,9 +1,9 @@
 /**
  * @name Le Truc
- * @version 0.15.0
+ * @version 0.15.1
  * @author Esther Brunner
  */
-export { batch, CircularDependencyError, type Cleanup, type Computed, type ComputedCallback, createComputed, createEffect, createState, createStore, type DiffResult, diff, type EffectCallback, InvalidCallbackError, InvalidSignalValueError, isAbortError, isAsyncFunction, isComputed, isEqual, isFunction, isMutableSignal, isNumber, isRecord, isRecordOrArray, isSignal, isState, isStore, isString, isSymbol, type MatchHandlers, type MaybeCleanup, match, NullishSignalValueError, type ResolveResult, resolve, type Signal, type State, type Store, StoreKeyExistsError, StoreKeyRangeError, StoreKeyReadonlyError, toError, toSignal, UNSET, valueString, } from '@zeix/cause-effect';
+export { batchSignalWrites, CircularDependencyError, type Cleanup, type Collection, type Computed, createComputed, createEffect, createError, createSignal, createStore, DerivedCollection, type DiffResult, DuplicateKeyError, diff, type EffectCallback, type Guard, InvalidCallbackError, InvalidCollectionSourceError, InvalidSignalValueError, isAbortError, isAsyncFunction, isComputed, isEqual, isFunction, isMutableSignal, isNumber, isRecord, isRecordOrArray, isSignal, isState, isStore, isString, isSymbol, type KeyConfig, List, type MatchHandlers, type MaybeCleanup, Memo, match, NullishSignalValueError, ReadonlySignalError, Ref, type ResolveResult, resolve, type Signal, State, type Store, Task, UNSET, valueString, } from '@zeix/cause-effect';
 export { type Component, type ComponentProp, type ComponentProps, type ComponentSetup, type ComponentUI, defineComponent, type Initializers, type MaybeSignal, type ReservedWords, } from './src/component';
 export { CONTEXT_REQUEST, type Context, ContextRequestEvent, type ContextType, provideContexts, requestContext, type UnknownContext, } from './src/context';
 export { type Effect, type Effects, type ElementEffects, type ElementUpdater, type Reactive, runEffects, runElementEffects, updateElement, } from './src/effects';
@@ -22,6 +22,5 @@ export { asJSON } from './src/parsers/json';
 export { asInteger, asNumber } from './src/parsers/number';
 export { asEnum, asString } from './src/parsers/string';
 export { schedule } from './src/scheduler';
-export { type Collection, type CollectionListener, createCollection, isCollection, } from './src/signals/collection';
 export { createSensor, type SensorEvents } from './src/signals/sensor';
 export type { ElementFromKey, ElementQueries, UI } from './src/ui';

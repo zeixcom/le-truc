@@ -1,13 +1,13 @@
 import {
-	batch,
+	batchSignalWrites,
 	type Component,
-	createComputed,
 	createSensor,
-	createState,
 	defineComponent,
+	Memo,
 	on,
 	pass,
 	read,
+	State,
 	setAttribute,
 	setProperty,
 	setText,
@@ -65,8 +65,8 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 		const errorId = error?.id
 		const descriptionId = description?.id
 
-		const showPopup = createState(false)
-		const isExpanded = createComputed(
+		const showPopup = new State(false)
+		const isExpanded = new Memo(
 			() => showPopup.get() && listbox.options.length > 0,
 		)
 
@@ -89,7 +89,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 				setProperty('ariaExpanded', () => String(isExpanded.get())),
 				on('input', () => {
 					textbox.checkValidity()
-					batch(() => {
+					batchSignalWrites(() => {
 						host.value = textbox.value
 						host.error = textbox.validationMessage ?? ''
 						showPopup.set(true)
@@ -112,7 +112,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 					if (target instanceof HTMLInputElement) {
 						textbox.value = target.value
 						textbox.checkValidity()
-						batch(() => {
+						batchSignalWrites(() => {
 							host.value = target.value
 							host.error = textbox.validationMessage ?? ''
 							showPopup.set(false)

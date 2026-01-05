@@ -8,20 +8,15 @@
 
 > `const` **createStore**: \<`T`\>(`initialValue`) => [`Store`](../type-aliases/Store.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/store.d.ts:56
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/store.d.ts:42
 
 Create a new store with deeply nested reactive properties
-
-Supports both objects and arrays as initial values. Arrays are converted
-to records internally for storage but maintain their array type through
-the .get() method, which automatically converts objects with consecutive
-numeric keys back to arrays.
 
 ## Type Parameters
 
 ### T
 
-`T` *extends* `UnknownRecord` \| `UnknownArray`
+`T` *extends* `UnknownRecord`
 
 ## Parameters
 
@@ -29,13 +24,13 @@ numeric keys back to arrays.
 
 `T`
 
-initial object or array value of the store
+Initial object or array value of the store
 
 ## Returns
 
 [`Store`](../type-aliases/Store.md)\<`T`\>
 
-- new store with reactive properties that preserves the original type T
+- New store with reactive properties that preserves the original type T
 
 ## Since
 

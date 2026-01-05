@@ -20,7 +20,7 @@ Le Truc
 
 ## Version
 
-0.15.0
+0.15.1
 
 ## Author
 

@@ -1,11 +1,12 @@
 import {
-	createComputed,
-	isComputedCallback,
 	isFunction,
+	isMemoCallback,
 	isRecord,
 	isSignal,
 	isString,
 	type MaybeCleanup,
+	Memo,
+	type MemoCallback,
 	UNSET,
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from '../component'
@@ -56,11 +57,13 @@ const pass =
 			if (isSignal(value)) return value.get
 			const fn =
 				isString(value) && value in host
-					? () => host[value as keyof typeof host]
-					: isComputedCallback(value)
+					? ((() => host[value as keyof typeof host]) as MemoCallback<
+							unknown & {}
+						>)
+					: isMemoCallback(value)
 						? value
 						: undefined
-			return fn ? createComputed(fn).get : undefined
+			return fn ? new Memo(fn).get : undefined
 		}
 
 		// Iterate through reactives

@@ -1,24 +1,29 @@
 /**
  * @name Le Truc
- * @version 0.15.0
+ * @version 0.15.1
  * @author Esther Brunner
  */
 
 // From Cause & Effect
 export {
-	batch,
+	batchSignalWrites,
 	CircularDependencyError,
 	type Cleanup,
+	type Collection,
 	type Computed,
-	type ComputedCallback,
 	createComputed,
 	createEffect,
-	createState,
+	createError,
+	createSignal,
 	createStore,
+	DerivedCollection,
 	type DiffResult,
+	DuplicateKeyError,
 	diff,
 	type EffectCallback,
+	type Guard,
 	InvalidCallbackError,
+	InvalidCollectionSourceError,
 	InvalidSignalValueError,
 	isAbortError,
 	isAsyncFunction,
@@ -34,20 +39,21 @@ export {
 	isStore,
 	isString,
 	isSymbol,
+	type KeyConfig,
+	List,
 	type MatchHandlers,
 	type MaybeCleanup,
+	Memo,
 	match,
 	NullishSignalValueError,
+	ReadonlySignalError,
+	Ref,
 	type ResolveResult,
 	resolve,
 	type Signal,
-	type State,
+	State,
 	type Store,
-	StoreKeyExistsError,
-	StoreKeyRangeError,
-	StoreKeyReadonlyError,
-	toError,
-	toSignal,
+	Task,
 	UNSET,
 	valueString,
 } from '@zeix/cause-effect'
@@ -117,11 +123,5 @@ export { asJSON } from './src/parsers/json'
 export { asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'
 export { schedule } from './src/scheduler'
-export {
-	type Collection,
-	type CollectionListener,
-	createCollection,
-	isCollection,
-} from './src/signals/collection'
 export { createSensor, type SensorEvents } from './src/signals/sensor'
 export type { ElementFromKey, ElementQueries, UI } from './src/ui'

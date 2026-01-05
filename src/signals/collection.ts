@@ -1,30 +1,32 @@
 import {
+	batchSignalWrites,
 	type Cleanup,
-	isSymbol,
-	notify,
-	subscribe,
+	type Collection,
+	type CollectionCallback,
+	DerivedCollection,
+	HOOK_ADD,
+	HOOK_CHANGE,
+	HOOK_REMOVE,
+	HOOK_SORT,
+	HOOK_WATCH,
+	type Hook,
+	type HookCallback,
+	type HookCallbacks,
+	InvalidHookError,
+	isEqual,
+	isFunction,
+	isHandledHook,
+	isString,
+	type KeyConfig,
+	notifyWatchers,
+	Ref,
+	subscribeActiveWatcher,
+	TYPE_COLLECTION,
+	triggerHook,
 	type Watcher,
 } from '@zeix/cause-effect'
 import type { ElementFromSelector } from '../ui'
 import { isElement } from '../util'
-
-/* === Types === */
-
-type CollectionListener<E extends Element> = (changes: readonly E[]) => void
-
-type Collection<E extends Element> = {
-	readonly [Symbol.toStringTag]: 'Collection'
-	readonly [Symbol.isConcatSpreadable]: true
-	[Symbol.iterator](): IterableIterator<E>
-	[n: number]: E
-	get(): E[]
-	on(type: 'add' | 'remove', listener: CollectionListener<E>): Cleanup
-	readonly length: number
-}
-
-/* === Constants === */
-
-const TYPE_COLLECTION = 'Collection'
 
 /* === Internal Functions === */
 
@@ -54,6 +56,237 @@ const extractAttributes = (selector: string): string[] => {
 	return [...attributes]
 }
 
+/* === Class === */
+
+class ElementCollection<T extends Element> implements Collection<T> {
+	#watchers = new Set<Watcher>()
+	#signals = new Map<string, Ref<T>>()
+	#hookCallbacks: HookCallbacks = {}
+	#parent: ParentNode
+	#selector: string
+	#observer: MutationObserver | undefined
+	#order: string[] = []
+	#generateKey: (item: T) => string
+
+	constructor(parent: ParentNode, selector: string, keyConfig?: KeyConfig<T>) {
+		this.#parent = parent
+		this.#selector = selector
+
+		let keyCounter = 0
+		this.#generateKey = isString(keyConfig)
+			? () => `${keyConfig}${keyCounter++}`
+			: isFunction<string>(keyConfig)
+				? (element: T) => keyConfig(element)
+				: () => String(keyCounter++)
+	}
+
+	#keyFor(element: T): string | undefined {
+		for (const [key, signal] of this.#signals) {
+			if (signal.get() === element) return key
+		}
+		return undefined
+	}
+
+	#observe() {
+		Array.from(this.#parent.querySelectorAll<T>(this.#selector)).forEach(
+			element => {
+				const key = this.#generateKey(element)
+				this.#signals.set(key, new Ref(element))
+			},
+		)
+
+		const findMatches = (nodes: NodeList) => {
+			const elements = Array.from(nodes).filter(isElement)
+			const found: T[] = []
+			for (const element of elements) {
+				if (element.matches(this.#selector)) found.push(element as T)
+				found.push(...Array.from(element.querySelectorAll<T>(this.#selector)))
+			}
+			return found
+		}
+
+		this.#observer = new MutationObserver(mutations => {
+			const addedElements: T[] = []
+			const removedElements: T[] = []
+			const addedKeys: string[] = []
+			const changedKeys = new Set<string>()
+			const removedKeys: string[] = []
+			let changed = false
+
+			for (const mutation of mutations) {
+				if (mutation.type === 'childList') {
+					const target = mutation.target as T
+					if (isElement(target)) {
+						// maybe observed match -> change
+						const key = this.#keyFor(target)
+						if (key) changedKeys.add(key)
+					}
+					if (mutation.addedNodes.length)
+						// Maybe new matches in childList -> add
+						addedElements.push(...findMatches(mutation.addedNodes))
+					if (mutation.removedNodes.length)
+						// Maybe removed matches in childList -> remove
+						removedElements.push(...findMatches(mutation.removedNodes))
+				} else if (mutation.type === 'attributes') {
+					const target = mutation.target as T
+					if (isElement(target)) {
+						const key = this.#keyFor(target)
+						const isMatching = target.matches(this.#selector)
+						if (key && !isMatching) {
+							// No longer matching -> remove
+							this.#signals.delete(key)
+							removedElements.push(target)
+							removedKeys.push(key)
+						} else if (key && isMatching) {
+							// Still matching -> change
+							changedKeys.add(key)
+						} else if (!key && isMatching) {
+							// Matching for the first time -> add
+							const newKey = this.#generateKey(target)
+							this.#signals.set(newKey, new Ref(target))
+							addedElements.push(target)
+							addedKeys.push(newKey)
+						}
+					}
+				}
+			}
+
+			batchSignalWrites(() => {
+				if (addedKeys.length || removedKeys.length) {
+					changed = true
+					if (addedKeys.length)
+						triggerHook(this.#hookCallbacks[HOOK_ADD], addedKeys)
+					if (removedKeys.length)
+						triggerHook(this.#hookCallbacks[HOOK_REMOVE], removedKeys)
+				}
+
+				if (this.#hookCallbacks[HOOK_CHANGE]?.size) {
+					triggerHook(this.#hookCallbacks[HOOK_CHANGE], Array.from(changedKeys))
+					for (const key of changedKeys) {
+						if (key) this.#signals.get(key)?.notify()
+					}
+				}
+
+				const newOrder = Array.from(
+					this.#parent.querySelectorAll<T>(this.#selector),
+				)
+					.map(element => this.#keyFor(element))
+					.filter(key => key !== undefined)
+
+				if (!isEqual(this.#order, newOrder)) {
+					this.#order = newOrder
+					changed = true
+					triggerHook(this.#hookCallbacks[HOOK_SORT], newOrder)
+				}
+
+				if (changed) notifyWatchers(this.#watchers)
+			})
+		})
+
+		const observerConfig: MutationObserverInit = this.#hookCallbacks[
+			HOOK_CHANGE
+		]?.size
+			? {
+					attributes: true,
+					childList: true,
+					subtree: true,
+				}
+			: {
+					childList: true,
+					subtree: true,
+				}
+		if (!this.#hookCallbacks[HOOK_CHANGE]?.size) {
+			const observedAttributes = extractAttributes(this.#selector)
+			if (observedAttributes.length) {
+				observerConfig.attributes = true
+				observerConfig.attributeFilter = observedAttributes
+			}
+		}
+		this.#observer.observe(this.#parent, observerConfig)
+	}
+
+	get [Symbol.toStringTag](): 'Collection' {
+		return TYPE_COLLECTION
+	}
+
+	get [Symbol.isConcatSpreadable](): true {
+		return true
+	}
+
+	*[Symbol.iterator](): IterableIterator<Ref<T>> {
+		for (const key of this.#order) {
+			const element = this.#signals.get(key)
+			if (element) yield element
+		}
+	}
+
+	keys(): IterableIterator<string> {
+		return this.#order.values()
+	}
+
+	get(): T[] {
+		subscribeActiveWatcher(this.#watchers, this.#hookCallbacks[HOOK_WATCH])
+		if (!this.#observer) this.#observe()
+		return this.#order
+			.map(key => this.#signals.get(key)?.get())
+			.filter(element => element !== undefined)
+	}
+
+	at(index: number): Ref<T> | undefined {
+		return this.#signals.get(this.#order[index])
+	}
+
+	byKey(key: string): Ref<T> | undefined {
+		return this.#signals.get(key)
+	}
+
+	keyAt(index: number): string | undefined {
+		return this.#order[index]
+	}
+
+	indexOfKey(key: string): number {
+		return this.#order.indexOf(key)
+	}
+
+	on(type: Hook, callback: HookCallback): Cleanup {
+		if (
+			isHandledHook(type, [
+				HOOK_ADD,
+				HOOK_CHANGE,
+				HOOK_REMOVE,
+				HOOK_SORT,
+				HOOK_WATCH,
+			])
+		) {
+			this.#hookCallbacks[type] ||= new Set()
+			this.#hookCallbacks[type].add(callback)
+			if (!this.#observer) this.#observe()
+			return () => {
+				this.#hookCallbacks[type]?.delete(callback)
+			}
+		}
+		throw new InvalidHookError(TYPE_COLLECTION, type)
+	}
+
+	deriveCollection<R extends {}>(
+		callback: (sourceValue: T) => R,
+	): DerivedCollection<R, T>
+	deriveCollection<R extends {}>(
+		callback: (sourceValue: T, abort: AbortSignal) => Promise<R>,
+	): DerivedCollection<R, T>
+	deriveCollection<R extends {}>(
+		callback: CollectionCallback<R, T>,
+	): DerivedCollection<R, T> {
+		return new DerivedCollection(this, callback)
+	}
+
+	get length(): number {
+		subscribeActiveWatcher(this.#watchers, this.#hookCallbacks[HOOK_WATCH])
+		if (!this.#observer) this.#observe()
+		return this.#signals.size
+	}
+}
+
 /* === Exported Functions === */
 
 /**
@@ -64,190 +297,22 @@ const extractAttributes = (selector: string): string[] => {
  * @param selector - The CSS selector to match elements
  * @returns A collection signal of elements
  */
-function createCollection<S extends string>(
+function createElementCollection<S extends string>(
 	parent: ParentNode,
 	selector: S,
-): Collection<ElementFromSelector<S>>
-function createCollection<E extends Element>(
+	keyConfig?: KeyConfig<ElementFromSelector<S>>,
+): ElementCollection<ElementFromSelector<S>>
+function createElementCollection<E extends Element>(
 	parent: ParentNode,
 	selector: string,
-): Collection<E>
-function createCollection<S extends string>(
+	keyConfig?: KeyConfig<E>,
+): ElementCollection<E>
+function createElementCollection<S extends string>(
 	parent: ParentNode,
 	selector: S,
-): Collection<ElementFromSelector<S>> {
-	const watchers: Set<Watcher> = new Set()
-	const listeners = {
-		add: new Set<CollectionListener<ElementFromSelector<S>>>(),
-		remove: new Set<CollectionListener<ElementFromSelector<S>>>(),
-	}
-	let elements: ElementFromSelector<S>[] = []
-	let observer: MutationObserver | undefined
-
-	const findMatches = (nodes: NodeList) => {
-		const elements = Array.from(nodes).filter(isElement)
-		const found: ElementFromSelector<S>[] = []
-		for (const element of elements) {
-			if (element.matches(selector))
-				found.push(element as ElementFromSelector<S>)
-			found.push(
-				...Array.from(
-					element.querySelectorAll<ElementFromSelector<S>>(selector),
-				),
-			)
-		}
-		return found
-	}
-
-	const notifyListeners = (
-		listeners: Set<CollectionListener<ElementFromSelector<S>>>,
-		elements: ElementFromSelector<S>[],
-	) => {
-		Object.freeze(elements)
-		for (const listener of listeners) listener(elements)
-	}
-
-	const observe = () => {
-		elements = Array.from(
-			parent.querySelectorAll<ElementFromSelector<S>>(selector),
-		)
-
-		observer = new MutationObserver(mutations => {
-			const added: ElementFromSelector<S>[] = []
-			const removed: ElementFromSelector<S>[] = []
-
-			for (const mutation of mutations) {
-				if (mutation.type === 'childList') {
-					if (mutation.addedNodes.length)
-						added.push(...findMatches(mutation.addedNodes))
-					if (mutation.removedNodes.length)
-						removed.push(...findMatches(mutation.removedNodes))
-				} else if (mutation.type === 'attributes') {
-					const target = mutation.target as ElementFromSelector<S>
-					if (isElement(target)) {
-						const wasMatching = elements.includes(target)
-						const isMatching = target.matches(selector)
-						if (wasMatching && !isMatching) removed.push(target)
-						else if (!wasMatching && isMatching) added.push(target)
-					}
-				}
-			}
-
-			if (added.length || removed.length) {
-				elements = Array.from(
-					parent.querySelectorAll<ElementFromSelector<S>>(selector),
-				)
-				notify(watchers)
-			}
-			if (added.length) notifyListeners(listeners.add, added)
-			if (removed.length) notifyListeners(listeners.remove, removed)
-		})
-		const observerConfig: MutationObserverInit = {
-			childList: true,
-			subtree: true,
-		}
-		const observedAttributes = extractAttributes(selector)
-		if (observedAttributes.length) {
-			observerConfig.attributes = true
-			observerConfig.attributeFilter = observedAttributes
-		}
-		observer.observe(parent, observerConfig)
-	}
-
-	const collection = {} as Collection<ElementFromSelector<S>>
-	Object.defineProperties(collection, {
-		[Symbol.toStringTag]: {
-			value: TYPE_COLLECTION,
-		},
-		[Symbol.isConcatSpreadable]: {
-			value: true,
-		},
-		[Symbol.iterator]: {
-			value: function* () {
-				for (const element of elements) yield element
-			},
-		},
-		get: {
-			value: () => {
-				subscribe(watchers)
-				if (!observer) observe()
-				return elements
-			},
-		},
-		on: {
-			value: (
-				type: 'add' | 'remove',
-				listener: CollectionListener<ElementFromSelector<S>>,
-			) => {
-				const listenerSet = listeners[type]
-				if (!listenerSet)
-					throw new TypeError(`Invalid change notification type: ${type}`)
-				listenerSet.add(listener)
-				if (!observer) observe()
-				return () => listenerSet.delete(listener)
-			},
-		},
-		length: {
-			get: () => {
-				subscribe(watchers)
-				if (!observer) observe()
-				return elements.length
-			},
-		},
-	})
-
-	return new Proxy(collection, {
-		get(target, prop) {
-			if (prop in target) return Reflect.get(target, prop)
-			if (isSymbol(prop)) return undefined
-
-			const index = Number(prop)
-			if (Number.isInteger(index)) return elements[index]
-
-			return undefined
-		},
-		has(target, prop) {
-			if (prop in target) return true
-			if (Number.isInteger(Number(prop))) return !!elements[Number(prop)]
-			return false
-		},
-		ownKeys(target) {
-			const staticKeys = Reflect.ownKeys(target)
-			const indexes = Object.keys(elements).map(key => String(key))
-			return [...new Set([...indexes, ...staticKeys])]
-		},
-		getOwnPropertyDescriptor(target, prop) {
-			if (prop in target) return Reflect.getOwnPropertyDescriptor(target, prop)
-
-			const element = elements[Number(prop)]
-			return element
-				? {
-						enumerable: true,
-						configurable: true,
-						writable: true,
-						value: element,
-					}
-				: undefined
-		},
-	})
+	keyConfig?: KeyConfig<ElementFromSelector<S>>,
+): ElementCollection<ElementFromSelector<S>> {
+	return new ElementCollection(parent, selector, keyConfig)
 }
 
-/**
- * Check if a value is a collection signal
- *
- * @since 0.15.0
- * @param {unknown} value - Value to check
- * @returns {boolean} - True if value is a collection signal, false otherwise
- */
-const isCollection = <E extends Element = Element>(
-	value: unknown,
-): value is Collection<E> =>
-	Object.prototype.toString.call(value) === `[object Collection]`
-
-export {
-	type Collection,
-	type CollectionListener,
-	TYPE_COLLECTION,
-	createCollection,
-	isCollection,
-}
+export { createElementCollection, ElementCollection }

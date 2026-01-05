@@ -6,9 +6,9 @@
 
 # Variable: diff()
 
-> `const` **diff**: \<`T`\>(`oldObj`, `newObj`) => [`DiffResult`](../type-aliases/DiffResult.md)\<`T`\>
+> `const` **diff**: \<`T`\>(`oldObj`, `newObj`) => [`DiffResult`](../type-aliases/DiffResult.md)
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:31
+Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:27
 
 Compares two records and returns a result object containing the differences.
 
@@ -16,25 +16,25 @@ Compares two records and returns a result object containing the differences.
 
 ### T
 
-`T` *extends* `UnknownRecord` \| `UnknownArray`
+`T` *extends* `UnknownRecord`
 
 ## Parameters
 
 ### oldObj
 
-`T` *extends* `UnknownArray` ? `ArrayToRecord`\<`T`\> : `T`
+`T`
 
 The old record to compare
 
 ### newObj
 
-`T` *extends* `UnknownArray` ? `ArrayToRecord`\<`T`\> : `T`
+`T`
 
 The new record to compare
 
 ## Returns
 
-[`DiffResult`](../type-aliases/DiffResult.md)\<`T`\>
+[`DiffResult`](../type-aliases/DiffResult.md)
 
 The result of the comparison
 

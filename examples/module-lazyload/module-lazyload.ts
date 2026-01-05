@@ -1,11 +1,11 @@
 import {
 	asString,
 	type Component,
-	createComputed,
 	dangerouslySetInnerHTML,
 	defineComponent,
 	setText,
 	show,
+	Task,
 	toggleClass,
 } from '../..'
 import { fetchWithCache, isRecursiveURL, isValidURL } from '../_common/fetch'
@@ -41,7 +41,7 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 	}),
 	ui => {
 		const { host } = ui
-		const result = createComputed<{
+		const result = new Task<{
 			ok: boolean
 			value: string
 			error: string

@@ -6,9 +6,9 @@
 
 # Variable: isComputed()
 
-> `const` **isComputed**: \<`T`\>(`value`) => `value is Computed<T>`
+> `const` **isComputed**: \<`T`\>(`value`) => `value is Memo<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/computed.d.ts:24
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/computed.d.ts:95
 
 Check if a value is a computed signal
 
@@ -28,9 +28,9 @@ Value to check
 
 ## Returns
 
-`value is Computed<T>`
+`value is Memo<T>`
 
-- true if value is a computed signal, false otherwise
+- True if value is a computed signal, false otherwise
 
 ## Since
 

@@ -1,24 +1,60 @@
-import { createStore, type Store, UNSET } from '@zeix/cause-effect'
+import { HOOK_WATCH, List } from '@zeix/cause-effect'
 import { Glob } from 'bun'
+import { createHash } from 'crypto'
+import { existsSync, watch } from 'fs'
+import { stat } from 'fs/promises'
+import { basename, join } from 'path'
 import { FileInfo } from './file-signals'
-import {
-	createFileInfo,
-	getFilePath,
-	isPlaywrightRunning,
-	watchDirectory,
-} from './io'
 
 /* === Exported Functions === */
 
-export const watchFiles = async (
+const isPlaywrightRunning = (): boolean => {
+	return !!(
+		process.env.PLAYWRIGHT_TEST_BASE_URL
+		|| process.env.PLAYWRIGHT
+		|| process.env.PWTEST_SKIP_TEST_OUTPUT
+		|| process.argv.some(arg => arg.includes('playwright'))
+	)
+}
+
+const getFileInfo = async (filePath: string): Promise<FileInfo> => {
+	const filename = basename(filePath)
+	const content = await Bun.file(filePath).text()
+	const hash = createHash('sha256')
+		.update(content, 'utf8')
+		.digest('hex')
+		.slice(0, 16)
+	const stats = await stat(filePath)
+
+	return {
+		path: filePath,
+		filename,
+		content,
+		hash,
+		lastModified: stats.mtimeMs,
+		size: stats.size,
+		exists: true,
+	}
+}
+
+export const createFileList = async (
 	directory: string,
-	inlclude: string,
+	include: string,
 	exclude?: string,
-): Promise<Store<Record<string, FileInfo>>> => {
-	const glob = new Glob(inlclude)
+): Promise<List<FileInfo>> => {
+	const glob = new Glob(include)
 	const excludeGlob = exclude ? new Glob(exclude) : null
-	const store = createStore<Record<string, FileInfo>>(UNSET)
-	const playwrightDetected = isPlaywrightRunning()
+	const watchFiles = !isPlaywrightRunning()
+	const files = glob.scan(directory)
+
+	const fileList = new List<FileInfo>([], item => item.path)
+	for await (const file of files) {
+		if (excludeGlob && excludeGlob.match(file)) continue
+
+		const filePath = join(directory, file)
+		const fileInfo = await getFileInfo(filePath)
+		if (fileInfo.exists) fileList.add(fileInfo)
+	}
 
 	const isMatching = (file: string): boolean => {
 		if (!glob.match(file)) return false
@@ -26,52 +62,30 @@ export const watchFiles = async (
 		return true
 	}
 
-	const files: Record<string, FileInfo> = {}
-	try {
-		for await (const file of glob.scan(directory)) {
-			// Apply exclusion filter
-			if (excludeGlob && excludeGlob.match(file)) continue
+	if (watchFiles) {
+		fileList.on(HOOK_WATCH, () => {
+			const watcher = watch(
+				directory,
+				{ recursive: include.includes('**/'), persistent: true },
+				async (event, filename) => {
+					if (!filename || !isMatching(filename)) return
 
-			const filename = file.split(/[\\/]/).pop() || ''
-			const filePath = getFilePath(directory, file)
-			const fileInfo = await createFileInfo(filePath, filename)
-			if (fileInfo.exists) files[filePath] = fileInfo
-		}
-		store.set(files)
-	} catch (error) {
-		console.error(`Error listing files in ${directory}:`, error)
+					const filePath = join(directory, filename)
+					if (event === 'rename' && !existsSync(filePath)) {
+						fileList.remove(filePath)
+					} else {
+						const fileInfo = await getFileInfo(filePath)
+						const fileSignal = fileList.byKey(filePath)
+						if (fileSignal) fileSignal.set(fileInfo)
+						else fileList.add(fileInfo)
+					}
+				},
+			)
+			return () => {
+				watcher.close()
+			}
+		})
 	}
 
-	if (playwrightDetected) {
-		console.log(
-			'🎭 Skipping file watching for directory (Playwright detected):',
-			directory,
-		)
-	} else {
-		console.log('Watching files in directory:', directory)
-		watchDirectory(
-			directory,
-			inlclude.includes('**/'),
-			isMatching,
-			async (filePath, filename) => {
-				const fileInfo = await createFileInfo(filePath, filename)
-				const currentFiles = store.get()
-				if (currentFiles !== UNSET) {
-					const updatedFiles = { ...currentFiles }
-					updatedFiles[filePath] = fileInfo
-					store.set(updatedFiles)
-				}
-			},
-			filePath => {
-				const currentFiles = store.get()
-				if (currentFiles !== UNSET) {
-					const updatedFiles = { ...currentFiles }
-					delete updatedFiles[filePath]
-					store.set(updatedFiles)
-				}
-			},
-		)
-	}
-
-	return store
+	return fileList
 }

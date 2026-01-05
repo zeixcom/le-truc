@@ -2,7 +2,7 @@ import Markdoc from '@markdoc/markdoc'
 import {
 	type Computed,
 	createComputed,
-	type Store,
+	type List,
 	UNSET,
 } from '@zeix/cause-effect'
 import { codeToHtml } from 'shiki'
@@ -16,7 +16,7 @@ import {
 	SRC_DIR,
 	TEMPLATES_DIR,
 } from './config'
-import { watchFiles } from './file-watcher'
+import { createFileList } from './file-watcher'
 import { getRelativePath } from './io'
 import markdocConfig from './markdoc/markdoc.config'
 import { collectHeadings } from './markdoc/utils'
@@ -127,12 +127,12 @@ function extractFrontmatter(content: string): {
 /* === Exported Signals === */
 
 const docsMarkdown: {
-	sources: Store<Record<string, FileInfo>>
+	sources: List<FileInfo>
 	processed: Computed<Map<string, FileInfo & { metadata: PageMetadata }>>
 	pageInfos: Computed<PageInfo[]>
 	fullyProcessed: Computed<Map<string, ProcessedMarkdownFile>>
 } = await (async () => {
-	const sources = await watchFiles(PAGES_DIR, '*.md')
+	const sources = await createFileList(PAGES_DIR, '*.md')
 
 	const processed = createComputed(async () => {
 		const rawFiles = sources.get()
@@ -325,11 +325,11 @@ const docsMarkdown: {
 })()
 
 const docsStyles = {
-	sources: await watchFiles(INPUT_DIR, '*.css'),
+	sources: await createFileList(INPUT_DIR, '*.css'),
 }
 
 const docsScripts = {
-	sources: await watchFiles(INPUT_DIR, '*.ts'),
+	sources: await createFileList(INPUT_DIR, '*.ts'),
 }
 
 /* const layoutFiles = {
@@ -341,11 +341,11 @@ const includeFiles = {
 } */
 
 const templateScripts = {
-	sources: await watchFiles(TEMPLATES_DIR, '**/*.ts'),
+	sources: await createFileList(TEMPLATES_DIR, '**/*.ts'),
 }
 
 const libraryScripts = {
-	sources: await watchFiles(SRC_DIR, '**/*.ts'),
+	sources: await createFileList(SRC_DIR, '**/*.ts'),
 }
 
 /* const apiMarkdown = {
@@ -353,19 +353,19 @@ const libraryScripts = {
 } */
 
 const componentMarkup = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'),
+	sources: await createFileList(COMPONENTS_DIR, '**/*.html', '**/mocks/**'),
 }
 
 const componentMarkdown = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/*.md'),
+	sources: await createFileList(COMPONENTS_DIR, '**/*.md'),
 }
 
 const componentStyles = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/*.css'),
+	sources: await createFileList(COMPONENTS_DIR, '**/*.css'),
 }
 
 const componentScripts = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/*.ts'),
+	sources: await createFileList(COMPONENTS_DIR, '**/*.ts'),
 }
 
 export {

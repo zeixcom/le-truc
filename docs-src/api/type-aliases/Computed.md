@@ -8,7 +8,7 @@
 
 > **Computed**\<`T`\> = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/computed.d.ts:1
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/computed.d.ts:2
 
 ## Name
 
@@ -16,7 +16,7 @@ Le Truc
 
 ## Version
 
-0.15.0
+0.15.1
 
 ## Author
 
@@ -34,7 +34,7 @@ Esther Brunner
 
 > `readonly` **\[toStringTag\]**: `"Computed"`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/computed.d.ts:2
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/computed.d.ts:3
 
 ## Methods
 
@@ -42,7 +42,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/computed.d.ts:2
 
 > **get**(): `T`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/computed.d.ts:3
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/computed.d.ts:4
 
 #### Returns
 

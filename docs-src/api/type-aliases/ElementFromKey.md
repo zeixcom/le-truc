@@ -8,7 +8,7 @@
 
 > **ElementFromKey**\<`U`, `K`\> = `NonNullable`\<`U`\[`K`\] *extends* [`Collection`](Collection.md)\<infer E\> ? `E` : `U`\[`K`\] *extends* `Element` ? `U`\[`K`\] : `never`\>
 
-Defined in: [src/ui.ts:97](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/ui.ts#L97)
+Defined in: [src/ui.ts:98](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/ui.ts#L98)
 
 ## Type Parameters
 
@@ -18,4 +18,4 @@ Defined in: [src/ui.ts:97](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdc
 
 ### K
 
-`K` *extends* keyof `U`
+`K` *extends* keyof `U` & `string`

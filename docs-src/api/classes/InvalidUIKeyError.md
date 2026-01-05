@@ -2,49 +2,63 @@
 
 ***
 
-[@zeix/le-truc](../globals.md) / StoreKeyRangeError
+[@zeix/le-truc](../globals.md) / InvalidUIKeyError
 
-# Class: StoreKeyRangeError
+# Class: InvalidUIKeyError
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:16
+Defined in: [src/errors.ts:87](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/errors.ts#L87)
 
-## Name
+Error thrown if UI key is invalid
 
-Le Truc
+## Since
 
-## Version
+0.15.1
 
-0.15.0
+## Param
 
-## Author
+Host component
 
-Esther Brunner
+## Param
+
+Invalid key
+
+## Param
+
+Where the key is used
 
 ## Extends
 
-- `RangeError`
+- `TypeError`
 
 ## Constructors
 
 ### Constructor
 
-> **new StoreKeyRangeError**(`index`): `StoreKeyRangeError`
+> **new InvalidUIKeyError**(`host`, `key`, `where`): `InvalidUIKeyError`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:17
+Defined in: [src/errors.ts:88](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/errors.ts#L88)
 
 #### Parameters
 
-##### index
+##### host
 
-`number`
+`HTMLElement`
+
+##### key
+
+`string`
+
+##### where
+
+`string`
 
 #### Returns
 
-`StoreKeyRangeError`
+`InvalidUIKeyError`
 
 #### Overrides
 
-`RangeError.constructor`
+`TypeError.constructor`
 
 ## Properties
 
@@ -58,7 +72,7 @@ The cause of the error.
 
 #### Inherited from
 
-`RangeError.cause`
+`TypeError.cause`
 
 ***
 
@@ -70,7 +84,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
 
 #### Inherited from
 
-`RangeError.message`
+`TypeError.message`
 
 ***
 
@@ -82,7 +96,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1076
 
 #### Inherited from
 
-`RangeError.name`
+`TypeError.name`
 
 ***
 
@@ -94,7 +108,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 #### Inherited from
 
-`RangeError.stack`
+`TypeError.stack`
 
 ***
 
@@ -116,7 +130,7 @@ not capture any frames.
 
 #### Inherited from
 
-`RangeError.stackTraceLimit`
+`TypeError.stackTraceLimit`
 
 ## Methods
 
@@ -188,13 +202,13 @@ a();
 
 ##### Inherited from
 
-`RangeError.captureStackTrace`
+`TypeError.captureStackTrace`
 
 #### Call Signature
 
 > `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
 
-Defined in: node\_modules/bun-types/globals.d.ts:1043
+Defined in: node\_modules/bun-types/globals.d.ts:1042
 
 Create .stack property on a target object
 
@@ -214,7 +228,7 @@ Create .stack property on a target object
 
 ##### Inherited from
 
-`RangeError.captureStackTrace`
+`TypeError.captureStackTrace`
 
 ***
 
@@ -240,13 +254,13 @@ Indicates whether the argument provided is a built-in Error instance or not.
 
 ##### Inherited from
 
-`RangeError.isError`
+`TypeError.isError`
 
 #### Call Signature
 
 > `static` **isError**(`value`): `value is Error`
 
-Defined in: node\_modules/bun-types/globals.d.ts:1038
+Defined in: node\_modules/bun-types/globals.d.ts:1037
 
 Check if a value is an instance of Error
 
@@ -266,7 +280,7 @@ True if the value is an instance of Error, false otherwise
 
 ##### Inherited from
 
-`RangeError.isError`
+`TypeError.isError`
 
 ***
 
@@ -296,4 +310,4 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 #### Inherited from
 
-`RangeError.prepareStackTrace`
+`TypeError.prepareStackTrace`

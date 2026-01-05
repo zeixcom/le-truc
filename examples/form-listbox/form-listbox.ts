@@ -2,8 +2,7 @@ import {
 	asString,
 	type Collection,
 	type Component,
-	createCollection,
-	createComputed,
+	createElementCollection,
 	dangerouslySetInnerHTML,
 	defineComponent,
 	on,
@@ -11,6 +10,7 @@ import {
 	setProperty,
 	setText,
 	show,
+	Task,
 	toggleClass,
 } from '../..'
 
@@ -66,7 +66,7 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 	{
 		value: asString(),
 		options: ({ listbox }) =>
-			createCollection(listbox, 'button[role="option"]:not([hidden])'),
+			createElementCollection(listbox, 'button[role="option"]:not([hidden])'),
 		filter: '',
 		src: asString(),
 	},
@@ -112,7 +112,7 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 					]
 				: []
 
-		const html = createComputed<{
+		const html = new Task<{
 			ok: boolean
 			value: string
 			error: string

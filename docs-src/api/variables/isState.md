@@ -8,7 +8,7 @@
 
 > `const` **isState**: \<`T`\>(`value`) => `value is State<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:23
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/state.d.ts:60
 
 Check if the provided value is a State instance
 
@@ -24,13 +24,13 @@ Check if the provided value is a State instance
 
 `unknown`
 
-value to check
+Value to check
 
 ## Returns
 
 `value is State<T>`
 
-- true if the value is a State instance, false otherwise
+- True if the value is a State instance, false otherwise
 
 ## Since
 

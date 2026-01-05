@@ -1,5 +1,5 @@
-import { existsSync, watch } from 'node:fs'
-import { mkdir, readdir, stat } from 'node:fs/promises'
+import { existsSync, watch } from 'fs'
+import { mkdir, readdir, stat } from 'fs/promises'
 import { createHash } from 'crypto'
 import { basename, dirname, extname, join, relative } from 'path'
 import { brotliCompressSync, gzipSync } from 'zlib'

@@ -1,9 +1,9 @@
 import {
 	type Component,
 	type Context,
-	createState,
 	defineComponent,
 	provideContexts,
+	State,
 } from '../..'
 
 export type ContextMediaMotion = 'no-preference' | 'reduce'
@@ -51,7 +51,7 @@ export default defineComponent<ContextMediaProps>(
 		// Context for motion preference
 		[MEDIA_MOTION]: () => {
 			const mql = matchMedia('(prefers-reduced-motion: reduce)')
-			const motion = createState(mql.matches ? 'reduce' : 'no-preference')
+			const motion = new State(mql.matches ? 'reduce' : 'no-preference')
 			mql.addEventListener('change', e => {
 				motion.set(e.matches ? 'reduce' : 'no-preference')
 			})
@@ -61,7 +61,7 @@ export default defineComponent<ContextMediaProps>(
 		// Context for preferred color scheme
 		[MEDIA_THEME]: () => {
 			const mql = matchMedia('(prefers-color-scheme: dark)')
-			const theme = createState(mql.matches ? 'dark' : 'light')
+			const theme = new State(mql.matches ? 'dark' : 'light')
 			mql.addEventListener('change', e => {
 				theme.set(e.matches ? 'dark' : 'light')
 			})
@@ -88,7 +88,7 @@ export default defineComponent<ContextMediaProps>(
 				if (mqlSM.matches) return 'sm'
 				return 'xs'
 			}
-			const viewport = createState(getViewport())
+			const viewport = new State(getViewport())
 			mqlSM.addEventListener('change', () => {
 				viewport.set(getViewport())
 			})
@@ -107,7 +107,7 @@ export default defineComponent<ContextMediaProps>(
 		// Context for screen orientation
 		[MEDIA_ORIENTATION]: () => {
 			const mql = matchMedia('(orientation: landscape)')
-			const orientation = createState(mql.matches ? 'landscape' : 'portrait')
+			const orientation = new State(mql.matches ? 'landscape' : 'portrait')
 			mql.addEventListener('change', e => {
 				orientation.set(e.matches ? 'landscape' : 'portrait')
 			})

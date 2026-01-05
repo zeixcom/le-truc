@@ -1,8 +1,8 @@
 import {
 	type Collection,
 	type Component,
-	createComputed,
 	defineComponent,
+	Memo,
 	pass,
 } from '../..'
 import { BasicButtonProps } from '../basic-button/basic-button'
@@ -24,7 +24,7 @@ export default defineComponent<{}, ModuleCatalogUI>(
 		),
 	}),
 	({ spinbuttons }) => {
-		const total = createComputed(() =>
+		const total = new Memo(() =>
 			spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
 		)
 		return {

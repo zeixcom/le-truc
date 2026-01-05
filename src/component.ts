@@ -1,16 +1,19 @@
 import {
-	type ComputedCallback,
-	createComputed,
-	createState,
 	isComputed,
-	isComputedCallback,
 	isFunction,
+	isMemoCallback,
 	isMutableSignal,
 	isSignal,
 	isState,
 	isStore,
+	isTaskCallback,
 	type MaybeCleanup,
+	Memo,
+	type MemoCallback,
 	type Signal,
+	State,
+	Task,
+	type TaskCallback,
 	UNSET,
 } from '@zeix/cause-effect'
 
@@ -58,7 +61,11 @@ type Initializers<P extends ComponentProps, U extends UI> = {
 		| MethodProducer<P, ComponentUI<P, U>>
 }
 
-type MaybeSignal<T extends {}> = T | Signal<T> | ComputedCallback<T>
+type MaybeSignal<T extends {}> =
+	| T
+	| Signal<T>
+	| MemoCallback<T>
+	| TaskCallback<T>
 
 /* === Exported Functions === */
 
@@ -182,9 +189,11 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 		#setAccessor<K extends keyof P>(key: K, value: MaybeSignal<P[K]>): void {
 			const signal = isSignal(value)
 				? value
-				: isComputedCallback(value)
-					? createComputed(value)
-					: createState(value)
+				: isMemoCallback(value)
+					? new Memo(value)
+					: isTaskCallback(value)
+						? new Task(value)
+						: new State(value)
 			const prev = this.#signals[key]
 			const mutable = isMutableSignal(signal)
 			this.#signals[key] = signal as Signal<P[K]>

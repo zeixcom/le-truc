@@ -1,9 +1,9 @@
 import {
 	type Cleanup,
 	type Computed,
-	createComputed,
 	isFunction,
 	isString,
+	Memo,
 } from '@zeix/cause-effect'
 
 import type { Component, ComponentProps } from './component'
@@ -142,7 +142,7 @@ const requestContext =
 				consumed = getter
 			}),
 		)
-		return createComputed(consumed)
+		return new Memo(consumed)
 	}
 
 export {

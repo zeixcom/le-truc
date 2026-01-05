@@ -8,7 +8,7 @@
 
 > `const` **isNumber**: (`value`) => `value is number`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:3
+Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:2
 
 ## Parameters
 
@@ -26,7 +26,7 @@ Le Truc
 
 ## Version
 
-0.15.0
+0.15.1
 
 ## Author
 

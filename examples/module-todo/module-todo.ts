@@ -1,6 +1,6 @@
 import {
 	type Component,
-	createCollection,
+	createElementCollection,
 	defineComponent,
 	on,
 	pass,
@@ -59,8 +59,8 @@ export default defineComponent<{}, ModuleTodoUI>(
 		),
 	}),
 	({ textbox, list, filter }) => {
-		const active = createCollection(list, 'form-checkbox:not([checked])')
-		const completed = createCollection(list, 'form-checkbox[checked]')
+		const active = createElementCollection(list, 'form-checkbox:not([checked])')
+		const completed = createElementCollection(list, 'form-checkbox[checked]')
 
 		return {
 			form: on('submit', e => {

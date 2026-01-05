@@ -2,11 +2,11 @@
 
 ***
 
-[@zeix/le-truc](../globals.md) / StoreKeyReadonlyError
+[@zeix/le-truc](../globals.md) / InvalidCollectionSourceError
 
-# Class: StoreKeyReadonlyError
+# Class: InvalidCollectionSourceError
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:19
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:12
 
 ## Name
 
@@ -14,7 +14,7 @@ Le Truc
 
 ## Version
 
-0.15.0
+0.15.1
 
 ## Author
 
@@ -22,33 +22,33 @@ Esther Brunner
 
 ## Extends
 
-- `Error`
+- `TypeError`
 
 ## Constructors
 
 ### Constructor
 
-> **new StoreKeyReadonlyError**(`key`, `value`): `StoreKeyReadonlyError`
+> **new InvalidCollectionSourceError**(`where`, `value`): `InvalidCollectionSourceError`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:20
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:13
 
 #### Parameters
 
-##### key
+##### where
 
 `string`
 
 ##### value
 
-`string`
+`unknown`
 
 #### Returns
 
-`StoreKeyReadonlyError`
+`InvalidCollectionSourceError`
 
 #### Overrides
 
-`Error.constructor`
+`TypeError.constructor`
 
 ## Properties
 
@@ -62,7 +62,7 @@ The cause of the error.
 
 #### Inherited from
 
-`Error.cause`
+`TypeError.cause`
 
 ***
 
@@ -74,7 +74,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
 
 #### Inherited from
 
-`Error.message`
+`TypeError.message`
 
 ***
 
@@ -86,7 +86,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1076
 
 #### Inherited from
 
-`Error.name`
+`TypeError.name`
 
 ***
 
@@ -98,7 +98,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 #### Inherited from
 
-`Error.stack`
+`TypeError.stack`
 
 ***
 
@@ -120,7 +120,7 @@ not capture any frames.
 
 #### Inherited from
 
-`Error.stackTraceLimit`
+`TypeError.stackTraceLimit`
 
 ## Methods
 
@@ -192,13 +192,13 @@ a();
 
 ##### Inherited from
 
-`Error.captureStackTrace`
+`TypeError.captureStackTrace`
 
 #### Call Signature
 
 > `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
 
-Defined in: node\_modules/bun-types/globals.d.ts:1043
+Defined in: node\_modules/bun-types/globals.d.ts:1042
 
 Create .stack property on a target object
 
@@ -218,7 +218,7 @@ Create .stack property on a target object
 
 ##### Inherited from
 
-`Error.captureStackTrace`
+`TypeError.captureStackTrace`
 
 ***
 
@@ -244,13 +244,13 @@ Indicates whether the argument provided is a built-in Error instance or not.
 
 ##### Inherited from
 
-`Error.isError`
+`TypeError.isError`
 
 #### Call Signature
 
 > `static` **isError**(`value`): `value is Error`
 
-Defined in: node\_modules/bun-types/globals.d.ts:1038
+Defined in: node\_modules/bun-types/globals.d.ts:1037
 
 Check if a value is an instance of Error
 
@@ -270,7 +270,7 @@ True if the value is an instance of Error, false otherwise
 
 ##### Inherited from
 
-`Error.isError`
+`TypeError.isError`
 
 ***
 
@@ -300,4 +300,4 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 #### Inherited from
 
-`Error.prepareStackTrace`
+`TypeError.prepareStackTrace`

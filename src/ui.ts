@@ -1,5 +1,6 @@
+import type { Collection } from '@zeix/cause-effect'
 import { DependencyTimeoutError, MissingElementError } from './errors'
-import { type Collection, createCollection } from './signals/collection'
+import { createElementCollection } from './signals/collection'
 import { isNotYetDefinedComponent } from './util'
 
 /* === Types === */
@@ -94,7 +95,7 @@ type AllElements = {
 }
 type UI = Record<string, Element | Collection<Element>>
 
-type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<
+type ElementFromKey<U extends UI, K extends keyof U & string> = NonNullable<
 	U[K] extends Collection<infer E extends Element>
 		? E
 		: U[K] extends Element
@@ -181,7 +182,7 @@ const getHelpers = (
 		selector: S,
 		required?: string,
 	): Collection<ElementFromSelector<S>> {
-		const collection = createCollection(root, selector)
+		const collection = createElementCollection(root, selector)
 		const targets = collection.get()
 		if (required != null && !targets.length)
 			throw new MissingElementError(host, selector, required)

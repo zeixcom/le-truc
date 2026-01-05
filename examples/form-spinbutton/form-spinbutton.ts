@@ -2,9 +2,9 @@ import {
 	asInteger,
 	type Collection,
 	type Component,
-	createComputed,
 	createSensor,
 	defineComponent,
+	Memo,
 	read,
 	setProperty,
 	show,
@@ -53,8 +53,8 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 					return clamped
 				},
 				click: ({ target, prev }) =>
-					prev +
-					(target.classList.contains('decrement')
+					prev
+					+ (target.classList.contains('decrement')
 						? -1
 						: target.classList.contains('increment')
 							? 1
@@ -87,9 +87,9 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 		other: first('.other'),
 	}),
 	({ host, increment, zero }) => {
-		const nonZero = createComputed(() => host.value !== 0)
+		const nonZero = new Memo(() => host.value !== 0)
 		const incrementLabel = increment.ariaLabel || 'Increment'
-		const ariaLabel = createComputed(() =>
+		const ariaLabel = new Memo(() =>
 			nonZero.get() || !zero ? incrementLabel : zero.textContent,
 		)
 

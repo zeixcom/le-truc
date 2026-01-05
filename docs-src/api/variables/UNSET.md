@@ -8,7 +8,7 @@
 
 > `const` **UNSET**: `any`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:1
+Defined in: node\_modules/@zeix/cause-effect/types/src/system.d.ts:15
 
 ## Name
 
@@ -16,7 +16,7 @@ Le Truc
 
 ## Version
 
-0.15.0
+0.15.1
 
 ## Author
 

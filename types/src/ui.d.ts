@@ -1,4 +1,4 @@
-import { type Collection } from './signals/collection';
+import type { Collection } from '@zeix/cause-effect';
 type SplitByComma<S extends string> = S extends `${infer First},${infer Rest}` ? [TrimWhitespace<First>, ...SplitByComma<Rest>] : [TrimWhitespace<S>];
 type TrimWhitespace<S extends string> = S extends ` ${infer Rest}` ? TrimWhitespace<Rest> : S extends `${infer Rest} ` ? TrimWhitespace<Rest> : S;
 type ExtractRightmostSelector<S extends string> = S extends `${string} ${infer Rest}` ? ExtractRightmostSelector<Rest> : S extends `${string}>${infer Rest}` ? ExtractRightmostSelector<Rest> : S extends `${string}+${infer Rest}` ? ExtractRightmostSelector<Rest> : S extends `${string}~${infer Rest}` ? ExtractRightmostSelector<Rest> : S;
@@ -21,7 +21,7 @@ type AllElements = {
     <E extends Element>(selector: string, required?: string): Collection<E>;
 };
 type UI = Record<string, Element | Collection<Element>>;
-type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<U[K] extends Collection<infer E extends Element> ? E : U[K] extends Element ? U[K] : never>;
+type ElementFromKey<U extends UI, K extends keyof U & string> = NonNullable<U[K] extends Collection<infer E extends Element> ? E : U[K] extends Element ? U[K] : never>;
 type ElementQueries = {
     first: FirstElement;
     all: AllElements;

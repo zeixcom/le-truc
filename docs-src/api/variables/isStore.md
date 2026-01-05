@@ -6,9 +6,9 @@
 
 # Variable: isStore()
 
-> `const` **isStore**: \<`T`\>(`value`) => `value is Store<T>`
+> `const` **isStore**: \<`T`\>(`value`) => `value is BaseStore<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/store.d.ts:64
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/store.d.ts:50
 
 Check if the provided value is a Store instance
 
@@ -16,7 +16,7 @@ Check if the provided value is a Store instance
 
 ### T
 
-`T` *extends* `UnknownRecord` \| `UnknownArray`
+`T` *extends* `UnknownRecord`
 
 ## Parameters
 
@@ -24,13 +24,13 @@ Check if the provided value is a Store instance
 
 `unknown`
 
-value to check
+Value to check
 
 ## Returns
 
-`value is Store<T>`
+`value is BaseStore<T>`
 
-- true if the value is a Store instance, false otherwise
+- True if the value is a Store instance, false otherwise
 
 ## Since
 

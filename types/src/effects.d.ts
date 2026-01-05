@@ -6,7 +6,7 @@ type ElementEffects<P extends ComponentProps, E extends Element> = Effect<P, E> 
 type Effects<P extends ComponentProps, U extends UI & {
     host: Component<P>;
 }> = {
-    [K in keyof U]?: ElementEffects<P, ElementFromKey<U, K>>;
+    [K in keyof U & string]?: ElementEffects<P, ElementFromKey<U, K>>;
 };
 type Reactive<T, P extends ComponentProps, E extends Element> = keyof P | Signal<T & {}> | ((target: E) => T | null | undefined);
 type UpdateOperation = 'a' | 'c' | 'd' | 'h' | 'm' | 'p' | 's' | 't';

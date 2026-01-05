@@ -8,7 +8,7 @@
 
 > `const` **isString**: (`value`) => `value is string`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:2
+Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:1
 
 ## Parameters
 
@@ -26,7 +26,7 @@ Le Truc
 
 ## Version
 
-0.15.0
+0.15.1
 
 ## Author
 

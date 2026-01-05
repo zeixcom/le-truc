@@ -1,4 +1,10 @@
-import { batch, createState, defineComponent, on, toggleClass } from '../..'
+import {
+	batchSignalWrites,
+	defineComponent,
+	on,
+	State,
+	toggleClass,
+} from '../..'
 
 const MIN_INTERSECTION_RATIO = 0
 const MAX_INTERSECTION_RATIO = 0.99 // ignore rounding errors of fraction pixels
@@ -13,11 +19,11 @@ const observeOverflow =
 		const observer = new IntersectionObserver(
 			([entry]) => {
 				if (
-					entry.intersectionRatio > MIN_INTERSECTION_RATIO &&
-					entry.intersectionRatio < MAX_INTERSECTION_RATIO
+					entry.intersectionRatio > MIN_INTERSECTION_RATIO
+					&& entry.intersectionRatio < MAX_INTERSECTION_RATIO
 				)
 					overflowCallback()
-				else batch(noOverflowCallback)
+				else batchSignalWrites(noOverflowCallback)
 			},
 			{
 				root: container,
@@ -38,8 +44,8 @@ export default defineComponent(
 		const child = host.firstElementChild
 		if (!child) return {}
 
-		const overflowStart = createState(false)
-		const overflowEnd = createState(false)
+		const overflowStart = new State(false)
+		const overflowEnd = new State(false)
 		const hasOverflow = () => overflowStart.get() || overflowEnd.get()
 
 		const scrollCallback =
@@ -73,7 +79,7 @@ export default defineComponent(
 					},
 				),
 				on('scroll', () => {
-					if (hasOverflow()) batch(scrollCallback)
+					if (hasOverflow()) batchSignalWrites(scrollCallback)
 				}),
 			],
 		}

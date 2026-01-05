@@ -1,19 +1,21 @@
 import {
 	type Cleanup,
+	type Collection,
 	createEffect,
+	HOOK_ADD,
+	HOOK_REMOVE,
+	isCollection,
 	isFunction,
 	isRecord,
 	isSignal,
 	isString,
 	type MaybeCleanup,
 	type Signal,
-	toError,
 	UNSET,
 	valueString,
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from './component'
 import { InvalidEffectsError } from './errors'
-import { type Collection, isCollection } from './signals/collection'
 import type { ElementFromKey, UI } from './ui'
 import { DEV_MODE, elementName, LOG_ERROR, log } from './util'
 
@@ -32,7 +34,7 @@ type Effects<
 	P extends ComponentProps,
 	U extends UI & { host: Component<P> },
 > = {
-	[K in keyof U]?: ElementEffects<P, ElementFromKey<U, K>>
+	[K in keyof U & string]?: ElementEffects<P, ElementFromKey<U, K>>
 }
 
 type Reactive<T, P extends ComponentProps, E extends Element> =
@@ -133,22 +135,28 @@ const runCollectionEffects = <P extends ComponentProps, E extends Element>(
 ): Cleanup => {
 	const cleanups: Map<E, Cleanup> = new Map()
 
-	const attach = (targets: readonly E[]) => {
-		for (const target of targets) {
+	const attach = (keys?: readonly string[]) => {
+		if (!keys) return
+		for (const key of keys) {
+			const target = collection.byKey(key)?.get()
+			if (!target) continue
 			const cleanup = runElementEffects(host, target, effects)
 			if (cleanup) cleanups.set(target, cleanup)
 		}
 	}
-	const detach = (targets: readonly E[]) => {
-		for (const target of targets) {
+	const detach = (keys?: readonly string[]) => {
+		if (!keys) return
+		for (const key of keys) {
+			const target = collection.byKey(key)?.get()
+			if (!target) continue
 			cleanups.get(target)?.()
 			cleanups.delete(target)
 		}
 	}
 
-	collection.on('add', attach)
-	collection.on('remove', detach)
-	attach(collection.get())
+	collection.on(HOOK_ADD, attach)
+	collection.on(HOOK_REMOVE, detach)
+	attach(Array.from(collection.keys()))
 	return () => {
 		for (const cleanup of cleanups.values()) cleanup()
 		cleanups.clear()
@@ -176,16 +184,18 @@ const runEffects = <
 	const cleanups: Cleanup[] = []
 	const keys = Object.keys(effects)
 	for (const key of keys) {
-		const k = key as keyof U
-		if (!effects[k]) continue
+		if (!effects[key]) continue
 
-		const elementEffects = Array.isArray(effects[k]) ? effects[k] : [effects[k]]
-		if (isCollection<ElementFromKey<U, typeof k>>(ui[k])) {
-			cleanups.push(runCollectionEffects(ui.host, ui[k], elementEffects))
-		} else if (ui[k]) {
+		const elementEffects = Array.isArray(effects[key])
+			? effects[key]
+			: [effects[key]]
+		const targets = ui[key]
+		if (isCollection<ElementFromKey<U, typeof key>>(targets)) {
+			cleanups.push(runCollectionEffects(ui.host, targets, elementEffects))
+		} else if (targets) {
 			const cleanup = runElementEffects(
 				ui.host,
-				ui[k] as ElementFromKey<U, typeof k>,
+				targets as ElementFromKey<U, typeof key>,
 				elementEffects,
 			)
 			if (cleanup) cleanups.push(cleanup)

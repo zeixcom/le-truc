@@ -8,7 +8,7 @@
 
 > `const` **createEffect**: (`callback`) => [`Cleanup`](../type-aliases/Cleanup.md)
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/effect.d.ts:15
+Defined in: node\_modules/@zeix/cause-effect/types/src/effect.d.ts:14
 
 Define what happens when a reactive state changes
 

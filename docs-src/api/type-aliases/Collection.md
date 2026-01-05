@@ -4,21 +4,29 @@
 
 [@zeix/le-truc](../globals.md) / Collection
 
-# Type Alias: Collection\<E\>
+# Type Alias: Collection\<T\>
 
-> **Collection**\<`E`\> = `object`
+> **Collection**\<`T`\> = `object`
 
-Defined in: [src/signals/collection.ts:15](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/signals/collection.ts#L15)
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:7
+
+## Name
+
+Le Truc
+
+## Version
+
+0.15.1
+
+## Author
+
+Esther Brunner
 
 ## Type Parameters
 
-### E
+### T
 
-`E` *extends* `Element`
-
-## Indexable
-
-\[`n`: `number`\]: `E`
+`T` *extends* `object`
 
 ## Properties
 
@@ -26,7 +34,7 @@ Defined in: [src/signals/collection.ts:15](https://github.com/zeixcom/le-truc/bl
 
 > `readonly` **\[isConcatSpreadable\]**: `true`
 
-Defined in: [src/signals/collection.ts:17](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/signals/collection.ts#L17)
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:9
 
 ***
 
@@ -34,7 +42,115 @@ Defined in: [src/signals/collection.ts:17](https://github.com/zeixcom/le-truc/bl
 
 > `readonly` **\[toStringTag\]**: `"Collection"`
 
-Defined in: [src/signals/collection.ts:16](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/signals/collection.ts#L16)
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:8
+
+***
+
+### at()
+
+> **at**: (`index`) => [`Signal`](Signal.md)\<`T`\> \| `undefined`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:13
+
+#### Parameters
+
+##### index
+
+`number`
+
+#### Returns
+
+[`Signal`](Signal.md)\<`T`\> \| `undefined`
+
+***
+
+### byKey()
+
+> **byKey**: (`key`) => [`Signal`](Signal.md)\<`T`\> \| `undefined`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:14
+
+#### Parameters
+
+##### key
+
+`string`
+
+#### Returns
+
+[`Signal`](Signal.md)\<`T`\> \| `undefined`
+
+***
+
+### deriveCollection()
+
+> **deriveCollection**: \<`R`\>(`callback`) => [`DerivedCollection`](../classes/DerivedCollection.md)\<`R`, `T`\>
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:18
+
+#### Type Parameters
+
+##### R
+
+`R` *extends* `object`
+
+#### Parameters
+
+##### callback
+
+`CollectionCallback`\<`R`, `T`\>
+
+#### Returns
+
+[`DerivedCollection`](../classes/DerivedCollection.md)\<`R`, `T`\>
+
+***
+
+### get()
+
+> **get**: () => `T`[]
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:12
+
+#### Returns
+
+`T`[]
+
+***
+
+### indexOfKey()
+
+> **indexOfKey**: (`key`) => `number` \| `undefined`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:16
+
+#### Parameters
+
+##### key
+
+`string`
+
+#### Returns
+
+`number` \| `undefined`
+
+***
+
+### keyAt()
+
+> **keyAt**: (`index`) => `string` \| `undefined`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:15
+
+#### Parameters
+
+##### index
+
+`number`
+
+#### Returns
+
+`string` \| `undefined`
 
 ***
 
@@ -42,50 +158,56 @@ Defined in: [src/signals/collection.ts:16](https://github.com/zeixcom/le-truc/bl
 
 > `readonly` **length**: `number`
 
-Defined in: [src/signals/collection.ts:22](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/signals/collection.ts#L22)
-
-## Methods
-
-### \[iterator\]()
-
-> **\[iterator\]**(): `IterableIterator`\<`E`\>
-
-Defined in: [src/signals/collection.ts:18](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/signals/collection.ts#L18)
-
-#### Returns
-
-`IterableIterator`\<`E`\>
-
-***
-
-### get()
-
-> **get**(): `E`[]
-
-Defined in: [src/signals/collection.ts:20](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/signals/collection.ts#L20)
-
-#### Returns
-
-`E`[]
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:19
 
 ***
 
 ### on()
 
-> **on**(`type`, `listener`): [`Cleanup`](Cleanup.md)
+> **on**: \<`K`\>(`type`, `callback`) => [`Cleanup`](Cleanup.md)
 
-Defined in: [src/signals/collection.ts:21](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/signals/collection.ts#L21)
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:17
+
+#### Type Parameters
+
+##### K
+
+`K` *extends* `Hook`
 
 #### Parameters
 
 ##### type
 
-`"add"` | `"remove"`
+`K`
 
-##### listener
+##### callback
 
-[`CollectionListener`](CollectionListener.md)\<`E`\>
+`HookCallback`
 
 #### Returns
 
 [`Cleanup`](Cleanup.md)
+
+## Methods
+
+### \[iterator\]()
+
+> **\[iterator\]**(): `IterableIterator`\<[`Signal`](Signal.md)\<`T`\>\>
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:10
+
+#### Returns
+
+`IterableIterator`\<[`Signal`](Signal.md)\<`T`\>\>
+
+***
+
+### keys()
+
+> **keys**(): `IterableIterator`\<`string`\>
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/classes/collection.d.ts:11
+
+#### Returns
+
+`IterableIterator`\<`string`\>

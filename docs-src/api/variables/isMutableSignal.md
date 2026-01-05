@@ -6,17 +6,11 @@
 
 # Variable: isMutableSignal()
 
-> `const` **isMutableSignal**: \<`T`\>(`value`) => value is State\<T\> \| Store\<T\>
+> `const` **isMutableSignal**: (`value`) => `value is MutableSignal<unknown & {}>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:26
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:30
 
-Check whether a value is a State or Store
-
-## Type Parameters
-
-### T
-
-`T` *extends* `object`
+Check whether a value is a State, Store, or List
 
 ## Parameters
 
@@ -24,13 +18,13 @@ Check whether a value is a State or Store
 
 `unknown`
 
-value to check
+Value to check
 
 ## Returns
 
-value is State\<T\> \| Store\<T\>
+`value is MutableSignal<unknown & {}>`
 
-- true if value is a State or Store, false otherwise
+- True if value is a State, Store, or List, false otherwise
 
 ## Since
 

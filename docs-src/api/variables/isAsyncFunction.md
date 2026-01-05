@@ -8,7 +8,7 @@
 
 > `const` **isAsyncFunction**: \<`T`\>(`fn`) => `fn is (args: unknown[]) => Promise<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:6
+Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:5
 
 ## Type Parameters
 
@@ -32,7 +32,7 @@ Le Truc
 
 ## Version
 
-0.15.0
+0.15.1
 
 ## Author
 

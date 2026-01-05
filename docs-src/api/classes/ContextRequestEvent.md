@@ -6,7 +6,7 @@
 
 # Class: ContextRequestEvent\<T\>
 
-Defined in: [src/context.ts:78](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/context.ts#L78)
+Defined in: [src/context.ts:78](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/context.ts#L78)
 
 Class for context-request events
 
@@ -37,7 +37,7 @@ function to the callback which requesters can invoke to indicate they no longer 
 
 > **new ContextRequestEvent**\<`T`\>(`context`, `callback`, `subscribe`): `ContextRequestEvent`\<`T`\>
 
-Defined in: [src/context.ts:83](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/context.ts#L83)
+Defined in: [src/context.ts:83](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/context.ts#L83)
 
 #### Parameters
 
@@ -107,7 +107,7 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11463
 
 > `readonly` **callback**: `ContextCallback`\<[`ContextType`](../type-aliases/ContextType.md)\<`T`\>\>
 
-Defined in: [src/context.ts:80](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/context.ts#L80)
+Defined in: [src/context.ts:80](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/context.ts#L80)
 
 callback function for value getter and unsubscribe function
 
@@ -179,7 +179,7 @@ The read-only **`composed`** property of the or not the event will propagate acr
 
 > `readonly` **context**: `T`
 
-Defined in: [src/context.ts:79](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/context.ts#L79)
+Defined in: [src/context.ts:79](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/context.ts#L79)
 
 context key
 
@@ -301,7 +301,7 @@ The deprecated **`Event.srcElement`** is an alias for the Event.target property.
 
 > `readonly` **subscribe**: `boolean`
 
-Defined in: [src/context.ts:81](https://github.com/zeixcom/le-truc/blob/278ab0df3fbdca5f6b0f0436bf1688626c821080/src/context.ts#L81)
+Defined in: [src/context.ts:81](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/context.ts#L81)
 
 whether to subscribe to context changes
 
@@ -427,7 +427,7 @@ The **`composedPath()`** method of the Event interface returns the event's path 
 
 > **composedPath**(): \[`EventTarget`?\]
 
-Defined in: node\_modules/bun-types/globals.d.ts:246
+Defined in: node\_modules/bun-types/globals.d.ts:269
 
 Returns an array containing the current EventTarget as the only entry or empty if the event is not being dispatched. This is not used in Node.js and is provided purely for completeness.
 
@@ -501,7 +501,7 @@ The **`preventDefault()`** method of the Event interface tells the user agent th
 
 > **preventDefault**(): `void`
 
-Defined in: node\_modules/bun-types/globals.d.ts:256
+Defined in: node\_modules/bun-types/globals.d.ts:279
 
 Sets the `defaultPrevented` property to `true` if `cancelable` is `true`.
 
@@ -539,7 +539,7 @@ The **`stopImmediatePropagation()`** method of the If several listeners are atta
 
 > **stopImmediatePropagation**(): `void`
 
-Defined in: node\_modules/bun-types/globals.d.ts:262
+Defined in: node\_modules/bun-types/globals.d.ts:285
 
 Stops the invocation of event listeners after the current one completes.
 
@@ -577,7 +577,7 @@ The **`stopPropagation()`** method of the Event interface prevents further propa
 
 > **stopPropagation**(): `void`
 
-Defined in: node\_modules/bun-types/globals.d.ts:264
+Defined in: node\_modules/bun-types/globals.d.ts:287
 
 This is not used in Node.js and is provided purely for completeness.
 

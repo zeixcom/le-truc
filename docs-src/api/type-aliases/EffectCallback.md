@@ -8,7 +8,7 @@
 
 > **EffectCallback** = () => [`MaybeCleanup`](MaybeCleanup.md) \| (`abort`) => `Promise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/effect.d.ts:3
+Defined in: node\_modules/@zeix/cause-effect/types/src/effect.d.ts:2
 
 ## Name
 
@@ -16,7 +16,7 @@ Le Truc
 
 ## Version
 
-0.15.0
+0.15.1
 
 ## Author
 
