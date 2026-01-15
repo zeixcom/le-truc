@@ -1,30 +1,17 @@
 import {
-	batchSignalWrites,
-	type Cleanup,
+	batch,
 	type Collection,
 	type CollectionCallback,
 	DerivedCollection,
-	HOOK_ADD,
-	HOOK_CHANGE,
-	HOOK_REMOVE,
-	HOOK_SORT,
-	HOOK_WATCH,
-	type Hook,
-	type HookCallback,
-	type HookCallbacks,
-	InvalidHookError,
 	isEqual,
 	isFunction,
-	isHandledHook,
 	isString,
-	type KeyConfig,
-	notifyWatchers,
+	notifyOf,
 	Ref,
-	subscribeActiveWatcher,
+	subscribeTo,
 	TYPE_COLLECTION,
-	triggerHook,
-	type Watcher,
 } from '@zeix/cause-effect'
+import type { ListOptions } from '@zeix/cause-effect/types/src/classes/list'
 import type { ElementFromSelector } from '../ui'
 import { isElement } from '../util'
 
@@ -59,20 +46,23 @@ const extractAttributes = (selector: string): string[] => {
 /* === Class === */
 
 class ElementCollection<T extends Element> implements Collection<T> {
-	#watchers = new Set<Watcher>()
 	#signals = new Map<string, Ref<T>>()
-	#hookCallbacks: HookCallbacks = {}
 	#parent: ParentNode
 	#selector: string
 	#observer: MutationObserver | undefined
-	#order: string[] = []
+	#keys: string[] = []
 	#generateKey: (item: T) => string
 
-	constructor(parent: ParentNode, selector: string, keyConfig?: KeyConfig<T>) {
+	constructor(
+		parent: ParentNode,
+		selector: string,
+		options?: ListOptions<T[]>,
+	) {
 		this.#parent = parent
 		this.#selector = selector
 
 		let keyCounter = 0
+		const keyConfig = options?.keyConfig
 		this.#generateKey = isString(keyConfig)
 			? () => `${keyConfig}${keyCounter++}`
 			: isFunction<string>(keyConfig)
@@ -107,100 +97,89 @@ class ElementCollection<T extends Element> implements Collection<T> {
 
 		this.#observer = new MutationObserver(mutations => {
 			const addedElements: T[] = []
-			const removedElements: T[] = []
-			const addedKeys: string[] = []
 			const changedKeys = new Set<string>()
 			const removedKeys: string[] = []
 			let changed = false
 
 			for (const mutation of mutations) {
+				const target = mutation.target as T
+
 				if (mutation.type === 'childList') {
-					const target = mutation.target as T
+					// Maybe observed match -> change
 					if (isElement(target)) {
-						// maybe observed match -> change
 						const key = this.#keyFor(target)
 						if (key) changedKeys.add(key)
 					}
+
+					// Maybe new matches in childList -> add
 					if (mutation.addedNodes.length)
-						// Maybe new matches in childList -> add
 						addedElements.push(...findMatches(mutation.addedNodes))
+
+					// Maybe removed matches in childList -> remove
 					if (mutation.removedNodes.length)
-						// Maybe removed matches in childList -> remove
-						removedElements.push(...findMatches(mutation.removedNodes))
+						removedKeys.push(
+							...findMatches(mutation.removedNodes)
+								.map(this.#keyFor)
+								.filter(v => v !== undefined),
+						)
 				} else if (mutation.type === 'attributes') {
-					const target = mutation.target as T
-					if (isElement(target)) {
-						const key = this.#keyFor(target)
-						const isMatching = target.matches(this.#selector)
-						if (key && !isMatching) {
-							// No longer matching -> remove
-							this.#signals.delete(key)
-							removedElements.push(target)
-							removedKeys.push(key)
-						} else if (key && isMatching) {
-							// Still matching -> change
-							changedKeys.add(key)
-						} else if (!key && isMatching) {
-							// Matching for the first time -> add
-							const newKey = this.#generateKey(target)
-							this.#signals.set(newKey, new Ref(target))
-							addedElements.push(target)
-							addedKeys.push(newKey)
-						}
-					}
+					if (!isElement(target)) continue
+
+					const key = this.#keyFor(target)
+					const isMatching = target.matches(this.#selector)
+
+					// No longer matching -> remove
+					if (key && !isMatching) removedKeys.push(key)
+					// Still matching -> change
+					else if (key && isMatching) changedKeys.add(key)
+					// Matching for the first time -> add
+					else if (!key && isMatching) addedElements.push(target)
 				}
 			}
 
-			batchSignalWrites(() => {
-				if (addedKeys.length || removedKeys.length) {
-					changed = true
-					if (addedKeys.length)
-						triggerHook(this.#hookCallbacks[HOOK_ADD], addedKeys)
-					if (removedKeys.length)
-						triggerHook(this.#hookCallbacks[HOOK_REMOVE], removedKeys)
+			if (addedElements.length) {
+				changed = true
+				for (const element of addedElements) {
+					const key = this.#generateKey(element)
+					this.#signals.set(key, new Ref(element))
+				}
+			}
+
+			if (removedKeys.length) {
+				changed = true
+				for (const key of removedKeys) {
+					this.#signals.delete(key)
+				}
+			}
+
+			const newKeys = Array.from(
+				this.#parent.querySelectorAll<T>(this.#selector),
+			)
+				.map(element => this.#keyFor(element))
+				.filter(key => key !== undefined)
+
+			if (!isEqual(this.#keys, newKeys)) {
+				this.#keys = newKeys
+				changed = true
+			}
+
+			batch(() => {
+				for (const key of changedKeys) {
+					if (key) this.#signals.get(key)?.notify()
 				}
 
-				if (this.#hookCallbacks[HOOK_CHANGE]?.size) {
-					triggerHook(this.#hookCallbacks[HOOK_CHANGE], Array.from(changedKeys))
-					for (const key of changedKeys) {
-						if (key) this.#signals.get(key)?.notify()
-					}
-				}
-
-				const newOrder = Array.from(
-					this.#parent.querySelectorAll<T>(this.#selector),
-				)
-					.map(element => this.#keyFor(element))
-					.filter(key => key !== undefined)
-
-				if (!isEqual(this.#order, newOrder)) {
-					this.#order = newOrder
-					changed = true
-					triggerHook(this.#hookCallbacks[HOOK_SORT], newOrder)
-				}
-
-				if (changed) notifyWatchers(this.#watchers)
+				if (changed) notifyOf(this)
 			})
 		})
 
-		const observerConfig: MutationObserverInit = this.#hookCallbacks[
-			HOOK_CHANGE
-		]?.size
-			? {
-					attributes: true,
-					childList: true,
-					subtree: true,
-				}
-			: {
-					childList: true,
-					subtree: true,
-				}
-		if (!this.#hookCallbacks[HOOK_CHANGE]?.size) {
-			const observedAttributes = extractAttributes(this.#selector)
-			if (observedAttributes.length) {
-				observerConfig.attributes = true
-				observerConfig.attributeFilter = observedAttributes
-			}
+		const observerConfig: MutationObserverInit = {
+			childList: true,
+			subtree: true,
+		}
+		const observedAttributes = extractAttributes(this.#selector)
+		if (observedAttributes.length) {
+			observerConfig.attributes = true
+			observerConfig.attributeFilter = observedAttributes
 		}
 		this.#observer.observe(this.#parent, observerConfig)
 	}
@@ -214,26 +193,28 @@ class ElementCollection<T extends Element> implements Collection<T> {
 	}
 
 	*[Symbol.iterator](): IterableIterator<Ref<T>> {
-		for (const key of this.#order) {
+		for (const key of this.#keys) {
 			const element = this.#signals.get(key)
 			if (element) yield element
 		}
 	}
 
 	keys(): IterableIterator<string> {
-		return this.#order.values()
+		subscribeTo(this)
+		if (!this.#observer) this.#observe()
+		return this.#keys.values()
 	}
 
 	get(): T[] {
-		subscribeActiveWatcher(this.#watchers, this.#hookCallbacks[HOOK_WATCH])
+		subscribeTo(this)
 		if (!this.#observer) this.#observe()
-		return this.#order
+		return this.#keys
 			.map(key => this.#signals.get(key)?.get())
 			.filter(element => element !== undefined)
 	}
 
 	at(index: number): Ref<T> | undefined {
-		return this.#signals.get(this.#order[index])
+		return this.#signals.get(this.#keys[index])
 	}
 
 	byKey(key: string): Ref<T> | undefined {
@@ -241,31 +222,11 @@ class ElementCollection<T extends Element> implements Collection<T> {
 	}
 
 	keyAt(index: number): string | undefined {
-		return this.#order[index]
+		return this.#keys[index]
 	}
 
 	indexOfKey(key: string): number {
-		return this.#order.indexOf(key)
-	}
-
-	on(type: Hook, callback: HookCallback): Cleanup {
-		if (
-			isHandledHook(type, [
-				HOOK_ADD,
-				HOOK_CHANGE,
-				HOOK_REMOVE,
-				HOOK_SORT,
-				HOOK_WATCH,
-			])
-		) {
-			this.#hookCallbacks[type] ||= new Set()
-			this.#hookCallbacks[type].add(callback)
-			if (!this.#observer) this.#observe()
-			return () => {
-				this.#hookCallbacks[type]?.delete(callback)
-			}
-		}
-		throw new InvalidHookError(TYPE_COLLECTION, type)
+		return this.#keys.indexOf(key)
 	}
 
 	deriveCollection<R extends {}>(
@@ -281,7 +242,7 @@ class ElementCollection<T extends Element> implements Collection<T> {
 	}
 
 	get length(): number {
-		subscribeActiveWatcher(this.#watchers, this.#hookCallbacks[HOOK_WATCH])
+		subscribeTo(this)
 		if (!this.#observer) this.#observe()
 		return this.#signals.size
 	}
@@ -300,19 +261,19 @@ class ElementCollection<T extends Element> implements Collection<T> {
 function createElementCollection<S extends string>(
 	parent: ParentNode,
 	selector: S,
-	keyConfig?: KeyConfig<ElementFromSelector<S>>,
+	options?: ListOptions<ElementFromSelector<S>[]>,
 ): ElementCollection<ElementFromSelector<S>>
 function createElementCollection<E extends Element>(
 	parent: ParentNode,
 	selector: string,
-	keyConfig?: KeyConfig<E>,
+	options?: ListOptions<E[]>,
 ): ElementCollection<E>
 function createElementCollection<S extends string>(
 	parent: ParentNode,
 	selector: S,
-	keyConfig?: KeyConfig<ElementFromSelector<S>>,
+	options?: ListOptions<ElementFromSelector<S>[]>,
 ): ElementCollection<ElementFromSelector<S>> {
-	return new ElementCollection(parent, selector, keyConfig)
+	return new ElementCollection(parent, selector, options)
 }
 
 export { createElementCollection, ElementCollection }

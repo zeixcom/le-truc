@@ -2,8 +2,7 @@ import {
 	type Cleanup,
 	type Collection,
 	createEffect,
-	HOOK_ADD,
-	HOOK_REMOVE,
+	createWatcher,
 	isCollection,
 	isFunction,
 	isRecord,
@@ -133,30 +132,50 @@ const runCollectionEffects = <P extends ComponentProps, E extends Element>(
 	collection: Collection<E>,
 	effects: ElementEffects<P, E>,
 ): Cleanup => {
-	const cleanups: Map<E, Cleanup> = new Map()
+	let keys: string[] = []
+	const cleanups: Map<string, Cleanup> = new Map()
 
-	const attach = (keys?: readonly string[]) => {
-		if (!keys) return
+	const attach = (keys: string[]) => {
 		for (const key of keys) {
 			const target = collection.byKey(key)?.get()
 			if (!target) continue
 			const cleanup = runElementEffects(host, target, effects)
-			if (cleanup) cleanups.set(target, cleanup)
+			if (cleanup) cleanups.set(key, cleanup)
 		}
 	}
-	const detach = (keys?: readonly string[]) => {
-		if (!keys) return
+	const detach = (keys: string[]) => {
 		for (const key of keys) {
-			const target = collection.byKey(key)?.get()
-			if (!target) continue
-			cleanups.get(target)?.()
-			cleanups.delete(target)
+			cleanups.get(key)?.()
+			cleanups.delete(key)
 		}
 	}
 
-	collection.on(HOOK_ADD, attach)
-	collection.on(HOOK_REMOVE, detach)
-	attach(Array.from(collection.keys()))
+	const watcher = createWatcher(
+		() => {
+			watcher.run()
+		},
+		() => {
+			const newKeys = Array.from(collection.keys())
+			const allKeys = new Set([...keys, ...newKeys])
+			const addedKeys: string[] = []
+			const removedKeys: string[] = []
+
+			for (const key of allKeys) {
+				const oldHas = keys.includes(key)
+				const newHas = newKeys.includes(key)
+
+				if (!oldHas && newHas) addedKeys.push(key)
+				else if (oldHas && !newHas) removedKeys.push(key)
+			}
+
+			attach(addedKeys)
+			detach(removedKeys)
+			keys = newKeys
+		},
+	)
+
+	keys = Array.from(collection.keys())
+	attach(keys)
 	return () => {
 		for (const cleanup of cleanups.values()) cleanup()
 		cleanups.clear()

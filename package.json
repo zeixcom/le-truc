@@ -48,15 +48,15 @@
 		"test:component": "bun scripts/test-component.ts"
 	},
 	"dependencies": {
-		"@zeix/cause-effect": "^0.17.2"
+		"@zeix/cause-effect": "^0.17.3"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.10",
+		"@biomejs/biome": "^2.3.11",
 		"@markdoc/markdoc": "^0.5.4",
 		"@playwright/test": "^1.57.0",
 		"@types/bun": "latest",
 		"lightningcss-cli": "^1.30.2",
-		"shiki": "^3.20.0",
+		"shiki": "^3.21.0",
 		"typedoc": "^0.28.15",
 		"typedoc-plugin-markdown": "^4.9.0"
 	},

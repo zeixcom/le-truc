@@ -99,7 +99,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 					const { key, altKey } = e
 					if (key === 'ArrowDown') {
 						if (altKey) showPopup.set(true)
-						if (isExpanded.get()) listbox.options[0]?.focus()
+						if (isExpanded.get()) listbox.options.at(0)?.get().focus()
 					}
 				}),
 			],

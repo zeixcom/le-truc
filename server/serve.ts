@@ -28,11 +28,7 @@ export type RequestContext = {
 	acceptsBrotli: boolean
 }
 
-export type TemplateContext = {
-	content?: string
-	title?: string
-	section?: string
-}
+export type TemplateContext = Record<string, string>
 
 export type HMRMessage = {
 	type: 'reload' | 'pong' | 'build-error' | 'build-success' | 'file-changed'
