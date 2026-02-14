@@ -1,11 +1,12 @@
 import {
 	asString,
-	type Collection,
 	type Component,
-	createCollection,
-	createComputed,
+	createTask,
 	dangerouslySetInnerHTML,
 	defineComponent,
+	type ElementChanges,
+	getWatchedElements,
+	type Memo,
 	on,
 	setAttribute,
 	setProperty,
@@ -41,7 +42,7 @@ export type FormListboxGroups = Record<
 
 export type FormListboxProps = {
 	value: string
-	options: Collection<HTMLButtonElement>
+	getOptions: () => HTMLButtonElement[]
 	filter: string
 	src: string
 }
@@ -52,7 +53,7 @@ type FormListboxUI = {
 	loading?: HTMLElement
 	error?: HTMLElement
 	listbox: HTMLElement
-	options: Collection<HTMLButtonElement>
+	options: Memo<ElementChanges<HTMLButtonElement>>
 }
 
 declare global {
@@ -65,8 +66,8 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 	'form-listbox',
 	{
 		value: '',
-		options: ({ listbox }) =>
-			createCollection(listbox, 'button[role="option"]:not([hidden])'),
+		getOptions: ({ listbox }: FormListboxUI) =>
+			getWatchedElements(listbox, 'button[role="option"]:not([hidden])'),
 		filter: '',
 		src: asString(),
 	},
@@ -112,7 +113,7 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 					]
 				: []
 
-		const html = createComputed<{
+		const html = createTask<{
 			ok: boolean
 			value: string
 			error: string
@@ -145,7 +146,7 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 					return { ok: false, value: '', error: String(err), pending: false }
 				}
 			},
-			{ ok: false, value: '', error: '', pending: true },
+			{ value: { ok: false, value: '', error: '', pending: true } },
 		)
 		const isSelected = (target: HTMLButtonElement) =>
 			host.value === target.value
@@ -164,8 +165,8 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 				setText(() => (host.src ? html.get().error : '')),
 			],
 			listbox: [
-				...manageFocus(host.options, options =>
-					options.get().findIndex(option => option.ariaSelected === 'true'),
+				...manageFocus(host.getOptions, options =>
+					options.findIndex(option => option.ariaSelected === 'true'),
 				),
 				on('click', ({ target }) => {
 					const option = (target as HTMLElement).closest(

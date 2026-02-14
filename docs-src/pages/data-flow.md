@@ -118,7 +118,7 @@ The `FormSpinbutton` component reacts to user interactions and exposes a reactiv
 defineComponent(
   'form-spinbutton',
   {
-    value: createSensor(
+    value: createEventSensor(
       read(ui => ui.input.value, asInteger()),
       'controls',
       {

@@ -23,7 +23,7 @@ import { expect, test } from '@playwright/test'
  * Architecture Notes:
  * - Wraps a text input with an expandable form-listbox popup
  * - Uses createState for popup visibility management
- * - Uses createSensor for input length tracking (readonly property)
+ * - Uses createEventSensor for input length tracking (readonly property)
  * - Implements validation with textbox.checkValidity()
  * - Passes filter value to nested form-listbox component via pass()
  * - Manages focus between textbox and listbox options
@@ -219,8 +219,8 @@ test.describe('form-combobox component', () => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
 					listboxElement
-					&& listboxElement.options
-					&& listboxElement.options.length > 0
+					&& listboxElement.getOptions
+					&& listboxElement.getOptions.length > 0
 				)
 			})
 
@@ -269,8 +269,8 @@ test.describe('form-combobox component', () => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
 					listboxElement
-					&& listboxElement.options
-					&& listboxElement.options.length > 0
+					&& listboxElement.getOptions
+					&& listboxElement.getOptions.length > 0
 				)
 			})
 
@@ -304,8 +304,8 @@ test.describe('form-combobox component', () => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
 					listboxElement
-					&& listboxElement.options
-					&& listboxElement.options.length > 0
+					&& listboxElement.getOptions
+					&& listboxElement.getOptions.length > 0
 				)
 			})
 
@@ -342,8 +342,8 @@ test.describe('form-combobox component', () => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
 					listboxElement
-					&& listboxElement.options
-					&& listboxElement.options.length > 0
+					&& listboxElement.getOptions
+					&& listboxElement.getOptions.length > 0
 				)
 			})
 

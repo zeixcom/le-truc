@@ -1,7 +1,7 @@
 import {
 	type Component,
 	type ComponentUI,
-	createSensor,
+	createEventsSensor,
 	defineComponent,
 	on,
 	read,
@@ -36,7 +36,7 @@ export default defineComponent<FormTextboxProps, FormTextboxUI>(
 	'form-textbox',
 	{
 		value: read(ui => ui.textbox.value, ''),
-		length: createSensor(
+		length: createEventsSensor(
 			read(ui => ui.textbox.value.length, 0),
 			'textbox',
 			{

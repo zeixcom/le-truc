@@ -2,19 +2,17 @@ import {
 	type Cleanup,
 	createEffect,
 	isFunction,
+	isMemo,
 	isRecord,
 	isSignal,
-	isString,
 	type MaybeCleanup,
+	type Memo,
 	type Signal,
-	toError,
-	UNSET,
 	valueString,
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from './component'
 import { InvalidEffectsError } from './errors'
-import { type Collection, isCollection } from './signals/collection'
-import type { ElementFromKey, UI } from './ui'
+import type { ElementChanges, ElementFromKey, UI } from './ui'
 import { DEV_MODE, elementName, LOG_ERROR, log } from './util'
 
 /* === Types === */
@@ -117,18 +115,18 @@ const runElementEffects = <P extends ComponentProps, E extends Element>(
 }
 
 /**
- * Run collection effects
+ * Run effects for dynamic collection of elements matching a selector
  *
- * @since 0.15.0
+ * @since 0.16.0
  * @param {Component<P>} host - Host component
- * @param {Collection<E>} collection - Collection of elements
+ * @param {Memo<ElementChanges<E>>} elementChanges - Element changes for selector
  * @param {ElementEffects<P, E>} effects - Element effects
  * @returns {Cleanup} - Cleanup function that runs collected cleanup functions
  * @throws {InvalidEffectsError} - If the effects are invalid
  */
-const runCollectionEffects = <P extends ComponentProps, E extends Element>(
+const runElementsEffects = <P extends ComponentProps, E extends Element>(
 	host: Component<P>,
-	collection: Collection<E>,
+	elementChanges: Memo<ElementChanges<E>>,
 	effects: ElementEffects<P, E>,
 ): Cleanup => {
 	const cleanups: Map<E, Cleanup> = new Map()
@@ -146,12 +144,16 @@ const runCollectionEffects = <P extends ComponentProps, E extends Element>(
 		}
 	}
 
-	collection.on('add', attach)
-	collection.on('remove', detach)
-	attach(collection.get())
+	const dispose = createEffect(() => {
+		const { added, removed } = elementChanges.get()
+		attach(added)
+		detach(removed)
+	})
+	attach(Array.from(elementChanges.get().current))
 	return () => {
 		for (const cleanup of cleanups.values()) cleanup()
 		cleanups.clear()
+		dispose()
 	}
 }
 
@@ -180,8 +182,8 @@ const runEffects = <
 		if (!effects[k]) continue
 
 		const elementEffects = Array.isArray(effects[k]) ? effects[k] : [effects[k]]
-		if (isCollection<ElementFromKey<U, typeof k>>(ui[k])) {
-			cleanups.push(runCollectionEffects(ui.host, ui[k], elementEffects))
+		if (isMemo<ElementChanges<ElementFromKey<U, typeof k>>>(ui[k])) {
+			cleanups.push(runElementsEffects(ui.host, ui[k], elementEffects))
 		} else if (ui[k]) {
 			const cleanup = runElementEffects(
 				ui.host,
@@ -217,7 +219,7 @@ const resolveReactive = <
 	context?: string,
 ): T => {
 	try {
-		return isString(reactive)
+		return typeof reactive === 'string'
 			? (host[reactive] as unknown as T)
 			: isSignal(reactive)
 				? reactive.get()
@@ -285,7 +287,7 @@ const updateElement =
 			const resolvedValue =
 				value === RESET
 					? fallback
-					: value === UNSET
+					: value === null
 						? updater.delete
 							? null
 							: fallback

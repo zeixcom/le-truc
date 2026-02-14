@@ -1,4 +1,4 @@
-import { type Collection } from './signals/collection';
+import { type Memo } from '@zeix/cause-effect';
 type SplitByComma<S extends string> = S extends `${infer First},${infer Rest}` ? [TrimWhitespace<First>, ...SplitByComma<Rest>] : [TrimWhitespace<S>];
 type TrimWhitespace<S extends string> = S extends ` ${infer Rest}` ? TrimWhitespace<Rest> : S extends `${infer Rest} ` ? TrimWhitespace<Rest> : S;
 type ExtractRightmostSelector<S extends string> = S extends `${string} ${infer Rest}` ? ExtractRightmostSelector<Rest> : S extends `${string}>${infer Rest}` ? ExtractRightmostSelector<Rest> : S extends `${string}+${infer Rest}` ? ExtractRightmostSelector<Rest> : S extends `${string}~${infer Rest}` ? ExtractRightmostSelector<Rest> : S;
@@ -10,6 +10,11 @@ type ElementsFromSelectorArray<Selectors extends readonly string[]> = {
     [K in keyof Selectors]: Selectors[K] extends string ? ElementFromSingleSelector<Selectors[K]> : never;
 }[number];
 type ElementFromSelector<S extends string> = S extends `${string},${string}` ? ElementsFromSelectorArray<SplitByComma<S>> : ElementFromSingleSelector<S>;
+type ElementChanges<E extends Element> = {
+    current: Set<E>;
+    added: E[];
+    removed: E[];
+};
 type FirstElement = {
     <S extends string>(selector: S, required: string): ElementFromSelector<S>;
     <S extends string>(selector: S): ElementFromSelector<S> | undefined;
@@ -17,15 +22,17 @@ type FirstElement = {
     <E extends Element>(selector: string): E | undefined;
 };
 type AllElements = {
-    <S extends string>(selector: S, required?: string): Collection<ElementFromSelector<S>>;
-    <E extends Element>(selector: string, required?: string): Collection<E>;
+    <S extends string>(selector: S, required?: string): Memo<ElementChanges<ElementFromSelector<S>>>;
+    <E extends Element>(selector: string, required?: string): Memo<ElementChanges<E>>;
 };
-type UI = Record<string, Element | Collection<Element>>;
-type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<U[K] extends Collection<infer E extends Element> ? E : U[K] extends Element ? U[K] : never>;
 type ElementQueries = {
     first: FirstElement;
     all: AllElements;
 };
+type UI = Record<string, Element | Memo<ElementChanges<Element>>>;
+type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<U[K] extends Memo<ElementChanges<infer E extends Element>> ? E : U[K] extends Element ? U[K] : never>;
+declare function getWatchedElements<S extends string>(parent: ParentNode, selector: S): () => ElementFromSelector<S>[];
+declare function getWatchedElements<E extends Element>(parent: ParentNode, selector: string): () => E[];
 /**
  * Create partially applied helper functions to get descendants and run effects on them
  *
@@ -34,4 +41,4 @@ type ElementQueries = {
  * @returns {ElementSelectors<P>} - Helper functions for selecting descendants
  */
 declare const getHelpers: (host: HTMLElement) => [ElementQueries, (run: () => void) => void];
-export { type ElementFromKey, type ElementFromSelector, type ElementQueries, getHelpers, type UI, };
+export { type ElementChanges, type ElementFromKey, type ElementFromSelector, type ElementQueries, getWatchedElements, getHelpers, type UI, };

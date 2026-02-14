@@ -1,17 +1,14 @@
 import {
-	type ComputedCallback,
 	createComputed,
 	createState,
 	isComputed,
-	isComputedCallback,
 	isFunction,
 	isMutableSignal,
 	isSignal,
-	isState,
-	isStore,
 	type MaybeCleanup,
+	type MemoCallback,
 	type Signal,
-	UNSET,
+	type TaskCallback,
 } from '@zeix/cause-effect'
 
 import { type Effects, runEffects } from './effects'
@@ -58,7 +55,11 @@ type Initializers<P extends ComponentProps, U extends UI> = {
 		| MethodProducer<P, ComponentUI<P, U>>
 }
 
-type MaybeSignal<T extends {}> = T | Signal<T> | ComputedCallback<T>
+type MaybeSignal<T extends {}> =
+	| T
+	| Signal<T>
+	| MemoCallback<T>
+	| TaskCallback<T>
 
 /* === Exported Functions === */
 
@@ -182,10 +183,10 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 		#setAccessor<K extends keyof P>(key: K, value: MaybeSignal<P[K]>): void {
 			const signal = isSignal(value)
 				? value
-				: isComputedCallback(value)
+				: isFunction<P[K]>(value)
 					? createComputed(value)
 					: createState(value)
-			const prev = this.#signals[key]
+			// const prev = this.#signals[key]
 			const mutable = isMutableSignal(signal)
 			this.#signals[key] = signal as Signal<P[K]>
 			Object.defineProperty(this, key, {
@@ -194,7 +195,7 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 				enumerable: true,
 				configurable: mutable,
 			})
-			if ((prev && isState(prev)) || isStore(prev)) prev.set(UNSET)
+			// if ((prev && isState(prev)) || isStore(prev)) prev.set(UNSET)
 		}
 	}
 
@@ -203,13 +204,13 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 }
 
 export {
+	defineComponent,
 	type Component,
 	type ComponentProp,
 	type ComponentProps,
-	type ComponentUI,
 	type ComponentSetup,
+	type ComponentUI,
+	type Initializers,
 	type MaybeSignal,
 	type ReservedWords,
-	type Initializers,
-	defineComponent,
 }

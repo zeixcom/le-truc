@@ -1,4 +1,4 @@
-import { type Cleanup, type Computed } from '@zeix/cause-effect';
+import { type Cleanup, type Memo } from '@zeix/cause-effect';
 import type { Component, ComponentProps } from './component';
 import { type Fallback, type Reader } from './parsers';
 import type { UI } from './ui';
@@ -75,11 +75,11 @@ declare const provideContexts: <P extends ComponentProps>(contexts: Array<keyof 
  * @since 0.15.0
  * @param {Context<string, () => T>} context - Context key to consume
  * @param {Fallback<T, U>} fallback - Fallback value or reader function for fallback
- * @returns {Reader<Computed<T>, U>} Computed signal that returns the consumed context the fallback value
+ * @returns {Reader<Memo<T>, U>} Computed signal that returns the consumed context the fallback value
  */
 declare const requestContext: <T extends {}, P extends ComponentProps, U extends UI>(context: Context<string, () => T>, fallback: Fallback<T, U & {
     host: Component<P>;
-}>) => Reader<Computed<T>, U & {
+}>) => Reader<Memo<T>, U & {
     host: Component<P>;
 }>;
 export { type Context, type UnknownContext, type ContextType, CONTEXT_REQUEST, ContextRequestEvent, provideContexts, requestContext, };

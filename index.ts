@@ -1,6 +1,6 @@
 /**
  * @name Le Truc
- * @version 0.15.0
+ * @version 0.16.0
  * @author Esther Brunner
  */
 
@@ -9,46 +9,54 @@ export {
 	batch,
 	CircularDependencyError,
 	type Cleanup,
-	type Computed,
-	type ComputedCallback,
+	type Collection,
+	type CollectionChanges,
+	type CollectionOptions,
+	type ComputedOptions,
+	createCollection,
 	createComputed,
 	createEffect,
+	createList,
+	createMemo,
+	createMutableSignal,
+	createScope,
+	createSensor,
 	createState,
 	createStore,
-	type DiffResult,
-	diff,
+	createTask,
 	type EffectCallback,
 	InvalidCallbackError,
 	InvalidSignalValueError,
-	isAbortError,
 	isAsyncFunction,
+	isCollection,
 	isComputed,
 	isEqual,
 	isFunction,
+	isList,
+	isMemo,
 	isMutableSignal,
-	isNumber,
 	isRecord,
-	isRecordOrArray,
 	isSignal,
 	isState,
 	isStore,
-	isString,
-	isSymbol,
+	isTask,
+	type List,
+	type ListOptions,
 	type MatchHandlers,
 	type MaybeCleanup,
+	type Memo,
+	type MemoCallback,
 	match,
 	NullishSignalValueError,
-	type ResolveResult,
-	resolve,
+	type Sensor,
+	type SensorOptions,
 	type Signal,
+	type SignalOptions,
 	type State,
 	type Store,
-	StoreKeyExistsError,
-	StoreKeyRangeError,
-	StoreKeyReadonlyError,
-	toError,
-	toSignal,
-	UNSET,
+	type StoreOptions,
+	type Task,
+	type TaskCallback,
 	valueString,
 } from '@zeix/cause-effect'
 
@@ -103,6 +111,7 @@ export {
 	InvalidReactivesError,
 	MissingElementError,
 } from './src/errors'
+export { createEventsSensor, type EventHandlers } from './src/events'
 export {
 	type Fallback,
 	isParser,
@@ -118,10 +127,9 @@ export { asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'
 export { schedule } from './src/scheduler'
 export {
-	type Collection,
-	type CollectionListener,
-	createCollection,
-	isCollection,
-} from './src/signals/collection'
-export { createSensor, type SensorEvents } from './src/signals/sensor'
-export type { ElementFromKey, ElementQueries, UI } from './src/ui'
+	type ElementChanges,
+	type ElementFromKey,
+	type ElementQueries,
+	getWatchedElements,
+	type UI,
+} from './src/ui'

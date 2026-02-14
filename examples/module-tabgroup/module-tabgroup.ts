@@ -1,8 +1,9 @@
 import {
-	type Collection,
 	type Component,
-	createSensor,
+	createEventsSensor,
 	defineComponent,
+	ElementChanges,
+	Memo,
 	read,
 	setProperty,
 	show,
@@ -13,8 +14,8 @@ export type ModuleTabgroupProps = {
 }
 
 type ModuleTabgroupUI = {
-	tabs: Collection<HTMLButtonElement>
-	panels: Collection<HTMLElement>
+	tabs: Memo<ElementChanges<HTMLButtonElement>>
+	panels: Memo<ElementChanges<HTMLElement>>
 }
 
 declare global {
@@ -27,11 +28,10 @@ const getAriaControls = (element: HTMLElement) =>
 	element.getAttribute('aria-controls') ?? ''
 
 const getSelected = (
-	elements: Collection<HTMLElement>,
+	tabs: HTMLElement[],
 	isCurrent: (element: HTMLElement) => boolean,
 	offset = 0,
 ) => {
-	const tabs = elements.get()
 	const currentIndex = tabs.findIndex(isCurrent)
 	const newIndex = (currentIndex + offset + tabs.length) % tabs.length
 	return getAriaControls(tabs[newIndex])
@@ -40,8 +40,15 @@ const getSelected = (
 export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 	'module-tabgroup',
 	{
-		selected: createSensor(
-			read(ui => getSelected(ui.tabs, tab => tab.ariaSelected === 'true'), ''),
+		selected: createEventsSensor(
+			read(
+				ui =>
+					getSelected(
+						Array.from(ui.tabs.get().current),
+						tab => tab.ariaSelected === 'true',
+					),
+				'',
+			),
 			'tabs',
 			{
 				click: ({ target }) => getAriaControls(target),
@@ -59,14 +66,14 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 					) {
 						event.preventDefault()
 						event.stopPropagation()
-						const tabs = ui.tabs.get()
+						const tabs = Array.from(ui.tabs.get().current)
 						const next =
 							key === 'Home'
 								? getAriaControls(tabs[0])
 								: key === 'End'
 									? getAriaControls(tabs[tabs.length - 1])
 									: getSelected(
-											ui.tabs,
+											tabs,
 											tab => tab === target,
 											key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1,
 										)

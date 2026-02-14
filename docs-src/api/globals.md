@@ -105,7 +105,7 @@
 - [asNumber](functions/asNumber.md)
 - [asString](functions/asString.md)
 - [createCollection](functions/createCollection.md)
-- [createSensor](functions/createSensor.md)
+- [createEventSensor](functions/createEventSensor.md)
 - [dangerouslySetInnerHTML](functions/dangerouslySetInnerHTML.md)
 - [defineComponent](functions/defineComponent.md)
 - [isCollection](functions/isCollection.md)

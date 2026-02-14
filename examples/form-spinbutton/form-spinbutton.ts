@@ -1,10 +1,11 @@
 import {
 	asInteger,
-	type Collection,
 	type Component,
 	createComputed,
-	createSensor,
+	createEventsSensor,
 	defineComponent,
+	type ElementChanges,
+	type Memo,
 	read,
 	setProperty,
 	show,
@@ -16,7 +17,7 @@ export type FormSpinbuttonProps = {
 }
 
 type FormSpinbuttonUI = {
-	controls: Collection<HTMLButtonElement | HTMLInputElement>
+	controls: Memo<ElementChanges<HTMLButtonElement | HTMLInputElement>>
 	increment: HTMLButtonElement
 	decrement: HTMLButtonElement
 	input: HTMLInputElement
@@ -33,7 +34,7 @@ declare global {
 export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 	'form-spinbutton',
 	{
-		value: createSensor(
+		value: createEventsSensor(
 			read(ui => ui.input.value, asInteger()),
 			'controls',
 			{
@@ -53,8 +54,8 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 					return clamped
 				},
 				click: ({ target, prev }) =>
-					prev +
-					(target.classList.contains('decrement')
+					prev
+					+ (target.classList.contains('decrement')
 						? -1
 						: target.classList.contains('increment')
 							? 1

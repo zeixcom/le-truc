@@ -1,12 +1,8 @@
 import {
-	createComputed,
-	isComputedCallback,
 	isFunction,
 	isRecord,
 	isSignal,
-	isString,
 	type MaybeCleanup,
-	UNSET,
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from '../component'
 import type { Effect, Reactive } from '../effects'
@@ -55,12 +51,12 @@ const pass =
 		const getGetter = (value: unknown) => {
 			if (isSignal(value)) return value.get
 			const fn =
-				isString(value) && value in host
+				typeof value === 'string' && value in host
 					? () => host[value as keyof typeof host]
-					: isComputedCallback(value)
+					: isFunction(value)
 						? value
 						: undefined
-			return fn ? createComputed(fn).get : undefined
+			return fn
 		}
 
 		// Iterate through reactives
@@ -91,7 +87,7 @@ const pass =
 			})
 
 			// Unset previous value so subscribers are notified
-			descriptor.set?.call(target, UNSET)
+			// descriptor.set?.call(target, UNSET)
 		}
 
 		// Reset to original descriptors on cleanup

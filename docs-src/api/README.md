@@ -215,7 +215,7 @@ Server-rendered markup:
 Le Truc component:
 
 ```js
-import { createSensor, defineComponent, read, setProperty, show } from '@zeix/le-truc'
+import { createEventSensor, defineComponent, read, setProperty, show } from '@zeix/le-truc'
 
 const getAriaControls = element => element.getAttribute('aria-controls') ?? ''
 
@@ -233,7 +233,7 @@ export default defineComponent(
   // 2. Reactive properties (signals)
   {
     // Sensors are read-only signals that update on user interaction only (events)
-    selected: createSensor(
+    selected: createEventSensor(
       // Initial value from aria-selected attribute
       read(ui => getSelected(ui.tabs, tab => tab.ariaSelected === 'true'), ''),
       // Target element(s) key

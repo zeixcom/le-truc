@@ -2,7 +2,7 @@ import {
 	batch,
 	type Component,
 	createComputed,
-	createSensor,
+	createEventsSensor,
 	createState,
 	defineComponent,
 	on,
@@ -42,7 +42,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 	'form-combobox',
 	{
 		value: read(ui => ui.textbox.value, ''),
-		length: createSensor(
+		length: createEventsSensor(
 			read(ui => ui.textbox.value.length, 0),
 			'textbox',
 			{
@@ -67,7 +67,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 
 		const showPopup = createState(false)
 		const isExpanded = createComputed(
-			() => showPopup.get() && listbox.options.length > 0,
+			() => showPopup.get() && listbox.getOptions().length > 0,
 		)
 
 		return {
@@ -99,7 +99,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 					const { key, altKey } = e
 					if (key === 'ArrowDown') {
 						if (altKey) showPopup.set(true)
-						if (isExpanded.get()) listbox.options[0]?.focus()
+						if (isExpanded.get()) listbox.getOptions()[0]?.focus()
 					}
 				}),
 			],
