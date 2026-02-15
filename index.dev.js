@@ -1782,20 +1782,9 @@ var extractAttributes = (selector) => {
   }
   return [...attributes];
 };
-function observeSelectorChanges(parent, selector) {
-  return createMemo((prev) => {
-    const next = new Set(Array.from(parent.querySelectorAll(selector)));
-    const added = [];
-    const removed = [];
-    for (const el of next)
-      if (!prev.current.has(el))
-        added.push(el);
-    for (const el of prev.current)
-      if (!next.has(el))
-        removed.push(el);
-    return { current: next, added, removed };
-  }, {
-    value: { current: new Set, added: [], removed: [] },
+function createElementsMemo(parent, selector) {
+  return createMemo(() => Array.from(parent.querySelectorAll(selector)), {
+    value: [],
     watched: (invalidate) => {
       const observerConfig = {
         childList: true,
@@ -1812,10 +1801,6 @@ function observeSelectorChanges(parent, selector) {
     }
   });
 }
-function getWatchedElements(parent, selector) {
-  const watcher = observeSelectorChanges(parent, selector);
-  return () => Array.from(watcher.get().current);
-}
 var getHelpers = (host) => {
   const root = host.shadowRoot ?? host;
   const dependencies = new Set;
@@ -1828,16 +1813,16 @@ var getHelpers = (host) => {
     return target ?? undefined;
   }
   function all(selector, required) {
-    const changes = observeSelectorChanges(root, selector);
-    const targets = changes.get().current;
-    if (required != null && !targets.size)
+    const targets = createElementsMemo(root, selector);
+    const current = targets.get();
+    if (required != null && !current.length)
       throw new MissingElementError(host, selector, required);
-    if (targets.size)
-      for (const target of targets) {
+    if (current.length)
+      for (const target of current) {
         if (isNotYetDefinedComponent(target))
           dependencies.add(target.localName);
       }
-    return createMemo(() => Array.from(changes.get().current), { value: [] });
+    return targets;
   }
   const resolveDependencies = (callback) => {
     if (dependencies.size) {
@@ -1964,7 +1949,7 @@ var requestContext = (context, fallback) => (ui) => {
   ui.host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
     consumed = getter;
   }));
-  return createComputed(consumed);
+  return createMemo(consumed);
 };
 // src/effects/attribute.ts
 var isSafeURL = (value) => {
@@ -2317,7 +2302,6 @@ export {
   isComputed,
   isCollection,
   isAsyncFunction,
-  getWatchedElements,
   defineComponent,
   dangerouslySetInnerHTML,
   createTask,
@@ -2329,6 +2313,7 @@ export {
   createMemo,
   createList,
   createEventsSensor,
+  createElementsMemo,
   createEffect,
   createComputed,
   createCollection,

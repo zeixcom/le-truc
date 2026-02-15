@@ -1,4 +1,4 @@
-import { createMemo, type Memo, type Sensor } from '@zeix/cause-effect'
+import { createMemo, type Memo } from '@zeix/cause-effect'
 import { DependencyTimeoutError, MissingElementError } from './errors'
 import { isNotYetDefinedComponent } from './util'
 
@@ -140,8 +140,10 @@ const extractAttributes = (selector: string): string[] => {
 	return [...attributes]
 }
 
+/* === Exported Functions === */
+
 /**
- * Observe current elements matching a CSS selector.
+ * Create a memo of elements matching a CSS selector.
  * The MutationObserver is lazily activated when an effect first reads
  * the memo, and disconnected when no effects are watching.
  *
@@ -150,15 +152,15 @@ const extractAttributes = (selector: string): string[] => {
  * @param selector - The CSS selector to match elements
  * @returns A Memo of current matching elements
  */
-function observeSelectorElements<S extends string>(
+function createElementsMemo<S extends string>(
 	parent: ParentNode,
 	selector: S,
 ): Memo<ElementFromSelector<S>[]>
-function observeSelectorElements<E extends Element>(
+function createElementsMemo<E extends Element>(
 	parent: ParentNode,
 	selector: string,
 ): Memo<E[]>
-function observeSelectorElements<S extends string>(
+function createElementsMemo<S extends string>(
 	parent: ParentNode,
 	selector: S,
 ): Memo<ElementFromSelector<S>[]> {
@@ -181,24 +183,6 @@ function observeSelectorElements<S extends string>(
 			return () => observer.disconnect()
 		},
 	})
-}
-
-/* === Exported Functions === */
-
-function getWatchedElements<S extends string>(
-	parent: ParentNode,
-	selector: S,
-): () => ElementFromSelector<S>[]
-function getWatchedElements<E extends Element>(
-	parent: ParentNode,
-	selector: string,
-): () => E[]
-function getWatchedElements<S extends string>(
-	parent: ParentNode,
-	selector: S,
-): () => ElementFromSelector<S>[] {
-	const watcher = observeSelectorElements(parent, selector)
-	return () => watcher.get()
 }
 
 /**
@@ -269,7 +253,7 @@ const getHelpers = (
 		selector: S,
 		required?: string,
 	): Memo<ElementFromSelector<S>[]> {
-		const targets = observeSelectorElements(root, selector)
+		const targets = createElementsMemo(root, selector)
 		const current = targets.get()
 		if (required != null && !current.length)
 			throw new MissingElementError(host, selector, required)
@@ -319,7 +303,7 @@ export {
 	type ElementFromKey,
 	type ElementFromSelector,
 	type ElementQueries,
-	getWatchedElements,
+	createElementsMemo,
 	getHelpers,
 	type UI,
 }

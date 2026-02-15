@@ -1,6 +1,6 @@
 import {
 	type Component,
-	createComputed,
+	createMemo,
 	defineComponent,
 	type Memo,
 	pass,
@@ -24,7 +24,7 @@ export default defineComponent<{}, ModuleCatalogUI>(
 		),
 	}),
 	({ spinbuttons }) => {
-		const total = createComputed(() =>
+		const total = createMemo(() =>
 			spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
 		)
 		return {

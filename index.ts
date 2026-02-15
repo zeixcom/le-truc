@@ -69,6 +69,7 @@ export {
 	defineComponent,
 	type Initializers,
 	type MaybeSignal,
+	type MethodProducer,
 	type ReservedWords,
 } from './src/component'
 export {
@@ -127,8 +128,8 @@ export { asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'
 export { schedule } from './src/scheduler'
 export {
+	createElementsMemo,
 	type ElementFromKey,
 	type ElementQueries,
-	getWatchedElements,
 	type UI,
 } from './src/ui'

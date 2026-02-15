@@ -1,6 +1,7 @@
 import {
 	asInteger,
 	type Component,
+	ComponentUI,
 	defineComponent,
 	MissingElementError,
 	on,
@@ -33,7 +34,11 @@ const MAX_ITEMS = 1000
 export default defineComponent<ModuleListProps, ModuleListUI>(
 	'module-list',
 	{
-		add: ({ host, container, template }) => {
+		add: ({
+			host,
+			container,
+			template,
+		}: ComponentUI<ModuleListProps, ModuleListUI>) => {
 			let key = 0
 			host.add = (process?: (item: HTMLElement) => void) => {
 				const item = (template.content.cloneNode(true) as DocumentFragment)
@@ -51,7 +56,10 @@ export default defineComponent<ModuleListProps, ModuleListUI>(
 				}
 			}
 		},
-		delete: ({ host, container }) => {
+		delete: ({
+			host,
+			container,
+		}: ComponentUI<ModuleListProps, ModuleListUI>) => {
 			host.delete = (key: string) => {
 				const item = container.querySelector(`[data-key="${key}"]`)
 				if (item) item.remove()
@@ -87,8 +95,8 @@ export default defineComponent<ModuleListProps, ModuleListUI>(
 			host: on('click', e => {
 				const { target } = e
 				if (
-					target instanceof HTMLElement &&
-					target.closest('basic-button.delete')
+					target instanceof HTMLElement
+					&& target.closest('basic-button.delete')
 				) {
 					e.stopPropagation()
 					target.closest('[data-key]')?.remove()

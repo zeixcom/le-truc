@@ -211,6 +211,7 @@ export {
 	type ComponentSetup,
 	type ComponentUI,
 	type Initializers,
+	type MethodProducer,
 	type MaybeSignal,
 	type ReservedWords,
 }

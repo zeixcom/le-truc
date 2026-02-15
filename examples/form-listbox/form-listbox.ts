@@ -1,10 +1,10 @@
 import {
 	asString,
 	type Component,
+	createElementsMemo,
 	createTask,
 	dangerouslySetInnerHTML,
 	defineComponent,
-	getWatchedElements,
 	type Memo,
 	on,
 	setAttribute,
@@ -41,7 +41,7 @@ export type FormListboxGroups = Record<
 
 export type FormListboxProps = {
 	value: string
-	getOptions: () => HTMLButtonElement[]
+	options: HTMLButtonElement[]
 	filter: string
 	src: string
 }
@@ -65,8 +65,8 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 	'form-listbox',
 	{
 		value: '',
-		getOptions: ({ listbox }: FormListboxUI) =>
-			getWatchedElements(listbox, 'button[role="option"]:not([hidden])'),
+		options: ({ listbox }: FormListboxUI) =>
+			createElementsMemo(listbox, 'button[role="option"]:not([hidden])'),
 		filter: '',
 		src: asString(),
 	},
@@ -164,8 +164,10 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 				setText(() => (host.src ? html.get().error : '')),
 			],
 			listbox: [
-				...manageFocus(host.getOptions, options =>
-					options.findIndex(option => option.ariaSelected === 'true'),
+				...manageFocus(
+					() => host.options,
+					options =>
+						options.findIndex(option => option.ariaSelected === 'true'),
 				),
 				on('click', ({ target }) => {
 					const option = (target as HTMLElement).closest(

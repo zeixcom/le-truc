@@ -1,8 +1,8 @@
 import {
 	batch,
 	type Component,
-	createComputed,
 	createEventsSensor,
+	createMemo,
 	createState,
 	defineComponent,
 	on,
@@ -66,8 +66,8 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 		const descriptionId = description?.id
 
 		const showPopup = createState(false)
-		const isExpanded = createComputed(
-			() => showPopup.get() && listbox.getOptions().length > 0,
+		const isExpanded = createMemo(
+			() => showPopup.get() && listbox.options.length > 0,
 		)
 
 		return {
@@ -99,7 +99,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 					const { key, altKey } = e
 					if (key === 'ArrowDown') {
 						if (altKey) showPopup.set(true)
-						if (isExpanded.get()) listbox.getOptions()[0]?.focus()
+						if (isExpanded.get()) listbox.options[0]?.focus()
 					}
 				}),
 			],

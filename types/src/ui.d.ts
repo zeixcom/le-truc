@@ -26,8 +26,18 @@ type ElementQueries = {
 };
 type UI = Record<string, Element | Memo<Element[]>>;
 type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<U[K] extends Memo<infer E extends Element[]> ? E[number] : U[K] extends Element ? U[K] : never>;
-declare function getWatchedElements<S extends string>(parent: ParentNode, selector: S): () => ElementFromSelector<S>[];
-declare function getWatchedElements<E extends Element>(parent: ParentNode, selector: string): () => E[];
+/**
+ * Create a memo of elements matching a CSS selector.
+ * The MutationObserver is lazily activated when an effect first reads
+ * the memo, and disconnected when no effects are watching.
+ *
+ * @since 0.16.0
+ * @param parent - The parent node to search within
+ * @param selector - The CSS selector to match elements
+ * @returns A Memo of current matching elements
+ */
+declare function createElementsMemo<S extends string>(parent: ParentNode, selector: S): Memo<ElementFromSelector<S>[]>;
+declare function createElementsMemo<E extends Element>(parent: ParentNode, selector: string): Memo<E[]>;
 /**
  * Create partially applied helper functions to get descendants and run effects on them
  *
@@ -36,4 +46,4 @@ declare function getWatchedElements<E extends Element>(parent: ParentNode, selec
  * @returns {ElementSelectors<P>} - Helper functions for selecting descendants
  */
 declare const getHelpers: (host: HTMLElement) => [ElementQueries, (run: () => void) => void];
-export { type ElementFromKey, type ElementFromSelector, type ElementQueries, getWatchedElements, getHelpers, type UI, };
+export { type ElementFromKey, type ElementFromSelector, type ElementQueries, createElementsMemo, getHelpers, type UI, };

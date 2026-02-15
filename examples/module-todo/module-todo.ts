@@ -1,7 +1,7 @@
 import {
 	type Component,
+	createElementsMemo,
 	defineComponent,
-	getWatchedElements,
 	on,
 	pass,
 	setAttribute,
@@ -59,8 +59,8 @@ export default defineComponent<{}, ModuleTodoUI>(
 		),
 	}),
 	({ textbox, list, filter }) => {
-		const active = getWatchedElements(list, 'form-checkbox:not([checked])')
-		const completed = getWatchedElements(list, 'form-checkbox[checked]')
+		const active = createElementsMemo(list, 'form-checkbox:not([checked])')
+		const completed = createElementsMemo(list, 'form-checkbox[checked]')
 
 		return {
 			form: on('submit', e => {
@@ -74,14 +74,15 @@ export default defineComponent<{}, ModuleTodoUI>(
 			}),
 			submit: pass({ disabled: () => !textbox.length }),
 			list: setAttribute('filter', () => filter?.value || 'all'),
-			count: pass({ count: () => active.length }),
+			count: pass({ count: () => active.get().length }),
 			clearCompleted: [
 				pass({
-					disabled: () => !completed().length,
-					badge: () => (completed().length ? String(completed().length) : ''),
+					disabled: () => !completed.get().length,
+					badge: () =>
+						completed.get().length ? String(completed.get().length) : '',
 				}),
 				on('click', () => {
-					const items = completed()
+					const items = completed.get()
 					for (let i = items.length - 1; i >= 0; i--)
 						items[i].closest('li')?.remove()
 				}),

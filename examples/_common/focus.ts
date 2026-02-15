@@ -1,4 +1,4 @@
-import { type Collection, on } from '../..'
+import { on } from '../..'
 
 /* === Constants ===  */
 

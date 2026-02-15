@@ -1,8 +1,8 @@
 import {
 	asInteger,
 	type Component,
-	createComputed,
 	createEventsSensor,
+	createMemo,
 	defineComponent,
 	type Memo,
 	read,
@@ -87,9 +87,9 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 		other: first('.other'),
 	}),
 	({ host, increment, zero }) => {
-		const nonZero = createComputed(() => host.value !== 0)
+		const nonZero = createMemo(() => host.value !== 0)
 		const incrementLabel = increment.ariaLabel || 'Increment'
-		const ariaLabel = createComputed(() =>
+		const ariaLabel = createMemo(() =>
 			nonZero.get() || !zero ? incrementLabel : zero.textContent,
 		)
 
