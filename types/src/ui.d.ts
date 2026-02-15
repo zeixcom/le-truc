@@ -10,11 +10,6 @@ type ElementsFromSelectorArray<Selectors extends readonly string[]> = {
     [K in keyof Selectors]: Selectors[K] extends string ? ElementFromSingleSelector<Selectors[K]> : never;
 }[number];
 type ElementFromSelector<S extends string> = S extends `${string},${string}` ? ElementsFromSelectorArray<SplitByComma<S>> : ElementFromSingleSelector<S>;
-type ElementChanges<E extends Element> = {
-    current: Set<E>;
-    added: E[];
-    removed: E[];
-};
 type FirstElement = {
     <S extends string>(selector: S, required: string): ElementFromSelector<S>;
     <S extends string>(selector: S): ElementFromSelector<S> | undefined;
@@ -22,15 +17,15 @@ type FirstElement = {
     <E extends Element>(selector: string): E | undefined;
 };
 type AllElements = {
-    <S extends string>(selector: S, required?: string): Memo<ElementChanges<ElementFromSelector<S>>>;
-    <E extends Element>(selector: string, required?: string): Memo<ElementChanges<E>>;
+    <S extends string>(selector: S, required?: string): Memo<ElementFromSelector<S>[]>;
+    <E extends Element>(selector: string, required?: string): Memo<E[]>;
 };
 type ElementQueries = {
     first: FirstElement;
     all: AllElements;
 };
-type UI = Record<string, Element | Memo<ElementChanges<Element>>>;
-type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<U[K] extends Memo<ElementChanges<infer E extends Element>> ? E : U[K] extends Element ? U[K] : never>;
+type UI = Record<string, Element | Memo<Element[]>>;
+type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<U[K] extends Memo<infer E extends Element[]> ? E[number] : U[K] extends Element ? U[K] : never>;
 declare function getWatchedElements<S extends string>(parent: ParentNode, selector: S): () => ElementFromSelector<S>[];
 declare function getWatchedElements<E extends Element>(parent: ParentNode, selector: string): () => E[];
 /**
@@ -41,4 +36,4 @@ declare function getWatchedElements<E extends Element>(parent: ParentNode, selec
  * @returns {ElementSelectors<P>} - Helper functions for selecting descendants
  */
 declare const getHelpers: (host: HTMLElement) => [ElementQueries, (run: () => void) => void];
-export { type ElementChanges, type ElementFromKey, type ElementFromSelector, type ElementQueries, getWatchedElements, getHelpers, type UI, };
+export { type ElementFromKey, type ElementFromSelector, type ElementQueries, getWatchedElements, getHelpers, type UI, };

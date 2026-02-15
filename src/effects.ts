@@ -12,7 +12,7 @@ import {
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from './component'
 import { InvalidEffectsError } from './errors'
-import type { ElementChanges, ElementFromKey, UI } from './ui'
+import type { ElementFromKey, UI } from './ui'
 import { DEV_MODE, elementName, LOG_ERROR, log } from './util'
 
 /* === Types === */
@@ -119,14 +119,14 @@ const runElementEffects = <P extends ComponentProps, E extends Element>(
  *
  * @since 0.16.0
  * @param {Component<P>} host - Host component
- * @param {Memo<ElementChanges<E>>} elementChanges - Element changes for selector
+ * @param {Memo<E[]>} elements - Elements for selector
  * @param {ElementEffects<P, E>} effects - Element effects
  * @returns {Cleanup} - Cleanup function that runs collected cleanup functions
  * @throws {InvalidEffectsError} - If the effects are invalid
  */
 const runElementsEffects = <P extends ComponentProps, E extends Element>(
 	host: Component<P>,
-	elementChanges: Memo<ElementChanges<E>>,
+	elements: Memo<E[]>,
 	effects: ElementEffects<P, E>,
 ): Cleanup => {
 	const cleanups: Map<E, Cleanup> = new Map()
@@ -145,11 +145,17 @@ const runElementsEffects = <P extends ComponentProps, E extends Element>(
 	}
 
 	const dispose = createEffect(() => {
-		const { added, removed } = elementChanges.get()
+		const next = new Set(elements.get())
+		const added: E[] = []
+		const removed: E[] = []
+
+		for (const target of next) if (!cleanups.has(target)) added.push(target)
+		for (const target of cleanups.keys())
+			if (!next.has(target)) removed.push(target)
+
 		attach(added)
 		detach(removed)
 	})
-	attach(Array.from(elementChanges.get().current))
 	return () => {
 		for (const cleanup of cleanups.values()) cleanup()
 		cleanups.clear()
@@ -182,7 +188,7 @@ const runEffects = <
 		if (!effects[k]) continue
 
 		const elementEffects = Array.isArray(effects[k]) ? effects[k] : [effects[k]]
-		if (isMemo<ElementChanges<ElementFromKey<U, typeof k>>>(ui[k])) {
+		if (isMemo<ElementFromKey<U, typeof k>[]>(ui[k])) {
 			cleanups.push(runElementsEffects(ui.host, ui[k], elementEffects))
 		} else if (ui[k]) {
 			const cleanup = runElementEffects(

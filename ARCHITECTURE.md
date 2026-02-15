@@ -121,7 +121,7 @@ Calls the cleanup function returned by `runEffects()`, which tears down all effe
 
 1. **`runEffects(ui, effects)`** — top-level orchestrator. Iterates the keys of the effects record. For each key, checks whether `ui[key]` is a `Memo` (from `all()`) or a single `Element` (from `first()`), and delegates accordingly.
 
-2. **`runElementsEffects(host, elementChanges, effects)`** — handles dynamic collections. Creates a `createEffect()` that watches the `Memo<ElementChanges>` and attaches/detaches per-element effects as elements are added or removed from the DOM.
+2. **`runElementsEffects(host, elements, effects)`** — handles dynamic collections. Creates a `createEffect()` that watches `Memo<E[]>`, computes added/removed elements by diffing against currently attached cleanups, and attaches/detaches per-element effects.
 
 3. **`runElementEffects(host, target, effects)`** — runs one or many effect functions against a single target element, collecting their cleanup functions.
 
@@ -188,7 +188,7 @@ Calls `root.querySelector()`. If the matched element is an undefined custom elem
 
 ### all(selector, required?)
 
-Returns a `Memo<ElementChanges<E>>` created by `observeSelectorChanges()`. This sets up a `MutationObserver` (lazily, via the `watched` option on `createMemo`) that watches for `childList`, `subtree`, and relevant attribute changes. The memo tracks `{ current: Set<E>, added: E[], removed: E[] }` — a diff of which elements matching the selector were added or removed.
+Returns a `Memo<E[]>` created by `observeSelectorElements()`. This sets up a `MutationObserver` (lazily, via the `watched` option on `createMemo`) that watches for `childList`, `subtree`, and relevant attribute changes. The memo always contains the current matching elements; added/removed diffs are derived downstream where needed (for example in `runElementsEffects`).
 
 The `MutationObserver` config is smart about which attributes to watch: `extractAttributes(selector)` parses the CSS selector to find attribute names implied by `.class`, `#id`, and `[attr]` patterns.
 

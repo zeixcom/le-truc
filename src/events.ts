@@ -2,7 +2,7 @@ import { createSensor, isMemo, isSensor, type Sensor } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from './component'
 import { getFallback, type ParserOrFallback } from './parsers'
 import { PASSIVE_EVENTS, schedule } from './scheduler'
-import type { ElementChanges, ElementFromKey, UI } from './ui'
+import type { ElementFromKey, UI } from './ui'
 
 /* === Types === */
 
@@ -46,8 +46,8 @@ const createEventsSensor =
 	(ui: U & { host: Component<P> }) => {
 		const { host } = ui
 		let value: T = getFallback(ui, init)
-		const targets = isMemo<ElementChanges<ElementFromKey<U, K>>>(ui[key])
-			? Array.from(ui[key].get().current)
+		const targets = isMemo<ElementFromKey<U, K>[]>(ui[key])
+			? ui[key].get()
 			: [ui[key] as ElementFromKey<U & { host: Component<P> }, K>]
 		const eventMap = new Map<string, EventListener>()
 

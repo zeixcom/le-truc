@@ -4,7 +4,6 @@ import {
 	createComputed,
 	createEventsSensor,
 	defineComponent,
-	type ElementChanges,
 	type Memo,
 	read,
 	setProperty,
@@ -17,7 +16,7 @@ export type FormSpinbuttonProps = {
 }
 
 type FormSpinbuttonUI = {
-	controls: Memo<ElementChanges<HTMLButtonElement | HTMLInputElement>>
+	controls: Memo<(HTMLButtonElement | HTMLInputElement)[]>
 	increment: HTMLButtonElement
 	decrement: HTMLButtonElement
 	input: HTMLInputElement

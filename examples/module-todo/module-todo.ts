@@ -1,7 +1,7 @@
 import {
 	type Component,
-	createCollection,
 	defineComponent,
+	getWatchedElements,
 	on,
 	pass,
 	setAttribute,
@@ -59,8 +59,8 @@ export default defineComponent<{}, ModuleTodoUI>(
 		),
 	}),
 	({ textbox, list, filter }) => {
-		const active = createCollection(list, 'form-checkbox:not([checked])')
-		const completed = createCollection(list, 'form-checkbox[checked]')
+		const active = getWatchedElements(list, 'form-checkbox:not([checked])')
+		const completed = getWatchedElements(list, 'form-checkbox[checked]')
 
 		return {
 			form: on('submit', e => {
@@ -77,11 +77,11 @@ export default defineComponent<{}, ModuleTodoUI>(
 			count: pass({ count: () => active.length }),
 			clearCompleted: [
 				pass({
-					disabled: () => !completed.length,
-					badge: () => (completed.length ? String(completed.length) : ''),
+					disabled: () => !completed().length,
+					badge: () => (completed().length ? String(completed().length) : ''),
 				}),
 				on('click', () => {
-					const items = completed.get()
+					const items = completed()
 					for (let i = items.length - 1; i >= 0; i--)
 						items[i].closest('li')?.remove()
 				}),

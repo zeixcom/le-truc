@@ -127,7 +127,6 @@ export { asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'
 export { schedule } from './src/scheduler'
 export {
-	type ElementChanges,
 	type ElementFromKey,
 	type ElementQueries,
 	getWatchedElements,

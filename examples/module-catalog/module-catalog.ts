@@ -2,7 +2,6 @@ import {
 	type Component,
 	createComputed,
 	defineComponent,
-	type ElementChanges,
 	type Memo,
 	pass,
 } from '../..'
@@ -11,7 +10,7 @@ import { FormSpinbuttonProps } from '../form-spinbutton/form-spinbutton'
 
 type ModuleCatalogUI = {
 	button: Component<BasicButtonProps>
-	spinbuttons: Memo<ElementChanges<Component<FormSpinbuttonProps>>>
+	spinbuttons: Memo<Component<FormSpinbuttonProps>[]>
 }
 
 export default defineComponent<{}, ModuleCatalogUI>(
@@ -26,10 +25,7 @@ export default defineComponent<{}, ModuleCatalogUI>(
 	}),
 	({ spinbuttons }) => {
 		const total = createComputed(() =>
-			Array.from(spinbuttons.get().current).reduce(
-				(sum, item) => sum + item.value,
-				0,
-			),
+			spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
 		)
 		return {
 			button: pass({

@@ -2,7 +2,6 @@ import {
 	type Component,
 	createEventsSensor,
 	defineComponent,
-	ElementChanges,
 	Memo,
 	read,
 	setProperty,
@@ -14,8 +13,8 @@ export type ModuleTabgroupProps = {
 }
 
 type ModuleTabgroupUI = {
-	tabs: Memo<ElementChanges<HTMLButtonElement>>
-	panels: Memo<ElementChanges<HTMLElement>>
+	tabs: Memo<HTMLButtonElement[]>
+	panels: Memo<HTMLElement[]>
 }
 
 declare global {
@@ -42,11 +41,7 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 	{
 		selected: createEventsSensor(
 			read(
-				ui =>
-					getSelected(
-						Array.from(ui.tabs.get().current),
-						tab => tab.ariaSelected === 'true',
-					),
+				ui => getSelected(ui.tabs.get(), tab => tab.ariaSelected === 'true'),
 				'',
 			),
 			'tabs',
@@ -66,7 +61,7 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 					) {
 						event.preventDefault()
 						event.stopPropagation()
-						const tabs = Array.from(ui.tabs.get().current)
+						const tabs = ui.tabs.get()
 						const next =
 							key === 'Home'
 								? getAriaControls(tabs[0])

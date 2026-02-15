@@ -1,7 +1,7 @@
 import {
 	asString,
 	type Component,
-	createComputed,
+	createTask,
 	dangerouslySetInnerHTML,
 	defineComponent,
 	setText,
@@ -41,7 +41,7 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 	}),
 	ui => {
 		const { host } = ui
-		const result = createComputed<{
+		const result = createTask<{
 			ok: boolean
 			value: string
 			error: string
@@ -70,7 +70,7 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 					}
 				}
 			},
-			{ ok: false, value: '', error: '', pending: true },
+			{ value: { ok: false, value: '', error: '', pending: true } },
 		)
 		const hasError = () => !!result.get().error
 

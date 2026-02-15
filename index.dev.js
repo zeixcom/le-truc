@@ -1645,7 +1645,7 @@ var runElementEffects = (host, target, effects) => {
     cleanups.length = 0;
   };
 };
-var runElementsEffects = (host, elementChanges, effects) => {
+var runElementsEffects = (host, elements, effects) => {
   const cleanups = new Map;
   const attach = (targets) => {
     for (const target of targets) {
@@ -1661,11 +1661,18 @@ var runElementsEffects = (host, elementChanges, effects) => {
     }
   };
   const dispose = createEffect(() => {
-    const { added, removed } = elementChanges.get();
+    const next = new Set(elements.get());
+    const added = [];
+    const removed = [];
+    for (const target of next)
+      if (!cleanups.has(target))
+        added.push(target);
+    for (const target of cleanups.keys())
+      if (!next.has(target))
+        removed.push(target);
     attach(added);
     detach(removed);
   });
-  attach(Array.from(elementChanges.get().current));
   return () => {
     for (const cleanup of cleanups.values())
       cleanup();
@@ -1830,7 +1837,7 @@ var getHelpers = (host) => {
         if (isNotYetDefinedComponent(target))
           dependencies.add(target.localName);
       }
-    return changes;
+    return createMemo(() => Array.from(changes.get().current), { value: [] });
   }
   const resolveDependencies = (callback) => {
     if (dependencies.size) {
@@ -2177,7 +2184,7 @@ var setText = (reactive) => updateElement(reactive, {
 var createEventsSensor = (init, key, events) => (ui) => {
   const { host } = ui;
   let value = getFallback(ui, init);
-  const targets = isMemo(ui[key]) ? Array.from(ui[key].get().current) : [ui[key]];
+  const targets = isMemo(ui[key]) ? ui[key].get() : [ui[key]];
   const eventMap = new Map;
   const getTarget = (eventTarget) => {
     for (const t of targets)

@@ -2,7 +2,6 @@ import {
 	type Component,
 	createEventsSensor,
 	defineComponent,
-	type ElementChanges,
 	type Memo,
 	read,
 	setProperty,
@@ -15,8 +14,8 @@ export type FormRadiogroupProps = {
 }
 
 type FormRadiogroupUI = {
-	radios: Memo<ElementChanges<HTMLInputElement>>
-	labels: Memo<ElementChanges<HTMLLabelElement>>
+	radios: Memo<HTMLInputElement[]>
+	labels: Memo<HTMLLabelElement[]>
 }
 
 declare global {
@@ -33,7 +32,7 @@ export default defineComponent<FormRadiogroupProps, FormRadiogroupUI>(
 	{
 		value: createEventsSensor(
 			read(({ radios }) => {
-				const radiosArray = Array.from(radios.get().current)
+				const radiosArray = radios.get()
 				return radiosArray[getIndex(radiosArray)]?.value
 			}, ''),
 			'radios',
@@ -50,7 +49,7 @@ export default defineComponent<FormRadiogroupProps, FormRadiogroupUI>(
 		labels: all('label', 'Wrap radio buttons with labels.'),
 	}),
 	({ host, radios }) => ({
-		host: manageFocus(() => Array.from(radios.get().current), getIndex),
+		host: manageFocus(() => radios.get(), getIndex),
 		radios: setProperty('tabIndex', target =>
 			target.value === host.value ? 0 : -1,
 		),

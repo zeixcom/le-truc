@@ -3,7 +3,6 @@ import {
 	type Component,
 	createEffect,
 	defineComponent,
-	type ElementChanges,
 	type Memo,
 	on,
 	setProperty,
@@ -14,9 +13,9 @@ export type ModuleCarouselProps = {
 }
 
 type ModuleCarouselUI = {
-	dots: Memo<ElementChanges<HTMLElement>>
-	slides: Memo<ElementChanges<HTMLElement>>
-	buttons: Memo<ElementChanges<HTMLElement>>
+	dots: Memo<HTMLElement[]>
+	slides: Memo<HTMLElement[]>
+	buttons: Memo<HTMLElement[]>
 }
 
 declare global {
@@ -32,9 +31,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 	{
 		index: asInteger(ui =>
 			Math.max(
-				Array.from(ui.slides.get().current).findIndex(
-					slide => slide.ariaCurrent === 'true',
-				),
+				ui.slides.get().findIndex(slide => slide.ariaCurrent === 'true'),
 				0,
 			),
 		),
@@ -49,7 +46,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 		let isScrolling = false
 
 		const scrollToSlide = (index: number) => {
-			const slide = Array.from(slides.get().current)[index]
+			const slide = slides.get()[index]
 			if (!slide) return
 
 			isNavigating = true
@@ -72,9 +69,9 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 					const observer = new IntersectionObserver(entries => {
 						for (const entry of entries) {
 							if (entry.intersectionRatio > config.threshold) {
-								const slideIndex = Array.from(slides.get().current).findIndex(
-									slide => slide === entry.target,
-								)
+								const slideIndex = slides
+									.get()
+									.findIndex(slide => slide === entry.target)
 
 								if (isNavigating) {
 									if (slideIndex === host.index) isNavigating = false
@@ -88,8 +85,8 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 						}
 					}, config)
 
-					const slideSet = slides.get().current
-					for (const slide of slideSet) observer.observe(slide)
+					const slideArray = slides.get()
+					for (const slide of slideArray) observer.observe(slide)
 					return () => {
 						observer.disconnect()
 					}
@@ -114,7 +111,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 				on('click', ({ target }) => {
 					if (!(target instanceof HTMLElement)) return
 
-					const slidesLength = slides.get().current.size
+					const slidesLength = slides.get().length
 					const total = slidesLength
 					const nextIndex = target.classList.contains('prev')
 						? host.index - 1
@@ -131,7 +128,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 						e.preventDefault()
 						e.stopPropagation()
 
-						const slidesLength = slides.get().current.size
+						const slidesLength = slides.get().length
 						const total = slidesLength
 						const nextIndex =
 							key === 'Home'
@@ -155,7 +152,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 
 			// Set the active slide in the slides
 			slides: setProperty('ariaCurrent', target =>
-				String(target.id === Array.from(slides.get().current)[host.index].id),
+				String(target.id === slides.get()[host.index].id),
 			),
 		}
 	},

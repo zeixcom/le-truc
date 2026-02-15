@@ -4,7 +4,6 @@ import {
 	createTask,
 	dangerouslySetInnerHTML,
 	defineComponent,
-	type ElementChanges,
 	getWatchedElements,
 	type Memo,
 	on,
@@ -53,7 +52,7 @@ type FormListboxUI = {
 	loading?: HTMLElement
 	error?: HTMLElement
 	listbox: HTMLElement
-	options: Memo<ElementChanges<HTMLButtonElement>>
+	options: Memo<HTMLButtonElement[]>
 }
 
 declare global {

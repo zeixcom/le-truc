@@ -78,12 +78,6 @@ type ElementFromSelector<S extends string> = S extends `${string},${string}`
 	? ElementsFromSelectorArray<SplitByComma<S>>
 	: ElementFromSingleSelector<S>
 
-type ElementChanges<E extends Element> = {
-	current: Set<E>
-	added: E[]
-	removed: E[]
-}
-
 type FirstElement = {
 	<S extends string>(selector: S, required: string): ElementFromSelector<S>
 	<S extends string>(selector: S): ElementFromSelector<S> | undefined
@@ -95,11 +89,8 @@ type AllElements = {
 	<S extends string>(
 		selector: S,
 		required?: string,
-	): Memo<ElementChanges<ElementFromSelector<S>>>
-	<E extends Element>(
-		selector: string,
-		required?: string,
-	): Memo<ElementChanges<E>>
+	): Memo<ElementFromSelector<S>[]>
+	<E extends Element>(selector: string, required?: string): Memo<E[]>
 }
 
 type ElementQueries = {
@@ -107,11 +98,11 @@ type ElementQueries = {
 	all: AllElements
 }
 
-type UI = Record<string, Element | Memo<ElementChanges<Element>>>
+type UI = Record<string, Element | Memo<Element[]>>
 
 type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<
-	U[K] extends Memo<ElementChanges<infer E extends Element>>
-		? E
+	U[K] extends Memo<infer E extends Element[]>
+		? E[number]
 		: U[K] extends Element
 			? U[K]
 			: never
@@ -150,59 +141,46 @@ const extractAttributes = (selector: string): string[] => {
 }
 
 /**
- * Observe changes to elements matching a CSS selector.
- * Returns a Memo that tracks which elements were added and removed.
+ * Observe current elements matching a CSS selector.
  * The MutationObserver is lazily activated when an effect first reads
  * the memo, and disconnected when no effects are watching.
  *
  * @since 0.16.0
  * @param parent - The parent node to search within
  * @param selector - The CSS selector to match elements
- * @returns A Memo of element changes (current set, added, removed)
+ * @returns A Memo of current matching elements
  */
-function observeSelectorChanges<S extends string>(
+function observeSelectorElements<S extends string>(
 	parent: ParentNode,
 	selector: S,
-): Memo<ElementChanges<ElementFromSelector<S>>>
-function observeSelectorChanges<E extends Element>(
+): Memo<ElementFromSelector<S>[]>
+function observeSelectorElements<E extends Element>(
 	parent: ParentNode,
 	selector: string,
-): Memo<ElementChanges<E>>
-function observeSelectorChanges<S extends string>(
+): Memo<E[]>
+function observeSelectorElements<S extends string>(
 	parent: ParentNode,
 	selector: S,
-): Memo<ElementChanges<ElementFromSelector<S>>> {
+): Memo<ElementFromSelector<S>[]> {
 	type E = ElementFromSelector<S>
 
-	return createMemo(
-		(prev: ElementChanges<E>) => {
-			const next = new Set(Array.from(parent.querySelectorAll<E>(selector)))
-			const added: E[] = []
-			const removed: E[] = []
-
-			for (const el of next) if (!prev.current.has(el)) added.push(el)
-			for (const el of prev.current) if (!next.has(el)) removed.push(el)
-
-			return { current: next, added, removed }
+	return createMemo(() => Array.from(parent.querySelectorAll<E>(selector)), {
+		value: [],
+		watched: invalidate => {
+			const observerConfig: MutationObserverInit = {
+				childList: true,
+				subtree: true,
+			}
+			const observedAttributes = extractAttributes(selector)
+			if (observedAttributes.length) {
+				observerConfig.attributes = true
+				observerConfig.attributeFilter = observedAttributes
+			}
+			const observer = new MutationObserver(() => invalidate())
+			observer.observe(parent, observerConfig)
+			return () => observer.disconnect()
 		},
-		{
-			value: { current: new Set<E>(), added: [], removed: [] },
-			watched: invalidate => {
-				const observerConfig: MutationObserverInit = {
-					childList: true,
-					subtree: true,
-				}
-				const observedAttributes = extractAttributes(selector)
-				if (observedAttributes.length) {
-					observerConfig.attributes = true
-					observerConfig.attributeFilter = observedAttributes
-				}
-				const observer = new MutationObserver(() => invalidate())
-				observer.observe(parent, observerConfig)
-				return () => observer.disconnect()
-			},
-		},
-	)
+	})
 }
 
 /* === Exported Functions === */
@@ -219,8 +197,8 @@ function getWatchedElements<S extends string>(
 	parent: ParentNode,
 	selector: S,
 ): () => ElementFromSelector<S>[] {
-	const watcher = observeSelectorChanges(parent, selector)
-	return () => Array.from(watcher.get().current)
+	const watcher = observeSelectorElements(parent, selector)
+	return () => watcher.get()
 }
 
 /**
@@ -282,25 +260,25 @@ const getHelpers = (
 	function all<S extends string>(
 		selector: S,
 		required?: string,
-	): Memo<ElementChanges<ElementFromSelector<S>>>
+	): Memo<ElementFromSelector<S>[]>
 	function all<E extends Element>(
 		selector: string,
 		required?: string,
-	): Memo<ElementChanges<E>>
+	): Memo<E[]>
 	function all<S extends string>(
 		selector: S,
 		required?: string,
-	): Memo<ElementChanges<ElementFromSelector<S>>> {
-		const changes = observeSelectorChanges(root, selector)
-		const targets = changes.get().current
-		if (required != null && !targets.size)
+	): Memo<ElementFromSelector<S>[]> {
+		const targets = observeSelectorElements(root, selector)
+		const current = targets.get()
+		if (required != null && !current.length)
 			throw new MissingElementError(host, selector, required)
-		if (targets.size)
-			for (const target of targets) {
+		if (current.length)
+			for (const target of current) {
 				// Only add to dependencies if element is a custom element that's not yet defined
 				if (isNotYetDefinedComponent(target)) dependencies.add(target.localName)
 			}
-		return changes
+		return targets
 	}
 
 	/**
@@ -338,7 +316,6 @@ const getHelpers = (
 }
 
 export {
-	type ElementChanges,
 	type ElementFromKey,
 	type ElementFromSelector,
 	type ElementQueries,
