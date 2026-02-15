@@ -1,14 +1,14 @@
 import {
 	asInteger,
 	type Component,
-	ComponentUI,
+	type ComponentUI,
 	defineComponent,
 	MissingElementError,
 	on,
 	pass,
 } from '../..'
-import { BasicButtonProps } from '../basic-button/basic-button'
-import { FormTextboxProps } from '../form-textbox/form-textbox'
+import type { BasicButtonProps } from '../basic-button/basic-button'
+import type { FormTextboxProps } from '../form-textbox/form-textbox'
 
 export type ModuleListProps = {
 	add: (process?: (item: HTMLElement) => void) => void

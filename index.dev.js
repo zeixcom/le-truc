@@ -96,6 +96,7 @@ var FLAG_CLEAN = 0;
 var FLAG_CHECK = 1 << 0;
 var FLAG_DIRTY = 1 << 1;
 var FLAG_RUNNING = 1 << 2;
+var FLAG_RELINK = 1 << 3;
 var activeSink = null;
 var activeOwner = null;
 var queuedEffects = [];
@@ -154,9 +155,16 @@ function unlink(edge) {
     prevSink.nextSink = nextSink;
   else
     source.sinks = nextSink;
-  if (!source.sinks && source.stop) {
-    source.stop();
-    source.stop = undefined;
+  if (!source.sinks) {
+    if (source.stop) {
+      source.stop();
+      source.stop = undefined;
+    }
+    if ("sources" in source && source.sources) {
+      const sinkNode = source;
+      sinkNode.sourcesTail = null;
+      trimSources(sinkNode);
+    }
   }
   return nextSource;
 }
@@ -576,10 +584,8 @@ function createList(value, options) {
         keys.splice(index, 1);
       structural = true;
     }
-    if (structural) {
-      node.sources = null;
-      node.sourcesTail = null;
-    }
+    if (structural)
+      node.flags |= FLAG_RELINK;
     return changes.changed;
   };
   const watched = options?.watched;
@@ -619,8 +625,16 @@ function createList(value, options) {
       subscribe();
       if (node.sources) {
         if (node.flags) {
+          const relink = node.flags & FLAG_RELINK;
           node.value = untrack(buildValue);
-          node.flags = FLAG_CLEAN;
+          if (relink) {
+            node.flags = FLAG_DIRTY;
+            refresh(node);
+            if (node.error)
+              throw node.error;
+          } else {
+            node.flags = FLAG_CLEAN;
+          }
         }
       } else {
         refresh(node);
@@ -669,9 +683,7 @@ function createList(value, options) {
         keys.push(key);
       validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
       signals.set(key, createState(value2));
-      node.sources = null;
-      node.sourcesTail = null;
-      node.flags |= FLAG_DIRTY;
+      node.flags |= FLAG_DIRTY | FLAG_RELINK;
       for (let e = node.sinks;e; e = e.nextSink)
         propagate(e.sink);
       if (batchDepth === 0)
@@ -685,9 +697,7 @@ function createList(value, options) {
         const index = typeof keyOrIndex === "number" ? keyOrIndex : keys.indexOf(key);
         if (index >= 0)
           keys.splice(index, 1);
-        node.sources = null;
-        node.sourcesTail = null;
-        node.flags |= FLAG_DIRTY;
+        node.flags |= FLAG_DIRTY | FLAG_RELINK;
         for (let e = node.sinks;e; e = e.nextSink)
           propagate(e.sink);
         if (batchDepth === 0)
@@ -887,8 +897,7 @@ function deriveCollection(source, callback) {
     });
     signals.set(key, signal);
   };
-  function syncKeys() {
-    const nextKeys = Array.from(source.keys());
+  function syncKeys(nextKeys) {
     if (!keysEqual(keys, nextKeys)) {
       const a = new Set(keys);
       const b = new Set(nextKeys);
@@ -899,12 +908,11 @@ function deriveCollection(source, callback) {
         if (!a.has(key))
           addSignal(key);
       keys = nextKeys;
-      node.sources = null;
-      node.sourcesTail = null;
+      node.flags |= FLAG_RELINK;
     }
   }
   function buildValue() {
-    syncKeys();
+    syncKeys(Array.from(source.keys()));
     const result = [];
     for (const key of keys) {
       try {
@@ -941,21 +949,24 @@ function deriveCollection(source, callback) {
     if (node.sources) {
       if (node.flags) {
         node.value = untrack(buildValue);
-        node.flags = FLAG_CLEAN;
-        if (!node.sources) {
+        if (node.flags & FLAG_RELINK) {
           node.flags = FLAG_DIRTY;
           refresh(node);
           if (node.error)
             throw node.error;
+        } else {
+          node.flags = FLAG_CLEAN;
         }
       }
-    } else {
+    } else if (node.sinks) {
       refresh(node);
       if (node.error)
         throw node.error;
+    } else {
+      node.value = untrack(buildValue);
     }
   }
-  const initialKeys = Array.from(source.keys());
+  const initialKeys = Array.from(untrack(() => source.keys()));
   for (const key of initialKeys)
     addSignal(key);
   keys = initialKeys;
@@ -1094,11 +1105,7 @@ function createCollection(watched, options) {
                 structural = true;
               }
             }
-            if (structural) {
-              node.sources = null;
-              node.sourcesTail = null;
-            }
-            node.flags = FLAG_DIRTY;
+            node.flags = FLAG_DIRTY | (structural ? FLAG_RELINK : 0);
             for (let e = node.sinks;e; e = e.nextSink)
               propagate(e.sink);
           });
@@ -1128,8 +1135,16 @@ function createCollection(watched, options) {
       subscribe();
       if (node.sources) {
         if (node.flags) {
+          const relink = node.flags & FLAG_RELINK;
           node.value = untrack(buildValue);
-          node.flags = FLAG_CLEAN;
+          if (relink) {
+            node.flags = FLAG_DIRTY;
+            refresh(node);
+            if (node.error)
+              throw node.error;
+          } else {
+            node.flags = FLAG_CLEAN;
+          }
         }
       } else {
         refresh(node);
@@ -1353,10 +1368,8 @@ function createStore(value, options) {
       signals.delete(key);
       structural = true;
     }
-    if (structural) {
-      node.sources = null;
-      node.sourcesTail = null;
-    }
+    if (structural)
+      node.flags |= FLAG_RELINK;
     return changes.changed;
   };
   const watched = options?.watched;
@@ -1393,8 +1406,16 @@ function createStore(value, options) {
       subscribe();
       if (node.sources) {
         if (node.flags) {
+          const relink = node.flags & FLAG_RELINK;
           node.value = untrack(buildValue);
-          node.flags = FLAG_CLEAN;
+          if (relink) {
+            node.flags = FLAG_DIRTY;
+            refresh(node);
+            if (node.error)
+              throw node.error;
+          } else {
+            node.flags = FLAG_CLEAN;
+          }
         }
       } else {
         refresh(node);
@@ -1421,9 +1442,7 @@ function createStore(value, options) {
       if (signals.has(key))
         throw new DuplicateKeyError(TYPE_STORE, key, value2);
       addSignal(key, value2);
-      node.sources = null;
-      node.sourcesTail = null;
-      node.flags |= FLAG_DIRTY;
+      node.flags |= FLAG_DIRTY | FLAG_RELINK;
       for (let e = node.sinks;e; e = e.nextSink)
         propagate(e.sink);
       if (batchDepth === 0)
@@ -1433,9 +1452,7 @@ function createStore(value, options) {
     remove(key) {
       const ok = signals.delete(key);
       if (ok) {
-        node.sources = null;
-        node.sourcesTail = null;
-        node.flags |= FLAG_DIRTY;
+        node.flags |= FLAG_DIRTY | FLAG_RELINK;
         for (let e = node.sinks;e; e = e.nextSink)
           propagate(e.sink);
         if (batchDepth === 0)

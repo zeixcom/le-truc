@@ -24,11 +24,15 @@
 		"noUnusedParameters": false,
 		"noPropertyAccessFromIndexSignature": false,
 
-		// Declarations
-		"declaration": true,
-		"declarationDir": "./types",
-		"emitDeclarationOnly": true
+		// No emit — use tsconfig.build.json for declarations
+		"noEmit": true,
 	},
-	"include": ["./index.ts", "./index.dev.ts", "./src/**/*.ts"],
-	"exclude": ["node_modules", "test", "docs", "types/**/*"]
+	"include": [
+		"./index.ts",
+		"./index.dev.ts",
+		"./src/**/*.ts",
+		"./server/**/*.ts",
+		"./examples/**/*.ts",
+	],
+	"exclude": ["node_modules", "test", "docs", "types"],
 }

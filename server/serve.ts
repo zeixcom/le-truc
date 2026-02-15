@@ -62,7 +62,7 @@ const replaceTemplateVariables = (
 	context: TemplateContext,
 ): string => {
 	return content.replace(/{{\s*([\w\-]+)\s*}}/g, (_, key) => {
-		const trimmedKey = key.trim()
+		const trimmedKey = key.trim() as keyof TemplateContext
 		return context[trimmedKey] || ''
 	})
 }
@@ -145,7 +145,7 @@ const handleStaticFile = async (filePath: string): Promise<Response> => {
 	}
 }
 
-const handleComponentMock = async (filePath: string): Promise<Response> => {
+/* const handleComponentMock = async (filePath: string): Promise<Response> => {
 	if (!fileExists(filePath)) {
 		// Try fallback pattern: /component-name/file.html -> component-name/mocks/file.html
 		const pathSegments = filePath.split('/')
@@ -168,14 +168,14 @@ const handleComponentMock = async (filePath: string): Promise<Response> => {
 	}
 
 	return handleStaticFile(filePath)
-}
+} */
 
 /* === HMR Functions === */
 
 const broadcastToHMRClients = (message: HMRMessage | string) => {
 	const data = typeof message === 'string' ? message : JSON.stringify(message)
 
-	for (const client of hmrClients) {
+	for (const client of Array.from(hmrClients)) {
 		try {
 			client.send(data)
 		} catch (error) {
@@ -279,11 +279,11 @@ const server = Bun.serve({
 		'/:page': req => handleStaticFile(getFilePath(OUTPUT_DIR, req.params.page)),
 
 		// Serve favicon
-		'/favicon.ico': req =>
+		'/favicon.ico': () =>
 			handleStaticFile(getFilePath(OUTPUT_DIR, 'favicon.ico')),
 
 		// Index
-		'/': req => handleStaticFile(getFilePath(OUTPUT_DIR, 'index.html')),
+		'/': () => handleStaticFile(getFilePath(OUTPUT_DIR, 'index.html')),
 	},
 
 	websocket: {
@@ -293,7 +293,7 @@ const server = Bun.serve({
 				if (data.type === 'ping') {
 					ws.send(JSON.stringify({ type: 'pong' }))
 				}
-			} catch (error) {
+			} catch (_error) {
 				// Ignore non-JSON messages
 			}
 		},

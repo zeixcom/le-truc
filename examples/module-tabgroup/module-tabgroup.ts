@@ -2,7 +2,7 @@ import {
 	type Component,
 	createEventsSensor,
 	defineComponent,
-	Memo,
+	type Memo,
 	read,
 	setProperty,
 	show,

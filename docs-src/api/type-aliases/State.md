@@ -8,19 +8,10 @@
 
 > **State**\<`T`\> = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:1
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/state.d.ts:16
 
-## Name
-
-Le Truc
-
-## Version
-
-0.15.0
-
-## Author
-
-Esther Brunner
+A mutable reactive state container.
+Changes to the state will automatically propagate to dependent computations and effects.
 
 ## Type Parameters
 
@@ -28,13 +19,15 @@ Esther Brunner
 
 `T` *extends* `object`
 
+The type of value stored in the state
+
 ## Properties
 
 ### \[toStringTag\]
 
 > `readonly` **\[toStringTag\]**: `"State"`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:2
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/state.d.ts:17
 
 ## Methods
 
@@ -42,25 +35,35 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:2
 
 > **get**(): `T`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:3
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/state.d.ts:23
+
+Gets the current value of the state.
+When called inside a memo, task, or effect, creates a dependency.
 
 #### Returns
 
 `T`
 
+The current value
+
 ***
 
 ### set()
 
-> **set**(`newValue`): `void`
+> **set**(`next`): `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:4
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/state.d.ts:29
+
+Sets a new value for the state.
+If the new value is different (according to the equality function), all dependents will be notified.
 
 #### Parameters
 
-##### newValue
+##### next
 
 `T`
+
+The new value to set
 
 #### Returns
 
@@ -70,15 +73,20 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:4
 
 ### update()
 
-> **update**(`updater`): `void`
+> **update**(`fn`): `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/state.d.ts:5
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/state.d.ts:35
+
+Updates the state with a new value computed by a callback function.
+The callback receives the current value as an argument.
 
 #### Parameters
 
-##### updater
+##### fn
 
-(`oldValue`) => `T`
+`UpdateCallback`\<`T`\>
+
+The callback function to compute the new value
 
 #### Returns
 

@@ -6,19 +6,9 @@
 
 # Class: InvalidSignalValueError
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:7
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:46
 
-## Name
-
-Le Truc
-
-## Version
-
-0.15.0
-
-## Author
-
-Esther Brunner
+Error thrown when a signal value is invalid.
 
 ## Extends
 
@@ -30,7 +20,9 @@ Esther Brunner
 
 > **new InvalidSignalValueError**(`where`, `value`): `InvalidSignalValueError`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:8
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:53
+
+Constructs a new InvalidSignalValueError.
 
 #### Parameters
 
@@ -38,9 +30,13 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:8
 
 `string`
 
+The location where the error occurred.
+
 ##### value
 
-`string`
+`unknown`
+
+The invalid value.
 
 #### Returns
 
@@ -198,7 +194,7 @@ a();
 
 > `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
 
-Defined in: node\_modules/bun-types/globals.d.ts:1043
+Defined in: node\_modules/bun-types/globals.d.ts:1042
 
 Create .stack property on a target object
 
@@ -250,7 +246,7 @@ Indicates whether the argument provided is a built-in Error instance or not.
 
 > `static` **isError**(`value`): `value is Error`
 
-Defined in: node\_modules/bun-types/globals.d.ts:1038
+Defined in: node\_modules/bun-types/globals.d.ts:1037
 
 Check if a value is an instance of Error
 

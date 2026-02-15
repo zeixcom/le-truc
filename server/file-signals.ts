@@ -1,9 +1,9 @@
 import Markdoc from '@markdoc/markdoc'
 import {
-	type Computed,
 	createComputed,
-	type Store,
-	UNSET,
+	type List,
+	type Memo,
+	type Task,
 } from '@zeix/cause-effect'
 import { codeToHtml } from 'shiki'
 import {
@@ -127,23 +127,21 @@ function extractFrontmatter(content: string): {
 /* === Exported Signals === */
 
 const docsMarkdown: {
-	sources: Store<Record<string, FileInfo>>
-	processed: Computed<Map<string, FileInfo & { metadata: PageMetadata }>>
-	pageInfos: Computed<PageInfo[]>
-	fullyProcessed: Computed<Map<string, ProcessedMarkdownFile>>
+	sources: List<FileInfo>
+	processed: Memo<Map<string, FileInfo & { metadata: PageMetadata }>>
+	pageInfos: Memo<PageInfo[]>
+	fullyProcessed: Task<Map<string, ProcessedMarkdownFile>>
 } = await (async () => {
 	const sources = await watchFiles(PAGES_DIR, '**/*.md')
 
-	const processed = createComputed(async () => {
+	const processed = createComputed(() => {
 		const rawFiles = sources.get()
-		if (rawFiles === UNSET) return UNSET
 
 		const files = new Map<string, FileInfo & { metadata: PageMetadata }>()
-		for (const path in rawFiles) {
-			const fileInfo = rawFiles[path]
+		for (const fileInfo of rawFiles) {
 			if (!fileInfo) continue
 			const { metadata, content } = extractFrontmatter(fileInfo.content)
-			files.set(path, {
+			files.set(fileInfo.path, {
 				...fileInfo,
 				content, // Content without frontmatter
 				metadata,
@@ -152,10 +150,9 @@ const docsMarkdown: {
 		return files
 	})
 
-	const pageInfos = createComputed(async () => {
+	const pageInfos = createComputed(() => {
 		const pageInfos: PageInfo[] = []
 		const files = processed.get()
-		if (files === UNSET) return UNSET
 
 		for (const [path, file] of files) {
 			const relativePath = getRelativePath(PAGES_DIR, path)
@@ -176,7 +173,6 @@ const docsMarkdown: {
 
 	const fullyProcessed = createComputed(async () => {
 		const files = processed.get()
-		if (files === UNSET) return UNSET
 
 		const processedFiles = new Map<string, ProcessedMarkdownFile>()
 

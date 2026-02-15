@@ -14,7 +14,7 @@ import {
 	show,
 } from '../..'
 import { clearEffects, clearMethod } from '../_common/clear'
-import { FormListboxProps } from '../form-listbox/form-listbox'
+import type { FormListboxProps } from '../form-listbox/form-listbox'
 
 export type FormComboboxProps = {
 	value: string

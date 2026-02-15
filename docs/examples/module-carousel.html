@@ -261,10 +261,10 @@
 			</p>
 			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	asInteger,</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Collection,</span></span>
 <span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createEffect,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Memo,</span></span>
 <span class="line"><span style="color:#F8F8F2">	on,</span></span>
 <span class="line"><span style="color:#F8F8F2">	setProperty,</span></span>
 <span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
@@ -274,9 +274,9 @@
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleCarouselUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">	dots</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Collection</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	slides</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Collection</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	buttons</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Collection</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	dots</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Memo</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">[]></span></span>
+<span class="line"><span style="color:#F8F8F2">	slides</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Memo</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">[]></span></span>
+<span class="line"><span style="color:#F8F8F2">	buttons</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Memo</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">[]></span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
@@ -307,7 +307,7 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> isScrolling </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> scrollToSlide</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">index</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> slide </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slides[index]</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> slide </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()[index]</span></span>
 <span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">slide) </span><span style="color:#F92672">return</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F8F8F2">			isNavigating </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
@@ -346,7 +346,8 @@
 <span class="line"><span style="color:#F8F8F2">						}</span></span>
 <span class="line"><span style="color:#F8F8F2">					}, config)</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">					for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> slide </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> slides) observer.</span><span style="color:#A6E22E">observe</span><span style="color:#F8F8F2">(slide)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> slideArray </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">					for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> slide </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> slideArray) observer.</span><span style="color:#A6E22E">observe</span><span style="color:#F8F8F2">(slide)</span></span>
 <span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">						observer.</span><span style="color:#A6E22E">disconnect</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">					}</span></span>
@@ -370,7 +371,9 @@
 <span class="line"><span style="color:#F8F8F2">			buttons: [</span></span>
 <span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">(target </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">)) </span><span style="color:#F92672">return</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> total </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slides.length</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> slidesLength </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> total </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slidesLength</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> nextIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.classList.</span><span style="color:#A6E22E">contains</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'prev'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F92672">						?</span><span style="color:#F8F8F2"> host.index </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span></span>
 <span class="line"><span style="color:#F92672">						:</span><span style="color:#F8F8F2"> target.classList.</span><span style="color:#A6E22E">contains</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'next'</span><span style="color:#F8F8F2">)</span></span>
@@ -385,7 +388,9 @@
 <span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> ([</span><span style="color:#E6DB74">'ArrowLeft'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'ArrowRight'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Home'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'End'</span><span style="color:#F8F8F2">].</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(key)) {</span></span>
 <span class="line"><span style="color:#F8F8F2">						e.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">						e.</span><span style="color:#A6E22E">stopPropagation</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> total </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slides.length</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> slidesLength </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> total </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slidesLength</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> nextIndex </span><span style="color:#F92672">=</span></span>
 <span class="line"><span style="color:#F8F8F2">							key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'Home'</span></span>
 <span class="line"><span style="color:#F92672">								?</span><span style="color:#AE81FF"> 0</span></span>
@@ -408,7 +413,7 @@
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">			// Set the active slide in the slides</span></span>
 <span class="line"><span style="color:#F8F8F2">			slides: </span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'ariaCurrent'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
-<span class="line"><span style="color:#A6E22E">				String</span><span style="color:#F8F8F2">(target.id </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> slides[host.index].id),</span></span>
+<span class="line"><span style="color:#A6E22E">				String</span><span style="color:#F8F8F2">(target.id </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()[host.index].id),</span></span>
 <span class="line"><span style="color:#F8F8F2">			),</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>

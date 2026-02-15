@@ -6,78 +6,40 @@
 
 # Function: createCollection()
 
-## Call Signature
+> **createCollection**\<`T`\>(`watched`, `options?`): [`Collection`](../type-aliases/Collection.md)\<`T`\>
 
-> **createCollection**\<`S`\>(`parent`, `selector`): [`Collection`](../type-aliases/Collection.md)\<`ElementFromSelector`\<`S`\>\>
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:52
 
-Defined in: [src/signals/collection.ts:67](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/signals/collection.ts#L67)
+Creates an externally-driven Collection with a watched lifecycle.
+Items are managed via the `applyChanges(changes)` helper passed to the watched callback.
+The collection activates when first accessed by an effect and deactivates when no longer watched.
 
-Create a collection of elements from a parent node and a CSS selector.
+## Type Parameters
 
-### Type Parameters
+### T
 
-#### S
+`T` *extends* `object`
 
-`S` *extends* `string`
+## Parameters
 
-### Parameters
+### watched
 
-#### parent
+`CollectionCallback`\<`T`\>
 
-`ParentNode`
+Callback invoked when the collection starts being watched, receives applyChanges helper
 
-The parent node to search within
+### options?
 
-#### selector
+[`CollectionOptions`](../type-aliases/CollectionOptions.md)\<`T`\>
 
-`S`
+Optional configuration including initial value, key generation, and item signal creation
 
-The CSS selector to match elements
+## Returns
 
-### Returns
+[`Collection`](../type-aliases/Collection.md)\<`T`\>
 
-[`Collection`](../type-aliases/Collection.md)\<`ElementFromSelector`\<`S`\>\>
+A read-only Collection signal
 
-A collection signal of elements
+## Since
 
-### Since
-
-0.15.0
-
-## Call Signature
-
-> **createCollection**\<`E`\>(`parent`, `selector`): [`Collection`](../type-aliases/Collection.md)\<`E`\>
-
-Defined in: [src/signals/collection.ts:71](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/signals/collection.ts#L71)
-
-Create a collection of elements from a parent node and a CSS selector.
-
-### Type Parameters
-
-#### E
-
-`E` *extends* `Element`
-
-### Parameters
-
-#### parent
-
-`ParentNode`
-
-The parent node to search within
-
-#### selector
-
-`string`
-
-The CSS selector to match elements
-
-### Returns
-
-[`Collection`](../type-aliases/Collection.md)\<`E`\>
-
-A collection signal of elements
-
-### Since
-
-0.15.0
+0.18.0

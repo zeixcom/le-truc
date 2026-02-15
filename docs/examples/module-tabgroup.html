@@ -414,10 +414,10 @@
 				<span class="language">ts</span>
 			</p>
 			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Collection,</span></span>
 <span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
-<span class="line"><span style="color:#F8F8F2">	createSensor,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createEventsSensor,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Memo,</span></span>
 <span class="line"><span style="color:#F8F8F2">	read,</span></span>
 <span class="line"><span style="color:#F8F8F2">	setProperty,</span></span>
 <span class="line"><span style="color:#F8F8F2">	show,</span></span>
@@ -428,8 +428,8 @@
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleTabgroupUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">	tabs</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Collection</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	panels</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Collection</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	tabs</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Memo</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span><span style="color:#F8F8F2">[]></span></span>
+<span class="line"><span style="color:#F8F8F2">	panels</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Memo</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">[]></span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
@@ -442,11 +442,10 @@
 <span class="line"><span style="color:#F8F8F2">	element.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-controls'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#A6E22E"> getSelected</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">	elements</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Collection</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">>,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">	tabs</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">[],</span></span>
 <span class="line"><span style="color:#A6E22E">	isCurrent</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">element</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> boolean</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	offset </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> tabs </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> elements.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> currentIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> tabs.</span><span style="color:#A6E22E">findIndex</span><span style="color:#F8F8F2">(isCurrent)</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> newIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (currentIndex </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> offset </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> tabs.length) </span><span style="color:#F92672">%</span><span style="color:#F8F8F2"> tabs.length</span></span>
 <span class="line"><span style="color:#F92672">	return</span><span style="color:#A6E22E"> getAriaControls</span><span style="color:#F8F8F2">(tabs[newIndex])</span></span>
@@ -455,8 +454,11 @@
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleTabgroupProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">ModuleTabgroupUI</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'module-tabgroup'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	{</span></span>
-<span class="line"><span style="color:#F8F8F2">		selected: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#A6E22E">			read</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#A6E22E"> getSelected</span><span style="color:#F8F8F2">(ui.tabs, </span><span style="color:#FD971F;font-style:italic">tab</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> tab.ariaSelected </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'true'</span><span style="color:#F8F8F2">), </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		selected: </span><span style="color:#A6E22E">createEventsSensor</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#A6E22E">			read</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">				ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#A6E22E"> getSelected</span><span style="color:#F8F8F2">(ui.tabs.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(), </span><span style="color:#FD971F;font-style:italic">tab</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> tab.ariaSelected </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'true'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#E6DB74">				''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
 <span class="line"><span style="color:#E6DB74">			'tabs'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">			{</span></span>
 <span class="line"><span style="color:#A6E22E">				click</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#A6E22E"> getAriaControls</span><span style="color:#F8F8F2">(target),</span></span>
@@ -481,7 +483,7 @@
 <span class="line"><span style="color:#F92672">								:</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'End'</span></span>
 <span class="line"><span style="color:#F92672">									?</span><span style="color:#A6E22E"> getAriaControls</span><span style="color:#F8F8F2">(tabs[tabs.length </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">])</span></span>
 <span class="line"><span style="color:#F92672">									:</span><span style="color:#A6E22E"> getSelected</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#F8F8F2">											ui.tabs,</span></span>
+<span class="line"><span style="color:#F8F8F2">											tabs,</span></span>
 <span class="line"><span style="color:#FD971F;font-style:italic">											tab</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> tab </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> target,</span></span>
 <span class="line"><span style="color:#F8F8F2">											key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowLeft'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowUp'</span><span style="color:#F92672"> ?</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F92672"> :</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">										)</span></span>

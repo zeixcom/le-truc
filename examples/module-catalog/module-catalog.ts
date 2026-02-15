@@ -5,8 +5,8 @@ import {
 	type Memo,
 	pass,
 } from '../..'
-import { BasicButtonProps } from '../basic-button/basic-button'
-import { FormSpinbuttonProps } from '../form-spinbutton/form-spinbutton'
+import type { BasicButtonProps } from '../basic-button/basic-button'
+import type { FormSpinbuttonProps } from '../form-spinbutton/form-spinbutton'
 
 type ModuleCatalogUI = {
 	button: Component<BasicButtonProps>

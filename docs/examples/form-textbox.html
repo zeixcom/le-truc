@@ -249,7 +249,7 @@
 			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
 <span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> ComponentUI,</span></span>
-<span class="line"><span style="color:#F8F8F2">	createSensor,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createEventsSensor,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
 <span class="line"><span style="color:#F8F8F2">	on,</span></span>
 <span class="line"><span style="color:#F8F8F2">	read,</span></span>
@@ -284,7 +284,7 @@
 <span class="line"><span style="color:#E6DB74">	'form-textbox'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	{</span></span>
 <span class="line"><span style="color:#F8F8F2">		value: </span><span style="color:#A6E22E">read</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.textbox.value, </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		length: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">		length: </span><span style="color:#A6E22E">createEventsSensor</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#A6E22E">			read</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.textbox.value.length, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#E6DB74">			'textbox'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">			{</span></span>

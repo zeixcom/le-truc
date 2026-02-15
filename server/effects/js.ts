@@ -1,4 +1,4 @@
-import { createEffect, match, resolve } from '@zeix/cause-effect'
+import { createEffect, match } from '@zeix/cause-effect'
 import { execSync } from 'child_process'
 import { ASSETS_DIR, TS_FILE } from '../config'
 import { componentScripts, docsScripts, libraryScripts } from '../file-signals'
@@ -6,11 +6,7 @@ import { componentScripts, docsScripts, libraryScripts } from '../file-signals'
 export const jsEffect = () =>
 	createEffect(() => {
 		match(
-			resolve({
-				docs: docsScripts.sources,
-				library: libraryScripts.sources,
-				components: componentScripts.sources,
-			}),
+			[docsScripts.sources, libraryScripts.sources, componentScripts.sources],
 			{
 				ok: () => {
 					try {

@@ -1,23 +1,19 @@
-import { createStore, type Store, UNSET } from '@zeix/cause-effect'
+import { createList, type List } from '@zeix/cause-effect'
 import { Glob } from 'bun'
-import { FileInfo } from './file-signals'
-import {
-	createFileInfo,
-	getFilePath,
-	isPlaywrightRunning,
-	watchDirectory,
-} from './io'
+import type { FileInfo } from './file-signals'
+import { createFileInfo, getFilePath, isPlaywrightRunning } from './io'
+import { existsSync, watch } from 'node:fs'
+import { join } from 'path'
 
 /* === Exported Functions === */
 
 export const watchFiles = async (
 	directory: string,
-	inlclude: string,
+	include: string,
 	exclude?: string,
-): Promise<Store<Record<string, FileInfo>>> => {
-	const glob = new Glob(inlclude)
+): Promise<List<FileInfo>> => {
+	const glob = new Glob(include)
 	const excludeGlob = exclude ? new Glob(exclude) : null
-	const store = createStore<Record<string, FileInfo>>(UNSET)
 	const playwrightDetected = isPlaywrightRunning()
 
 	const isMatching = (file: string): boolean => {
@@ -26,52 +22,72 @@ export const watchFiles = async (
 		return true
 	}
 
-	const files: Record<string, FileInfo> = {}
-	try {
+	// Scan initial files
+	const initialFiles: FileInfo[] = []
+	if (existsSync(directory)) {
 		for await (const file of glob.scan(directory)) {
-			// Apply exclusion filter
 			if (excludeGlob && excludeGlob.match(file)) continue
-
-			const filename = file.split(/[\\/]/).pop() || ''
 			const filePath = getFilePath(directory, file)
+			const filename = file.split(/[\\/]/).pop() || ''
 			const fileInfo = await createFileInfo(filePath, filename)
-			if (fileInfo.exists) files[filePath] = fileInfo
+			if (fileInfo.exists) initialFiles.push(fileInfo)
 		}
-		store.set(files)
-	} catch (error) {
-		console.error(`Error listing files in ${directory}:`, error)
 	}
+
+	const shouldWatch = !playwrightDetected
+
+	const handleFileChange = async (
+		fileList: List<FileInfo>,
+		filename: string,
+	) => {
+		if (!isMatching(filename)) return
+
+		const filePath = join(directory, filename)
+		if (!existsSync(filePath)) {
+			fileList.remove(filePath)
+		} else {
+			const fileInfo = await createFileInfo(
+				filePath,
+				filename.split(/[\\/]/).pop() || '',
+			)
+			const existing = fileList.byKey(filePath)
+			if (existing) {
+				if (existing.get().hash !== fileInfo.hash) existing.set(fileInfo)
+			} else {
+				fileList.add(fileInfo)
+			}
+		}
+	}
+
+	const fileList = createList<FileInfo>(initialFiles, {
+		keyConfig: item => item.path,
+		...(shouldWatch && existsSync(directory)
+			? {
+					watched: () => {
+						console.log('Watching files in directory:', directory)
+						const watcher = watch(
+							directory,
+							{
+								recursive: include.includes('**/'),
+								persistent: true,
+							},
+							async (_event, filename) => {
+								if (!filename) return
+								await handleFileChange(fileList, filename)
+							},
+						)
+						return () => watcher.close()
+					},
+				}
+			: {}),
+	})
 
 	if (playwrightDetected) {
 		console.log(
 			'🎭 Skipping file watching for directory (Playwright detected):',
 			directory,
 		)
-	} else {
-		console.log('Watching files in directory:', directory)
-		watchDirectory(
-			directory,
-			inlclude.includes('**/'),
-			isMatching,
-			async (filePath, filename) => {
-				const fileInfo = await createFileInfo(filePath, filename)
-				const currentFiles = store.get()
-				if (currentFiles !== UNSET) {
-					const updatedFiles = { ...currentFiles }
-					updatedFiles[filePath] = fileInfo
-					store.set(updatedFiles)
-				}
-			},
-			filePath => {
-				const currentFiles = store.get()
-				if (currentFiles !== UNSET) {
-					const updatedFiles = { ...currentFiles }
-					delete updatedFiles[filePath]
-					store.set(updatedFiles)
-				}
-			},
-		)
 	}
 
-	return store
+	return fileList
 }

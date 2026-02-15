@@ -6,11 +6,11 @@ import {
 	pass,
 	setAttribute,
 } from '../..'
-import { BasicButtonProps } from '../basic-button/basic-button'
-import { BasicPluralizeProps } from '../basic-pluralize/basic-pluralize'
-import { FormRadiogroupProps } from '../form-radiogroup/form-radiogroup'
-import { FormTextboxProps } from '../form-textbox/form-textbox'
-import { ModuleListProps } from '../module-list/module-list'
+import type { BasicButtonProps } from '../basic-button/basic-button'
+import type { BasicPluralizeProps } from '../basic-pluralize/basic-pluralize'
+import type { FormRadiogroupProps } from '../form-radiogroup/form-radiogroup'
+import type { FormTextboxProps } from '../form-textbox/form-textbox'
+import type { ModuleListProps } from '../module-list/module-list'
 
 type ModuleTodoUI = {
 	form: HTMLFormElement
