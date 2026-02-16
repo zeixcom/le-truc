@@ -219,8 +219,8 @@ test.describe('form-combobox component', () => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
 					listboxElement
-					&& listboxElement.getOptions
-					&& listboxElement.getOptions.length > 0
+					&& listboxElement.options
+					&& listboxElement.options.length > 0
 				)
 			})
 
@@ -269,8 +269,8 @@ test.describe('form-combobox component', () => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
 					listboxElement
-					&& listboxElement.getOptions
-					&& listboxElement.getOptions.length > 0
+					&& listboxElement.options
+					&& listboxElement.options.length > 0
 				)
 			})
 
@@ -304,8 +304,8 @@ test.describe('form-combobox component', () => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
 					listboxElement
-					&& listboxElement.getOptions
-					&& listboxElement.getOptions.length > 0
+					&& listboxElement.options
+					&& listboxElement.options.length > 0
 				)
 			})
 
@@ -342,8 +342,8 @@ test.describe('form-combobox component', () => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
 					listboxElement
-					&& listboxElement.getOptions
-					&& listboxElement.getOptions.length > 0
+					&& listboxElement.options
+					&& listboxElement.options.length > 0
 				)
 			})
 
@@ -933,14 +933,17 @@ test.describe('form-combobox component', () => {
 			const textbox = combobox.locator('input[role="combobox"]')
 			const listboxElement = combobox.locator('[role="listbox"]')
 
-			// Wait for options to load
-			await page.waitForTimeout(50)
+			// Wait for options to load from JSON endpoint
+			await expect(
+				combobox.locator('button[role="option"]').first(),
+			).toBeAttached()
 
 			// No popup should show before user interaction
 			await expect(listboxElement).toBeHidden()
 			await expect(textbox).toHaveAttribute('aria-expanded', 'false')
 
-			// Clear textbox (empty filter)
+			// Type something first, then clear to trigger input event with empty value
+			await textbox.fill('A')
 			await textbox.fill('')
 
 			// Popup should show after any interaction, even with empty filter

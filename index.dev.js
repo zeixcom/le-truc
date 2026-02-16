@@ -57,6 +57,13 @@ class InvalidCallbackError extends TypeError {
   }
 }
 
+class ReadonlySignalError extends Error {
+  constructor(where) {
+    super(`[${where}] Signal is read-only`);
+    this.name = "ReadonlySignalError";
+  }
+}
+
 class RequiredOwnerError extends Error {
   constructor(where) {
     super(`[${where}] Active owner is required`);
@@ -92,6 +99,7 @@ var TYPE_SENSOR = "Sensor";
 var TYPE_LIST = "List";
 var TYPE_COLLECTION = "Collection";
 var TYPE_STORE = "Store";
+var TYPE_SLOT = "Slot";
 var FLAG_CLEAN = 0;
 var FLAG_CHECK = 1 << 0;
 var FLAG_DIRTY = 1 << 1;
@@ -878,8 +886,6 @@ function isTask(value) {
 // node_modules/@zeix/cause-effect/src/nodes/collection.ts
 function deriveCollection(source, callback) {
   validateCallback(TYPE_COLLECTION, callback);
-  if (!isCollectionSource(source))
-    throw new TypeError(`[${TYPE_COLLECTION}] Invalid collection source: expected a List or Collection`);
   const isAsync = isAsyncFunction(callback);
   const signals = new Map;
   let keys = [];
@@ -1173,9 +1179,6 @@ function createCollection(watched, options) {
 }
 function isCollection(value) {
   return isObjectOfType(value, TYPE_COLLECTION);
-}
-function isCollectionSource(value) {
-  return isList(value) || isCollection(value);
 }
 // node_modules/@zeix/cause-effect/src/nodes/effect.ts
 function createEffect(fn) {
@@ -1493,6 +1496,7 @@ function createStore(value, options) {
 function isStore(value) {
   return isObjectOfType(value, TYPE_STORE);
 }
+
 // node_modules/@zeix/cause-effect/src/signal.ts
 function createComputed(callback, options) {
   return isAsyncFunction(callback) ? createTask(callback, options) : createMemo(callback, options);
@@ -1517,6 +1521,7 @@ function isSignal(value) {
     TYPE_MEMO,
     TYPE_TASK,
     TYPE_SENSOR,
+    TYPE_SLOT,
     TYPE_LIST,
     TYPE_COLLECTION,
     TYPE_STORE
@@ -1526,6 +1531,59 @@ function isSignal(value) {
 }
 function isMutableSignal(value) {
   return isState(value) || isStore(value) || isList(value);
+}
+
+// node_modules/@zeix/cause-effect/src/nodes/slot.ts
+function createSlot(initialSignal, options) {
+  validateSignalValue(TYPE_SLOT, initialSignal, isSignal);
+  let delegated = initialSignal;
+  const guard = options?.guard;
+  const node = {
+    fn: () => delegated.get(),
+    value: undefined,
+    flags: FLAG_DIRTY,
+    sources: null,
+    sourcesTail: null,
+    sinks: null,
+    sinksTail: null,
+    equals: options?.equals ?? DEFAULT_EQUALITY,
+    error: undefined
+  };
+  const get = () => {
+    if (activeSink)
+      link(node, activeSink);
+    refresh(node);
+    if (node.error)
+      throw node.error;
+    return node.value;
+  };
+  const set = (next) => {
+    if (!isMutableSignal(delegated))
+      throw new ReadonlySignalError(TYPE_SLOT);
+    validateSignalValue(TYPE_SLOT, next, guard);
+    delegated.set(next);
+  };
+  const replace = (next) => {
+    validateSignalValue(TYPE_SLOT, next, isSignal);
+    delegated = next;
+    node.flags |= FLAG_DIRTY;
+    for (let e = node.sinks;e; e = e.nextSink)
+      propagate(e.sink);
+    if (batchDepth === 0)
+      flush();
+  };
+  return {
+    [Symbol.toStringTag]: TYPE_SLOT,
+    configurable: true,
+    enumerable: true,
+    get,
+    set,
+    replace,
+    current: () => delegated
+  };
+}
+function isSlot(value) {
+  return isObjectOfType(value, TYPE_SLOT);
 }
 // src/util.ts
 var DEV_MODE = true;
@@ -1769,6 +1827,17 @@ var updateElement = (reactive, updater) => (host, target) => {
   });
 };
 
+// src/internal.ts
+var componentSignals = new WeakMap;
+var getSignals = (el) => {
+  let signals = componentSignals.get(el);
+  if (!signals) {
+    signals = {};
+    componentSignals.set(el, signals);
+  }
+  return signals;
+};
+
 // src/parsers.ts
 var isParser = (value) => isFunction(value) && value.length >= 2;
 var isReader = (value) => isFunction(value);
@@ -1874,7 +1943,6 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
   class Truc extends HTMLElement {
     debug;
     #ui;
-    #signals = {};
     #cleanup;
     static observedAttributes = Object.entries(props)?.filter(([, initializer]) => isParser(initializer)).map(([prop]) => prop) ?? [];
     connectedCallback() {
@@ -1907,7 +1975,7 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
         this.#cleanup();
     }
     attributeChangedCallback(name2, oldValue, newValue) {
-      if (!this.#ui || newValue === oldValue || isComputed(this.#signals[name2]))
+      if (!this.#ui || newValue === oldValue || isComputed(getSignals(this)[name2]))
         return;
       const parser = props[name2];
       if (!isParser(parser))
@@ -1920,14 +1988,22 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
     }
     #setAccessor(key, value) {
       const signal = isSignal(value) ? value : isFunction(value) ? createComputed(value) : createState(value);
-      const mutable = isMutableSignal(signal);
-      this.#signals[key] = signal;
-      Object.defineProperty(this, key, {
-        get: signal.get,
-        set: mutable ? signal.set : undefined,
-        enumerable: true,
-        configurable: mutable
-      });
+      const signals = getSignals(this);
+      const k = key;
+      const prev = signals[k];
+      if (isSlot(prev)) {
+        prev.replace(signal);
+      } else if (isMutableSignal(signal)) {
+        const slot = createSlot(signal);
+        signals[k] = slot;
+        Object.defineProperty(this, key, slot);
+      } else {
+        signals[k] = signal;
+        Object.defineProperty(this, key, {
+          get: signal.get,
+          enumerable: true
+        });
+      }
     }
   }
   customElements.define(name, Truc);
@@ -2113,36 +2189,27 @@ var pass = (props) => (host, target) => {
   const reactives = isFunction(props) ? props(target) : props;
   if (!isRecord(reactives))
     throw new InvalidReactivesError(host, target, reactives);
-  const resetProperties = {};
-  const getGetter = (value) => {
+  const toSignal = (value) => {
     if (isSignal(value))
-      return value.get;
+      return value;
     const fn = typeof value === "string" && value in host ? () => host[value] : isFunction(value) ? value : undefined;
-    return fn;
+    return fn ? createComputed(fn) : undefined;
   };
+  const signals = getSignals(target);
   for (const [prop, reactive] of Object.entries(reactives)) {
     if (reactive == null)
       continue;
-    const descriptor = Object.getOwnPropertyDescriptor(target, prop);
-    if (!(prop in target) || !descriptor?.configurable)
+    if (!(prop in target))
       continue;
     const applied = isFunction(reactive) && reactive.length === 1 ? reactive(target) : reactive;
     const isArray = Array.isArray(applied) && applied.length === 2;
-    const getter = getGetter(isArray ? applied[0] : applied);
-    const setter = isArray && isFunction(applied[1]) ? applied[1] : undefined;
-    if (!getter)
+    const signal = toSignal(isArray ? applied[0] : applied);
+    if (!signal)
       continue;
-    resetProperties[prop] = descriptor;
-    Object.defineProperty(target, prop, {
-      configurable: true,
-      enumerable: true,
-      get: getter,
-      set: setter
-    });
+    const slot = signals[prop];
+    if (isSlot(slot))
+      slot.replace(signal);
   }
-  return () => {
-    Object.defineProperties(target, resetProperties);
-  };
 };
 // src/effects/property.ts
 var setProperty = (key, reactive = key) => updateElement(reactive, {

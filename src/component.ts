@@ -1,18 +1,22 @@
 import {
 	createComputed,
+	createSlot,
 	createState,
 	isComputed,
 	isFunction,
 	isMutableSignal,
 	isSignal,
+	isSlot,
 	type MaybeCleanup,
 	type MemoCallback,
 	type Signal,
+	type State,
 	type TaskCallback,
 } from '@zeix/cause-effect'
 
 import { type Effects, runEffects } from './effects'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
+import { getSignals } from './internal'
 import { isParser, type Parser, type Reader } from './parsers'
 import { type ElementQueries, getHelpers, type UI } from './ui'
 import { validatePropertyName } from './util'
@@ -90,7 +94,6 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 	class Truc extends HTMLElement {
 		debug?: boolean
 		#ui: ComponentUI<P, U> | undefined
-		#signals = {} as { [K in keyof P]: Signal<P[K]> }
 		#cleanup: MaybeCleanup
 
 		static observedAttributes =
@@ -161,7 +164,11 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 			newValue: string | null,
 		) {
 			// Not connected yet, unchanged value or controlled by computed
-			if (!this.#ui || newValue === oldValue || isComputed(this.#signals[name]))
+			if (
+				!this.#ui ||
+				newValue === oldValue ||
+				isComputed(getSignals(this)[name as string])
+			)
 				return
 
 			// Check whether we have a parser for the attribute
@@ -185,17 +192,23 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 				? value
 				: isFunction<P[K]>(value)
 					? createComputed(value)
-					: createState(value)
-			// const prev = this.#signals[key]
-			const mutable = isMutableSignal(signal)
-			this.#signals[key] = signal as Signal<P[K]>
-			Object.defineProperty(this, key, {
-				get: signal.get,
-				set: mutable ? signal.set : undefined,
-				enumerable: true,
-				configurable: mutable,
-			})
-			// if ((prev && isState(prev)) || isStore(prev)) prev.set(UNSET)
+					: (createState(value) as State<P[K]>)
+			const signals = getSignals(this)
+			const k = key as string
+			const prev = signals[k]
+			if (isSlot(prev)) {
+				prev.replace(signal)
+			} else if (isMutableSignal(signal)) {
+				const slot = createSlot<P[K]>(signal)
+				signals[k] = slot
+				Object.defineProperty(this, key, slot)
+			} else {
+				signals[k] = signal
+				Object.defineProperty(this, key, {
+					get: signal.get,
+					enumerable: true,
+				})
+			}
 		}
 	}
 
