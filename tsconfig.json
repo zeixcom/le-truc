@@ -29,7 +29,6 @@
 	},
 	"include": [
 		"./index.ts",
-		"./index.dev.ts",
 		"./src/**/*.ts",
 		"./server/**/*.ts",
 		"./examples/**/*.ts",

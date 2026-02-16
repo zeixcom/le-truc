@@ -8,9 +8,9 @@
 
 ## Call Signature
 
-> **createElementsMemo**\<`S`\>(`parent`, `selector`): [`Memo`](../type-aliases/Memo.md)\<`ElementFromSelector`\<`S`\>[]\>
+> **createElementsMemo**\<`S`\>(`parent`, `selector`): [`Memo`](../type-aliases/Memo.md)\<[`ElementFromSelector`](../type-aliases/ElementFromSelector.md)\<`S`\>[]\>
 
-Defined in: [src/ui.ts:155](https://github.com/zeixcom/le-truc/blob/f24c1c5bc3c2b0911801769c1a46c70e066ccb8e/src/ui.ts#L155)
+Defined in: [src/ui.ts:155](https://github.com/zeixcom/le-truc/blob/9067b0df4b01434796accabfb262c9896f05f14f/src/ui.ts#L155)
 
 Create a memo of elements matching a CSS selector.
 The MutationObserver is lazily activated when an effect first reads
@@ -38,7 +38,7 @@ The CSS selector to match elements
 
 ### Returns
 
-[`Memo`](../type-aliases/Memo.md)\<`ElementFromSelector`\<`S`\>[]\>
+[`Memo`](../type-aliases/Memo.md)\<[`ElementFromSelector`](../type-aliases/ElementFromSelector.md)\<`S`\>[]\>
 
 A Memo of current matching elements
 
@@ -50,7 +50,7 @@ A Memo of current matching elements
 
 > **createElementsMemo**\<`E`\>(`parent`, `selector`): [`Memo`](../type-aliases/Memo.md)\<`E`[]\>
 
-Defined in: [src/ui.ts:159](https://github.com/zeixcom/le-truc/blob/f24c1c5bc3c2b0911801769c1a46c70e066ccb8e/src/ui.ts#L159)
+Defined in: [src/ui.ts:159](https://github.com/zeixcom/le-truc/blob/9067b0df4b01434796accabfb262c9896f05f14f/src/ui.ts#L159)
 
 Create a memo of elements matching a CSS selector.
 The MutationObserver is lazily activated when an effect first reads

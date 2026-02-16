@@ -300,10 +300,20 @@ const getHelpers = (
 }
 
 export {
+	type AllElements,
 	type ElementFromKey,
 	type ElementFromSelector,
+	type ElementsFromSelectorArray,
+	type ElementFromSingleSelector,
 	type ElementQueries,
+	type ExtractRightmostSelector,
+	type ExtractTag,
+	type ExtractTagFromSimpleSelector,
+	type FirstElement,
+	type KnownTag,
 	createElementsMemo,
 	getHelpers,
+	type SplitByComma,
+	type TrimWhitespace,
 	type UI,
 }

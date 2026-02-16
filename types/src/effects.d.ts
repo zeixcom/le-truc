@@ -150,4 +150,4 @@ const insertOrRemoveElement =
             }
         })
         } */
-export { type Effect, type Effects, type ElementEffects, type ElementUpdater, type Reactive, runEffects, runElementEffects, resolveReactive, updateElement, RESET, };
+export { type Effect, type Effects, type ElementEffects, type ElementUpdater, type Reactive, type UpdateOperation, runEffects, runElementEffects, resolveReactive, updateElement, RESET, };

@@ -6,7 +6,7 @@
 
 # Class: CircularMutationError
 
-Defined in: [src/errors.ts:11](https://github.com/zeixcom/le-truc/blob/f24c1c5bc3c2b0911801769c1a46c70e066ccb8e/src/errors.ts#L11)
+Defined in: [src/errors.ts:11](https://github.com/zeixcom/le-truc/blob/9067b0df4b01434796accabfb262c9896f05f14f/src/errors.ts#L11)
 
 Error thrown when a circular dependency is detected in a selection signal
 
@@ -24,7 +24,7 @@ Error thrown when a circular dependency is detected in a selection signal
 
 > **new CircularMutationError**(`host`, `selector`): `CircularMutationError`
 
-Defined in: [src/errors.ts:16](https://github.com/zeixcom/le-truc/blob/f24c1c5bc3c2b0911801769c1a46c70e066ccb8e/src/errors.ts#L16)
+Defined in: [src/errors.ts:16](https://github.com/zeixcom/le-truc/blob/9067b0df4b01434796accabfb262c9896f05f14f/src/errors.ts#L16)
 
 #### Parameters
 

@@ -17,13 +17,13 @@ Must be called within an active owner (effect or scope) so async cleanup can be 
 
 ### T
 
-`T` *extends* [`Signal`](../type-aliases/Signal.md)\<\{ \}\>[]
+`T` *extends* readonly [`Signal`](../type-aliases/Signal.md)\<\{ \}\>[]
 
 ## Parameters
 
 ### signals
 
-`T`
+readonly \[`T`\]
 
 ### handlers
 

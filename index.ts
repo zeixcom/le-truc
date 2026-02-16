@@ -1,6 +1,8 @@
 /**
- * @name Le Truc
- * @version 0.16.0
+ * Le Truc
+ *
+ * Version 0.16.0
+ *
  * @author Esther Brunner
  */
 
@@ -75,6 +77,7 @@ export {
 export {
 	CONTEXT_REQUEST,
 	type Context,
+	type ContextCallback,
 	ContextRequestEvent,
 	type ContextType,
 	provideContexts,
@@ -89,6 +92,7 @@ export {
 	type Reactive,
 	runEffects,
 	runElementEffects,
+	type UpdateOperation,
 	updateElement,
 } from './src/effects'
 export { setAttribute, toggleAttribute } from './src/effects/attribute'
@@ -112,7 +116,11 @@ export {
 	InvalidReactivesError,
 	MissingElementError,
 } from './src/errors'
-export { createEventsSensor, type EventHandlers } from './src/events'
+export {
+	createEventsSensor,
+	type EventHandlers,
+	type SensorEventHandler,
+} from './src/events'
 export {
 	type Fallback,
 	isParser,
@@ -128,8 +136,19 @@ export { asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'
 export { schedule } from './src/scheduler'
 export {
+	type AllElements,
 	createElementsMemo,
 	type ElementFromKey,
+	type ElementFromSelector,
+	type ElementsFromSelectorArray,
+	type ElementFromSingleSelector,
 	type ElementQueries,
+	type ExtractRightmostSelector,
+	type ExtractTag,
+	type ExtractTagFromSimpleSelector,
+	type FirstElement,
+	type KnownTag,
+	type SplitByComma,
+	type TrimWhitespace,
 	type UI,
 } from './src/ui'

@@ -8,7 +8,7 @@
 
 > **EventHandler**\<`P`, `Evt`\> = (`event`) => `{ [K in keyof P]?: P[K] }` \| `void` \| `Promise`\<`void`\>
 
-Defined in: [src/effects/event.ts:10](https://github.com/zeixcom/le-truc/blob/f24c1c5bc3c2b0911801769c1a46c70e066ccb8e/src/effects/event.ts#L10)
+Defined in: [src/effects/event.ts:10](https://github.com/zeixcom/le-truc/blob/9067b0df4b01434796accabfb262c9896f05f14f/src/effects/event.ts#L10)
 
 ## Type Parameters
 

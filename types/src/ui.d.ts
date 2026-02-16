@@ -46,4 +46,4 @@ declare function createElementsMemo<E extends Element>(parent: ParentNode, selec
  * @returns {ElementSelectors<P>} - Helper functions for selecting descendants
  */
 declare const getHelpers: (host: HTMLElement) => [ElementQueries, (run: () => void) => void];
-export { type ElementFromKey, type ElementFromSelector, type ElementQueries, createElementsMemo, getHelpers, type UI, };
+export { type AllElements, type ElementFromKey, type ElementFromSelector, type ElementsFromSelectorArray, type ElementFromSingleSelector, type ElementQueries, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, type FirstElement, type KnownTag, createElementsMemo, getHelpers, type SplitByComma, type TrimWhitespace, type UI, };

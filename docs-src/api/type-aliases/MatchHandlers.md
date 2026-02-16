@@ -10,13 +10,9 @@
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:3
 
-## Name
-
 Le Truc
 
-## Version
-
-0.16.0
+Version 0.16.0
 
 ## Author
 
@@ -26,7 +22,7 @@ Esther Brunner
 
 ### T
 
-`T` *extends* [`Signal`](Signal.md)\<`unknown` & `object`\>[]
+`T` *extends* readonly [`Signal`](Signal.md)\<`unknown` & `object`\>[]
 
 ## Properties
 

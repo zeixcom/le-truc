@@ -10,7 +10,7 @@ type EventType<K extends string> = K extends keyof HTMLElementEventMap
 	? HTMLElementEventMap[K]
 	: Event
 
-type EventHandler<
+type SensorEventHandler<
 	T extends {},
 	Evt extends Event,
 	U extends UI,
@@ -23,7 +23,7 @@ type EventHandler<
 }) => T | void | Promise<void>
 
 type EventHandlers<T extends {}, U extends UI, E extends Element> = {
-	[K in keyof HTMLElementEventMap]?: EventHandler<T, EventType<K>, U, E>
+	[K in keyof HTMLElementEventMap]?: SensorEventHandler<T, EventType<K>, U, E>
 }
 
 /* === Exported Functions === */
@@ -105,7 +105,7 @@ const createEventsSensor =
 
 export {
 	createEventsSensor,
-	type EventHandler,
+	type SensorEventHandler,
 	type EventHandlers,
 	type EventType,
 }

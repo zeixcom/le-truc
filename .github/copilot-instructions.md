@@ -45,7 +45,7 @@ Developer workflows (essential commands)
 What to change (and what to avoid)
 - Change: small refactors that preserve exported API in `index.ts` and `.d.ts` files.
 - Change: add or update examples in `examples/` to demonstrate new or changed behavior.
-- Avoid: breaking changes to public exports without updating `index.ts` / `index.dev.ts` and re-building (`bun run build:dev`).
+- Avoid: breaking changes to public exports without updating `index.ts` and re-building (`bun run build`).
 - Avoid: changing the custom element registration pattern (i.e., calling `customElements.define`) in a way that prevents `getHelpers` dependency detection.
 
 PR guidance / descriptions

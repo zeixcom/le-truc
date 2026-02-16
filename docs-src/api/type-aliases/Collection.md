@@ -10,13 +10,9 @@
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:5
 
-## Name
-
 Le Truc
 
-## Version
-
-0.16.0
+Version 0.16.0
 
 ## Author
 

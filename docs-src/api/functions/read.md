@@ -8,7 +8,7 @@
 
 > **read**\<`T`, `U`\>(`reader`, `fallback`): [`Reader`](../type-aliases/Reader.md)\<`T`, `U`\>
 
-Defined in: [src/parsers.ts:69](https://github.com/zeixcom/le-truc/blob/f24c1c5bc3c2b0911801769c1a46c70e066ccb8e/src/parsers.ts#L69)
+Defined in: [src/parsers.ts:69](https://github.com/zeixcom/le-truc/blob/9067b0df4b01434796accabfb262c9896f05f14f/src/parsers.ts#L69)
 
 Read a value from a UI element
 

@@ -286,7 +286,7 @@ async function startServer() {
 						status: 404,
 					})
 
-				const success = server.upgrade(req)
+				const success = server.upgrade(req, { data: {} })
 				if (success) return new Response()
 
 				return new Response('WebSocket upgrade failed', { status: 400 })

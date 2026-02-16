@@ -10,6 +10,10 @@
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:9
 
+Le Truc
+
+Version 0.16.0
+
 ## Parameters
 
 ### value
@@ -19,14 +23,6 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:9
 ## Returns
 
 `string`
-
-## Name
-
-Le Truc
-
-## Version
-
-0.16.0
 
 ## Author
 

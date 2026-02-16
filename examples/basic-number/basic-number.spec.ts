@@ -143,8 +143,8 @@ test.describe('basic-number component', () => {
 		// Verify console error was logged for dynamic creation
 		const hasUnitError = consoleMessages.some(
 			msg =>
-				msg.includes('unit')
-				&& (msg.includes('liter') || msg.includes('kilometer')),
+				msg.includes('unit') &&
+				(msg.includes('liter') || msg.includes('kilometer')),
 		)
 		expect(hasUnitError).toBe(true)
 	})

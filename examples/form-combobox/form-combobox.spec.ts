@@ -218,9 +218,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement
-					&& listboxElement.options
-					&& listboxElement.options.length > 0
+					listboxElement &&
+					listboxElement.options &&
+					listboxElement.options.length > 0
 				)
 			})
 
@@ -268,9 +268,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement
-					&& listboxElement.options
-					&& listboxElement.options.length > 0
+					listboxElement &&
+					listboxElement.options &&
+					listboxElement.options.length > 0
 				)
 			})
 
@@ -303,9 +303,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement
-					&& listboxElement.options
-					&& listboxElement.options.length > 0
+					listboxElement &&
+					listboxElement.options &&
+					listboxElement.options.length > 0
 				)
 			})
 
@@ -341,9 +341,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement
-					&& listboxElement.options
-					&& listboxElement.options.length > 0
+					listboxElement &&
+					listboxElement.options &&
+					listboxElement.options.length > 0
 				)
 			})
 
