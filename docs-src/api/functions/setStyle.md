@@ -8,7 +8,7 @@
 
 > **setStyle**\<`P`, `E`\>(`prop`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/style.ts:15](https://github.com/zeixcom/le-truc/blob/c62468fd9c5d5c7240f34b9daac5034cede67a90/src/effects/style.ts#L15)
+Defined in: [src/effects/style.ts:15](https://github.com/zeixcom/le-truc/blob/a6eb6ebcd7352b6a07349eccb67cc61a478cd06f/src/effects/style.ts#L15)
 
 Effect for setting a CSS style property on an element.
 Sets the specified style property with support for deletion via UNSET.

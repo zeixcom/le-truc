@@ -6,6 +6,7 @@ import {
 	type Memo,
 	on,
 	setProperty,
+	show,
 } from '../..'
 
 export type ModuleCarouselProps = {
@@ -16,6 +17,8 @@ type ModuleCarouselUI = {
 	dots: Memo<HTMLElement[]>
 	slides: Memo<HTMLElement[]>
 	buttons: Memo<HTMLElement[]>
+	prev: HTMLButtonElement
+	next: HTMLButtonElement
 }
 
 declare global {
@@ -24,7 +27,8 @@ declare global {
 	}
 }
 
-const wrapAround = (index: number, total: number) => (index + total) % total
+const clamp = (index: number, total: number) =>
+	Math.max(0, Math.min(index, total - 1))
 
 export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 	'module-carousel',
@@ -36,10 +40,12 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 			),
 		),
 	},
-	({ all }) => ({
+	({ all, first }) => ({
 		dots: all('[role="tab"]'),
 		slides: all('[role="tabpanel"]'),
 		buttons: all('nav button'),
+		prev: first('button.prev', 'Add a previous button'),
+		next: first('button.next', 'Add a next button'),
 	}),
 	({ host, slides }) => {
 		let isNavigating = false
@@ -99,12 +105,14 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 						prevIndex = newIndex
 
 						// Only scroll if this change wasn't from user scroll
-						if (!isScrolling) {
-							scrollToSlide(newIndex)
-						}
+						if (!isScrolling) scrollToSlide(newIndex)
 					})
 				},
 			],
+
+			// Visibility of navigation buttons
+			prev: show(() => host.index !== 0),
+			next: show(() => host.index !== slides.get().length - 1),
 
 			// Handle navigation button click and keyup events
 			buttons: [
@@ -112,14 +120,13 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 					if (!(target instanceof HTMLElement)) return
 
 					const slidesLength = slides.get().length
-					const total = slidesLength
 					const nextIndex = target.classList.contains('prev')
 						? host.index - 1
 						: target.classList.contains('next')
 							? host.index + 1
 							: parseInt(target.dataset.index || '0')
 					host.index = Number.isInteger(nextIndex)
-						? wrapAround(nextIndex, total)
+						? clamp(nextIndex, slidesLength)
 						: 0
 				}),
 				on('keyup', e => {
@@ -129,15 +136,14 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 						e.stopPropagation()
 
 						const slidesLength = slides.get().length
-						const total = slidesLength
 						const nextIndex =
 							key === 'Home'
 								? 0
 								: key === 'End'
-									? total - 1
-									: wrapAround(
+									? slidesLength - 1
+									: clamp(
 											host.index + (key === 'ArrowLeft' ? -1 : 1),
-											total,
+											slidesLength,
 										)
 						host.index = nextIndex
 					}

@@ -142,7 +142,7 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">		overscroll-behavior-x</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">	[</span><span style="color:#A6E22E">role</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#F8F8F2">	[</span><span style="color:#A6E22E">role</span><span style="color:#F92672">=</span><span style="color:#E6DB74">'tabpanel'</span><span style="color:#F8F8F2">] {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		width</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">100</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">calc</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">100</span><span style="color:#F92672">%</span><span style="color:#F92672"> -</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--input-height));</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		padding-bottom</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height);</span></span>
@@ -150,7 +150,37 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">		scroll-snap-align</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">start</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		flex</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#AE81FF"> 0</span><span style="color:#AE81FF"> 100</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">		&#x26; h3 {</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;.blue {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-blue-20);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-blue-90);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text-soft: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-blue-80);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.purple</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-purple-20);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-purple-90);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text-soft: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-purple-80);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.pink</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-pink-20);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-pink-90);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text-soft: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-pink-80);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.orange</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-orange-20);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-orange-90);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text-soft: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-orange-80);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.green</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-green-20);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-green-90);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text-soft: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-green-80);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26; </span><span style="color:#F92672">h3</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">block</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"></span>
@@ -202,7 +232,7 @@
 <span class="line"><span style="color:#F8F8F2">			}</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">		[</span><span style="color:#A6E22E">role</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"tablist"</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#F8F8F2">		[</span><span style="color:#A6E22E">role</span><span style="color:#F92672">=</span><span style="color:#E6DB74">'tablist'</span><span style="color:#F8F8F2">] {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">absolute</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			bottom</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			left</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
@@ -211,7 +241,7 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">			justify-content</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">center</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			margin-block</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m);</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">			[</span><span style="color:#66D9EF;font-style:italic">role</span><span style="color:#F8F8F2">="tab"] {</span></span>
+<span class="line"><span style="color:#F8F8F2">			[</span><span style="color:#66D9EF;font-style:italic">role</span><span style="color:#F8F8F2">='tab'] {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				width</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-l);</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-l);</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				border</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
@@ -229,10 +259,44 @@
 <span class="line"><span style="color:#F8F8F2">					opacity: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-dimmed);</span></span>
 <span class="line"><span style="color:#F8F8F2">				}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">				&#x26;[</span><span style="color:#A6E22E">aria-selected</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"true"</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x26;[</span><span style="color:#A6E22E">aria-selected</span><span style="color:#F92672">=</span><span style="color:#E6DB74">'true'</span><span style="color:#F8F8F2">] {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">					opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-solid);</span></span>
 <span class="line"><span style="color:#F8F8F2">				}</span></span>
 <span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">@media</span><span style="color:#F8F8F2"> (prefers-color-scheme: dark) {</span></span>
+<span class="line"><span style="color:#F92672">	module-carousel</span><span style="color:#F8F8F2"> [</span><span style="color:#A6E22E">role</span><span style="color:#F92672">=</span><span style="color:#E6DB74">'tabpanel'</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;.blue {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-blue-80);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-blue-10);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text-soft: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-blue-20);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.purple</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-purple-80);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-purple-10);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text-soft: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-purple-20);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.pink</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-pink-80);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-pink-10);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text-soft: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-pink-20);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.orange</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-orange-80);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-orange-10);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text-soft: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-orange-20);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">.green</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-green-80);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-green-10);</span></span>
+<span class="line"><span style="color:#F8F8F2">			--color-text-soft: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-green-20);</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
@@ -267,6 +331,7 @@
 <span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Memo,</span></span>
 <span class="line"><span style="color:#F8F8F2">	on,</span></span>
 <span class="line"><span style="color:#F8F8F2">	setProperty,</span></span>
+<span class="line"><span style="color:#F8F8F2">	show,</span></span>
 <span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleCarouselProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
@@ -277,6 +342,8 @@
 <span class="line"><span style="color:#F8F8F2">	dots</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Memo</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">[]></span></span>
 <span class="line"><span style="color:#F8F8F2">	slides</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Memo</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">[]></span></span>
 <span class="line"><span style="color:#F8F8F2">	buttons</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Memo</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">[]></span></span>
+<span class="line"><span style="color:#F8F8F2">	prev</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	next</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
@@ -285,7 +352,8 @@
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#A6E22E"> wrapAround</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">index</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">total</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (index </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> total) </span><span style="color:#F92672">%</span><span style="color:#F8F8F2"> total</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#A6E22E"> clamp</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">index</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">total</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">	Math.</span><span style="color:#A6E22E">max</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, Math.</span><span style="color:#A6E22E">min</span><span style="color:#F8F8F2">(index, total </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">))</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleCarouselProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">ModuleCarouselUI</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'module-carousel'</span><span style="color:#F8F8F2">,</span></span>
@@ -297,10 +365,12 @@
 <span class="line"><span style="color:#F8F8F2">			),</span></span>
 <span class="line"><span style="color:#F8F8F2">		),</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
 <span class="line"><span style="color:#F8F8F2">		dots: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'[role="tab"]'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">		slides: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'[role="tabpanel"]'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">		buttons: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'nav button'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		prev: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button.prev'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a previous button'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		next: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button.next'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a next button'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">	}),</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">slides</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> isNavigating </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
@@ -360,12 +430,14 @@
 <span class="line"><span style="color:#F8F8F2">						prevIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> newIndex</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">						// Only scroll if this change wasn't from user scroll</span></span>
-<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">isScrolling) {</span></span>
-<span class="line"><span style="color:#A6E22E">							scrollToSlide</span><span style="color:#F8F8F2">(newIndex)</span></span>
-<span class="line"><span style="color:#F8F8F2">						}</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">isScrolling) </span><span style="color:#A6E22E">scrollToSlide</span><span style="color:#F8F8F2">(newIndex)</span></span>
 <span class="line"><span style="color:#F8F8F2">					})</span></span>
 <span class="line"><span style="color:#F8F8F2">				},</span></span>
 <span class="line"><span style="color:#F8F8F2">			],</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Visibility of navigation buttons</span></span>
+<span class="line"><span style="color:#F8F8F2">			prev: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.index </span><span style="color:#F92672">!==</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">			next: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.index </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">			// Handle navigation button click and keyup events</span></span>
 <span class="line"><span style="color:#F8F8F2">			buttons: [</span></span>
@@ -373,14 +445,13 @@
 <span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">(target </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">)) </span><span style="color:#F92672">return</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> slidesLength </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> total </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slidesLength</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> nextIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.classList.</span><span style="color:#A6E22E">contains</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'prev'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F92672">						?</span><span style="color:#F8F8F2"> host.index </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span></span>
 <span class="line"><span style="color:#F92672">						:</span><span style="color:#F8F8F2"> target.classList.</span><span style="color:#A6E22E">contains</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'next'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F92672">							?</span><span style="color:#F8F8F2"> host.index </span><span style="color:#F92672">+</span><span style="color:#AE81FF"> 1</span></span>
 <span class="line"><span style="color:#F92672">							:</span><span style="color:#A6E22E"> parseInt</span><span style="color:#F8F8F2">(target.dataset.index </span><span style="color:#F92672">||</span><span style="color:#E6DB74"> '0'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F8F8F2">					host.index </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Number.</span><span style="color:#A6E22E">isInteger</span><span style="color:#F8F8F2">(nextIndex)</span></span>
-<span class="line"><span style="color:#F92672">						?</span><span style="color:#A6E22E"> wrapAround</span><span style="color:#F8F8F2">(nextIndex, total)</span></span>
+<span class="line"><span style="color:#F92672">						?</span><span style="color:#A6E22E"> clamp</span><span style="color:#F8F8F2">(nextIndex, slidesLength)</span></span>
 <span class="line"><span style="color:#F92672">						:</span><span style="color:#AE81FF"> 0</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
 <span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'keyup'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
@@ -390,15 +461,14 @@
 <span class="line"><span style="color:#F8F8F2">						e.</span><span style="color:#A6E22E">stopPropagation</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> slidesLength </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> total </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slidesLength</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> nextIndex </span><span style="color:#F92672">=</span></span>
 <span class="line"><span style="color:#F8F8F2">							key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'Home'</span></span>
 <span class="line"><span style="color:#F92672">								?</span><span style="color:#AE81FF"> 0</span></span>
 <span class="line"><span style="color:#F92672">								:</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'End'</span></span>
-<span class="line"><span style="color:#F92672">									?</span><span style="color:#F8F8F2"> total </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span></span>
-<span class="line"><span style="color:#F92672">									:</span><span style="color:#A6E22E"> wrapAround</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F92672">									?</span><span style="color:#F8F8F2"> slidesLength </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span></span>
+<span class="line"><span style="color:#F92672">									:</span><span style="color:#A6E22E"> clamp</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#F8F8F2">											host.index </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowLeft'</span><span style="color:#F92672"> ?</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F92672"> :</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">											total,</span></span>
+<span class="line"><span style="color:#F8F8F2">											slidesLength,</span></span>
 <span class="line"><span style="color:#F8F8F2">										)</span></span>
 <span class="line"><span style="color:#F8F8F2">						host.index </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> nextIndex</span></span>
 <span class="line"><span style="color:#F8F8F2">					}</span></span>

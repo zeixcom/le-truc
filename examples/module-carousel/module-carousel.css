@@ -17,13 +17,43 @@ module-carousel {
 		overscroll-behavior-x: none;
 	}
 
-	[role="tabpanel"] {
+	[role='tabpanel'] {
 		width: 100%;
 		height: calc(100% - var(--input-height));
 		padding-bottom: var(--input-height);
 		text-align: center;
 		scroll-snap-align: start;
 		flex: 0 0 100%;
+
+		&.blue {
+			background-color: var(--color-blue-20);
+			--color-text: var(--color-blue-90);
+			--color-text-soft: var(--color-blue-80);
+		}
+
+		&.purple {
+			background-color: var(--color-purple-20);
+			--color-text: var(--color-purple-90);
+			--color-text-soft: var(--color-purple-80);
+		}
+
+		&.pink {
+			background-color: var(--color-pink-20);
+			--color-text: var(--color-pink-90);
+			--color-text-soft: var(--color-pink-80);
+		}
+
+		&.orange {
+			background-color: var(--color-orange-20);
+			--color-text: var(--color-orange-90);
+			--color-text-soft: var(--color-orange-80);
+		}
+
+		&.green {
+			background-color: var(--color-green-20);
+			--color-text: var(--color-green-90);
+			--color-text-soft: var(--color-green-80);
+		}
 
 		& h3 {
 			display: block;
@@ -77,7 +107,7 @@ module-carousel {
 			}
 		}
 
-		[role="tablist"] {
+		[role='tablist'] {
 			position: absolute;
 			bottom: 0;
 			left: 0;
@@ -86,7 +116,7 @@ module-carousel {
 			justify-content: center;
 			margin-block: var(--space-m);
 
-			[role="tab"] {
+			[role='tab'] {
 				width: var(--space-l);
 				height: var(--space-l);
 				border: 0;
@@ -104,10 +134,44 @@ module-carousel {
 					opacity: var(--opacity-dimmed);
 				}
 
-				&[aria-selected="true"] {
+				&[aria-selected='true'] {
 					opacity: var(--opacity-solid);
 				}
 			}
+		}
+	}
+}
+
+@media (prefers-color-scheme: dark) {
+	module-carousel [role='tabpanel'] {
+		&.blue {
+			background-color: var(--color-blue-80);
+			--color-text: var(--color-blue-10);
+			--color-text-soft: var(--color-blue-20);
+		}
+
+		&.purple {
+			background-color: var(--color-purple-80);
+			--color-text: var(--color-purple-10);
+			--color-text-soft: var(--color-purple-20);
+		}
+
+		&.pink {
+			background-color: var(--color-pink-80);
+			--color-text: var(--color-pink-10);
+			--color-text-soft: var(--color-pink-20);
+		}
+
+		&.orange {
+			background-color: var(--color-orange-80);
+			--color-text: var(--color-orange-10);
+			--color-text-soft: var(--color-orange-20);
+		}
+
+		&.green {
+			background-color: var(--color-green-80);
+			--color-text: var(--color-green-10);
+			--color-text-soft: var(--color-green-20);
 		}
 	}
 }
