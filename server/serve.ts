@@ -1,15 +1,16 @@
 import { watch } from 'node:fs'
+import { buildOnce } from './build'
 import {
 	ASSETS_DIR,
 	COMPONENTS_DIR,
 	EXAMPLES_DIR,
 	LAYOUTS_DIR,
 	OUTPUT_DIR,
+	PAGES_DIR,
 	SERVER_CONFIG,
 } from './config'
 import { fileExists, getFilePath } from './io'
 import { hmrScriptTag } from './templates/hmr'
-import { buildOnce } from './build'
 
 /* === Command Line Args === */
 
@@ -144,6 +145,19 @@ const handleStaticFile = async (filePath: string): Promise<Response> => {
 		console.error('Error serving static file:', error)
 		return new Response('Internal server error', { status: 500 })
 	}
+}
+
+const acceptsMarkdown = (req: Request): boolean =>
+	(req.headers.get('Accept') || '').includes('text/markdown')
+
+const handleMarkdownSource = async (
+	pageName: string,
+): Promise<Response | null> => {
+	const mdPath = getFilePath(PAGES_DIR, `${pageName}.md`)
+	if (!fileExists(mdPath)) return null
+	return new Response(Bun.file(mdPath), {
+		headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
+	})
 }
 
 /* const handleComponentMock = async (filePath: string): Promise<Response> => {
@@ -318,15 +332,27 @@ async function startServer() {
 			'/test/*': new Response('Not Found', { status: 404 }),
 
 			// Documentation pages
-			'/:page': req =>
-				handleStaticFile(getFilePath(OUTPUT_DIR, req.params.page)),
+			'/:page': async req => {
+				if (acceptsMarkdown(req)) {
+					const pageName = req.params.page.replace(/\.html$/, '')
+					const mdResponse = await handleMarkdownSource(pageName)
+					if (mdResponse) return mdResponse
+				}
+				return handleStaticFile(getFilePath(OUTPUT_DIR, req.params.page))
+			},
 
 			// Serve favicon
 			'/favicon.ico': () =>
 				handleStaticFile(getFilePath(OUTPUT_DIR, 'favicon.ico')),
 
 			// Index
-			'/': () => handleStaticFile(getFilePath(OUTPUT_DIR, 'index.html')),
+			'/': async req => {
+				if (acceptsMarkdown(req)) {
+					const mdResponse = await handleMarkdownSource('index')
+					if (mdResponse) return mdResponse
+				}
+				return handleStaticFile(getFilePath(OUTPUT_DIR, 'index.html'))
+			},
 		},
 
 		websocket: {
