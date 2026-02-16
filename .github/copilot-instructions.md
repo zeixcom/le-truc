@@ -32,7 +32,8 @@ Files to consult for examples and authoritative patterns
 - Selector helpers & mutation-observer logic: `src/ui.ts`
 - Parser implementations: `src/parsers/*.ts` (e.g. `json.ts`, `number.ts`, `string.ts`)
 - Effect implementations: `src/effects/*.ts` (exported from root `index.ts`)
-- Signal helpers: `src/signals/*.ts` (collection, sensor)
+- Event-driven sensors: `src/events.ts` (createEventsSensor)
+- Element memos: `createElementsMemo` in `src/ui.ts`
 - Examples demonstrating usage: `examples/*` (start from `basic-hello` and `basic-counter`)
 
 Developer workflows (essential commands)

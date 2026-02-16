@@ -14,6 +14,7 @@ src/
   context.ts          Context protocol (provide/request) for dependency injection
   scheduler.ts        rAF-based task deduplication
   errors.ts           Domain-specific error classes
+  internal.ts         Internal signal map (getSignals) — shared by component.ts and pass.ts
   util.ts             Logging, element introspection, property validation
 
   effects/
@@ -45,6 +46,7 @@ scheduler.ts ──── (leaf, no internal imports)        │
 parsers.ts ─────── ui.ts (types only)                │
 parsers/* ──────── parsers.ts, ui.ts (types)         │
                                                      │
+internal.ts ────── (leaf, WeakMap for signal storage)  │
 ui.ts ──────────── errors.ts, util.ts                │
                                                      │
 effects.ts ─────── component.ts (types), errors.ts,  │
@@ -100,10 +102,12 @@ connectedCallback()
 Takes a key and a value and creates the appropriate signal:
 
 - Already a `Signal` → use directly
-- A function → `createComputed(fn)` (read-only, non-configurable)
-- Anything else → `createState(value)` (read-write, configurable)
+- A function → `createComputed(fn)` (read-only)
+- Anything else → `createState(value)` (read-write)
 
-Then defines a property descriptor on the component instance with `get: signal.get` and `set: signal.set` (if mutable). This is what makes `host.count` reactive — reading it calls `signal.get()` inside effects, which registers the dependency automatically.
+For mutable signals, the value is wrapped in a `createSlot(signal)` — a Slot from `@zeix/cause-effect` that acts as an indirection layer. The Slot's `get`/`set` are used as the property descriptor on the component instance, which is what makes `host.count` reactive. Reading calls `signal.get()` inside effects, registering the dependency automatically.
+
+The Slot enables signal swapping: if `#setAccessor` is called again for an existing key (e.g., via `attributeChangedCallback`), it calls `slot.replace(newSignal)` instead of redefining the property. This is also the mechanism used by `pass()` to inject parent signals into a child component.
 
 ### attributeChangedCallback — attribute sync
 
@@ -136,8 +140,8 @@ updateElement(reactive, { op, name, read, update, delete? })
   │
   └─ createEffect(() => {
        value = resolveReactive(reactive)   ← auto-tracks signal deps
-       if value === RESET  → use fallback
-       if value === null && delete exists → delete(target)
+       if value === RESET   → use fallback
+       if value === null   → delete(target) if available, else use fallback
        if value !== current → update(target, value)
      })
 ```
@@ -176,7 +180,7 @@ All default their `reactive` parameter to the effect name (e.g., `setAttribute('
 
 ### pass() — inter-component binding
 
-`pass(props)` overrides property descriptors on a child Le Truc component, replacing them with getters (and optional setters) that read from the parent's signals. This creates a live reactive binding between parent and child without the child needing to know about the parent. On cleanup, original descriptors are restored.
+`pass(props)` replaces the backing signal of a child Le Truc component's Slot properties. It uses `getSignals(target)` to access the child's internal signal map, then for each passed prop calls `slot.replace(signal)` with a new signal derived from the parent's reactive value. This creates a live reactive binding between parent and child without the child needing to know about the parent. No cleanup/restore is needed: when the parent unmounts, the child is torn down as well.
 
 ## The UI Query System
 
@@ -188,7 +192,7 @@ Calls `root.querySelector()`. If the matched element is an undefined custom elem
 
 ### all(selector, required?)
 
-Returns a `Memo<E[]>` created by `observeSelectorElements()`. This sets up a `MutationObserver` (lazily, via the `watched` option on `createMemo`) that watches for `childList`, `subtree`, and relevant attribute changes. The memo always contains the current matching elements; added/removed diffs are derived downstream where needed (for example in `runElementsEffects`).
+Returns a `Memo<E[]>` created by `createElementsMemo()`. This sets up a `MutationObserver` (lazily, via the `watched` option on `createMemo`) that watches for `childList`, `subtree`, and relevant attribute changes. The memo always contains the current matching elements; added/removed diffs are derived downstream where needed (for example in `runElementsEffects`).
 
 The `MutationObserver` config is smart about which attributes to watch: `extractAttributes(selector)` parses the CSS selector to find attribute names implied by `.class`, `#id`, and `[attr]` patterns.
 
@@ -230,7 +234,7 @@ This is used as a `MethodProducer` — a property initializer that returns `void
 
 ### Consumer side
 
-`requestContext('theme', 'light')` returns a `Reader<Memo<T>>` used as a property initializer. During `connectedCallback`, it dispatches a `ContextRequestEvent` that bubbles up the DOM. If an ancestor provider intercepts it, the consumer receives a getter and wraps it in `createComputed()`, creating a live reactive binding. If no provider responds, it falls back to the provided default value.
+`requestContext('theme', 'light')` returns a `Reader<Memo<T>>` used as a property initializer. During `connectedCallback`, it dispatches a `ContextRequestEvent` that bubbles up the DOM. If an ancestor provider intercepts it, the consumer receives a getter and wraps it in a `createMemo()`, creating a live reactive binding. If no provider responds, it falls back to the provided default value.
 
 ## The Scheduler
 
@@ -270,9 +274,9 @@ The dependency resolution catches all errors and runs the callback anyway. The `
 
 `callMethod` uses `read: () => null` — it never reads the current state. This means it always runs `update()` when the reactive is truthy, even if the method was already called. For idempotent methods like `focus()` this is fine, but for methods with side effects it could cause redundant calls. The `focus` effect partially addresses this with `read: el => el === document.activeElement`, but this pattern isn't consistent.
 
-### Commented-out code in effects.ts and component.ts
+### Commented-out code in effects.ts
 
-`effects.ts` contains a large commented-out `insertOrRemoveElement` function with its `ElementInserter` type. `component.ts` has commented-out lines in `#setAccessor` involving `UNSET` and `prev` signal cleanup. These suggest in-progress or abandoned features. Should they be removed, or are they actively being worked on?
+`effects.ts` contains a large commented-out `insertOrRemoveElement` function with its `ElementInserter` type. This suggests an in-progress or abandoned feature. Should it be removed, or is it actively being worked on?
 
 ### `on()` event handler can't access component UI
 

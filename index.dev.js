@@ -1276,6 +1276,9 @@ function createSensor(watched, options) {
     }
   };
 }
+function isSensor(value) {
+  return isObjectOfType(value, TYPE_SENSOR);
+}
 // node_modules/@zeix/cause-effect/src/nodes/store.ts
 function diffRecords(prev, next) {
   const prevValid = isRecord(prev) || Array.isArray(prev);
@@ -2375,7 +2378,9 @@ export {
   isTask,
   isStore,
   isState,
+  isSlot,
   isSignal,
+  isSensor,
   isRecord,
   isParser,
   isMutableSignal,
@@ -2391,6 +2396,7 @@ export {
   createTask,
   createStore,
   createState,
+  createSlot,
   createSensor,
   createScope,
   createMutableSignal,

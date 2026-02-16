@@ -18,9 +18,16 @@ Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built
 Le Truc creates components using the `defineComponent()` function:
 
 ```js
-defineComponent('my-component', {}, {}, () => [
-  // Component setup
-])
+defineComponent(
+  'my-component',
+  {},                    // Reactive properties
+  ({ first, all }) => ({
+    // Select descendant elements
+  }),
+  ui => ({
+    // Component setup: return effects
+  }),
+)
 ```
 
 Every Le Truc component must be registered with a valid custom element tag name (two or more words joined with `-`) as the first parameter.
@@ -85,7 +92,19 @@ The select function is used to find descendant elements within the component's D
 }),
 ```
 
-The select function must return a record of the selected elements, commonly called `ui` to which initializer functions for reactive properties and the setup function for effects have access to. In the above example, the helper function `first()` is used to find the first descendant matching a selector. Also available is `all()` to find all descendants matching a selector, dynamically updating the list of elements when the DOM changes. Both helper functions take a selector string and an optional error message to display if no element is found.
+The select function must return a record of the selected elements, commonly called `ui`. Both property initializers and the setup function have access to this object, so elements are queried once and shared everywhere.
+
+This is a separate parameter from the setup function for a reason: Le Truc initializes components in three phases — **select elements → initialize properties → run effects**. Some property initializers need to read from the DOM (e.g. `read(ui => ui.input.value, asInteger())`), so the elements must be queried first. And some queried elements may be custom elements that haven't been upgraded yet, so Le Truc waits for their definitions before running effects.
+
+In the above example, the helper function `first()` is used to find the first descendant matching a selector. Also available is `all()` which returns a `Memo<E[]>` — a lazily observed collection that dynamically updates when matching elements are added or removed from the DOM. Both helper functions take a selector string and an optional error message explaining why the element is required for proper functioning of the component:
+
+```js
+// Optional element — effects for this key are skipped if not found
+input: first('input'),
+
+// Required element — throws MissingElementError with your message if not found
+input: first('input', 'Needed to enter the name.'),
+```
 
 #### Setup Function
 
@@ -134,7 +153,7 @@ defineComponent(
     count: 0, // Initial value of "count" signal
     value: asInteger(5), // Parse "value" attribute as integer defaulting to 5
     isEven: ui => () => !(ui.host.count % 2), // Computed signal based on "count" signal
-    name: fromContext('display-name', 'World'), // Consume "display-name" signal from closest context provider
+    name: requestContext('display-name', 'World'), // Consume "display-name" signal from closest context provider
   },
   () => ({
     // Component UI
@@ -158,18 +177,23 @@ In the `disconnectedCallback()` Le Truc runs all cleanup functions returned by e
 If you added **event listeners** outside the scope of your component or **subscribed manually to external APIs** in a custom effect, you need to return a cleanup function:
 
 ```js
-defineComponent('my-component', {}, {}, ({ host }) => {
-  // Setup logic
-  host: () => {
-    const observer = new IntersectionObserver(([entry]) => {
-      // Do something
-    })
-    observer.observe(host)
+defineComponent(
+  'my-component',
+  {},
+  () => ({}),
+  ({ host }) => ({
+    host: () => {
+      // Setup logic
+      const observer = new IntersectionObserver(([entry]) => {
+        // Do something
+      })
+      observer.observe(host)
 
-    // Cleanup logic
-    return () => observer.disconnect()
-  },
-})
+      // Cleanup logic
+      return () => observer.disconnect()
+    },
+  }),
+)
 ```
 
 ## Managing State with Signals
@@ -189,10 +213,11 @@ Signals in Le Truc are of a **static type** and **non-nullable**. This allows to
 - If you use **TypeScript** (recommended), **you will be warned** that `null` or `undefined` cannot be assigned to a signal or if you try to assign a value of a wrong type.
 - If you use vanilla **JavaScript** without a build step, setting a signal to `null` or `undefined` **will throw a `NullishSignalValueError`**. However, strict type checking is not enforced at runtime.
 
-Because of the **non-nullable nature of signals** in Le Truc, we need two special values that can be assigned to any signal type:
+Because of the **non-nullable nature of signals** in Le Truc, there is a special value that can be assigned to any signal type:
 
 - **`RESET`**: Will **reset to the server-rendered version** that was there before Le Truc took control. This is what you want to do most of the times when a signal lacks a specific value.
-- **`UNSET`**: Will **delete the signal**, **unsubscribe its watchers** and also **delete related attributes or style properties** in effects. Use this with special care!
+
+To unset an attribute or style property in effects, return `null` from the reactive function. This signals to the effect system that the value should be removed.
 
 ### Initializing State from Attributes
 
@@ -207,7 +232,7 @@ defineComponent(
   },
   () => ({
     // Component UI
-  })
+  }),
   () => ({
     // Component setup
   }),
@@ -285,7 +310,7 @@ defineComponent(
 
 The `first()` function expects the matched element to be present at connection time. If not, it will silently ignore the call.
 
-On the other hand, the `all()` function creates a dynamic array of elements that will be updated whenever the matching elements are added or removed from the component's DOM branch. Le Truc will apply the given setup functions to added elements and run the cleanup functions on removed elements.
+On the other hand, the `all()` function returns a `Memo<E[]>` — a lazily observed collection backed by a `MutationObserver` that updates whenever matching elements are added or removed from the component's DOM branch. Le Truc will apply the given effects to added elements and run cleanup functions on removed elements.
 
 {% callout class="tip" %}
 **Tip**: The `all()` function is more flexible but also more resource-intensive than `first()`. Prefer `first()` when targeting a single element known to be present at connection time.
@@ -297,7 +322,11 @@ On the other hand, the `all()` function creates a dynamic array of elements that
 
 ## Adding Event Listeners
 
-Event listeners allow to respond to user interactions. They are the the main cause for changes in the component's state. Le Truc provides the `on()` function to add event listeners to elements and remove them when the component is disconnected.
+Event listeners respond to user interactions. They are the main cause for changes in component state. Le Truc provides two approaches for handling events, each suited to different situations.
+
+### on() — Imperative Event Handling
+
+The `on()` effect works like a familiar `addEventListener()` callback. It receives the DOM event and lets you imperatively update host properties:
 
 ```js
 defineComponent(
@@ -315,14 +344,79 @@ defineComponent(
       // Set 'active' signal to value of data-index attribute of button
       const index = parseInt(target.dataset.index, 10);
       host.active = Number.isInteger(index) ? index : 0;
-    })
+    }),
     input: on('change', () => {
       // Set 'value' signal to value of input element
-      host.value = target.value;
-    })
+      host.value = input.value;
+    }),
   })
 )
 ```
+
+The handler can also **return an object** to update multiple host properties at once. When it does, the updates are automatically batched for efficiency:
+
+```js
+on('click', () => ({
+  count: host.count + 1,
+  lastClicked: Date.now(),
+}))
+```
+
+Since `on()` is an effect, it's attached to a specific UI element and automatically cleaned up when the component disconnects.
+
+### createEventsSensor() — Declarative Event-to-State Mapping
+
+For more complex event handling, `createEventsSensor()` takes a different approach: instead of imperatively mutating state, it **derives a single reactive value** from one or more event types. This value becomes a read-only property on the component.
+
+```js
+defineComponent(
+  'module-tabgroup',
+  {
+    // 'selected' is a read-only property derived entirely from events
+    selected: createEventsSensor(
+      read(ui => getSelected(ui.tabs.get(), isSelectedTab), ''),
+      'tabs',
+      {
+        click: ({ target }) => getAriaControls(target),
+        keyup: ({ event, ui, target, prev }) => {
+          // Handle arrow key navigation
+          if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+            return getNextTab(ui.tabs.get(), target, event.key)
+          }
+        },
+      },
+    ),
+  },
+  // ...
+)
+```
+
+The sensor handler receives a rich context object with typed access to:
+
+- **`event`** — the original DOM event
+- **`target`** — the matched element (with proper type information, unlike `event.target`)
+- **`ui`** — the full component UI object
+- **`prev`** — the previous value of the sensor
+
+The sensor is created as a **property initializer** (second parameter of `defineComponent`), not as an effect. This means the resulting property is read-only — no other code can write to it. The sensor is the sole source of truth for that value.
+
+### When to Use Which?
+
+{% callout class="tip" %}
+**Choosing the right approach**
+
+Use **`on()`** when you want to:
+- React to a single event type on an element
+- Imperatively update one or more host properties
+- Keep the handler simple and familiar
+
+Use **`createEventsSensor()`** when you want to:
+- Derive a single value from multiple event types (click, keyboard, etc.)
+- Ensure the property is read-only — only events can change it
+- Access the previous value, typed target element, or component UI in the handler
+
+**Rule of thumb**: If you're *doing things* in response to an event, use `on()`. If an event stream *is* the state, use `createEventsSensor()`.
+{% /callout %}
 
 {% /section %}
 
@@ -382,7 +476,7 @@ defineComponent(
   }),
   () => {
     const count = createState(0)
-    const double = createComputed(() => count.get() * 2)
+    const double = createMemo(() => count.get() * 2)
     return {
       increment: on('click', () => {
         count.update(v => ++v)

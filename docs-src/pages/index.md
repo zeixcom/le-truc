@@ -50,7 +50,7 @@ defineComponent(
   { name: asString() },
   q => ({ span: q.first('span') }),
   () => ({ span: setText('name') }),
-])
+)
 ```
 
 Le Truc augments what the platform already provides. It leverages the Web Components standard while adding just enough convenience functions to make reactive UI behaviors easy to implement.
