@@ -165,7 +165,12 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 			],
 			listbox: [
 				...manageFocus(
-					() => host.options,
+					() =>
+						Array.from(
+							ui.listbox.querySelectorAll<HTMLButtonElement>(
+								'button[role="option"]:not([hidden])',
+							),
+						),
 					options =>
 						options.findIndex(option => option.ariaSelected === 'true'),
 				),
