@@ -11,7 +11,6 @@ import {
 	setProperty,
 	setText,
 	show,
-	Task,
 	toggleClass,
 } from '../..'
 

@@ -8,7 +8,7 @@
 
 // From Cause & Effect
 export {
-	batchSignalWrites,
+	batch,
 	CircularDependencyError,
 	type Cleanup,
 	type Collection,
@@ -30,7 +30,6 @@ export {
 	type EffectCallback,
 	type Guard,
 	InvalidCallbackError,
-	InvalidCollectionSourceError,
 	InvalidSignalValueError,
 	isAsyncFunction,
 	isCollection,

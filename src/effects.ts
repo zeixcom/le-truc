@@ -1,9 +1,6 @@
 import {
 	type Cleanup,
-	type Collection,
 	createEffect,
-	createWatcher,
-	isCollection,
 	isFunction,
 	isMemo,
 	isRecord,
@@ -33,7 +30,7 @@ type Effects<
 	P extends ComponentProps,
 	U extends UI & { host: Component<P> },
 > = {
-	[K in keyof U & string]?: ElementEffects<P, ElementFromKey<U, K>>
+	[K in keyof U]?: ElementEffects<P, ElementFromKey<U, K>>
 }
 
 type Reactive<T, P extends ComponentProps, E extends Element> =
@@ -125,21 +122,18 @@ const runElementsEffects = <P extends ComponentProps, E extends Element>(
 	elements: Memo<E[]>,
 	effects: ElementEffects<P, E>,
 ): Cleanup => {
-	let keys: string[] = []
-	const cleanups: Map<string, Cleanup> = new Map()
+	const cleanups: Map<E, Cleanup> = new Map()
 
-	const attach = (keys: string[]) => {
-		for (const key of keys) {
-			const target = collection.byKey(key)?.get()
-			if (!target) continue
+	const attach = (targets: readonly E[]) => {
+		for (const target of targets) {
 			const cleanup = runElementEffects(host, target, effects)
-			if (cleanup) cleanups.set(key, cleanup)
+			if (cleanup) cleanups.set(target, cleanup)
 		}
 	}
-	const detach = (keys: string[]) => {
-		for (const key of keys) {
-			cleanups.get(key)?.()
-			cleanups.delete(key)
+	const detach = (targets: readonly E[]) => {
+		for (const target of targets) {
+			cleanups.get(target)?.()
+			cleanups.delete(target)
 		}
 	}
 
@@ -183,7 +177,8 @@ const runEffects = <
 	const cleanups: Cleanup[] = []
 	const keys = Object.keys(effects)
 	for (const key of keys) {
-		if (!effects[key]) continue
+		const k = key as keyof U
+		if (!effects[k]) continue
 
 		const elementEffects = Array.isArray(effects[k]) ? effects[k] : [effects[k]]
 		if (isMemo<ElementFromKey<U, typeof k>[]>(ui[k])) {
@@ -191,7 +186,7 @@ const runEffects = <
 		} else if (ui[k]) {
 			const cleanup = runElementEffects(
 				ui.host,
-				targets as ElementFromKey<U, typeof key>,
+				ui[k] as ElementFromKey<U, typeof k>,
 				elementEffects,
 			)
 			if (cleanup) cleanups.push(cleanup)

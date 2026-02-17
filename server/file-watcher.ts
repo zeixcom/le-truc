@@ -7,36 +7,7 @@ import { join } from 'path'
 
 /* === Exported Functions === */
 
-const isPlaywrightRunning = (): boolean => {
-	return !!(
-		process.env.PLAYWRIGHT_TEST_BASE_URL
-		|| process.env.PLAYWRIGHT
-		|| process.env.PWTEST_SKIP_TEST_OUTPUT
-		|| process.argv.some(arg => arg.includes('playwright'))
-	)
-}
-
-const getFileInfo = async (filePath: string): Promise<FileInfo> => {
-	const filename = basename(filePath)
-	const content = await Bun.file(filePath).text()
-	const hash = createHash('sha256')
-		.update(content, 'utf8')
-		.digest('hex')
-		.slice(0, 16)
-	const stats = await stat(filePath)
-
-	return {
-		path: filePath,
-		filename,
-		content,
-		hash,
-		lastModified: stats.mtimeMs,
-		size: stats.size,
-		exists: true,
-	}
-}
-
-export const createFileList = async (
+export const watchFiles = async (
 	directory: string,
 	include: string,
 	exclude?: string,
@@ -51,33 +22,6 @@ export const createFileList = async (
 		return true
 	}
 
-<<<<<<< HEAD
-	if (watchFiles) {
-		fileList.on(HOOK_WATCH, () => {
-			const watcher = watch(
-				directory,
-				{ recursive: include.includes('**/'), persistent: true },
-				async (event, filename) => {
-					if (!filename || !isMatching(filename)) return
-
-					const filePath = join(directory, filename)
-					if (event === 'rename' && !existsSync(filePath)) {
-						fileList.remove(filePath)
-					} else {
-						const fileInfo = await getFileInfo(filePath)
-						const fileSignal = fileList.byKey(filePath)
-						if (fileSignal) fileSignal.set(fileInfo)
-						else fileList.add(fileInfo)
-					}
-				},
-			)
-			return () => {
-				watcher.close()
-			}
-		})
-	}
-
-=======
 	// Scan initial files
 	const initialFiles: FileInfo[] = []
 	if (existsSync(directory)) {
@@ -145,6 +89,5 @@ export const createFileList = async (
 		)
 	}
 
->>>>>>> main
 	return fileList
 }

@@ -1,200 +1,172 @@
+import Markdoc from '@markdoc/markdoc'
 import { createEffect, match } from '@zeix/cause-effect'
 import { codeToHtml } from 'shiki'
-import { EXAMPLES_DIR } from '../config'
-import {
-	type Computed,
-	createComputed,
-	createEffect,
-	UNSET,
-} from '@zeix/cause-effect'
 import { COMPONENTS_DIR, CONTENT_MARKER, EXAMPLES_DIR } from '../config'
-import { componentMarkdown } from '../file-signals'
-import { fileExists, getFilePath, writeFileSafe } from '../io'
-import markdocConfig from '../markdoc/markdoc.config'
+import {
+	componentMarkdown,
+	componentMarkup,
+	type FileInfo,
+} from '../file-signals'
+import { getFilePath, writeFileSafe } from '../io'
+import markdocConfig from '../markdoc.config'
 
-/**
- * Examples effect - processes component documentation and generates HTML fragments
- *
- * This effect:
- * 1. Watches for component documentation markdown files (*.md)
- * 2. Processes them with Markdoc, replacing {{ content }} with component HTML
- * 3. Outputs HTML fragments to docs/examples/ for lazy loading
- */
+/* === Internal Functions === */
 
-type ExampleFile = {
-	componentName: string
-	markdownPath: string
-	htmlPath: string
-	outputPath: string
-	content: string
-}
-
-// Build a path-keyed lookup from a FileInfo array
 const toPathMap = (files: FileInfo[]): Map<string, FileInfo> => {
 	const map = new Map<string, FileInfo>()
 	for (const file of files) map.set(file.path, file)
 	return map
 }
 
+const processExample = async (
+	componentName: string,
+	markdownContent: string,
+	componentHtml: string,
+): Promise<string> => {
+	// Replace {{ content }} placeholder with actual HTML wrapped in a fence block
+	const processedContent = markdownContent.replace(
+		CONTENT_MARKER,
+		`\`\`\`html\n${componentHtml}\n\`\`\``,
+	)
+
+	// Parse with Markdoc
+	const ast = Markdoc.parse(processedContent)
+
+	// Validate the document
+	const errors = Markdoc.validate(ast, markdocConfig)
+	if (errors.length > 0) {
+		console.warn(`Markdoc validation errors for ${componentName}:`, errors)
+	}
+
+	// Transform the AST
+	const transformed = Markdoc.transform(ast, markdocConfig)
+
+	// Render to HTML
+	let htmlContent = Markdoc.renderers.html(transformed)
+
+	// Remove automatic <article> wrapper added by Markdoc
+	htmlContent = htmlContent.replace(/^<article>([\s\S]*)<\/article>$/m, '$1')
+
+	// Process code blocks with syntax highlighting
+	const codeBlockRegex =
+		/<pre data-language="([^"]*)"><code class="language-[^"]*">([\s\S]*?)<\/code><\/pre>/g
+	let codeMatch: RegExpExecArray | null
+
+	while ((codeMatch = codeBlockRegex.exec(htmlContent)) !== null) {
+		const [fullMatch, lang, code] = codeMatch
+
+		const decodedCode = code
+			.replace(/&quot;/g, '"')
+			.replace(/&#39;/g, "'")
+			.replace(/&lt;/g, '<')
+			.replace(/&gt;/g, '>')
+			.replace(/&amp;/g, '&')
+
+		try {
+			const highlighted = await codeToHtml(decodedCode, {
+				lang: lang || 'text',
+				theme: 'monokai',
+			})
+
+			htmlContent = htmlContent.replace(fullMatch, highlighted)
+		} catch (error) {
+			console.warn(`Failed to highlight ${lang} code block:`, error)
+		}
+	}
+
+	// Process module-demo components with raw HTML
+	htmlContent = htmlContent.replace(
+		/<module-demo([^>]*) preview-html="([^"]*)"([^>]*)>([\s\S]*?)<\/module-demo>/g,
+		(_fullMatch, beforeAttrs, encodedHtml, afterAttrs, content) => {
+			const previewHtml = encodedHtml
+				.replace(/&quot;/g, '"')
+				.replace(/&#39;/g, "'")
+				.replace(/&lt;/g, '<')
+				.replace(/&gt;/g, '>')
+				.replace(/&amp;/g, '&')
+				.replace(/>\s{2,}</g, '><')
+				.replace(/\s{2,}/g, ' ')
+				.trim()
+
+			const previewDiv = `<div class="preview">${previewHtml}</div>`
+			return `<module-demo${beforeAttrs}${afterAttrs}>${previewDiv}${content}</module-demo>`
+		},
+	)
+
+	return htmlContent
+}
+
+/* === Exported Effect === */
+
 export const examplesEffect = () =>
 	createEffect(() => {
-		match(
-			[
-				componentMarkup.sources,
-				componentStyles.sources,
-				componentScripts.sources,
-			],
-			{
-				ok: async ([htmlFiles, cssFiles, tsFiles]) => {
-					try {
-						console.log('🔄 Rebuilding example fragments...')
+		match([componentMarkdown.sources, componentMarkup.sources], {
+			ok: async ([mdFiles, htmlFiles]) => {
+				try {
+					console.log('🔄 Rebuilding example documentation...')
 
-						const cssMap = toPathMap(cssFiles)
-						const tsMap = toPathMap(tsFiles)
+					const htmlMap = toPathMap(htmlFiles)
 
-						for (const html of htmlFiles) {
-							// Only process main component HTML files (examples/component-name/component-name.html)
-							// Skip test files and other auxiliary HTML files
-							const pathParts = html.path.split('/')
+					for (const md of mdFiles) {
+						const pathParts = md.path.split('/')
 
-			const componentName = pathParts[pathParts.length - 2] // e.g., "basic-button"
-			const markdownPath = path
+						if (pathParts.length < 3) continue
 
-			// Find corresponding HTML file
-			const htmlPath = getFilePath(
-				COMPONENTS_DIR,
-				componentName,
-				`${componentName}.html`,
-			)
+						const componentName = pathParts[pathParts.length - 2]
+						const fileName = pathParts[pathParts.length - 1].replace(
+							/\.md$/,
+							'',
+						)
 
-			if (!fileExists(htmlPath)) {
-				console.warn(`No HTML file found for component: ${componentName}`)
-				continue
-			}
+						// Only process markdown files that match their directory name
+						if (componentName !== fileName) continue
 
-							const name = html.path.replace(/\.html$/, '')
-							const css = cssMap.get(name + '.css')
-							const ts = tsMap.get(name + '.ts')
+						// Find corresponding HTML file
+						const htmlPath = getFilePath(
+							COMPONENTS_DIR,
+							componentName,
+							`${componentName}.html`,
+						)
+						const htmlFile = htmlMap.get(htmlPath)
 
-			exampleFiles.set(componentName, {
-				componentName,
-				markdownPath,
-				htmlPath,
-				outputPath,
-				content: fileInfo.content,
-			})
-		}
-		return exampleFiles
-	},
-)
+						if (!htmlFile) {
+							console.warn(`No HTML file found for component: ${componentName}`)
+							continue
+						}
 
-const processedExamples: Computed<Map<string, string>> = createComputed(
-	async () => {
-		const examples = componentExamples.get()
-		if (examples === UNSET) return UNSET
-		const processed = new Map<string, string>()
+						try {
+							const htmlContent = await processExample(
+								componentName,
+								md.content,
+								htmlFile.content,
+							)
 
-		for (const [componentName, example] of examples) {
-			try {
-				// Read the component HTML file
-				let componentHtml = ''
-				if (fileExists(example.htmlPath)) {
-					const htmlFile = Bun.file(example.htmlPath)
-					componentHtml = await htmlFile.text()
+							const outputPath = getFilePath(
+								EXAMPLES_DIR,
+								`${componentName}.html`,
+							)
+							const success = await writeFileSafe(outputPath, htmlContent)
+
+							if (success) {
+								console.log(`✅ Generated examples/${componentName}.html`)
+							} else {
+								console.error(`❌ Failed to write ${outputPath}`)
+							}
+						} catch (error) {
+							console.error(
+								`Failed to process example ${componentName}:`,
+								error,
+							)
+						}
+					}
+
+					console.log('📝 Examples processing completed')
+				} catch (error) {
+					console.error('Failed to process examples:', error)
 				}
-
-				// Replace {{content}} placeholder with actual HTML wrapped in a fence block
-				const processedContent = example.content.replace(
-					CONTENT_MARKER,
-					`\`\`\`html\n${componentHtml}\n\`\`\``,
-				)
-
-				// Process with Markdoc
-				const ast = Markdoc.parse(processedContent)
-
-				// Validate the document
-				const errors = Markdoc.validate(ast, markdocConfig)
-				if (errors.length > 0) {
-					console.warn(
-						`Markdoc validation errors for ${example.markdownPath}:`,
-						errors,
-					)
-				}
-
-				// Transform the AST
-				const transformed = Markdoc.transform(ast, markdocConfig)
-
-				// Render to HTML
-				let htmlContent = Markdoc.renderers.html(transformed)
-
-				// Remove automatic <article> wrapper added by Markdoc
-				htmlContent = htmlContent.replace(
-					/^<article>([\s\S]*)<\/article>$/m,
-					'$1',
-				)
-
-				// Process module-demo components with raw HTML
-				htmlContent = htmlContent.replace(
-					/<module-demo([^>]*) preview-html="([^"]*)"([^>]*)>([\s\S]*?)<\/module-demo>/g,
-					(fullMatch, beforeAttrs, encodedHtml, afterAttrs, content) => {
-						// Decode HTML entities that may have been encoded
-						const previewHtml = encodedHtml
-							.replace(/&quot;/g, '"')
-							.replace(/&#39;/g, "'")
-							.replace(/&lt;/g, '<')
-							.replace(/&gt;/g, '>')
-							.replace(/&amp;/g, '&')
-							.replace(/>\s{2,}</g, '><')
-							.replace(/\s{2,}/g, ' ')
-							.trim()
-
-						// Build the complete module-demo structure
-						const previewDiv = `<div class="preview">${previewHtml}</div>`
-						return `<module-demo${beforeAttrs}${afterAttrs}>${previewDiv}${content}</module-demo>`
-					},
-				)
-
-				processed.set(componentName, htmlContent)
-			} catch (error) {
-				console.error(`Failed to process example ${componentName}:`, error)
-				processed.set(
-					componentName,
-					`<p>Error processing example: ${error}</p>`,
-				)
-			}
-		}
-
-		return processed
-	},
-)
-
-export function examplesEffect(): () => void {
-	console.log('🔄 Starting examples effect...')
-
-	const unsubscribe = createEffect(async () => {
-		const processed = processedExamples.get()
-		const examples = componentExamples.get()
-
-		if (processed === UNSET || examples === UNSET || processed.size === 0)
-			return
-
-		// Write each processed example to output directory
-		for (const [componentName, htmlContent] of processed) {
-			const example = examples.get(componentName)
-			if (!example) continue
-
-			const success = await writeFileSafe(example.outputPath, htmlContent)
-			if (success) {
-				console.log(
-					`✅ Generated ${getFilePath('examples', `${componentName}.html`)}`,
-				)
-			} else {
-				console.error(`❌ Failed to write ${example.outputPath}`)
-			}
-		}
-
-		console.log('📝 Examples processing completed')
+			},
+			err: errors => {
+				console.error('Error in examples effect:', errors[0].message)
+			},
+		})
 	})
-
-	return unsubscribe
-}

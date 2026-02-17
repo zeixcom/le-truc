@@ -1725,25 +1725,15 @@ var runElementEffects = (host, target, effects) => {
 };
 var runElementsEffects = (host, elements, effects) => {
   const cleanups = new Map;
-  const attach = (keys) => {
-    if (!keys)
-      return;
-    for (const key of keys) {
-      const target = collection.byKey(key)?.get();
-      if (!target)
-        continue;
+  const attach = (targets) => {
+    for (const target of targets) {
       const cleanup = runElementEffects(host, target, effects);
       if (cleanup)
         cleanups.set(target, cleanup);
     }
   };
-  const detach = (keys) => {
-    if (!keys)
-      return;
-    for (const key of keys) {
-      const target = collection.byKey(key)?.get();
-      if (!target)
-        continue;
+  const detach = (targets) => {
+    for (const target of targets) {
       cleanups.get(target)?.();
       cleanups.delete(target);
     }
@@ -1774,7 +1764,8 @@ var runEffects = (ui, effects) => {
   const cleanups = [];
   const keys = Object.keys(effects);
   for (const key of keys) {
-    if (!effects[key])
+    const k = key;
+    if (!effects[k])
       continue;
     const elementEffects = Array.isArray(effects[k]) ? effects[k] : [effects[k]];
     if (isMemo(ui[k])) {
@@ -1858,211 +1849,6 @@ var read = (reader, fallback) => (ui) => {
   const value = reader(ui);
   return typeof value === "string" && isParser(fallback) ? fallback(ui, value) : value ?? getFallback(ui, fallback);
 };
-
-// src/signals/collection.ts
-var extractAttributes = (selector) => {
-  const attributes = new Set;
-  if (selector.includes("."))
-    attributes.add("class");
-  if (selector.includes("#"))
-    attributes.add("id");
-  if (selector.includes("[")) {
-    const parts = selector.split("[");
-    for (let i = 1;i < parts.length; i++) {
-      const part = parts[i];
-      if (!part.includes("]"))
-        continue;
-      const attrName = part.split("=")[0].trim().replace(/[^a-zA-Z0-9_-]/g, "");
-      if (attrName)
-        attributes.add(attrName);
-    }
-  }
-  return [...attributes];
-};
-
-class ElementCollection {
-  #watchers = new Set;
-  #signals = new Map;
-  #hookCallbacks = {};
-  #parent;
-  #selector;
-  #observer;
-  #order = [];
-  #generateKey;
-  constructor(parent, selector, keyConfig) {
-    this.#parent = parent;
-    this.#selector = selector;
-    let keyCounter = 0;
-    this.#generateKey = isString(keyConfig) ? () => `${keyConfig}${keyCounter++}` : isFunction(keyConfig) ? (element) => keyConfig(element) : () => String(keyCounter++);
-  }
-  #keyFor(element) {
-    for (const [key, signal] of this.#signals) {
-      if (signal.get() === element)
-        return key;
-    }
-    return;
-  }
-  #observe() {
-    Array.from(this.#parent.querySelectorAll(this.#selector)).forEach((element) => {
-      const key = this.#generateKey(element);
-      this.#signals.set(key, new Ref(element));
-    });
-    const findMatches = (nodes) => {
-      const elements = Array.from(nodes).filter(isElement);
-      const found = [];
-      for (const element of elements) {
-        if (element.matches(this.#selector))
-          found.push(element);
-        found.push(...Array.from(element.querySelectorAll(this.#selector)));
-      }
-      return found;
-    };
-    this.#observer = new MutationObserver((mutations) => {
-      const addedElements = [];
-      const removedElements = [];
-      const addedKeys = [];
-      const changedKeys = new Set;
-      const removedKeys = [];
-      let changed = false;
-      for (const mutation of mutations) {
-        if (mutation.type === "childList") {
-          const target = mutation.target;
-          if (isElement(target)) {
-            const key = this.#keyFor(target);
-            if (key)
-              changedKeys.add(key);
-          }
-          if (mutation.addedNodes.length)
-            addedElements.push(...findMatches(mutation.addedNodes));
-          if (mutation.removedNodes.length)
-            removedElements.push(...findMatches(mutation.removedNodes));
-        } else if (mutation.type === "attributes") {
-          const target = mutation.target;
-          if (isElement(target)) {
-            const key = this.#keyFor(target);
-            const isMatching = target.matches(this.#selector);
-            if (key && !isMatching) {
-              this.#signals.delete(key);
-              removedElements.push(target);
-              removedKeys.push(key);
-            } else if (key && isMatching) {
-              changedKeys.add(key);
-            } else if (!key && isMatching) {
-              const newKey = this.#generateKey(target);
-              this.#signals.set(newKey, new Ref(target));
-              addedElements.push(target);
-              addedKeys.push(newKey);
-            }
-          }
-        }
-      }
-      batchSignalWrites(() => {
-        if (addedKeys.length || removedKeys.length) {
-          changed = true;
-          if (addedKeys.length)
-            triggerHook(this.#hookCallbacks[HOOK_ADD], addedKeys);
-          if (removedKeys.length)
-            triggerHook(this.#hookCallbacks[HOOK_REMOVE], removedKeys);
-        }
-        if (this.#hookCallbacks[HOOK_CHANGE]?.size) {
-          triggerHook(this.#hookCallbacks[HOOK_CHANGE], Array.from(changedKeys));
-          for (const key of changedKeys) {
-            if (key)
-              this.#signals.get(key)?.notify();
-          }
-        }
-        const newOrder = Array.from(this.#parent.querySelectorAll(this.#selector)).map((element) => this.#keyFor(element)).filter((key) => key !== undefined);
-        if (!isEqual(this.#order, newOrder)) {
-          this.#order = newOrder;
-          changed = true;
-          triggerHook(this.#hookCallbacks[HOOK_SORT], newOrder);
-        }
-        if (changed)
-          notifyWatchers(this.#watchers);
-      });
-    });
-    const observerConfig = this.#hookCallbacks[HOOK_CHANGE]?.size ? {
-      attributes: true,
-      childList: true,
-      subtree: true
-    } : {
-      childList: true,
-      subtree: true
-    };
-    if (!this.#hookCallbacks[HOOK_CHANGE]?.size) {
-      const observedAttributes = extractAttributes(this.#selector);
-      if (observedAttributes.length) {
-        observerConfig.attributes = true;
-        observerConfig.attributeFilter = observedAttributes;
-      }
-    }
-    this.#observer.observe(this.#parent, observerConfig);
-  }
-  get [Symbol.toStringTag]() {
-    return TYPE_COLLECTION;
-  }
-  get [Symbol.isConcatSpreadable]() {
-    return true;
-  }
-  *[Symbol.iterator]() {
-    for (const key of this.#order) {
-      const element = this.#signals.get(key);
-      if (element)
-        yield element;
-    }
-  }
-  keys() {
-    return this.#order.values();
-  }
-  get() {
-    subscribeActiveWatcher(this.#watchers, this.#hookCallbacks[HOOK_WATCH]);
-    if (!this.#observer)
-      this.#observe();
-    return this.#order.map((key) => this.#signals.get(key)?.get()).filter((element) => element !== undefined);
-  }
-  at(index) {
-    return this.#signals.get(this.#order[index]);
-  }
-  byKey(key) {
-    return this.#signals.get(key);
-  }
-  keyAt(index) {
-    return this.#order[index];
-  }
-  indexOfKey(key) {
-    return this.#order.indexOf(key);
-  }
-  on(type, callback) {
-    if (isHandledHook(type, [
-      HOOK_ADD,
-      HOOK_CHANGE,
-      HOOK_REMOVE,
-      HOOK_SORT,
-      HOOK_WATCH
-    ])) {
-      this.#hookCallbacks[type] ||= new Set;
-      this.#hookCallbacks[type].add(callback);
-      if (!this.#observer)
-        this.#observe();
-      return () => {
-        this.#hookCallbacks[type]?.delete(callback);
-      };
-    }
-    throw new InvalidHookError(TYPE_COLLECTION, type);
-  }
-  deriveCollection(callback) {
-    return new DerivedCollection(this, callback);
-  }
-  get length() {
-    subscribeActiveWatcher(this.#watchers, this.#hookCallbacks[HOOK_WATCH]);
-    if (!this.#observer)
-      this.#observe();
-    return this.#signals.size;
-  }
-}
-function createElementCollection(parent, selector, keyConfig) {
-  return new ElementCollection(parent, selector, keyConfig);
-}
 
 // src/ui.ts
 var DEPENDENCY_TIMEOUT = 200;
@@ -2358,7 +2144,7 @@ var on = (type, handler, options = {}) => (host, target) => {
       const result = handler(e);
       if (!isRecord(result))
         return;
-      batchSignalWrites(() => {
+      batch(() => {
         for (const [key, value] of Object.entries(result)) {
           try {
             host[key] = value;
@@ -2635,6 +2421,7 @@ export {
   isFunction,
   isEqual,
   isComputed,
+  isCollection,
   isAsyncFunction,
   defineComponent,
   dangerouslySetInnerHTML,
@@ -2651,7 +2438,8 @@ export {
   createElementsMemo,
   createEffect,
   createComputed,
-  batchSignalWrites,
+  createCollection,
+  batch,
   asString,
   asNumber,
   asJSON,
@@ -2660,18 +2448,14 @@ export {
   asBoolean,
   NullishSignalValueError,
   MissingElementError,
-  Memo,
-  List,
+  InvalidUIKeyError,
   InvalidSignalValueError,
   InvalidReactivesError,
   InvalidPropertyNameError,
   InvalidEffectsError,
   InvalidCustomElementError,
   InvalidComponentNameError,
-  InvalidCollectionSourceError,
   InvalidCallbackError,
-  DuplicateKeyError,
-  DerivedCollection,
   DependencyTimeoutError,
   ContextRequestEvent,
   CircularDependencyError,

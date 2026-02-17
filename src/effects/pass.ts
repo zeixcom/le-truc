@@ -1,7 +1,6 @@
 import {
 	createComputed,
 	isFunction,
-	isMemoCallback,
 	isRecord,
 	isSignal,
 	isSlot,

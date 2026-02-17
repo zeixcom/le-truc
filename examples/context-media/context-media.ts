@@ -1,9 +1,9 @@
 import {
 	type Component,
 	type Context,
+	createState,
 	defineComponent,
 	provideContexts,
-	State,
 } from '../..'
 
 export type ContextMediaMotion = 'no-preference' | 'reduce'
@@ -48,10 +48,10 @@ export const MEDIA_ORIENTATION = 'media-orientation' as Context<
 export default defineComponent<ContextMediaProps>(
 	'context-media',
 	{
-		// Context for motion preference
+		// Context for motion preference; true for no-preference, false for reduce
 		[MEDIA_MOTION]: () => {
 			const mql = matchMedia('(prefers-reduced-motion: reduce)')
-			const motion = new State(mql.matches ? 'reduce' : 'no-preference')
+			const motion = createState(mql.matches ? 'reduce' : 'no-preference')
 			mql.addEventListener('change', e => {
 				motion.set(e.matches ? 'reduce' : 'no-preference')
 			})
@@ -61,7 +61,7 @@ export default defineComponent<ContextMediaProps>(
 		// Context for preferred color scheme
 		[MEDIA_THEME]: () => {
 			const mql = matchMedia('(prefers-color-scheme: dark)')
-			const theme = new State(mql.matches ? 'dark' : 'light')
+			const theme = createState(mql.matches ? 'dark' : 'light')
 			mql.addEventListener('change', e => {
 				theme.set(e.matches ? 'dark' : 'light')
 			})
@@ -71,10 +71,11 @@ export default defineComponent<ContextMediaProps>(
 		// Context for screen viewport size
 		[MEDIA_VIEWPORT]: (ui: { host: HTMLElement }) => {
 			const getBreakpoint = (attr: string, fallback: string) => {
-				const value = ui.host.getAttribute(attr)?.trim()
-				if (!value) return fallback
-				const unit = value.match(/em$/) ? 'em' : 'px'
-				const v = parseFloat(value)
+				const value = ui.host.getAttribute(attr)
+				const trimmed = value?.trim()
+				if (!trimmed) return fallback
+				const unit = trimmed.match(/em$/) ? 'em' : 'px'
+				const v = parseFloat(trimmed)
 				return Number.isFinite(v) ? v + unit : fallback
 			}
 			const mqlSM = matchMedia(`(min-width: ${getBreakpoint('sm', '32em')})`)
@@ -88,7 +89,7 @@ export default defineComponent<ContextMediaProps>(
 				if (mqlSM.matches) return 'sm'
 				return 'xs'
 			}
-			const viewport = new State(getViewport())
+			const viewport = createState(getViewport())
 			mqlSM.addEventListener('change', () => {
 				viewport.set(getViewport())
 			})
@@ -107,7 +108,7 @@ export default defineComponent<ContextMediaProps>(
 		// Context for screen orientation
 		[MEDIA_ORIENTATION]: () => {
 			const mql = matchMedia('(orientation: landscape)')
-			const orientation = new State(mql.matches ? 'landscape' : 'portrait')
+			const orientation = createState(mql.matches ? 'landscape' : 'portrait')
 			mql.addEventListener('change', e => {
 				orientation.set(e.matches ? 'landscape' : 'portrait')
 			})

@@ -2,7 +2,6 @@ import {
 	asInteger,
 	type Component,
 	defineComponent,
-	type Effect,
 	setText,
 	show,
 	type UI,
@@ -76,10 +75,7 @@ export default defineComponent<BasicPluralizeProps, BasicPluralizeUI>(
 			count: setText(() => String(host.count)),
 			none: show(() => host.count === 0),
 			some: show(() => host.count > 0),
-		} as Record<
-			Intl.LDMLPluralRule | 'count' | 'none' | 'some',
-			Effect<BasicPluralizeProps, HTMLElement>
-		>
+		}
 
 		// Subset of plural categories for applicable pluralizer: ['zero', 'one', 'two', 'few', 'many', 'other']
 		const categories = pluralizer.resolvedOptions().pluralCategories

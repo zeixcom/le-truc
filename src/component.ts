@@ -4,7 +4,6 @@ import {
 	createState,
 	isComputed,
 	isFunction,
-	isMemoCallback,
 	isMutableSignal,
 	isSignal,
 	isSlot,

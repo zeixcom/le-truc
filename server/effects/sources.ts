@@ -1,4 +1,4 @@
-import { createEffect, match, resolve } from '@zeix/cause-effect'
+import { createEffect, match } from '@zeix/cause-effect'
 import { codeToHtml } from 'shiki'
 import { SOURCES_DIR } from '../config'
 import {
@@ -8,13 +8,21 @@ import {
 	type FileInfo,
 } from '../file-signals'
 import { getFilePath, writeFileSafe } from '../io'
-import { PanelType, tabGroup } from '../templates/fragments'
+import { type PanelType, tabGroup } from '../templates/fragments'
+
+/* === Internal Functions === */
 
 const highlightCode = async (content: string, type: string) =>
 	await codeToHtml(content, {
 		lang: type,
 		theme: 'monokai',
 	})
+
+const toPathMap = (files: FileInfo[]): Map<string, FileInfo> => {
+	const map = new Map<string, FileInfo>()
+	for (const file of files) map.set(file.path, file)
+	return map
+}
 
 const generatePanels = async (
 	html: FileInfo,
@@ -51,44 +59,43 @@ const generatePanels = async (
 	return panels
 }
 
+/* === Exported Effect === */
+
 export const sourcesEffect = () =>
 	createEffect(() => {
 		match(
-			resolve({
-				htmlFiles: componentMarkup.sources,
-				cssFiles: componentStyles.sources,
-				tsFiles: componentScripts.sources,
-			}),
+			[
+				componentMarkup.sources,
+				componentStyles.sources,
+				componentScripts.sources,
+			],
 			{
-				ok: async ({ htmlFiles, cssFiles, tsFiles }) => {
+				ok: async ([htmlFiles, cssFiles, tsFiles]) => {
 					try {
-						console.log('🔄 Rebuilding example fragments...')
+						console.log('🔄 Rebuilding source fragments...')
 
-						for (const path in htmlFiles) {
-							const html = htmlFiles[path]
+						const cssMap = toPathMap(cssFiles)
+						const tsMap = toPathMap(tsFiles)
 
+						for (const html of htmlFiles) {
 							// Only process main component HTML files (examples/component-name/component-name.html)
 							// Skip test files and other auxiliary HTML files
 							const pathParts = html.path.split('/')
 
-							if (pathParts.length < 3) {
-								continue // Skip files not in component directories
-							}
+							if (pathParts.length < 3) continue
 
-							const componentName = pathParts[pathParts.length - 2] // Get directory name
+							const componentName = pathParts[pathParts.length - 2]
 							const fileName = pathParts[pathParts.length - 1].replace(
 								/\.html$/,
 								'',
-							) // Get file name without extension
+							)
 
 							// Skip if filename doesn't match component directory name
-							if (componentName !== fileName) {
-								continue
-							}
+							if (componentName !== fileName) continue
 
 							const name = html.path.replace(/\.html$/, '')
-							const css = cssFiles[name + '.css']
-							const ts = tsFiles[name + '.ts']
+							const css = cssMap.get(name + '.css')
+							const ts = tsMap.get(name + '.ts')
 
 							const panels = await generatePanels(html, css, ts)
 							const outputPath = getFilePath(
@@ -98,14 +105,13 @@ export const sourcesEffect = () =>
 							await writeFileSafe(outputPath, tabGroup(componentName, panels))
 						}
 
-						console.log('Example fragments successfully rebuilt')
-						return
+						console.log('Source fragments successfully rebuilt')
 					} catch (error) {
-						console.error('Example fragments failed to rebuild:', String(error))
+						console.error('Source fragments failed to rebuild:', String(error))
 					}
 				},
 				err: errors => {
-					console.error('Error in examples effect:', errors[0].message)
+					console.error('Error in sources effect:', errors[0].message)
 				},
 			},
 		)

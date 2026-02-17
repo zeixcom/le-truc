@@ -6,25 +6,9 @@
 
 # Class: CircularDependencyError
 
-<<<<<<< HEAD
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:3
-
-## Name
-
-Le Truc
-
-## Version
-
-0.15.1
-
-## Author
-
-Esther Brunner
-=======
 Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:13
 
 Error thrown on re-entrance on an already running function.
->>>>>>> main
 
 ## Extends
 
@@ -36,13 +20,9 @@ Error thrown on re-entrance on an already running function.
 
 > **new CircularDependencyError**(`where`): `CircularDependencyError`
 
-<<<<<<< HEAD
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:4
-=======
 Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:19
 
 Constructs a new CircularDependencyError.
->>>>>>> main
 
 #### Parameters
 

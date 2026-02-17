@@ -1,4 +1,4 @@
-import { batchSignalWrites, type Cleanup, isRecord } from '@zeix/cause-effect'
+import { batch, type Cleanup, isRecord } from '@zeix/cause-effect'
 import type { ComponentProps } from '../component'
 import type { Effect } from '../effects'
 import type { EventType } from '../events'
@@ -40,7 +40,7 @@ const on =
 			const task = () => {
 				const result = handler(e as EventType<K>)
 				if (!isRecord(result)) return
-				batchSignalWrites(() => {
+				batch(() => {
 					for (const [key, value] of Object.entries(result)) {
 						try {
 							host[key as keyof P] = value

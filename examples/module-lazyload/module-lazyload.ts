@@ -1,15 +1,11 @@
 import {
 	asString,
 	type Component,
-<<<<<<< HEAD
-=======
 	createTask,
->>>>>>> main
 	dangerouslySetInnerHTML,
 	defineComponent,
 	setText,
 	show,
-	Task,
 	toggleClass,
 } from '../..'
 import { fetchWithCache, isRecursiveURL, isValidURL } from '../_common/fetch'
@@ -45,11 +41,7 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 	}),
 	ui => {
 		const { host } = ui
-<<<<<<< HEAD
-		const result = new Task<{
-=======
 		const result = createTask<{
->>>>>>> main
 			ok: boolean
 			value: string
 			error: string

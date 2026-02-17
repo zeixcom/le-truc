@@ -1,6 +1,6 @@
 import { type Component, defineComponent, pass } from '../..'
-import { FormListboxProps } from '../form-listbox/form-listbox'
-import { ModuleLazyloadProps } from '../module-lazyload/module-lazyload'
+import type { FormListboxProps } from '../form-listbox/form-listbox'
+import type { ModuleLazyloadProps } from '../module-lazyload/module-lazyload'
 
 type ModuleListnavUI = {
 	listbox: Component<FormListboxProps>
