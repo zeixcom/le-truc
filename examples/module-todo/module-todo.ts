@@ -1,16 +1,16 @@
 import {
 	type Component,
-	createCollection,
+	createElementsMemo,
 	defineComponent,
 	on,
 	pass,
 	setAttribute,
 } from '../..'
-import { BasicButtonProps } from '../basic-button/basic-button'
-import { BasicPluralizeProps } from '../basic-pluralize/basic-pluralize'
-import { FormRadiogroupProps } from '../form-radiogroup/form-radiogroup'
-import { FormTextboxProps } from '../form-textbox/form-textbox'
-import { ModuleListProps } from '../module-list/module-list'
+import type { BasicButtonProps } from '../basic-button/basic-button'
+import type { BasicPluralizeProps } from '../basic-pluralize/basic-pluralize'
+import type { FormRadiogroupProps } from '../form-radiogroup/form-radiogroup'
+import type { FormTextboxProps } from '../form-textbox/form-textbox'
+import type { ModuleListProps } from '../module-list/module-list'
 
 type ModuleTodoUI = {
 	form: HTMLFormElement
@@ -59,8 +59,8 @@ export default defineComponent<{}, ModuleTodoUI>(
 		),
 	}),
 	({ textbox, list, filter }) => {
-		const active = createCollection(list, 'form-checkbox:not([checked])')
-		const completed = createCollection(list, 'form-checkbox[checked]')
+		const active = createElementsMemo(list, 'form-checkbox:not([checked])')
+		const completed = createElementsMemo(list, 'form-checkbox[checked]')
 
 		return {
 			form: on('submit', e => {
@@ -74,11 +74,12 @@ export default defineComponent<{}, ModuleTodoUI>(
 			}),
 			submit: pass({ disabled: () => !textbox.length }),
 			list: setAttribute('filter', () => filter?.value || 'all'),
-			count: pass({ count: () => active.length }),
+			count: pass({ count: () => active.get().length }),
 			clearCompleted: [
 				pass({
-					disabled: () => !completed.length,
-					badge: () => (completed.length ? String(completed.length) : ''),
+					disabled: () => !completed.get().length,
+					badge: () =>
+						completed.get().length ? String(completed.get().length) : '',
 				}),
 				on('click', () => {
 					const items = completed.get()

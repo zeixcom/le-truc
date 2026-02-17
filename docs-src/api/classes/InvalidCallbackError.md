@@ -6,19 +6,9 @@
 
 # Class: InvalidCallbackError
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:4
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:58
 
-## Name
-
-Le Truc
-
-## Version
-
-0.15.0
-
-## Author
-
-Esther Brunner
+Error thrown when a callback is invalid.
 
 ## Extends
 
@@ -30,7 +20,9 @@ Esther Brunner
 
 > **new InvalidCallbackError**(`where`, `value`): `InvalidCallbackError`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:5
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:65
+
+Constructs a new InvalidCallbackError.
 
 #### Parameters
 
@@ -38,9 +30,13 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:5
 
 `string`
 
+The location where the error occurred.
+
 ##### value
 
-`string`
+`unknown`
+
+The invalid value.
 
 #### Returns
 
@@ -198,7 +194,7 @@ a();
 
 > `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
 
-Defined in: node\_modules/bun-types/globals.d.ts:1043
+Defined in: node\_modules/bun-types/globals.d.ts:1042
 
 Create .stack property on a target object
 
@@ -250,7 +246,7 @@ Indicates whether the argument provided is a built-in Error instance or not.
 
 > `static` **isError**(`value`): `value is Error`
 
-Defined in: node\_modules/bun-types/globals.d.ts:1038
+Defined in: node\_modules/bun-types/globals.d.ts:1037
 
 Check if a value is an instance of Error
 

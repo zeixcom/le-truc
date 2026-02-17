@@ -7,20 +7,20 @@
 		<meta name="description" content="Installation, setup, and first steps" />
 		<link
 			rel="preload"
-			href="./assets/main.css?v=mjarbk4w"
+			href="./assets/main.css?v=mlpzvlmm"
 			as="style"
 		/>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=mjarbk4w"
+			href="./assets/main.js?v=mlpzvlmm"
 		/>
 		<link
 			rel="stylesheet"
-			href="./assets/main.css?v=mjarbk4w"
+			href="./assets/main.css?v=mlpzvlmm"
 		/>
 		<script
 			type="module"
-			src="./assets/main.js?v=mjarbk4w"
+			src="./assets/main.js?v=mlpzvlmm"
 		></script>
 	</head>
 
@@ -30,7 +30,7 @@
 				<a href="#main" class="skiplink visually-hidden">
 					Skip to main content
 				</a>
-				<h1 class="content">Le Truc Docs <small>Version 0.15.0</small></h1>
+				<h1 class="content">Le Truc Docs <small>Version 0.16.0</small></h1>
 				<section-menu>
 		<nav>
 			<h2 class="visually-hidden">Main Menu</h2>
@@ -97,7 +97,7 @@
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><h3 id="self-hosting-le-truc"><a name="self-hosting-le-truc" class="anchor" href="#self-hosting-le-truc"><span class="permalink">🔗</span><span class="title">Self-Hosting Le Truc</span></a></h3><p>For production use, you may want to <strong>self-host Le Truc</strong> to avoid relying on a CDN. You can download the latest version from:</p><p><a href="https://github.com/zeixcom/le-truc/blob/main/index.js">index.js in Github Repository</a></p><p>Simply host the file on your server and include it like this:</p><module-codeblock language="html" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="file">page.html</span><span class="language">html</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">script</span><span style="color:#A6E22E"> src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/path/to/your/hosted/le-truc.js"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">script</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p><strong>Why self-host?</strong></p><ul><li>You <strong>control updates</strong> and avoid breaking changes from external CDNs.</li><li>Works for <strong>projects with stricter Content Security Policy rules</strong>.</li></ul><p>Remember to keep the hosted file updated to use the latest features and bug fixes.</p><h3 id="installing-via-package-managers"><a name="installing-via-package-managers" class="anchor" href="#installing-via-package-managers"><span class="permalink">🔗</span><span class="title">Installing via Package Managers</span></a></h3><p>If you're using a <strong>bundler</strong> like <strong>Vite, Webpack, or Rollup</strong>, install Le Truc via NPM or Bun:</p><module-tabgroup><div role="tablist"><button role="tab" id="trigger_npm" aria-controls="panel_npm" aria-selected="true" tabindex="0">NPM</button><button role="tab" id="trigger_bun" aria-controls="panel_bun" aria-selected="false" tabindex="-1">Bun</button></div><div role="tabpanel" id="panel_npm" aria-labelledby="trigger_npm"><div><module-codeblock language="sh" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">sh</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">npm</span><span style="color:#E6DB74"> install</span><span style="color:#E6DB74"> @zeix/le-truc</span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock></div></div><div role="tabpanel" id="panel_bun" aria-labelledby="trigger_bun" hidden=""><div><module-codeblock language="sh" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">sh</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">bun</span><span style="color:#E6DB74"> add</span><span style="color:#E6DB74"> @zeix/le-truc</span></span>
-<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock></div></div></module-tabgroup><p>Then import the needed functions in your JavaScript:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="file">main.js</span><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asString, component, on, setText } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '@zeix/le-truc'</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock></div></div></module-tabgroup><p>Then import the needed functions in your JavaScript:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="file">main.js</span><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asString, defineComponent, on, setText } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '@zeix/le-truc'</span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock></section><section><h2 id="creating-your-first-component"><a name="creating-your-first-component" class="anchor" href="#creating-your-first-component"><span class="permalink">🔗</span><span class="title">Creating Your First Component</span></a></h2><p>Now, let's create an interactive Web Component to verify your setup.</p><p><strong>What This Component Does</strong></p><ul><li>Displays <code>Hello, World!</code> by default.</li><li>Updates dynamically when you type into the input field.</li></ul><h3 id="markup"><a name="markup" class="anchor" href="#markup"><span class="permalink">🔗</span><span class="title">Markup</span></a></h3><p>Include the following in your server-rendered HTML:</p><module-codeblock language="html" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="file">page.html</span><span class="language">html</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-hello</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">  &#x3C;</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">    Your name&#x3C;</span><span style="color:#F92672">br</span><span style="color:#F8F8F2"> /></span></span>
@@ -138,7 +138,7 @@
 			<footer class="content-grid">
 				<div class="content">
 					<h2 class="visually-hidden">Footer</h2>
-					<p>© 2024 – 2025 Zeix AG</p>
+					<p>© 2024 – 2026 Zeix AG</p>
 				</div>
 			</footer>
 		</context-router>

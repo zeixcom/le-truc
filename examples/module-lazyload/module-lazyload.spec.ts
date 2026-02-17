@@ -561,8 +561,8 @@ test.describe('module-lazyload component', () => {
 				return {
 					exists: !!callout,
 					hidden:
-						callout?.hasAttribute('hidden')
-						|| (callout as HTMLElement).style.display === 'none',
+						callout?.hasAttribute('hidden') ||
+						(callout as HTMLElement).style.display === 'none',
 				}
 			})
 			expect(shadowCallout.exists).toBe(true)

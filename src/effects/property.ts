@@ -1,4 +1,3 @@
-import { UNSET } from '@zeix/cause-effect'
 import type { ComponentProps } from '../component'
 import { type Effect, type Reactive, updateElement } from '../effects'
 
@@ -25,10 +24,10 @@ const setProperty = <
 		E
 	>,
 ): Effect<P, E> =>
-	updateElement(reactive, {
+	updateElement<E[K] & {}, P, E>(reactive, {
 		op: 'p',
 		name: key,
-		read: el => (key in el ? el[key] : UNSET),
+		read: el => (key in el ? (el[key] ?? null) : null),
 		update: (el, value) => {
 			el[key] = value
 		},

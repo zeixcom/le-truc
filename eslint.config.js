@@ -18,7 +18,6 @@ export default [
 	{
 		files: [
 			'index.ts',
-			'index.dev.ts',
 			'src/**/*.{js,mjs,cjs,ts}',
 			'docs-src/**/*.{js,mjs,cjs,ts}',
 		],
@@ -30,7 +29,6 @@ export default [
 		...config,
 		files: [
 			'index.ts',
-			'index.dev.ts',
 			'src/**/*.{js,mjs,cjs,ts}',
 			'docs-src/**/*.{js,mjs,cjs,ts}',
 		],
@@ -39,7 +37,6 @@ export default [
 	{
 		files: [
 			'index.ts',
-			'index.dev.ts',
 			'src/**/*.{js,mjs,cjs,ts}',
 			'docs-src/**/*.{js,mjs,cjs,ts}',
 		],

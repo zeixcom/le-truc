@@ -1,8 +1,8 @@
 import {
 	batch,
 	type Component,
-	createComputed,
-	createSensor,
+	createEventsSensor,
+	createMemo,
 	createState,
 	defineComponent,
 	on,
@@ -14,7 +14,7 @@ import {
 	show,
 } from '../..'
 import { clearEffects, clearMethod } from '../_common/clear'
-import { FormListboxProps } from '../form-listbox/form-listbox'
+import type { FormListboxProps } from '../form-listbox/form-listbox'
 
 export type FormComboboxProps = {
 	value: string
@@ -42,7 +42,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 	'form-combobox',
 	{
 		value: read(ui => ui.textbox.value, ''),
-		length: createSensor(
+		length: createEventsSensor(
 			read(ui => ui.textbox.value.length, 0),
 			'textbox',
 			{
@@ -66,7 +66,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 		const descriptionId = description?.id
 
 		const showPopup = createState(false)
-		const isExpanded = createComputed(
+		const isExpanded = createMemo(
 			() => showPopup.get() && listbox.options.length > 0,
 		)
 

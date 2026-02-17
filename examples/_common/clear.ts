@@ -1,4 +1,11 @@
-import { type Component, ComponentUI, type Effect, on, show, UI } from '../..'
+import {
+	type Component,
+	type ComponentUI,
+	type Effect,
+	on,
+	show,
+	type UI,
+} from '../..'
 
 /**
  * Creates a clear method for input components

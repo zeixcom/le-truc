@@ -4,21 +4,25 @@
 
 [@zeix/le-truc](../globals.md) / Collection
 
-# Type Alias: Collection\<E\>
+# Type Alias: Collection\<T\>
 
-> **Collection**\<`E`\> = `object`
+> **Collection**\<`T`\> = `object`
 
-Defined in: [src/signals/collection.ts:15](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/signals/collection.ts#L15)
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:5
+
+Le Truc
+
+Version 0.16.0
+
+## Author
+
+Esther Brunner
 
 ## Type Parameters
 
-### E
+### T
 
-`E` *extends* `Element`
-
-## Indexable
-
-\[`n`: `number`\]: `E`
+`T` *extends* `object`
 
 ## Properties
 
@@ -26,7 +30,7 @@ Defined in: [src/signals/collection.ts:15](https://github.com/zeixcom/le-truc/bl
 
 > `readonly` **\[isConcatSpreadable\]**: `true`
 
-Defined in: [src/signals/collection.ts:17](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/signals/collection.ts#L17)
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:7
 
 ***
 
@@ -34,7 +38,7 @@ Defined in: [src/signals/collection.ts:17](https://github.com/zeixcom/le-truc/bl
 
 > `readonly` **\[toStringTag\]**: `"Collection"`
 
-Defined in: [src/signals/collection.ts:16](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/signals/collection.ts#L16)
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:6
 
 ***
 
@@ -42,50 +46,160 @@ Defined in: [src/signals/collection.ts:16](https://github.com/zeixcom/le-truc/bl
 
 > `readonly` **length**: `number`
 
-Defined in: [src/signals/collection.ts:22](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/signals/collection.ts#L22)
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:17
 
 ## Methods
 
 ### \[iterator\]()
 
-> **\[iterator\]**(): `IterableIterator`\<`E`\>
+> **\[iterator\]**(): `IterableIterator`\<[`Signal`](Signal.md)\<`T`\>\>
 
-Defined in: [src/signals/collection.ts:18](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/signals/collection.ts#L18)
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:8
 
 #### Returns
 
-`IterableIterator`\<`E`\>
+`IterableIterator`\<[`Signal`](Signal.md)\<`T`\>\>
+
+***
+
+### at()
+
+> **at**(`index`): [`Signal`](Signal.md)\<`T`\> \| `undefined`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:11
+
+#### Parameters
+
+##### index
+
+`number`
+
+#### Returns
+
+[`Signal`](Signal.md)\<`T`\> \| `undefined`
+
+***
+
+### byKey()
+
+> **byKey**(`key`): [`Signal`](Signal.md)\<`T`\> \| `undefined`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:12
+
+#### Parameters
+
+##### key
+
+`string`
+
+#### Returns
+
+[`Signal`](Signal.md)\<`T`\> \| `undefined`
+
+***
+
+### deriveCollection()
+
+#### Call Signature
+
+> **deriveCollection**\<`R`\>(`callback`): `Collection`\<`R`\>
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:15
+
+##### Type Parameters
+
+###### R
+
+`R` *extends* `object`
+
+##### Parameters
+
+###### callback
+
+(`sourceValue`) => `R`
+
+##### Returns
+
+`Collection`\<`R`\>
+
+#### Call Signature
+
+> **deriveCollection**\<`R`\>(`callback`): `Collection`\<`R`\>
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:16
+
+##### Type Parameters
+
+###### R
+
+`R` *extends* `object`
+
+##### Parameters
+
+###### callback
+
+(`sourceValue`, `abort`) => `Promise`\<`R`\>
+
+##### Returns
+
+`Collection`\<`R`\>
 
 ***
 
 ### get()
 
-> **get**(): `E`[]
+> **get**(): `T`[]
 
-Defined in: [src/signals/collection.ts:20](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/signals/collection.ts#L20)
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:10
 
 #### Returns
 
-`E`[]
+`T`[]
 
 ***
 
-### on()
+### indexOfKey()
 
-> **on**(`type`, `listener`): [`Cleanup`](Cleanup.md)
+> **indexOfKey**(`key`): `number`
 
-Defined in: [src/signals/collection.ts:21](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/signals/collection.ts#L21)
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:14
 
 #### Parameters
 
-##### type
+##### key
 
-`"add"` | `"remove"`
-
-##### listener
-
-[`CollectionListener`](CollectionListener.md)\<`E`\>
+`string`
 
 #### Returns
 
-[`Cleanup`](Cleanup.md)
+`number`
+
+***
+
+### keyAt()
+
+> **keyAt**(`index`): `string` \| `undefined`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:13
+
+#### Parameters
+
+##### index
+
+`number`
+
+#### Returns
+
+`string` \| `undefined`
+
+***
+
+### keys()
+
+> **keys**(): `IterableIterator`\<`string`\>
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:9
+
+#### Returns
+
+`IterableIterator`\<`string`\>

@@ -93,7 +93,7 @@ Many Le Truc form components use sensors that read from DOM elements:
 
 ```typescript
 // Component definition
-checked: createSensor(
+checked: createEventSensor(
   read(ui => ui.checkbox.checked, false),
   'checkbox',
   { change: ({ target }) => target.checked },

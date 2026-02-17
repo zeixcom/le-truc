@@ -312,7 +312,9 @@
 <span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (activeElement) activeElement.</span><span style="color:#A6E22E">focus</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">					}</span></span>
 <span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">						host.open </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">						document.body.classList.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">(SCROLL_LOCK_CLASS)</span></span>
+<span class="line"><span style="color:#F8F8F2">						document.body.style.</span><span style="color:#A6E22E">removeProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'top'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">						dialog.</span><span style="color:#A6E22E">close</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">					}</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
 <span class="line"><span style="color:#F8F8F2">			openButton: </span><span style="color:#A6E22E">on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

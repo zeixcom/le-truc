@@ -6,17 +6,17 @@
 
 # Function: isCollection()
 
-> **isCollection**\<`E`\>(`value`): `value is Collection<E>`
+> **isCollection**\<`T`\>(`value`): `value is Collection<T>`
 
-Defined in: [src/signals/collection.ts:242](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/signals/collection.ts#L242)
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:60
 
-Check if a value is a collection signal
+Checks if a value is a Collection signal.
 
 ## Type Parameters
 
-### E
+### T
 
-`E` *extends* `Element` = `Element`
+`T` *extends* `object`
 
 ## Parameters
 
@@ -24,14 +24,14 @@ Check if a value is a collection signal
 
 `unknown`
 
-Value to check
+The value to check
 
 ## Returns
 
-`value is Collection<E>`
+`value is Collection<T>`
 
-- True if value is a collection signal, false otherwise
+True if the value is a Collection
 
 ## Since
 
-0.15.0
+0.17.2

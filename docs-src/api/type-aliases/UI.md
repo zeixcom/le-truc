@@ -6,6 +6,6 @@
 
 # Type Alias: UI
 
-> **UI** = `Record`\<`string`, `Element` \| [`Collection`](Collection.md)\<`Element`\>\>
+> **UI** = `Record`\<`string`, `Element` \| [`Memo`](Memo.md)\<`Element`[]\>\>
 
-Defined in: [src/ui.ts:95](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/ui.ts#L95)
+Defined in: [src/ui.ts:101](https://github.com/zeixcom/le-truc/blob/d0a4e93f3ca0be0a72dba7eef0d44a002f024ef7/src/ui.ts#L101)

@@ -269,7 +269,10 @@ export function validateHtml(template: string): ValidationResult {
 	const openTagNames = openTags
 		.map(tag => tag.match(/<(\w+)/)?.[1])
 		.filter(Boolean)
-		.filter(tag => !selfClosingTags.includes(tag!))
+		.filter(
+			tag =>
+				!selfClosingTags.includes(tag! as (typeof selfClosingTags)[number]),
+		)
 
 	const closeTagNames = closeTags
 		.map(tag => tag.match(/<\/(\w+)/)?.[1])

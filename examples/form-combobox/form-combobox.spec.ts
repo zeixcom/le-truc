@@ -23,7 +23,7 @@ import { expect, test } from '@playwright/test'
  * Architecture Notes:
  * - Wraps a text input with an expandable form-listbox popup
  * - Uses createState for popup visibility management
- * - Uses createSensor for input length tracking (readonly property)
+ * - Uses createEventSensor for input length tracking (readonly property)
  * - Implements validation with textbox.checkValidity()
  * - Passes filter value to nested form-listbox component via pass()
  * - Manages focus between textbox and listbox options
@@ -218,9 +218,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement
-					&& listboxElement.options
-					&& listboxElement.options.length > 0
+					listboxElement &&
+					listboxElement.options &&
+					listboxElement.options.length > 0
 				)
 			})
 
@@ -268,9 +268,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement
-					&& listboxElement.options
-					&& listboxElement.options.length > 0
+					listboxElement &&
+					listboxElement.options &&
+					listboxElement.options.length > 0
 				)
 			})
 
@@ -303,9 +303,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement
-					&& listboxElement.options
-					&& listboxElement.options.length > 0
+					listboxElement &&
+					listboxElement.options &&
+					listboxElement.options.length > 0
 				)
 			})
 
@@ -341,9 +341,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement
-					&& listboxElement.options
-					&& listboxElement.options.length > 0
+					listboxElement &&
+					listboxElement.options &&
+					listboxElement.options.length > 0
 				)
 			})
 
@@ -933,14 +933,17 @@ test.describe('form-combobox component', () => {
 			const textbox = combobox.locator('input[role="combobox"]')
 			const listboxElement = combobox.locator('[role="listbox"]')
 
-			// Wait for options to load
-			await page.waitForTimeout(50)
+			// Wait for options to load from JSON endpoint
+			await expect(
+				combobox.locator('button[role="option"]').first(),
+			).toBeAttached()
 
 			// No popup should show before user interaction
 			await expect(listboxElement).toBeHidden()
 			await expect(textbox).toHaveAttribute('aria-expanded', 'false')
 
-			// Clear textbox (empty filter)
+			// Type something first, then clear to trigger input event with empty value
+			await textbox.fill('A')
 			await textbox.fill('')
 
 			// Popup should show after any interaction, even with empty filter

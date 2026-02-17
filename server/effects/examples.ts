@@ -1,4 +1,4 @@
-import { createEffect, match, resolve } from '@zeix/cause-effect'
+import { createEffect, match } from '@zeix/cause-effect'
 import { codeToHtml } from 'shiki'
 import { EXAMPLES_DIR } from '../config'
 import {
@@ -51,22 +51,30 @@ const generatePanels = async (
 	return panels
 }
 
+// Build a path-keyed lookup from a FileInfo array
+const toPathMap = (files: FileInfo[]): Map<string, FileInfo> => {
+	const map = new Map<string, FileInfo>()
+	for (const file of files) map.set(file.path, file)
+	return map
+}
+
 export const examplesEffect = () =>
 	createEffect(() => {
 		match(
-			resolve({
-				htmlFiles: componentMarkup.sources,
-				cssFiles: componentStyles.sources,
-				tsFiles: componentScripts.sources,
-			}),
+			[
+				componentMarkup.sources,
+				componentStyles.sources,
+				componentScripts.sources,
+			],
 			{
-				ok: async ({ htmlFiles, cssFiles, tsFiles }) => {
+				ok: async ([htmlFiles, cssFiles, tsFiles]) => {
 					try {
 						console.log('🔄 Rebuilding example fragments...')
 
-						for (const path in htmlFiles) {
-							const html = htmlFiles[path]
+						const cssMap = toPathMap(cssFiles)
+						const tsMap = toPathMap(tsFiles)
 
+						for (const html of htmlFiles) {
 							// Only process main component HTML files (examples/component-name/component-name.html)
 							// Skip test files and other auxiliary HTML files
 							const pathParts = html.path.split('/')
@@ -87,8 +95,8 @@ export const examplesEffect = () =>
 							}
 
 							const name = html.path.replace(/\.html$/, '')
-							const css = cssFiles[name + '.css']
-							const ts = tsFiles[name + '.ts']
+							const css = cssMap.get(name + '.css')
+							const ts = tsMap.get(name + '.ts')
 
 							const panels = await generatePanels(html, css, ts)
 							const outputPath = `${EXAMPLES_DIR}/${componentName}.html`

@@ -1,14 +1,16 @@
 import { watch } from 'node:fs'
+import { buildOnce } from './build'
 import {
 	ASSETS_DIR,
 	COMPONENTS_DIR,
 	EXAMPLES_DIR,
 	LAYOUTS_DIR,
 	OUTPUT_DIR,
+	PAGES_DIR,
+	SERVER_CONFIG,
 } from './config'
 import { fileExists, getFilePath } from './io'
 import { hmrScriptTag } from './templates/hmr'
-import { buildOnce } from './build'
 
 /* === Command Line Args === */
 
@@ -62,7 +64,7 @@ const replaceTemplateVariables = (
 	context: TemplateContext,
 ): string => {
 	return content.replace(/{{\s*([\w\-]+)\s*}}/g, (_, key) => {
-		const trimmedKey = key.trim()
+		const trimmedKey = key.trim() as keyof TemplateContext
 		return context[trimmedKey] || ''
 	})
 }
@@ -145,7 +147,20 @@ const handleStaticFile = async (filePath: string): Promise<Response> => {
 	}
 }
 
-const handleComponentMock = async (filePath: string): Promise<Response> => {
+const acceptsMarkdown = (req: Request): boolean =>
+	(req.headers.get('Accept') || '').includes('text/markdown')
+
+const handleMarkdownSource = async (
+	pageName: string,
+): Promise<Response | null> => {
+	const mdPath = getFilePath(PAGES_DIR, `${pageName}.md`)
+	if (!fileExists(mdPath)) return null
+	return new Response(Bun.file(mdPath), {
+		headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
+	})
+}
+
+/* const handleComponentMock = async (filePath: string): Promise<Response> => {
 	if (!fileExists(filePath)) {
 		// Try fallback pattern: /component-name/file.html -> component-name/mocks/file.html
 		const pathSegments = filePath.split('/')
@@ -168,14 +183,14 @@ const handleComponentMock = async (filePath: string): Promise<Response> => {
 	}
 
 	return handleStaticFile(filePath)
-}
+} */
 
 /* === HMR Functions === */
 
 const broadcastToHMRClients = (message: HMRMessage | string) => {
 	const data = typeof message === 'string' ? message : JSON.stringify(message)
 
-	for (const client of hmrClients) {
+	for (const client of Array.from(hmrClients)) {
 		try {
 			client.send(data)
 		} catch (error) {
@@ -235,85 +250,32 @@ const setupFileWatcher = () => {
 
 /* === Server === */
 
-const server = Bun.serve({
-	routes: {
-		'/api/status': new Response('OK'),
+let server: ReturnType<typeof Bun.serve>
 
-		// WebSocket endpoint for HMR
-		'/ws': req => {
-			if (!isDevelopment)
-				return new Response('Not available in production', { status: 404 })
-
-			const success = server.upgrade(req)
-			if (success) return new Response()
-
-			return new Response('WebSocket upgrade failed', { status: 400 })
-		},
-
-		// Static assets
-		'/assets/:file': req =>
-			handleStaticFile(getFilePath(ASSETS_DIR, req.params.file)),
-
-		// Example component's source code
-		'/examples/:component': req =>
-			handleStaticFile(getFilePath(EXAMPLES_DIR, req.params.component)),
-
-		// Component tests mock files
-		'/test/:component/mocks/:mock': req =>
-			handleStaticFile(
-				getFilePath(
-					COMPONENTS_DIR,
-					req.params.component,
-					'mocks',
-					req.params.mock,
-				),
-			),
-
-		// Component tests
-		'/test/:component': req => handleComponentTest(req.params.component),
-
-		// Not found for test routes
-		'/test/*': new Response('Not Found', { status: 404 }),
-
-		// Documentation pages
-		'/:page': req => handleStaticFile(getFilePath(OUTPUT_DIR, req.params.page)),
-
-		// Serve favicon
-		'/favicon.ico': req =>
-			handleStaticFile(getFilePath(OUTPUT_DIR, 'favicon.ico')),
-
-		// Index
-		'/': req => handleStaticFile(getFilePath(OUTPUT_DIR, 'index.html')),
-	},
-
-	websocket: {
-		message: (ws, message) => {
-			try {
-				const data = JSON.parse(message.toString())
-				if (data.type === 'ping') {
-					ws.send(JSON.stringify({ type: 'pong' }))
-				}
-			} catch (error) {
-				// Ignore non-JSON messages
-			}
-		},
-		open: ws => {
-			hmrClients.add(ws as any)
-			console.log(`🔌 HMR client connected (${hmrClients.size} total)`)
-			ws.send(JSON.stringify({ type: 'build-success' }))
-		},
-		close: ws => {
-			hmrClients.delete(ws as any)
-			console.log(`🔌 HMR client disconnected (${hmrClients.size} total)`)
-		},
-	},
-
-	fetch() {
-		return new Response('Not Found', { status: 404 })
-	},
-})
+async function checkPort(port: number): Promise<void> {
+	try {
+		const response = await fetch(`http://localhost:${port}/api/status`, {
+			signal: AbortSignal.timeout(1000),
+		})
+		if (response.ok) {
+			console.error(
+				`❌ Port ${port} is already in use by another server.\n\n`
+					+ `   Kill the blocking process:\n`
+					+ `     lsof -ti:${port} | xargs kill\n\n`
+					+ `   Or change the port in server/config.ts\n`,
+			)
+			process.exit(1)
+		}
+	} catch {
+		// Connection refused or timeout = port is free
+	}
+}
 
 async function startServer() {
+	const port = SERVER_CONFIG.PORT
+
+	await checkPort(port)
+
 	// Run build first if requested
 	if (buildFirst) {
 		console.log('🔨 Running build before starting server...')
@@ -325,6 +287,100 @@ async function startServer() {
 			process.exit(1)
 		}
 	}
+
+	server = Bun.serve({
+		port,
+		routes: {
+			'/api/status': new Response('OK'),
+
+			// WebSocket endpoint for HMR
+			'/ws': req => {
+				if (!isDevelopment)
+					return new Response('Not available in production', {
+						status: 404,
+					})
+
+				const success = server.upgrade(req, { data: {} })
+				if (success) return new Response()
+
+				return new Response('WebSocket upgrade failed', { status: 400 })
+			},
+
+			// Static assets
+			'/assets/:file': req =>
+				handleStaticFile(getFilePath(ASSETS_DIR, req.params.file)),
+
+			// Example component's source code
+			'/examples/:component': req =>
+				handleStaticFile(getFilePath(EXAMPLES_DIR, req.params.component)),
+
+			// Component tests mock files
+			'/test/:component/mocks/:mock': req =>
+				handleStaticFile(
+					getFilePath(
+						COMPONENTS_DIR,
+						req.params.component,
+						'mocks',
+						req.params.mock,
+					),
+				),
+
+			// Component tests
+			'/test/:component': req => handleComponentTest(req.params.component),
+
+			// Not found for test routes
+			'/test/*': new Response('Not Found', { status: 404 }),
+
+			// Documentation pages
+			'/:page': async req => {
+				if (acceptsMarkdown(req)) {
+					const pageName = req.params.page.replace(/\.html$/, '')
+					const mdResponse = await handleMarkdownSource(pageName)
+					if (mdResponse) return mdResponse
+				}
+				return handleStaticFile(getFilePath(OUTPUT_DIR, req.params.page))
+			},
+
+			// Serve favicon
+			'/favicon.ico': () =>
+				handleStaticFile(getFilePath(OUTPUT_DIR, 'favicon.ico')),
+
+			// Index
+			'/': async req => {
+				if (acceptsMarkdown(req)) {
+					const mdResponse = await handleMarkdownSource('index')
+					if (mdResponse) return mdResponse
+				}
+				return handleStaticFile(getFilePath(OUTPUT_DIR, 'index.html'))
+			},
+		},
+
+		websocket: {
+			message: (ws, message) => {
+				try {
+					const data = JSON.parse(message.toString())
+					if (data.type === 'ping') {
+						ws.send(JSON.stringify({ type: 'pong' }))
+					}
+				} catch (_error) {
+					// Ignore non-JSON messages
+				}
+			},
+			open: ws => {
+				hmrClients.add(ws as any)
+				console.log(`🔌 HMR client connected (${hmrClients.size} total)`)
+				ws.send(JSON.stringify({ type: 'build-success' }))
+			},
+			close: ws => {
+				hmrClients.delete(ws as any)
+				console.log(`🔌 HMR client disconnected (${hmrClients.size} total)`)
+			},
+		},
+
+		fetch() {
+			return new Response('Not Found', { status: 404 })
+		},
+	})
 
 	// Setup file watching for HMR
 	if (isDevelopment) {

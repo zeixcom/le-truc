@@ -31,7 +31,7 @@ Although `BasicButton` and `FormSpinbutton` are completely independent, they nee
 
 The **parent component (`ModuleCatalog`) knows about its children**, meaning it can **read state from and pass state to** them.
 
-First, we need to observe the quantities of all `FormSpinbutton` components. For this, we create a `Collection` of all children matching the `form-spinbutton` selector using the `all` function:
+First, we need to observe the quantities of all `FormSpinbutton` components. For this, we use the `all()` function which returns a `Memo<E[]>` — a lazily observed collection of all children matching the `form-spinbutton` selector:
 
 ```js#module-catalog.js
 defineComponent(
@@ -50,7 +50,7 @@ defineComponent(
 )
 ```
 
-In contrast to a static `querySelectorAll()` call, the `Collection` signal returned by `all()` is reactive and updates whenever new elements are added or removed from the DOM.
+In contrast to a static `querySelectorAll()` call, the `Memo<E[]>` returned by `all()` is reactive and updates whenever new elements are added or removed from the DOM.
 
 Then, we need to convert the total of all product quantities to a string and pass it on to the `BasicButton` component. In Le Truc we use the `pass()` function to share state with descendant components:
 
@@ -66,7 +66,7 @@ defineComponent(
     ),
   }),
   ({ spinbuttons }) => {
-    const total = createComputed(() =>
+    const total = createMemo(() =>
       spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
     )
     return {
@@ -118,7 +118,7 @@ The `FormSpinbutton` component reacts to user interactions and exposes a reactiv
 defineComponent(
   'form-spinbutton',
   {
-    value: createSensor(
+    value: createEventsSensor(
       read(ui => ui.input.value, asInteger()),
       'controls',
       {
@@ -174,9 +174,9 @@ defineComponent(
     other: first('.other'),
   }),
   ({ host, increment, zero }) => {
-    const nonZero = createComputed(() => host.value !== 0)
+    const nonZero = createMemo(() => host.value !== 0)
     const incrementLabel = increment.ariaLabel || 'Increment'
-    const ariaLabel = createComputed(() =>
+    const ariaLabel = createMemo(() =>
       nonZero.get() || !zero ? incrementLabel : zero.textContent,
     )
 

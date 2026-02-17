@@ -2,18 +2,16 @@ import {
 	type Cleanup,
 	createEffect,
 	isFunction,
+	isMemo,
 	isRecord,
 	isSignal,
-	isString,
 	type MaybeCleanup,
+	type Memo,
 	type Signal,
-	toError,
-	UNSET,
 	valueString,
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from './component'
 import { InvalidEffectsError } from './errors'
-import { type Collection, isCollection } from './signals/collection'
 import type { ElementFromKey, UI } from './ui'
 import { DEV_MODE, elementName, LOG_ERROR, log } from './util'
 
@@ -51,13 +49,6 @@ type ElementUpdater<E extends Element, T> = {
 	resolve?: (element: E) => void
 	reject?: (error: unknown) => void
 }
-
-/* type ElementInserter<E extends Element> = {
-	position?: InsertPosition
-	create: (parent: E) => Element | null
-	resolve?: (parent: E) => void
-	reject?: (error: unknown) => void
-} */
 
 /* === Constants === */
 
@@ -117,18 +108,18 @@ const runElementEffects = <P extends ComponentProps, E extends Element>(
 }
 
 /**
- * Run collection effects
+ * Run effects for dynamic collection of elements matching a selector
  *
- * @since 0.15.0
+ * @since 0.16.0
  * @param {Component<P>} host - Host component
- * @param {Collection<E>} collection - Collection of elements
+ * @param {Memo<E[]>} elements - Elements for selector
  * @param {ElementEffects<P, E>} effects - Element effects
  * @returns {Cleanup} - Cleanup function that runs collected cleanup functions
  * @throws {InvalidEffectsError} - If the effects are invalid
  */
-const runCollectionEffects = <P extends ComponentProps, E extends Element>(
+const runElementsEffects = <P extends ComponentProps, E extends Element>(
 	host: Component<P>,
-	collection: Collection<E>,
+	elements: Memo<E[]>,
 	effects: ElementEffects<P, E>,
 ): Cleanup => {
 	const cleanups: Map<E, Cleanup> = new Map()
@@ -146,12 +137,22 @@ const runCollectionEffects = <P extends ComponentProps, E extends Element>(
 		}
 	}
 
-	collection.on('add', attach)
-	collection.on('remove', detach)
-	attach(collection.get())
+	const dispose = createEffect(() => {
+		const next = new Set(elements.get())
+		const added: E[] = []
+		const removed: E[] = []
+
+		for (const target of next) if (!cleanups.has(target)) added.push(target)
+		for (const target of cleanups.keys())
+			if (!next.has(target)) removed.push(target)
+
+		attach(added)
+		detach(removed)
+	})
 	return () => {
 		for (const cleanup of cleanups.values()) cleanup()
 		cleanups.clear()
+		dispose()
 	}
 }
 
@@ -180,8 +181,8 @@ const runEffects = <
 		if (!effects[k]) continue
 
 		const elementEffects = Array.isArray(effects[k]) ? effects[k] : [effects[k]]
-		if (isCollection<ElementFromKey<U, typeof k>>(ui[k])) {
-			cleanups.push(runCollectionEffects(ui.host, ui[k], elementEffects))
+		if (isMemo<ElementFromKey<U, typeof k>[]>(ui[k])) {
+			cleanups.push(runElementsEffects(ui.host, ui[k], elementEffects))
 		} else if (ui[k]) {
 			const cleanup = runElementEffects(
 				ui.host,
@@ -217,7 +218,7 @@ const resolveReactive = <
 	context?: string,
 ): T => {
 	try {
-		return isString(reactive)
+		return typeof reactive === 'string'
 			? (host[reactive] as unknown as T)
 			: isSignal(reactive)
 				? reactive.get()
@@ -285,7 +286,7 @@ const updateElement =
 			const resolvedValue =
 				value === RESET
 					? fallback
-					: value === UNSET
+					: value === null
 						? updater.delete
 							? null
 							: fallback
@@ -311,99 +312,13 @@ const updateElement =
 		})
 	}
 
-/**
- * Effect for dynamically inserting or removing elements based on a reactive numeric value.
- * Positive values insert elements, negative values remove them.
- *
- * @since 0.12.1
- * @param {Reactive<number, P, E>} reactive - Reactive value determining number of elements to insert (positive) or remove (negative)
- * @param {ElementInserter<E>} inserter - Configuration object defining how to create and position elements
- * @returns {Effect<P, E>} Effect function that manages element insertion and removal
- * /
-const insertOrRemoveElement =
-	<P extends ComponentProps, E extends Element = HTMLElement>(
-		reactive: Reactive<number, P, E>,
-		inserter?: ElementInserter<E>,
-	): Effect<P, E> =>
-	(host, target) => {
-		const ok = (verb: string) => () => {
-			if (DEV_MODE && host.debug) {
-				log(
-					target,
-					`${verb} element in ${elementName(target)} in ${elementName(host)}`,
-				)
-			}
-			if (isFunction(inserter?.resolve)) {
-				inserter.resolve(target)
-			} else {
-				const signal = isSignal<number>(reactive) ? reactive : undefined
-				if (isState(signal)) signal.set(0)
-			}
-		}
-
-		const err = (verb: string) => (error: unknown) => {
-			log(
-				error,
-				`Failed to ${verb} element in ${elementName(target)} in ${elementName(host)}`,
-				LOG_ERROR,
-			)
-			inserter?.reject?.(error)
-		}
-
-		return createEffect(() => {
-			const diff = resolveReactive(
-				reactive,
-				host,
-				target,
-				'insertion or deletion',
-			)
-			const resolvedDiff = diff === RESET ? 0 : diff
-
-			if (resolvedDiff > 0) {
-				// Positive diff => insert element
-				if (!inserter) throw new TypeError(`No inserter provided`)
-				try {
-					for (let i = 0; i < resolvedDiff; i++) {
-						const element = inserter.create(target)
-						if (!element) continue
-						target.insertAdjacentElement(
-							inserter.position ?? 'beforeend',
-							element,
-						)
-					}
-					ok('insert')()
-				} catch (error) {
-					err('insert')(error)
-				}
-			} else if (resolvedDiff < 0) {
-				try {
-					if (
-						inserter &&
-						(inserter.position === 'afterbegin' ||
-							inserter.position === 'beforeend')
-					) {
-						for (let i = 0; i > resolvedDiff; i--) {
-							if (inserter.position === 'afterbegin')
-								target.firstElementChild?.remove()
-							else target.lastElementChild?.remove()
-						}
-					} else {
-						target.remove()
-					}
-					ok('remove')()
-				} catch (error) {
-					err('remove')(error)
-				}
-			}
-		})
-		} */
-
 export {
 	type Effect,
 	type Effects,
 	type ElementEffects,
 	type ElementUpdater,
 	type Reactive,
+	type UpdateOperation,
 	runEffects,
 	runElementEffects,
 	resolveReactive,

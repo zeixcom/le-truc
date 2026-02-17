@@ -6,42 +6,37 @@
 
 # Function: match()
 
-> **match**\<`S`\>(`result`, `handlers`): `void`
+> **match**\<`T`\>(`signals`, `handlers`): [`MaybeCleanup`](../type-aliases/MaybeCleanup.md)
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/match.d.ts:20
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:47
 
-Match on resolve result and call appropriate handler for side effects
-
-This is a utility function for those who prefer the handler pattern.
-All handlers are for side effects only and return void. If you need
-cleanup logic, use a hoisted let variable in your effect.
+Runs handlers based on the current values of signals.
+Must be called within an active owner (effect or scope) so async cleanup can be registered.
 
 ## Type Parameters
 
-### S
+### T
 
-`S` *extends* `UnknownSignalRecord`
+`T` *extends* readonly [`Signal`](../type-aliases/Signal.md)\<\{ \}\>[]
 
 ## Parameters
 
-### result
+### signals
 
-[`ResolveResult`](../type-aliases/ResolveResult.md)\<`S`\>
-
-Result from resolve()
+readonly \[`T`\]
 
 ### handlers
 
-[`MatchHandlers`](../type-aliases/MatchHandlers.md)\<`S`\>
-
-Handlers for different states (side effects only)
+[`MatchHandlers`](../type-aliases/MatchHandlers.md)\<`T`\>
 
 ## Returns
 
-`void`
-
-- Always returns void
+[`MaybeCleanup`](../type-aliases/MaybeCleanup.md)
 
 ## Since
 
 0.15.0
+
+## Throws
+
+RequiredOwnerError If called without an active owner.

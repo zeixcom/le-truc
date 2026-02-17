@@ -4,24 +4,6 @@ import { elementName } from './util'
 /* === Error Classes === */
 
 /**
- * Error thrown when a circular dependency is detected in a selection signal
- *
- * @since 0.14.0
- */
-class CircularMutationError extends Error {
-	/**
-	 * @param {HTMLElement} host - Host component
-	 * @param {string} selector - Selector used to find the elements
-	 */
-	constructor(host: HTMLElement, selector: string) {
-		super(
-			`Circular dependency detected in selection signal for component ${elementName(host)} with selector "${selector}"`,
-		)
-		this.name = 'CircularMutationError'
-	}
-}
-
-/**
  * Error thrown when component name violates rules for custom element names
  *
  * @since 0.14.0
@@ -149,7 +131,6 @@ class InvalidCustomElementError extends TypeError {
 }
 
 export {
-	CircularMutationError,
 	DependencyTimeoutError,
 	InvalidComponentNameError,
 	InvalidCustomElementError,

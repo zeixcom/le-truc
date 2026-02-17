@@ -1,4 +1,4 @@
-import { createEffect, match, resolve } from '@zeix/cause-effect'
+import { createEffect, match } from '@zeix/cause-effect'
 import { OUTPUT_DIR } from '../config'
 import {
 	componentScripts,
@@ -16,13 +16,13 @@ import {
 export const serviceWorkerEffect = () =>
 	createEffect(() => {
 		match(
-			resolve({
-				docsStyles: docsStyles.sources,
-				componentStyles: componentStyles.sources,
-				docsScripts: docsScripts.sources,
-				componentScripts: componentScripts.sources,
-				libraryScripts: libraryScripts.sources,
-			}),
+			[
+				docsStyles.sources,
+				componentStyles.sources,
+				docsScripts.sources,
+				componentScripts.sources,
+				libraryScripts.sources,
+			],
 			{
 				ok: async () => {
 					try {
@@ -50,7 +50,6 @@ export const serviceWorkerEffect = () =>
 				},
 				err: errors => {
 					console.error('Error in service worker effect:', errors[0].message)
-					return undefined
 				},
 			},
 		)

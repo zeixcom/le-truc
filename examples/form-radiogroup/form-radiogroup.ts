@@ -1,8 +1,8 @@
 import {
-	type Collection,
 	type Component,
-	createSensor,
+	createEventsSensor,
 	defineComponent,
+	type Memo,
 	read,
 	setProperty,
 	toggleClass,
@@ -14,8 +14,8 @@ export type FormRadiogroupProps = {
 }
 
 type FormRadiogroupUI = {
-	radios: Collection<HTMLInputElement>
-	labels: Collection<HTMLLabelElement>
+	radios: Memo<HTMLInputElement[]>
+	labels: Memo<HTMLLabelElement[]>
 }
 
 declare global {
@@ -24,14 +24,17 @@ declare global {
 	}
 }
 
-const getIndex = (radios: Collection<HTMLInputElement>) =>
-	radios.get().findIndex(radio => radio.checked)
+const getIndex = (radios: HTMLInputElement[]) =>
+	radios.findIndex(radio => radio.checked)
 
 export default defineComponent<FormRadiogroupProps, FormRadiogroupUI>(
 	'form-radiogroup',
 	{
-		value: createSensor(
-			read(({ radios }) => radios[getIndex(radios)]?.value, ''),
+		value: createEventsSensor(
+			read(({ radios }) => {
+				const radiosArray = radios.get()
+				return radiosArray[getIndex(radiosArray)]?.value
+			}, ''),
 			'radios',
 			{
 				change: ({ target }) => target.value,
@@ -46,7 +49,7 @@ export default defineComponent<FormRadiogroupProps, FormRadiogroupUI>(
 		labels: all('label', 'Wrap radio buttons with labels.'),
 	}),
 	({ host, radios }) => ({
-		host: manageFocus(radios, getIndex),
+		host: manageFocus(() => radios.get(), getIndex),
 		radios: setProperty('tabIndex', target =>
 			target.value === host.value ? 0 : -1,
 		),

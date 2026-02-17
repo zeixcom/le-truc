@@ -1,4 +1,4 @@
-import { createEffect, match, resolve } from '@zeix/cause-effect'
+import { createEffect, match } from '@zeix/cause-effect'
 import { ASSETS_DIR, INCLUDES_DIR, LAYOUTS_DIR, OUTPUT_DIR } from '../config'
 import { docsMarkdown, type ProcessedMarkdownFile } from '../file-signals'
 import { getFileContent, getFilePath, writeFileSafe } from '../io'
@@ -123,56 +123,51 @@ const applyTemplate = async (
 
 export const pagesEffect = () =>
 	createEffect(() => {
-		match(
-			resolve({
-				processedFiles: docsMarkdown.fullyProcessed,
-			}),
-			{
-				ok: async ({ processedFiles }) => {
-					try {
-						console.log('📚 Generating HTML pages from processed markdown...')
+		match([docsMarkdown.fullyProcessed], {
+			ok: async ([processedFiles]) => {
+				try {
+					console.log('📚 Generating HTML pages from processed markdown...')
 
-						// Process all markdown files
-						const processPromises = Array.from(processedFiles.values()).map(
-							async (processedFile: ProcessedMarkdownFile) => {
-								try {
-									// Apply template
-									const finalHtml = await applyTemplate(processedFile)
+					// Process all markdown files
+					const processPromises = Array.from(processedFiles.values()).map(
+						async (processedFile: ProcessedMarkdownFile) => {
+							try {
+								// Apply template
+								const finalHtml = await applyTemplate(processedFile)
 
-									// Write output file
-									await writeFileSafe(
-										getFilePath(
-											OUTPUT_DIR,
-											processedFile.relativePath.replace('.md', '.html'),
-										),
-										finalHtml,
-									)
+								// Write output file
+								await writeFileSafe(
+									getFilePath(
+										OUTPUT_DIR,
+										processedFile.relativePath.replace('.md', '.html'),
+									),
+									finalHtml,
+								)
 
-									console.log(
-										`📄 Generated ${processedFile.relativePath.replace('.md', '.html')}`,
-									)
-								} catch (error) {
-									console.error(
-										`Failed to generate ${processedFile.relativePath}:`,
-										error,
-									)
-								}
-							},
-						)
+								console.log(
+									`📄 Generated ${processedFile.relativePath.replace('.md', '.html')}`,
+								)
+							} catch (error) {
+								console.error(
+									`Failed to generate ${processedFile.relativePath}:`,
+									error,
+								)
+							}
+						},
+					)
 
-						// Wait for all processing to complete
-						await Promise.all(processPromises)
+					// Wait for all processing to complete
+					await Promise.all(processPromises)
 
-						console.log(
-							`📚 Successfully generated ${processedFiles.size} HTML pages`,
-						)
-					} catch (error) {
-						console.error('Failed to generate HTML pages:', error)
-					}
-				},
-				err: errors => {
-					console.error('Error in pages effect:', errors[0].message)
-				},
+					console.log(
+						`📚 Successfully generated ${processedFiles.size} HTML pages`,
+					)
+				} catch (error) {
+					console.error('Failed to generate HTML pages:', error)
+				}
 			},
-		)
+			err: errors => {
+				console.error('Error in pages effect:', errors[0].message)
+			},
+		})
 	})

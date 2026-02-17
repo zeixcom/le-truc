@@ -1,9 +1,8 @@
 import {
 	type Cleanup,
-	type Computed,
-	createComputed,
+	createMemo,
 	isFunction,
-	isString,
+	type Memo,
 } from '@zeix/cause-effect'
 
 import type { Component, ComponentProps } from './component'
@@ -110,7 +109,7 @@ const provideContexts =
 		const listener = (e: ContextRequestEvent<UnknownContext>) => {
 			const { context, callback } = e
 			if (
-				isString(context) &&
+				typeof context === 'string' &&
 				contexts.includes(context as unknown as Extract<keyof P, string>) &&
 				isFunction(callback)
 			) {
@@ -128,13 +127,13 @@ const provideContexts =
  * @since 0.15.0
  * @param {Context<string, () => T>} context - Context key to consume
  * @param {Fallback<T, U>} fallback - Fallback value or reader function for fallback
- * @returns {Reader<Computed<T>, U>} Computed signal that returns the consumed context the fallback value
+ * @returns {Reader<Memo<T>, U>} Computed signal that returns the consumed context the fallback value
  */
 const requestContext =
 	<T extends {}, P extends ComponentProps, U extends UI>(
 		context: Context<string, () => T>,
 		fallback: Fallback<T, U & { host: Component<P> }>,
-	): Reader<Computed<T>, U & { host: Component<P> }> =>
+	): Reader<Memo<T>, U & { host: Component<P> }> =>
 	(ui: U & { host: Component<P> }) => {
 		let consumed = () => getFallback(ui, fallback)
 		ui.host.dispatchEvent(
@@ -142,11 +141,12 @@ const requestContext =
 				consumed = getter
 			}),
 		)
-		return createComputed(consumed)
+		return createMemo(consumed)
 	}
 
 export {
 	type Context,
+	type ContextCallback,
 	type UnknownContext,
 	type ContextType,
 	CONTEXT_REQUEST,

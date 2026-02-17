@@ -65,7 +65,7 @@ bun add @zeix/le-truc
 Then import the needed functions in your JavaScript:
 
 ```js#main.js
-import { asString, component, on, setText } from '@zeix/le-truc'
+import { asString, defineComponent, on, setText } from '@zeix/le-truc'
 ```
 
 {% /section %}

@@ -6,9 +6,9 @@
 
 # Function: toggleAttribute()
 
-> **toggleAttribute**\<`P`, `E`\>(`name`, `reactive`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
+> **toggleAttribute**\<`P`, `E`\>(`name`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/attribute.ts:66](https://github.com/zeixcom/le-truc/blob/18042e4c4fbfc3b2f2479cf6ec1867dbaa7b7796/src/effects/attribute.ts#L66)
+Defined in: [src/effects/attribute.ts:66](https://github.com/zeixcom/le-truc/blob/d0a4e93f3ca0be0a72dba7eef0d44a002f024ef7/src/effects/attribute.ts#L66)
 
 Effect for toggling a boolean attribute on an element.
 When the reactive value is true, the attribute is present; when false, it's absent.
@@ -31,7 +31,7 @@ When the reactive value is true, the attribute is present; when false, it's abse
 
 Name of the attribute to toggle
 
-### reactive
+### reactive?
 
 [`Reactive`](../type-aliases/Reactive.md)\<`boolean`, `P`, `E`\> = `...`
 

@@ -6,23 +6,19 @@
 
 # Type Alias: Store\<T\>
 
-> **Store**\<`T`\> = `T` *extends* `UnknownRecord` ? `RecordStore`\<`T`\> : `T` *extends* `UnknownArray` ? `ArrayStore`\<`T`\> : `never`
+> **Store**\<`T`\> = `BaseStore`\<`T`\> & \{ \[K in keyof T\]: T\[K\] extends readonly (infer U extends \{\})\[\] ? List\<U\> : T\[K\] extends UnknownRecord ? Store\<T\[K\]\> : T\[K\] extends unknown & \{\} ? State\<T\[K\] & \{\}\> : State\<T\[K\] & \{\}\> \| undefined \}
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/store.d.ts:42
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/store.d.ts:22
+
+Le Truc
+
+Version 0.16.0
 
 ## Type Parameters
 
 ### T
 
-`T` *extends* `UnknownRecord` \| `UnknownArray`
-
-## Name
-
-Le Truc
-
-## Version
-
-0.15.0
+`T` *extends* `UnknownRecord`
 
 ## Author
 

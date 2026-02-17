@@ -8,15 +8,11 @@
 
 > **Signal**\<`T`\> = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:4
-
-## Name
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:47
 
 Le Truc
 
-## Version
-
-0.15.0
+Version 0.16.0
 
 ## Author
 
@@ -34,7 +30,7 @@ Esther Brunner
 
 > **get**(): `T`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:5
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:48
 
 #### Returns
 

@@ -112,13 +112,13 @@
 	--color-background: var(--color-neutral-10);
 	--color-background-alt: var(--color-neutral-20);
 	--color-border: var(--color-neutral-50);
-	--color-text: var(--color-purple-90);
-	--color-text-soft: var(--color-purple-80);
+	--color-text: var(--color-neutral-90);
+	--color-text-soft: var(--color-neutral-80);
 	--color-text-inverted: var(--color-white); /* var(--color-purple-10); */
 	--color-shadow: rgb(0 0 0 / 10%);
 
-	--font-family-sans: "Helvetica Neue", Arial, Roboto, sans-serif;
-	--font-family-mono: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+	--font-family-sans: 'Helvetica Neue', Arial, Roboto, sans-serif;
+	--font-family-mono: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
 
 	--font-weight-regular: 400;
 	--font-weight-bold: 700;
@@ -187,7 +187,7 @@
 		--color-success-hover: var(--color-green-20);
 		--color-success-active: var(--color-green-10);
 		--color-success-text: var(--color-green-90);
-		--color-text: var(--color-purple-10);
+		--color-text: var(--color-neutral-10);
 		--color-text-soft: var(--color-neutral-20);
 		--color-text-inverted: var(--color-black); /* #2a1c42; */
 		--color-shadow: rgb(0 0 0 / 40%);
@@ -436,7 +436,7 @@ a[href] {
 	}
 }
 
-[aria-hidden="true"],
+[aria-hidden='true'],
 [hidden] {
 	display: none !important;
 }

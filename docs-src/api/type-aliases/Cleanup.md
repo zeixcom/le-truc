@@ -8,20 +8,10 @@
 
 > **Cleanup** = () => `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/system.d.ts:1
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:53
+
+A cleanup function that can be called to dispose of resources.
 
 ## Returns
 
 `void`
-
-## Name
-
-Le Truc
-
-## Version
-
-0.15.0
-
-## Author
-
-Esther Brunner

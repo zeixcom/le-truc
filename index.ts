@@ -1,6 +1,8 @@
 /**
- * @name Le Truc
- * @version 0.15.0
+ * Le Truc
+ *
+ * Version 0.16.0
+ *
  * @author Esther Brunner
  */
 
@@ -9,46 +11,58 @@ export {
 	batch,
 	CircularDependencyError,
 	type Cleanup,
-	type Computed,
-	type ComputedCallback,
+	type Collection,
+	type CollectionChanges,
+	type CollectionOptions,
+	type ComputedOptions,
+	createCollection,
 	createComputed,
 	createEffect,
+	createList,
+	createMemo,
+	createMutableSignal,
+	createScope,
+	createSensor,
+	createSlot,
 	createState,
 	createStore,
-	type DiffResult,
-	diff,
+	createTask,
 	type EffectCallback,
 	InvalidCallbackError,
 	InvalidSignalValueError,
-	isAbortError,
 	isAsyncFunction,
+	isCollection,
 	isComputed,
 	isEqual,
 	isFunction,
+	isList,
+	isMemo,
 	isMutableSignal,
-	isNumber,
 	isRecord,
-	isRecordOrArray,
+	isSensor,
 	isSignal,
+	isSlot,
 	isState,
 	isStore,
-	isString,
-	isSymbol,
+	isTask,
+	type List,
+	type ListOptions,
 	type MatchHandlers,
 	type MaybeCleanup,
+	type Memo,
+	type MemoCallback,
 	match,
 	NullishSignalValueError,
-	type ResolveResult,
-	resolve,
+	type Sensor,
+	type SensorOptions,
 	type Signal,
+	type SignalOptions,
+	type Slot,
 	type State,
 	type Store,
-	StoreKeyExistsError,
-	StoreKeyRangeError,
-	StoreKeyReadonlyError,
-	toError,
-	toSignal,
-	UNSET,
+	type StoreOptions,
+	type Task,
+	type TaskCallback,
 	valueString,
 } from '@zeix/cause-effect'
 
@@ -61,11 +75,13 @@ export {
 	defineComponent,
 	type Initializers,
 	type MaybeSignal,
+	type MethodProducer,
 	type ReservedWords,
 } from './src/component'
 export {
 	CONTEXT_REQUEST,
 	type Context,
+	type ContextCallback,
 	ContextRequestEvent,
 	type ContextType,
 	provideContexts,
@@ -80,6 +96,7 @@ export {
 	type Reactive,
 	runEffects,
 	runElementEffects,
+	type UpdateOperation,
 	updateElement,
 } from './src/effects'
 export { setAttribute, toggleAttribute } from './src/effects/attribute'
@@ -94,7 +111,6 @@ export { setProperty, show } from './src/effects/property'
 export { setStyle } from './src/effects/style'
 export { setText } from './src/effects/text'
 export {
-	CircularMutationError,
 	DependencyTimeoutError,
 	InvalidComponentNameError,
 	InvalidCustomElementError,
@@ -103,6 +119,11 @@ export {
 	InvalidReactivesError,
 	MissingElementError,
 } from './src/errors'
+export {
+	createEventsSensor,
+	type EventHandlers,
+	type SensorEventHandler,
+} from './src/events'
 export {
 	type Fallback,
 	isParser,
@@ -118,10 +139,19 @@ export { asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'
 export { schedule } from './src/scheduler'
 export {
-	type Collection,
-	type CollectionListener,
-	createCollection,
-	isCollection,
-} from './src/signals/collection'
-export { createSensor, type SensorEvents } from './src/signals/sensor'
-export type { ElementFromKey, ElementQueries, UI } from './src/ui'
+	type AllElements,
+	createElementsMemo,
+	type ElementFromKey,
+	type ElementFromSelector,
+	type ElementFromSingleSelector,
+	type ElementQueries,
+	type ElementsFromSelectorArray,
+	type ExtractRightmostSelector,
+	type ExtractTag,
+	type ExtractTagFromSimpleSelector,
+	type FirstElement,
+	type KnownTag,
+	type SplitByComma,
+	type TrimWhitespace,
+	type UI,
+} from './src/ui'

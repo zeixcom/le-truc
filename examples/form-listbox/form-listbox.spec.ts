@@ -348,8 +348,8 @@ test.describe('form-listbox component', () => {
 			const lastOptionValue = await page.evaluate(() => {
 				const listbox = document.querySelector('form-listbox')
 				const options = Array.from(
-					listbox?.querySelectorAll('button[role="option"]:not([hidden])')
-						|| [],
+					listbox?.querySelectorAll('button[role="option"]:not([hidden])') ||
+						[],
 				)
 				return (options[options.length - 1] as HTMLElement)?.getAttribute(
 					'value',

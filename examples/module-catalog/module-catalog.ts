@@ -1,16 +1,16 @@
 import {
-	type Collection,
 	type Component,
-	createComputed,
+	createMemo,
 	defineComponent,
+	type Memo,
 	pass,
 } from '../..'
-import { BasicButtonProps } from '../basic-button/basic-button'
-import { FormSpinbuttonProps } from '../form-spinbutton/form-spinbutton'
+import type { BasicButtonProps } from '../basic-button/basic-button'
+import type { FormSpinbuttonProps } from '../form-spinbutton/form-spinbutton'
 
 type ModuleCatalogUI = {
 	button: Component<BasicButtonProps>
-	spinbuttons: Collection<Component<FormSpinbuttonProps>>
+	spinbuttons: Memo<Component<FormSpinbuttonProps>[]>
 }
 
 export default defineComponent<{}, ModuleCatalogUI>(
@@ -24,7 +24,7 @@ export default defineComponent<{}, ModuleCatalogUI>(
 		),
 	}),
 	({ spinbuttons }) => {
-		const total = createComputed(() =>
+		const total = createMemo(() =>
 			spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
 		)
 		return {

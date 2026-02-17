@@ -17,7 +17,7 @@ description: 'Overview and key benefits of Le Truc'
 
 {% carousel %}
 
-{% slide title="We Can Have Nice Things!" style="background: var(--color-purple-20);" %}
+{% slide title="We Can Have Nice Things!" class="purple" %}
 - Embrace the Web Platform
 - Use any server-side technology to render HTML
 - Have components
@@ -27,7 +27,7 @@ description: 'Overview and key benefits of Le Truc'
 - Have fun!
 {% /slide %}
 
-{% slide title="HTML First." style="background: var(--color-pink-20);" %}
+{% slide title="HTML First." class="pink" %}
 Le Truc assumes you start with semantic HTML and want to enhance it with behavior:
 
 ```html
@@ -39,7 +39,7 @@ Le Truc assumes you start with semantic HTML and want to enhance it with behavio
 This means better SEO, faster initial page loads, and progressive enhancement that works even when JavaScript fails.
 {% /slide %}
 
-{% slide title="Add JavaScript." style="background: var(--color-orange-20);" %}
+{% slide title="Add JavaScript." class="orange" %}
 Progressively enhance the user experience by adding interactivity:
 
 ```js
@@ -50,13 +50,13 @@ defineComponent(
   { name: asString() },
   q => ({ span: q.first('span') }),
   () => ({ span: setText('name') }),
-])
+)
 ```
 
 Le Truc augments what the platform already provides. It leverages the Web Components standard while adding just enough convenience functions to make reactive UI behaviors easy to implement.
 {% /slide %}
 
-{% slide title="Faster. Because We Do Less." style="background: var(--color-green-20);" %}
+{% slide title="Faster. Because We Do Less." class="green" %}
 - Unlike SPA frameworks (React, Vue, Angular, Svelte, Lit, etc.) we **never render** on the client. Instead, the server and browser do this work. Like it's 1995.
 - Because we never render on the client, we need no JSON data and no JS templates either. This means less data over the wire and no plumbing DB → JSON → JS → HTML.
 - Unlike Hypermedia frameworks (HTMX, Datastar) we don't compensate for the lack of client-side rendering by a network request if not needed. If possible, we calculate the new state on the client.
@@ -64,8 +64,8 @@ Le Truc augments what the platform already provides. It leverages the Web Compon
 - When the user interacts with the UI, we know exactly what to do. We just do fine-grained updates to the DOM. No VDOM, no diffing. Wait for signal 🚦 and go! 🏁
 {% /slide %}
 
-{% slide title="Minimal Size." style="background: var(--color-blue-20);" %}
-Because we add less abstractions, we can keep the library small (approximately 8kB gzipped).
+{% slide title="Minimal Size." class="blue" %}
+Because we add less abstractions, we can keep the library small (approximately 10kB gzipped).
 
 Le Truc is a lightweight library that provides a simple and efficient way to build reactive user interfaces. It is designed to be easy to use and understand, while still providing powerful features for building complex applications.
 
@@ -90,7 +90,7 @@ Le Truc shines when you want:
 
 **Key Benefits:**
 
-- ~8kB gzipped with no dependencies
+- ~10kB gzipped with no dependencies
 - TypeScript support with full type safety
 - Works with any backend or build setup
 - Progressive enhancement friendly

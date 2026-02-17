@@ -21,3 +21,6 @@ import './module-pagination/module-pagination.ts'
 import './module-scrollarea/module-scrollarea.ts'
 import './module-tabgroup/module-tabgroup.ts'
 import './module-todo/module-todo.ts'
+
+// Structural-only custom elements
+customElements.define('card-callout', class extends HTMLElement {})

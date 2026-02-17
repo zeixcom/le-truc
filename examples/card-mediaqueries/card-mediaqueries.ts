@@ -1,4 +1,4 @@
-import { Component, defineComponent, requestContext, setText } from '../..'
+import { type Component, defineComponent, requestContext, setText } from '../..'
 import {
 	MEDIA_MOTION,
 	MEDIA_ORIENTATION,

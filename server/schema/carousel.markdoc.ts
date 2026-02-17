@@ -34,8 +34,7 @@ const carousel: Schema = {
 
 		// Transform each slide
 		const slides = slideNodes.map((slideNode, index) => {
-			const title = slideNode.attributes?.title
-			const style = slideNode.attributes?.style
+			const { title, style } = slideNode.attributes || {}
 
 			if (!title) {
 				throw new Error('Slide must have a title attribute')
@@ -62,9 +61,9 @@ const carousel: Schema = {
 				'aria-current': index === 0 ? 'true' : 'false',
 			}
 
-			if (style) {
-				slideAttributes.style = style
-			}
+			if (style) slideAttributes.style = style
+			if (slideNode.attributes?.class)
+				slideAttributes.class = slideNode.attributes.class
 
 			return {
 				slide: new Tag('div', slideAttributes, [slideTitle, slideContentDiv]),

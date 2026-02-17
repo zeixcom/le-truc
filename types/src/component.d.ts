@@ -1,4 +1,4 @@
-import { type ComputedCallback, type Signal } from '@zeix/cause-effect';
+import { type MemoCallback, type Signal, type TaskCallback } from '@zeix/cause-effect';
 import { type Effects } from './effects';
 import { type Parser, type Reader } from './parsers';
 import { type ElementQueries, type UI } from './ui';
@@ -16,7 +16,7 @@ type MethodProducer<P extends ComponentProps, U extends UI> = (ui: U & {
 type Initializers<P extends ComponentProps, U extends UI> = {
     [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K], ComponentUI<P, U>> | Reader<MaybeSignal<P[K]>, ComponentUI<P, U>> | MethodProducer<P, ComponentUI<P, U>>;
 };
-type MaybeSignal<T extends {}> = T | Signal<T> | ComputedCallback<T>;
+type MaybeSignal<T extends {}> = T | Signal<T> | MemoCallback<T> | TaskCallback<T>;
 /**
  * Define a component with dependency resolution and setup function (connectedCallback)
  *
@@ -29,4 +29,4 @@ type MaybeSignal<T extends {}> = T | Signal<T> | ComputedCallback<T>;
  * @throws {InvalidPropertyNameError} If property name is invalid
  */
 declare function defineComponent<P extends ComponentProps, U extends UI = {}>(name: string, props?: Initializers<P, U>, select?: (elementQueries: ElementQueries) => U, setup?: (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>>): Component<P>;
-export { type Component, type ComponentProp, type ComponentProps, type ComponentUI, type ComponentSetup, type MaybeSignal, type ReservedWords, type Initializers, defineComponent, };
+export { defineComponent, type Component, type ComponentProp, type ComponentProps, type ComponentSetup, type ComponentUI, type Initializers, type MethodProducer, type MaybeSignal, type ReservedWords, };

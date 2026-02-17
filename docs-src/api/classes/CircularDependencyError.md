@@ -6,19 +6,9 @@
 
 # Class: CircularDependencyError
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:1
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:13
 
-## Name
-
-Le Truc
-
-## Version
-
-0.15.0
-
-## Author
-
-Esther Brunner
+Error thrown on re-entrance on an already running function.
 
 ## Extends
 
@@ -30,13 +20,17 @@ Esther Brunner
 
 > **new CircularDependencyError**(`where`): `CircularDependencyError`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:2
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:19
+
+Constructs a new CircularDependencyError.
 
 #### Parameters
 
 ##### where
 
 `string`
+
+The location where the error occurred.
 
 #### Returns
 
@@ -194,7 +188,7 @@ a();
 
 > `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
 
-Defined in: node\_modules/bun-types/globals.d.ts:1043
+Defined in: node\_modules/bun-types/globals.d.ts:1042
 
 Create .stack property on a target object
 
@@ -246,7 +240,7 @@ Indicates whether the argument provided is a built-in Error instance or not.
 
 > `static` **isError**(`value`): `value is Error`
 
-Defined in: node\_modules/bun-types/globals.d.ts:1038
+Defined in: node\_modules/bun-types/globals.d.ts:1037
 
 Check if a value is an instance of Error
 
