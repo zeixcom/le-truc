@@ -519,4 +519,4 @@ Feel free to contribute, report issues, or suggest improvements.
 
 License: [MIT](_media/LICENSE)
 
-(c) 2025 [Zeix AG](https://zeix.com)
+(c) 2026 [Zeix AG](https://zeix.com)
