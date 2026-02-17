@@ -68,7 +68,11 @@ export default defineComponent<BasicPluralizeProps, BasicPluralizeUI>(
 		)
 
 		// Basic effects
-		const effects = {
+		const effects: {
+			count: ReturnType<typeof setText>
+			none: ReturnType<typeof show>
+			some: ReturnType<typeof show>
+		} & Partial<Record<Intl.LDMLPluralRule, ReturnType<typeof show>>> = {
 			count: setText(() => String(host.count)),
 			none: show(() => host.count === 0),
 			some: show(() => host.count > 0),

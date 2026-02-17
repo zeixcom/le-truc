@@ -110,7 +110,7 @@ const select = ({ first, all }) => ({
   input?: first('input[type="text"]'),  // HTMLInputElement | undefined
 
   // Element collections
-  items: all('.item'),                  // Collection<HTMLElement>
+  items: all('.item'),                  // Memo<HTMLElement[]>
 
   // Required elements (throws if missing)
   form: first('form', 'Form is required'),
@@ -122,20 +122,21 @@ const select = ({ first, all }) => ({
 
 **Dependency Detection**: Custom elements found in queries are automatically added to dependencies, ensuring they're defined before effects run.
 
-**Collection Signals**: `Collection<E>` provides reactive arrays of elements:
-- Implements iterator protocol and array-like indexing
-- Emits `add`/`remove` notifications for fine-grained change handling
-- Automatically tracks DOM mutations
+**Element Memos**: `all()` returns `Memo<E[]>` created by `createElementsMemo()`:
+- Lazily backed by a `MutationObserver` that activates only when read within a reactive effect
+- Always contains the current matching elements; added/removed diffs are derived downstream
+- Access via `.get()` to retrieve the current element array
 
 ### Effect System
 
 Effects are functions that run reactively and return cleanup functions:
 
 ```typescript
-const effects = {
+// Effects are keyed by UI element name; the setup function receives the full ui object
+({ host }) => ({
   button: [
-    // Event handling
-    on('click', ({ host }) => ({ count: host.count + 1 })),
+    // Event handling — handler receives the DOM event
+    on('click', () => ({ count: host.count + 1 })),
 
     // Property updates from reactive values
     setProperty('disabled', 'loading'),
@@ -156,17 +157,20 @@ const effects = {
       return () => target.style.color = 'transparent'
     })
   ]
-}
+})
 ```
 
 **Built-in Effects**:
-- `on(event, handler)` - Event listeners with reactive property updates
+- `on(event, handler)` - Event listeners; handler receives the event and may return `{ prop: value }` to update host
 - `setText(property)` - Reactive text content
 - `setProperty(prop, reactive)` - Element property updates
 - `setAttribute(attr, reactive)` - Attribute management
+- `toggleAttribute(attr, reactive)` - Boolean attribute: present when truthy
 - `toggleClass(class, property)` - Conditional CSS classes
 - `setStyle(prop, reactive)` - Inline style updates
-- `emit(event, reactive)` - Custom event emission
+- `show(reactive)` - Toggle element visibility via `hidden`
+- `pass(props)` - Pass reactive values to child Le Truc components via Slot signal replacement
+- `dangerouslySetInnerHTML(reactive, opts?)` - Set innerHTML (use only for trusted sources)
 
 ### Parser Architecture
 

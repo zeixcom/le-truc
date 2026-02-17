@@ -1,11 +1,11 @@
-import { createEffect, match, resolve } from '@zeix/cause-effect'
+import { createEffect, match } from '@zeix/cause-effect'
 import { execSync } from 'child_process'
 import { API_DIR } from '../config'
 import { libraryScripts } from '../file-signals'
 
 export const apiEffect = () =>
 	createEffect(() => {
-		match(resolve({ library: libraryScripts.sources }), {
+		match([libraryScripts.sources], {
 			ok: () => {
 				try {
 					console.log('📚 Rebuilding API documentation...')

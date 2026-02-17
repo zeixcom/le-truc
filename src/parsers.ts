@@ -1,4 +1,4 @@
-import { isFunction, isString } from '@zeix/cause-effect'
+import { isFunction } from '@zeix/cause-effect'
 import type { UI } from './ui'
 
 /* === Types === */
@@ -72,7 +72,7 @@ const read =
 	): Reader<T, U> =>
 	(ui: U): T => {
 		const value = reader(ui)
-		return isString(value) && isParser<T, U>(fallback)
+		return typeof value === 'string' && isParser<T, U>(fallback)
 			? fallback(ui, value)
 			: ((value as T) ?? getFallback(ui, fallback))
 	}

@@ -6,19 +6,9 @@
 
 # Class: InvalidSignalValueError
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:18
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:46
 
-## Name
-
-Le Truc
-
-## Version
-
-0.15.1
-
-## Author
-
-Esther Brunner
+Error thrown when a signal value is invalid.
 
 ## Extends
 
@@ -30,7 +20,9 @@ Esther Brunner
 
 > **new InvalidSignalValueError**(`where`, `value`): `InvalidSignalValueError`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:19
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:53
+
+Constructs a new InvalidSignalValueError.
 
 #### Parameters
 
@@ -38,9 +30,13 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:19
 
 `string`
 
+The location where the error occurred.
+
 ##### value
 
 `unknown`
+
+The invalid value.
 
 #### Returns
 

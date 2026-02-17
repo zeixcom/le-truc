@@ -4,11 +4,11 @@
 
 [@zeix/le-truc](../globals.md) / isSignal
 
-# Variable: isSignal()
+# Function: isSignal()
 
-> `const` **isSignal**: \<`T`\>(`value`) => `value is Signal<T>`
+> **isSignal**\<`T`\>(`value`): `value is Signal<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:22
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:56
 
 Check whether a value is a Signal
 
@@ -24,13 +24,13 @@ Check whether a value is a Signal
 
 `unknown`
 
-value to check
+Value to check
 
 ## Returns
 
 `value is Signal<T>`
 
-- true if value is a Signal, false otherwise
+True if value is a Signal, false otherwise
 
 ## Since
 

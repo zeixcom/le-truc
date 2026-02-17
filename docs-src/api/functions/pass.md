@@ -8,9 +8,13 @@
 
 > **pass**\<`P`, `Q`\>(`props`): [`Effect`](../type-aliases/Effect.md)\<`P`, [`Component`](../type-aliases/Component.md)\<`Q`\>\>
 
-Defined in: [src/effects/pass.ts:40](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/effects/pass.ts#L40)
+Defined in: [src/effects/pass.ts:42](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/effects/pass.ts#L42)
 
-Effect for passing reactive values to a descendant Le Truc component.
+Effect for passing reactive values to a descendant Le Truc component
+by replacing the backing signal of the target's Slot.
+
+No cleanup/restore is needed: when the parent unmounts, the child
+is torn down as well. For re-parenting scenarios, use context instead.
 
 ## Type Parameters
 
@@ -47,7 +51,3 @@ When the target element is not a valid custom element
 ## Throws
 
 When the provided reactives is not a record of signals, reactive property names or functions
-
-## Throws
-
-When passing signals failed for some other reason

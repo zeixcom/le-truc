@@ -6,19 +6,9 @@
 
 # Class: NullishSignalValueError
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:21
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:24
 
-## Name
-
-Le Truc
-
-## Version
-
-0.15.1
-
-## Author
-
-Esther Brunner
+Error thrown when a signal value is null or undefined.
 
 ## Extends
 
@@ -30,13 +20,17 @@ Esther Brunner
 
 > **new NullishSignalValueError**(`where`): `NullishSignalValueError`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:22
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:30
+
+Constructs a new NullishSignalValueError.
 
 #### Parameters
 
 ##### where
 
 `string`
+
+The location where the error occurred.
 
 #### Returns
 

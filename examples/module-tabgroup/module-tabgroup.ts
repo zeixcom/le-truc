@@ -1,8 +1,8 @@
 import {
-	type Collection,
 	type Component,
-	createSensor,
+	createEventsSensor,
 	defineComponent,
+	type Memo,
 	read,
 	setProperty,
 	show,
@@ -13,8 +13,8 @@ export type ModuleTabgroupProps = {
 }
 
 type ModuleTabgroupUI = {
-	tabs: Collection<HTMLButtonElement>
-	panels: Collection<HTMLElement>
+	tabs: Memo<HTMLButtonElement[]>
+	panels: Memo<HTMLElement[]>
 }
 
 declare global {
@@ -27,11 +27,10 @@ const getAriaControls = (element: HTMLElement) =>
 	element.getAttribute('aria-controls') ?? ''
 
 const getSelected = (
-	elements: Collection<HTMLElement>,
+	tabs: HTMLElement[],
 	isCurrent: (element: HTMLElement) => boolean,
 	offset = 0,
 ) => {
-	const tabs = elements.get()
 	const currentIndex = tabs.findIndex(isCurrent)
 	const newIndex = (currentIndex + offset + tabs.length) % tabs.length
 	return getAriaControls(tabs[newIndex])
@@ -40,8 +39,11 @@ const getSelected = (
 export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 	'module-tabgroup',
 	{
-		selected: createSensor(
-			read(ui => getSelected(ui.tabs, tab => tab.ariaSelected === 'true'), ''),
+		selected: createEventsSensor(
+			read(
+				ui => getSelected(ui.tabs.get(), tab => tab.ariaSelected === 'true'),
+				'',
+			),
 			'tabs',
 			{
 				click: ({ target }) => getAriaControls(target),
@@ -66,7 +68,7 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 								: key === 'End'
 									? getAriaControls(tabs[tabs.length - 1])
 									: getSelected(
-											ui.tabs,
+											tabs,
 											tab => tab === target,
 											key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1,
 										)

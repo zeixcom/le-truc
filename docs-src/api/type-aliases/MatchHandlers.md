@@ -4,19 +4,15 @@
 
 [@zeix/le-truc](../globals.md) / MatchHandlers
 
-# Type Alias: MatchHandlers\<S\>
+# Type Alias: MatchHandlers\<T\>
 
-> **MatchHandlers**\<`S`\> = `object`
+> **MatchHandlers**\<`T`\> = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/match.d.ts:3
-
-## Name
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:3
 
 Le Truc
 
-## Version
-
-0.15.1
+Version 0.16.0
 
 ## Author
 
@@ -24,17 +20,17 @@ Esther Brunner
 
 ## Type Parameters
 
-### S
+### T
 
-`S` *extends* `UnknownSignalRecord`
+`T` *extends* readonly [`Signal`](Signal.md)\<`unknown` & `object`\>[]
 
 ## Properties
 
 ### err()?
 
-> `optional` **err**: (`errors`) => `void`
+> `optional` **err**: (`errors`) => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/match.d.ts:5
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:7
 
 #### Parameters
 
@@ -44,34 +40,34 @@ readonly `Error`[]
 
 #### Returns
 
-`void`
+`MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 ***
 
 ### nil()?
 
-> `optional` **nil**: () => `void`
+> `optional` **nil**: () => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/match.d.ts:6
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:8
 
 #### Returns
 
-`void`
+`MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 ***
 
 ### ok()
 
-> **ok**: (`values`) => `void`
+> **ok**: (`values`) => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/match.d.ts:4
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:4
 
 #### Parameters
 
 ##### values
 
-`SignalValues`\<`S`\>
+`{ [K in keyof T]: T[K] extends Signal<infer V> ? V : never }`
 
 #### Returns
 
-`void`
+`MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>

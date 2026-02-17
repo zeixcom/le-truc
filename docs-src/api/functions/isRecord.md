@@ -4,11 +4,15 @@
 
 [@zeix/le-truc](../globals.md) / isRecord
 
-# Variable: isRecord()
+# Function: isRecord()
 
-> `const` **isRecord**: \<`T`\>(`value`) => `value is T`
+> **isRecord**\<`T`\>(`value`): `value is T`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:11
+Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:7
+
+Le Truc
+
+Version 0.16.0
 
 ## Type Parameters
 
@@ -25,14 +29,6 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:11
 ## Returns
 
 `value is T`
-
-## Name
-
-Le Truc
-
-## Version
-
-0.15.1
 
 ## Author
 

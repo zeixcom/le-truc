@@ -112,10 +112,9 @@
 	--color-background: var(--color-neutral-10);
 	--color-background-alt: var(--color-neutral-20);
 	--color-border: var(--color-neutral-50);
-	--color-border-soft: var(--color-neutral-30);
 	--color-text: var(--color-neutral-90);
 	--color-text-soft: var(--color-neutral-80);
-	--color-text-inverted: var(--color-white);
+	--color-text-inverted: var(--color-white); /* var(--color-purple-10); */
 	--color-shadow: rgb(0 0 0 / 10%);
 
 	--font-family-sans: 'Helvetica Neue', Arial, Roboto, sans-serif;
@@ -188,7 +187,6 @@
 		--color-success-hover: var(--color-green-20);
 		--color-success-active: var(--color-green-10);
 		--color-success-text: var(--color-green-90);
-		--color-border-soft: var(--color-neutral-70);
 		--color-text: var(--color-neutral-10);
 		--color-text-soft: var(--color-neutral-20);
 		--color-text-inverted: var(--color-black); /* #2a1c42; */

@@ -4,20 +4,16 @@
 
 [@zeix/le-truc](../globals.md) / EffectCallback
 
-# Type Alias: EffectCallback
+# Type Alias: EffectCallback()
 
-> **EffectCallback** = () => [`MaybeCleanup`](MaybeCleanup.md) \| (`abort`) => `Promise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
+> **EffectCallback** = () => [`MaybeCleanup`](MaybeCleanup.md)
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/effect.d.ts:2
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:112
 
-## Name
+A callback function for effects that can perform side effects.
 
-Le Truc
+## Returns
 
-## Version
+[`MaybeCleanup`](MaybeCleanup.md)
 
-0.15.1
-
-## Author
-
-Esther Brunner
+An optional cleanup function that will be called before the effect re-runs or is disposed

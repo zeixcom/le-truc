@@ -61,13 +61,10 @@ export async function build(
 		// API docs should be generated first, then CSS/JS, then pages processing
 		console.log('🚀 Initializing effects...')
 
-		// let buildError: Error | null = null
-
 		const apiCleanup = apiEffect()
 		const cssCleanup = cssEffect()
 		const jsCleanup = jsEffect()
 		const serviceWorkerCleanup = serviceWorkerEffect()
-		const sourcesCleanup = sourcesEffect()
 		const examplesCleanup = examplesEffect()
 		const pagesCleanup = pagesEffect()
 		const menuCleanup = menuEffect()
@@ -90,7 +87,6 @@ export async function build(
 			cssCleanup?.()
 			jsCleanup?.()
 			serviceWorkerCleanup?.()
-			sourcesCleanup?.()
 			examplesCleanup?.()
 			pagesCleanup?.()
 			menuCleanup?.()

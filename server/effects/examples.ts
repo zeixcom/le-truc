@@ -1,4 +1,6 @@
-import Markdoc from '@markdoc/markdoc'
+import { createEffect, match } from '@zeix/cause-effect'
+import { codeToHtml } from 'shiki'
+import { EXAMPLES_DIR } from '../config'
 import {
 	type Computed,
 	createComputed,
@@ -27,17 +29,33 @@ type ExampleFile = {
 	content: string
 }
 
-const componentExamples: Computed<Map<string, ExampleFile>> = createComputed(
-	async () => {
-		const markdownFiles = componentMarkdown.sources.get()
-		const exampleFiles = new Map<string, ExampleFile>()
+// Build a path-keyed lookup from a FileInfo array
+const toPathMap = (files: FileInfo[]): Map<string, FileInfo> => {
+	const map = new Map<string, FileInfo>()
+	for (const file of files) map.set(file.path, file)
+	return map
+}
 
-		for (const [path, fileInfo] of Object.entries(markdownFiles)) {
-			if (!fileInfo || !path.endsWith('.md')) continue
+export const examplesEffect = () =>
+	createEffect(() => {
+		match(
+			[
+				componentMarkup.sources,
+				componentStyles.sources,
+				componentScripts.sources,
+			],
+			{
+				ok: async ([htmlFiles, cssFiles, tsFiles]) => {
+					try {
+						console.log('🔄 Rebuilding example fragments...')
 
-			// Extract component name from path (e.g., "./examples/basic-button/basic-button.md")
-			const pathParts = path.split('/')
-			if (pathParts.length < 3) continue
+						const cssMap = toPathMap(cssFiles)
+						const tsMap = toPathMap(tsFiles)
+
+						for (const html of htmlFiles) {
+							// Only process main component HTML files (examples/component-name/component-name.html)
+							// Skip test files and other auxiliary HTML files
+							const pathParts = html.path.split('/')
 
 			const componentName = pathParts[pathParts.length - 2] // e.g., "basic-button"
 			const markdownPath = path
@@ -54,8 +72,9 @@ const componentExamples: Computed<Map<string, ExampleFile>> = createComputed(
 				continue
 			}
 
-			// Output path in docs/examples/
-			const outputPath = getFilePath(EXAMPLES_DIR, `${componentName}.html`)
+							const name = html.path.replace(/\.html$/, '')
+							const css = cssMap.get(name + '.css')
+							const ts = tsMap.get(name + '.ts')
 
 			exampleFiles.set(componentName, {
 				componentName,

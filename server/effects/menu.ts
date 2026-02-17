@@ -1,4 +1,4 @@
-import { createEffect, match, resolve } from '@zeix/cause-effect'
+import { createEffect, match } from '@zeix/cause-effect'
 import { MENU_FILE } from '../config'
 import { docsMarkdown } from '../file-signals'
 import { writeFileSafe } from '../io'
@@ -6,8 +6,8 @@ import { menu } from '../templates/menu'
 
 export const menuEffect = () =>
 	createEffect(() => {
-		match(resolve({ pageInfos: docsMarkdown.pageInfos }), {
-			ok: async ({ pageInfos }) => {
+		match([docsMarkdown.pageInfos], {
+			ok: async ([pageInfos]) => {
 				console.log(`📄 Generated ${pageInfos.length} page infos`)
 
 				// Filter for root pages (files directly in pages directory, not in subdirectories)

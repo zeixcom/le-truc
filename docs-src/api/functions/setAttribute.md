@@ -6,9 +6,9 @@
 
 # Function: setAttribute()
 
-> **setAttribute**\<`P`, `E`\>(`name`, `reactive`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
+> **setAttribute**\<`P`, `E`\>(`name`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/attribute.ts:41](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/effects/attribute.ts#L41)
+Defined in: [src/effects/attribute.ts:41](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/effects/attribute.ts#L41)
 
 Effect for setting an attribute on an element.
 Sets the specified attribute with security validation for unsafe values.
@@ -31,7 +31,7 @@ Sets the specified attribute with security validation for unsafe values.
 
 Name of the attribute to set
 
-### reactive
+### reactive?
 
 [`Reactive`](../type-aliases/Reactive.md)\<`string`, `P`, `E`\> = `...`
 

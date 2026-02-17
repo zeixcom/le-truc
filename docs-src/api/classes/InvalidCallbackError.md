@@ -6,19 +6,9 @@
 
 # Class: InvalidCallbackError
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:9
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:58
 
-## Name
-
-Le Truc
-
-## Version
-
-0.15.1
-
-## Author
-
-Esther Brunner
+Error thrown when a callback is invalid.
 
 ## Extends
 
@@ -30,7 +20,9 @@ Esther Brunner
 
 > **new InvalidCallbackError**(`where`, `value`): `InvalidCallbackError`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:10
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:65
+
+Constructs a new InvalidCallbackError.
 
 #### Parameters
 
@@ -38,9 +30,13 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:10
 
 `string`
 
+The location where the error occurred.
+
 ##### value
 
 `unknown`
+
+The invalid value.
 
 #### Returns
 

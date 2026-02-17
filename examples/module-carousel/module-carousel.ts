@@ -1,11 +1,12 @@
 import {
 	asInteger,
-	type Collection,
 	type Component,
 	createEffect,
 	defineComponent,
+	type Memo,
 	on,
 	setProperty,
+	show,
 } from '../..'
 
 export type ModuleCarouselProps = {
@@ -13,9 +14,11 @@ export type ModuleCarouselProps = {
 }
 
 type ModuleCarouselUI = {
-	dots: Collection<HTMLElement>
-	slides: Collection<HTMLElement>
-	buttons: Collection<HTMLElement>
+	dots: Memo<HTMLElement[]>
+	slides: Memo<HTMLElement[]>
+	buttons: Memo<HTMLElement[]>
+	prev: HTMLButtonElement
+	next: HTMLButtonElement
 }
 
 declare global {
@@ -24,7 +27,8 @@ declare global {
 	}
 }
 
-const wrapAround = (index: number, total: number) => (index + total) % total
+const clamp = (index: number, total: number) =>
+	Math.max(0, Math.min(index, total - 1))
 
 export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 	'module-carousel',
@@ -36,17 +40,19 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 			),
 		),
 	},
-	({ all }) => ({
+	({ all, first }) => ({
 		dots: all('[role="tab"]'),
 		slides: all('[role="tabpanel"]'),
 		buttons: all('nav button'),
+		prev: first('button.prev', 'Add a previous button'),
+		next: first('button.next', 'Add a next button'),
 	}),
 	({ host, slides }) => {
 		let isNavigating = false
 		let isScrolling = false
 
 		const scrollToSlide = (index: number) => {
-			const slide = slides[index]
+			const slide = slides.get()[index]
 			if (!slide) return
 
 			isNavigating = true
@@ -85,7 +91,8 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 						}
 					}, config)
 
-					for (const slide of slides) observer.observe(slide)
+					const slideArray = slides.get()
+					for (const slide of slideArray) observer.observe(slide)
 					return () => {
 						observer.disconnect()
 					}
@@ -98,25 +105,28 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 						prevIndex = newIndex
 
 						// Only scroll if this change wasn't from user scroll
-						if (!isScrolling) {
-							scrollToSlide(newIndex)
-						}
+						if (!isScrolling) scrollToSlide(newIndex)
 					})
 				},
 			],
+
+			// Visibility of navigation buttons
+			prev: show(() => host.index !== 0),
+			next: show(() => host.index !== slides.get().length - 1),
 
 			// Handle navigation button click and keyup events
 			buttons: [
 				on('click', ({ target }) => {
 					if (!(target instanceof HTMLElement)) return
-					const total = slides.length
+
+					const slidesLength = slides.get().length
 					const nextIndex = target.classList.contains('prev')
 						? host.index - 1
 						: target.classList.contains('next')
 							? host.index + 1
 							: parseInt(target.dataset.index || '0')
 					host.index = Number.isInteger(nextIndex)
-						? wrapAround(nextIndex, total)
+						? clamp(nextIndex, slidesLength)
 						: 0
 				}),
 				on('keyup', e => {
@@ -124,15 +134,16 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 					if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) {
 						e.preventDefault()
 						e.stopPropagation()
-						const total = slides.length
+
+						const slidesLength = slides.get().length
 						const nextIndex =
 							key === 'Home'
 								? 0
 								: key === 'End'
-									? total - 1
-									: wrapAround(
+									? slidesLength - 1
+									: clamp(
 											host.index + (key === 'ArrowLeft' ? -1 : 1),
-											total,
+											slidesLength,
 										)
 						host.index = nextIndex
 					}
@@ -147,7 +158,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 
 			// Set the active slide in the slides
 			slides: setProperty('ariaCurrent', target =>
-				String(target.id === slides[host.index].id),
+				String(target.id === slides.get()[host.index].id),
 			),
 		}
 	},

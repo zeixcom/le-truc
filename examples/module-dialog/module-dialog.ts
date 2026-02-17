@@ -59,7 +59,9 @@ export default defineComponent<ModuleDialogProps, ModuleDialogUI>(
 						if (activeElement) activeElement.focus()
 					}
 					return () => {
-						host.open = false
+						document.body.classList.remove(SCROLL_LOCK_CLASS)
+						document.body.style.removeProperty('top')
+						dialog.close()
 					}
 				}),
 			openButton: on('click', () => {

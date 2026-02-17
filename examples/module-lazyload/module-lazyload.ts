@@ -1,6 +1,10 @@
 import {
 	asString,
 	type Component,
+<<<<<<< HEAD
+=======
+	createTask,
+>>>>>>> main
 	dangerouslySetInnerHTML,
 	defineComponent,
 	setText,
@@ -41,7 +45,11 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 	}),
 	ui => {
 		const { host } = ui
+<<<<<<< HEAD
 		const result = new Task<{
+=======
+		const result = createTask<{
+>>>>>>> main
 			ok: boolean
 			value: string
 			error: string
@@ -70,7 +78,7 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 					}
 				}
 			},
-			{ ok: false, value: '', error: '', pending: true },
+			{ value: { ok: false, value: '', error: '', pending: true } },
 		)
 		const hasError = () => !!result.get().error
 

@@ -1,10 +1,10 @@
 import {
 	asInteger,
-	type Collection,
 	type Component,
-	createSensor,
+	createEventsSensor,
+	createMemo,
 	defineComponent,
-	Memo,
+	type Memo,
 	read,
 	setProperty,
 	show,
@@ -16,7 +16,7 @@ export type FormSpinbuttonProps = {
 }
 
 type FormSpinbuttonUI = {
-	controls: Collection<HTMLButtonElement | HTMLInputElement>
+	controls: Memo<(HTMLButtonElement | HTMLInputElement)[]>
 	increment: HTMLButtonElement
 	decrement: HTMLButtonElement
 	input: HTMLInputElement
@@ -33,7 +33,7 @@ declare global {
 export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 	'form-spinbutton',
 	{
-		value: createSensor(
+		value: createEventsSensor(
 			read(ui => ui.input.value, asInteger()),
 			'controls',
 			{
@@ -87,9 +87,9 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 		other: first('.other'),
 	}),
 	({ host, increment, zero }) => {
-		const nonZero = new Memo(() => host.value !== 0)
+		const nonZero = createMemo(() => host.value !== 0)
 		const incrementLabel = increment.ariaLabel || 'Increment'
-		const ariaLabel = new Memo(() =>
+		const ariaLabel = createMemo(() =>
 			nonZero.get() || !zero ? incrementLabel : zero.textContent,
 		)
 

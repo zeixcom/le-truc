@@ -6,9 +6,9 @@
 
 # Function: defineComponent()
 
-> **defineComponent**\<`P`, `U`\>(`name`, `props`, `select`, `setup`): [`Component`](../type-aliases/Component.md)\<`P`\>
+> **defineComponent**\<`P`, `U`\>(`name`, `props?`, `select?`, `setup?`): [`Component`](../type-aliases/Component.md)\<`P`\>
 
-Defined in: [src/component.ts:83](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/component.ts#L83)
+Defined in: [src/component.ts:81](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/component.ts#L81)
 
 Define a component with dependency resolution and setup function (connectedCallback)
 
@@ -30,19 +30,19 @@ Define a component with dependency resolution and setup function (connectedCallb
 
 Custom element name
 
-### props
+### props?
 
 [`Initializers`](../type-aliases/Initializers.md)\<`P`, `U`\> = `...`
 
 Component properties
 
-### select
+### select?
 
 (`elementQueries`) => `U`
 
 Function to select UI elements
 
-### setup
+### setup?
 
 (`ui`) => [`Effects`](../type-aliases/Effects.md)\<`P`, [`ComponentUI`](../type-aliases/ComponentUI.md)\<`P`, `U`\>\>
 

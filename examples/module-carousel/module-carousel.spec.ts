@@ -46,7 +46,7 @@ async function waitForStableIndex(
  *
  * Key Features Tested:
  * - ✅ Initial state rendering and ARIA compliance
- * - ✅ Navigation wrapping (first ↔ last slide)
+ * - ✅ Navigation clamping (stays at first/last slide)
  * - ✅ Reactive index property (writable, not readonly sensor)
  * - ✅ Smooth scroll animations and intersection observer updates
  * - ✅ ARIA attributes synchronization (aria-current, aria-selected, tabindex)
@@ -83,8 +83,8 @@ test.describe('module-carousel component', () => {
 			await expect(slides).toHaveCount(3)
 			await expect(dots).toHaveCount(3)
 
-			// Should have navigation buttons
-			await expect(prevButton).toBeVisible()
+			// Next button should be visible, prev button hidden at start
+			await expect(prevButton).toBeHidden()
 			await expect(nextButton).toBeVisible()
 
 			// First slide should be current
@@ -172,50 +172,40 @@ test.describe('module-carousel component', () => {
 			expect(indexValue).toBe(0)
 		})
 
-		test('wraps around from last to first slide', async ({ page }) => {
+		test('clamps at last slide when clicking next', async ({ page }) => {
 			const carousel = page.locator('module-carousel')
 			const nextButton = carousel.locator('button.next')
 			const slides = carousel.locator('[role="tabpanel"]')
 
 			// Navigate to last slide (index 2)
-			// Navigate to last slide by clicking next twice
 			await nextButton.click()
-			// await waitForStableIndex(carousel, 1)
 			await nextButton.click()
-			// await waitForStableIndex(carousel, 2)
 
 			// Third slide should be current
 			const thirdSlide = slides.nth(2)
 			await expect(thirdSlide).toHaveAttribute('aria-current', 'true')
 
-			// Click next again to wrap around
-			await nextButton.click()
-			await waitForStableIndex(carousel, 0)
+			// Next button should be hidden at last slide
+			await expect(nextButton).toBeHidden()
 
-			// Should wrap to first slide
+			const indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(2)
+		})
+
+		test('clamps at first slide when clicking prev', async ({ page }) => {
+			const carousel = page.locator('module-carousel')
+			const prevButton = carousel.locator('button.prev')
+			const slides = carousel.locator('[role="tabpanel"]')
+
+			// Prev button should be hidden at first slide
+			await expect(prevButton).toBeHidden()
+
+			// First slide should remain current
 			const firstSlide = slides.first()
 			await expect(firstSlide).toHaveAttribute('aria-current', 'true')
 
 			const indexValue = await carousel.evaluate((el: any) => el.index)
 			expect(indexValue).toBe(0)
-		})
-
-		test('wraps around from first to last slide', async ({ page }) => {
-			const carousel = page.locator('module-carousel')
-			const prevButton = carousel.locator('button.prev')
-			const slides = carousel.locator('[role="tabpanel"]')
-
-			// Click prev from first slide to wrap around
-			await prevButton.click()
-			await waitForStableIndex(carousel, 2)
-
-			// Should wrap to last slide
-			const thirdSlide = slides.nth(2)
-			await expect(thirdSlide).toHaveAttribute('aria-current', 'true')
-
-			// Check property value directly for reliability
-			const indexValue = await carousel.evaluate((el: any) => el.index)
-			expect(indexValue).toBe(2)
 		})
 	})
 
@@ -304,46 +294,44 @@ test.describe('module-carousel component', () => {
 			// Focus and press End key
 			await nextButton.focus()
 			await page.keyboard.press('End')
-			// await waitForStableIndex(carousel, 2)
 
 			// Last slide should be current
 			const thirdSlide = slides.nth(2)
 			await expect(thirdSlide).toHaveAttribute('aria-current', 'true')
 
-			// Press Home key
+			// Press Home key (focus prev button since next is hidden at last slide)
+			const prevButton = carousel.locator('button.prev')
+			await prevButton.focus()
 			await page.keyboard.press('Home')
-			// await waitForStableIndex(carousel, 0)
 
 			// First slide should be current
 			const firstSlide = slides.first()
 			await expect(firstSlide).toHaveAttribute('aria-current', 'true')
 		})
 
-		test('wraps around with arrow key navigation', async ({ page }) => {
+		test('clamps with arrow key navigation at boundaries', async ({ page }) => {
 			const carousel = page.locator('module-carousel')
 			const nextButton = carousel.locator('button.next')
 			const slides = carousel.locator('[role="tabpanel"]')
 
-			// Navigate to last slide
-			await nextButton.click()
-			// await waitForStableIndex(carousel, 1)
-			await nextButton.click()
-			// await waitForStableIndex(carousel, 2)
-
-			// Focus and press right arrow to wrap around
+			// Focus on navigation and press left arrow at first slide
 			await nextButton.focus()
-			await page.keyboard.press('ArrowRight')
-			// await waitForStableIndex(carousel, 0)
+			await page.keyboard.press('ArrowLeft')
 
-			// Should wrap to first slide
+			// Should stay at first slide
 			const firstSlide = slides.first()
 			await expect(firstSlide).toHaveAttribute('aria-current', 'true')
 
-			// Press left arrow to wrap to last slide
-			await page.keyboard.press('ArrowLeft')
-			// await waitForStableIndex(carousel, 2)
+			// Navigate to last slide
+			await nextButton.click()
+			await nextButton.click()
 
-			// Should wrap to last slide
+			// Press right arrow at last slide (focus prev button since next is hidden)
+			const prevButton = carousel.locator('button.prev')
+			await prevButton.focus()
+			await page.keyboard.press('ArrowRight')
+
+			// Should stay at last slide
 			const thirdSlide = slides.nth(2)
 			await expect(thirdSlide).toHaveAttribute('aria-current', 'true')
 		})
@@ -505,18 +493,19 @@ test.describe('module-carousel component', () => {
 			const carousel = page.locator('module-carousel')
 			const nextButton = carousel.locator('button.next')
 
-			// Track index through sequential navigation
-			let expectedIndex = 0
-
 			// Navigate through all slides sequentially
-			for (let i = 0; i < 5; i++) {
+			for (let expectedIndex = 1; expectedIndex <= 2; expectedIndex++) {
 				await nextButton.click()
-				expectedIndex = (expectedIndex + 1) % 3 // Wrap around at 3
 				await waitForStableIndex(carousel, expectedIndex)
 
 				const indexValue = await carousel.evaluate((el: any) => el.index)
 				expect(indexValue).toBe(expectedIndex)
 			}
+
+			// Should clamp at last slide (next button hidden)
+			await expect(nextButton).toBeHidden()
+			const indexValue = await carousel.evaluate((el: any) => el.index)
+			expect(indexValue).toBe(2)
 		})
 
 		test('maintains state consistency across different navigation methods', async ({

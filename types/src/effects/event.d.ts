@@ -1,6 +1,6 @@
 import type { ComponentProps } from '../component';
-import { type Effect } from '../effects';
-type EventType<K extends string> = K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K] : Event;
+import type { Effect } from '../effects';
+import type { EventType } from '../events';
 type EventHandler<P extends ComponentProps, Evt extends Event> = (event: Evt) => {
     [K in keyof P]?: P[K];
 } | void | Promise<void>;

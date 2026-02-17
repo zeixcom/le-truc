@@ -42,9 +42,9 @@ function getNumberFormatter(
 	const drops: string[] = []
 	if (style === 'currency') {
 		if (
-			!o.currency ||
-			typeof o.currency !== 'string' ||
-			o.currency.length !== 3
+			!o.currency
+			|| typeof o.currency !== 'string'
+			|| o.currency.length !== 3
 		) {
 			onError?.(
 				`style="currency" requires a 3-letter ISO currency (e.g. "CHF").`,
@@ -70,7 +70,7 @@ function getNumberFormatter(
 
 	const sanitized: Intl.NumberFormatOptions = {}
 	for (const [k, v] of Object.entries(o)) {
-		if (!drops.includes(k)) sanitized[k] = v
+		if (!drops.includes(k)) (sanitized as Record<string, unknown>)[k] = v
 		else onWarn?.(`Option "${k}" is ignored for style="${style}".`)
 	}
 

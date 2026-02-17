@@ -1,18 +1,18 @@
 import {
+	createComputed,
 	isFunction,
 	isMemoCallback,
 	isRecord,
 	isSignal,
-	isString,
+	isSlot,
 	type MaybeCleanup,
-	Memo,
-	type MemoCallback,
-	UNSET,
+	type Signal,
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from '../component'
 import type { Effect, Reactive } from '../effects'
 import { InvalidCustomElementError, InvalidReactivesError } from '../errors'
-import { elementName, isCustomElement } from '../util'
+import { getSignals } from '../internal'
+import { DEV_MODE, elementName, isCustomElement, LOG_WARN } from '../util'
 
 /* === Types === */
 
@@ -27,14 +27,17 @@ type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
 /* === Exported Function === */
 
 /**
- * Effect for passing reactive values to a descendant Le Truc component.
+ * Effect for passing reactive values to a descendant Le Truc component
+ * by replacing the backing signal of the target's Slot.
+ *
+ * No cleanup/restore is needed: when the parent unmounts, the child
+ * is torn down as well. For re-parenting scenarios, use context instead.
  *
  * @since 0.15.0
- * @param {MutableReactives<Component<Q>, P>} props - Reactive values to pass
+ * @param {PassedProps<P, Q>} props - Reactive values to pass
  * @returns {Effect<P, Component<Q>>} Effect function that passes reactive values to the descendant component
  * @throws {InvalidCustomElementError} When the target element is not a valid custom element
  * @throws {InvalidReactivesError} When the provided reactives is not a record of signals, reactive property names or functions
- * @throws {Error} When passing signals failed for some other reason
  */
 const pass =
 	<P extends ComponentProps, Q extends ComponentProps>(
@@ -50,56 +53,49 @@ const pass =
 		if (!isRecord(reactives))
 			throw new InvalidReactivesError(host, target, reactives)
 
-		const resetProperties: PropertyDescriptorMap = {}
-
-		// Return getter from signal, reactive property name or function
-		const getGetter = (value: unknown) => {
-			if (isSignal(value)) return value.get
+		// Resolve a reactive value to a Signal
+		const toSignal = (value: unknown): Signal<any> | undefined => {
+			if (isSignal(value)) return value
 			const fn =
-				isString(value) && value in host
-					? ((() => host[value as keyof typeof host]) as MemoCallback<
-							unknown & {}
-						>)
-					: isMemoCallback(value)
+				typeof value === 'string' && value in host
+					? () => host[value as keyof typeof host]
+					: isFunction(value)
 						? value
 						: undefined
-			return fn ? new Memo(fn).get : undefined
+			return fn ? createComputed(fn as () => NonNullable<unknown>) : undefined
 		}
 
-		// Iterate through reactives
+		const signals = getSignals(target)
+		const targetName = elementName(target)
+
 		for (const [prop, reactive] of Object.entries(reactives)) {
 			if (reactive == null) continue
+			if (!(prop in target)) {
+				if (DEV_MODE)
+					console[LOG_WARN](
+						`pass(): property '${prop}' does not exist on ${targetName}`,
+					)
+				continue
+			}
 
-			// Ensure target has configurable property
-			const descriptor = Object.getOwnPropertyDescriptor(target, prop)
-			if (!(prop in target) || !descriptor?.configurable) continue
-
-			// Determine getter	and setter
+			// Resolve the reactive to a signal
 			const applied =
 				isFunction(reactive) && reactive.length === 1
 					? reactive(target)
 					: reactive
 			const isArray = Array.isArray(applied) && applied.length === 2
-			const getter = getGetter(isArray ? applied[0] : applied)
-			const setter = isArray && isFunction(applied[1]) ? applied[1] : undefined
-			if (!getter) continue
+			const signal = toSignal(isArray ? applied[0] : applied)
+			if (!signal) continue
 
-			// Store original descriptor for reset and assign new descriptor
-			resetProperties[prop] = descriptor
-			Object.defineProperty(target, prop, {
-				configurable: true,
-				enumerable: true,
-				get: getter,
-				set: setter,
-			})
-
-			// Unset previous value so subscribers are notified
-			descriptor.set?.call(target, UNSET)
-		}
-
-		// Reset to original descriptors on cleanup
-		return () => {
-			Object.defineProperties(target, resetProperties)
+			// Replace the backing signal of the target's Slot
+			const slot = signals[prop]
+			if (isSlot(slot)) {
+				slot.replace(signal)
+			} else if (DEV_MODE) {
+				console[LOG_WARN](
+					`pass(): property '${prop}' on ${targetName} has no Slot — binding skipped`,
+				)
+			}
 		}
 	}
 

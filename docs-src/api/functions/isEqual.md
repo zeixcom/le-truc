@@ -4,11 +4,11 @@
 
 [@zeix/le-truc](../globals.md) / isEqual
 
-# Variable: isEqual()
+# Function: isEqual()
 
-> `const` **isEqual**: \<`T`\>(`a`, `b`, `visited?`) => `boolean`
+> **isEqual**\<`T`\>(`a`, `b`, `visited?`): `boolean`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/diff.d.ts:18
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:45
 
 Checks if two values are equal with cycle detection
 

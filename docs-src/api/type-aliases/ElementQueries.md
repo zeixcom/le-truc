@@ -8,20 +8,20 @@
 
 > **ElementQueries** = `object`
 
-Defined in: [src/ui.ts:106](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/ui.ts#L106)
+Defined in: [src/ui.ts:96](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/ui.ts#L96)
 
 ## Properties
 
 ### all
 
-> **all**: `AllElements`
+> **all**: [`AllElements`](AllElements.md)
 
-Defined in: [src/ui.ts:108](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/ui.ts#L108)
+Defined in: [src/ui.ts:98](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/ui.ts#L98)
 
 ***
 
 ### first
 
-> **first**: `FirstElement`
+> **first**: [`FirstElement`](FirstElement.md)
 
-Defined in: [src/ui.ts:107](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/ui.ts#L107)
+Defined in: [src/ui.ts:97](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/ui.ts#L97)

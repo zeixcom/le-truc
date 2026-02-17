@@ -1,4 +1,4 @@
-import { isFunction, isString } from '@zeix/cause-effect'
+import { isFunction } from '@zeix/cause-effect'
 
 /* === Types === */
 
@@ -72,7 +72,7 @@ const hasMethod = /*#__PURE__*/ <T extends object, K extends PropertyKey, R>(
 	obj: T,
 	methodName: K,
 ): obj is T & Record<K, (...args: any[]) => R> =>
-	isString(methodName) &&
+	typeof methodName === 'string' &&
 	methodName in obj &&
 	isFunction<R>((obj as any)[methodName])
 

@@ -1,16 +1,4 @@
 /**
- * Error thrown when a circular dependency is detected in a selection signal
- *
- * @since 0.14.0
- */
-declare class CircularMutationError extends Error {
-    /**
-     * @param {HTMLElement} host - Host component
-     * @param {string} selector - Selector used to find the elements
-     */
-    constructor(host: HTMLElement, selector: string);
-}
-/**
  * Error thrown when component name violates rules for custom element names
  *
  * @since 0.14.0
@@ -107,4 +95,4 @@ declare class InvalidCustomElementError extends TypeError {
      */
     constructor(target: HTMLElement, where: string);
 }
-export { CircularMutationError, DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPropertyNameError, InvalidEffectsError, InvalidReactivesError, InvalidUIKeyError, MissingElementError, };
+export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPropertyNameError, InvalidEffectsError, InvalidReactivesError, MissingElementError, };

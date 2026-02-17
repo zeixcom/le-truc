@@ -4,11 +4,15 @@
 
 [@zeix/le-truc](../globals.md) / isAsyncFunction
 
-# Variable: isAsyncFunction()
+# Function: isAsyncFunction()
 
-> `const` **isAsyncFunction**: \<`T`\>(`fn`) => `fn is (args: unknown[]) => Promise<T>`
+> **isAsyncFunction**\<`T`\>(`fn`): `fn is (args: unknown[]) => Promise<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:5
+Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:2
+
+Le Truc
+
+Version 0.16.0
 
 ## Type Parameters
 
@@ -25,14 +29,6 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:5
 ## Returns
 
 `fn is (args: unknown[]) => Promise<T>`
-
-## Name
-
-Le Truc
-
-## Version
-
-0.15.1
 
 ## Author
 

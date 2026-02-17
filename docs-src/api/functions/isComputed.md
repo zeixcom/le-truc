@@ -4,11 +4,11 @@
 
 [@zeix/le-truc](../globals.md) / isComputed
 
-# Variable: isComputed()
+# Function: isComputed()
 
-> `const` **isComputed**: \<`T`\>(`value`) => `value is Memo<T>`
+> **isComputed**\<`T`\>(`value`): `value is Memo<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/classes/computed.d.ts:95
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:48
 
 Check if a value is a computed signal
 
@@ -30,7 +30,7 @@ Value to check
 
 `value is Memo<T>`
 
-- True if value is a computed signal, false otherwise
+True if value is a computed signal, false otherwise
 
 ## Since
 

@@ -1,14 +1,11 @@
 import { batchSignalWrites, type Cleanup, isRecord } from '@zeix/cause-effect'
 import type { ComponentProps } from '../component'
-import { type Effect } from '../effects'
+import type { Effect } from '../effects'
+import type { EventType } from '../events'
 import { PASSIVE_EVENTS, schedule } from '../scheduler'
 import { elementName, LOG_ERROR, log } from '../util'
 
 /* === Types === */
-
-type EventType<K extends string> = K extends keyof HTMLElementEventMap
-	? HTMLElementEventMap[K]
-	: Event
 
 type EventHandler<P extends ComponentProps, Evt extends Event> = (
 	event: Evt,

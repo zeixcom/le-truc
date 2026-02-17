@@ -1,7 +1,7 @@
 import {
 	asString,
 	type Component,
-	createSensor,
+	createEventsSensor,
 	defineComponent,
 	read,
 	setText,
@@ -27,7 +27,7 @@ declare global {
 export default defineComponent<FormCheckboxProps, FormCheckboxUI>(
 	'form-checkbox',
 	{
-		checked: createSensor(
+		checked: createEventsSensor(
 			read(ui => ui.checkbox.checked, false),
 			'checkbox',
 			{

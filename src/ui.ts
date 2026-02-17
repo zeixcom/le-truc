@@ -1,7 +1,6 @@
-import type { Collection } from '@zeix/cause-effect'
+import { createMemo, type Memo } from '@zeix/cause-effect'
 import { DependencyTimeoutError, MissingElementError } from './errors'
-import { createElementCollection } from './signals/collection'
-import { isNotYetDefinedComponent } from './util'
+import { DEV_MODE, isNotYetDefinedComponent, LOG_WARN } from './util'
 
 /* === Types === */
 
@@ -90,29 +89,101 @@ type AllElements = {
 	<S extends string>(
 		selector: S,
 		required?: string,
-	): Collection<ElementFromSelector<S>>
-	<E extends Element>(selector: string, required?: string): Collection<E>
+	): Memo<ElementFromSelector<S>[]>
+	<E extends Element>(selector: string, required?: string): Memo<E[]>
 }
-type UI = Record<string, Element | Collection<Element>>
-
-type ElementFromKey<U extends UI, K extends keyof U & string> = NonNullable<
-	U[K] extends Collection<infer E extends Element>
-		? E
-		: U[K] extends Element
-			? U[K]
-			: never
->
 
 type ElementQueries = {
 	first: FirstElement
 	all: AllElements
 }
 
+type UI = Record<string, Element | Memo<Element[]>>
+
+type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<
+	U[K] extends Memo<infer E extends Element[]>
+		? E[number]
+		: U[K] extends Element
+			? U[K]
+			: never
+>
+
 /* === Constants === */
 
-const DEPENDENCY_TIMEOUT = 50
+const DEPENDENCY_TIMEOUT = 200
+
+/* === Internal Functions === */
+
+/**
+ * Extract attribute names from a CSS selector
+ * Handles various attribute selector formats: .class, #id, [attr], [attr=value], [attr^=value], etc.
+ *
+ * @param {string} selector - CSS selector to parse
+ * @returns {string[]} - Array of attribute names found in the selector
+ */
+const extractAttributes = (selector: string): string[] => {
+	const attributes = new Set<string>()
+	if (selector.includes('.')) attributes.add('class')
+	if (selector.includes('#')) attributes.add('id')
+	if (selector.includes('[')) {
+		const parts = selector.split('[')
+		for (let i = 1; i < parts.length; i++) {
+			const part = parts[i]
+			if (!part.includes(']')) continue
+			const attrName = part
+				.split('=')[0]
+				.trim()
+				.replace(/[^a-zA-Z0-9_-]/g, '')
+			if (attrName) attributes.add(attrName)
+		}
+	}
+	return [...attributes]
+}
 
 /* === Exported Functions === */
+
+/**
+ * Create a memo of elements matching a CSS selector.
+ * The MutationObserver is lazily activated when an effect first reads
+ * the memo, and disconnected when no effects are watching.
+ *
+ * @since 0.16.0
+ * @param parent - The parent node to search within
+ * @param selector - The CSS selector to match elements
+ * @returns A Memo of current matching elements
+ */
+function createElementsMemo<S extends string>(
+	parent: ParentNode,
+	selector: S,
+): Memo<ElementFromSelector<S>[]>
+function createElementsMemo<E extends Element>(
+	parent: ParentNode,
+	selector: string,
+): Memo<E[]>
+function createElementsMemo<S extends string>(
+	parent: ParentNode,
+	selector: S,
+): Memo<ElementFromSelector<S>[]> {
+	type E = ElementFromSelector<S>
+
+	return createMemo(() => Array.from(parent.querySelectorAll<E>(selector)), {
+		value: [],
+		watched: invalidate => {
+			const observerConfig: MutationObserverInit = {
+				childList: true,
+				subtree: true,
+			}
+			const observedAttributes = extractAttributes(selector)
+			if (observedAttributes.length) {
+				observerConfig.attributes = true
+				observerConfig.attributeFilter = observedAttributes
+			}
+			const observer = new MutationObserver(() => invalidate())
+			observer.observe(parent, observerConfig)
+			return () => observer.disconnect()
+		},
+	})
+}
 
 /**
  * Create partially applied helper functions to get descendants and run effects on them
@@ -173,25 +244,25 @@ const getHelpers = (
 	function all<S extends string>(
 		selector: S,
 		required?: string,
-	): Collection<ElementFromSelector<S>>
+	): Memo<ElementFromSelector<S>[]>
 	function all<E extends Element>(
 		selector: string,
 		required?: string,
-	): Collection<E>
+	): Memo<E[]>
 	function all<S extends string>(
 		selector: S,
 		required?: string,
-	): Collection<ElementFromSelector<S>> {
-		const collection = createElementCollection(root, selector)
-		const targets = collection.get()
-		if (required != null && !targets.length)
+	): Memo<ElementFromSelector<S>[]> {
+		const targets = createElementsMemo(root, selector)
+		const current = targets.get()
+		if (required != null && !current.length)
 			throw new MissingElementError(host, selector, required)
-		if (targets.length)
-			targets.forEach(target => {
+		if (current.length)
+			for (const target of current) {
 				// Only add to dependencies if element is a custom element that's not yet defined
 				if (isNotYetDefinedComponent(target)) dependencies.add(target.localName)
-			})
-		return collection
+			}
+		return targets
 	}
 
 	/**
@@ -201,25 +272,36 @@ const getHelpers = (
 	 */
 	const resolveDependencies = (callback: () => void) => {
 		if (dependencies.size) {
-			const deps = Array.from(dependencies)
-			Promise.race([
-				Promise.all(deps.map(dep => customElements.whenDefined(dep))),
-				new Promise((_, reject) => {
-					setTimeout(() => {
-						reject(
-							new DependencyTimeoutError(
-								host,
-								deps.filter(dep => !customElements.get(dep)),
-							),
-						)
-					}, DEPENDENCY_TIMEOUT)
-				}),
-			])
-				.then(callback)
-				.catch(() => {
-					// Error during setup of <${name}>. Trying to run effects anyway.
+			// Defer to microtask to filter out components that get defined
+			// synchronously after queries ran (e.g. co-bundled components
+			// whose define() calls execute later in the same script).
+			queueMicrotask(() => {
+				const deps = Array.from(dependencies).filter(
+					dep => !customElements.get(dep),
+				)
+				if (!deps.length) {
 					callback()
-				})
+					return
+				}
+				Promise.race([
+					Promise.all(deps.map(dep => customElements.whenDefined(dep))),
+					new Promise((_, reject) => {
+						setTimeout(() => {
+							reject(
+								new DependencyTimeoutError(
+									host,
+									deps.filter(dep => !customElements.get(dep)),
+								),
+							)
+						}, DEPENDENCY_TIMEOUT)
+					}),
+				])
+					.then(callback)
+					.catch((error: unknown) => {
+						if (DEV_MODE) console[LOG_WARN](error)
+						callback()
+					})
+			})
 		} else {
 			callback()
 		}
@@ -229,9 +311,20 @@ const getHelpers = (
 }
 
 export {
+	type AllElements,
 	type ElementFromKey,
 	type ElementFromSelector,
+	type ElementsFromSelectorArray,
+	type ElementFromSingleSelector,
 	type ElementQueries,
+	type ExtractRightmostSelector,
+	type ExtractTag,
+	type ExtractTagFromSimpleSelector,
+	type FirstElement,
+	type KnownTag,
+	createElementsMemo,
 	getHelpers,
+	type SplitByComma,
+	type TrimWhitespace,
 	type UI,
 }

@@ -6,7 +6,11 @@
 
 # Class: ContextRequestEvent\<T\>
 
+<<<<<<< HEAD
 Defined in: [src/context.ts:78](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/context.ts#L78)
+=======
+Defined in: [src/context.ts:77](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/context.ts#L77)
+>>>>>>> main
 
 Class for context-request events
 
@@ -35,9 +39,13 @@ function to the callback which requesters can invoke to indicate they no longer 
 
 ### Constructor
 
-> **new ContextRequestEvent**\<`T`\>(`context`, `callback`, `subscribe`): `ContextRequestEvent`\<`T`\>
+> **new ContextRequestEvent**\<`T`\>(`context`, `callback`, `subscribe?`): `ContextRequestEvent`\<`T`\>
 
+<<<<<<< HEAD
 Defined in: [src/context.ts:83](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/context.ts#L83)
+=======
+Defined in: [src/context.ts:82](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/context.ts#L82)
+>>>>>>> main
 
 #### Parameters
 
@@ -47,9 +55,9 @@ Defined in: [src/context.ts:83](https://github.com/zeixcom/le-truc/blob/f3b75cd2
 
 ##### callback
 
-`ContextCallback`\<[`ContextType`](../type-aliases/ContextType.md)\<`T`\>\>
+[`ContextCallback`](../type-aliases/ContextCallback.md)\<[`ContextType`](../type-aliases/ContextType.md)\<`T`\>\>
 
-##### subscribe
+##### subscribe?
 
 `boolean` = `false`
 
@@ -105,9 +113,13 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11463
 
 ### callback
 
-> `readonly` **callback**: `ContextCallback`\<[`ContextType`](../type-aliases/ContextType.md)\<`T`\>\>
+> `readonly` **callback**: [`ContextCallback`](../type-aliases/ContextCallback.md)\<[`ContextType`](../type-aliases/ContextType.md)\<`T`\>\>
 
+<<<<<<< HEAD
 Defined in: [src/context.ts:80](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/context.ts#L80)
+=======
+Defined in: [src/context.ts:79](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/context.ts#L79)
+>>>>>>> main
 
 callback function for value getter and unsubscribe function
 
@@ -179,7 +191,11 @@ The read-only **`composed`** property of the or not the event will propagate acr
 
 > `readonly` **context**: `T`
 
+<<<<<<< HEAD
 Defined in: [src/context.ts:79](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/context.ts#L79)
+=======
+Defined in: [src/context.ts:78](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/context.ts#L78)
+>>>>>>> main
 
 context key
 
@@ -301,7 +317,7 @@ The deprecated **`Event.srcElement`** is an alias for the Event.target property.
 
 > `readonly` **subscribe**: `boolean`
 
-Defined in: [src/context.ts:81](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/context.ts#L81)
+Defined in: [src/context.ts:80](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/context.ts#L80)
 
 whether to subscribe to context changes
 

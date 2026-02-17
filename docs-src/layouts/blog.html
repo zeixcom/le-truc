@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>{{ title }} – Le Truc Blog</title>
+		<meta name="description" content="{{ description }}" />
+		<meta name="author" content="{{ author }}" />
+		<meta name="article:published_time" content="{{ published-date }}" />
+		<meta name="article:modified_time" content="{{ modified-date }}" />
+		<link
+			rel="preload"
+			href="{{ base-path }}assets/main.css?v={{ css-hash }}"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="{{ base-path }}assets/main.js?v={{ js-hash }}"
+		/>
+		<link
+			rel="stylesheet"
+			href="{{ base-path }}assets/main.css?v={{ css-hash }}"
+		/>
+		<script
+			type="module"
+			src="{{ base-path }}assets/main.js?v={{ js-hash }}"
+		></script>
+	</head>
+	<body class="blog">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">Le Truc Docs <small>Version 0.15.0</small></h1>
+				{{ include 'menu.html' }}
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<div class="blog-header">
+				<div class="content-grid">
+					<div class="content">
+						<h1 class="blog-title">{{ title }}</h1>
+						<p class="blog-subtitle">{{ description }}</p>
+						<div class="blog-meta">
+							<div class="blog-meta-item">
+								<span>📅</span>
+								<time datetime="{{ published-date }}">{{ published-date-formatted }}</time>
+							</div>
+							<div class="blog-meta-item">
+								<span></span>👤</span>
+								<span>{{ author }}</span>
+							</div>
+							<div class="blog-meta-item">
+								<span>⏱</span>
+								<span>{{ reading-time }} min read</span>
+							</div>
+						</div>
+						<div class="blog-tags">
+							{{ blog-tags }}
+						</div>
+					</div>
+				</div>
+			</div>
+			<main id="main" class="content-grid">
+				<div class="content">
+					<div class="grid" style="grid-template-columns: 1fr 300px; gap: 2rem;">
+						<div class="blog-content">
+							<article>
+								{{ content }}
+							</article>
+							<div class="blog-author">
+								<img src="{{ author-avatar }}" alt="{{ author }}" class="blog-author-avatar" />
+								<div class="blog-author-info">
+									<h3>{{ author }}</h3>
+									<p class="blog-author-bio">{{ author-bio }}</p>
+								</div>
+							</div>
+						</div>
+						<aside class="blog-toc">
+							<h3>Table of Contents</h3>
+							{{ toc }}
+						</aside>
+					</div>
+				</div>
+			</main>
+			<div class="blog-nav">
+				<div class="content-grid">
+					<div class="content">
+						<nav class="blog-nav-links" aria-label="Blog navigation">
+							<a href="{{ prev-post }}" class="blog-nav-link prev">
+								<span class="blog-nav-label">← Previous</span>
+								<span class="blog-nav-title">{{ prev-post-title }}</span>
+							</a>
+							<a href="/blog/" class="blog-nav-link">
+								📋 All Posts
+							</a>
+							<a href="{{ next-post }}" class="blog-nav-link next">
+								<span class="blog-nav-label">Next →</span>
+								<span class="blog-nav-title">{{ next-post-title }}</span>
+							</a>
+						</nav>
+					</div>
+				</div>
+			</div>
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2026 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

@@ -6,11 +6,13 @@
 
 # Function: createSensor()
 
-> **createSensor**\<`T`, `P`, `U`, `K`\>(`init`, `key`, `events`): (`ui`) => [`Computed`](../type-aliases/Computed.md)\<`T`\>
+> **createSensor**\<`T`\>(`watched`, `options?`): [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-Defined in: [src/signals/sensor.ts:164](https://github.com/zeixcom/le-truc/blob/f3b75cd20fa8d2a4f346b020bc9e35faa4881fd2/src/signals/sensor.ts#L164)
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/sensor.d.ts:72
 
-Create a computed signal from transformed event data
+Creates a sensor that tracks external input and updates a state value as long as it is active.
+Sensors get activated when they are first accessed by an effect and deactivated when they are
+no longer watched. This lazy activation pattern ensures resources are only consumed when needed.
 
 ## Type Parameters
 
@@ -18,54 +20,52 @@ Create a computed signal from transformed event data
 
 `T` *extends* `object`
 
-### P
-
-`P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
-
-### U
-
-`U` *extends* [`UI`](../type-aliases/UI.md)
-
-### K
-
-`K` *extends* `string`
+The type of value produced by the sensor
 
 ## Parameters
 
-### init
+### watched
 
-[`ParserOrFallback`](../type-aliases/ParserOrFallback.md)\<`T`, `U`\>
+`SensorCallback`\<`T`\>
 
-Initial value, reader or parser
+The callback invoked when the sensor starts being watched, receives a `set` function and returns a cleanup function.
 
-### key
+### options?
 
-`K`
+[`SensorOptions`](../type-aliases/SensorOptions.md)\<`T`\>
 
-Name of UI key
-
-### events
-
-[`SensorEvents`](../type-aliases/SensorEvents.md)\<`T`, `U`, [`ElementFromKey`](../type-aliases/ElementFromKey.md)\<`U`, `K`\>\>
-
-Transformation functions for events
+Optional configuration for the sensor.
 
 ## Returns
 
-Extractor function for value from event
+[`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-> (`ui`): [`Computed`](../type-aliases/Computed.md)\<`T`\>
-
-### Parameters
-
-#### ui
-
-`U` & `object`
-
-### Returns
-
-[`Computed`](../type-aliases/Computed.md)\<`T`\>
+A read-only sensor signal.
 
 ## Since
 
-0.14.0
+0.18.0
+
+## Examples
+
+```ts
+const mousePos = createSensor<{ x: number; y: number }>((set) => {
+  const handler = (e: MouseEvent) => {
+    set({ x: e.clientX, y: e.clientY });
+  };
+  window.addEventListener('mousemove', handler);
+  return () => window.removeEventListener('mousemove', handler);
+});
+```
+
+```ts
+import { createSensor, SKIP_EQUALITY } from 'cause-effect';
+
+const el = createSensor<HTMLElement>((set) => {
+  const node = document.getElementById('box')!;
+  set(node);
+  const obs = new MutationObserver(() => set(node));
+  obs.observe(node, { attributes: true });
+  return () => obs.disconnect();
+}, { value: node, equals: SKIP_EQUALITY });
+```
