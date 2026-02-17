@@ -3,7 +3,7 @@ import {
 	CalloutClassAttribute,
 	richChildren,
 	titleAttribute,
-} from '../markdoc-helpers'
+} from '../markdoc-constants'
 
 const callout: Schema = {
 	render: 'card-callout',

@@ -4,8 +4,8 @@ import type {
 	Schema,
 	ValidationError,
 } from '@markdoc/markdoc'
+import { commonAttributes } from '../markdoc-constants'
 import {
-	commonAttributes,
 	extractNavigationItem,
 	extractTextFromNode,
 	generateId,

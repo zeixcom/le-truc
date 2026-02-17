@@ -12,6 +12,7 @@ bun run serve:examples   # Build examples, then serve (Playwright-safe)
 bun run build:docs       # One-shot docs build
 bun run test             # Run all Playwright tests
 bun run test:component <name>  # Run tests for a single component
+bun run test:server      # Run server unit/integration tests
 ```
 
 ## Architecture Overview
@@ -63,6 +64,8 @@ The build watcher drives correctness (rebuilds); the server watcher drives liven
 | `build:examples` | `bun run build:examples:js && bun run build:examples:css` | N/A | No | N/A |
 | `test` | `bunx playwright test examples` | N/A | N/A | N/A |
 | `test:component` | `bun scripts/test-component.ts <name>` | N/A | N/A | N/A |
+| `test:server` | `bun test server/__tests__` | N/A | N/A | N/A |
+| `test:server:watch` | `bun test server/__tests__ --watch` | N/A | N/A | N/A |
 
 ## Reactive Build Pipeline
 
@@ -174,12 +177,18 @@ Configured in `markdoc.config.ts`:
 
 Note: `link.markdoc.ts` exists as a schema file but is **not registered** in `markdoc.config.ts`. Link `.md` → `.html` conversion is handled by `postProcessHtml()` in `markdoc-helpers.ts` instead.
 
+### Markdoc Constants
+
+`markdoc-constants.ts` provides shared constants and attribute definitions used by all Markdoc schemas. It was extracted from `markdoc-helpers.ts` to avoid circular dependencies between helpers and schema files.
+
+- **Attribute classes:** `ClassAttribute`, `IdAttribute`, `CalloutClassAttribute` — custom Markdoc attribute types with `validate()` and `transform()` methods
+- **Attribute definitions:** `classAttribute`, `idAttribute`, `styleAttribute`, `titleAttribute`, `requiredTitleAttribute`, `commonAttributes`, `styledAttributes`
+- **Children definitions:** `standardChildren`, `richChildren`
+
 ### Markdoc Helpers
 
 `markdoc-helpers.ts` provides shared utilities for schema development:
 
-- **Attribute definitions:** `classAttribute`, `idAttribute`, `styleAttribute`, `titleAttribute`, `commonAttributes`, `styledAttributes`
-- **Children definitions:** `standardChildren`, `richChildren`
 - **Node utilities:** `extractTextFromNode()`, `transformChildrenWithConfig()`, `splitContentBySeparator()`
 - **HTML generation:** `createNavigationButton()`, `createTabButton()`, `createAccessibleHeading()`, `createVisuallyHiddenHeading()`
 - **Post-processing:** `postProcessHtml()` — link rewriting, API content wrapping
@@ -304,6 +313,72 @@ hmrScriptTag({
 | `sitemap.ts` | `sitemapUrl()`, `sitemap()` | `sitemapEffect` |
 
 Note: `templates/utils.ts` `html` produces **plain HTML strings**; `markdoc-helpers.ts` `html` produces **Markdoc `Tag` objects**. They are different functions imported from different paths.
+
+## Testing (`server/__tests__/`)
+
+The server has a test suite using **Bun's built-in test runner** (`bun:test`). Tests live in `server/__tests__/` and mirror the source module structure.
+
+### Running Tests
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `test:server` | `bun test server/__tests__` | Run all server tests |
+| `test:server:unit` | `bun test server/__tests__ --bail` | Run with bail on first failure |
+| `test:server:integration` | `bun test server/__tests__ --timeout 10000` | Run with longer timeout |
+| `test:server:watch` | `bun test server/__tests__ --watch` | Watch mode for development |
+
+### Test Structure
+
+```
+server/__tests__/
+├── helpers/
+│   └── test-utils.ts              # Shared utilities (temp dirs, mocks, assertions)
+├── io.test.ts                     # IO utilities
+├── markdoc-constants.test.ts      # Attribute classes and constant definitions
+├── markdoc-helpers.test.ts        # Node utilities, tag helpers, post-processing
+├── schema/
+│   ├── fence.test.ts              # Code block schema
+│   └── heading.test.ts            # Heading schema
+└── templates/
+    └── utils.test.ts              # Tagged template literals, escaping, validation
+```
+
+### Test Categories
+
+| Category | Mocking | File I/O | Network | Typical runtime |
+|----------|---------|----------|---------|-----------------|
+| **Unit** | None | No | No | < 5 ms per test |
+| **Integration** | Minimal | Temp dirs | No | < 500 ms per test |
+| **Server** | Build pipeline | Temp dirs | localhost HTTP | < 2 s per test |
+
+### Current Coverage (P0 — highest priority)
+
+| Test file | Tests | Module |
+|-----------|-------|--------|
+| `io.test.ts` | 39 | File hashing, paths, compression, safe writes |
+| `templates/utils.test.ts` | 95 | Tagged templates, escaping, slugs, sorting, validation |
+| `schema/fence.test.ts` | 28 | Code block transformation pipeline |
+| `markdoc-helpers.test.ts` | 45 | Node utilities, tag helpers, post-processing |
+| `markdoc-constants.test.ts` | 40 | Attribute classes, constant definitions |
+| `schema/heading.test.ts` | 29 | Heading levels, anchors, ID generation |
+
+**Total:** 276 tests, ~200 ms execution time.
+
+### Test Helpers
+
+`server/__tests__/helpers/test-utils.ts` provides shared utilities:
+
+- **Temp directories:** `createTempDir()`, `createTempFile()`, `createTempStructure()`
+- **Mock generators:** `mockMarkdown()`, `mockHtml()`, `mockFileInfo()`, `mockRequestContext()`
+- **Assertions:** `assertContains()`, `assertNotContains()`, `assertMatches()`, `assertValidHtml()`
+- **Async:** `wait()`, `retryUntil()`
+- **Normalization:** `normalizeWhitespace()`, `normalizeHtml()`
+
+### References
+
+- [TESTS.md](./TESTS.md) — Full test plan with specifications for all modules
+- [TEST-SUMMARY.md](./TEST-SUMMARY.md) — Implementation progress and resolved issues
+- [__tests__/README.md](./\_\_tests\_\_/README.md) — Test usage guidelines
 
 ## Configuration (`config.ts`)
 

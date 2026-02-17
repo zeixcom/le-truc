@@ -7,7 +7,7 @@ import {
 } from '@zeix/cause-effect'
 import { codeToHtml } from 'shiki'
 import {
-	// API_DIR,
+	API_DIR,
 	COMPONENTS_DIR,
 	// INCLUDES_DIR,
 	INPUT_DIR,
@@ -343,9 +343,9 @@ const libraryScripts = {
 	sources: await watchFiles(SRC_DIR, '**/*.ts'),
 }
 
-/* const apiMarkdown = {
-	sources: await watchFiles(API_DIR, '** /*.md'),
-} */
+const apiMarkdown = {
+	sources: await watchFiles(API_DIR, '**/*.md'),
+}
 
 const componentMarkup = {
 	sources: await watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'),
@@ -364,7 +364,7 @@ const componentScripts = {
 }
 
 export {
-	// apiMarkdown,
+	apiMarkdown,
 	componentMarkdown,
 	componentMarkup,
 	componentScripts,

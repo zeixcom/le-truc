@@ -4,7 +4,7 @@ import Markdoc, {
 	type RenderableTreeNode,
 	type Schema,
 } from '@markdoc/markdoc'
-import { commonAttributes, standardChildren } from '../markdoc-helpers'
+import { commonAttributes, standardChildren } from '../markdoc-constants'
 
 const hero: Schema = {
 	render: 'section-hero',

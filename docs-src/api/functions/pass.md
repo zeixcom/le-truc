@@ -8,7 +8,7 @@
 
 > **pass**\<`P`, `Q`\>(`props`): [`Effect`](../type-aliases/Effect.md)\<`P`, [`Component`](../type-aliases/Component.md)\<`Q`\>\>
 
-Defined in: [src/effects/pass.ts:42](https://github.com/zeixcom/le-truc/blob/29df9dc153407528423acb370c4f28ebc628bed2/src/effects/pass.ts#L42)
+Defined in: [src/effects/pass.ts:42](https://github.com/zeixcom/le-truc/blob/d14510e550dfc154f9f0472e7b8adcdb3ab3002e/src/effects/pass.ts#L42)
 
 Effect for passing reactive values to a descendant Le Truc component
 by replacing the backing signal of the target's Slot.

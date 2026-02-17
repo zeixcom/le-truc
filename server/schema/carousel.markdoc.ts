@@ -1,6 +1,6 @@
 import { type Node, type Schema, Tag } from '@markdoc/markdoc'
+import { commonAttributes } from '../markdoc-constants'
 import {
-	commonAttributes,
 	createNavigationButton,
 	createTabButton,
 	createVisuallyHiddenHeading,
@@ -21,7 +21,7 @@ const carousel: Schema = {
 			default: 5000,
 		},
 	},
-	transform(node: Node) {
+	transform(node: Node, config) {
 		// Extract slides from children
 		const slideNodes =
 			node.children?.filter(
@@ -41,7 +41,10 @@ const carousel: Schema = {
 			}
 
 			// Transform slide content
-			const slideContent = transformChildrenWithConfig(slideNode.children || [])
+			const slideContent = transformChildrenWithConfig(
+				slideNode.children || [],
+				config,
+			)
 
 			// Create slide title as h3
 			const slideTitle = new Tag('h3', {}, [title])

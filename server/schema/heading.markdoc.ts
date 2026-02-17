@@ -4,18 +4,16 @@ import Markdoc, {
 	type Schema,
 	type Tag,
 } from '@markdoc/markdoc'
-import { createAccessibleHeading } from '../markdoc-helpers'
+import {
+	createAccessibleHeading,
+	extractTextFromNode,
+} from '../markdoc-helpers'
 
 const heading: Schema = {
 	...Markdoc.nodes.heading,
 	transform(node: Node, config: Config) {
-		if (!Markdoc.nodes.heading.transform) {
-			throw new Error('Markdoc.nodes.heading.transform is not defined')
-		}
-		const base = Markdoc.nodes.heading.transform(node, config) as Tag
-
-		const text =
-			base.children?.filter(child => typeof child === 'string').join(' ') || ''
+		// Extract text from the original node's children before transformation
+		const text = extractTextFromNode(node)
 		return createAccessibleHeading(node.attributes.level, text)
 	},
 }

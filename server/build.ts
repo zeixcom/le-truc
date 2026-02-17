@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { apiEffect } from './effects/api'
+import { apiPagesEffect } from './effects/api-pages'
 import { cssEffect } from './effects/css'
 import { examplesEffect } from './effects/examples'
 import { jsEffect } from './effects/js'
@@ -62,6 +63,7 @@ export async function build(
 		console.log('🚀 Initializing effects...')
 
 		const apiCleanup = apiEffect()
+		const apiPagesCleanup = apiPagesEffect()
 		const cssCleanup = cssEffect()
 		const jsCleanup = jsEffect()
 		const serviceWorkerCleanup = serviceWorkerEffect()
@@ -85,6 +87,7 @@ export async function build(
 		// Return cleanup function for graceful shutdown
 		return () => {
 			apiCleanup?.()
+			apiPagesCleanup?.()
 			cssCleanup?.()
 			jsCleanup?.()
 			serviceWorkerCleanup?.()

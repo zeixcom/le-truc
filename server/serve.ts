@@ -274,6 +274,12 @@ async function startServer() {
 			// Not found for test routes
 			'/test/*': new Response('Not Found', { status: 404 }),
 
+			// API documentation fragments (lazy-loaded by listnav)
+			'/api/:category/:page': req =>
+				handleStaticFile(
+					getFilePath(OUTPUT_DIR, 'api', req.params.category, req.params.page),
+				),
+
 			// Documentation pages
 			'/:page': async req => {
 				if (acceptsMarkdown(req)) {

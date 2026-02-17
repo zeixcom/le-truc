@@ -1,7 +1,6 @@
 import Markdoc, { type Node, type Schema } from '@markdoc/markdoc'
+import { commonAttributes, richChildren } from '../markdoc-constants'
 import {
-	commonAttributes,
-	richChildren,
 	splitContentBySeparator,
 	transformChildrenWithConfig,
 } from '../markdoc-helpers'
@@ -10,7 +9,7 @@ const demo: Schema = {
 	render: 'module-demo',
 	children: [...richChildren, 'document', 'source'],
 	attributes: commonAttributes,
-	transform(node: Node) {
+	transform(node: Node, config) {
 		// Split content by HR separator
 		const sections = splitContentBySeparator(node.children || [])
 
@@ -50,8 +49,10 @@ const demo: Schema = {
 		}
 
 		// Transform the markdown nodes after the separator
-		const transformedMarkdown =
-			transformChildrenWithConfig(markdownNodes).filter(Boolean)
+		const transformedMarkdown = transformChildrenWithConfig(
+			markdownNodes,
+			config,
+		).filter(Boolean)
 
 		// Store raw HTML as attribute for post-processing, similar to module-codeblock
 		return new Markdoc.Tag(
