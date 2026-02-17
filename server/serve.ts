@@ -1,4 +1,3 @@
-import { watch } from 'node:fs'
 import { buildOnce } from './build'
 import {
 	ASSETS_DIR,
@@ -7,6 +6,8 @@ import {
 	LAYOUTS_DIR,
 	OUTPUT_DIR,
 	PAGES_DIR,
+	ROUTE_LAYOUT_MAP,
+	SOURCES_DIR,
 	SERVER_CONFIG,
 } from './config'
 import { fileExists, getFilePath } from './io'
@@ -46,6 +47,20 @@ const isDevelopment =
 /* === Utility Functions === */
 
 const layoutsCache = new Map<string, string>()
+
+const clearLayoutCache = () => layoutsCache.clear()
+
+const getLayoutForPath = (urlPath: string): string => {
+	for (const [prefix, layout] of Object.entries(ROUTE_LAYOUT_MAP)) {
+		if (prefix === '/') continue
+		if (prefix.endsWith('/')) {
+			if (urlPath.startsWith(prefix)) return layout
+		} else {
+			if (urlPath === prefix) return layout
+		}
+	}
+	return ROUTE_LAYOUT_MAP['/'] || 'page'
+}
 
 const getCachedLayout = async (file: string) => {
 	if (!layoutsCache.has(file)) {
@@ -99,7 +114,8 @@ const handleComponentTest = async (
 		}
 
 		const componentContent = await Bun.file(componentPath).text()
-		const layoutContent = await getCachedLayout('test.html')
+		const layoutName = getLayoutForPath(`/test/${componentName}`)
+		const layoutContent = await getCachedLayout(`${layoutName}.html`)
 		let finalContent = replaceTemplateVariables(layoutContent, {
 			content: componentContent,
 			title: componentName,
@@ -156,31 +172,6 @@ const handleMarkdownSource = async (
 	})
 }
 
-/* const handleComponentMock = async (filePath: string): Promise<Response> => {
-	if (!fileExists(filePath)) {
-		// Try fallback pattern: /component-name/file.html -> component-name/mocks/file.html
-		const pathSegments = filePath.split('/')
-		const fileName = pathSegments.pop()
-		const componentName = pathSegments.pop()
-
-		if (componentName && fileName) {
-			const fallbackPath = getFilePath(
-				COMPONENTS_DIR,
-				componentName,
-				'mocks',
-				fileName,
-			)
-			if (fileExists(fallbackPath)) {
-				return handleStaticFile(fallbackPath)
-			}
-		}
-
-		return new Response('Not Found', { status: 404 })
-	}
-
-	return handleStaticFile(filePath)
-} */
-
 /* === HMR Functions === */
 
 const broadcastToHMRClients = (message: HMRMessage | string) => {
@@ -195,54 +186,6 @@ const broadcastToHMRClients = (message: HMRMessage | string) => {
 		}
 	}
 }
-
-const setupFileWatcher = () => {
-	if (!isDevelopment) return
-
-	const watchPaths = [
-		'src',
-		'examples',
-		'docs-src',
-		'server/effects',
-		'server/templates',
-		'index.ts',
-		'package.json',
-	]
-
-	console.log('📁 Setting up file watchers for:', watchPaths.join(', '))
-
-	watchPaths.forEach(watchPath => {
-		if (fileExists(watchPath)) {
-			try {
-				watch(watchPath, { recursive: true }, (eventType, filename) => {
-					if (filename) {
-						console.log(`📝 File changed: ${watchPath}/${filename}`)
-
-						// Clear layout cache on template changes
-						if (watchPath.includes('layouts')) {
-							layoutsCache.clear()
-						}
-
-						// Broadcast file change to HMR clients
-						broadcastToHMRClients({
-							type: 'file-changed',
-							path: `${watchPath}/${filename}`,
-						})
-
-						// Trigger page reload after short delay to allow for build completion
-						setTimeout(() => {
-							broadcastToHMRClients('reload')
-						}, 500)
-					}
-				})
-			} catch (error) {
-				console.warn(`⚠️  Could not watch ${watchPath}:`, error)
-			}
-		}
-	})
-}
-
-// WebSocket handling is now done in the websocket handlers below
 
 /* === Server === */
 
@@ -309,6 +252,10 @@ async function startServer() {
 			// Example component's source code
 			'/examples/:component': req =>
 				handleStaticFile(getFilePath(EXAMPLES_DIR, req.params.component)),
+
+			// Source code fragments for documentation
+			'/sources/:file': req =>
+				handleStaticFile(getFilePath(SOURCES_DIR, req.params.file)),
 
 			// Component tests mock files
 			'/test/:component/mocks/:mock': req =>
@@ -378,10 +325,8 @@ async function startServer() {
 		},
 	})
 
-	// Setup file watching for HMR
 	if (isDevelopment) {
-		setupFileWatcher()
-		console.log('🔥 HMR enabled - watching for file changes...')
+		console.log('🔥 HMR enabled')
 	}
 
 	console.log(`🚀 Server running at ${server.url}`)
@@ -391,8 +336,9 @@ async function startServer() {
 	if (process.env.PLAYWRIGHT) console.log('🎭 Playwright mode (HMR disabled)')
 }
 
-// Start the server
-startServer()
+// Start the server only when run directly
+if (import.meta.main) {
+	startServer()
+}
 
-// Export for use in build system
-export { broadcastToHMRClients, hmrClients }
+export { broadcastToHMRClients, clearLayoutCache, hmrClients, startServer }

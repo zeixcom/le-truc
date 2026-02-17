@@ -76,9 +76,10 @@ export async function build(
 		const duration = performance.now() - startTime
 		console.log(`✅ Build completed in ${duration.toFixed(2)}ms`)
 
-		// Notify HMR clients of successful build
+		// Notify HMR clients of successful build and trigger reload
 		if (watch) {
 			notifyHMR('build-success')
+			hmrBroadcast?.('reload')
 		}
 
 		// Return cleanup function for graceful shutdown

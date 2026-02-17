@@ -48,13 +48,11 @@ export type PageMetadata = {
 	title?: string
 	description?: string
 	emoji?: string
-	url?: string
 	section?: string
+	layout?: string
 	order?: number
 	draft?: boolean
 	tags?: string[]
-	created?: Date
-	updated?: Date
 }
 
 export type ProcessedMarkdownFile = FileInfo & {
@@ -103,6 +101,7 @@ function extractFrontmatter(content: string): {
 				case 'description':
 				case 'emoji':
 				case 'section':
+				case 'layout':
 					metadata[key] = value
 					break
 				case 'order':

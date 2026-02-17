@@ -2,7 +2,7 @@
 title: 'Examples'
 emoji: '🍽️'
 description: 'Common use cases and demos'
-layout: 'overview'
+layout: 'page'
 ---
 
 {% hero %}

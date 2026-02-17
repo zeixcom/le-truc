@@ -312,8 +312,8 @@ export function createAccessibleHeading(
 
 	return new Tag(`h${level}`, { id: slug, ...attributes }, [
 		new Tag('a', { name: slug, class: 'anchor', href: `#${slug}` }, [
-			new Tag('span', { class: 'permalink' }, ['🔗']),
 			new Tag('span', { class: 'title' }, [text]),
+			new Tag('span', { class: 'permalink' }, ['#']),
 		]),
 	])
 }
@@ -350,11 +350,6 @@ export function renderValidationErrors(
 /* === HTML Post-Processing === */
 
 export function postProcessHtml(htmlStr: string, section?: string): string {
-	htmlStr = htmlStr.replace(
-		/href="([^"]*\.md)"/g,
-		(_, href) => `href="${href.replace(/\.md$/, '.html')}"`,
-	)
-
 	if (section === 'api') {
 		htmlStr = `<section class="api-content">\n${htmlStr}\n</section>`
 	}

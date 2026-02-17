@@ -153,12 +153,14 @@ Just because Le Truc is a JavaScript library doesn't mean you have to use JavaSc
 Here's the example of the `<card-callout>` we're using in this documentation:
 
 {% demo %}
+```html
 <card-callout>This is an informational message.</card-callout>
 <card-callout class="tip">Remember to hydrate while coding!</card-callout>
 <card-callout class="caution">Be careful with this operation.</card-callout>
 <card-callout class="danger">This action is irreversible!</card-callout>
 <card-callout class="note">This is just a side note.</card-callout>
----
+```
+
 {% sources title="Source code" src="./sources/card-callout.html" /%}
 {% /demo %}
 

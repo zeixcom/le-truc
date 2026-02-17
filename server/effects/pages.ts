@@ -1,22 +1,25 @@
 import { createEffect, match } from '@zeix/cause-effect'
 import { ASSETS_DIR, INCLUDES_DIR, LAYOUTS_DIR, OUTPUT_DIR } from '../config'
 import { docsMarkdown, type ProcessedMarkdownFile } from '../file-signals'
-import { getFileContent, getFilePath, writeFileSafe } from '../io'
+import {
+	calculateFileHash,
+	getFileContent,
+	getFilePath,
+	writeFileSafe,
+} from '../io'
 import { performanceHints } from '../templates/performance-hints'
 
 /* === Internal Functionals === */
 
-const generateAssetHash = (_filePath: string): string => {
-	// Simple timestamp-based hash for development
-	// In production, this would read the actual file hash
-	return Date.now().toString(36)
-}
-
-const getAssetHashes = (): { css: string; js: string } => {
+const getAssetHashes = async (): Promise<{ css: string; js: string }> => {
 	try {
+		const [cssContent, jsContent] = await Promise.all([
+			getFileContent(getFilePath(ASSETS_DIR, 'main.css')),
+			getFileContent(getFilePath(ASSETS_DIR, 'main.js')),
+		])
 		return {
-			css: generateAssetHash(getFilePath(ASSETS_DIR, 'main.css')),
-			js: generateAssetHash(getFilePath(ASSETS_DIR, 'main.js')),
+			css: calculateFileHash(cssContent),
+			js: calculateFileHash(jsContent),
 		}
 	} catch {
 		return { css: 'dev', js: 'dev' }
@@ -64,9 +67,13 @@ const analyzePageForPreloads = (htmlContent: string): string[] => {
 
 const applyTemplate = async (
 	processedFile: ProcessedMarkdownFile,
+	assetHashes: { css: string; js: string },
 ): Promise<string> => {
 	try {
-		let layout = await getFileContent(getFilePath(LAYOUTS_DIR, 'page.html'))
+		const layoutName = processedFile.metadata.layout || 'page'
+		let layout = await getFileContent(
+			getFilePath(LAYOUTS_DIR, `${layoutName}.html`),
+		)
 
 		// Load includes first
 		layout = await loadIncludes(layout)
@@ -77,9 +84,6 @@ const applyTemplate = async (
 
 		// Replace content
 		layout = layout.replace('{{ content }}', processedFile.htmlContent)
-
-		// Get asset hashes
-		const assetHashes = getAssetHashes()
 
 		// Replace template variables
 		const replacements: { [key: string]: string } = {
@@ -119,12 +123,17 @@ export const pagesEffect = () =>
 				try {
 					console.log('📚 Generating HTML pages from processed markdown...')
 
+					const assetHashes = await getAssetHashes()
+
 					// Process all markdown files
 					const processPromises = Array.from(processedFiles.values()).map(
 						async (processedFile: ProcessedMarkdownFile) => {
 							try {
 								// Apply template
-								const finalHtml = await applyTemplate(processedFile)
+								const finalHtml = await applyTemplate(
+									processedFile,
+									assetHashes,
+								)
 
 								// Write output file
 								await writeFileSafe(

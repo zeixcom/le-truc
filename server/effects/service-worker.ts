@@ -1,5 +1,5 @@
 import { createEffect, match } from '@zeix/cause-effect'
-import { OUTPUT_DIR } from '../config'
+import { ASSETS_DIR, OUTPUT_DIR } from '../config'
 import {
 	componentScripts,
 	componentStyles,
@@ -7,7 +7,12 @@ import {
 	docsStyles,
 	libraryScripts,
 } from '../file-signals'
-import { getFilePath, writeFileSafe } from '../io'
+import {
+	calculateFileHash,
+	getFileContent,
+	getFilePath,
+	writeFileSafe,
+} from '../io'
 import {
 	type ServiceWorkerConfig,
 	serviceWorker,
@@ -28,15 +33,17 @@ export const serviceWorkerEffect = () =>
 					try {
 						console.log('🔧 Generating service worker...')
 
-						// Generate asset hashes based on current timestamp
-						// In production, these would be actual file content hashes
-						const cssHash = Date.now().toString(36)
-						const jsHash = Date.now().toString(36)
+						const [cssContent, jsContent] = await Promise.all([
+							getFileContent(getFilePath(ASSETS_DIR, 'main.css')),
+							getFileContent(getFilePath(ASSETS_DIR, 'main.js')),
+						])
+						const cssHash = calculateFileHash(cssContent)
+						const jsHash = calculateFileHash(jsContent)
 
 						const config: ServiceWorkerConfig = {
 							cssHash,
 							jsHash,
-							cacheName: `le-truc-docs-v${Date.now()}`,
+							cacheName: `le-truc-docs-${cssHash.slice(0, 8)}-${jsHash.slice(0, 8)}`,
 							staticAssets: ['/', '/index.html'],
 						}
 						await writeFileSafe(

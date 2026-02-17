@@ -27,10 +27,26 @@ const demo: Schema = {
 				.map((child: Node) => extractRawContent(child))
 				.join('\n')
 		} else if (sections.length === 1) {
-			// No separator found, treat all content as HTML preview
-			previewContent = sections[0]
-				.map((child: Node) => extractRawContent(child))
-				.join('\n')
+			const children = sections[0]
+
+			// Check if a fence node is present (code block style demo)
+			const fenceIndex = children.findIndex(
+				(child: Node) => child.type === 'fence',
+			)
+
+			if (fenceIndex !== -1) {
+				// Fence content is the HTML preview
+				previewContent = children[fenceIndex].attributes.content || ''
+				// Remaining nodes after the fence are markdown (e.g. {% sources %})
+				markdownNodes = children.filter(
+					(_: Node, i: number) => i !== fenceIndex,
+				)
+			} else {
+				// No fence, no separator: treat all content as HTML preview
+				previewContent = children
+					.map((child: Node) => extractRawContent(child))
+					.join('\n')
+			}
 		}
 
 		// Transform the markdown nodes after the separator

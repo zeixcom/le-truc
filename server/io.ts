@@ -1,4 +1,4 @@
-import { existsSync, watch } from 'fs'
+import { existsSync } from 'fs'
 import { mkdir, readdir, stat } from 'fs/promises'
 import { createHash } from 'crypto'
 import { basename, dirname, extname, join, relative } from 'path'
@@ -115,26 +115,6 @@ const getRelativePath = (basePath: string, filePath: string): string | null => {
 	}
 }
 
-const watchDirectory = async (
-	directoryPath: string,
-	recursive: boolean,
-	isMatching: (filename: string) => boolean,
-	onUpdate: (filePath: string, filename: string) => void,
-	onDelete: (filePath: string) => void,
-): Promise<void> => {
-	watch(
-		directoryPath,
-		{ recursive, persistent: true },
-		async (event, filename) => {
-			if (!filename || !isMatching(filename)) return
-
-			const filePath = join(directoryPath, filename)
-			if (event === 'rename' && !existsSync(filePath)) onDelete(filePath)
-			else onUpdate(filePath, filename)
-		},
-	)
-}
-
 /**
  * Write file asynchronously and safely (ensure parent dir exists) using Bun.write.
  */
@@ -169,6 +149,5 @@ export {
 	getFilePath,
 	getRelativePath,
 	isPlaywrightRunning,
-	watchDirectory,
 	writeFileSafe,
 }

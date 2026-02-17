@@ -3,25 +3,23 @@ import Markdoc, { type Node, type Schema, Tag } from '@markdoc/markdoc'
 const link: Schema = {
 	...Markdoc.nodes.link,
 	transform(node: Node, config) {
-		const base = Markdoc.nodes.link.transform?.(node, config) as Tag
-		if (!base || base.name !== 'a') return base
+		const children = node.transformChildren(config)
+		let href = node.attributes.href as string | undefined
+		const title = node.attributes.title as string | undefined
 
-		// Get the href attribute
-		const href = base.attributes?.href
-
-		if (typeof href === 'string' && href.endsWith('.md')) {
-			// Convert .md to .html for internal links
-			return new Tag(
-				'a',
-				{
-					...base.attributes,
-					href: href.replace(/\.md$/, '.html'),
-				},
-				base.children,
-			)
+		if (
+			typeof href === 'string'
+			&& href.endsWith('.md')
+			&& !href.includes('://')
+		) {
+			href = href.replace(/\.md$/, '.html')
 		}
 
-		return base
+		const attrs: Record<string, unknown> = {}
+		if (href) attrs.href = href
+		if (title) attrs.title = title
+
+		return new Tag('a', attrs, children)
 	},
 }
 
