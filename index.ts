@@ -111,7 +111,6 @@ export { setProperty, show } from './src/effects/property'
 export { setStyle } from './src/effects/style'
 export { setText } from './src/effects/text'
 export {
-	CircularMutationError,
 	DependencyTimeoutError,
 	InvalidComponentNameError,
 	InvalidCustomElementError,

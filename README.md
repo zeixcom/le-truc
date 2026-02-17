@@ -2,9 +2,9 @@
 
 Version 0.16.0
 
-**Le Truc - the thing for type-safe reactive web components**
+**Le Truc - the thing for type-safe reactive Web Components**
 
-Le Truc helps you create reusable, interactive web components that work with any backend or static site generator. Build once, use everywhere.
+Le Truc helps you create reusable, interactive Web Components that work with any backend or static site generator. Build once, use everywhere.
 
 Le Truc is a set of functions to build reusable, loosely coupled Web Components with reactive properties. It provides structure through components and simplifies state management and DOM synchronization using signals and effects, leading to more organized and maintainable code without a steep learning curve.
 
@@ -53,7 +53,7 @@ defineComponent(
 - 🧩 **Function Composition**: Declare component behavior by composing small, reusable functions (parsers and effects).
 - 🛠️ **Customizable**: Le Truc is designed to be easily customizable and extensible. Create your own custom parsers and effects to suit your specific needs.
 - 🌐 **Context Support**: Share global states across components without prop drilling or tightly coupling logic.
-- 🪶 **Tiny footprint**: Minimal core (~8kB gzipped) with tree-shaking support, minimizing JavaScript bundle size.
+- 🪶 **Tiny footprint**: Minimal core (~10kB gzipped) with tree-shaking support, minimizing JavaScript bundle size.
 - 🛡️ **Type Safety**: Early warnings when types don't match improve code quality and reduce bugs.
 
 Le Truc uses [Cause & Effect](https://github.com/zeixcom/cause-effect) internally for state management with signals and glitch-free DOM updates. If wanted, you could fork Le Truc and replace Cause & Effect with a different state management library without changes to the user-facing `defineComponent()` API.

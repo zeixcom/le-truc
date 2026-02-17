@@ -1,6 +1,6 @@
 import { createMemo, type Memo } from '@zeix/cause-effect'
 import { DependencyTimeoutError, MissingElementError } from './errors'
-import { isNotYetDefinedComponent } from './util'
+import { DEV_MODE, isNotYetDefinedComponent, LOG_WARN } from './util'
 
 /* === Types === */
 
@@ -110,7 +110,7 @@ type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<
 
 /* === Constants === */
 
-const DEPENDENCY_TIMEOUT = 50
+const DEPENDENCY_TIMEOUT = 200
 
 /* === Internal Functions === */
 
@@ -272,25 +272,36 @@ const getHelpers = (
 	 */
 	const resolveDependencies = (callback: () => void) => {
 		if (dependencies.size) {
-			const deps = Array.from(dependencies)
-			Promise.race([
-				Promise.all(deps.map(dep => customElements.whenDefined(dep))),
-				new Promise((_, reject) => {
-					setTimeout(() => {
-						reject(
-							new DependencyTimeoutError(
-								host,
-								deps.filter(dep => !customElements.get(dep)),
-							),
-						)
-					}, DEPENDENCY_TIMEOUT)
-				}),
-			])
-				.then(callback)
-				.catch(() => {
-					// Error during setup of <${name}>. Trying to run effects anyway.
+			// Defer to microtask to filter out components that get defined
+			// synchronously after queries ran (e.g. co-bundled components
+			// whose define() calls execute later in the same script).
+			queueMicrotask(() => {
+				const deps = Array.from(dependencies).filter(
+					dep => !customElements.get(dep),
+				)
+				if (!deps.length) {
 					callback()
-				})
+					return
+				}
+				Promise.race([
+					Promise.all(deps.map(dep => customElements.whenDefined(dep))),
+					new Promise((_, reject) => {
+						setTimeout(() => {
+							reject(
+								new DependencyTimeoutError(
+									host,
+									deps.filter(dep => !customElements.get(dep)),
+								),
+							)
+						}, DEPENDENCY_TIMEOUT)
+					}),
+				])
+					.then(callback)
+					.catch((error: unknown) => {
+						if (DEV_MODE) console[LOG_WARN](error)
+						callback()
+					})
+			})
 		} else {
 			callback()
 		}

@@ -4,11 +4,11 @@
 
 # Le Truc
 
-Version 0.15.0
+Version 0.16.0
 
-**Le Truc - the thing for type-safe reactive web components**
+**Le Truc - the thing for type-safe reactive Web Components**
 
-Le Truc helps you create reusable, interactive web components that work with any backend or static site generator. Build once, use everywhere.
+Le Truc helps you create reusable, interactive Web Components that work with any backend or static site generator. Build once, use everywhere.
 
 Le Truc is a set of functions to build reusable, loosely coupled Web Components with reactive properties. It provides structure through components and simplifies state management and DOM synchronization using signals and effects, leading to more organized and maintainable code without a steep learning curve.
 
@@ -57,10 +57,10 @@ defineComponent(
 - 🧩 **Function Composition**: Declare component behavior by composing small, reusable functions (parsers and effects).
 - 🛠️ **Customizable**: Le Truc is designed to be easily customizable and extensible. Create your own custom parsers and effects to suit your specific needs.
 - 🌐 **Context Support**: Share global states across components without prop drilling or tightly coupling logic.
-- 🪶 **Tiny footprint**: Minimal core (~8kB gzipped) with tree-shaking support, minimizing JavaScript bundle size.
+- 🪶 **Tiny footprint**: Minimal core (~10kB gzipped) with tree-shaking support, minimizing JavaScript bundle size.
 - 🛡️ **Type Safety**: Early warnings when types don't match improve code quality and reduce bugs.
 
-Le Truc uses [Cause & Effect](https://github.com/zeixcom/cause-effect) internally for state management with signals and glitch-free DOM updates. If wanted, you could fork Le Truc and replace Cause & Effect with a different state management library without changes to the user-facing `createComponent()` API.
+Le Truc uses [Cause & Effect](https://github.com/zeixcom/cause-effect) internally for state management with signals and glitch-free DOM updates. If wanted, you could fork Le Truc and replace Cause & Effect with a different state management library without changes to the user-facing `defineComponent()` API.
 
 ## Installation
 
@@ -215,12 +215,11 @@ Server-rendered markup:
 Le Truc component:
 
 ```js
-import { createEventSensor, defineComponent, read, setProperty, show } from '@zeix/le-truc'
+import { createEventsSensor, defineComponent, read, setProperty, show } from '@zeix/le-truc'
 
 const getAriaControls = element => element.getAttribute('aria-controls') ?? ''
 
-const getSelected = (elements, isCurrent, offset = 0) => {
-  const tabs = elements.get()
+const getSelected = (tabs, isCurrent, offset = 0) => {
   const currentIndex = tabs.findIndex(isCurrent)
   const newIndex = (currentIndex + offset + tabs.length) % tabs.length
   return getAriaControls(tabs[newIndex])
@@ -233,9 +232,9 @@ export default defineComponent(
   // 2. Reactive properties (signals)
   {
     // Sensors are read-only signals that update on user interaction only (events)
-    selected: createEventSensor(
+    selected: createEventsSensor(
       // Initial value from aria-selected attribute
-      read(ui => getSelected(ui.tabs, tab => tab.ariaSelected === 'true'), ''),
+      read(ui => getSelected(ui.tabs.get(), tab => tab.ariaSelected === 'true'), ''),
       // Target element(s) key
       'tabs',
       // Event handlers return a value to update the signal
@@ -262,7 +261,7 @@ export default defineComponent(
                 : key === 'End'
                   ? getAriaControls(tabs[tabs.length - 1])
                   : getSelected(
-                      ui.tabs,
+                      tabs,
                       tab => tab === target,
                       key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1,
                     )
@@ -276,8 +275,8 @@ export default defineComponent(
 
   // 3. Find DOM elements
   ({ all }) => ({
-    // all() returns a Collection signal that holds all elements matching the selector,
-    // dynamically updating when the DOM changes
+    // all() returns a Memo<E[]> that holds all elements matching the selector,
+    // dynamically updating when the DOM changes via MutationObserver
     tabs: all(
       'button[role="tab"]',
       'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
@@ -386,14 +385,13 @@ Le Truc component:
 import {
   asString,
   type Component,
-  createComputed,
+  createTask,
   dangerouslySetInnerHTML,
   defineComponent,
   setText,
   show,
   toggleClass,
 } from '@zeix/le-truc'
-import { isRecursiveURL, isValidURL } from '../_common/fetch'
 
 export default defineComponent(
   // 1. Component name
@@ -419,8 +417,8 @@ export default defineComponent(
   ui => {
     const { host } = ui
 
-    // Private async computed signal to fetch content from the provided URL
-    const result = createComputed(
+    // Private async task signal to fetch content from the provided URL
+    const result = createTask(
       async (_prev, abort) => {
         const url = host.src
         const error = !url
@@ -447,7 +445,7 @@ export default defineComponent(
         }
       },
       // Initial value of the signal before the Promise is resolved
-      { ok: false, value: '', error: '', pending: true },
+      { value: { ok: false, value: '', error: '', pending: true } },
     )
 
     // Extracted function to check if an error occurred

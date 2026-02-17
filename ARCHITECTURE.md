@@ -22,7 +22,6 @@ src/
     class.ts          toggleClass
     event.ts          on() — event listener effect
     html.ts           dangerouslySetInnerHTML
-    method.ts         callMethod, focus
     pass.ts           pass() — inter-component reactive property binding
     property.ts       setProperty, show
     style.ts          setStyle
@@ -46,7 +45,7 @@ scheduler.ts ──── (leaf, no internal imports)        │
 parsers.ts ─────── ui.ts (types only)                │
 parsers/* ──────── parsers.ts, ui.ts (types)         │
                                                      │
-internal.ts ────── (leaf, WeakMap for signal storage)  │
+internal.ts ────── (leaf, signal storage)            │
 ui.ts ──────────── errors.ts, util.ts                │
                                                      │
 effects.ts ─────── component.ts (types), errors.ts,  │
@@ -141,7 +140,7 @@ updateElement(reactive, { op, name, read, update, delete? })
   └─ createEffect(() => {
        value = resolveReactive(reactive)   ← auto-tracks signal deps
        if value === RESET   → use fallback
-       if value === null   → delete(target) if available, else use fallback
+       if value === null    → delete(target) if available, else use fallback
        if value !== current → update(target, value)
      })
 ```
@@ -169,8 +168,6 @@ The `Reactive<T>` type is a union of three forms:
 | `show(reactive)` | `p` | Controls `el.hidden` |
 | `setStyle(prop, reactive?)` | `s` | Sets/removes an inline style |
 | `dangerouslySetInnerHTML(reactive, opts?)` | `h` | Sets innerHTML, optionally in a shadow root |
-| `callMethod(name, reactive, args?)` | `m` | Calls a method when reactive is truthy |
-| `focus(reactive)` | `m` | Calls `el.focus()` when truthy |
 
 All default their `reactive` parameter to the effect name (e.g., `setAttribute('href')` reads `host.href`).
 
@@ -265,22 +262,6 @@ The distinction between Parser (≥2 params) and Reader (1 param) is detected at
 ### `resolveDependencies` uses Promise.race with error swallowing
 
 The dependency resolution catches all errors and runs the callback anyway. The `.catch(() => { callback() })` pattern means even unexpected errors (not just timeouts) are silently swallowed. The `DependencyTimeoutError` is constructed and passed to `reject`, but the actual logging happens... nowhere visible. The error is created inside a `new Promise((_, reject) => { reject(new DependencyTimeoutError(...)) })`, which rejects the race, but the `.catch` just calls `callback()` without logging the error.
-
-### `CircularMutationError` is defined but never thrown
-
-`CircularMutationError` is exported from `errors.ts` and from `index.ts`, but no code in the repository actually throws it. Is this dead code left from a previous implementation, or is it intended for future use?
-
-### `callMethod` reads `() => null` as fallback
-
-`callMethod` uses `read: () => null` — it never reads the current state. This means it always runs `update()` when the reactive is truthy, even if the method was already called. For idempotent methods like `focus()` this is fine, but for methods with side effects it could cause redundant calls. The `focus` effect partially addresses this with `read: el => el === document.activeElement`, but this pattern isn't consistent.
-
-### Commented-out code in effects.ts
-
-`effects.ts` contains a large commented-out `insertOrRemoveElement` function with its `ElementInserter` type. This suggests an in-progress or abandoned feature. Should it be removed, or is it actively being worked on?
-
-### `on()` event handler can't access component UI
-
-The `on()` effect handler receives only the event — it cannot access the component's `ui` object (unlike `createEventsSensor` handlers, which receive `{ event, ui, target, prev }`). This means `on()` handlers can't easily read from other UI elements. Is this intentional to keep `on()` simple, or is it a limitation that should be addressed?
 
 ### `createEventsSensor` captures `targets` once
 

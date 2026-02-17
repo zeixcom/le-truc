@@ -7,20 +7,20 @@
 		<meta name="description" content="Scoped styles, CSS custom properties" />
 		<link
 			rel="preload"
-			href="./assets/main.css?v=mlpctd2u"
+			href="./assets/main.css?v=mlpzvlml"
 			as="style"
 		/>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=mlpctd2u"
+			href="./assets/main.js?v=mlpzvlml"
 		/>
 		<link
 			rel="stylesheet"
-			href="./assets/main.css?v=mlpctd2u"
+			href="./assets/main.css?v=mlpzvlml"
 		/>
 		<script
 			type="module"
-			src="./assets/main.js?v=mlpctd2u"
+			src="./assets/main.js?v=mlpzvlml"
 		></script>
 	</head>
 
@@ -150,7 +150,8 @@
 <span class="line"><span style="color:#88846F">    /* Style rules for tertiary buttons */</span></span>
 <span class="line"><span style="color:#F8F8F2">  }</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
-<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock></section><section><h2 id="css-only-components"><a name="css-only-components" class="anchor" href="#css-only-components"><span class="permalink">🔗</span><span class="title">CSS-only Components</span></a></h2><p>Just because Le Truc is a JavaScript library doesn't mean you have to use JavaScript in every component. It's perfectly fine to use custom elements just for styling purposes.</p><p>Here's the example of the <code>&lt;card-callout&gt;</code> we're using in this documentation:</p><module-demo><div class="preview"><card-callout>This is an informational message.</card-callout><card-callout class="tip">Remember to hydrate while coding!</card-callout><card-callout class="caution">Be careful with this operation.</card-callout><card-callout class="danger">This action is irreversible!</card-callout><card-callout class="note">This is just a side note.</card-callout></div><details title="Source code" src="./examples/card-callout.html"><summary>Source code</summary><module-lazyload src="./examples/card-callout.html"><card-callout><p class="loading" role="status" aria-live="polite">Loading...</p><p class="error" role="alert" aria-live="assertive" hidden="true"></p></card-callout><div class="content"></div></module-lazyload></details></module-demo></section></main>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock></section><section><h2 id="css-only-components"><a name="css-only-components" class="anchor" href="#css-only-components"><span class="permalink">🔗</span><span class="title">CSS-only Components</span></a></h2><p>Just because Le Truc is a JavaScript library doesn't mean you have to use JavaScript in every component. It's perfectly fine to use custom elements just for styling purposes.</p><p>Here's the example of the <code>&lt;card-callout&gt;</code> we're using in this documentation:</p><module-demo><div class="preview"><card-callout>This is an informational message.</card-callout><card-callout class="tip">Remember to hydrate while coding!</card-callout><card-callout class="caution">Be careful with this operation.</card-callout><card-callout class="danger">This action is irreversible!</card-callout><card-callout class="note">This is just a side note.</card-callout></div><details title="Source code" src="./examples/card-callout.html"><summary>Source code</summary><module-lazyload src="./examples/card-callout.html"><card-callout><p class="loading" role="status" aria-live="polite">Loading...</p><p class="error" role="alert" aria-live="assertive" hidden="true"></p></card-callout><div class="content"></div></module-lazyload></details></module-demo><h3 id="register-css-only-custom-elements"><a name="register-css-only-custom-elements" class="anchor" href="#register-css-only-custom-elements"><span class="permalink">🔗</span><span class="title">Register CSS-only Custom Elements</span></a></h3><p>If a Le Truc component queries for a CSS-only custom element (via <code>first()</code> or <code>all()</code>), it will detect the element as an unresolved dependency and wait for it to upgrade — causing an unnecessary delay before effects run.</p><p>To avoid this, register CSS-only custom elements with a trivial definition:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">customElements.</span><span style="color:#A6E22E">define</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'card-callout'</span><span style="color:#F8F8F2">, </span><span style="color:#66D9EF;font-style:italic">class</span><span style="color:#F92672"> extends</span><span> </span><span style="color:#A6E22E;font-style:italic;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2"> {})</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>This tells the browser (and Le Truc) that the element is defined and ready. The registration has no runtime cost — the element simply upgrades to a plain <code>HTMLElement</code> immediately.</p><card-callout class="tip"><p><strong>As a rule of thumb</strong>, every custom element tag you use in HTML should have a corresponding <code>customElements.define()</code> call. This is the web platform's contract: a hyphenated tag name is a custom element, and defining it — even with an empty class — ensures it upgrades correctly and doesn't block other components.</p></card-callout></section></main>
 
 			<footer class="content-grid">
 				<div class="content">

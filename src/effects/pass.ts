@@ -11,7 +11,7 @@ import type { Component, ComponentProps } from '../component'
 import type { Effect, Reactive } from '../effects'
 import { InvalidCustomElementError, InvalidReactivesError } from '../errors'
 import { getSignals } from '../internal'
-import { elementName, isCustomElement } from '../util'
+import { DEV_MODE, elementName, isCustomElement, LOG_WARN } from '../util'
 
 /* === Types === */
 
@@ -65,10 +65,17 @@ const pass =
 		}
 
 		const signals = getSignals(target)
+		const targetName = elementName(target)
 
 		for (const [prop, reactive] of Object.entries(reactives)) {
 			if (reactive == null) continue
-			if (!(prop in target)) continue
+			if (!(prop in target)) {
+				if (DEV_MODE)
+					console[LOG_WARN](
+						`pass(): property '${prop}' does not exist on ${targetName}`,
+					)
+				continue
+			}
 
 			// Resolve the reactive to a signal
 			const applied =
@@ -81,7 +88,13 @@ const pass =
 
 			// Replace the backing signal of the target's Slot
 			const slot = signals[prop]
-			if (isSlot(slot)) slot.replace(signal)
+			if (isSlot(slot)) {
+				slot.replace(signal)
+			} else if (DEV_MODE) {
+				console[LOG_WARN](
+					`pass(): property '${prop}' on ${targetName} has no Slot — binding skipped`,
+				)
+			}
 		}
 	}
 

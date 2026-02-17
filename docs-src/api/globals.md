@@ -7,7 +7,6 @@
 ## Classes
 
 - [CircularDependencyError](classes/CircularDependencyError.md)
-- [CircularMutationError](classes/CircularMutationError.md)
 - [ContextRequestEvent](classes/ContextRequestEvent.md)
 - [DependencyTimeoutError](classes/DependencyTimeoutError.md)
 - [InvalidCallbackError](classes/InvalidCallbackError.md)
@@ -78,6 +77,7 @@
 - [SensorOptions](type-aliases/SensorOptions.md)
 - [Signal](type-aliases/Signal.md)
 - [SignalOptions](type-aliases/SignalOptions.md)
+- [Slot](type-aliases/Slot.md)
 - [SplitByComma](type-aliases/SplitByComma.md)
 - [State](type-aliases/State.md)
 - [Store](type-aliases/Store.md)
@@ -112,6 +112,7 @@
 - [createMutableSignal](functions/createMutableSignal.md)
 - [createScope](functions/createScope.md)
 - [createSensor](functions/createSensor.md)
+- [createSlot](functions/createSlot.md)
 - [createState](functions/createState.md)
 - [createStore](functions/createStore.md)
 - [createTask](functions/createTask.md)
@@ -127,7 +128,9 @@
 - [isMutableSignal](functions/isMutableSignal.md)
 - [isParser](functions/isParser.md)
 - [isRecord](functions/isRecord.md)
+- [isSensor](functions/isSensor.md)
 - [isSignal](functions/isSignal.md)
+- [isSlot](functions/isSlot.md)
 - [isState](functions/isState.md)
 - [isStore](functions/isStore.md)
 - [isTask](functions/isTask.md)

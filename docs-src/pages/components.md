@@ -310,10 +310,12 @@ defineComponent(
 
 The `first()` function expects the matched element to be present at connection time. If not, it will silently ignore the call.
 
-On the other hand, the `all()` function returns a `Memo<E[]>` — a lazily observed collection backed by a `MutationObserver` that updates whenever matching elements are added or removed from the component's DOM branch. Le Truc will apply the given effects to added elements and run cleanup functions on removed elements.
+On the other hand, the `all()` function returns a `Memo<E[]>` — a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array of elements. Because it's memoized, unwrapping it multiple times is almost free. And because it's reactive, effects that read from it automatically re-run whenever elements are added, removed, or rearranged in the DOM.
+
+Under the hood, a lazy `MutationObserver` watches for structural changes and invalidates the memo when needed. Le Truc then diffs the new element list against the previous one, applies effects to newly added elements, and runs cleanup functions on removed ones.
 
 {% callout class="tip" %}
-**Tip**: The `all()` function is more flexible but also more resource-intensive than `first()`. Prefer `first()` when targeting a single element known to be present at connection time.
+**Tip**: `all()` sets up a `MutationObserver` and re-runs effects on every structural change. Prefer `first()` when targeting a single element known to be present at connection time.
 {% /callout %}
 
 {% /section %}

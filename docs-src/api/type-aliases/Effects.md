@@ -8,7 +8,7 @@
 
 > **Effects**\<`P`, `U`\> = `{ [K in keyof U]?: ElementEffects<P, ElementFromKey<U, K>> }`
 
-Defined in: [src/effects.ts:29](https://github.com/zeixcom/le-truc/blob/a6eb6ebcd7352b6a07349eccb67cc61a478cd06f/src/effects.ts#L29)
+Defined in: [src/effects.ts:29](https://github.com/zeixcom/le-truc/blob/d0a4e93f3ca0be0a72dba7eef0d44a002f024ef7/src/effects.ts#L29)
 
 ## Type Parameters
 

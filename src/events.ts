@@ -46,13 +46,19 @@ const createEventsSensor =
 	(ui: U & { host: Component<P> }) => {
 		const { host } = ui
 		let value: T = getFallback(ui, init)
-		const targets = isMemo<ElementFromKey<U, K>[]>(ui[key])
-			? ui[key].get()
-			: [ui[key] as ElementFromKey<U & { host: Component<P> }, K>]
+		const memo = isMemo<ElementFromKey<U, K>[]>(ui[key]) ? ui[key] : null
+		const single = memo
+			? null
+			: (ui[key] as ElementFromKey<U & { host: Component<P> }, K>)
 		const eventMap = new Map<string, EventListener>()
 
 		const getTarget = (eventTarget: Node): ElementFromKey<U, K> | undefined => {
-			for (const t of targets)
+			if (single) {
+				return single.contains(eventTarget)
+					? (single as ElementFromKey<U, K>)
+					: undefined
+			}
+			for (const t of memo!.get())
 				if (t.contains(eventTarget)) return t as ElementFromKey<U, K>
 		}
 

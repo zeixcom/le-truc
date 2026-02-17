@@ -17,7 +17,7 @@ export { type PassedProp, type PassedProps, pass } from './src/effects/pass';
 export { setProperty, show } from './src/effects/property';
 export { setStyle } from './src/effects/style';
 export { setText } from './src/effects/text';
-export { CircularMutationError, DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidEffectsError, InvalidPropertyNameError, InvalidReactivesError, MissingElementError, } from './src/errors';
+export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidEffectsError, InvalidPropertyNameError, InvalidReactivesError, MissingElementError, } from './src/errors';
 export { createEventsSensor, type EventHandlers, type SensorEventHandler, } from './src/events';
 export { type Fallback, isParser, type LooseReader, type Parser, type ParserOrFallback, type Reader, read, } from './src/parsers';
 export { asBoolean } from './src/parsers/boolean';

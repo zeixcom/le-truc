@@ -40,14 +40,31 @@ const dangerouslySetInnerHTML = <P extends ComponentProps, E extends Element>(
 			schedule(el, () => {
 				target.innerHTML = html
 				if (allowScripts) {
+					// allowScripts is the security gate; once opted in, scripts should
+					// work correctly. Copy functional and security-hardening attributes
+					// but not event handler attributes (e.g. onerror).
+					const SCRIPT_ATTRS = [
+						'type',
+						'src',
+						'async',
+						'defer',
+						'nomodule',
+						'crossorigin',
+						'integrity',
+						'referrerpolicy',
+						'fetchpriority',
+					]
 					target.querySelectorAll('script').forEach(script => {
 						const newScript = document.createElement('script')
-						newScript.appendChild(
-							document.createTextNode(script.textContent ?? ''),
-						)
-						// Safely copy only the type attribute to preserve module/MIME type info
-						const typeAttr = script.getAttribute('type')
-						if (typeAttr) newScript.setAttribute('type', typeAttr)
+						for (const attr of SCRIPT_ATTRS) {
+							if (script.hasAttribute(attr))
+								newScript.setAttribute(attr, script.getAttribute(attr)!)
+						}
+						// Only set text content for inline scripts (no src attribute)
+						if (!script.hasAttribute('src'))
+							newScript.appendChild(
+								document.createTextNode(script.textContent ?? ''),
+							)
 						target.appendChild(newScript)
 						script.remove()
 					})

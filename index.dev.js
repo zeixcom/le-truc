@@ -1633,13 +1633,6 @@ var validatePropertyName = (prop) => {
 };
 
 // src/errors.ts
-class CircularMutationError extends Error {
-  constructor(host, selector) {
-    super(`Circular dependency detected in selection signal for component ${elementName(host)} with selector "${selector}"`);
-    this.name = "CircularMutationError";
-  }
-}
-
 class InvalidComponentNameError extends TypeError {
   constructor(component) {
     super(`Invalid component name "${component}". Custom element names must contain a hyphen, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens.`);
@@ -1851,7 +1844,7 @@ var read = (reader, fallback) => (ui) => {
 };
 
 // src/ui.ts
-var DEPENDENCY_TIMEOUT = 50;
+var DEPENDENCY_TIMEOUT = 200;
 var extractAttributes = (selector) => {
   const attributes = new Set;
   if (selector.includes("."))
@@ -1915,16 +1908,24 @@ var getHelpers = (host) => {
   }
   const resolveDependencies = (callback) => {
     if (dependencies.size) {
-      const deps = Array.from(dependencies);
-      Promise.race([
-        Promise.all(deps.map((dep) => customElements.whenDefined(dep))),
-        new Promise((_, reject) => {
-          setTimeout(() => {
-            reject(new DependencyTimeoutError(host, deps.filter((dep) => !customElements.get(dep))));
-          }, DEPENDENCY_TIMEOUT);
-        })
-      ]).then(callback).catch(() => {
-        callback();
+      queueMicrotask(() => {
+        const deps = Array.from(dependencies).filter((dep) => !customElements.get(dep));
+        if (!deps.length) {
+          callback();
+          return;
+        }
+        Promise.race([
+          Promise.all(deps.map((dep) => customElements.whenDefined(dep))),
+          new Promise((_, reject) => {
+            setTimeout(() => {
+              reject(new DependencyTimeoutError(host, deps.filter((dep) => !customElements.get(dep))));
+            }, DEPENDENCY_TIMEOUT);
+          })
+        ]).then(callback).catch((error) => {
+          if (DEV_MODE)
+            console[LOG_WARN](error);
+          callback();
+        });
       });
     } else {
       callback();
@@ -2171,12 +2172,25 @@ var dangerouslySetInnerHTML = (reactive, options = {}) => updateElement(reactive
     schedule(el, () => {
       target.innerHTML = html;
       if (allowScripts) {
+        const SCRIPT_ATTRS = [
+          "type",
+          "src",
+          "async",
+          "defer",
+          "nomodule",
+          "crossorigin",
+          "integrity",
+          "referrerpolicy",
+          "fetchpriority"
+        ];
         target.querySelectorAll("script").forEach((script) => {
           const newScript = document.createElement("script");
-          newScript.appendChild(document.createTextNode(script.textContent ?? ""));
-          const typeAttr = script.getAttribute("type");
-          if (typeAttr)
-            newScript.setAttribute("type", typeAttr);
+          for (const attr of SCRIPT_ATTRS) {
+            if (script.hasAttribute(attr))
+              newScript.setAttribute(attr, script.getAttribute(attr));
+          }
+          if (!script.hasAttribute("src"))
+            newScript.appendChild(document.createTextNode(script.textContent ?? ""));
           target.appendChild(newScript);
           script.remove();
         });
@@ -2199,19 +2213,26 @@ var pass = (props) => (host, target) => {
     return fn ? createComputed(fn) : undefined;
   };
   const signals = getSignals(target);
+  const targetName = elementName(target);
   for (const [prop, reactive] of Object.entries(reactives)) {
     if (reactive == null)
       continue;
-    if (!(prop in target))
+    if (!(prop in target)) {
+      if (DEV_MODE)
+        console[LOG_WARN](`pass(): property '${prop}' does not exist on ${targetName}`);
       continue;
+    }
     const applied = isFunction(reactive) && reactive.length === 1 ? reactive(target) : reactive;
     const isArray = Array.isArray(applied) && applied.length === 2;
     const signal = toSignal(isArray ? applied[0] : applied);
     if (!signal)
       continue;
     const slot = signals[prop];
-    if (isSlot(slot))
+    if (isSlot(slot)) {
       slot.replace(signal);
+    } else if (DEV_MODE) {
+      console[LOG_WARN](`pass(): property '${prop}' on ${targetName} has no Slot — binding skipped`);
+    }
   }
 };
 // src/effects/property.ts
@@ -2256,10 +2277,14 @@ var setText = (reactive) => updateElement(reactive, {
 var createEventsSensor = (init, key, events) => (ui) => {
   const { host } = ui;
   let value = getFallback(ui, init);
-  const targets = isMemo(ui[key]) ? ui[key].get() : [ui[key]];
+  const memo = isMemo(ui[key]) ? ui[key] : null;
+  const single = memo ? null : ui[key];
   const eventMap = new Map;
   const getTarget = (eventTarget) => {
-    for (const t of targets)
+    if (single) {
+      return single.contains(eventTarget) ? single : undefined;
+    }
+    for (const t of memo.get())
       if (t.contains(eventTarget))
         return t;
   };
@@ -2425,7 +2450,6 @@ export {
   InvalidCallbackError,
   DependencyTimeoutError,
   ContextRequestEvent,
-  CircularMutationError,
   CircularDependencyError,
   CONTEXT_REQUEST
 };
