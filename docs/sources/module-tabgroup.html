@@ -1,0 +1,528 @@
+<module-tabgroup>
+		<div role="tablist">
+		<button
+		type="button"
+		role="tab"
+		id="trigger_module-tabgroup_html"
+		aria-controls="panel_module-tabgroup_html"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		HTML
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_module-tabgroup_css"
+		aria-controls="panel_module-tabgroup_css"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		CSS
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_module-tabgroup_ts"
+		aria-controls="panel_module-tabgroup_ts"
+		aria-selected="true"
+		tabindex="0"
+	>
+		TypeScript
+	</button>
+	</div> <div
+		role="tabpanel"
+		id="panel_module-tabgroup_html"
+		aria-labelledby="trigger_module-tabgroup_html"
+		 hidden
+	>
+		<module-codeblock
+			language="html"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">module-tabgroup.html</span>
+				<span class="language">html</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#88846F">&#x3C;!-- Default example - tests initial state and basic functionality --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-tabgroup</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tablist"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger1"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel1"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"true"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Tab 1</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger2"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel2"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Tab 2</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger3"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel3"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Tab 3</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel1"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger1"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Tab 1 content</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel2"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger2"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Tab 2 content</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel3"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger3"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Tab 3 content</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-tabgroup</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Second tab initially selected - tests different initial state --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-tabgroup</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"second-tab-selected"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tablist"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger4"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel4"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Settings</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger5"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel5"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"true"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Profile</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger6"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel6"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Security</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel4"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger4"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">h3</span><span style="color:#F8F8F2">>Settings Panel&#x3C;/</span><span style="color:#F92672">h3</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Configure your application settings here.&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel5"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger5"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">h3</span><span style="color:#F8F8F2">>Profile Panel&#x3C;/</span><span style="color:#F92672">h3</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Manage your user profile information.&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel6"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger6"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">h3</span><span style="color:#F8F8F2">>Security Panel&#x3C;/</span><span style="color:#F92672">h3</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Update your security preferences and passwords.&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-tabgroup</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Many tabs - tests keyboard navigation with more options --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-tabgroup</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"many-tabs"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tablist"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger7"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel7"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"true"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Home</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger8"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel8"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Products</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger9"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel9"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Services</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger10"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel10"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			About</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger11"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel11"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Contact</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel7"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger7"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Welcome to our homepage</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel8"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger8"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Browse our products</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel9"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger9"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Learn about our services</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel10"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger10"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		About our company</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel11"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger11"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Get in touch with us</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-tabgroup</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Property test - for testing programmatic property changes --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-tabgroup</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"property-test"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tablist"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger12"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel12"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"true"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			First</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger13"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel13"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Second</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger14"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel14"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Third</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel12"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger12"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		First panel content</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel13"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger13"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Second panel content</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel14"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger14"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Third panel content</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-tabgroup</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Edge case - minimum viable tabgroup --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-tabgroup</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"minimal-test"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tablist"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger15"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel15"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"true"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Only Tab</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger16"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel16"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Second Tab</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel15"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger15"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Only panel content</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel16"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger16"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Second panel content</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-tabgroup</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Invalid state test - for testing error recovery --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-tabgroup</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"invalid-state-test"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tablist"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger17"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"nonexistent-panel"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Broken Reference</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">			type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
+<span class="line"><span style="color:#A6E22E">			id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger18"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel18"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"true"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			Valid Tab</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel18"</span><span style="color:#A6E22E"> aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"trigger18"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		Valid panel content</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-tabgroup</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_module-tabgroup_css"
+		aria-labelledby="trigger_module-tabgroup_css"
+		 hidden
+	>
+		<module-codeblock
+			language="css"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">module-tabgroup.css</span>
+				<span class="language">css</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">module-tabgroup</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">block</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	margin-bottom</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-l);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	> [</span><span style="color:#66D9EF;font-style:italic">role</span><span style="color:#F8F8F2">="tablist"] {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">flex</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		border-bottom</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> solid</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-border);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		padding</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		margin-bottom</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		> [</span><span style="color:#66D9EF;font-style:italic">role</span><span style="color:#F8F8F2">="tab"] {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			border</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			border-top</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">2</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> solid</span><span style="color:#66D9EF"> transparent</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			border-bottom-width</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			border-radius</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs) </span><span style="color:#AE81FF">0</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			font-family</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-family-sans);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			font-weight</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-weight-bold);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			padding</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-s) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text-soft);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-secondary);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			cursor</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">pointer</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			transition</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">all</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--transition-short) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--easing-inout);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;:hover,</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;:focus {</span></span>
+<span class="line"><span style="color:#66D9EF">				color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-secondary-hover);</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;</span><span style="color:#A6E22E">:focus</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				z-index</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;</span><span style="color:#A6E22E">:active</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-secondary-active);</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;[</span><span style="color:#A6E22E">aria-selected</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"true"</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-primary-active);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				border-top</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">3</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> solid</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-primary);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-background);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				margin-bottom</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">-1</span><span style="color:#F92672">px</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">	></span><span style="color:#F8F8F2"> [</span><span style="color:#A6E22E">role</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"tabpanel"</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		font-family</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">sans-serif</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-m);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-background);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		margin-block</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-l);</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_module-tabgroup_ts"
+		aria-labelledby="trigger_module-tabgroup_ts"
+		
+	>
+		<module-codeblock
+			language="ts"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">module-tabgroup.ts</span>
+				<span class="language">ts</span>
+			</p>
+			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createEventsSensor,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Memo,</span></span>
+<span class="line"><span style="color:#F8F8F2">	read,</span></span>
+<span class="line"><span style="color:#F8F8F2">	setProperty,</span></span>
+<span class="line"><span style="color:#F8F8F2">	show,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleTabgroupProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> selected</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleTabgroupUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	tabs</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Memo</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span><span style="color:#F8F8F2">[]></span></span>
+<span class="line"><span style="color:#F8F8F2">	panels</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Memo</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">[]></span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'module-tabgroup'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleTabgroupProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#A6E22E"> getAriaControls</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">element</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">	element.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-controls'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#A6E22E"> getSelected</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">	tabs</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">[],</span></span>
+<span class="line"><span style="color:#A6E22E">	isCurrent</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">element</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> boolean</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	offset </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> currentIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> tabs.</span><span style="color:#A6E22E">findIndex</span><span style="color:#F8F8F2">(isCurrent)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> newIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (currentIndex </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> offset </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> tabs.length) </span><span style="color:#F92672">%</span><span style="color:#F8F8F2"> tabs.length</span></span>
+<span class="line"><span style="color:#F92672">	return</span><span style="color:#A6E22E"> getAriaControls</span><span style="color:#F8F8F2">(tabs[newIndex])</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleTabgroupProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">ModuleTabgroupUI</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#E6DB74">	'module-tabgroup'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{</span></span>
+<span class="line"><span style="color:#F8F8F2">		selected: </span><span style="color:#A6E22E">createEventsSensor</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#A6E22E">			read</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">				ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#A6E22E"> getSelected</span><span style="color:#F8F8F2">(ui.tabs.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(), </span><span style="color:#FD971F;font-style:italic">tab</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> tab.ariaSelected </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'true'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#E6DB74">				''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
+<span class="line"><span style="color:#E6DB74">			'tabs'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			{</span></span>
+<span class="line"><span style="color:#A6E22E">				click</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#A6E22E"> getAriaControls</span><span style="color:#F8F8F2">(target),</span></span>
+<span class="line"><span style="color:#A6E22E">				keyup</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">event</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> event.key</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (</span></span>
+<span class="line"><span style="color:#F8F8F2">						[</span></span>
+<span class="line"><span style="color:#E6DB74">							'ArrowLeft'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">							'ArrowRight'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">							'ArrowUp'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">							'ArrowDown'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">							'Home'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">							'End'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">						].</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(key)</span></span>
+<span class="line"><span style="color:#F8F8F2">					) {</span></span>
+<span class="line"><span style="color:#F8F8F2">						event.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">						event.</span><span style="color:#A6E22E">stopPropagation</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> tabs </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> ui.tabs.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> next </span><span style="color:#F92672">=</span></span>
+<span class="line"><span style="color:#F8F8F2">							key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'Home'</span></span>
+<span class="line"><span style="color:#F92672">								?</span><span style="color:#A6E22E"> getAriaControls</span><span style="color:#F8F8F2">(tabs[</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">])</span></span>
+<span class="line"><span style="color:#F92672">								:</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'End'</span></span>
+<span class="line"><span style="color:#F92672">									?</span><span style="color:#A6E22E"> getAriaControls</span><span style="color:#F8F8F2">(tabs[tabs.length </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">])</span></span>
+<span class="line"><span style="color:#F92672">									:</span><span style="color:#A6E22E"> getSelected</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">											tabs,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">											tab</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> tab </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> target,</span></span>
+<span class="line"><span style="color:#F8F8F2">											key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowLeft'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowUp'</span><span style="color:#F92672"> ?</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F92672"> :</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">										)</span></span>
+<span class="line"><span style="color:#F8F8F2">						tabs.</span><span style="color:#A6E22E">filter</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">tab</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#A6E22E"> getAriaControls</span><span style="color:#F8F8F2">(tab) </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> next)[</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">].</span><span style="color:#A6E22E">focus</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">						return</span><span style="color:#F8F8F2"> next</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#F8F8F2">			},</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		tabs: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'button[role="tab"]'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'At least 2 tabs as children of a &#x3C;[role="tablist"]> element are needed. Each tab must reference a unique id of a &#x3C;[role="tabpanel"]> element.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">		panels: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'[role="tabpanel"]'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'At least 2 tabpanels are needed. Each tabpanel must have a unique id.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> isCurrentTab</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">tab</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">			host.selected </span><span style="color:#F92672">===</span><span style="color:#A6E22E"> getAriaControls</span><span style="color:#F8F8F2">(tab)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			tabs: [</span></span>
+<span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'ariaSelected'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(</span><span style="color:#A6E22E">isCurrentTab</span><span style="color:#F8F8F2">(target))),</span></span>
+<span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'tabIndex'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">isCurrentTab</span><span style="color:#F8F8F2">(target) </span><span style="color:#F92672">?</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> :</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#F8F8F2">			],</span></span>
+<span class="line"><span style="color:#F8F8F2">			panels: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> host.selected </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> target.id),</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+	</module-tabgroup>

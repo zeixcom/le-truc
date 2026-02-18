@@ -7,20 +7,20 @@
 		<meta name="description" content="Overview and key benefits of Le Truc" />
 		<link
 			rel="preload"
-			href="./assets/main.css?v=mlqcj7rv"
+			href="./assets/main.css?v=7cc8fd149009e272"
 			as="style"
 		/>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=mlqcj7rv"
+			href="./assets/main.js?v=5c3e974ca1fa2b64"
 		/>
 		<link
 			rel="stylesheet"
-			href="./assets/main.css?v=mlqcj7rv"
+			href="./assets/main.css?v=7cc8fd149009e272"
 		/>
 		<script
 			type="module"
-			src="./assets/main.js?v=mlqcj7rv"
+			src="./assets/main.js?v=5c3e974ca1fa2b64"
 		></script>
 	</head>
 
@@ -30,7 +30,7 @@
 				<a href="#main" class="skiplink visually-hidden">
 					Skip to main content
 				</a>
-				<h1 class="content">Le Truc Docs <small>Version 0.16.0</small></h1>
+				<h1 class="content">Le Truc Docs <small>Version 0.16.1</small></h1>
 				<section-menu>
 		<nav>
 			<h2 class="visually-hidden">Main Menu</h2>
@@ -66,6 +66,18 @@
 			<small>Passing state, events, context</small>
 		</a>
 	</li><li>
+		<a href="examples.html">
+			<span class="icon">🍽️</span>
+			<strong>Examples</strong>
+			<small>Common use cases and demos</small>
+		</a>
+	</li><li>
+		<a href="api.html">
+			<span class="icon">📖</span>
+			<strong>API</strong>
+			<small>API reference documentation</small>
+		</a>
+	</li><li>
 		<a href="about.html">
 			<span class="icon">🤝</span>
 			<strong>About</strong>
@@ -80,18 +92,7 @@
 				</card-callout>
 			</header>
 
-			<main id="main" class="content-grid"><section-hero><h1 id="-introduction"><a name="-introduction" class="anchor" href="#-introduction"><span class="permalink">🔗</span><span class="title">📖 Introduction</span></a></h1><div class="hero-layout"><div class="lead"><p><strong>Web development doesn't need to be complicated</strong>. Le Truc lets you create reactive Web Components that enhance your existing HTML.</p></div><module-toc>
-		<nav>
-			<h2>On This Page</h2>
-			<ol>
-				<li>
-		<a href="#what-is-le-truc">What is Le Truc?</a>
-	</li><li>
-		<a href="#why-choose-le-truc">Why Choose Le Truc?</a>
-	</li>
-			</ol>
-		</nav>
-	</module-toc></div></section-hero><section class="breakout"><h2 id="what-is-le-truc"><a name="what-is-le-truc" class="anchor" href="#what-is-le-truc"><span class="permalink">🔗</span><span class="title">What is Le Truc?</span></a></h2><module-carousel><h2 class="visually-hidden">Slides</h2><div class="slides"><div id="slide1" role="tabpanel" aria-current="true" class="purple"><h3>We Can Have Nice Things!</h3><div class="slide-content"><ul><li>Embrace the Web Platform</li><li>Use any server-side technology to render HTML</li><li>Have components</li><li>Have reactivity</li><li>Have type-safety</li><li>Have optimal performance</li><li>Have fun!</li></ul></div></div><div id="slide2" role="tabpanel" aria-current="false" class="pink"><h3>HTML First.</h3><div class="slide-content"><p>Le Truc assumes you start with semantic HTML and want to enhance it with behavior:</p><module-codeblock language="html" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">html</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hello-world</span><span style="color:#F8F8F2">></span></span>
+			<main id="main" class="content-grid"><section-hero><h1 id="-introduction"><a name="-introduction" class="anchor" href="#-introduction"><span class="title">📖 Introduction</span><span class="permalink">#</span></a></h1><div class="hero-layout"><div class="lead"><p><strong>Web development doesn't need to be complicated</strong>. Le Truc lets you create reactive Web Components that enhance your existing HTML.</p></div><div class="toc-placeholder" data-toc="true"></div></div></section-hero><section class="breakout" id="undefined"><h2 id="what-is-le-truc"><a name="what-is-le-truc" class="anchor" href="#what-is-le-truc"><span class="title">What is Le Truc?</span><span class="permalink">#</span></a></h2><module-carousel><h2 class="visually-hidden">Slides</h2><div class="slides"><div id="slide1" role="tabpanel" aria-current="true" class="purple"><h3>We Can Have Nice Things!</h3><div class="slide-content"><ul><li>Embrace the Web Platform</li><li>Use any server-side technology to render HTML</li><li>Have components</li><li>Have reactivity</li><li>Have type-safety</li><li>Have optimal performance</li><li>Have fun!</li></ul></div></div><div id="slide2" role="tabpanel" aria-current="false" class="pink"><h3>HTML First.</h3><div class="slide-content"><p>Le Truc assumes you start with semantic HTML and want to enhance it with behavior:</p><module-codeblock language="html" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">html</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hello-world</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">  &#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Hello, &#x3C;</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">>Alice&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">>!&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">hello-world</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>This means better SEO, faster initial page loads, and progressive enhancement that works even when JavaScript fails.</p></div></div><div id="slide3" role="tabpanel" aria-current="false" class="orange"><h3>Add JavaScript.</h3><div class="slide-content"><p>Progressively enhance the user experience by adding interactivity:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asString, defineComponent, setText } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '@zeix/le-truc'</span></span>
@@ -102,7 +103,7 @@
 <span class="line"><span style="color:#FD971F;font-style:italic">  q</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ({ span: q.</span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'span'</span><span style="color:#F8F8F2">) }),</span></span>
 <span class="line"><span style="color:#F8F8F2">  () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({ span: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2">) }),</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
-<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>Le Truc augments what the platform already provides. It leverages the Web Components standard while adding just enough convenience functions to make reactive UI behaviors easy to implement.</p></div></div><div id="slide4" role="tabpanel" aria-current="false" class="green"><h3>Faster. Because We Do Less.</h3><div class="slide-content"><ul><li>Unlike SPA frameworks (React, Vue, Angular, Svelte, Lit, etc.) we <strong>never render</strong> on the client. Instead, the server and browser do this work. Like it's 1995.</li><li>Because we never render on the client, we need no JSON data and no JS templates either. This means less data over the wire and no plumbing DB → JSON → JS → HTML.</li><li>Unlike Hypermedia frameworks (HTMX, Datastar) we don't compensate for the lack of client-side rendering by a network request if not needed. If possible, we calculate the new state on the client.</li><li>We just add event listeners and set up a signal graph. Invisible work that doesn't cause layout shifts.</li><li>When the user interacts with the UI, we know exactly what to do. We just do fine-grained updates to the DOM. No VDOM, no diffing. Wait for signal 🚦 and go! 🏁</li></ul></div></div><div id="slide5" role="tabpanel" aria-current="false" class="blue"><h3>Minimal Size.</h3><div class="slide-content"><p>Because we add less abstractions, we can keep the library small (approximately 10kB gzipped).</p><p>Le Truc is a lightweight library that provides a simple and efficient way to build reactive user interfaces. It is designed to be easy to use and understand, while still providing powerful features for building complex applications.</p><p>HTML ain't broken. CSS ain't broken. JavaScript ain't broken. We just want to split it in chunks (components), detect bugs early (type safety), and have predictable updates without tight coupling (reactivity). That's what we stand for.</p></div></div></div><nav aria-label="Carousel Navigation"><button type="button" class="prev" aria-label="Previous">❮</button><button type="button" class="next" aria-label="Next">❯</button><div role="tablist"><button role="tab" id="tab_slide1" aria-controls="slide1" aria-label="We Can Have Nice Things!" aria-selected="true" data-index="0" tabindex="0">●</button><button role="tab" id="tab_slide2" aria-controls="slide2" aria-label="HTML First." aria-selected="false" data-index="1" tabindex="-1">●</button><button role="tab" id="tab_slide3" aria-controls="slide3" aria-label="Add JavaScript." aria-selected="false" data-index="2" tabindex="-1">●</button><button role="tab" id="tab_slide4" aria-controls="slide4" aria-label="Faster. Because We Do Less." aria-selected="false" data-index="3" tabindex="-1">●</button><button role="tab" id="tab_slide5" aria-controls="slide5" aria-label="Minimal Size." aria-selected="false" data-index="4" tabindex="-1">●</button></div></nav></module-carousel></section><section><h2 id="why-choose-le-truc"><a name="why-choose-le-truc" class="anchor" href="#why-choose-le-truc"><span class="permalink">🔗</span><span class="title">Why Choose Le Truc?</span></a></h2><p>Le Truc shines when you want:</p><ul><li><strong>Server-rendered content</strong> with client-side enhancements</li><li><strong>High performance</strong> on all devices (no virtual DOM overhead)</li><li><strong>Component reusability</strong> without framework lock-in</li><li><strong>Future-proof</strong> code built on web standards</li><li><strong>Easy integration</strong> with existing codebases</li></ul><p><strong>Key Benefits:</strong></p><ul><li>~10kB gzipped with no dependencies</li><li>TypeScript support with full type safety</li><li>Works with any backend or build setup</li><li>Progressive enhancement friendly</li></ul></section></main>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>Le Truc augments what the platform already provides. It leverages the Web Components standard while adding just enough convenience functions to make reactive UI behaviors easy to implement.</p></div></div><div id="slide4" role="tabpanel" aria-current="false" class="green"><h3>Faster. Because We Do Less.</h3><div class="slide-content"><ul><li>Unlike SPA frameworks (React, Vue, Angular, Svelte, Lit, etc.) we <strong>never render</strong> on the client. Instead, the server and browser do this work. Like it's 1995.</li><li>Because we never render on the client, we need no JSON data and no JS templates either. This means less data over the wire and no plumbing DB → JSON → JS → HTML.</li><li>Unlike Hypermedia frameworks (HTMX, Datastar) we don't compensate for the lack of client-side rendering by a network request if not needed. If possible, we calculate the new state on the client.</li><li>We just add event listeners and set up a signal graph. Invisible work that doesn't cause layout shifts.</li><li>When the user interacts with the UI, we know exactly what to do. We just do fine-grained updates to the DOM. No VDOM, no diffing. Wait for signal 🚦 and go! 🏁</li></ul></div></div><div id="slide5" role="tabpanel" aria-current="false" class="blue"><h3>Minimal Size.</h3><div class="slide-content"><p>Because we add less abstractions, we can keep the library small (approximately 10kB gzipped).</p><p>Le Truc is a lightweight library that provides a simple and efficient way to build reactive user interfaces. It is designed to be easy to use and understand, while still providing powerful features for building complex applications.</p><p>HTML ain't broken. CSS ain't broken. JavaScript ain't broken. We just want to split it in chunks (components), detect bugs early (type safety), and have predictable updates without tight coupling (reactivity). That's what we stand for.</p></div></div></div><nav aria-label="Carousel Navigation"><button type="button" class="prev" aria-label="Previous">❮</button><button type="button" class="next" aria-label="Next">❯</button><div role="tablist"><button role="tab" id="tab_slide1" aria-controls="slide1" aria-label="We Can Have Nice Things!" aria-selected="true" data-index="0" tabindex="0">●</button><button role="tab" id="tab_slide2" aria-controls="slide2" aria-label="HTML First." aria-selected="false" data-index="1" tabindex="-1">●</button><button role="tab" id="tab_slide3" aria-controls="slide3" aria-label="Add JavaScript." aria-selected="false" data-index="2" tabindex="-1">●</button><button role="tab" id="tab_slide4" aria-controls="slide4" aria-label="Faster. Because We Do Less." aria-selected="false" data-index="3" tabindex="-1">●</button><button role="tab" id="tab_slide5" aria-controls="slide5" aria-label="Minimal Size." aria-selected="false" data-index="4" tabindex="-1">●</button></div></nav></module-carousel></section><section class="" id="undefined"><h2 id="why-choose-le-truc"><a name="why-choose-le-truc" class="anchor" href="#why-choose-le-truc"><span class="title">Why Choose Le Truc?</span><span class="permalink">#</span></a></h2><p>Le Truc shines when you want:</p><ul><li><strong>Server-rendered content</strong> with client-side enhancements</li><li><strong>High performance</strong> on all devices (no virtual DOM overhead)</li><li><strong>Component reusability</strong> without framework lock-in</li><li><strong>Future-proof</strong> code built on web standards</li><li><strong>Easy integration</strong> with existing codebases</li></ul><p><strong>Key Benefits:</strong></p><ul><li>~10kB gzipped with no dependencies</li><li>TypeScript support with full type safety</li><li>Works with any backend or build setup</li><li>Progressive enhancement friendly</li></ul></section></main>
 
 			<footer class="content-grid">
 				<div class="content">

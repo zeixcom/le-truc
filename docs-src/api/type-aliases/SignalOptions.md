@@ -50,7 +50,7 @@ Defaults to reference equality (===).
 
 ### guard?
 
-> `optional` **guard**: `Guard`\<`T`\>
+> `optional` **guard**: [`Guard`](Guard.md)\<`T`\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:65
 

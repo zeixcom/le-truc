@@ -1,9 +1,9 @@
 /**
  * Le Truc
  *
- * Version 0.16.0
+ * Version 0.16.1
  *
- * @author Esther Brunner
+ * @author Esther Brunner, Zeix AG
  */
 
 // From Cause & Effect
@@ -28,6 +28,7 @@ export {
 	createStore,
 	createTask,
 	type EffectCallback,
+	type Guard,
 	InvalidCallbackError,
 	InvalidSignalValueError,
 	isAsyncFunction,
@@ -94,8 +95,6 @@ export {
 	type ElementEffects,
 	type ElementUpdater,
 	type Reactive,
-	runEffects,
-	runElementEffects,
 	type UpdateOperation,
 	updateElement,
 } from './src/effects'
@@ -117,6 +116,7 @@ export {
 	InvalidEffectsError,
 	InvalidPropertyNameError,
 	InvalidReactivesError,
+	InvalidUIKeyError,
 	MissingElementError,
 } from './src/errors'
 export {

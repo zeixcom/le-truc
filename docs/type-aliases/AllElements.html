@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>AllElements – Le Truc API</title>
+		<meta name="description" content="API reference for AllElements (type-alias)" />
+		<link
+			rel="preload"
+			href="../../assets/main.css?v=bbd3df2cbd926183"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="../../assets/main.js?v=3aad7c7c0b2829ea"
+		/>
+		<link
+			rel="stylesheet"
+			href="../../assets/main.css?v=bbd3df2cbd926183"
+		/>
+		<script
+			type="module"
+			src="../../assets/main.js?v=3aad7c7c0b2829ea"
+		></script>
+	</head>
+	<body class="api">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">Le Truc Docs <small>Version 0.16.0</small></h1>
+				<section-menu>
+		<nav>
+			<h2 class="visually-hidden">Main Menu</h2>
+			<ol>
+				<li>
+		<a href="index.html">
+			<span class="icon">📖</span>
+			<strong>Introduction</strong>
+			<small>Overview and key benefits of Le Truc</small>
+		</a>
+	</li><li>
+		<a href="getting-started.html">
+			<span class="icon">🚀</span>
+			<strong>Getting Started</strong>
+			<small>Installation, setup, and first steps</small>
+		</a>
+	</li><li>
+		<a href="components.html">
+			<span class="icon">🏗️</span>
+			<strong>Components</strong>
+			<small>Anatomy, lifecycle, signals, effects</small>
+		</a>
+	</li><li>
+		<a href="styling.html">
+			<span class="icon">🎨</span>
+			<strong>Styling</strong>
+			<small>Scoped styles, CSS custom properties</small>
+		</a>
+	</li><li>
+		<a href="data-flow.html">
+			<span class="icon">🔄</span>
+			<strong>Data Flow</strong>
+			<small>Passing state, events, context</small>
+		</a>
+	</li><li>
+		<a href="examples.html">
+			<span class="icon">🍽️</span>
+			<strong>Examples</strong>
+			<small>Common use cases and demos</small>
+		</a>
+	</li><li>
+		<a href="api.html">
+			<span class="icon">📖</span>
+			<strong>API</strong>
+			<small>API reference documentation</small>
+		</a>
+	</li><li>
+		<a href="about.html">
+			<span class="icon">🤝</span>
+			<strong>About</strong>
+			<small>License, versioning, getting involved</small>
+		</a>
+	</li>
+			</ol>
+		</nav>
+	</section-menu>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<div class="api-header">
+				<div class="content-grid">
+					<div class="content">
+						<nav class="api-breadcrumb" aria-label="Breadcrumb">
+							<a href="/api/">API</a> ›
+							<a href="/api/type-aliases/">type-aliases</a> › AllElements
+						</nav>
+						<h1 class="api-title">
+							AllElements
+							<span class="api-kind type-alias">type-alias</span>
+						</h1>
+					</div>
+				</div>
+			</div>
+			<main id="main" class="content-grid">
+				<div class="content api-content">
+					<div class="grid" style="grid-template-columns: 1fr 300px; gap: 2rem">
+						<article><section class="api-content">
+<h1 id="type-alias-allelements"><a name="type-alias-allelements" class="anchor" href="#type-alias-allelements"><span class="title">Type Alias: AllElements()</span><span class="permalink">#</span></a></h1><blockquote><p><strong>AllElements</strong> = {&lt;<code>S</code>&gt;(<code>selector</code>, <code>required?</code>): <a href="Memo.html"><code>Memo</code></a>&lt;<a href="ElementFromSelector.html"><code>ElementFromSelector</code></a>&lt;<code>S</code>&gt;[]&gt;; &lt;<code>E</code>&gt;(<code>selector</code>, <code>required?</code>): <a href="Memo.html"><code>Memo</code></a>&lt;<code>E</code>[]&gt;; }</p></blockquote><p>Defined in: <a href="https://github.com/zeixcom/le-truc/blob/d14510e550dfc154f9f0472e7b8adcdb3ab3002e/src/ui.ts#L88">src/ui.ts:88</a></p><h2 id="call-signature"><a name="call-signature" class="anchor" href="#call-signature"><span class="title">Call Signature</span><span class="permalink">#</span></a></h2><blockquote><p>&lt;<code>S</code>&gt;(<code>selector</code>, <code>required?</code>): <a href="Memo.html"><code>Memo</code></a>&lt;<a href="ElementFromSelector.html"><code>ElementFromSelector</code></a>&lt;<code>S</code>&gt;[]&gt;</p></blockquote><h3 id="type-parameters"><a name="type-parameters" class="anchor" href="#type-parameters"><span class="title">Type Parameters</span><span class="permalink">#</span></a></h3><h4 id="s"><a name="s" class="anchor" href="#s"><span class="title">S</span><span class="permalink">#</span></a></h4><p><code>S</code> <em>extends</em> <code>string</code></p><h3 id="parameters"><a name="parameters" class="anchor" href="#parameters"><span class="title">Parameters</span><span class="permalink">#</span></a></h3><h4 id="selector"><a name="selector" class="anchor" href="#selector"><span class="title">selector</span><span class="permalink">#</span></a></h4><p><code>S</code></p><h4 id="required"><a name="required" class="anchor" href="#required"><span class="title">required?</span><span class="permalink">#</span></a></h4><p><code>string</code></p><h3 id="returns"><a name="returns" class="anchor" href="#returns"><span class="title">Returns</span><span class="permalink">#</span></a></h3><p><a href="Memo.html"><code>Memo</code></a>&lt;<a href="ElementFromSelector.html"><code>ElementFromSelector</code></a>&lt;<code>S</code>&gt;[]&gt;</p><h2 id="call-signature"><a name="call-signature" class="anchor" href="#call-signature"><span class="title">Call Signature</span><span class="permalink">#</span></a></h2><blockquote><p>&lt;<code>E</code>&gt;(<code>selector</code>, <code>required?</code>): <a href="Memo.html"><code>Memo</code></a>&lt;<code>E</code>[]&gt;</p></blockquote><h3 id="type-parameters"><a name="type-parameters" class="anchor" href="#type-parameters"><span class="title">Type Parameters</span><span class="permalink">#</span></a></h3><h4 id="e"><a name="e" class="anchor" href="#e"><span class="title">E</span><span class="permalink">#</span></a></h4><p><code>E</code> <em>extends</em> <code>Element</code></p><h3 id="parameters"><a name="parameters" class="anchor" href="#parameters"><span class="title">Parameters</span><span class="permalink">#</span></a></h3><h4 id="selector"><a name="selector" class="anchor" href="#selector"><span class="title">selector</span><span class="permalink">#</span></a></h4><p><code>string</code></p><h4 id="required"><a name="required" class="anchor" href="#required"><span class="title">required?</span><span class="permalink">#</span></a></h4><p><code>string</code></p><h3 id="returns"><a name="returns" class="anchor" href="#returns"><span class="title">Returns</span><span class="permalink">#</span></a></h3><p><a href="Memo.html"><code>Memo</code></a>&lt;<code>E</code>[]&gt;</p>
+</section></article>
+						<aside class="api-sidebar">
+							<nav class="api-nav" aria-label="Page contents">
+								<h3>On this page</h3>
+								<ul>
+<li><a href="#call-signature">Call Signature</a></li>
+  <li><a href="#type-parameters">Type Parameters</a></li>
+  <li><a href="#parameters">Parameters</a></li>
+  <li><a href="#returns">Returns</a></li>
+<li><a href="#call-signature">Call Signature</a></li>
+  <li><a href="#type-parameters">Type Parameters</a></li>
+  <li><a href="#parameters">Parameters</a></li>
+  <li><a href="#returns">Returns</a></li>
+</ul>
+							</nav>
+						</aside>
+					</div>
+				</div>
+			</main>
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2026 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

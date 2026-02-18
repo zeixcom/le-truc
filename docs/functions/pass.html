@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>pass – Le Truc API</title>
+		<meta name="description" content="API reference for pass (function)" />
+		<link
+			rel="preload"
+			href="../../assets/main.css?v=bbd3df2cbd926183"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="../../assets/main.js?v=3aad7c7c0b2829ea"
+		/>
+		<link
+			rel="stylesheet"
+			href="../../assets/main.css?v=bbd3df2cbd926183"
+		/>
+		<script
+			type="module"
+			src="../../assets/main.js?v=3aad7c7c0b2829ea"
+		></script>
+	</head>
+	<body class="api">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">Le Truc Docs <small>Version 0.16.0</small></h1>
+				<section-menu>
+		<nav>
+			<h2 class="visually-hidden">Main Menu</h2>
+			<ol>
+				<li>
+		<a href="index.html">
+			<span class="icon">📖</span>
+			<strong>Introduction</strong>
+			<small>Overview and key benefits of Le Truc</small>
+		</a>
+	</li><li>
+		<a href="getting-started.html">
+			<span class="icon">🚀</span>
+			<strong>Getting Started</strong>
+			<small>Installation, setup, and first steps</small>
+		</a>
+	</li><li>
+		<a href="components.html">
+			<span class="icon">🏗️</span>
+			<strong>Components</strong>
+			<small>Anatomy, lifecycle, signals, effects</small>
+		</a>
+	</li><li>
+		<a href="styling.html">
+			<span class="icon">🎨</span>
+			<strong>Styling</strong>
+			<small>Scoped styles, CSS custom properties</small>
+		</a>
+	</li><li>
+		<a href="data-flow.html">
+			<span class="icon">🔄</span>
+			<strong>Data Flow</strong>
+			<small>Passing state, events, context</small>
+		</a>
+	</li><li>
+		<a href="examples.html">
+			<span class="icon">🍽️</span>
+			<strong>Examples</strong>
+			<small>Common use cases and demos</small>
+		</a>
+	</li><li>
+		<a href="api.html">
+			<span class="icon">📖</span>
+			<strong>API</strong>
+			<small>API reference documentation</small>
+		</a>
+	</li><li>
+		<a href="about.html">
+			<span class="icon">🤝</span>
+			<strong>About</strong>
+			<small>License, versioning, getting involved</small>
+		</a>
+	</li>
+			</ol>
+		</nav>
+	</section-menu>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<div class="api-header">
+				<div class="content-grid">
+					<div class="content">
+						<nav class="api-breadcrumb" aria-label="Breadcrumb">
+							<a href="/api/">API</a> ›
+							<a href="/api/functions/">functions</a> › pass
+						</nav>
+						<h1 class="api-title">
+							pass
+							<span class="api-kind function">function</span>
+						</h1>
+					</div>
+				</div>
+			</div>
+			<main id="main" class="content-grid">
+				<div class="content api-content">
+					<div class="grid" style="grid-template-columns: 1fr 300px; gap: 2rem">
+						<article><section class="api-content">
+<h1 id="function-pass"><a name="function-pass" class="anchor" href="#function-pass"><span class="title">Function: pass()</span><span class="permalink">#</span></a></h1><blockquote><p><strong>pass</strong>&lt;<code>P</code>, <code>Q</code>&gt;(<code>props</code>): <a href="../type-aliases/Effect.html"><code>Effect</code></a>&lt;<code>P</code>, <a href="../type-aliases/Component.html"><code>Component</code></a>&lt;<code>Q</code>&gt;&gt;</p></blockquote><p>Defined in: <a href="https://github.com/zeixcom/le-truc/blob/d14510e550dfc154f9f0472e7b8adcdb3ab3002e/src/effects/pass.ts#L42">src/effects/pass.ts:42</a></p><p>Effect for passing reactive values to a descendant Le Truc component by replacing the backing signal of the target's Slot.</p><p>No cleanup/restore is needed: when the parent unmounts, the child is torn down as well. For re-parenting scenarios, use context instead.</p><h2 id="type-parameters"><a name="type-parameters" class="anchor" href="#type-parameters"><span class="title">Type Parameters</span><span class="permalink">#</span></a></h2><h3 id="p"><a name="p" class="anchor" href="#p"><span class="title">P</span><span class="permalink">#</span></a></h3><p><code>P</code> <em>extends</em> <a href="../type-aliases/ComponentProps.html"><code>ComponentProps</code></a></p><h3 id="q"><a name="q" class="anchor" href="#q"><span class="title">Q</span><span class="permalink">#</span></a></h3><p><code>Q</code> <em>extends</em> <a href="../type-aliases/ComponentProps.html"><code>ComponentProps</code></a></p><h2 id="parameters"><a name="parameters" class="anchor" href="#parameters"><span class="title">Parameters</span><span class="permalink">#</span></a></h2><h3 id="props"><a name="props" class="anchor" href="#props"><span class="title">props</span><span class="permalink">#</span></a></h3><p>Reactive values to pass</p><p><a href="../type-aliases/PassedProps.html"><code>PassedProps</code></a>&lt;<code>P</code>, <code>Q</code>&gt; | (<code>target</code>) =&gt; <a href="../type-aliases/PassedProps.html"><code>PassedProps</code></a>&lt;<code>P</code>, <code>Q</code>&gt;</p><h2 id="returns"><a name="returns" class="anchor" href="#returns"><span class="title">Returns</span><span class="permalink">#</span></a></h2><p><a href="../type-aliases/Effect.html"><code>Effect</code></a>&lt;<code>P</code>, <a href="../type-aliases/Component.html"><code>Component</code></a>&lt;<code>Q</code>&gt;&gt;</p><p>Effect function that passes reactive values to the descendant component</p><h2 id="since"><a name="since" class="anchor" href="#since"><span class="title">Since</span><span class="permalink">#</span></a></h2><p>0.15.0</p><h2 id="throws"><a name="throws" class="anchor" href="#throws"><span class="title">Throws</span><span class="permalink">#</span></a></h2><p>When the target element is not a valid custom element</p><h2 id="throws"><a name="throws" class="anchor" href="#throws"><span class="title">Throws</span><span class="permalink">#</span></a></h2><p>When the provided reactives is not a record of signals, reactive property names or functions</p>
+</section></article>
+						<aside class="api-sidebar">
+							<nav class="api-nav" aria-label="Page contents">
+								<h3>On this page</h3>
+								<ul>
+<li><a href="#type-parameters">Type Parameters</a></li>
+  <li><a href="#p">P</a></li>
+  <li><a href="#q">Q</a></li>
+<li><a href="#parameters">Parameters</a></li>
+  <li><a href="#props">props</a></li>
+<li><a href="#returns">Returns</a></li>
+<li><a href="#since">Since</a></li>
+<li><a href="#throws">Throws</a></li>
+<li><a href="#throws">Throws</a></li>
+</ul>
+							</nav>
+						</aside>
+					</div>
+				</div>
+			</main>
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2026 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

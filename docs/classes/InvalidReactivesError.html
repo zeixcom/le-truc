@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>InvalidReactivesError – Le Truc API</title>
+		<meta name="description" content="API reference for InvalidReactivesError (class)" />
+		<link
+			rel="preload"
+			href="../../assets/main.css?v=bbd3df2cbd926183"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="../../assets/main.js?v=3aad7c7c0b2829ea"
+		/>
+		<link
+			rel="stylesheet"
+			href="../../assets/main.css?v=bbd3df2cbd926183"
+		/>
+		<script
+			type="module"
+			src="../../assets/main.js?v=3aad7c7c0b2829ea"
+		></script>
+	</head>
+	<body class="api">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">Le Truc Docs <small>Version 0.16.0</small></h1>
+				<section-menu>
+		<nav>
+			<h2 class="visually-hidden">Main Menu</h2>
+			<ol>
+				<li>
+		<a href="index.html">
+			<span class="icon">📖</span>
+			<strong>Introduction</strong>
+			<small>Overview and key benefits of Le Truc</small>
+		</a>
+	</li><li>
+		<a href="getting-started.html">
+			<span class="icon">🚀</span>
+			<strong>Getting Started</strong>
+			<small>Installation, setup, and first steps</small>
+		</a>
+	</li><li>
+		<a href="components.html">
+			<span class="icon">🏗️</span>
+			<strong>Components</strong>
+			<small>Anatomy, lifecycle, signals, effects</small>
+		</a>
+	</li><li>
+		<a href="styling.html">
+			<span class="icon">🎨</span>
+			<strong>Styling</strong>
+			<small>Scoped styles, CSS custom properties</small>
+		</a>
+	</li><li>
+		<a href="data-flow.html">
+			<span class="icon">🔄</span>
+			<strong>Data Flow</strong>
+			<small>Passing state, events, context</small>
+		</a>
+	</li><li>
+		<a href="examples.html">
+			<span class="icon">🍽️</span>
+			<strong>Examples</strong>
+			<small>Common use cases and demos</small>
+		</a>
+	</li><li>
+		<a href="api.html">
+			<span class="icon">📖</span>
+			<strong>API</strong>
+			<small>API reference documentation</small>
+		</a>
+	</li><li>
+		<a href="about.html">
+			<span class="icon">🤝</span>
+			<strong>About</strong>
+			<small>License, versioning, getting involved</small>
+		</a>
+	</li>
+			</ol>
+		</nav>
+	</section-menu>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<div class="api-header">
+				<div class="content-grid">
+					<div class="content">
+						<nav class="api-breadcrumb" aria-label="Breadcrumb">
+							<a href="/api/">API</a> ›
+							<a href="/api/classes/">classes</a> › InvalidReactivesError
+						</nav>
+						<h1 class="api-title">
+							InvalidReactivesError
+							<span class="api-kind class">class</span>
+						</h1>
+					</div>
+				</div>
+			</div>
+			<main id="main" class="content-grid">
+				<div class="content api-content">
+					<div class="grid" style="grid-template-columns: 1fr 300px; gap: 2rem">
+						<article><section class="api-content">
+<h1 id="class-invalidreactiveserror"><a name="class-invalidreactiveserror" class="anchor" href="#class-invalidreactiveserror"><span class="title">Class: InvalidReactivesError</span><span class="permalink">#</span></a></h1><p>Defined in: <a href="https://github.com/zeixcom/le-truc/blob/d14510e550dfc154f9f0472e7b8adcdb3ab3002e/src/errors.ts#L120">src/errors.ts:120</a></p><p>Error thrown when reactives passed to a component are invalid</p><h2 id="since"><a name="since" class="anchor" href="#since"><span class="title">Since</span><span class="permalink">#</span></a></h2><p>0.15.0</p><h2 id="extends"><a name="extends" class="anchor" href="#extends"><span class="title">Extends</span><span class="permalink">#</span></a></h2><ul><li><code>TypeError</code></li></ul><h2 id="constructors"><a name="constructors" class="anchor" href="#constructors"><span class="title">Constructors</span><span class="permalink">#</span></a></h2><h3 id="constructor"><a name="constructor" class="anchor" href="#constructor"><span class="title">Constructor</span><span class="permalink">#</span></a></h3><blockquote><p><strong>new InvalidReactivesError</strong>(<code>host</code>, <code>target</code>, <code>reactives</code>): <code>InvalidReactivesError</code></p></blockquote><p>Defined in: <a href="https://github.com/zeixcom/le-truc/blob/d14510e550dfc154f9f0472e7b8adcdb3ab3002e/src/errors.ts#L126">src/errors.ts:126</a></p><h4 id="parameters"><a name="parameters" class="anchor" href="#parameters"><span class="title">Parameters</span><span class="permalink">#</span></a></h4><h5 id="host"><a name="host" class="anchor" href="#host"><span class="title">host</span><span class="permalink">#</span></a></h5><p><code>HTMLElement</code></p><p>Host component</p><h5 id="target"><a name="target" class="anchor" href="#target"><span class="title">target</span><span class="permalink">#</span></a></h5><p><code>HTMLElement</code></p><p>Target component</p><h5 id="reactives"><a name="reactives" class="anchor" href="#reactives"><span class="title">reactives</span><span class="permalink">#</span></a></h5><p><code>unknown</code></p><p>Reactives passed to the component</p><h4 id="returns"><a name="returns" class="anchor" href="#returns"><span class="title">Returns</span><span class="permalink">#</span></a></h4><p><code>InvalidReactivesError</code></p><h4 id="overrides"><a name="overrides" class="anchor" href="#overrides"><span class="title">Overrides</span><span class="permalink">#</span></a></h4><p><code>TypeError.constructor</code></p><h2 id="properties"><a name="properties" class="anchor" href="#properties"><span class="title">Properties</span><span class="permalink">#</span></a></h2><h3 id="cause"><a name="cause" class="anchor" href="#cause"><span class="title">cause?</span><span class="permalink">#</span></a></h3><blockquote><p><code>optional</code> <strong>cause</strong>: <code>unknown</code></p></blockquote><p>Defined in: node_modules/typescript/lib/lib.es2022.error.d.ts:26</p><p>The cause of the error.</p><h4 id="inherited-from"><a name="inherited-from" class="anchor" href="#inherited-from"><span class="title">Inherited from</span><span class="permalink">#</span></a></h4><p><code>TypeError.cause</code></p><hr><h3 id="message"><a name="message" class="anchor" href="#message"><span class="title">message</span><span class="permalink">#</span></a></h3><blockquote><p><strong>message</strong>: <code>string</code></p></blockquote><p>Defined in: node_modules/typescript/lib/lib.es5.d.ts:1077</p><h4 id="inherited-from"><a name="inherited-from" class="anchor" href="#inherited-from"><span class="title">Inherited from</span><span class="permalink">#</span></a></h4><p><code>TypeError.message</code></p><hr><h3 id="name"><a name="name" class="anchor" href="#name"><span class="title">name</span><span class="permalink">#</span></a></h3><blockquote><p><strong>name</strong>: <code>string</code></p></blockquote><p>Defined in: node_modules/typescript/lib/lib.es5.d.ts:1076</p><h4 id="inherited-from"><a name="inherited-from" class="anchor" href="#inherited-from"><span class="title">Inherited from</span><span class="permalink">#</span></a></h4><p><code>TypeError.name</code></p><hr><h3 id="stack"><a name="stack" class="anchor" href="#stack"><span class="title">stack?</span><span class="permalink">#</span></a></h3><blockquote><p><code>optional</code> <strong>stack</strong>: <code>string</code></p></blockquote><p>Defined in: node_modules/typescript/lib/lib.es5.d.ts:1078</p><h4 id="inherited-from"><a name="inherited-from" class="anchor" href="#inherited-from"><span class="title">Inherited from</span><span class="permalink">#</span></a></h4><p><code>TypeError.stack</code></p><hr><h3 id="stacktracelimit"><a name="stacktracelimit" class="anchor" href="#stacktracelimit"><span class="title">stackTraceLimit</span><span class="permalink">#</span></a></h3><blockquote><p><code>static</code> <strong>stackTraceLimit</strong>: <code>number</code></p></blockquote><p>Defined in: node_modules/@types/node/globals.d.ts:68</p><p>The <code>Error.stackTraceLimit</code> property specifies the number of stack frames collected by a stack trace (whether generated by <code>new Error().stack</code> or <code>Error.captureStackTrace(obj)</code>).</p><p>The default value is <code>10</code> but may be set to any valid JavaScript number. Changes will affect any stack trace captured <em>after</em> the value has been changed.</p><p>If set to a non-number value, or set to a negative number, stack traces will not capture any frames.</p><h4 id="inherited-from"><a name="inherited-from" class="anchor" href="#inherited-from"><span class="title">Inherited from</span><span class="permalink">#</span></a></h4><p><code>TypeError.stackTraceLimit</code></p><h2 id="methods"><a name="methods" class="anchor" href="#methods"><span class="title">Methods</span><span class="permalink">#</span></a></h2><h3 id="capturestacktrace"><a name="capturestacktrace" class="anchor" href="#capturestacktrace"><span class="title">captureStackTrace()</span><span class="permalink">#</span></a></h3><h4 id="call-signature"><a name="call-signature" class="anchor" href="#call-signature"><span class="title">Call Signature</span><span class="permalink">#</span></a></h4><blockquote><p><code>static</code> <strong>captureStackTrace</strong>(<code>targetObject</code>, <code>constructorOpt?</code>): <code>void</code></p></blockquote><p>Defined in: node_modules/@types/node/globals.d.ts:52</p><p>Creates a <code>.stack</code> property on <code>targetObject</code>, which when accessed returns a string representing the location in the code at which <code>Error.captureStackTrace()</code> was called.</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> myObject </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {};</span></span>
+<span class="line"><span style="color:#F8F8F2">Error.</span><span style="color:#A6E22E">captureStackTrace</span><span style="color:#F8F8F2">(myObject);</span></span>
+<span class="line"><span style="color:#F8F8F2">myObject.stack;  </span><span style="color:#88846F">// Similar to `new Error().stack`</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>The first line of the trace will be prefixed with <code>${myObject.name}: ${myObject.message}</code>.</p><p>The optional <code>constructorOpt</code> argument accepts a function. If given, all frames above <code>constructorOpt</code>, including <code>constructorOpt</code>, will be omitted from the generated stack trace.</p><p>The <code>constructorOpt</code> argument is useful for hiding implementation details of error generation from the user. For instance:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#66D9EF;font-style:italic">function</span><span style="color:#A6E22E"> a</span><span style="color:#F8F8F2">() {</span></span>
+<span class="line"><span style="color:#A6E22E">  b</span><span style="color:#F8F8F2">();</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">function</span><span style="color:#A6E22E"> b</span><span style="color:#F8F8F2">() {</span></span>
+<span class="line"><span style="color:#A6E22E">  c</span><span style="color:#F8F8F2">();</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">function</span><span style="color:#A6E22E"> c</span><span style="color:#F8F8F2">() {</span></span>
+<span class="line"><span style="color:#88846F">  // Create an error without stack trace to avoid calculating the stack trace twice.</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">  const</span><span style="color:#F8F8F2"> { stackTraceLimit } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Error;</span></span>
+<span class="line"><span style="color:#F8F8F2">  Error.stackTraceLimit </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">  const</span><span style="color:#F8F8F2"> error </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> Error</span><span style="color:#F8F8F2">();</span></span>
+<span class="line"><span style="color:#F8F8F2">  Error.stackTraceLimit </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> stackTraceLimit;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">  // Capture the stack trace above function b</span></span>
+<span class="line"><span style="color:#F8F8F2">  Error.</span><span style="color:#A6E22E">captureStackTrace</span><span style="color:#F8F8F2">(error, b); </span><span style="color:#88846F">// Neither function c, nor b is included in the stack trace</span></span>
+<span class="line"><span style="color:#F92672">  throw</span><span style="color:#F8F8F2"> error;</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">a</span><span style="color:#F8F8F2">();</span></span>
+<span class="line"></span></code></pre><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><h5 id="parameters"><a name="parameters" class="anchor" href="#parameters"><span class="title">Parameters</span><span class="permalink">#</span></a></h5><h6 id="targetobject"><a name="targetobject" class="anchor" href="#targetobject"><span class="title">targetObject</span><span class="permalink">#</span></a></h6><p><code>object</code></p><h6 id="constructoropt"><a name="constructoropt" class="anchor" href="#constructoropt"><span class="title">constructorOpt?</span><span class="permalink">#</span></a></h6><p><code>Function</code></p><h5 id="returns"><a name="returns" class="anchor" href="#returns"><span class="title">Returns</span><span class="permalink">#</span></a></h5><p><code>void</code></p><h5 id="inherited-from"><a name="inherited-from" class="anchor" href="#inherited-from"><span class="title">Inherited from</span><span class="permalink">#</span></a></h5><p><code>TypeError.captureStackTrace</code></p><h4 id="call-signature"><a name="call-signature" class="anchor" href="#call-signature"><span class="title">Call Signature</span><span class="permalink">#</span></a></h4><blockquote><p><code>static</code> <strong>captureStackTrace</strong>(<code>targetObject</code>, <code>constructorOpt?</code>): <code>void</code></p></blockquote><p>Defined in: node_modules/bun-types/globals.d.ts:1042</p><p>Create .stack property on a target object</p><h5 id="parameters"><a name="parameters" class="anchor" href="#parameters"><span class="title">Parameters</span><span class="permalink">#</span></a></h5><h6 id="targetobject"><a name="targetobject" class="anchor" href="#targetobject"><span class="title">targetObject</span><span class="permalink">#</span></a></h6><p><code>object</code></p><h6 id="constructoropt"><a name="constructoropt" class="anchor" href="#constructoropt"><span class="title">constructorOpt?</span><span class="permalink">#</span></a></h6><p><code>Function</code></p><h5 id="returns"><a name="returns" class="anchor" href="#returns"><span class="title">Returns</span><span class="permalink">#</span></a></h5><p><code>void</code></p><h5 id="inherited-from"><a name="inherited-from" class="anchor" href="#inherited-from"><span class="title">Inherited from</span><span class="permalink">#</span></a></h5><p><code>TypeError.captureStackTrace</code></p><hr><h3 id="iserror"><a name="iserror" class="anchor" href="#iserror"><span class="title">isError()</span><span class="permalink">#</span></a></h3><h4 id="call-signature"><a name="call-signature" class="anchor" href="#call-signature"><span class="title">Call Signature</span><span class="permalink">#</span></a></h4><blockquote><p><code>static</code> <strong>isError</strong>(<code>error</code>): <code>error is Error</code></p></blockquote><p>Defined in: node_modules/typescript/lib/lib.esnext.error.d.ts:23</p><p>Indicates whether the argument provided is a built-in Error instance or not.</p><h5 id="parameters"><a name="parameters" class="anchor" href="#parameters"><span class="title">Parameters</span><span class="permalink">#</span></a></h5><h6 id="error"><a name="error" class="anchor" href="#error"><span class="title">error</span><span class="permalink">#</span></a></h6><p><code>unknown</code></p><h5 id="returns"><a name="returns" class="anchor" href="#returns"><span class="title">Returns</span><span class="permalink">#</span></a></h5><p><code>error is Error</code></p><h5 id="inherited-from"><a name="inherited-from" class="anchor" href="#inherited-from"><span class="title">Inherited from</span><span class="permalink">#</span></a></h5><p><code>TypeError.isError</code></p><h4 id="call-signature"><a name="call-signature" class="anchor" href="#call-signature"><span class="title">Call Signature</span><span class="permalink">#</span></a></h4><blockquote><p><code>static</code> <strong>isError</strong>(<code>value</code>): <code>value is Error</code></p></blockquote><p>Defined in: node_modules/bun-types/globals.d.ts:1037</p><p>Check if a value is an instance of Error</p><h5 id="parameters"><a name="parameters" class="anchor" href="#parameters"><span class="title">Parameters</span><span class="permalink">#</span></a></h5><h6 id="value"><a name="value" class="anchor" href="#value"><span class="title">value</span><span class="permalink">#</span></a></h6><p><code>unknown</code></p><p>The value to check</p><h5 id="returns"><a name="returns" class="anchor" href="#returns"><span class="title">Returns</span><span class="permalink">#</span></a></h5><p><code>value is Error</code></p><p>True if the value is an instance of Error, false otherwise</p><h5 id="inherited-from"><a name="inherited-from" class="anchor" href="#inherited-from"><span class="title">Inherited from</span><span class="permalink">#</span></a></h5><p><code>TypeError.isError</code></p><hr><h3 id="preparestacktrace"><a name="preparestacktrace" class="anchor" href="#preparestacktrace"><span class="title">prepareStackTrace()</span><span class="permalink">#</span></a></h3><blockquote><p><code>static</code> <strong>prepareStackTrace</strong>(<code>err</code>, <code>stackTraces</code>): <code>any</code></p></blockquote><p>Defined in: node_modules/@types/node/globals.d.ts:56</p><h4 id="parameters"><a name="parameters" class="anchor" href="#parameters"><span class="title">Parameters</span><span class="permalink">#</span></a></h4><h5 id="err"><a name="err" class="anchor" href="#err"><span class="title">err</span><span class="permalink">#</span></a></h5><p><code>Error</code></p><h5 id="stacktraces"><a name="stacktraces" class="anchor" href="#stacktraces"><span class="title">stackTraces</span><span class="permalink">#</span></a></h5><p><code>CallSite</code>[]</p><h4 id="returns"><a name="returns" class="anchor" href="#returns"><span class="title">Returns</span><span class="permalink">#</span></a></h4><p><code>any</code></p><h4 id="see"><a name="see" class="anchor" href="#see"><span class="title">See</span><span class="permalink">#</span></a></h4><p>https://v8.dev/docs/stack-trace-api#customizing-stack-traces</p><h4 id="inherited-from"><a name="inherited-from" class="anchor" href="#inherited-from"><span class="title">Inherited from</span><span class="permalink">#</span></a></h4><p><code>TypeError.prepareStackTrace</code></p>
+</section></article>
+						<aside class="api-sidebar">
+							<nav class="api-nav" aria-label="Page contents">
+								<h3>On this page</h3>
+								<ul>
+<li><a href="#since">Since</a></li>
+<li><a href="#extends">Extends</a></li>
+<li><a href="#constructors">Constructors</a></li>
+  <li><a href="#constructor">Constructor</a></li>
+<li><a href="#properties">Properties</a></li>
+  <li><a href="#cause">cause?</a></li>
+  <li><a href="#message">message</a></li>
+  <li><a href="#name">name</a></li>
+  <li><a href="#stack">stack?</a></li>
+  <li><a href="#stacktracelimit">stackTraceLimit</a></li>
+<li><a href="#methods">Methods</a></li>
+  <li><a href="#capturestacktrace">captureStackTrace()</a></li>
+  <li><a href="#iserror">isError()</a></li>
+  <li><a href="#preparestacktrace">prepareStackTrace()</a></li>
+</ul>
+							</nav>
+						</aside>
+					</div>
+				</div>
+			</main>
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2026 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

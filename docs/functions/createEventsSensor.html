@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>createEventsSensor – Le Truc API</title>
+		<meta name="description" content="API reference for createEventsSensor (function)" />
+		<link
+			rel="preload"
+			href="../../assets/main.css?v=bbd3df2cbd926183"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="../../assets/main.js?v=3aad7c7c0b2829ea"
+		/>
+		<link
+			rel="stylesheet"
+			href="../../assets/main.css?v=bbd3df2cbd926183"
+		/>
+		<script
+			type="module"
+			src="../../assets/main.js?v=3aad7c7c0b2829ea"
+		></script>
+	</head>
+	<body class="api">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">Le Truc Docs <small>Version 0.16.0</small></h1>
+				<section-menu>
+		<nav>
+			<h2 class="visually-hidden">Main Menu</h2>
+			<ol>
+				<li>
+		<a href="index.html">
+			<span class="icon">📖</span>
+			<strong>Introduction</strong>
+			<small>Overview and key benefits of Le Truc</small>
+		</a>
+	</li><li>
+		<a href="getting-started.html">
+			<span class="icon">🚀</span>
+			<strong>Getting Started</strong>
+			<small>Installation, setup, and first steps</small>
+		</a>
+	</li><li>
+		<a href="components.html">
+			<span class="icon">🏗️</span>
+			<strong>Components</strong>
+			<small>Anatomy, lifecycle, signals, effects</small>
+		</a>
+	</li><li>
+		<a href="styling.html">
+			<span class="icon">🎨</span>
+			<strong>Styling</strong>
+			<small>Scoped styles, CSS custom properties</small>
+		</a>
+	</li><li>
+		<a href="data-flow.html">
+			<span class="icon">🔄</span>
+			<strong>Data Flow</strong>
+			<small>Passing state, events, context</small>
+		</a>
+	</li><li>
+		<a href="examples.html">
+			<span class="icon">🍽️</span>
+			<strong>Examples</strong>
+			<small>Common use cases and demos</small>
+		</a>
+	</li><li>
+		<a href="api.html">
+			<span class="icon">📖</span>
+			<strong>API</strong>
+			<small>API reference documentation</small>
+		</a>
+	</li><li>
+		<a href="about.html">
+			<span class="icon">🤝</span>
+			<strong>About</strong>
+			<small>License, versioning, getting involved</small>
+		</a>
+	</li>
+			</ol>
+		</nav>
+	</section-menu>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<div class="api-header">
+				<div class="content-grid">
+					<div class="content">
+						<nav class="api-breadcrumb" aria-label="Breadcrumb">
+							<a href="/api/">API</a> ›
+							<a href="/api/functions/">functions</a> › createEventsSensor
+						</nav>
+						<h1 class="api-title">
+							createEventsSensor
+							<span class="api-kind function">function</span>
+						</h1>
+					</div>
+				</div>
+			</div>
+			<main id="main" class="content-grid">
+				<div class="content api-content">
+					<div class="grid" style="grid-template-columns: 1fr 300px; gap: 2rem">
+						<article><section class="api-content">
+<h1 id="function-createeventssensor"><a name="function-createeventssensor" class="anchor" href="#function-createeventssensor"><span class="title">Function: createEventsSensor()</span><span class="permalink">#</span></a></h1><blockquote><p><strong>createEventsSensor</strong>&lt;<code>T</code>, <code>P</code>, <code>U</code>, <code>K</code>&gt;(<code>init</code>, <code>key</code>, <code>events</code>): (<code>ui</code>) =&gt; <a href="../type-aliases/Sensor.html"><code>Sensor</code></a>&lt;<code>T</code>&gt;</p></blockquote><p>Defined in: <a href="https://github.com/zeixcom/le-truc/blob/d14510e550dfc154f9f0472e7b8adcdb3ab3002e/src/events.ts#L41">src/events.ts:41</a></p><p>Produce an event-driven sensor from transformed event data</p><h2 id="type-parameters"><a name="type-parameters" class="anchor" href="#type-parameters"><span class="title">Type Parameters</span><span class="permalink">#</span></a></h2><h3 id="t"><a name="t" class="anchor" href="#t"><span class="title">T</span><span class="permalink">#</span></a></h3><p><code>T</code> <em>extends</em> <code>object</code></p><h3 id="p"><a name="p" class="anchor" href="#p"><span class="title">P</span><span class="permalink">#</span></a></h3><p><code>P</code> <em>extends</em> <a href="../type-aliases/ComponentProps.html"><code>ComponentProps</code></a></p><h3 id="u"><a name="u" class="anchor" href="#u"><span class="title">U</span><span class="permalink">#</span></a></h3><p><code>U</code> <em>extends</em> <a href="../type-aliases/UI.html"><code>UI</code></a></p><h3 id="k"><a name="k" class="anchor" href="#k"><span class="title">K</span><span class="permalink">#</span></a></h3><p><code>K</code> <em>extends</em> <code>string</code> | <code>number</code> | <code>symbol</code></p><h2 id="parameters"><a name="parameters" class="anchor" href="#parameters"><span class="title">Parameters</span><span class="permalink">#</span></a></h2><h3 id="init"><a name="init" class="anchor" href="#init"><span class="title">init</span><span class="permalink">#</span></a></h3><p><a href="../type-aliases/ParserOrFallback.html"><code>ParserOrFallback</code></a>&lt;<code>T</code>, <code>U</code>&gt;</p><p>Initial value, reader or parser</p><h3 id="key"><a name="key" class="anchor" href="#key"><span class="title">key</span><span class="permalink">#</span></a></h3><p><code>K</code></p><p>name of UI key</p><h3 id="events"><a name="events" class="anchor" href="#events"><span class="title">events</span><span class="permalink">#</span></a></h3><p><a href="../type-aliases/EventHandlers.html"><code>EventHandlers</code></a>&lt;<code>T</code>, <code>U</code>, <a href="../type-aliases/ElementFromKey.html"><code>ElementFromKey</code></a>&lt;<code>U</code>, <code>K</code>&gt;&gt;</p><p>Transformation functions for events</p><h2 id="returns"><a name="returns" class="anchor" href="#returns"><span class="title">Returns</span><span class="permalink">#</span></a></h2><p>Extractor function for value from event</p><blockquote><p>(<code>ui</code>): <a href="../type-aliases/Sensor.html"><code>Sensor</code></a>&lt;<code>T</code>&gt;</p></blockquote><h3 id="parameters"><a name="parameters" class="anchor" href="#parameters"><span class="title">Parameters</span><span class="permalink">#</span></a></h3><h4 id="ui"><a name="ui" class="anchor" href="#ui"><span class="title">ui</span><span class="permalink">#</span></a></h4><p><code>U</code> &amp; <code>object</code></p><h3 id="returns"><a name="returns" class="anchor" href="#returns"><span class="title">Returns</span><span class="permalink">#</span></a></h3><p><a href="../type-aliases/Sensor.html"><code>Sensor</code></a>&lt;<code>T</code>&gt;</p><h2 id="since"><a name="since" class="anchor" href="#since"><span class="title">Since</span><span class="permalink">#</span></a></h2><p>0.16.0</p>
+</section></article>
+						<aside class="api-sidebar">
+							<nav class="api-nav" aria-label="Page contents">
+								<h3>On this page</h3>
+								<ul>
+<li><a href="#type-parameters">Type Parameters</a></li>
+  <li><a href="#t">T</a></li>
+  <li><a href="#p">P</a></li>
+  <li><a href="#u">U</a></li>
+  <li><a href="#k">K</a></li>
+<li><a href="#parameters">Parameters</a></li>
+  <li><a href="#init">init</a></li>
+  <li><a href="#key">key</a></li>
+  <li><a href="#events">events</a></li>
+<li><a href="#returns">Returns</a></li>
+  <li><a href="#parameters">Parameters</a></li>
+  <li><a href="#returns">Returns</a></li>
+<li><a href="#since">Since</a></li>
+</ul>
+							</nav>
+						</aside>
+					</div>
+				</div>
+			</main>
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2026 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

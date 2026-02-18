@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Examples – Le Truc Docs</title>
+		<meta name="description" content="Common use cases and demos" />
+		<link
+			rel="preload"
+			href="./assets/main.css?v=7cc8fd149009e272"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="./assets/main.js?v=5c3e974ca1fa2b64"
+		/>
+		<link
+			rel="stylesheet"
+			href="./assets/main.css?v=7cc8fd149009e272"
+		/>
+		<script
+			type="module"
+			src="./assets/main.js?v=5c3e974ca1fa2b64"
+		></script>
+	</head>
+
+	<body class="">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">Le Truc Docs <small>Version 0.16.1</small></h1>
+				<section-menu>
+		<nav>
+			<h2 class="visually-hidden">Main Menu</h2>
+			<ol>
+				<li>
+		<a href="index.html">
+			<span class="icon">📖</span>
+			<strong>Introduction</strong>
+			<small>Overview and key benefits of Le Truc</small>
+		</a>
+	</li><li>
+		<a href="getting-started.html">
+			<span class="icon">🚀</span>
+			<strong>Getting Started</strong>
+			<small>Installation, setup, and first steps</small>
+		</a>
+	</li><li>
+		<a href="components.html">
+			<span class="icon">🏗️</span>
+			<strong>Components</strong>
+			<small>Anatomy, lifecycle, signals, effects</small>
+		</a>
+	</li><li>
+		<a href="styling.html">
+			<span class="icon">🎨</span>
+			<strong>Styling</strong>
+			<small>Scoped styles, CSS custom properties</small>
+		</a>
+	</li><li>
+		<a href="data-flow.html">
+			<span class="icon">🔄</span>
+			<strong>Data Flow</strong>
+			<small>Passing state, events, context</small>
+		</a>
+	</li><li>
+		<a href="examples.html">
+			<span class="icon">🍽️</span>
+			<strong>Examples</strong>
+			<small>Common use cases and demos</small>
+		</a>
+	</li><li>
+		<a href="api.html">
+			<span class="icon">📖</span>
+			<strong>API</strong>
+			<small>API reference documentation</small>
+		</a>
+	</li><li>
+		<a href="about.html">
+			<span class="icon">🤝</span>
+			<strong>About</strong>
+			<small>License, versioning, getting involved</small>
+		</a>
+	</li>
+			</ol>
+		</nav>
+	</section-menu>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+
+			<main id="main" class="content-grid"><section-hero><h1 id="-examples-recipes"><a name="-examples-recipes" class="anchor" href="#-examples-recipes"><span class="title">🍽️ Examples &amp; Recipes</span><span class="permalink">#</span></a></h1><div class="hero-layout"><div class="lead"><p><strong>Discover practical examples components with Le Truc.</strong> Each example focuses on showcasing a specific feature or best practice, guiding you through real-world use cases.</p></div><div class="toc-placeholder" data-toc="true"></div></div></section-hero><section class="breakout" id="undefined"><h2 id="components"><a name="components" class="anchor" href="#components"><span class="title">Components</span><span class="permalink">#</span></a></h2><module-listnav><nav><h2 id="listnav-0ujg35q-label" class="visually-hidden">Example Components</h2><form-listbox id="listnav-0ujg35q" value="/examples/basic-button.html"><input type="hidden" name="page"><label for="listnav-0ujg35q-filter" class="visually-hidden">Filter</label><div class="input"><input type="text" id="listnav-0ujg35q-filter" class="filter" name="filter" value="" autocomplete="off" placeholder="Filter"><button type="button" class="clear" aria-label="Clear filter" hidden="true">✕</button></div><div role="listbox" aria-labelledby="listnav-0ujg35q-label"><div role="group" aria-labelledby="group-68tgysh"><div role="presentation" id="group-68tgysh">Basic</div><button type="button" role="option" tabindex="0" value="/examples/basic-button.html" aria-selected="true">Button</button><button type="button" role="option" tabindex="-1" value="/examples/basic-counter.html" aria-selected="false">Counter</button><button type="button" role="option" tabindex="-1" value="/examples/basic-hello.html" aria-selected="false">Hello</button><button type="button" role="option" tabindex="-1" value="/examples/basic-number.html" aria-selected="false">Number</button><button type="button" role="option" tabindex="-1" value="/examples/basic-pluralize.html" aria-selected="false">Pluralize</button></div><div role="group" aria-labelledby="group-gqmlzap"><div role="presentation" id="group-gqmlzap">Card</div><button type="button" role="option" tabindex="-1" value="/examples/card-callout.html" aria-selected="false">Callout</button></div><div role="group" aria-labelledby="group-4p38jxt"><div role="presentation" id="group-4p38jxt">Context</div><button type="button" role="option" tabindex="-1" value="/examples/context-media.html" aria-selected="false">Media</button></div><div role="group" aria-labelledby="group-ivp5xtt"><div role="presentation" id="group-ivp5xtt">Form</div><button type="button" role="option" tabindex="-1" value="/examples/form-checkbox.html" aria-selected="false">Checkbox</button><button type="button" role="option" tabindex="-1" value="/examples/form-combobox.html" aria-selected="false">Combobox</button><button type="button" role="option" tabindex="-1" value="/examples/form-listbox.html" aria-selected="false">Listbox</button><button type="button" role="option" tabindex="-1" value="/examples/form-radiogroup.html" aria-selected="false">Radiogroup</button><button type="button" role="option" tabindex="-1" value="/examples/form-spinbutton.html" aria-selected="false">Spinbutton</button><button type="button" role="option" tabindex="-1" value="/examples/form-textbox.html" aria-selected="false">Textbox</button></div><div role="group" aria-labelledby="group-et8fm90"><div role="presentation" id="group-et8fm90">Module</div><button type="button" role="option" tabindex="-1" value="/examples/module-carousel.html" aria-selected="false">Carousel</button><button type="button" role="option" tabindex="-1" value="/examples/module-catalog.html" aria-selected="false">Catalog</button><button type="button" role="option" tabindex="-1" value="/examples/module-codeblock.html" aria-selected="false">Codeblock</button><button type="button" role="option" tabindex="-1" value="/examples/module-dialog.html" aria-selected="false">Dialog</button><button type="button" role="option" tabindex="-1" value="/examples/module-lazyload.html" aria-selected="false">Lazyload</button><button type="button" role="option" tabindex="-1" value="/examples/module-list.html" aria-selected="false">List</button><button type="button" role="option" tabindex="-1" value="/examples/module-pagination.html" aria-selected="false">Pagination</button><button type="button" role="option" tabindex="-1" value="/examples/module-scrollarea.html" aria-selected="false">Scrollarea</button><button type="button" role="option" tabindex="-1" value="/examples/module-tabgroup.html" aria-selected="false">Tabgroup</button><button type="button" role="option" tabindex="-1" value="/examples/module-todo.html" aria-selected="false">Todo</button></div></div></form-listbox></nav><module-lazyload><card-callout><p class="loading" role="status">Loading...</p><p class="error" role="alert" aria-live="assertive" hidden="true"></p></card-callout><div class="content" hidden="true"></div></module-lazyload></module-listnav></section></main>
+
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2026 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

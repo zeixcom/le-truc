@@ -1,9 +1,8 @@
 import { type Node, type Schema, Tag } from '@markdoc/markdoc'
+import { commonAttributes, standardChildren } from '../markdoc-constants'
 import {
-	commonAttributes,
 	extractTextFromNode,
 	splitContentBySeparator,
-	standardChildren,
 	transformChildrenWithConfig,
 } from '../markdoc-helpers'
 
@@ -11,7 +10,7 @@ const tabgroup: Schema = {
 	render: 'module-tabgroup',
 	children: standardChildren,
 	attributes: commonAttributes,
-	transform(node: Node) {
+	transform(node: Node, config) {
 		// Process child nodes to find HR separators and collect sections
 		const sections = splitContentBySeparator(node.children || [])
 
@@ -36,7 +35,10 @@ const tabgroup: Schema = {
 				)
 			}
 
-			const label = firstNode.children?.map(extractTextFromNode).join('').trim()
+			const label = firstNode.children
+				?.map(child => extractTextFromNode(child))
+				.join('')
+				.trim()
 
 			if (!label) {
 				throw new Error('Tab heading cannot be empty')
@@ -44,7 +46,10 @@ const tabgroup: Schema = {
 
 			// Transform the remaining content (everything except the heading)
 			const contentNodes = section.slice(1)
-			const transformedContent = transformChildrenWithConfig(contentNodes)
+			const transformedContent = transformChildrenWithConfig(
+				contentNodes,
+				config,
+			)
 
 			// Generate unique ID based on label
 			const baseId = label
