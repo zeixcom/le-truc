@@ -1,5 +1,5 @@
 // Le Truc Docs Service Worker
-// Generated at 2026-02-18T17:31:42.133Z
+// Generated at 2026-02-18T17:33:18.518Z
 // Auto-generated - do not edit manually
 
 const CACHE_NAME = 'le-truc-docs-7cc8fd14-5c3e974c';
