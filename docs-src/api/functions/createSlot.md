@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / createSlot
-
-# Function: createSlot()
+### Function: createSlot()
 
 > **createSlot**\<`T`\>(`initialSignal`, `options?`): [`Slot`](../type-aliases/Slot.md)\<`T`\>
 
@@ -17,34 +11,34 @@ via `Object.defineProperty(target, key, slot)`. Subscribers link to the slot its
 so replacing the backing signal with `replace()` invalidates them without breaking
 existing edges. Setter calls forward to the current backing signal when it is writable.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
 The type of value held by the delegated signal.
 
-## Parameters
+#### Parameters
 
-### initialSignal
+##### initialSignal
 
 [`Signal`](../type-aliases/Signal.md)\<`T`\>
 
 The initial signal to delegate to.
 
-### options?
+##### options?
 
 [`SignalOptions`](../type-aliases/SignalOptions.md)\<`T`\>
 
 Optional configuration for the slot.
 
-## Returns
+#### Returns
 
 [`Slot`](../type-aliases/Slot.md)\<`T`\>
 
 A `Slot<T>` object usable both as a property descriptor and as a reactive signal.
 
-## Since
+#### Since
 
 0.18.3

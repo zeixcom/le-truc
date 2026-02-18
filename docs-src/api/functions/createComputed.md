@@ -1,20 +1,6 @@
-[**@zeix/le-truc**](../README.md)
+### Function: createComputed()
 
-***
-
-[@zeix/le-truc](../globals.md) / createComputed
-
-# Function: createComputed()
-
-Le Truc
-
-Version 0.16.1
-
-## Author
-
-Esther Brunner, Zeix AG
-
-## Call Signature
+#### Call Signature
 
 > **createComputed**\<`T`\>(`callback`, `options?`): [`Task`](../type-aliases/Task.md)\<`T`\>
 
@@ -22,35 +8,35 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:19
 
 Create a derived signal from existing signals
 
-### Type Parameters
+##### Type Parameters
 
-#### T
+###### T
 
 `T` *extends* `object`
 
-### Parameters
+##### Parameters
 
-#### callback
+###### callback
 
 [`TaskCallback`](../type-aliases/TaskCallback.md)\<`T`\>
 
 Computation callback function
 
-#### options?
+###### options?
 
 [`ComputedOptions`](../type-aliases/ComputedOptions.md)\<`T`\>
 
 Optional configuration
 
-### Returns
+##### Returns
 
 [`Task`](../type-aliases/Task.md)\<`T`\>
 
-### Since
+##### Since
 
 0.9.0
 
-## Call Signature
+#### Call Signature
 
 > **createComputed**\<`T`\>(`callback`, `options?`): [`Memo`](../type-aliases/Memo.md)\<`T`\>
 
@@ -58,30 +44,30 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:20
 
 Create a derived signal from existing signals
 
-### Type Parameters
+##### Type Parameters
 
-#### T
+###### T
 
 `T` *extends* `object`
 
-### Parameters
+##### Parameters
 
-#### callback
+###### callback
 
 [`MemoCallback`](../type-aliases/MemoCallback.md)\<`T`\>
 
 Computation callback function
 
-#### options?
+###### options?
 
 [`ComputedOptions`](../type-aliases/ComputedOptions.md)\<`T`\>
 
 Optional configuration
 
-### Returns
+##### Returns
 
 [`Memo`](../type-aliases/Memo.md)\<`T`\>
 
-### Since
+##### Since
 
 0.9.0

@@ -1,99 +1,93 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / FirstElement
-
-# Type Alias: FirstElement()
+### Type Alias: FirstElement()
 
 > **FirstElement** = \{\<`S`\>(`selector`, `required`): [`ElementFromSelector`](ElementFromSelector.md)\<`S`\>; \<`S`\>(`selector`): [`ElementFromSelector`](ElementFromSelector.md)\<`S`\> \| `undefined`; \<`E`\>(`selector`, `required`): `E`; \<`E`\>(`selector`): `E` \| `undefined`; \}
 
-Defined in: [src/ui.ts:81](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/ui.ts#L81)
+Defined in: [src/ui.ts:81](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/ui.ts#L81)
 
-## Call Signature
+#### Call Signature
 
 > \<`S`\>(`selector`, `required`): [`ElementFromSelector`](ElementFromSelector.md)\<`S`\>
 
-### Type Parameters
+##### Type Parameters
 
-#### S
+###### S
 
 `S` *extends* `string`
 
-### Parameters
+##### Parameters
 
-#### selector
+###### selector
 
 `S`
 
-#### required
+###### required
 
 `string`
 
-### Returns
+##### Returns
 
 [`ElementFromSelector`](ElementFromSelector.md)\<`S`\>
 
-## Call Signature
+#### Call Signature
 
 > \<`S`\>(`selector`): [`ElementFromSelector`](ElementFromSelector.md)\<`S`\> \| `undefined`
 
-### Type Parameters
+##### Type Parameters
 
-#### S
+###### S
 
 `S` *extends* `string`
 
-### Parameters
+##### Parameters
 
-#### selector
+###### selector
 
 `S`
 
-### Returns
+##### Returns
 
 [`ElementFromSelector`](ElementFromSelector.md)\<`S`\> \| `undefined`
 
-## Call Signature
+#### Call Signature
 
 > \<`E`\>(`selector`, `required`): `E`
 
-### Type Parameters
+##### Type Parameters
 
-#### E
+###### E
 
 `E` *extends* `Element`
 
-### Parameters
+##### Parameters
 
-#### selector
-
-`string`
-
-#### required
+###### selector
 
 `string`
 
-### Returns
+###### required
+
+`string`
+
+##### Returns
 
 `E`
 
-## Call Signature
+#### Call Signature
 
 > \<`E`\>(`selector`): `E` \| `undefined`
 
-### Type Parameters
+##### Type Parameters
 
-#### E
+###### E
 
 `E` *extends* `Element`
 
-### Parameters
+##### Parameters
 
-#### selector
+###### selector
 
 `string`
 
-### Returns
+##### Returns
 
 `E` \| `undefined`

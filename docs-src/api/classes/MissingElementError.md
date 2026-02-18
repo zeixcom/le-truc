@@ -1,32 +1,26 @@
-[**@zeix/le-truc**](../README.md)
+### Class: MissingElementError
 
-***
-
-[@zeix/le-truc](../globals.md) / MissingElementError
-
-# Class: MissingElementError
-
-Defined in: [src/errors.ts:83](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/errors.ts#L83)
+Defined in: [src/errors.ts:83](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/errors.ts#L83)
 
 Error thrown when a required descendant element does not exist in a component's DOM subtree
 
-## Since
+#### Since
 
 0.14.0
 
-## Extends
+#### Extends
 
 - `Error`
 
-## Constructors
+#### Constructors
 
-### Constructor
+##### Constructor
 
 > **new MissingElementError**(`host`, `selector`, `required`): `MissingElementError`
 
-Defined in: [src/errors.ts:89](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/errors.ts#L89)
+Defined in: [src/errors.ts:89](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/errors.ts#L89)
 
-#### Parameters
+###### Parameters
 
 ##### host
 
@@ -46,17 +40,17 @@ Selector used to find the elements
 
 Explanation why the element is required
 
-#### Returns
+###### Returns
 
 `MissingElementError`
 
-#### Overrides
+###### Overrides
 
 `Error.constructor`
 
-## Properties
+#### Properties
 
-### cause?
+##### cause?
 
 > `optional` **cause**: `unknown`
 
@@ -64,49 +58,49 @@ Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:26
 
 The cause of the error.
 
-#### Inherited from
+###### Inherited from
 
 `Error.cause`
 
 ***
 
-### message
+##### message
 
 > **message**: `string`
 
 Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
 
-#### Inherited from
+###### Inherited from
 
 `Error.message`
 
 ***
 
-### name
+##### name
 
 > **name**: `string`
 
 Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1076
 
-#### Inherited from
+###### Inherited from
 
 `Error.name`
 
 ***
 
-### stack?
+##### stack?
 
 > `optional` **stack**: `string`
 
 Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
-#### Inherited from
+###### Inherited from
 
 `Error.stack`
 
 ***
 
-### stackTraceLimit
+##### stackTraceLimit
 
 > `static` **stackTraceLimit**: `number`
 
@@ -122,15 +116,15 @@ will affect any stack trace captured _after_ the value has been changed.
 If set to a non-number value, or set to a negative number, stack traces will
 not capture any frames.
 
-#### Inherited from
+###### Inherited from
 
 `Error.stackTraceLimit`
 
-## Methods
+#### Methods
 
-### captureStackTrace()
+##### captureStackTrace()
 
-#### Call Signature
+###### Call Signature
 
 > `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
 
@@ -198,7 +192,7 @@ a();
 
 `Error.captureStackTrace`
 
-#### Call Signature
+###### Call Signature
 
 > `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
 
@@ -226,9 +220,9 @@ Create .stack property on a target object
 
 ***
 
-### isError()
+##### isError()
 
-#### Call Signature
+###### Call Signature
 
 > `static` **isError**(`error`): `error is Error`
 
@@ -250,7 +244,7 @@ Indicates whether the argument provided is a built-in Error instance or not.
 
 `Error.isError`
 
-#### Call Signature
+###### Call Signature
 
 > `static` **isError**(`value`): `value is Error`
 
@@ -278,13 +272,13 @@ True if the value is an instance of Error, false otherwise
 
 ***
 
-### prepareStackTrace()
+##### prepareStackTrace()
 
 > `static` **prepareStackTrace**(`err`, `stackTraces`): `any`
 
 Defined in: node\_modules/@types/node/globals.d.ts:56
 
-#### Parameters
+###### Parameters
 
 ##### err
 
@@ -294,14 +288,14 @@ Defined in: node\_modules/@types/node/globals.d.ts:56
 
 `CallSite`[]
 
-#### Returns
+###### Returns
 
 `any`
 
-#### See
+###### See
 
 https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
-#### Inherited from
+###### Inherited from
 
 `Error.prepareStackTrace`

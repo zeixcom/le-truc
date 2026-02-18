@@ -18,6 +18,7 @@ import {
 
 import { fetchWithCache, isRecursiveURL, isValidURL } from '../_common/fetch'
 import { manageFocus } from '../_common/focus'
+import { highlightMatch } from '../_common/highlight'
 
 /**
  * Form-aware Listbox Component
@@ -209,15 +210,7 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 							?.trim()
 							.toLowerCase()
 							.includes(filterText)
-						target.innerHTML = filterText
-							? textContent.replace(
-									new RegExp(
-										filterText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
-										'gi',
-									),
-									'<mark>$&</mark>',
-								)
-							: textContent
+						target.innerHTML = highlightMatch(textContent, filterText)
 					}),
 				(_host, target) =>
 					createEffect(() => {

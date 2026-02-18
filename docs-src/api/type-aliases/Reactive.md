@@ -1,25 +1,19 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / Reactive
-
-# Type Alias: Reactive\<T, P, E\>
+### Type Alias: Reactive\<T, P, E\>
 
 > **Reactive**\<`T`, `P`, `E`\> = keyof `P` \| [`Signal`](Signal.md)\<`T` & `object`\> \| (`target`) => `T` \| `null` \| `undefined`
 
-Defined in: [src/effects.ts:37](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects.ts#L37)
+Defined in: [src/effects.ts:37](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/effects.ts#L37)
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T`
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](ComponentProps.md)
 
-### E
+##### E
 
 `E` *extends* `Element`

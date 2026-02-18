@@ -1,20 +1,6 @@
-[**@zeix/le-truc**](../README.md)
+### Function: createMutableSignal()
 
-***
-
-[@zeix/le-truc](../globals.md) / createMutableSignal
-
-# Function: createMutableSignal()
-
-Le Truc
-
-Version 0.16.1
-
-## Author
-
-Esther Brunner, Zeix AG
-
-## Call Signature
+#### Call Signature
 
 > **createMutableSignal**\<`T`\>(`value`): `MutableSignal`\<`T`\>
 
@@ -22,27 +8,27 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:37
 
 Convert a value to a MutableSignal.
 
-### Type Parameters
+##### Type Parameters
 
-#### T
+###### T
 
 `T` *extends* `object`
 
-### Parameters
+##### Parameters
 
-#### value
-
-`MutableSignal`\<`T`\>
-
-### Returns
+###### value
 
 `MutableSignal`\<`T`\>
 
-### Since
+##### Returns
+
+`MutableSignal`\<`T`\>
+
+##### Since
 
 0.17.0
 
-## Call Signature
+#### Call Signature
 
 > **createMutableSignal**\<`T`\>(`value`): [`List`](../type-aliases/List.md)\<`T`\>
 
@@ -50,27 +36,27 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:38
 
 Convert a value to a MutableSignal.
 
-### Type Parameters
+##### Type Parameters
 
-#### T
+###### T
 
 `T` *extends* `object`
 
-### Parameters
+##### Parameters
 
-#### value
+###### value
 
 readonly `T`[]
 
-### Returns
+##### Returns
 
 [`List`](../type-aliases/List.md)\<`T`\>
 
-### Since
+##### Since
 
 0.17.0
 
-## Call Signature
+#### Call Signature
 
 > **createMutableSignal**\<`T`\>(`value`): [`Store`](../type-aliases/Store.md)\<`T`\>
 
@@ -78,27 +64,27 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:39
 
 Convert a value to a MutableSignal.
 
-### Type Parameters
+##### Type Parameters
 
-#### T
+###### T
 
 `T` *extends* `UnknownRecord`
 
-### Parameters
+##### Parameters
 
-#### value
+###### value
 
 `T`
 
-### Returns
+##### Returns
 
 [`Store`](../type-aliases/Store.md)\<`T`\>
 
-### Since
+##### Since
 
 0.17.0
 
-## Call Signature
+#### Call Signature
 
 > **createMutableSignal**\<`T`\>(`value`): [`State`](../type-aliases/State.md)\<`T`\>
 
@@ -106,22 +92,22 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:40
 
 Convert a value to a MutableSignal.
 
-### Type Parameters
+##### Type Parameters
 
-#### T
+###### T
 
 `T` *extends* `object`
 
-### Parameters
+##### Parameters
 
-#### value
+###### value
 
 `T`
 
-### Returns
+##### Returns
 
 [`State`](../type-aliases/State.md)\<`T`\>
 
-### Since
+##### Since
 
 0.17.0

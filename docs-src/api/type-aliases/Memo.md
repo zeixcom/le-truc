@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / Memo
-
-# Type Alias: Memo\<T\>
+### Type Alias: Memo\<T\>
 
 > **Memo**\<`T`\> = `object`
 
@@ -13,25 +7,25 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/memo.d.ts:8
 A derived reactive computation that caches its result.
 Automatically tracks dependencies and recomputes when they change.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
 The type of value computed by the memo
 
-## Properties
+#### Properties
 
-### \[toStringTag\]
+##### \[toStringTag\]
 
 > `readonly` **\[toStringTag\]**: `"Memo"`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/memo.d.ts:9
 
-## Methods
+#### Methods
 
-### get()
+##### get()
 
 > **get**(): `T`
 
@@ -41,12 +35,12 @@ Gets the current value of the memo.
 Recomputes if dependencies have changed since last access.
 When called inside another reactive context, creates a dependency.
 
-#### Returns
+###### Returns
 
 `T`
 
 The computed value
 
-#### Throws
+###### Throws
 
 UnsetSignalValueError If the memo value is still unset when read.

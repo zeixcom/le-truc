@@ -1,21 +1,15 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / Effects
-
-# Type Alias: Effects\<P, U\>
+### Type Alias: Effects\<P, U\>
 
 > **Effects**\<`P`, `U`\> = `{ [K in keyof U]?: ElementEffects<P, ElementFromKey<U, K>> }`
 
-Defined in: [src/effects.ts:30](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects.ts#L30)
+Defined in: [src/effects.ts:30](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/effects.ts#L30)
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](ComponentProps.md)
 
-### U
+##### U
 
 `U` *extends* [`UI`](UI.md) & `object`

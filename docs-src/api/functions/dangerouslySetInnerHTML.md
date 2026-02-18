@@ -1,48 +1,42 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / dangerouslySetInnerHTML
-
-# Function: dangerouslySetInnerHTML()
+### Function: dangerouslySetInnerHTML()
 
 > **dangerouslySetInnerHTML**\<`P`, `E`\>(`reactive`, `options?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/html.ts:23](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects/html.ts#L23)
+Defined in: [src/effects/html.ts:23](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/effects/html.ts#L23)
 
 Effect for setting the inner HTML of an element with optional Shadow DOM support.
 Provides security options for script execution and shadow root creation.
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
 
-### E
+##### E
 
 `E` *extends* `Element`
 
-## Parameters
+#### Parameters
 
-### reactive
+##### reactive
 
 [`Reactive`](../type-aliases/Reactive.md)\<`string`, `P`, `E`\>
 
 Reactive value bound to the inner HTML content
 
-### options?
+##### options?
 
 [`DangerouslySetInnerHTMLOptions`](../type-aliases/DangerouslySetInnerHTMLOptions.md) = `{}`
 
 Configuration options: shadowRootMode, allowScripts
 
-## Returns
+#### Returns
 
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
 Effect function that sets the inner HTML of the element
 
-## Since
+#### Since
 
 0.11.0

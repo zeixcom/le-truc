@@ -1,41 +1,35 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / isParser
-
-# Function: isParser()
+### Function: isParser()
 
 > **isParser**\<`T`, `U`\>(`value`): `value is Parser<T, U>`
 
-Defined in: [src/parsers.ts:32](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/parsers.ts#L32)
+Defined in: [src/parsers.ts:32](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/parsers.ts#L32)
 
 Check if a value is a parser
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
-### U
+##### U
 
 `U` *extends* [`UI`](../type-aliases/UI.md)
 
-## Parameters
+#### Parameters
 
-### value
+##### value
 
 `unknown`
 
 Value to check if it is a parser
 
-## Returns
+#### Returns
 
 `value is Parser<T, U>`
 
 True if the value is a parser, false otherwise
 
-## Since
+#### Since
 
 0.14.0

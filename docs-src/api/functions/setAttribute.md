@@ -1,48 +1,42 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / setAttribute
-
-# Function: setAttribute()
+### Function: setAttribute()
 
 > **setAttribute**\<`P`, `E`\>(`name`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/attribute.ts:41](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects/attribute.ts#L41)
+Defined in: [src/effects/attribute.ts:41](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/effects/attribute.ts#L41)
 
 Effect for setting an attribute on an element.
 Sets the specified attribute with security validation for unsafe values.
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
 
-### E
+##### E
 
 `E` *extends* `Element`
 
-## Parameters
+#### Parameters
 
-### name
+##### name
 
 `string`
 
 Name of the attribute to set
 
-### reactive?
+##### reactive?
 
 [`Reactive`](../type-aliases/Reactive.md)\<`string`, `P`, `E`\> = `...`
 
 Reactive value bound to the attribute value (defaults to attribute name)
 
-## Returns
+#### Returns
 
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
 Effect function that sets the attribute on the element
 
-## Since
+#### Since
 
 0.8.0

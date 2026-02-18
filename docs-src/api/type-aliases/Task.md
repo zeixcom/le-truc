@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / Task
-
-# Type Alias: Task\<T\>
+### Type Alias: Task\<T\>
 
 > **Task**\<`T`\> = `object`
 
@@ -14,25 +8,25 @@ An asynchronous reactive computation (colorless async).
 Automatically tracks dependencies and re-executes when they change.
 Provides abort semantics and pending state tracking.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
 The type of value resolved by the task
 
-## Properties
+#### Properties
 
-### \[toStringTag\]
+##### \[toStringTag\]
 
 > `readonly` **\[toStringTag\]**: `"Task"`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:10
 
-## Methods
+#### Methods
 
-### abort()
+##### abort()
 
 > **abort**(): `void`
 
@@ -41,13 +35,13 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:28
 Aborts the current computation if one is running.
 The task's AbortSignal will be triggered.
 
-#### Returns
+###### Returns
 
 `void`
 
 ***
 
-### get()
+##### get()
 
 > **get**(): `T`
 
@@ -57,19 +51,19 @@ Gets the current value of the task.
 Returns the last resolved value, even while a new computation is pending.
 When called inside another reactive context, creates a dependency.
 
-#### Returns
+###### Returns
 
 `T`
 
 The current value
 
-#### Throws
+###### Throws
 
 UnsetSignalValueError If the task value is still unset when read.
 
 ***
 
-### isPending()
+##### isPending()
 
 > **isPending**(): `boolean`
 
@@ -77,7 +71,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:23
 
 Checks if the task is currently executing.
 
-#### Returns
+###### Returns
 
 `boolean`
 

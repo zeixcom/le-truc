@@ -1,42 +1,36 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / setText
-
-# Function: setText()
+### Function: setText()
 
 > **setText**\<`P`, `E`\>(`reactive`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/text.ts:14](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects/text.ts#L14)
+Defined in: [src/effects/text.ts:14](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/effects/text.ts#L14)
 
 Effect for setting the text content of an element.
 Replaces all child nodes (except comments) with a single text node.
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
 
-### E
+##### E
 
 `E` *extends* `Element`
 
-## Parameters
+#### Parameters
 
-### reactive
+##### reactive
 
 [`Reactive`](../type-aliases/Reactive.md)\<`string`, `P`, `E`\>
 
 Reactive value bound to the text content
 
-## Returns
+#### Returns
 
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
 Effect function that sets the text content of the element
 
-## Since
+#### Since
 
 0.8.0

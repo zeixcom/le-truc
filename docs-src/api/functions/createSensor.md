@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / createSensor
-
-# Function: createSensor()
+### Function: createSensor()
 
 > **createSensor**\<`T`\>(`watched`, `options?`): [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
@@ -14,39 +8,39 @@ Creates a sensor that tracks external input and updates a state value as long as
 Sensors get activated when they are first accessed by an effect and deactivated when they are
 no longer watched. This lazy activation pattern ensures resources are only consumed when needed.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
 The type of value produced by the sensor
 
-## Parameters
+#### Parameters
 
-### watched
+##### watched
 
 `SensorCallback`\<`T`\>
 
 The callback invoked when the sensor starts being watched, receives a `set` function and returns a cleanup function.
 
-### options?
+##### options?
 
 [`SensorOptions`](../type-aliases/SensorOptions.md)\<`T`\>
 
 Optional configuration for the sensor.
 
-## Returns
+#### Returns
 
 [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
 A read-only sensor signal.
 
-## Since
+#### Since
 
 0.18.0
 
-## Examples
+#### Examples
 
 ```ts
 const mousePos = createSensor<{ x: number; y: number }>((set) => {

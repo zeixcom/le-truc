@@ -1,12 +1,6 @@
-[**@zeix/le-truc**](../README.md)
+### Class: ContextRequestEvent\<T\>
 
-***
-
-[@zeix/le-truc](../globals.md) / ContextRequestEvent
-
-# Class: ContextRequestEvent\<T\>
-
-Defined in: [src/context.ts:77](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/context.ts#L77)
+Defined in: [src/context.ts:77](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/context.ts#L77)
 
 Class for context-request events
 
@@ -21,25 +15,25 @@ function to the callback which requesters can invoke to indicate they no longer 
 
  ContextRequestEvent
 
-## Extends
+#### Extends
 
 - `Event`
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* [`UnknownContext`](../type-aliases/UnknownContext.md)
 
-## Constructors
+#### Constructors
 
-### Constructor
+##### Constructor
 
 > **new ContextRequestEvent**\<`T`\>(`context`, `callback`, `subscribe?`): `ContextRequestEvent`\<`T`\>
 
-Defined in: [src/context.ts:82](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/context.ts#L82)
+Defined in: [src/context.ts:82](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/context.ts#L82)
 
-#### Parameters
+###### Parameters
 
 ##### context
 
@@ -53,29 +47,29 @@ Defined in: [src/context.ts:82](https://github.com/zeixcom/le-truc/blob/5c30877f
 
 `boolean` = `false`
 
-#### Returns
+###### Returns
 
 `ContextRequestEvent`\<`T`\>
 
-#### Overrides
+###### Overrides
 
 `Event.constructor`
 
-## Properties
+#### Properties
 
-### AT\_TARGET
+##### AT\_TARGET
 
 > `readonly` **AT\_TARGET**: `2`
 
 Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11462
 
-#### Inherited from
+###### Inherited from
 
 `Event.AT_TARGET`
 
 ***
 
-### bubbles
+##### bubbles
 
 > `readonly` **bubbles**: `boolean`
 
@@ -85,35 +79,35 @@ The **`bubbles`** read-only property of the Event interface indicates whether th
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/bubbles)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`bubbles`](#bubbles)
 
 ***
 
-### BUBBLING\_PHASE
+##### BUBBLING\_PHASE
 
 > `readonly` **BUBBLING\_PHASE**: `3`
 
 Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11463
 
-#### Inherited from
+###### Inherited from
 
 `Event.BUBBLING_PHASE`
 
 ***
 
-### callback
+##### callback
 
 > `readonly` **callback**: [`ContextCallback`](../type-aliases/ContextCallback.md)\<[`ContextType`](../type-aliases/ContextType.md)\<`T`\>\>
 
-Defined in: [src/context.ts:79](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/context.ts#L79)
+Defined in: [src/context.ts:79](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/context.ts#L79)
 
 callback function for value getter and unsubscribe function
 
 ***
 
-### cancelable
+##### cancelable
 
 > `readonly` **cancelable**: `boolean`
 
@@ -123,13 +117,13 @@ The **`cancelable`** read-only property of the Event interface indicates whether
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/cancelable)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`cancelable`](#cancelable)
 
 ***
 
-### ~~cancelBubble~~
+##### ~~cancelBubble~~
 
 > **cancelBubble**: `boolean`
 
@@ -137,29 +131,29 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11360
 
 The **`cancelBubble`** property of the Event interface is deprecated.
 
-#### Deprecated
+###### Deprecated
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/cancelBubble)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`cancelBubble`](#cancelbubble)
 
 ***
 
-### CAPTURING\_PHASE
+##### CAPTURING\_PHASE
 
 > `readonly` **CAPTURING\_PHASE**: `1`
 
 Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11461
 
-#### Inherited from
+###### Inherited from
 
 `Event.CAPTURING_PHASE`
 
 ***
 
-### composed
+##### composed
 
 > `readonly` **composed**: `boolean`
 
@@ -169,23 +163,23 @@ The read-only **`composed`** property of the or not the event will propagate acr
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/composed)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`composed`](#composed)
 
 ***
 
-### context
+##### context
 
 > `readonly` **context**: `T`
 
-Defined in: [src/context.ts:78](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/context.ts#L78)
+Defined in: [src/context.ts:78](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/context.ts#L78)
 
 context key
 
 ***
 
-### currentTarget
+##### currentTarget
 
 > `readonly` **currentTarget**: `EventTarget` \| `null`
 
@@ -195,13 +189,13 @@ The **`currentTarget`** read-only property of the Event interface identifies the
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/currentTarget)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`currentTarget`](#currenttarget)
 
 ***
 
-### defaultPrevented
+##### defaultPrevented
 
 > `readonly` **defaultPrevented**: `boolean`
 
@@ -211,13 +205,13 @@ The **`defaultPrevented`** read-only property of the Event interface returns a b
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/defaultPrevented)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`defaultPrevented`](#defaultprevented)
 
 ***
 
-### eventPhase
+##### eventPhase
 
 > `readonly` **eventPhase**: `number`
 
@@ -227,13 +221,13 @@ The **`eventPhase`** read-only property of the being evaluated.
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/eventPhase)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`eventPhase`](#eventphase)
 
 ***
 
-### isTrusted
+##### isTrusted
 
 > `readonly` **isTrusted**: `boolean`
 
@@ -243,25 +237,25 @@ The **`isTrusted`** read-only property of the when the event was generated by th
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/isTrusted)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`isTrusted`](#istrusted)
 
 ***
 
-### NONE
+##### NONE
 
 > `readonly` **NONE**: `0`
 
 Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11460
 
-#### Inherited from
+###### Inherited from
 
 `Event.NONE`
 
 ***
 
-### ~~returnValue~~
+##### ~~returnValue~~
 
 > **returnValue**: `boolean`
 
@@ -269,17 +263,17 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11403
 
 The Event property **`returnValue`** indicates whether the default action for this event has been prevented or not.
 
-#### Deprecated
+###### Deprecated
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/returnValue)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`returnValue`](#returnvalue)
 
 ***
 
-### ~~srcElement~~
+##### ~~srcElement~~
 
 > `readonly` **srcElement**: `EventTarget` \| `null`
 
@@ -287,27 +281,27 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11410
 
 The deprecated **`Event.srcElement`** is an alias for the Event.target property.
 
-#### Deprecated
+###### Deprecated
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/srcElement)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`srcElement`](#srcelement)
 
 ***
 
-### subscribe
+##### subscribe
 
 > `readonly` **subscribe**: `boolean`
 
-Defined in: [src/context.ts:80](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/context.ts#L80)
+Defined in: [src/context.ts:80](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/context.ts#L80)
 
 whether to subscribe to context changes
 
 ***
 
-### target
+##### target
 
 > `readonly` **target**: `EventTarget` \| `null`
 
@@ -317,13 +311,13 @@ The read-only **`target`** property of the dispatched.
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/target)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`target`](#target)
 
 ***
 
-### timeStamp
+##### timeStamp
 
 > `readonly` **timeStamp**: `number`
 
@@ -333,13 +327,13 @@ The **`timeStamp`** read-only property of the Event interface returns the time (
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/timeStamp)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`timeStamp`](#timestamp)
 
 ***
 
-### type
+##### type
 
 > `readonly` **type**: `string`
 
@@ -349,63 +343,63 @@ The **`type`** read-only property of the Event interface returns a string contai
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/type)
 
-#### Inherited from
+###### Inherited from
 
 `ContextRequestEvent`.[`type`](#type)
 
 ***
 
-### AT\_TARGET
+##### AT\_TARGET
 
 > `readonly` `static` **AT\_TARGET**: `2`
 
 Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11471
 
-#### Inherited from
+###### Inherited from
 
 `Event.AT_TARGET`
 
 ***
 
-### BUBBLING\_PHASE
+##### BUBBLING\_PHASE
 
 > `readonly` `static` **BUBBLING\_PHASE**: `3`
 
 Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11472
 
-#### Inherited from
+###### Inherited from
 
 `Event.BUBBLING_PHASE`
 
 ***
 
-### CAPTURING\_PHASE
+##### CAPTURING\_PHASE
 
 > `readonly` `static` **CAPTURING\_PHASE**: `1`
 
 Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11470
 
-#### Inherited from
+###### Inherited from
 
 `Event.CAPTURING_PHASE`
 
 ***
 
-### NONE
+##### NONE
 
 > `readonly` `static` **NONE**: `0`
 
 Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11469
 
-#### Inherited from
+###### Inherited from
 
 `Event.NONE`
 
-## Methods
+#### Methods
 
-### composedPath()
+##### composedPath()
 
-#### Call Signature
+###### Call Signature
 
 > **composedPath**(): `EventTarget`[]
 
@@ -423,7 +417,7 @@ The **`composedPath()`** method of the Event interface returns the event's path 
 
 `Event.composedPath`
 
-#### Call Signature
+###### Call Signature
 
 > **composedPath**(): \[`EventTarget`?\]
 
@@ -441,7 +435,7 @@ Returns an array containing the current EventTarget as the only entry or empty i
 
 ***
 
-### ~~initEvent()~~
+##### ~~initEvent()~~
 
 > **initEvent**(`type`, `bubbles?`, `cancelable?`): `void`
 
@@ -449,7 +443,7 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11441
 
 The **`Event.initEvent()`** method is used to initialize the value of an event created using Document.createEvent().
 
-#### Parameters
+###### Parameters
 
 ##### type
 
@@ -463,23 +457,23 @@ The **`Event.initEvent()`** method is used to initialize the value of an event c
 
 `boolean`
 
-#### Returns
+###### Returns
 
 `void`
 
-#### Deprecated
+###### Deprecated
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/initEvent)
 
-#### Inherited from
+###### Inherited from
 
 `Event.initEvent`
 
 ***
 
-### preventDefault()
+##### preventDefault()
 
-#### Call Signature
+###### Call Signature
 
 > **preventDefault**(): `void`
 
@@ -497,7 +491,7 @@ The **`preventDefault()`** method of the Event interface tells the user agent th
 
 `Event.preventDefault`
 
-#### Call Signature
+###### Call Signature
 
 > **preventDefault**(): `void`
 
@@ -515,9 +509,9 @@ Sets the `defaultPrevented` property to `true` if `cancelable` is `true`.
 
 ***
 
-### stopImmediatePropagation()
+##### stopImmediatePropagation()
 
-#### Call Signature
+###### Call Signature
 
 > **stopImmediatePropagation**(): `void`
 
@@ -535,7 +529,7 @@ The **`stopImmediatePropagation()`** method of the If several listeners are atta
 
 `Event.stopImmediatePropagation`
 
-#### Call Signature
+###### Call Signature
 
 > **stopImmediatePropagation**(): `void`
 
@@ -553,9 +547,9 @@ Stops the invocation of event listeners after the current one completes.
 
 ***
 
-### stopPropagation()
+##### stopPropagation()
 
-#### Call Signature
+###### Call Signature
 
 > **stopPropagation**(): `void`
 
@@ -573,7 +567,7 @@ The **`stopPropagation()`** method of the Event interface prevents further propa
 
 `Event.stopPropagation`
 
-#### Call Signature
+###### Call Signature
 
 > **stopPropagation**(): `void`
 

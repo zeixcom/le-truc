@@ -183,27 +183,21 @@ function createElementsMemo<S extends string>(
 				node instanceof Element &&
 				(node.matches(selector) || node.querySelector(selector))
 
+			const maybeDirty = (mutation: MutationRecord) => {
+				if (mutation.type === 'attributes') return true
+				if (mutation.type === 'childList')
+					return (
+						Array.from(mutation.addedNodes).some(couldMatch) ||
+						Array.from(mutation.removedNodes).some(couldMatch)
+					)
+				return false
+			}
+
 			const observer = new MutationObserver(mutations => {
 				for (const mutation of mutations) {
-					if (mutation.type === 'attributes') {
+					if (maybeDirty(mutation)) {
 						invalidate()
 						return
-					}
-					// For childList mutations, only invalidate if added/removed
-					// nodes match (or contain elements matching) the selector.
-					// This filters out innerHTML changes inside matched elements
-					// (e.g. setting innerHTML on a button for filter highlights).
-					for (const node of mutation.addedNodes) {
-						if (couldMatch(node)) {
-							invalidate()
-							return
-						}
-					}
-					for (const node of mutation.removedNodes) {
-						if (couldMatch(node)) {
-							invalidate()
-							return
-						}
 					}
 				}
 			})

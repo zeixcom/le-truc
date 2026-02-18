@@ -1830,23 +1830,18 @@ function createElementsMemo(parent, selector) {
         observerConfig.attributeFilter = observedAttributes;
       }
       const couldMatch = (node) => node instanceof Element && (node.matches(selector) || node.querySelector(selector));
+      const maybeDirty = (mutation) => {
+        if (mutation.type === "attributes")
+          return true;
+        if (mutation.type === "childList")
+          return Array.from(mutation.addedNodes).some(couldMatch) || Array.from(mutation.removedNodes).some(couldMatch);
+        return false;
+      };
       const observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
-          if (mutation.type === "attributes") {
+          if (maybeDirty(mutation)) {
             invalidate();
             return;
-          }
-          for (const node of mutation.addedNodes) {
-            if (couldMatch(node)) {
-              invalidate();
-              return;
-            }
-          }
-          for (const node of mutation.removedNodes) {
-            if (couldMatch(node)) {
-              invalidate();
-              return;
-            }
           }
         }
       });

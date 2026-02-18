@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / isSignal
-
-# Function: isSignal()
+### Function: isSignal()
 
 > **isSignal**\<`T`\>(`value`): `value is Signal<T>`
 
@@ -12,26 +6,26 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:56
 
 Check whether a value is a Signal
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
-## Parameters
+#### Parameters
 
-### value
+##### value
 
 `unknown`
 
 Value to check
 
-## Returns
+#### Returns
 
 `value is Signal<T>`
 
 True if value is a Signal, false otherwise
 
-## Since
+#### Since
 
 0.9.0

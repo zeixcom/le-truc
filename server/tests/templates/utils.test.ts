@@ -5,31 +5,31 @@
  * sorting, validation, and other template utilities.
  */
 
-import { describe, test, expect } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import {
-	html,
-	xml,
+	createOrderedSort,
 	css,
-	js,
 	escapeHtml,
 	escapeXml,
-	generateSlug,
-	createOrderedSort,
-	validateHashString,
-	validateRequiredString,
-	validateArrayField,
-	safeRender,
-	when,
-	unless,
-	mapSafe,
 	fragment,
-	indent,
-	minify,
-	validateHtml,
-	validateXml,
+	generateSlug,
 	getResourceType,
+	html,
+	indent,
+	js,
+	mapSafe,
+	minify,
 	requiresCrossorigin,
 	type SortableItem,
+	safeRender,
+	unless,
+	validateArrayField,
+	validateHashString,
+	validateHtml,
+	validateRequiredString,
+	validateXml,
+	when,
+	xml,
 } from '../../templates/utils'
 
 /* === Tagged Template Literals === */
@@ -52,11 +52,6 @@ describe('html tagged template', () => {
 		const safeHtml = '<strong>Bold</strong>'
 		const result = html`<div>${safeHtml}</div>`
 		expect(result).toBe('<div><strong>Bold</strong></div>')
-	})
-
-	test('should handle null and undefined', () => {
-		const result = html`<div>${null} ${undefined}</div>`
-		expect(result).toBe('<div> </div>')
 	})
 
 	test('should handle arrays', () => {

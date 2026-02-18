@@ -1,0 +1,16 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["index.ts"],
+  "out": "docs-src/api",
+  "plugin": [
+    "typedoc-plugin-markdown",
+    "./server/typedoc-heading-shift.mjs"
+  ],
+  "readme": "none",
+  "hidePageHeader": true,
+  "hideBreadcrumbs": true,
+  "hidePageTitle": false,
+  "useCodeBlocks": false,
+  "expandObjects": false,
+  "expandParameters": false
+}

@@ -1,29 +1,19 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / ComputedOptions
-
-# Type Alias: ComputedOptions\<T\>
+### Type Alias: ComputedOptions\<T\>
 
 > **ComputedOptions**\<`T`\> = [`SignalOptions`](SignalOptions.md)\<`T`\> & `object`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:73
 
-Le Truc
+#### Type Declaration
 
-Version 0.16.1
-
-## Type Declaration
-
-### value?
+##### value?
 
 > `optional` **value**: `T`
 
 Optional initial value.
 Useful for reducer patterns so that calculations start with a value of correct type.
 
-### watched()?
+##### watched()?
 
 > `optional` **watched**: (`invalidate`) => [`Cleanup`](Cleanup.md)
 
@@ -35,22 +25,18 @@ This enables lazy resource activation for computed signals that need to
 react to external events (e.g. DOM mutations, timers) in addition to
 tracked signal dependencies.
 
-#### Parameters
+###### Parameters
 
 ##### invalidate
 
 () => `void`
 
-#### Returns
+###### Returns
 
 [`Cleanup`](Cleanup.md)
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
-
-## Author
-
-Esther Brunner, Zeix AG

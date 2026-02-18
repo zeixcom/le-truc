@@ -1,32 +1,18 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / Collection
-
-# Type Alias: Collection\<T\>
+### Type Alias: Collection\<T\>
 
 > **Collection**\<`T`\> = `object`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:5
 
-Le Truc
+#### Type Parameters
 
-Version 0.16.1
-
-## Author
-
-Esther Brunner, Zeix AG
-
-## Type Parameters
-
-### T
+##### T
 
 `T` *extends* `object`
 
-## Properties
+#### Properties
 
-### \[isConcatSpreadable\]
+##### \[isConcatSpreadable\]
 
 > `readonly` **\[isConcatSpreadable\]**: `true`
 
@@ -34,7 +20,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:7
 
 ***
 
-### \[toStringTag\]
+##### \[toStringTag\]
 
 > `readonly` **\[toStringTag\]**: `"Collection"`
 
@@ -42,65 +28,65 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:6
 
 ***
 
-### length
+##### length
 
 > `readonly` **length**: `number`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:17
 
-## Methods
+#### Methods
 
-### \[iterator\]()
+##### \[iterator\]()
 
 > **\[iterator\]**(): `IterableIterator`\<[`Signal`](Signal.md)\<`T`\>\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:8
 
-#### Returns
+###### Returns
 
 `IterableIterator`\<[`Signal`](Signal.md)\<`T`\>\>
 
 ***
 
-### at()
+##### at()
 
 > **at**(`index`): [`Signal`](Signal.md)\<`T`\> \| `undefined`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:11
 
-#### Parameters
+###### Parameters
 
 ##### index
 
 `number`
 
-#### Returns
+###### Returns
 
 [`Signal`](Signal.md)\<`T`\> \| `undefined`
 
 ***
 
-### byKey()
+##### byKey()
 
 > **byKey**(`key`): [`Signal`](Signal.md)\<`T`\> \| `undefined`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:12
 
-#### Parameters
+###### Parameters
 
 ##### key
 
 `string`
 
-#### Returns
+###### Returns
 
 [`Signal`](Signal.md)\<`T`\> \| `undefined`
 
 ***
 
-### deriveCollection()
+##### deriveCollection()
 
-#### Call Signature
+###### Call Signature
 
 > **deriveCollection**\<`R`\>(`callback`): `Collection`\<`R`\>
 
@@ -122,7 +108,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:15
 
 `Collection`\<`R`\>
 
-#### Call Signature
+###### Call Signature
 
 > **deriveCollection**\<`R`\>(`callback`): `Collection`\<`R`\>
 
@@ -146,60 +132,60 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:16
 
 ***
 
-### get()
+##### get()
 
 > **get**(): `T`[]
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:10
 
-#### Returns
+###### Returns
 
 `T`[]
 
 ***
 
-### indexOfKey()
+##### indexOfKey()
 
 > **indexOfKey**(`key`): `number`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:14
 
-#### Parameters
+###### Parameters
 
 ##### key
 
 `string`
 
-#### Returns
+###### Returns
 
 `number`
 
 ***
 
-### keyAt()
+##### keyAt()
 
 > **keyAt**(`index`): `string` \| `undefined`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:13
 
-#### Parameters
+###### Parameters
 
 ##### index
 
 `number`
 
-#### Returns
+###### Returns
 
 `string` \| `undefined`
 
 ***
 
-### keys()
+##### keys()
 
 > **keys**(): `IterableIterator`\<`string`\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:9
 
-#### Returns
+###### Returns
 
 `IterableIterator`\<`string`\>

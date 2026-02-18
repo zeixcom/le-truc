@@ -1,59 +1,53 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / AllElements
-
-# Type Alias: AllElements()
+### Type Alias: AllElements()
 
 > **AllElements** = \{\<`S`\>(`selector`, `required?`): [`Memo`](Memo.md)\<[`ElementFromSelector`](ElementFromSelector.md)\<`S`\>[]\>; \<`E`\>(`selector`, `required?`): [`Memo`](Memo.md)\<`E`[]\>; \}
 
-Defined in: [src/ui.ts:88](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/ui.ts#L88)
+Defined in: [src/ui.ts:88](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/ui.ts#L88)
 
-## Call Signature
+#### Call Signature
 
 > \<`S`\>(`selector`, `required?`): [`Memo`](Memo.md)\<[`ElementFromSelector`](ElementFromSelector.md)\<`S`\>[]\>
 
-### Type Parameters
+##### Type Parameters
 
-#### S
+###### S
 
 `S` *extends* `string`
 
-### Parameters
+##### Parameters
 
-#### selector
+###### selector
 
 `S`
 
-#### required?
+###### required?
 
 `string`
 
-### Returns
+##### Returns
 
 [`Memo`](Memo.md)\<[`ElementFromSelector`](ElementFromSelector.md)\<`S`\>[]\>
 
-## Call Signature
+#### Call Signature
 
 > \<`E`\>(`selector`, `required?`): [`Memo`](Memo.md)\<`E`[]\>
 
-### Type Parameters
+##### Type Parameters
 
-#### E
+###### E
 
 `E` *extends* `Element`
 
-### Parameters
+##### Parameters
 
-#### selector
-
-`string`
-
-#### required?
+###### selector
 
 `string`
 
-### Returns
+###### required?
+
+`string`
+
+##### Returns
 
 [`Memo`](Memo.md)\<`E`[]\>

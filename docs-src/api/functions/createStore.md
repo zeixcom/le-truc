@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / createStore
-
-# Function: createStore()
+### Function: createStore()
 
 > **createStore**\<`T`\>(`value`, `options?`): [`Store`](../type-aliases/Store.md)\<`T`\>
 
@@ -14,37 +8,37 @@ Creates a reactive store with deeply nested reactive properties.
 Each property becomes its own signal (State for primitives, nested Store for objects, List for arrays).
 Properties are accessible directly via proxy.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `UnknownRecord`
 
-## Parameters
+#### Parameters
 
-### value
+##### value
 
 `T`
 
 Initial object value of the store
 
-### options?
+##### options?
 
 [`StoreOptions`](../type-aliases/StoreOptions.md)
 
 Optional configuration for watch lifecycle
 
-## Returns
+#### Returns
 
 [`Store`](../type-aliases/Store.md)\<`T`\>
 
 A Store with reactive properties
 
-## Since
+#### Since
 
 0.15.0
 
-## Example
+#### Example
 
 ```ts
 const user = createStore({ name: 'Alice', age: 30 });

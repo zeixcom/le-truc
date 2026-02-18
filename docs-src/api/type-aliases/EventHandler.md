@@ -1,31 +1,25 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / EventHandler
-
-# Type Alias: EventHandler()\<P, Evt\>
+### Type Alias: EventHandler()\<P, Evt\>
 
 > **EventHandler**\<`P`, `Evt`\> = (`event`) => `{ [K in keyof P]?: P[K] }` \| `void` \| `Promise`\<`void`\>
 
-Defined in: [src/effects/event.ts:10](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects/event.ts#L10)
+Defined in: [src/effects/event.ts:10](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/effects/event.ts#L10)
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](ComponentProps.md)
 
-### Evt
+##### Evt
 
 `Evt` *extends* `Event`
 
-## Parameters
+#### Parameters
 
-### event
+##### event
 
 `Evt`
 
-## Returns
+#### Returns
 
 `{ [K in keyof P]?: P[K] }` \| `void` \| `Promise`\<`void`\>

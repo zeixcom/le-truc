@@ -33,5 +33,11 @@
 		"./server/**/*.ts",
 		"./examples/**/*.ts",
 	],
-	"exclude": ["node_modules", "test", "docs", "types"],
+	"exclude": [
+		"node_modules",
+		"test",
+		"docs",
+		"types",
+		"./server/typedoc-heading-shift.mjs",
+	],
 }

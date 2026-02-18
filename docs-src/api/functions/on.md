@@ -1,58 +1,52 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / on
-
-# Function: on()
+### Function: on()
 
 > **on**\<`K`, `P`, `E`\>(`type`, `handler`, `options?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/event.ts:27](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects/event.ts#L27)
+Defined in: [src/effects/event.ts:27](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/effects/event.ts#L27)
 
 Effect for attaching an event listener to an element.
 Provides proper cleanup when the effect is disposed.
 
-## Type Parameters
+#### Type Parameters
 
-### K
+##### K
 
 `K` *extends* `string`
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
 
-### E
+##### E
 
 `E` *extends* `Element` = `HTMLElement`
 
-## Parameters
+#### Parameters
 
-### type
+##### type
 
 `K`
 
 Event type
 
-### handler
+##### handler
 
 [`EventHandler`](../type-aliases/EventHandler.md)\<`P`, [`EventType`](../type-aliases/EventType.md)\<`K`\>\>
 
 Event handler function
 
-### options?
+##### options?
 
 `AddEventListenerOptions` = `{}`
 
 Event listener options
 
-## Returns
+#### Returns
 
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
 Effect function that manages the event listener
 
-## Since
+#### Since
 
 0.14.0

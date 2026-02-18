@@ -20,6 +20,37 @@ type ApiCategory = {
 /* === Internal Functions === */
 
 /**
+ * Define custom order for API categories.
+ * Functions are most important, then classes and variables, with type aliases last.
+ */
+const CATEGORY_ORDER: Record<string, number> = {
+	functions: 0,
+	classes: 1,
+	variables: 2,
+	'type-aliases': 3,
+	interfaces: 4,
+	enumerations: 5,
+}
+
+/**
+ * Sort categories according to predefined order.
+ * Unknown categories appear after known ones, sorted alphabetically.
+ */
+const sortCategories = (categories: ApiCategory[]): ApiCategory[] => {
+	return [...categories].sort((a, b) => {
+		const orderA = CATEGORY_ORDER[a.slug] ?? 999
+		const orderB = CATEGORY_ORDER[b.slug] ?? 999
+
+		if (orderA !== orderB) {
+			return orderA - orderB
+		}
+
+		// If same order value (or both unknown), sort alphabetically
+		return a.name.localeCompare(b.name)
+	})
+}
+
+/**
  * Parse globals.md to extract grouped API entries.
  * TypeDoc generates sections like "## Classes", "## Functions" etc.
  * Each entry is a markdown link: `- [Name](category/Name.md)`
@@ -55,7 +86,8 @@ const parseGlobals = (content: string): ApiCategory[] => {
 		}
 	}
 
-	return categories.filter(c => c.entries.length > 0)
+	const filtered = categories.filter(c => c.entries.length > 0)
+	return sortCategories(filtered)
 }
 
 /**
@@ -118,7 +150,12 @@ const computeSourcesHash = (
 }
 
 // Exported for testing
-export { parseGlobals, generateApiIndexMarkdown, computeSourcesHash }
+export {
+	parseGlobals,
+	generateApiIndexMarkdown,
+	computeSourcesHash,
+	sortCategories,
+}
 export type { ApiCategory }
 
 export const apiEffect = () =>
@@ -136,17 +173,11 @@ export const apiEffect = () =>
 					console.log('📚 Rebuilding API documentation...')
 
 					// Generate API docs using TypeDoc (async)
-					const proc = Bun.spawn(
-						[
-							'typedoc',
-							'--plugin',
-							'typedoc-plugin-markdown',
-							'--out',
-							`${API_DIR}/`,
-							'index.ts',
-						],
-						{ stdout: 'inherit', stderr: 'inherit' },
-					)
+					// Configuration is in typedoc.json
+					const proc = Bun.spawn(['typedoc'], {
+						stdout: 'inherit',
+						stderr: 'inherit',
+					})
 					const exitCode = await proc.exited
 
 					if (exitCode !== 0) {

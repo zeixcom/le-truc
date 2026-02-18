@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / isTask
-
-# Function: isTask()
+### Function: isTask()
 
 > **isTask**\<`T`\>(`value`): `value is Task<T>`
 
@@ -12,26 +6,26 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:78
 
 Checks if a value is a Task signal.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object` = \{ \}
 
-## Parameters
+#### Parameters
 
-### value
+##### value
 
 `unknown`
 
 The value to check
 
-## Returns
+#### Returns
 
 `value is Task<T>`
 
 True if the value is a Task
 
-## Since
+#### Since
 
 0.18.0

@@ -1,32 +1,18 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / CollectionChanges
-
-# Type Alias: CollectionChanges\<T\>
+### Type Alias: CollectionChanges\<T\>
 
 > **CollectionChanges**\<`T`\> = `object`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:19
 
-Le Truc
+#### Type Parameters
 
-Version 0.16.1
-
-## Author
-
-Esther Brunner, Zeix AG
-
-## Type Parameters
-
-### T
+##### T
 
 `T`
 
-## Properties
+#### Properties
 
-### add?
+##### add?
 
 > `optional` **add**: `T`[]
 
@@ -34,7 +20,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:20
 
 ***
 
-### change?
+##### change?
 
 > `optional` **change**: `T`[]
 
@@ -42,7 +28,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:21
 
 ***
 
-### remove?
+##### remove?
 
 > `optional` **remove**: `T`[]
 

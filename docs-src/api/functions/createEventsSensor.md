@@ -1,71 +1,65 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / createEventsSensor
-
-# Function: createEventsSensor()
+### Function: createEventsSensor()
 
 > **createEventsSensor**\<`T`, `P`, `U`, `K`\>(`init`, `key`, `events`): (`ui`) => [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-Defined in: [src/events.ts:41](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/events.ts#L41)
+Defined in: [src/events.ts:41](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/events.ts#L41)
 
 Produce an event-driven sensor from transformed event data
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
 
-### U
+##### U
 
 `U` *extends* [`UI`](../type-aliases/UI.md)
 
-### K
+##### K
 
 `K` *extends* `string` \| `number` \| `symbol`
 
-## Parameters
+#### Parameters
 
-### init
+##### init
 
 [`ParserOrFallback`](../type-aliases/ParserOrFallback.md)\<`T`, `U`\>
 
 Initial value, reader or parser
 
-### key
+##### key
 
 `K`
 
 name of UI key
 
-### events
+##### events
 
 [`EventHandlers`](../type-aliases/EventHandlers.md)\<`T`, `U`, [`ElementFromKey`](../type-aliases/ElementFromKey.md)\<`U`, `K`\>\>
 
 Transformation functions for events
 
-## Returns
+#### Returns
 
 Extractor function for value from event
 
 > (`ui`): [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-### Parameters
+##### Parameters
 
-#### ui
+###### ui
 
 `U` & `object`
 
-### Returns
+##### Returns
 
 [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-## Since
+#### Since
 
 0.16.0

@@ -1,87 +1,81 @@
-[**@zeix/le-truc**](../README.md)
+### Function: createElementsMemo()
 
-***
-
-[@zeix/le-truc](../globals.md) / createElementsMemo
-
-# Function: createElementsMemo()
-
-## Call Signature
+#### Call Signature
 
 > **createElementsMemo**\<`S`\>(`parent`, `selector`): [`Memo`](../type-aliases/Memo.md)\<[`ElementFromSelector`](../type-aliases/ElementFromSelector.md)\<`S`\>[]\>
 
-Defined in: [src/ui.ts:155](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/ui.ts#L155)
+Defined in: [src/ui.ts:155](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/ui.ts#L155)
 
 Create a memo of elements matching a CSS selector.
 The MutationObserver is lazily activated when an effect first reads
 the memo, and disconnected when no effects are watching.
 
-### Type Parameters
+##### Type Parameters
 
-#### S
+###### S
 
 `S` *extends* `string`
 
-### Parameters
+##### Parameters
 
-#### parent
+###### parent
 
 `ParentNode`
 
 The parent node to search within
 
-#### selector
+###### selector
 
 `S`
 
 The CSS selector to match elements
 
-### Returns
+##### Returns
 
 [`Memo`](../type-aliases/Memo.md)\<[`ElementFromSelector`](../type-aliases/ElementFromSelector.md)\<`S`\>[]\>
 
 A Memo of current matching elements
 
-### Since
+##### Since
 
 0.16.0
 
-## Call Signature
+#### Call Signature
 
 > **createElementsMemo**\<`E`\>(`parent`, `selector`): [`Memo`](../type-aliases/Memo.md)\<`E`[]\>
 
-Defined in: [src/ui.ts:159](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/ui.ts#L159)
+Defined in: [src/ui.ts:159](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/ui.ts#L159)
 
 Create a memo of elements matching a CSS selector.
 The MutationObserver is lazily activated when an effect first reads
 the memo, and disconnected when no effects are watching.
 
-### Type Parameters
+##### Type Parameters
 
-#### E
+###### E
 
 `E` *extends* `Element`
 
-### Parameters
+##### Parameters
 
-#### parent
+###### parent
 
 `ParentNode`
 
 The parent node to search within
 
-#### selector
+###### selector
 
 `string`
 
 The CSS selector to match elements
 
-### Returns
+##### Returns
 
 [`Memo`](../type-aliases/Memo.md)\<`E`[]\>
 
 A Memo of current matching elements
 
-### Since
+##### Since
 
 0.16.0

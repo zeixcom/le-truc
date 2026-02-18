@@ -11,6 +11,7 @@ import {
 	computeSourcesHash,
 	generateApiIndexMarkdown,
 	parseGlobals,
+	sortCategories,
 } from '../../effects/api'
 
 /* === parseGlobals Tests === */
@@ -61,15 +62,68 @@ describe('parseGlobals', () => {
 		const result = parseGlobals(content)
 
 		expect(result).toHaveLength(4)
-		expect(result[0].name).toBe('Classes')
-		expect(result[0].entries).toHaveLength(2)
-		expect(result[1].name).toBe('Functions')
-		expect(result[1].entries).toHaveLength(1)
-		expect(result[2].name).toBe('Type Aliases')
-		expect(result[2].slug).toBe('type-aliases')
-		expect(result[2].entries).toHaveLength(2)
-		expect(result[3].name).toBe('Variables')
-		expect(result[3].entries).toHaveLength(1)
+		// Categories should be sorted: Functions, Classes, Variables, Type Aliases
+		expect(result[0].name).toBe('Functions')
+		expect(result[0].entries).toHaveLength(1)
+		expect(result[1].name).toBe('Classes')
+		expect(result[1].entries).toHaveLength(2)
+		expect(result[2].name).toBe('Variables')
+		expect(result[2].entries).toHaveLength(1)
+		expect(result[3].name).toBe('Type Aliases')
+		expect(result[3].slug).toBe('type-aliases')
+		expect(result[3].entries).toHaveLength(2)
+	})
+
+	test('sorts categories in custom order: Functions, Classes, Variables, Type Aliases', () => {
+		// Deliberately ordered differently in the input to test sorting
+		const content = `# API Reference
+
+## Interfaces
+
+- [SomeInterface](interfaces/SomeInterface.md)
+
+## Type Aliases
+
+- [Component](type-aliases/Component.md)
+
+## Variables
+
+- [CONTEXT_REQUEST](variables/CONTEXT_REQUEST.md)
+
+## Enumerations
+
+- [Status](enumerations/Status.md)
+
+## Functions
+
+- [defineComponent](functions/defineComponent.md)
+- [on](functions/on.md)
+
+## Classes
+
+- [ContextRequestEvent](classes/ContextRequestEvent.md)
+`
+		const result = parseGlobals(content)
+
+		expect(result).toHaveLength(6)
+		// Verify custom order: Functions first
+		expect(result[0].name).toBe('Functions')
+		expect(result[0].slug).toBe('functions')
+		// Then Classes
+		expect(result[1].name).toBe('Classes')
+		expect(result[1].slug).toBe('classes')
+		// Then Variables
+		expect(result[2].name).toBe('Variables')
+		expect(result[2].slug).toBe('variables')
+		// Then Type Aliases
+		expect(result[3].name).toBe('Type Aliases')
+		expect(result[3].slug).toBe('type-aliases')
+		// Then Interfaces
+		expect(result[4].name).toBe('Interfaces')
+		expect(result[4].slug).toBe('interfaces')
+		// Then Enumerations
+		expect(result[5].name).toBe('Enumerations')
+		expect(result[5].slug).toBe('enumerations')
 	})
 
 	test('filters out empty categories', () => {
@@ -285,5 +339,58 @@ describe('computeSourcesHash', () => {
 
 		expect(typeof hash).toBe('string')
 		expect(hash.length).toBeGreaterThan(0)
+	})
+})
+
+/* === sortCategories Tests === */
+
+describe('sortCategories', () => {
+	test('sorts categories in custom order', () => {
+		const unsorted: ApiCategory[] = [
+			{ name: 'Variables', slug: 'variables', entries: [] },
+			{ name: 'Type Aliases', slug: 'type-aliases', entries: [] },
+			{ name: 'Functions', slug: 'functions', entries: [] },
+			{ name: 'Classes', slug: 'classes', entries: [] },
+		]
+
+		const sorted = sortCategories(unsorted)
+
+		expect(sorted[0].slug).toBe('functions')
+		expect(sorted[1].slug).toBe('classes')
+		expect(sorted[2].slug).toBe('variables')
+		expect(sorted[3].slug).toBe('type-aliases')
+	})
+
+	test('places unknown categories at the end, sorted alphabetically', () => {
+		const categories: ApiCategory[] = [
+			{ name: 'ZZZ Custom', slug: 'zzz-custom', entries: [] },
+			{ name: 'Functions', slug: 'functions', entries: [] },
+			{ name: 'AAA Custom', slug: 'aaa-custom', entries: [] },
+			{ name: 'Classes', slug: 'classes', entries: [] },
+		]
+
+		const sorted = sortCategories(categories)
+
+		expect(sorted[0].slug).toBe('functions')
+		expect(sorted[1].slug).toBe('classes')
+		expect(sorted[2].slug).toBe('aaa-custom')
+		expect(sorted[3].slug).toBe('zzz-custom')
+	})
+
+	test('does not mutate original array', () => {
+		const original: ApiCategory[] = [
+			{ name: 'Variables', slug: 'variables', entries: [] },
+			{ name: 'Functions', slug: 'functions', entries: [] },
+		]
+
+		const sorted = sortCategories(original)
+
+		expect(original[0].slug).toBe('variables')
+		expect(sorted[0].slug).toBe('functions')
+	})
+
+	test('handles empty array', () => {
+		const sorted = sortCategories([])
+		expect(sorted).toEqual([])
 	})
 })

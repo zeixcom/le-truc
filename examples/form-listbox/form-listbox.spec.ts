@@ -235,10 +235,20 @@ test.describe('form-listbox component', () => {
 
 		// Set innerHTML on all option buttons (simulating filter highlight)
 		await page.evaluate(() => {
+			const escapeHTML = (text: string) =>
+				text
+					.replace(/&/g, '&amp;')
+					.replace(/</g, '&lt;')
+					.replace(/>/g, '&gt;')
+					.replace(/"/g, '&quot;')
+					.replace(/'/g, '&#39;')
+
 			const options = document.querySelectorAll('#colors button[role="option"]')
 			for (const option of options) {
 				const text = option.textContent?.trim() ?? ''
-				option.innerHTML = `<mark>${text.charAt(0)}</mark>${text.slice(1)}`
+				const firstChar = escapeHTML(text.charAt(0))
+				const rest = escapeHTML(text.slice(1))
+				option.innerHTML = `<mark>${firstChar}</mark>${rest}`
 			}
 		})
 		await page.waitForTimeout(200)
@@ -267,10 +277,18 @@ test.describe('form-listbox component', () => {
 
 		// Set innerHTML on all fruit option buttons (simulating highlight)
 		await page.evaluate(() => {
+			const escapeHTML = (text: string) =>
+				text
+					.replace(/&/g, '&amp;')
+					.replace(/</g, '&lt;')
+					.replace(/>/g, '&gt;')
+					.replace(/"/g, '&quot;')
+					.replace(/'/g, '&#39;')
+
 			const options = document.querySelectorAll('#fruits button[role="option"]')
 			for (const option of options) {
 				const text = option.textContent?.trim() ?? ''
-				option.innerHTML = text
+				option.innerHTML = escapeHTML(text)
 			}
 		})
 		await page.waitForTimeout(200)
@@ -301,11 +319,21 @@ test.describe('form-listbox component', () => {
 
 		// Set innerHTML via requestAnimationFrame (same timing as schedule())
 		await page.evaluate(() => {
+			const escapeHTML = (text: string) =>
+				text
+					.replace(/&/g, '&amp;')
+					.replace(/</g, '&lt;')
+					.replace(/>/g, '&gt;')
+					.replace(/"/g, '&quot;')
+					.replace(/'/g, '&#39;')
+
 			const options = document.querySelectorAll('#colors button[role="option"]')
 			requestAnimationFrame(() => {
 				for (const option of options) {
 					const text = option.textContent?.trim() ?? ''
-					option.innerHTML = `<mark>${text.charAt(0)}</mark>${text.slice(1)}`
+					const firstChar = escapeHTML(text.charAt(0))
+					const rest = escapeHTML(text.slice(1))
+					option.innerHTML = `<mark>${firstChar}</mark>${rest}`
 				}
 			})
 		})
@@ -331,10 +359,18 @@ test.describe('form-listbox component', () => {
 
 			// Set innerHTML on all buttons after each selection
 			await page.evaluate(() => {
+				const escapeHTML = (text: string) =>
+					text
+						.replace(/&/g, '&amp;')
+						.replace(/</g, '&lt;')
+						.replace(/>/g, '&gt;')
+						.replace(/"/g, '&quot;')
+						.replace(/'/g, '&#39;')
+
 				const btns = document.querySelectorAll('#colors button[role="option"]')
 				for (const btn of btns) {
 					const text = btn.textContent?.trim() ?? ''
-					btn.innerHTML = `${text}`
+					btn.innerHTML = escapeHTML(text)
 				}
 			})
 			await page.waitForTimeout(100)

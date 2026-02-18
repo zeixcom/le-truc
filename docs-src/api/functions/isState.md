@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / isState
-
-# Function: isState()
+### Function: isState()
 
 > **isState**\<`T`\>(`value`): `value is State<T>`
 
@@ -12,31 +6,31 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/state.d.ts:77
 
 Checks if a value is a State signal.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object` = \{ \}
 
-## Parameters
+#### Parameters
 
-### value
+##### value
 
 `unknown`
 
 The value to check
 
-## Returns
+#### Returns
 
 `value is State<T>`
 
 True if the value is a State
 
-## Since
+#### Since
 
 0.9.0
 
-## Example
+#### Example
 
 ```ts
 const state = createState(0);

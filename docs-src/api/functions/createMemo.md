@@ -1,20 +1,6 @@
-[**@zeix/le-truc**](../README.md)
+### Function: createMemo()
 
-***
-
-[@zeix/le-truc](../globals.md) / createMemo
-
-# Function: createMemo()
-
-Le Truc
-
-Version 0.16.1
-
-## Author
-
-Esther Brunner, Zeix AG
-
-## Call Signature
+#### Call Signature
 
 > **createMemo**\<`T`\>(`fn`, `options`): [`Memo`](../type-aliases/Memo.md)\<`T`\>
 
@@ -24,39 +10,39 @@ Creates a derived reactive computation that caches its result.
 The computation automatically tracks dependencies and recomputes when they change.
 Uses lazy evaluation - only computes when the value is accessed.
 
-### Type Parameters
+##### Type Parameters
 
-#### T
+###### T
 
 `T` *extends* `object`
 
 The type of value computed by the memo
 
-### Parameters
+##### Parameters
 
-#### fn
+###### fn
 
 (`prev`) => `T`
 
 The computation function that receives the previous value
 
-#### options
+###### options
 
 [`SignalOptions`](../type-aliases/SignalOptions.md)\<`T`\> & `object` & `object`
 
 Optional configuration for the memo
 
-### Returns
+##### Returns
 
 [`Memo`](../type-aliases/Memo.md)\<`T`\>
 
 A Memo object with a get() method
 
-### Since
+##### Since
 
 0.18.0
 
-### Examples
+##### Examples
 
 ```ts
 const count = createState(0);
@@ -71,7 +57,7 @@ console.log(doubled.get()); // 10
 const sum = createMemo((prev) => prev + count.get(), { value: 0, equals: Object.is });
 ```
 
-## Call Signature
+#### Call Signature
 
 > **createMemo**\<`T`\>(`fn`, `options?`): [`Memo`](../type-aliases/Memo.md)\<`T`\>
 
@@ -81,39 +67,39 @@ Creates a derived reactive computation that caches its result.
 The computation automatically tracks dependencies and recomputes when they change.
 Uses lazy evaluation - only computes when the value is accessed.
 
-### Type Parameters
+##### Type Parameters
 
-#### T
+###### T
 
 `T` *extends* `object`
 
 The type of value computed by the memo
 
-### Parameters
+##### Parameters
 
-#### fn
+###### fn
 
 [`MemoCallback`](../type-aliases/MemoCallback.md)\<`T`\>
 
 The computation function that receives the previous value
 
-#### options?
+###### options?
 
 [`ComputedOptions`](../type-aliases/ComputedOptions.md)\<`T`\>
 
 Optional configuration for the memo
 
-### Returns
+##### Returns
 
 [`Memo`](../type-aliases/Memo.md)\<`T`\>
 
 A Memo object with a get() method
 
-### Since
+##### Since
 
 0.18.0
 
-### Examples
+##### Examples
 
 ```ts
 const count = createState(0);

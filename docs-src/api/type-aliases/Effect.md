@@ -1,35 +1,29 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / Effect
-
-# Type Alias: Effect()\<P, E\>
+### Type Alias: Effect()\<P, E\>
 
 > **Effect**\<`P`, `E`\> = (`host`, `target`) => [`MaybeCleanup`](MaybeCleanup.md)
 
-Defined in: [src/effects.ts:21](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects.ts#L21)
+Defined in: [src/effects.ts:21](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/effects.ts#L21)
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](ComponentProps.md)
 
-### E
+##### E
 
 `E` *extends* `Element`
 
-## Parameters
+#### Parameters
 
-### host
+##### host
 
 [`Component`](Component.md)\<`P`\>
 
-### target
+##### target
 
 `E`
 
-## Returns
+#### Returns
 
 [`MaybeCleanup`](MaybeCleanup.md)
