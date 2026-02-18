@@ -120,13 +120,12 @@ Calls the cleanup function returned by `runEffects()`, which tears down all effe
 
 ## The Effect System
 
-### Three layers
+### How `runEffects` works
 
-1. **`runEffects(ui, effects)`** — top-level orchestrator. Iterates the keys of the effects record. For each key, checks whether `ui[key]` is a `Memo` (from `all()`) or a single `Element` (from `first()`), and delegates accordingly.
+`runEffects(ui, effects)` is the top-level orchestrator (internal, not publicly exported). It creates a `createScope()` that owns all child effects for the component. For each key in the effects record:
 
-2. **`runElementsEffects(host, elements, effects)`** — handles dynamic collections. Creates a `createEffect()` that watches `Memo<E[]>`, computes added/removed elements by diffing against currently attached cleanups, and attaches/detaches per-element effects.
-
-3. **`runElementEffects(host, target, effects)`** — runs one or many effect functions against a single target element, collecting their cleanup functions.
+- **`Memo` (from `all()`)**: Wraps a `createEffect()` around the loop. Reading `memo.get()` tracks the collection as a dependency, so when elements are added/removed the effect re-runs. The ownership graph automatically disposes inner per-element effects on re-run.
+- **Single `Element` (from `first()`)**: Runs the effect functions directly inside the scope (no wrapping effect needed since the target is static).
 
 ### updateElement — the shared abstraction
 
@@ -189,9 +188,13 @@ Calls `root.querySelector()`. If the matched element is an undefined custom elem
 
 ### all(selector, required?)
 
-Returns a `Memo<E[]>` created by `createElementsMemo()`. This sets up a `MutationObserver` (lazily, via the `watched` option on `createMemo`) that watches for `childList`, `subtree`, and relevant attribute changes. The memo always contains the current matching elements; added/removed diffs are derived downstream where needed (for example in `runElementsEffects`).
+Returns a `Memo<E[]>` created by `createElementsMemo()`. This sets up a `MutationObserver` (lazily, via the `watched` option on `createMemo`) that watches for `childList`, `subtree`, and relevant attribute changes. The memo always contains the current matching elements; added/removed diffs are derived downstream by the owning `createEffect` in `runEffects`.
 
 The `MutationObserver` config is smart about which attributes to watch: `extractAttributes(selector)` parses the CSS selector to find attribute names implied by `.class`, `#id`, and `[attr]` patterns.
+
+**Mutation filtering**: The observer's callback uses a `couldMatch` helper that checks `node.matches(selector)` and `node.querySelector(selector)` on added/removed nodes. This prevents spurious invalidations from mutations *inside* matched elements (e.g., `innerHTML` changes on a `button[role="option"]` that add/remove `<mark>` tags).
+
+**Custom `equals`**: The memo uses `(a, b) => a.length === b.length && a.every((el, i) => el === b[i])` to compare arrays by element identity. This currently only prevents propagation through chained memos, because `cause-effect`'s `invalidate()` propagates `FLAG_DIRTY` directly to terminal effects, bypassing the `equals` check. A future fix in Cause & Effect (propagating `FLAG_CHECK` instead) will allow effects to skip re-runs when `equals` returns `true`, unlocking a further optimization.
 
 ### Dependency resolution
 
@@ -255,18 +258,6 @@ The distinction between Parser (≥2 params) and Reader (1 param) is detected at
 
 `MethodProducer<P, U>` is defined as `(ui) => void`, but `isReaderOrMethodProducer` just checks `isFunction`. There's no way to distinguish a `Reader` from a `MethodProducer` at runtime — the only difference is that a MethodProducer returns `void` and relies on side effects (like `provideContexts`). Since `#setAccessor` is only called when the result is non-null, this works by convention, but the flow is non-obvious: the MethodProducer's return value (`undefined`) causes `#setAccessor` to be silently skipped, which is the desired behavior but isn't explicitly documented in the code.
 
-### Dependency timeout of 50ms
+### `cause-effect` `invalidate()` propagates `FLAG_DIRTY` to effects
 
-`DEPENDENCY_TIMEOUT` is hardcoded at 50ms. This seems very short — on slower devices or with lazy-loaded component definitions, this could fire frequently. The error is logged but effects still run, so it's non-fatal, but it could cause effects to run against not-yet-upgraded elements. Is this timeout well-calibrated? Should it be configurable?
-
-### `resolveDependencies` uses Promise.race with error swallowing
-
-The dependency resolution catches all errors and runs the callback anyway. The `.catch(() => { callback() })` pattern means even unexpected errors (not just timeouts) are silently swallowed. The `DependencyTimeoutError` is constructed and passed to `reject`, but the actual logging happens... nowhere visible. The error is created inside a `new Promise((_, reject) => { reject(new DependencyTimeoutError(...)) })`, which rejects the race, but the `.catch` just calls `callback()` without logging the error.
-
-### `createEventsSensor` captures `targets` once
-
-In `createEventsSensor`, the `targets` array is computed once at sensor creation time from the current state of the `Memo`. If the collection changes later (elements added/removed), the sensor won't pick up new targets. For `Memo`-based collections that are specifically designed to be dynamic, this seems like a gap.
-
-### `dangerouslySetInnerHTML` script handling
-
-The script re-execution logic clones scripts by copying only `textContent` and `type`. This drops `src`, `async`, `defer`, `crossorigin`, `integrity`, `nomodule`, and other attributes. External scripts (`<script src="...">`) will silently become empty inline scripts. Is this intentional (security boundary) or an oversight?
+When a `Memo` with a `watched` callback calls `invalidate()`, `cause-effect` propagates `FLAG_DIRTY` directly to terminal effect sinks. This bypasses the memo's `equals` check — effects always re-run even when the memo's value hasn't changed. The correct behavior would be to propagate `FLAG_CHECK`, which forces effects to refresh their sources and respect `equals` at every level. This is tracked as a bug to report to the Cause & Effect team. Once fixed, the `couldMatch` mutation filter in `createElementsMemo` becomes a performance optimization rather than a correctness requirement.

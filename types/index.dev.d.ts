@@ -84,8 +84,6 @@ export {
 	type ElementEffects,
 	type ElementUpdater,
 	type Reactive,
-	runEffects,
-	runElementEffects,
 	updateElement,
 } from './src/effects'
 export { setAttribute, toggleAttribute } from './src/effects/attribute'

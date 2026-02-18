@@ -168,6 +168,7 @@ function createElementsMemo<S extends string>(
 
 	return createMemo(() => Array.from(parent.querySelectorAll<E>(selector)), {
 		value: [],
+		equals: (a, b) => a.length === b.length && a.every((el, i) => el === b[i]),
 		watched: invalidate => {
 			const observerConfig: MutationObserverInit = {
 				childList: true,
@@ -178,7 +179,34 @@ function createElementsMemo<S extends string>(
 				observerConfig.attributes = true
 				observerConfig.attributeFilter = observedAttributes
 			}
-			const observer = new MutationObserver(() => invalidate())
+			const couldMatch = (node: Node) =>
+				node instanceof Element &&
+				(node.matches(selector) || node.querySelector(selector))
+
+			const observer = new MutationObserver(mutations => {
+				for (const mutation of mutations) {
+					if (mutation.type === 'attributes') {
+						invalidate()
+						return
+					}
+					// For childList mutations, only invalidate if added/removed
+					// nodes match (or contain elements matching) the selector.
+					// This filters out innerHTML changes inside matched elements
+					// (e.g. setting innerHTML on a button for filter highlights).
+					for (const node of mutation.addedNodes) {
+						if (couldMatch(node)) {
+							invalidate()
+							return
+						}
+					}
+					for (const node of mutation.removedNodes) {
+						if (couldMatch(node)) {
+							invalidate()
+							return
+						}
+					}
+				}
+			})
 			observer.observe(parent, observerConfig)
 			return () => observer.disconnect()
 		},

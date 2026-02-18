@@ -1706,81 +1706,27 @@ var getUpdateDescription = (op, name = "") => {
   };
   return ops[op] + name;
 };
-var runElementEffects = (host, target, effects) => {
-  const cleanups = [];
-  const run = (fn) => {
-    const cleanup = fn(host, target);
-    if (cleanup)
-      cleanups.push(cleanup);
-  };
-  if (Array.isArray(effects))
-    for (const fn of effects)
-      run(fn);
-  else
-    run(effects);
-  return () => {
-    cleanups.forEach((cleanup) => cleanup());
-    cleanups.length = 0;
-  };
-};
-var runElementsEffects = (host, elements, effects) => {
-  const cleanups = new Map;
-  const attach = (targets) => {
-    for (const target of targets) {
-      const cleanup = runElementEffects(host, target, effects);
-      if (cleanup)
-        cleanups.set(target, cleanup);
-    }
-  };
-  const detach = (targets) => {
-    for (const target of targets) {
-      cleanups.get(target)?.();
-      cleanups.delete(target);
-    }
-  };
-  const dispose = createEffect(() => {
-    const next = new Set(elements.get());
-    const added = [];
-    const removed = [];
-    for (const target of next)
-      if (!cleanups.has(target))
-        added.push(target);
-    for (const target of cleanups.keys())
-      if (!next.has(target))
-        removed.push(target);
-    attach(added);
-    detach(removed);
-  });
-  return () => {
-    for (const cleanup of cleanups.values())
-      cleanup();
-    cleanups.clear();
-    dispose();
-  };
-};
 var runEffects = (ui, effects) => {
   if (!isRecord(effects))
     throw new InvalidEffectsError(ui.host);
-  const cleanups = [];
-  const keys = Object.keys(effects);
-  for (const key of keys) {
-    const k = key;
-    if (!effects[k])
-      continue;
-    const elementEffects = Array.isArray(effects[k]) ? effects[k] : [effects[k]];
-    if (isMemo(ui[k])) {
-      cleanups.push(runElementsEffects(ui.host, ui[k], elementEffects));
-    } else if (ui[k]) {
-      const cleanup = runElementEffects(ui.host, ui[k], elementEffects);
-      if (cleanup)
-        cleanups.push(cleanup);
+  return createScope(() => {
+    for (const key of Object.keys(effects)) {
+      const k = key;
+      if (!effects[k])
+        continue;
+      const fns = Array.isArray(effects[k]) ? effects[k] : [effects[k]];
+      if (isMemo(ui[k])) {
+        createEffect(() => {
+          for (const target of ui[k].get())
+            for (const fn of fns)
+              fn(ui.host, target);
+        });
+      } else if (ui[k]) {
+        for (const fn of fns)
+          fn(ui.host, ui[k]);
+      }
     }
-  }
-  return () => {
-    for (const cleanup of cleanups)
-      cleanup();
-    cleanups.length = 0;
-  };
+  });
 };
 var resolveReactive = (reactive, host, target, context) => {
   try {
@@ -1874,6 +1820,7 @@ var extractAttributes = (selector) => {
 function createElementsMemo(parent, selector) {
   return createMemo(() => Array.from(parent.querySelectorAll(selector)), {
     value: [],
+    equals: (a, b) => a.length === b.length && a.every((el, i) => el === b[i]),
     watched: (invalidate) => {
       const observerConfig = {
         childList: true,
@@ -1884,7 +1831,27 @@ function createElementsMemo(parent, selector) {
         observerConfig.attributes = true;
         observerConfig.attributeFilter = observedAttributes;
       }
-      const observer = new MutationObserver(() => invalidate());
+      const couldMatch = (node) => node instanceof Element && (node.matches(selector) || node.querySelector(selector));
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === "attributes") {
+            invalidate();
+            return;
+          }
+          for (const node of mutation.addedNodes) {
+            if (couldMatch(node)) {
+              invalidate();
+              return;
+            }
+          }
+          for (const node of mutation.removedNodes) {
+            if (couldMatch(node)) {
+              invalidate();
+              return;
+            }
+          }
+        }
+      });
       observer.observe(parent, observerConfig);
       return () => observer.disconnect();
     }
@@ -2399,8 +2366,6 @@ export {
   setProperty,
   setAttribute,
   schedule,
-  runElementEffects,
-  runEffects,
   requestContext,
   read,
   provideContexts,
