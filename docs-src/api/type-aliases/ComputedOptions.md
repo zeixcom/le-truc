@@ -12,7 +12,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:73
 
 Le Truc
 
-Version 0.16.0
+Version 0.16.1
 
 ## Type Declaration
 
@@ -53,4 +53,4 @@ tracked signal dependencies.
 
 ## Author
 
-Esther Brunner
+Esther Brunner, Zeix AG

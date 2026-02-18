@@ -1,9 +1,9 @@
 /**
  * Le Truc
  *
- * Version 0.16.0
+ * Version 0.16.1
  *
- * @author Esther Brunner
+ * @author Esther Brunner, Zeix AG
  */
 
 // From Cause & Effect

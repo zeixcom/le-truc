@@ -8,7 +8,7 @@
 
 > **ElementUpdater**\<`E`, `T`\> = `object`
 
-Defined in: [src/effects.ts:44](https://github.com/zeixcom/le-truc/blob/7a92bc007a166efb132ecdad99147e4787734f4c/src/effects.ts#L44)
+Defined in: [src/effects.ts:44](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects.ts#L44)
 
 ## Type Parameters
 
@@ -26,7 +26,7 @@ Defined in: [src/effects.ts:44](https://github.com/zeixcom/le-truc/blob/7a92bc00
 
 > `optional` **delete**: (`element`) => `void`
 
-Defined in: [src/effects.ts:49](https://github.com/zeixcom/le-truc/blob/7a92bc007a166efb132ecdad99147e4787734f4c/src/effects.ts#L49)
+Defined in: [src/effects.ts:49](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects.ts#L49)
 
 #### Parameters
 
@@ -44,7 +44,7 @@ Defined in: [src/effects.ts:49](https://github.com/zeixcom/le-truc/blob/7a92bc00
 
 > `optional` **name**: `string`
 
-Defined in: [src/effects.ts:46](https://github.com/zeixcom/le-truc/blob/7a92bc007a166efb132ecdad99147e4787734f4c/src/effects.ts#L46)
+Defined in: [src/effects.ts:46](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects.ts#L46)
 
 ***
 
@@ -52,7 +52,7 @@ Defined in: [src/effects.ts:46](https://github.com/zeixcom/le-truc/blob/7a92bc00
 
 > **op**: [`UpdateOperation`](UpdateOperation.md)
 
-Defined in: [src/effects.ts:45](https://github.com/zeixcom/le-truc/blob/7a92bc007a166efb132ecdad99147e4787734f4c/src/effects.ts#L45)
+Defined in: [src/effects.ts:45](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects.ts#L45)
 
 ***
 
@@ -60,7 +60,7 @@ Defined in: [src/effects.ts:45](https://github.com/zeixcom/le-truc/blob/7a92bc00
 
 > **read**: (`element`) => `T` \| `null`
 
-Defined in: [src/effects.ts:47](https://github.com/zeixcom/le-truc/blob/7a92bc007a166efb132ecdad99147e4787734f4c/src/effects.ts#L47)
+Defined in: [src/effects.ts:47](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects.ts#L47)
 
 #### Parameters
 
@@ -78,7 +78,7 @@ Defined in: [src/effects.ts:47](https://github.com/zeixcom/le-truc/blob/7a92bc00
 
 > `optional` **reject**: (`error`) => `void`
 
-Defined in: [src/effects.ts:51](https://github.com/zeixcom/le-truc/blob/7a92bc007a166efb132ecdad99147e4787734f4c/src/effects.ts#L51)
+Defined in: [src/effects.ts:51](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects.ts#L51)
 
 #### Parameters
 
@@ -96,7 +96,7 @@ Defined in: [src/effects.ts:51](https://github.com/zeixcom/le-truc/blob/7a92bc00
 
 > `optional` **resolve**: (`element`) => `void`
 
-Defined in: [src/effects.ts:50](https://github.com/zeixcom/le-truc/blob/7a92bc007a166efb132ecdad99147e4787734f4c/src/effects.ts#L50)
+Defined in: [src/effects.ts:50](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects.ts#L50)
 
 #### Parameters
 
@@ -114,7 +114,7 @@ Defined in: [src/effects.ts:50](https://github.com/zeixcom/le-truc/blob/7a92bc00
 
 > **update**: (`element`, `value`) => `void`
 
-Defined in: [src/effects.ts:48](https://github.com/zeixcom/le-truc/blob/7a92bc007a166efb132ecdad99147e4787734f4c/src/effects.ts#L48)
+Defined in: [src/effects.ts:48](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/effects.ts#L48)
 
 #### Parameters
 

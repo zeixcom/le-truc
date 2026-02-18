@@ -12,7 +12,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/store.d.ts:22
 
 Le Truc
 
-Version 0.16.0
+Version 0.16.1
 
 ## Type Parameters
 
@@ -22,4 +22,4 @@ Version 0.16.0
 
 ## Author
 
-Esther Brunner
+Esther Brunner, Zeix AG

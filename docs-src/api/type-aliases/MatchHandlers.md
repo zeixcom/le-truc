@@ -12,11 +12,11 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:3
 
 Le Truc
 
-Version 0.16.0
+Version 0.16.1
 
 ## Author
 
-Esther Brunner
+Esther Brunner, Zeix AG
 
 ## Type Parameters
 

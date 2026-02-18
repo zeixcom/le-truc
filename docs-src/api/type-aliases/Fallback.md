@@ -8,7 +8,7 @@
 
 > **Fallback**\<`T`, `U`\> = `T` \| [`Reader`](Reader.md)\<`T`, `U`\>
 
-Defined in: [src/parsers.ts:17](https://github.com/zeixcom/le-truc/blob/7a92bc007a166efb132ecdad99147e4787734f4c/src/parsers.ts#L17)
+Defined in: [src/parsers.ts:17](https://github.com/zeixcom/le-truc/blob/5c30877fa2fce96dab1ef679e495da98511e97d7/src/parsers.ts#L17)
 
 ## Type Parameters
 

@@ -199,10 +199,12 @@ function propagate(node, newFlag = FLAG_DIRTY) {
     for (let e = node.sinks;e; e = e.nextSink)
       propagate(e.sink, FLAG_CHECK);
   } else {
-    if (flags & FLAG_DIRTY)
+    if ((flags & (FLAG_DIRTY | FLAG_CHECK)) >= newFlag)
       return;
-    node.flags = FLAG_DIRTY;
-    queuedEffects.push(node);
+    const wasQueued = flags & (FLAG_DIRTY | FLAG_CHECK);
+    node.flags = newFlag;
+    if (!wasQueued)
+      queuedEffects.push(node);
   }
 }
 function setState(node, next) {
@@ -354,7 +356,7 @@ function flush() {
   try {
     for (let i = 0;i < queuedEffects.length; i++) {
       const effect = queuedEffects[i];
-      if (effect.flags & FLAG_DIRTY)
+      if (effect.flags & (FLAG_DIRTY | FLAG_CHECK))
         refresh(effect);
     }
     queuedEffects.length = 0;
@@ -797,9 +799,7 @@ function createMemo(fn, options) {
     if (activeSink) {
       if (!node.sinks)
         node.stop = watched(() => {
-          node.flags |= FLAG_DIRTY;
-          for (let e = node.sinks;e; e = e.nextSink)
-            propagate(e.sink);
+          propagate(node);
           if (batchDepth === 0)
             flush();
         });
@@ -848,9 +848,7 @@ function createTask(fn, options) {
     if (activeSink) {
       if (!node.sinks)
         node.stop = watched(() => {
-          node.flags |= FLAG_DIRTY;
-          for (let e = node.sinks;e; e = e.nextSink)
-            propagate(e.sink);
+          propagate(node);
           if (batchDepth === 0)
             flush();
         });
