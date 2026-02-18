@@ -93,7 +93,11 @@ ${listItems}
 `
 }
 
-/* === Exported Effect === */
+/* === Exported Functions === */
+
+// Exported for testing
+export { parseGlobals, generateApiIndexMarkdown }
+export type { ApiCategory }
 
 export const apiEffect = () =>
 	createEffect(() => {

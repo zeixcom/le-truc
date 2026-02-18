@@ -115,7 +115,10 @@ const processApiFile = async (file: FileInfo): Promise<void> => {
 	await writeFileSafe(outputPath, htmlContent)
 }
 
-/* === Exported Effect === */
+/* === Exported Functions === */
+
+// Exported for testing
+export { stripBreadcrumbs, highlightCodeBlocks }
 
 export const apiPagesEffect = () =>
 	createEffect(() => {

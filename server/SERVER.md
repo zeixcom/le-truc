@@ -108,7 +108,8 @@ Each effect calls `createEffect(() => match([...signals], { ok, err }))` and ret
 
 | Effect | Depends On | Output | Tool |
 |--------|-----------|--------|------|
-| `apiEffect` | `libraryScripts.sources` | `docs-src/api/**/*.md` | TypeDoc + typedoc-plugin-markdown |
+| `apiEffect` | `libraryScripts.sources` | `docs-src/api/**/*.md`, `docs-src/pages/api.md` | TypeDoc + typedoc-plugin-markdown |
+| `apiPagesEffect` | `apiMarkdown.sources` | `docs/api/**/*.html` | Markdoc + Shiki (HTML fragments) |
 | `cssEffect` | `docsStyles`, `componentStyles` | `docs/assets/main.css` | LightningCSS (`bunx lightningcss`) |
 | `jsEffect` | `docsScripts`, `libraryScripts`, `componentScripts` | `docs/assets/main.js` + sourcemap | `bun build` |
 | `serviceWorkerEffect` | All style + script sources | `docs/sw.js` | Template generation |
@@ -122,6 +123,11 @@ Each effect calls `createEffect(() => match([...signals], { ok, err }))` and ret
 
 ```
 docs/
+├── api/
+│   ├── classes/           # API class fragments
+│   ├── functions/         # API function fragments
+│   ├── type-aliases/      # API type alias fragments
+│   └── variables/         # API variable fragments
 ├── assets/
 │   ├── main.css          # Minified CSS bundle
 │   └── main.js           # Minified JS bundle + sourcemap
@@ -212,6 +218,7 @@ The `fence` schema override provides:
 | `GET /` | Home page | `docs/index.html` |
 | `GET /api/status` | Health check (`"OK"`) | Inline |
 | `GET /ws` | WebSocket upgrade (HMR) | In-memory |
+| `GET /api/:category/:page` | API doc fragment | `docs/api/<category>/<page>` |
 | `GET /assets/:file` | Static assets | `docs/assets/` |
 | `GET /examples/:component` | Pre-built example HTML | `docs/examples/` |
 | `GET /test/:component/mocks/:mock` | Test mock files | `examples/<component>/mocks/` |
@@ -378,7 +385,7 @@ server/tests/
 
 - [TESTS.md](./TESTS.md) — Full test plan with specifications for all modules
 - [TEST-SUMMARY.md](./TEST-SUMMARY.md) — Implementation progress and resolved issues
-- [tests/README.md](./\_\_tests\_\_/README.md) — Test usage guidelines
+- [tests/README.md](./tests/README.md) — Test usage guidelines
 
 ## Configuration (`config.ts`)
 
@@ -430,14 +437,11 @@ server/tests/
 
 ## Future Improvements
 
-### API Documentation Section
+### API Documentation Section ✅
 
-The current API pipeline generates TypeDoc Markdown into `docs-src/api/` (classes, functions, type-aliases, variables) but these files are not surfaced in the docs site as a navigable section. Adding an API section requires:
+The API section is implemented end-to-end. `apiEffect` runs TypeDoc, parses `globals.md`, and generates `docs-src/pages/api.md` with a grouped `{% listnav %}` index. `apiPagesEffect` processes individual API Markdown files through the Markdoc + Shiki pipeline and writes HTML fragments to `docs/api/<category>/<name>.html`. The `api.html` layout is served for direct navigation; lazy-loaded fragments are fetched by `module-lazyload` via listnav selection.
 
-- A new `api.md` page (or auto-generated equivalent) using the `{% listnav %}` pattern from the Examples section, with grouped entries (Functions, Classes, Type Aliases, Variables) linking to individual API pages
-- The `apiEffect` should generate or update a listnav-compatible index alongside the TypeDoc Markdown
-- Individual API pages need to be processed through the Markdoc pipeline and rendered with the existing `api.html` layout (which already has breadcrumbs, sidebar TOC, and API-specific styling)
-- The `api.html` layout has template variables (`{{ api-category }}`, `{{ api-name }}`, `{{ api-kind }}`, `{{ toc }}`) that the page generation pipeline does not currently populate
+**Remaining:** The `api.html` template variables (`{{ api-category }}`, `{{ api-name }}`, `{{ api-kind }}`, `{{ toc }}`) are not yet populated in `effects/pages.ts`, so breadcrumbs and sidebar TOC are empty on direct API page navigation.
 
 ### FAQ Section
 
