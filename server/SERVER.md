@@ -64,8 +64,8 @@ The build watcher drives correctness (rebuilds); the server watcher drives liven
 | `build:examples` | `bun run build:examples:js && bun run build:examples:css` | N/A | No | N/A |
 | `test` | `bunx playwright test examples` | N/A | N/A | N/A |
 | `test:component` | `bun scripts/test-component.ts <name>` | N/A | N/A | N/A |
-| `test:server` | `bun test server/__tests__` | N/A | N/A | N/A |
-| `test:server:watch` | `bun test server/__tests__ --watch` | N/A | N/A | N/A |
+| `test:server` | `bun test server/tests` | N/A | N/A | N/A |
+| `test:server:watch` | `bun test server/tests --watch` | N/A | N/A | N/A |
 
 ## Reactive Build Pipeline
 
@@ -314,23 +314,23 @@ hmrScriptTag({
 
 Note: `templates/utils.ts` `html` produces **plain HTML strings**; `markdoc-helpers.ts` `html` produces **Markdoc `Tag` objects**. They are different functions imported from different paths.
 
-## Testing (`server/__tests__/`)
+## Testing (`server/tests/`)
 
-The server has a test suite using **Bun's built-in test runner** (`bun:test`). Tests live in `server/__tests__/` and mirror the source module structure.
+The server has a test suite using **Bun's built-in test runner** (`bun:test`). Tests live in `server/tests/` and mirror the source module structure.
 
 ### Running Tests
 
 | Script | Command | Description |
 |--------|---------|-------------|
-| `test:server` | `bun test server/__tests__` | Run all server tests |
-| `test:server:unit` | `bun test server/__tests__ --bail` | Run with bail on first failure |
-| `test:server:integration` | `bun test server/__tests__ --timeout 10000` | Run with longer timeout |
-| `test:server:watch` | `bun test server/__tests__ --watch` | Watch mode for development |
+| `test:server` | `bun test server/tests` | Run all server tests |
+| `test:server:unit` | `bun test server/tests --bail` | Run with bail on first failure |
+| `test:server:integration` | `bun test server/tests --timeout 10000` | Run with longer timeout |
+| `test:server:watch` | `bun test server/tests --watch` | Watch mode for development |
 
 ### Test Structure
 
 ```
-server/__tests__/
+server/tests/
 ├── helpers/
 │   └── test-utils.ts              # Shared utilities (temp dirs, mocks, assertions)
 ├── io.test.ts                     # IO utilities
@@ -366,7 +366,7 @@ server/__tests__/
 
 ### Test Helpers
 
-`server/__tests__/helpers/test-utils.ts` provides shared utilities:
+`server/tests/helpers/test-utils.ts` provides shared utilities:
 
 - **Temp directories:** `createTempDir()`, `createTempFile()`, `createTempStructure()`
 - **Mock generators:** `mockMarkdown()`, `mockHtml()`, `mockFileInfo()`, `mockRequestContext()`
@@ -378,7 +378,7 @@ server/__tests__/
 
 - [TESTS.md](./TESTS.md) — Full test plan with specifications for all modules
 - [TEST-SUMMARY.md](./TEST-SUMMARY.md) — Implementation progress and resolved issues
-- [__tests__/README.md](./\_\_tests\_\_/README.md) — Test usage guidelines
+- [tests/README.md](./\_\_tests\_\_/README.md) — Test usage guidelines
 
 ## Configuration (`config.ts`)
 

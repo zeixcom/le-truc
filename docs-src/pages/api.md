@@ -12,9 +12,8 @@ layout: 'page'
 {% /hero %}
 
 {% section .breakout %}
-## Symbols
 
-{% listnav title="API Reference" %}
+{% listnav title="Symbols" %}
 - Classes
   - [CircularDependencyError](/api/classes/CircularDependencyError.html)
   - [ContextRequestEvent](/api/classes/ContextRequestEvent.html)
@@ -146,8 +145,6 @@ layout: 'page'
   - [provideContexts](/api/functions/provideContexts.html)
   - [read](/api/functions/read.html)
   - [requestContext](/api/functions/requestContext.html)
-  - [runEffects](/api/functions/runEffects.html)
-  - [runElementEffects](/api/functions/runElementEffects.html)
   - [schedule](/api/functions/schedule.html)
   - [setAttribute](/api/functions/setAttribute.html)
   - [setProperty](/api/functions/setProperty.html)

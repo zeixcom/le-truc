@@ -204,6 +204,28 @@ const listnav: Schema = {
 				<h2 id="${labelId}" class="visually-hidden">${title}</h2>
 				<form-listbox id="${listboxId}" value="${firstSrc}">
 					<input type="hidden" name="page" />
+					<label for="${listboxId}-filter" class="visually-hidden">
+						Filter
+					</label>
+					<div class="input">
+						<input
+							type="text"
+							id="${listboxId}-filter"
+							class="filter"
+							name="filter"
+							value=""
+							autocomplete="off"
+							placeholder="Filter"
+						/>
+						<button
+							type="button"
+							class="clear"
+							aria-label="Clear filter"
+							hidden
+						>
+							✕
+						</button>
+					</div>
 					<div role="listbox" aria-labelledby="${labelId}">
 						${renderNavigationItems(navigationItems)}
 					</div>

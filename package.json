@@ -46,10 +46,10 @@
 		"serve:examples": "bun run build:examples && PLAYWRIGHT=1 bun server/serve.ts",
 		"test": "bunx playwright test examples",
 		"test:component": "bun scripts/test-component.ts",
-		"test:server": "bun test server/__tests__",
-		"test:server:unit": "bun test server/__tests__ --bail",
-		"test:server:integration": "bun test server/__tests__ --timeout 10000",
-		"test:server:watch": "bun test server/__tests__ --watch"
+		"test:server": "bun test server/tests",
+		"test:server:unit": "bun test server/tests --bail",
+		"test:server:integration": "bun test server/tests --timeout 10000",
+		"test:server:watch": "bun test server/tests --watch"
 	},
 	"dependencies": {
 		"@zeix/cause-effect": "^0.18.3"

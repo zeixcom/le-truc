@@ -142,8 +142,6 @@
 - [provideContexts](functions/provideContexts.md)
 - [read](functions/read.md)
 - [requestContext](functions/requestContext.md)
-- [runEffects](functions/runEffects.md)
-- [runElementEffects](functions/runElementEffects.md)
 - [schedule](functions/schedule.md)
 - [setAttribute](functions/setAttribute.md)
 - [setProperty](functions/setProperty.md)

@@ -40,7 +40,7 @@ Reference: [SERVER.md](./SERVER.md) for architecture details.
 ### File naming and location
 
 ```text
-server/__tests__/
+server/tests/
 ├── io.test.ts                    # IO utilities
 ├── config.test.ts                # Configuration constants
 ├── templates/
@@ -80,16 +80,16 @@ Add to `package.json` scripts:
 
 ```json
 {
-  "test:server": "bun test server/__tests__/",
-  "test:server:unit": "bun test server/__tests__/ --grep 'unit'",
-  "test:server:integration": "bun test server/__tests__/ --grep 'integration'",
-  "test:server:watch": "bun test server/__tests__/ --watch"
+  "test:server": "bun test server/tests/",
+  "test:server:unit": "bun test server/tests/ --grep 'unit'",
+  "test:server:integration": "bun test server/tests/ --grep 'integration'",
+  "test:server:watch": "bun test server/tests/ --watch"
 }
 ```
 
 ### Shared test helpers
 
-Create `server/__tests__/helpers.ts` with:
+Create `server/tests/helpers.ts` with:
 
 - `createTempDir()` / `cleanupTempDir(path)` — isolated temp directories for file I/O tests
 - `createMockFileInfo(overrides)` — factory for `FileInfo` objects
@@ -106,7 +106,7 @@ Create `server/__tests__/helpers.ts` with:
 
 ### 1. `io.ts` — IO Utilities
 
-**File:** `server/__tests__/io.test.ts`
+**File:** `server/tests/io.test.ts`
 **Category:** Unit + Integration
 
 #### 1.1 `calculateFileHash`
@@ -169,7 +169,7 @@ Create `server/__tests__/helpers.ts` with:
 
 ### 2. `config.ts` — Configuration
 
-**File:** `server/__tests__/config.test.ts`
+**File:** `server/tests/config.test.ts`
 **Category:** Unit
 
 | # | Test | Expected |
@@ -185,7 +185,7 @@ Create `server/__tests__/helpers.ts` with:
 
 ### 3. `templates/utils.ts` — Template Utilities
 
-**File:** `server/__tests__/templates/utils.test.ts`
+**File:** `server/tests/templates/utils.test.ts`
 **Category:** Unit
 
 #### 3.1 Tagged template literals
@@ -265,7 +265,7 @@ Create `server/__tests__/helpers.ts` with:
 
 ### 4. `templates/menu.ts` — Menu Template
 
-**File:** `server/__tests__/templates/menu.test.ts`
+**File:** `server/tests/templates/menu.test.ts`
 **Category:** Unit
 
 | # | Test | Expected |
@@ -280,7 +280,7 @@ Create `server/__tests__/helpers.ts` with:
 
 ### 5. `templates/sitemap.ts` — Sitemap Template
 
-**File:** `server/__tests__/templates/sitemap.test.ts`
+**File:** `server/tests/templates/sitemap.test.ts`
 **Category:** Unit
 
 | # | Test | Expected |
@@ -297,7 +297,7 @@ Create `server/__tests__/helpers.ts` with:
 
 ### 6. `templates/fragments.ts` — Tab Group Fragments
 
-**File:** `server/__tests__/templates/fragments.test.ts`
+**File:** `server/tests/templates/fragments.test.ts`
 **Category:** Unit
 
 | # | Test | Expected |
@@ -317,7 +317,7 @@ Create `server/__tests__/helpers.ts` with:
 
 ### 7. `templates/performance-hints.ts` — Performance Hints
 
-**File:** `server/__tests__/templates/performance-hints.test.ts`
+**File:** `server/tests/templates/performance-hints.test.ts`
 **Category:** Unit
 
 | # | Test | Expected |
@@ -332,7 +332,7 @@ Create `server/__tests__/helpers.ts` with:
 
 ### 8. `templates/service-worker.ts` — Service Worker
 
-**File:** `server/__tests__/templates/service-worker.test.ts`
+**File:** `server/tests/templates/service-worker.test.ts`
 **Category:** Unit
 
 | # | Test | Expected |
@@ -349,7 +349,7 @@ Create `server/__tests__/helpers.ts` with:
 
 ### 9. `templates/hmr.ts` — HMR Client
 
-**File:** `server/__tests__/templates/hmr.test.ts`
+**File:** `server/tests/templates/hmr.test.ts`
 **Category:** Unit
 
 | # | Test | Expected |
@@ -367,7 +367,7 @@ Create `server/__tests__/helpers.ts` with:
 
 ### 10. `markdoc-helpers.ts` — Markdoc Utilities
 
-**File:** `server/__tests__/markdoc-helpers.test.ts`
+**File:** `server/tests/markdoc-helpers.test.ts`
 **Category:** Unit
 
 #### 10.1 Attribute classes
@@ -442,7 +442,7 @@ For each schema, test the `transform` function by parsing a minimal Markdoc docu
 
 #### 11.1 `fence.markdoc.ts`
 
-**File:** `server/__tests__/schema/fence.test.ts`
+**File:** `server/tests/schema/fence.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -456,7 +456,7 @@ For each schema, test the `transform` function by parsing a minimal Markdoc docu
 
 #### 11.2 `heading.markdoc.ts`
 
-**File:** `server/__tests__/schema/heading.test.ts`
+**File:** `server/tests/schema/heading.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -467,7 +467,7 @@ For each schema, test the `transform` function by parsing a minimal Markdoc docu
 
 #### 11.3 `callout.markdoc.ts`
 
-**File:** `server/__tests__/schema/callout.test.ts`
+**File:** `server/tests/schema/callout.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -478,7 +478,7 @@ For each schema, test the `transform` function by parsing a minimal Markdoc docu
 
 #### 11.4 `hero.markdoc.ts`
 
-**File:** `server/__tests__/schema/hero.test.ts`
+**File:** `server/tests/schema/hero.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -489,7 +489,7 @@ For each schema, test the `transform` function by parsing a minimal Markdoc docu
 
 #### 11.5 `demo.markdoc.ts`
 
-**File:** `server/__tests__/schema/demo.test.ts`
+**File:** `server/tests/schema/demo.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -500,7 +500,7 @@ For each schema, test the `transform` function by parsing a minimal Markdoc docu
 
 #### 11.6 `listnav.markdoc.ts`
 
-**File:** `server/__tests__/schema/listnav.test.ts`
+**File:** `server/tests/schema/listnav.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -515,7 +515,7 @@ For each schema, test the `transform` function by parsing a minimal Markdoc docu
 
 #### 11.7 `carousel.markdoc.ts`
 
-**File:** `server/__tests__/schema/carousel.test.ts`
+**File:** `server/tests/schema/carousel.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -525,7 +525,7 @@ For each schema, test the `transform` function by parsing a minimal Markdoc docu
 
 #### 11.8 `section.markdoc.ts`
 
-**File:** `server/__tests__/schema/section.test.ts`
+**File:** `server/tests/schema/section.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -537,7 +537,7 @@ For each schema, test the `transform` function by parsing a minimal Markdoc docu
 
 ### 12. `file-signals.ts` — Signal Pipeline & Frontmatter
 
-**File:** `server/__tests__/file-signals.test.ts`
+**File:** `server/tests/file-signals.test.ts`
 **Category:** Unit + Integration
 
 The `extractFrontmatter` function is not exported, but its behavior is observable through the `docsMarkdown.processed` memo. For unit testing, either export it (recommended: add a named export guarded by a comment) or test it indirectly.
@@ -583,7 +583,7 @@ The `extractFrontmatter` function is not exported, but its behavior is observabl
 
 ### 13. `file-watcher.ts` — File Watcher
 
-**File:** `server/__tests__/file-watcher.test.ts`
+**File:** `server/tests/file-watcher.test.ts`
 **Category:** Integration
 
 Tests require temporary directories with real files. Set `PLAYWRIGHT=1` to disable `fs.watch` and test only the scanning behavior.
@@ -602,7 +602,7 @@ Tests require temporary directories with real files. Set `PLAYWRIGHT=1` to disab
 
 ### 14. `serve.ts` — HTTP Server Routes
 
-**File:** `server/__tests__/serve.test.ts`
+**File:** `server/tests/serve.test.ts`
 **Category:** Server
 
 Start an isolated server instance on a random port for each test suite. Pre-populate `docs/` with minimal fixture files. Set `NODE_ENV=production` to disable HMR injection by default; test HMR injection separately with `NODE_ENV=development`.
@@ -664,7 +664,7 @@ Start an isolated server instance on a random port for each test suite. Pre-popu
 
 ### 15. `build.ts` — Build Orchestration
 
-**File:** `server/__tests__/build.test.ts`
+**File:** `server/tests/build.test.ts`
 **Category:** Integration
 
 These tests verify the orchestration logic, not individual effect correctness. Mock or stub the effects where possible.
@@ -693,7 +693,7 @@ For effects that shell out (`apiEffect` → `typedoc`, `cssEffect` → `lightnin
 
 #### 16.1 `effects/pages.ts` — Page Generation
 
-**File:** `server/__tests__/effects/pages.test.ts`
+**File:** `server/tests/effects/pages.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -709,7 +709,7 @@ For effects that shell out (`apiEffect` → `typedoc`, `cssEffect` → `lightnin
 
 #### 16.2 `effects/menu.ts` — Menu Generation
 
-**File:** `server/__tests__/effects/menu.test.ts`
+**File:** `server/tests/effects/menu.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -721,7 +721,7 @@ For effects that shell out (`apiEffect` → `typedoc`, `cssEffect` → `lightnin
 
 #### 16.3 `effects/sitemap.ts` — Sitemap Generation
 
-**File:** `server/__tests__/effects/sitemap.test.ts`
+**File:** `server/tests/effects/sitemap.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -732,7 +732,7 @@ For effects that shell out (`apiEffect` → `typedoc`, `cssEffect` → `lightnin
 
 #### 16.4 `effects/examples.ts` — Example Page Generation
 
-**File:** `server/__tests__/effects/examples.test.ts`
+**File:** `server/tests/effects/examples.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -744,7 +744,7 @@ For effects that shell out (`apiEffect` → `typedoc`, `cssEffect` → `lightnin
 
 #### 16.5 `effects/sources.ts` — Source Fragment Generation
 
-**File:** `server/__tests__/effects/sources.test.ts`
+**File:** `server/tests/effects/sources.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -757,7 +757,7 @@ For effects that shell out (`apiEffect` → `typedoc`, `cssEffect` → `lightnin
 
 #### 16.6 `effects/service-worker.ts` — Service Worker Generation
 
-**File:** `server/__tests__/effects/service-worker.test.ts`
+**File:** `server/tests/effects/service-worker.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -768,7 +768,7 @@ For effects that shell out (`apiEffect` → `typedoc`, `cssEffect` → `lightnin
 
 #### 16.7 `effects/css.ts` — CSS Bundling (smoke test)
 
-**File:** `server/__tests__/effects/css.test.ts`
+**File:** `server/tests/effects/css.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -778,7 +778,7 @@ For effects that shell out (`apiEffect` → `typedoc`, `cssEffect` → `lightnin
 
 #### 16.8 `effects/js.ts` — JS Bundling (smoke test)
 
-**File:** `server/__tests__/effects/js.test.ts`
+**File:** `server/tests/effects/js.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -788,7 +788,7 @@ For effects that shell out (`apiEffect` → `typedoc`, `cssEffect` → `lightnin
 
 #### 16.9 `effects/api.ts` — API Doc Generation (smoke test)
 
-**File:** `server/__tests__/effects/api.test.ts`
+**File:** `server/tests/effects/api.test.ts`
 
 | # | Test | Expected |
 |---|------|----------|
@@ -802,25 +802,25 @@ For effects that shell out (`apiEffect` → `typedoc`, `cssEffect` → `lightnin
 
 ### Process 1: After any change to template functions
 
-1. Run `bun test server/__tests__/templates/`
+1. Run `bun test server/tests/templates/`
 2. Verify all template output tests pass
 3. Run `bun run build:docs` and spot-check one generated page in a browser
 
 ### Process 2: After any change to Markdoc schemas or helpers
 
-1. Run `bun test server/__tests__/schema/ server/__tests__/markdoc-helpers.test.ts`
+1. Run `bun test server/tests/schema/ server/tests/markdoc-helpers.test.ts`
 2. Run `bun run build:docs` and verify example pages render correctly
 3. Check that validation errors appear for intentionally malformed Markdoc content
 
 ### Process 3: After any change to file signals or file watcher
 
-1. Run `bun test server/__tests__/file-signals.test.ts server/__tests__/file-watcher.test.ts`
+1. Run `bun test server/tests/file-signals.test.ts server/tests/file-watcher.test.ts`
 2. Run `bun run dev`, edit a `.md` file in `docs-src/pages/`, and confirm the browser reloads with updated content
 3. Run `bun run build:docs` and verify output file count matches source file count
 
 ### Process 4: After any change to serve.ts or routes
 
-1. Run `bun test server/__tests__/serve.test.ts`
+1. Run `bun test server/tests/serve.test.ts`
 2. Run `bun run dev` and manually verify:
    - Home page loads at `/`
    - A documentation page loads at `/<page>`
@@ -831,7 +831,7 @@ For effects that shell out (`apiEffect` → `typedoc`, `cssEffect` → `lightnin
 
 ### Process 5: After any change to build.ts or effects
 
-1. Run `bun test server/__tests__/build.test.ts server/__tests__/effects/`
+1. Run `bun test server/tests/build.test.ts server/tests/effects/`
 2. Run `bun run build:docs` — must complete without errors
 3. Verify key output files exist:
    - `docs/index.html`
@@ -846,7 +846,7 @@ For effects that shell out (`apiEffect` → `typedoc`, `cssEffect` → `lightnin
 
 ### Process 6: Full regression check (before release or major refactor)
 
-1. Run `bun test server/__tests__/` — all tests pass
+1. Run `bun test server/tests/` — all tests pass
 2. Run `bun run build:docs` — clean build succeeds
 3. Run `bun run serve:docs` — server starts, pages render
 4. Run `bun run serve:examples && bunx playwright test examples` — all Playwright tests pass

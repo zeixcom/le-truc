@@ -1,4 +1,10 @@
-import { type Component, createEffect, defineComponent, pass } from '../..'
+import {
+	batch,
+	type Component,
+	createEffect,
+	defineComponent,
+	pass,
+} from '../..'
 import type { FormListboxProps } from '../form-listbox/form-listbox'
 import type { ModuleLazyloadProps } from '../module-lazyload/module-lazyload'
 
@@ -74,17 +80,15 @@ export default defineComponent<{}, ModuleListnavUI>(
 		lazyload: first('module-lazyload', 'Required to load a partial into'),
 	}),
 	({ listbox }) => {
+		const hasOption = (value: string): boolean =>
+			!!listbox.querySelector(
+				`button[role="option"][value="${CSS.escape(value)}"]`,
+			)
+
 		// Set initial selection from hash
 		if (location.hash) {
 			const value = hashToValue(location.hash, listbox)
-			if (
-				value
-				&& listbox.querySelector(
-					`button[role="option"][value="${CSS.escape(value)}"]`,
-				)
-			) {
-				listbox.value = value
-			}
+			if (value && hasOption(value)) listbox.value = value
 		}
 
 		// Track whether we're updating the hash ourselves to avoid loops
@@ -93,15 +97,13 @@ export default defineComponent<{}, ModuleListnavUI>(
 		// Update selection when hash changes (browser back/forward)
 		const onHashChange = () => {
 			if (updatingHash) return
+
 			const value = hashToValue(location.hash, listbox)
-			if (
-				value
-				&& value !== listbox.value
-				&& listbox.querySelector(
-					`button[role="option"][value="${CSS.escape(value)}"]`,
-				)
-			) {
-				listbox.value = value
+			if (value && value !== listbox.value && hasOption(value)) {
+				batch(() => {
+					listbox.filter = ''
+					listbox.value = value
+				})
 			}
 		}
 

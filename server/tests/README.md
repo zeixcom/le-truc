@@ -5,7 +5,7 @@ This directory contains unit and integration tests for the Le Truc server and bu
 ## Test Structure
 
 ```
-__tests__/
+tests/
 ├── helpers/
 │   └── test-utils.ts          # Shared test utilities
 ├── schema/
@@ -180,10 +180,10 @@ describe('module name - feature', () => {
   test('should do something', () => {
     // Arrange
     const input = 'test'
-    
+
     // Act
     const result = functionToTest(input)
-    
+
     // Assert
     expect(result).toBe('expected')
   })

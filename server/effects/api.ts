@@ -84,9 +84,8 @@ layout: 'page'
 {% /hero %}
 
 {% section .breakout %}
-## Symbols
 
-{% listnav title="API Reference" %}
+{% listnav title="Symbols" %}
 ${listItems}
 {% /listnav %}
 

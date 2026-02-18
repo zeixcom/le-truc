@@ -8,7 +8,7 @@
 
 > **MethodProducer**\<`P`, `U`\> = (`ui`) => `void`
 
-Defined in: [src/component.ts:49](https://github.com/zeixcom/le-truc/blob/d14510e550dfc154f9f0472e7b8adcdb3ab3002e/src/component.ts#L49)
+Defined in: [src/component.ts:49](https://github.com/zeixcom/le-truc/blob/3cb760ea5cf00b2f369106cc51ee33852f9ce090/src/component.ts#L49)
 
 ## Type Parameters
 

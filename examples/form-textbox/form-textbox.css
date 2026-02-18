@@ -26,9 +26,8 @@ form-textbox {
 		padding: var(--space-xs) var(--space-xxs);
 		font-size: var(--font-size-m);
 		width: 100%;
-		transition: color var(--transition-short) var(--easing-inout);
 
-		&[aria-invalid="true"] {
+		&[aria-invalid='true'] {
 			box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
 		}
 
@@ -94,11 +93,6 @@ form-textbox {
 		& p,
 		& button {
 			opacity: var(--opacity-solid);
-		}
-
-		& input,
-		& textarea {
-			color: var(--color-text);
 		}
 	}
 }

@@ -2,7 +2,7 @@
 
 Prioritized task list derived from [SERVER.md § Future Improvements](./SERVER.md#future-improvements). Tasks are grouped by feature and ordered so each task builds on the previous one. A developer can work through them top-to-bottom.
 
-**Testing:** A test suite is in place (`server/__tests__/`) with P0 coverage of core modules (276 tests). The circular dependency between `markdoc-helpers.ts` and schema files has been resolved by extracting shared constants to `markdoc-constants.ts`. New features should include tests — see [TESTS.md](./TESTS.md) for specifications and [SERVER.md § Testing](./SERVER.md#testing-server__tests__) for an overview.
+**Testing:** A test suite is in place (`server/tests/`) with P0 coverage of core modules (276 tests). The circular dependency between `markdoc-helpers.ts` and schema files has been resolved by extracting shared constants to `markdoc-constants.ts`. New features should include tests — see [TESTS.md](./TESTS.md) for specifications and [SERVER.md § Testing](./SERVER.md#testing-servertests) for an overview.
 
 ---
 
@@ -139,7 +139,7 @@ The `{% question %}` tag should:
 
 Reference `server/schema/callout.markdoc.ts` for the pattern of extracting child content and rendering to a custom element. Import shared attribute definitions from `markdoc-constants.ts` (not `markdoc-helpers.ts`) to avoid circular dependencies.
 
-**Done when:** `{% faq %}{% question %}…{% /question %}{% /faq %}` parses, validates, and renders to accessible HTML. Tests added to `server/__tests__/schema/faq.test.ts`.
+**Done when:** `{% faq %}{% question %}…{% /question %}{% /faq %}` parses, validates, and renders to accessible HTML. Tests added to `server/tests/schema/faq.test.ts`.
 
 ---
 

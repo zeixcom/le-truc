@@ -95,8 +95,6 @@ export {
 	type ElementEffects,
 	type ElementUpdater,
 	type Reactive,
-	runEffects,
-	runElementEffects,
 	type UpdateOperation,
 	updateElement,
 } from './src/effects'
