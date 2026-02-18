@@ -15,8 +15,8 @@ type ModuleListnavUI = {
 
 /**
  * Extract the base path (first path segment) from an option value.
- * "/examples/form-combobox.html" → "/examples/"
- * "/api/functions/defineComponent.html" → "/api/"
+ * "./examples/form-combobox.html" → "./examples/"
+ * "./api/functions/defineComponent.html" → "./api/"
  */
 const getBasePath = (
 	listbox: HTMLElement,
@@ -27,8 +27,11 @@ const getBasePath = (
 	if (!firstOption?.value) return null
 
 	const value = firstOption.value
-	// Find the second slash to get the first path segment
-	const secondSlash = value.indexOf('/', 1)
+	// Handle relative paths starting with "./"
+	if (!value.startsWith('./')) return null
+
+	// Find the second slash to get the first path segment: "./examples/"
+	const secondSlash = value.indexOf('/', 2)
 	if (secondSlash === -1) return null
 
 	return {
@@ -39,8 +42,8 @@ const getBasePath = (
 
 /**
  * Derive the option value from a location hash.
- * "#functions/defineComponent" → "/api/functions/defineComponent.html"
- * "#form-combobox" → "/examples/form-combobox.html"
+ * "#functions/defineComponent" → "./api/functions/defineComponent.html"
+ * "#form-combobox" → "./examples/form-combobox.html"
  */
 const hashToValue = (hash: string, listbox: HTMLElement): string | null => {
 	if (!hash) return null
@@ -55,8 +58,8 @@ const hashToValue = (hash: string, listbox: HTMLElement): string | null => {
 
 /**
  * Derive a hash fragment from an option value.
- * "/api/functions/defineComponent.html" → "functions/defineComponent"
- * "/examples/form-combobox.html" → "form-combobox"
+ * "./api/functions/defineComponent.html" → "functions/defineComponent"
+ * "./examples/form-combobox.html" → "form-combobox"
  */
 const valueToHash = (value: string, listbox: HTMLElement): string => {
 	if (!value) return ''

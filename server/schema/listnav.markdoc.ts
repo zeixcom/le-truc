@@ -19,42 +19,65 @@ import {
  * Render navigation items with proper grouping structure for form-listbox
  */
 const renderNavigationItems = (
-	items: Array<{ label: string; src: string; group?: string }>,
+	items: Array<{
+		label: string
+		src: string
+		group?: string
+		selected?: boolean
+	}>,
 ) => {
+	// If no item has selected attribute, mark the first one as selected
+	const hasSelected = items.some(item => item.selected)
+	if (!hasSelected && items.length > 0) {
+		items[0].selected = true
+	}
+
 	// Group items by their group property
-	const groups = new Map<string, Array<{ label: string; src: string }>>()
-	const ungroupedItems: Array<{ label: string; src: string }> = []
+	const groups = new Map<
+		string,
+		Array<{ label: string; src: string; selected?: boolean }>
+	>()
+	const ungroupedItems: Array<{
+		label: string
+		src: string
+		selected?: boolean
+	}> = []
 
 	for (const item of items) {
 		if (item.group) {
 			if (!groups.has(item.group)) {
 				groups.set(item.group, [])
 			}
-			groups.get(item.group)!.push({ label: item.label, src: item.src })
+			groups.get(item.group)!.push({
+				label: item.label,
+				src: item.src,
+				selected: item.selected,
+			})
 		} else {
-			ungroupedItems.push({ label: item.label, src: item.src })
+			ungroupedItems.push({
+				label: item.label,
+				src: item.src,
+				selected: item.selected,
+			})
 		}
 	}
 
 	const result: Array<RenderableTreeNode | RenderableTreeNode[]> = []
-	let optionIndex = 0
 
 	// Add ungrouped items first (if any)
 	if (ungroupedItems.length > 0) {
 		for (const item of ungroupedItems) {
-			const isSelected = optionIndex === 0
 			result.push(
 				html`<button
 					type="button"
 					role="option"
-					tabindex="${isSelected ? '0' : '-1'}"
+					tabindex="${item.selected ? '0' : '-1'}"
 					value="${item.src}"
-					aria-selected="${String(isSelected)}"
+					aria-selected="${String(!!item.selected)}"
 				>
 					${item.label}
 				</button>`,
 			)
-			optionIndex++
 		}
 	}
 
@@ -64,14 +87,12 @@ const renderNavigationItems = (
 
 		// Create group with header and options
 		const groupOptions = groupItems.map(item => {
-			const isSelected = optionIndex === 0
-			optionIndex++
 			return html`<button
 				type="button"
 				role="option"
-				tabindex="${isSelected ? '0' : '-1'}"
+				tabindex="${item.selected ? '0' : '-1'}"
 				value="${item.src}"
-				aria-selected="${String(isSelected)}"
+				aria-selected="${String(!!item.selected)}"
 			>
 				${item.label}
 			</button>`
@@ -142,6 +163,7 @@ const listnav: Schema = {
 			label: string
 			src: string
 			group?: string
+			selected?: boolean
 		}> = []
 
 		// Process each list
@@ -196,8 +218,10 @@ const listnav: Schema = {
 		const listboxId = `listnav-${generateId()}`
 		const labelId = `${listboxId}-label`
 
-		// Get the first item's src or use default
-		const firstSrc = defaultSrc || navigationItems[0]?.src || ''
+		// Get the selected item's src, or use default, or first item
+		const selectedItem = navigationItems.find(item => item.selected)
+		const firstSrc =
+			selectedItem?.src || defaultSrc || navigationItems[0]?.src || ''
 
 		return html`<module-listnav>
 			<nav>

@@ -9,6 +9,7 @@ import {
 	defineComponent,
 	type Memo,
 	on,
+	read,
 	setAttribute,
 	setProperty,
 	setText,
@@ -68,7 +69,13 @@ declare global {
 export default defineComponent<FormListboxProps, FormListboxUI>(
 	'form-listbox',
 	{
-		value: '',
+		value: read(
+			({ listbox }: FormListboxUI) =>
+				listbox.querySelector<HTMLButtonElement>(
+					'button[role="option"][aria-selected="true"]',
+				)?.value,
+			'',
+		),
 		options: ({ listbox }: FormListboxUI) =>
 			createElementsMemo(listbox, 'button[role="option"]:not([hidden])'),
 		filter: '',

@@ -125,14 +125,24 @@ const findLinkNode = (node: Node): Node | null => {
 
 export function extractNavigationItem(
 	item: Node,
-): { label: string; src: string } | null {
+): { label: string; src: string; selected?: boolean } | null {
 	const linkNode = findLinkNode(item)
 	if (!linkNode) return null
 
-	const label = extractTextFromNode(item)
+	// Check if the item has a "selected" attribute
+	// Format: - [Label](url) selected
+	const text = extractTextFromNode(item, false)
+	const selected = text.trim().endsWith(' selected')
+
+	// Extract label and remove " selected" suffix if present
+	let label = extractTextFromNode(item)
+	if (selected && label.endsWith(' selected')) {
+		label = label.slice(0, -9) // Remove " selected" (9 characters)
+	}
+
 	const src = linkNode.attributes?.href || ''
 
-	return { label, src }
+	return { label, src, selected }
 }
 
 /* === Tag Helpers === */

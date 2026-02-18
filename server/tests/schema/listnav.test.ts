@@ -227,4 +227,49 @@ describe('listnav schema - rendered output', () => {
 		expect(html).toContain('on</button>')
 		expect(html).toContain('setText')
 	})
+
+	test('respects custom selected attribute over default first-item selection', () => {
+		const html = renderListnav(`{% listnav %}
+- [First](/first.html)
+- [Second](/second.html) selected
+- [Third](/third.html)
+{% /listnav %}`)
+
+		// Second option should be selected (has 'selected' attribute)
+		const secondOptionMatch = html.match(
+			/<button[^>]*value="\/second\.html"[^>]*>/,
+		)
+		expect(secondOptionMatch).not.toBeNull()
+		expect(secondOptionMatch![0]).toContain('aria-selected="true"')
+		expect(secondOptionMatch![0]).toContain('tabindex="0"')
+
+		// First option should NOT be selected
+		const firstOptionMatch = html.match(
+			/<button[^>]*value="\/first\.html"[^>]*>/,
+		)
+		expect(firstOptionMatch).not.toBeNull()
+		expect(firstOptionMatch![0]).toContain('aria-selected="false"')
+		expect(firstOptionMatch![0]).toContain('tabindex="-1"')
+
+		// form-listbox value should be set to the selected item
+		expect(html).toContain('value="/second.html"')
+	})
+
+	test('removes "selected" text from button label', () => {
+		const html = renderListnav(`{% listnav %}
+- [Counter](./examples/basic-counter.html) selected
+- [Button](./examples/basic-button.html)
+{% /listnav %}`)
+
+		// Button should contain "Counter" not "Counter selected"
+		expect(html).toContain('>Counter</button>')
+		expect(html).not.toContain('>Counter selected</button>')
+
+		// The selected button should still have aria-selected="true"
+		const counterMatch = html.match(
+			/<button[^>]*value="\.\/examples\/basic-counter\.html"[^>]*>/,
+		)
+		expect(counterMatch).not.toBeNull()
+		expect(counterMatch![0]).toContain('aria-selected="true"')
+	})
 })

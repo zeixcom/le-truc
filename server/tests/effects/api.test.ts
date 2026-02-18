@@ -17,10 +17,10 @@ import {
 /* === parseGlobals Tests === */
 
 describe('parseGlobals', () => {
-	test('parses a single category with entries', () => {
+	test('parses a single category with entries from README.md', () => {
 		const content = `# API Reference
 
-## Functions
+#### Functions
 
 - [defineComponent](functions/defineComponent.md)
 - [on](functions/on.md)
@@ -41,21 +41,21 @@ describe('parseGlobals', () => {
 	test('parses multiple categories', () => {
 		const content = `# API Reference
 
-## Classes
+#### Classes
 
 - [ContextRequestEvent](classes/ContextRequestEvent.md)
 - [DependencyTimeoutError](classes/DependencyTimeoutError.md)
 
-## Functions
+#### Functions
 
 - [defineComponent](functions/defineComponent.md)
 
-## Type Aliases
+#### Type Aliases
 
 - [Component](type-aliases/Component.md)
 - [Effect](type-aliases/Effect.md)
 
-## Variables
+#### Variables
 
 - [CONTEXT_REQUEST](variables/CONTEXT_REQUEST.md)
 `
@@ -78,28 +78,28 @@ describe('parseGlobals', () => {
 		// Deliberately ordered differently in the input to test sorting
 		const content = `# API Reference
 
-## Interfaces
+#### Interfaces
 
 - [SomeInterface](interfaces/SomeInterface.md)
 
-## Type Aliases
+#### Type Aliases
 
 - [Component](type-aliases/Component.md)
 
-## Variables
+#### Variables
 
 - [CONTEXT_REQUEST](variables/CONTEXT_REQUEST.md)
 
-## Enumerations
+#### Enumerations
 
 - [Status](enumerations/Status.md)
 
-## Functions
+#### Functions
 
 - [defineComponent](functions/defineComponent.md)
 - [on](functions/on.md)
 
-## Classes
+#### Classes
 
 - [ContextRequestEvent](classes/ContextRequestEvent.md)
 `
@@ -126,10 +126,10 @@ describe('parseGlobals', () => {
 		expect(result[5].slug).toBe('enumerations')
 	})
 
-	test('filters out empty categories', () => {
-		const content = `## Empty Category
+	test('filters out empty categories from README.md', () => {
+		const content = `#### Empty Category
 
-## Functions
+#### Functions
 
 - [defineComponent](functions/defineComponent.md)
 `
@@ -154,7 +154,7 @@ Some introductory text without any headings.
 	})
 
 	test('extracts slug from link path, not display name', () => {
-		const content = `## Type Aliases
+		const content = `#### Type Aliases
 
 - [ComponentProp](type-aliases/ComponentProp.md)
 `
@@ -165,7 +165,7 @@ Some introductory text without any headings.
 	})
 
 	test('ignores lines that are not headings or list entries', () => {
-		const content = `## Functions
+		const content = `#### Functions
 
 Some paragraph text that should be ignored.
 
@@ -181,7 +181,7 @@ Another paragraph.
 	})
 
 	test('handles entries with special characters in names', () => {
-		const content = `## Type Aliases
+		const content = `#### Type Aliases
 
 - [ElementFromKey](type-aliases/ElementFromKey.md)
 - [UI](type-aliases/UI.md)
@@ -241,14 +241,28 @@ describe('generateApiIndexMarkdown', () => {
 
 		expect(result).toContain('- Classes')
 		expect(result).toContain(
-			'  - [ContextRequestEvent](/api/classes/ContextRequestEvent.html)',
+			'  - [ContextRequestEvent](./api/classes/ContextRequestEvent.html)',
 		)
 		expect(result).toContain(
-			'  - [DependencyTimeoutError](/api/classes/DependencyTimeoutError.html)',
+			'  - [DependencyTimeoutError](./api/classes/DependencyTimeoutError.html)',
 		)
 		expect(result).toContain('- Functions')
 		expect(result).toContain(
-			'  - [defineComponent](/api/functions/defineComponent.html)',
+			'  - [defineComponent](./api/functions/defineComponent.html) selected',
+		)
+	})
+
+	test('marks defineComponent as selected by default', () => {
+		const result = generateApiIndexMarkdown(sampleCategories)
+
+		// defineComponent should have the selected attribute
+		expect(result).toContain(
+			'  - [defineComponent](./api/functions/defineComponent.html) selected',
+		)
+
+		// Other functions should not have selected attribute
+		expect(result).not.toContain(
+			'  - [ContextRequestEvent](./api/classes/ContextRequestEvent.html) selected',
 		)
 	})
 
@@ -272,7 +286,7 @@ describe('generateApiIndexMarkdown', () => {
 		const result = generateApiIndexMarkdown(categories)
 
 		expect(result).toContain(
-			'  - [Component](/api/type-aliases/Component.html)',
+			'  - [Component](./api/type-aliases/Component.html)',
 		)
 	})
 })
