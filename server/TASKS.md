@@ -102,19 +102,13 @@ Add `'faq'` to the `PAGE_ORDER` array (after `'api'` or `'about'`, depending on 
 
 ## 3 · Developer Experience
 
-### 3.1 — Incremental TypeDoc
+### 3.1 — Incremental TypeDoc ✅
 
 **File:** `server/effects/api.ts`
 
-**Problem:** `apiEffect` runs `typedoc` via `execSync` on every library source change, regenerating all API docs from scratch.
+**Implemented:** Hash-based skip — `computeSourcesHash` computes a composite SHA-256 hash of all library source file hashes (sorted for order-independence). The hash is compared to the previous successful run; if unchanged, TypeDoc is skipped entirely. Additionally, the `execSync` call was replaced with `Bun.spawn` so TypeDoc runs asynchronously, unblocking the event loop for other effects.
 
-**Approach:**
-
-1. Investigate TypeDoc's `--watch` mode or its programmatic API (`Application.convert()` + `Application.generateDocs()`) for incremental output.
-2. If TypeDoc doesn't support true incremental generation, consider **diffing** the source change set (from `libraryScripts.sources`) and only regenerating docs for changed files. TypeDoc's `--entryPoints` flag can target individual files.
-3. As a simpler first step, **skip the TypeDoc run** when no `.ts` files under `src/` have actually changed (compare hashes from the file signal).
-
-**Done when:** Editing a single file in `src/` no longer triggers a full TypeDoc regeneration (or at least short-circuits when nothing meaningful changed).
+**Done when:** ~~Editing a single file in `src/` no longer triggers a full TypeDoc regeneration.~~ ✅ Implemented.
 
 ---
 
@@ -187,7 +181,7 @@ Keep the overlay self-contained (inline styles + no external dependencies) since
 | 🟡 P1 | 2.3 Register FAQ schema | Pending | — |
 | 🟡 P1 | 2.4 Create FAQ page | Pending | — |
 | 🟡 P1 | 2.5 Add FAQ to page ordering | Pending | `config.test.ts` |
-| 🟢 P2 | 3.1 Incremental TypeDoc | Pending | `effects/api.test.ts` |
+| 🟢 P2 | 3.1 Incremental TypeDoc | ✅ Done | `effects/api.test.ts` |
 | 🟢 P2 | 3.2 Parallel effect execution | Pending | `build.test.ts` |
 | 🟢 P2 | 3.3 Improved error overlay | Pending | `templates/hmr.test.ts` |
 

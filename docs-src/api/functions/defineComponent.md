@@ -8,7 +8,7 @@
 
 > **defineComponent**\<`P`, `U`\>(`name`, `props?`, `select?`, `setup?`): [`Component`](../type-aliases/Component.md)\<`P`\>
 
-Defined in: [src/component.ts:81](https://github.com/zeixcom/le-truc/blob/3cb760ea5cf00b2f369106cc51ee33852f9ce090/src/component.ts#L81)
+Defined in: [src/component.ts:81](https://github.com/zeixcom/le-truc/blob/7a92bc007a166efb132ecdad99147e4787734f4c/src/component.ts#L81)
 
 Define a component with dependency resolution and setup function (connectedCallback)
 

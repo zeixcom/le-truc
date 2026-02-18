@@ -1,8 +1,13 @@
 import { createEffect, match } from '@zeix/cause-effect'
-import { execSync } from 'child_process'
 import { API_DIR, PAGES_DIR } from '../config'
 import { libraryScripts } from '../file-signals'
-import { fileExists, getFileContent, getFilePath, writeFileSafe } from '../io'
+import {
+	calculateFileHash,
+	fileExists,
+	getFileContent,
+	getFilePath,
+	writeFileSafe,
+} from '../io'
 
 /* === Types === */
 
@@ -95,23 +100,61 @@ ${listItems}
 
 /* === Exported Functions === */
 
+// Hash of library sources from the last successful TypeDoc run
+let previousSourcesHash = ''
+
+/**
+ * Compute a composite hash of all library source files.
+ * Used to skip redundant TypeDoc runs when nothing changed.
+ */
+const computeSourcesHash = (
+	sources: { hash: string; path: string }[],
+): string => {
+	const combined = sources
+		.map(s => s.hash)
+		.sort()
+		.join('')
+	return calculateFileHash(combined)
+}
+
 // Exported for testing
-export { parseGlobals, generateApiIndexMarkdown }
+export { parseGlobals, generateApiIndexMarkdown, computeSourcesHash }
 export type { ApiCategory }
 
 export const apiEffect = () =>
 	createEffect(() => {
 		match([libraryScripts.sources], {
-			ok: async () => {
+			ok: async ([sources]) => {
 				try {
+					// Skip TypeDoc run if library sources haven't changed
+					const currentHash = computeSourcesHash(sources)
+					if (currentHash === previousSourcesHash) {
+						console.log('📚 Library sources unchanged, skipping TypeDoc')
+						return
+					}
+
 					console.log('📚 Rebuilding API documentation...')
 
-					// Generate API docs using TypeDoc
-					execSync(
-						`typedoc --plugin typedoc-plugin-markdown --out ${API_DIR}/ index.ts`,
-						{ stdio: 'inherit' },
+					// Generate API docs using TypeDoc (async)
+					const proc = Bun.spawn(
+						[
+							'typedoc',
+							'--plugin',
+							'typedoc-plugin-markdown',
+							'--out',
+							`${API_DIR}/`,
+							'index.ts',
+						],
+						{ stdout: 'inherit', stderr: 'inherit' },
 					)
+					const exitCode = await proc.exited
 
+					if (exitCode !== 0) {
+						console.error(`TypeDoc exited with code ${exitCode}`)
+						return
+					}
+
+					previousSourcesHash = currentHash
 					console.log('📚 API documentation rebuilt successfully')
 
 					// Generate listnav-compatible API index page

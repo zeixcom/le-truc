@@ -8,6 +8,7 @@
 import { describe, expect, test } from 'bun:test'
 import {
 	type ApiCategory,
+	computeSourcesHash,
 	generateApiIndexMarkdown,
 	parseGlobals,
 } from '../../effects/api'
@@ -219,5 +220,70 @@ describe('generateApiIndexMarkdown', () => {
 		expect(result).toContain(
 			'  - [Component](/api/type-aliases/Component.html)',
 		)
+	})
+})
+
+/* === computeSourcesHash Tests === */
+
+describe('computeSourcesHash', () => {
+	test('returns a consistent hash for the same inputs', () => {
+		const sources = [
+			{ hash: 'abc123', path: 'src/a.ts' },
+			{ hash: 'def456', path: 'src/b.ts' },
+		]
+		const hash1 = computeSourcesHash(sources)
+		const hash2 = computeSourcesHash(sources)
+
+		expect(hash1).toBe(hash2)
+	})
+
+	test('returns the same hash regardless of input order', () => {
+		const sources1 = [
+			{ hash: 'abc123', path: 'src/a.ts' },
+			{ hash: 'def456', path: 'src/b.ts' },
+		]
+		const sources2 = [
+			{ hash: 'def456', path: 'src/b.ts' },
+			{ hash: 'abc123', path: 'src/a.ts' },
+		]
+
+		expect(computeSourcesHash(sources1)).toBe(computeSourcesHash(sources2))
+	})
+
+	test('returns a different hash when sources change', () => {
+		const before = [
+			{ hash: 'abc123', path: 'src/a.ts' },
+			{ hash: 'def456', path: 'src/b.ts' },
+		]
+		const after = [
+			{ hash: 'abc123', path: 'src/a.ts' },
+			{ hash: 'changed', path: 'src/b.ts' },
+		]
+
+		expect(computeSourcesHash(before)).not.toBe(computeSourcesHash(after))
+	})
+
+	test('returns a different hash when a file is added', () => {
+		const before = [{ hash: 'abc123', path: 'src/a.ts' }]
+		const after = [
+			{ hash: 'abc123', path: 'src/a.ts' },
+			{ hash: 'def456', path: 'src/b.ts' },
+		]
+
+		expect(computeSourcesHash(before)).not.toBe(computeSourcesHash(after))
+	})
+
+	test('handles empty sources array', () => {
+		const hash = computeSourcesHash([])
+
+		expect(typeof hash).toBe('string')
+		expect(hash.length).toBeGreaterThan(0)
+	})
+
+	test('handles single source', () => {
+		const hash = computeSourcesHash([{ hash: 'abc123', path: 'src/a.ts' }])
+
+		expect(typeof hash).toBe('string')
+		expect(hash.length).toBeGreaterThan(0)
 	})
 })

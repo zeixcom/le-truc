@@ -8,7 +8,7 @@
 
 > **dangerouslySetInnerHTML**\<`P`, `E`\>(`reactive`, `options?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/html.ts:23](https://github.com/zeixcom/le-truc/blob/3cb760ea5cf00b2f369106cc51ee33852f9ce090/src/effects/html.ts#L23)
+Defined in: [src/effects/html.ts:23](https://github.com/zeixcom/le-truc/blob/7a92bc007a166efb132ecdad99147e4787734f4c/src/effects/html.ts#L23)
 
 Effect for setting the inner HTML of an element with optional Shadow DOM support.
 Provides security options for script execution and shadow root creation.
