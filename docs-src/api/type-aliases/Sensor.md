@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / Sensor
-
-# Type Alias: Sensor\<T\>
+### Type Alias: Sensor\<T\>
 
 > **Sensor**\<`T`\> = `object`
 
@@ -12,25 +6,25 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/sensor.d.ts:7
 
 A read-only signal that tracks external input and updates a state value as long as it is active.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
 The type of value produced by the sensor
 
-## Properties
+#### Properties
 
-### \[toStringTag\]
+##### \[toStringTag\]
 
 > `readonly` **\[toStringTag\]**: `"Sensor"`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/sensor.d.ts:8
 
-## Methods
+#### Methods
 
-### get()
+##### get()
 
 > **get**(): `T`
 
@@ -39,12 +33,12 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/sensor.d.ts:15
 Gets the current value of the sensor.
 When called inside another reactive context, creates a dependency.
 
-#### Returns
+###### Returns
 
 `T`
 
 The sensor value
 
-#### Throws
+###### Throws
 
 UnsetSignalValueError If the sensor value is still unset when read.

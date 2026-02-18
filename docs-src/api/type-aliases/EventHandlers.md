@@ -1,25 +1,19 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / EventHandlers
-
-# Type Alias: EventHandlers\<T, U, E\>
+### Type Alias: EventHandlers\<T, U, E\>
 
 > **EventHandlers**\<`T`, `U`, `E`\> = `{ [K in keyof HTMLElementEventMap]?: SensorEventHandler<T, EventType<K>, U, E> }`
 
-Defined in: [src/events.ts:25](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/events.ts#L25)
+Defined in: [src/events.ts:25](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/events.ts#L25)
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
-### U
+##### U
 
 `U` *extends* [`UI`](UI.md)
 
-### E
+##### E
 
 `E` *extends* `Element`

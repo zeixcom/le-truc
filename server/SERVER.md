@@ -1,453 +1,458 @@
-# Development Server with Hot Module Replacement
+# Server & Build System
 
-The Le Truc development server provides a unified serving solution for documentation, component testing, and development with integrated Hot Module Replacement (HMR) for live reloading.
-
-## Overview
-
-The server system combines multiple serving modes into a single, flexible solution that automatically adapts based on routes and environment variables. It supports documentation serving, component testing, and full development workflows with live reloading.
+The Le Truc development server and build system provide a unified solution for documentation generation, component development, and testing — with integrated Hot Module Replacement (HMR) for live reloading.
 
 ## Quick Start
 
 ```bash
-# Full development server with HMR
-bun run dev
-
-# Basic production-like server
-bun run serve
-
-# Documentation server with build
-bun run serve:docs
-
-# Examples server for testing (Playwright)
-bun run serve:examples
+bun run dev              # Development server with HMR + file watching
+bun run serve            # Serve pre-built content (no HMR)
+bun run serve:docs       # Build docs, then serve
+bun run serve:examples   # Build examples, then serve (Playwright-safe)
+bun run build:docs       # One-shot docs build
+bun run test             # Run all Playwright tests
+bun run test:component <name>  # Run tests for a single component
+bun run test:server      # Run server unit/integration tests
 ```
 
-## Server Scripts
+## Architecture Overview
 
-### Development Scripts
+The system has two cooperating halves — a **reactive build pipeline** and an **HTTP/WebSocket server** — stitched together by `dev.ts` for development.
 
-#### `bun run dev`
-**Full Development Server with HMR**
-```bash
-NODE_ENV=development bun --watch server/dev.ts
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  dev.ts  (entry point for `bun run dev`)                             │
+│  ┌──────────────────────┐    ┌─────────────────────────────────────┐ │
+│  │  build.ts            │    │  serve.ts                           │ │
+│  │  (reactive pipeline) │───▶│  (HTTP + WebSocket server)          │ │
+│  │                      │    │                                     │ │
+│  │  file-signals.ts     │    │  Routes: /, /api/status, /assets/*, │ │
+│  │  file-watcher.ts     │    │  /examples/*, /test/*, /:page, /ws  │ │
+│  │  effects/*           │    │                                     │ │
+│  └──────────────────────┘    └─────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-**Use when:**
-- Active development of components, documentation, or examples
-- You want automatic rebuilding and live reloading
-- Working on the build system or server code
+### How `dev.ts` Wires Them Together
 
-**Features:**
-- ✅ Hot Module Replacement (HMR)
-- ✅ File watching and automatic rebuilds
-- ✅ WebSocket-based live reloading
-- ✅ Build error display in browser
-- ✅ Automatic server restart on code changes
+1. Imports `serve.ts` — which starts `Bun.serve()` as a side-effect on import
+2. Calls `setHMRBroadcast(broadcastToHMRClients)` to connect build notifications to WebSocket clients
+3. Calls `build({ watch: true })` to start the reactive pipeline with file watching
+4. Handles `SIGINT`/`SIGTERM` for graceful shutdown
 
-**What it does:**
-1. Starts the build system in watch mode
-2. Monitors `src/`, `examples/`, `docs-src/`, etc. for changes
-3. Rebuilds automatically when files change
-4. Serves content with HMR script injection
-5. Broadcasts reload signals to connected browsers
+### Two Independent File Watchers
 
-### Serving Scripts
+The system has two separate file-watching mechanisms:
 
-#### `bun run serve`
-**Basic Production-like Server**
-```bash
-bun server/serve.ts
+| Watcher | Location | Purpose |
+|---------|----------|---------|
+| **Build watcher** | `file-watcher.ts` via `@zeix/cause-effect` `createList` | Feeds reactive signals; triggers rebuilds through the effect graph |
+| **Server watcher** | `serve.ts` `setupFileWatcher()` via Node `fs.watch` | Broadcasts `file-changed` + `reload` to HMR WebSocket clients |
+
+The build watcher drives correctness (rebuilds); the server watcher drives liveness (browser reload).
+
+## Scripts Reference
+
+| Script | Command | HMR | Watch | Build First |
+|--------|---------|-----|-------|-------------|
+| `dev` | `NODE_ENV=development bun --watch server/dev.ts` | Yes | Yes | Yes |
+| `serve` | `bun server/serve.ts` | No | No | No |
+| `serve:docs` | `bun server/serve.ts --build-first` | No | No | Yes |
+| `serve:examples` | `bun run build:examples && PLAYWRIGHT=1 bun server/serve.ts` | No | No | Yes |
+| `build:docs` | `bun ./server/build.ts` | N/A | No | N/A |
+| `build:docs:watch` | `bun ./server/build.ts --watch` | N/A | Yes | N/A |
+| `build:examples` | `bun run build:examples:js && bun run build:examples:css` | N/A | No | N/A |
+| `test` | `bunx playwright test examples` | N/A | N/A | N/A |
+| `test:component` | `bun scripts/test-component.ts <name>` | N/A | N/A | N/A |
+| `test:server` | `bun test server/tests` | N/A | N/A | N/A |
+| `test:server:watch` | `bun test server/tests --watch` | N/A | N/A | N/A |
+
+## Reactive Build Pipeline
+
+### Core Primitives
+
+The build system is powered by `@zeix/cause-effect` reactive signals:
+
+- **`file-watcher.ts`** — `watchFiles(directory, include, exclude?)` creates a reactive `List<FileInfo>` backed by `Bun.Glob` scanning. Under non-Playwright conditions, attaches `fs.watch` for incremental updates via the `watched` option of `createList`.
+- **`file-signals.ts`** — Defines all source signals and the Markdoc processing pipeline.
+- **`build.ts`** — Orchestrates effects; plumbs HMR notifications via `setHMRBroadcast` / `notifyHMR`.
+
+### File Signals
+
+Each signal is a reactive `List<FileInfo>` that updates when files are added, changed, or removed.
+
+| Signal | Watches | Extensions | Recursive |
+|--------|---------|------------|-----------|
+| `docsMarkdown.sources` | `docs-src/pages/` | `.md` | Yes |
+| `docsStyles.sources` | `docs-src/` | `.css` | No |
+| `docsScripts.sources` | `docs-src/` | `.ts` | No |
+| `templateScripts.sources` | `server/templates/` | `.ts` | Yes |
+| `libraryScripts.sources` | `src/` | `.ts` | Yes |
+| `componentMarkup.sources` | `examples/` (excl. `mocks/`) | `.html` | Yes |
+| `componentMarkdown.sources` | `examples/` | `.md` | Yes |
+| `componentStyles.sources` | `examples/` | `.css` | Yes |
+| `componentScripts.sources` | `examples/` | `.ts` | Yes |
+
+The `docsMarkdown` signal has a multi-stage pipeline:
+
+```
+sources (List<FileInfo>)
+  → processed (Memo: frontmatter extraction, metadata)
+  → pageInfos (Memo: page navigation data for menu/sitemap)
+  → fullyProcessed (Task: Markdoc parse → transform → render → Shiki highlighting → post-processing)
 ```
 
-**Use when:**
-- Testing production-like behavior
-- Serving pre-built content without development features
-- Quick server startup without build watching
+### Effects
 
-**Features:**
-- ❌ No HMR or live reloading
-- ❌ No file watching
-- ❌ No automatic rebuilds
-- ✅ Fast startup
-- ✅ Production-like serving
+Each effect calls `createEffect(() => match([...signals], { ok, err }))` and returns a cleanup function.
 
-#### `bun run serve:docs`
-**Documentation Server with Build**
-```bash
-bun server/serve.ts --mode docs --build-first
+| Effect | Depends On | Output | Tool |
+|--------|-----------|--------|------|
+| `apiEffect` | `libraryScripts.sources` | `docs-src/api/**/*.md`, `docs-src/pages/api.md` | TypeDoc + typedoc-plugin-markdown |
+| `apiPagesEffect` | `apiMarkdown.sources` | `docs/api/**/*.html` | Markdoc + Shiki (HTML fragments) |
+| `cssEffect` | `docsStyles`, `componentStyles` | `docs/assets/main.css` | LightningCSS (`bunx lightningcss`) |
+| `jsEffect` | `docsScripts`, `libraryScripts`, `componentScripts` | `docs/assets/main.js` + sourcemap | `bun build` |
+| `serviceWorkerEffect` | All style + script sources | `docs/sw.js` | Template generation |
+| `examplesEffect` | `componentMarkdown`, `componentMarkup` | `docs/examples/<name>.html` | Markdoc + Shiki |
+| `sourcesEffect` | `componentMarkup`, `componentStyles`, `componentScripts` | `docs/sources/<name>.html` | Shiki-highlighted tab groups |
+| `pagesEffect` | `docsMarkdown.fullyProcessed` | `docs/**/*.html` | Layout templating |
+| `menuEffect` | `docsMarkdown.pageInfos` | `docs-src/includes/menu.html` | Template generation |
+| `sitemapEffect` | `docsMarkdown.pageInfos` | `docs/sitemap.xml` | XML template |
+
+### Build Outputs
+
+```
+docs/
+├── api/
+│   ├── classes/           # API class fragments
+│   ├── functions/         # API function fragments
+│   ├── type-aliases/      # API type alias fragments
+│   └── variables/         # API variable fragments
+├── assets/
+│   ├── main.css          # Minified CSS bundle
+│   └── main.js           # Minified JS bundle + sourcemap
+├── examples/
+│   └── <name>.html       # Pre-built example pages
+├── sources/
+│   └── <name>.html       # Syntax-highlighted source tab groups
+├── <page>.html           # Documentation pages
+├── sw.js                 # Service worker
+└── sitemap.xml           # SEO sitemap
+docs-src/
+├── api/                  # TypeDoc-generated Markdown (intermediate)
+│   ├── classes/
+│   ├── functions/
+│   ├── type-aliases/
+│   └── variables/
+└── includes/
+    └── menu.html         # Generated navigation menu (intermediate)
 ```
 
-**Use when:**
-- Serving documentation site
-- Need to build docs before serving
-- Production documentation deployment
+## Markdoc Content System
 
-**Features:**
-- ✅ Runs build before starting server
-- ❌ No HMR (unless NODE_ENV=development)
-- ✅ Documentation-specific configuration
-- ✅ One-time build execution
+### Processing Pipeline
 
-#### `bun run serve:examples`
-**Examples Server for Testing**
-```bash
-bun run build:examples && PLAYWRIGHT=1 bun server/serve.ts
-```
+Markdown files in `docs-src/pages/` are processed through:
 
-**Use when:**
-- Running Playwright tests
-- Need stable server without HMR interference
-- Testing examples in isolation
+1. **Frontmatter extraction** — Custom YAML mini-parser strips `title`, `emoji`, `description`, `layout`, etc.
+2. **Markdoc parse/validate/transform** — Using registered schemas from `markdoc.config.ts`
+3. **Markdoc render to HTML** — Produces raw HTML string
+4. **Shiki syntax highlighting** — Code blocks highlighted with Monokai theme
+5. **Post-processing** — `.md` → `.html` link rewriting, API content wrapping, `module-demo` HTML entity decoding
+6. **Layout application** — `docs-src/layouts/page.html` with `{{ include }}` and `{{ variable }}` substitution
 
-**Features:**
-- ✅ Builds examples first
-- ❌ HMR explicitly disabled (`PLAYWRIGHT=1`)
-- ❌ No file watching
-- ✅ Test-optimized serving
+### Registered Schemas
 
-### Testing Scripts
+Configured in `markdoc.config.ts`:
 
-#### `bun run test`
-**Run All Component Tests**
-```bash
-bunx playwright test examples
-```
+**Node overrides:** `fence`, `heading`
 
-**Use when:**
-- Running full test suite
-- CI/CD pipeline execution
-- Comprehensive testing before releases
+**Tags:**
 
-#### `bun run test:component <component-name>`
-**Run Individual Component Tests**
-```bash
-bun scripts/test-component.js <component-name>
-```
+| Tag | Renders As | Description |
+|-----|-----------|-------------|
+| `{% callout %}` | `<card-callout>` | Styled callout boxes (`.info`, `.tip`, `.danger`, `.note`, `.caution`) |
+| `{% carousel %}` | `<module-carousel>` | Interactive carousel with slides, tablist, prev/next buttons |
+| `{% slide %}` | `<div>` | Individual carousel slide (used inside `carousel`) |
+| `{% demo %}` | `<module-demo>` | Interactive demo: raw HTML preview + Markdown description |
+| `{% listnav %}` | `<module-listnav>` | Sidebar list navigation with lazy-loaded content panel |
+| `{% sources %}` | `<details>` | Lazy-loaded source code viewer |
+| `{% section %}` | `<section>` | Styled content section |
+| `{% hero %}` | `<section-hero>` | Hero section with extracted heading and TOC placeholder |
+| `{% tabgroup %}` | `<module-tabgroup>` | ARIA-compliant tabbed content |
 
-**Use when:**
-- Developing or debugging a specific component
-- Faster feedback during development
-- Focused testing on component changes
+Note: `link.markdoc.ts` exists as a schema file but is **not registered** in `markdoc.config.ts`. Link `.md` → `.html` conversion is handled by `postProcessHtml()` in `markdoc-helpers.ts` instead.
 
-**Examples:**
-```bash
-# Test specific components
-bun run test:component module-carousel
-bun run test:component basic-hello
-bun run test:component form-combobox
+### Markdoc Constants
 
-# With Playwright options
-bun run test:component module-carousel --headed --debug
-bun run test:component basic-hello -- --reporter=html
+`markdoc-constants.ts` provides shared constants and attribute definitions used by all Markdoc schemas. It was extracted from `markdoc-helpers.ts` to avoid circular dependencies between helpers and schema files.
 
-# List available components
-bun run test:component --help
-```
+- **Attribute classes:** `ClassAttribute`, `IdAttribute`, `CalloutClassAttribute` — custom Markdoc attribute types with `validate()` and `transform()` methods
+- **Attribute definitions:** `classAttribute`, `idAttribute`, `styleAttribute`, `titleAttribute`, `requiredTitleAttribute`, `commonAttributes`, `styledAttributes`
+- **Children definitions:** `standardChildren`, `richChildren`
 
-**Features:**
-- ✅ Auto-discovery of component tests
-- ✅ Helpful error messages with suggestions
-- ✅ Pass-through of Playwright arguments
-- ✅ Lists all available components
+### Markdoc Helpers
 
-## Server Architecture
+`markdoc-helpers.ts` provides shared utilities for schema development:
+
+- **Node utilities:** `extractTextFromNode()`, `transformChildrenWithConfig()`, `splitContentBySeparator()`
+- **HTML generation:** `createNavigationButton()`, `createTabButton()`, `createAccessibleHeading()`, `createVisuallyHiddenHeading()`
+- **Post-processing:** `postProcessHtml()` — link rewriting, API content wrapping
+- **`html` tagged template literal** — A mini HTML parser that converts HTML strings to Markdoc `Tag` objects (distinct from the plain-string `html` in `templates/utils.ts`)
+
+### Code Block Features
+
+The `fence` schema override provides:
+- Syntax highlighting via Shiki (Monokai theme)
+- Copy button with success/error feedback
+- Language label and optional filename (`lang#filename` syntax)
+- Auto-collapse for blocks exceeding 10 lines
+- Code stored in `data-code` attribute for async highlighting
+
+## HTTP Server (`serve.ts`)
 
 ### Route Handling
 
-The server handles multiple route patterns:
+| Route | Serves | Source |
+|-------|--------|--------|
+| `GET /` | Home page | `docs/index.html` |
+| `GET /api/status` | Health check (`"OK"`) | Inline |
+| `GET /ws` | WebSocket upgrade (HMR) | In-memory |
+| `GET /api/:category/:page` | API doc fragment | `docs/api/<category>/<page>` |
+| `GET /assets/:file` | Static assets | `docs/assets/` |
+| `GET /examples/:component` | Pre-built example HTML | `docs/examples/` |
+| `GET /test/:component/mocks/:mock` | Test mock files | `examples/<component>/mocks/` |
+| `GET /test/:component` | Component test page | `docs-src/layouts/test.html` + `examples/<component>/<component>.html` |
+| `GET /:page` | Documentation page | `docs/<page>.html` |
+| `GET /favicon.ico` | Favicon | `docs/favicon.ico` |
 
-| Route Pattern | Purpose | Example |
-|---------------|---------|---------|
-| `/api/status` | Server health check | Health monitoring |
-| `/assets/:file` | Static assets | CSS, JS, images |
-| `/examples/:component` | Component source code | Example files |
-| `/:component/:file` | Component mock files | `/module-lazyload/simple-text.html` |
-| `/test/:component/mocks/:mock` | Test mock files | Test resources |
-| `/test/:component` | Component test pages | Interactive testing |
-| `/:page` | Documentation pages | Static content |
-| `/` | Index page | Home page |
+All HTML routes support `Accept: text/markdown` to return raw `.md` source from `docs-src/pages/`.
 
-### File Serving
+### Layout and Template System
 
-The server uses a `handleStaticFile` function that:
+Layouts live in `docs-src/layouts/`:
+
+| Layout | Used For |
+|--------|----------|
+| `page.html` | Standard documentation pages |
+| `overview.html` | Overview/index pages |
+| `api.html` | API reference pages |
+| `blog.html` | Blog posts |
+| `example.html` | Example component pages |
+| `test.html` | Component test harness |
+
+Templates use `{{ variable }}` substitution and `{{ include 'file' }}` directives (resolved from `docs-src/includes/`).
+
+Layout files are cached in a `Map<string, string>` in `serve.ts` for performance.
+
+### Static File Handling
+
+The `handleStaticFile` function:
 - Checks file existence before serving
-- Returns proper 404 responses for missing files
-- Injects HMR scripts in development mode for HTML files
-- Handles proper MIME types and caching headers
+- Returns proper 404 for missing files
+- Injects HMR script in development mode for HTML responses
+- Handles MIME types from `config.ts` `MIME_TYPES` map
+- Supports Brotli/Gzip compression via `getCompressedBuffer()` from `io.ts`
 
-### Component Mock File Resolution
+### Port and Startup
 
-Special handling for component mock files with fallback patterns:
-- Direct path: `/test/component/mocks/file.html`
-- Fallback pattern: `/component/file.html` → `component/mocks/file.html`
-
-This allows tests to request `/module-lazyload/simple-text.html` and automatically resolve to `examples/module-lazyload/mocks/simple-text.html`.
+- Default port: 3000 (configurable in `SERVER_CONFIG`)
+- Port conflict detection: hits `/api/status` on startup; exits with `lsof` hint if occupied
+- CLI flags: `--mode docs`, `--build-first`, `--help`
 
 ## Hot Module Replacement (HMR)
 
-### HMR System Components
+### Components
 
-#### WebSocket Server
-- **Endpoint**: `/ws`
-- **Protocol**: JSON messages over WebSocket
-- **Client Management**: Tracks connected browsers
-- **Broadcasting**: Sends reload signals to all clients
+| Component | File | Role |
+|-----------|------|------|
+| WebSocket server | `serve.ts` | Manages client connections, broadcasts messages |
+| File watcher | `serve.ts` `setupFileWatcher()` | Detects changes, triggers reload broadcast |
+| Build integration | `build.ts` `setHMRBroadcast()` | Forwards build success/error to server |
+| Client script | `templates/hmr.ts` | Browser-side WebSocket client, injected into HTML |
 
-#### File Watching
-- **Directories**: `src/`, `examples/`, `docs-src/`, `server/layouts/`, etc.
-- **Recursive**: Watches subdirectories automatically
-- **Debouncing**: Prevents excessive rebuilds from rapid changes
-- **Cache Clearing**: Invalidates layout cache on template changes
+### Message Protocol
 
-#### Client Script Injection
-- **Automatic**: Injected into HTML responses in development
-- **Conditional**: Only when `NODE_ENV !== 'production'` and `!PLAYWRIGHT`
-- **Placement**: Before `</head>` or `</body>` tags
+**Server → Client:**
+```
+"reload"                                        // Trigger page reload
+{"type": "build-success"}                       // Build completed
+{"type": "build-error", "message": "..."}       // Build failed
+{"type": "file-changed", "path": "src/foo.ts"}  // File changed
+{"type": "pong"}                                // Keep-alive response
+```
 
-### HMR Configuration
+**Client → Server:**
+```
+{"type": "ping"}                                // Keep-alive request
+```
 
-The HMR client is configured with:
+### Client Configuration
+
 ```typescript
 hmrScriptTag({
-  enableLogging: true,          // Console logging for debugging
-  maxReconnectAttempts: 10,     // Connection retry limit
-  reconnectInterval: 1000,      // Base reconnection delay (ms)
-  pingInterval: 30000,          // Keep-alive ping frequency (ms)
+  enableLogging: true,          // Console logging
+  maxReconnectAttempts: 10,     // Reconnection limit
+  reconnectInterval: 1000,      // Base reconnect delay (ms)
+  pingInterval: 30000,          // Keep-alive interval (ms)
 })
 ```
 
-### HMR Message Protocol
+### Client Features
 
-#### Server → Client Messages
-```json
-// Simple reload trigger
-"reload"
+- Auto-reconnection with exponential backoff
+- Build error overlay injected into `document.body`
+- `visibilitychange` reconnection (reconnects when tab becomes active)
+- `window.__HMR__` debug API: `.status()`, `.reconnect()`, `.disconnect()`
+- Conditional injection: only when `NODE_ENV=development` and `!PLAYWRIGHT`
 
-// Structured messages
-{"type": "build-success"}
-{"type": "build-error", "message": "Error details"}
-{"type": "file-changed", "path": "src/component.ts"}
-{"type": "pong"}  // Keep-alive response
+## Template System (`server/templates/`)
+
+| File | Exports | Used By |
+|------|---------|---------|
+| `utils.ts` | `html`, `xml`, `css`, `js` tagged template literals; `escapeHtml`, `escapeXml`, `generateSlug`, `createOrderedSort`, validation helpers | All templates |
+| `constants.ts` | `MIME_TYPES`, `RESOURCE_TYPE_MAP`, `PAGE_ORDER`, `SERVICE_WORKER_EVENTS`, `SITEMAP_PRIORITIES`, etc. | Config, templates |
+| `fragments.ts` | `tabButton`, `tabPanel`, `tabGroup`, `componentInfo` | `sourcesEffect` |
+| `hmr.ts` | `hmrClient()`, `hmrScriptTag()` | `serve.ts` |
+| `menu.ts` | `menuItem()`, `menu()` | `menuEffect` |
+| `performance-hints.ts` | `preloadLink()`, `performanceHints()` | `pagesEffect` |
+| `service-worker.ts` | `serviceWorker()`, `minifiedServiceWorker()` | `serviceWorkerEffect` |
+| `sitemap.ts` | `sitemapUrl()`, `sitemap()` | `sitemapEffect` |
+
+Note: `templates/utils.ts` `html` produces **plain HTML strings**; `markdoc-helpers.ts` `html` produces **Markdoc `Tag` objects**. They are different functions imported from different paths.
+
+## Testing (`server/tests/`)
+
+The server has a test suite using **Bun's built-in test runner** (`bun:test`). Tests live in `server/tests/` and mirror the source module structure.
+
+### Running Tests
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `test:server` | `bun test server/tests` | Run all server tests |
+| `test:server:unit` | `bun test server/tests --bail` | Run with bail on first failure |
+| `test:server:integration` | `bun test server/tests --timeout 10000` | Run with longer timeout |
+| `test:server:watch` | `bun test server/tests --watch` | Watch mode for development |
+
+### Test Structure
+
+```
+server/tests/
+├── helpers/
+│   └── test-utils.ts              # Shared utilities (temp dirs, mocks, assertions)
+├── io.test.ts                     # IO utilities
+├── markdoc-constants.test.ts      # Attribute classes and constant definitions
+├── markdoc-helpers.test.ts        # Node utilities, tag helpers, post-processing
+├── schema/
+│   ├── fence.test.ts              # Code block schema
+│   └── heading.test.ts            # Heading schema
+└── templates/
+    └── utils.test.ts              # Tagged template literals, escaping, validation
 ```
 
-#### Client → Server Messages
-```json
-{"type": "ping"}  // Keep-alive request
-```
+### Test Categories
 
-### HMR Client Features
+| Category | Mocking | File I/O | Network | Typical runtime |
+|----------|---------|----------|---------|-----------------|
+| **Unit** | None | No | No | < 5 ms per test |
+| **Integration** | Minimal | Temp dirs | No | < 500 ms per test |
+| **Server** | Build pipeline | Temp dirs | localhost HTTP | < 2 s per test |
 
-- **Auto-reconnection**: Exponential backoff on connection loss
-- **Error Display**: Shows build errors directly in browser
-- **Keep-alive**: Prevents connection drops with ping-pong
-- **Debug API**: Exposes `window.__HMR__` for debugging
-- **Visibility Handling**: Reconnects when tab becomes active
+### Current Coverage (P0 — highest priority)
+
+| Test file | Tests | Module |
+|-----------|-------|--------|
+| `io.test.ts` | 39 | File hashing, paths, compression, safe writes |
+| `templates/utils.test.ts` | 95 | Tagged templates, escaping, slugs, sorting, validation |
+| `schema/fence.test.ts` | 28 | Code block transformation pipeline |
+| `markdoc-helpers.test.ts` | 45 | Node utilities, tag helpers, post-processing |
+| `markdoc-constants.test.ts` | 40 | Attribute classes, constant definitions |
+| `schema/heading.test.ts` | 29 | Heading levels, anchors, ID generation |
+
+**Total:** 276 tests, ~200 ms execution time.
+
+### Test Helpers
+
+`server/tests/helpers/test-utils.ts` provides shared utilities:
+
+- **Temp directories:** `createTempDir()`, `createTempFile()`, `createTempStructure()`
+- **Mock generators:** `mockMarkdown()`, `mockHtml()`, `mockFileInfo()`, `mockRequestContext()`
+- **Assertions:** `assertContains()`, `assertNotContains()`, `assertMatches()`, `assertValidHtml()`
+- **Async:** `wait()`, `retryUntil()`
+- **Normalization:** `normalizeWhitespace()`, `normalizeHtml()`
+
+### References
+
+- [TESTS.md](./TESTS.md) — Full test plan with specifications for all modules
+- [TEST-SUMMARY.md](./TEST-SUMMARY.md) — Implementation progress and resolved issues
+- [tests/README.md](./tests/README.md) — Test usage guidelines
+
+## Configuration (`config.ts`)
+
+### Directory Constants
+
+| Constant | Path | Description |
+|----------|------|-------------|
+| `SRC_DIR` | `./src` | Library source |
+| `COMPONENTS_DIR` | `./examples` | Component examples |
+| `CSS_FILE` | `./examples/main.css` | CSS entry point |
+| `TS_FILE` | `./examples/main.ts` | JS entry point |
+| `TEMPLATES_DIR` | `./server/templates` | Template functions |
+| `INPUT_DIR` | `./docs-src` | Documentation source root |
+| `PAGES_DIR` | `./docs-src/pages` | Markdown pages |
+| `API_DIR` | `./docs-src/api` | TypeDoc output (intermediate) |
+| `LAYOUTS_DIR` | `./docs-src/layouts` | HTML layout templates |
+| `INCLUDES_DIR` | `./docs-src/includes` | Includable HTML fragments |
+| `MENU_FILE` | `./docs-src/includes/menu.html` | Generated menu |
+| `OUTPUT_DIR` | `./docs` | Final build output |
+| `ASSETS_DIR` | `./docs/assets` | Built assets |
+| `EXAMPLES_DIR` | `./docs/examples` | Built example pages |
+| `SOURCES_DIR` | `./docs/sources` | Highlighted source fragments |
+
+### Page Ordering
+
+`PAGE_ORDER` controls navigation menu order:
+`index`, `getting-started`, `components`, `styling`, `data-flow`, `examples`, `api`, `blog`, `about`
 
 ## Environment Variables
 
-### `NODE_ENV`
-- `development` - Enables HMR, file watching, debug features
-- `production` - Disables HMR, optimizes for serving
-- `undefined` - Defaults to production-like behavior
-
-### `PLAYWRIGHT=1`
-- Explicitly disables HMR even in development
-- Used by test runner for stability
-- Prevents WebSocket connections and script injection
-
-### `DEBUG=1`
-- Enables verbose logging
-- Shows detailed file watching events
-- Useful for debugging build and server issues
-
-## Command Line Arguments
-
-### `--mode docs`
-- Configures server for documentation serving
-- May enable doc-specific features in the future
-
-### `--build-first`
-- Runs a complete build before starting the server
-- Useful for ensuring fresh content
-- Blocks server startup until build completes
-
-## Development Workflow
-
-### Which Script to Use?
-
-```
-Are you actively developing?
-├── Yes: Use `bun run dev`
-│   └── Need full development experience with HMR
-│
-└── No: Continue...
-    │
-    Are you running tests?
-    ├── Yes: Use `bun run serve:examples` (via `bun run test`)
-    │   └── Stable server without HMR interference
-    │
-    └── No: Continue...
-        │
-        Are you serving documentation?
-        ├── Yes: Use `bun run serve:docs`
-        │   └── Builds docs and serves them
-        │
-        └── No: Use `bun run serve`
-            └── Basic server for production-like testing
-```
-
-### Development Session
-
-1. **Start the development server**: `bun run dev`
-2. **Open browser**: Navigate to `http://localhost:3000`
-3. **Edit files**: Make changes to any watched file
-4. **Automatic rebuild**: Watch console for build notifications
-5. **Automatic reload**: Browser refreshes when build completes
-
-### File Watching Patterns
-
-The development server watches:
-- `src/` - Component source code
-- `examples/` - Component examples and tests
-- `docs-src/` - Documentation source
-- `server/layouts/` - HTML layout templates
-- `server/effects/` - Build system effects
-- `server/templates/` - Template files
-- `index.ts` - Main entry point
-- `package.json` - Dependencies
-
-## Server Configuration
-
-### Default Ports
-- Development server (`dev`): Assigned by `Bun.serve()` (typically 3000)
-- All other modes: Same as development
-
-### Custom Configuration
-```bash
-# Environment variables (not directly supported, modify server code)
-# PORT=8080 bun run dev
-
-# Command line arguments
-bun server/serve.ts --mode docs --build-first
-```
+| Variable | Values | Effect |
+|----------|--------|--------|
+| `NODE_ENV` | `development` | Enables HMR, file watching, debug features |
+| | `production` / unset | Disables HMR, production-like serving |
+| `PLAYWRIGHT` | `1` | Disables HMR even in development; prevents WebSocket connections and script injection |
+| `DEBUG` | `1` | Verbose logging for file watching and build events |
 
 ## Troubleshooting
 
-### HMR Issues
+**HMR not working:** Check `NODE_ENV=development` is set. Look for `__HMR__` messages in browser console. Verify WebSocket connection to `/ws`.
 
-**HMR not working**:
-- Check that `NODE_ENV=development` is set
-- Verify WebSocket connection in browser console
-- Look for `🔥 HMR:` messages in browser console
-- Ensure no firewall blocking WebSocket connections
+**Tests failing with HMR interference:** Verify `PLAYWRIGHT=1` is set. The `serve:examples` script sets this automatically.
 
-**WebSocket connection fails**:
-- Check if server is running
-- Verify `/ws` endpoint is accessible
-- Check browser console for connection errors
+**Build errors during development:** Errors display as an overlay in the browser. Check server console for full details. File watching continues after failures.
 
-**Files not reloading**:
-- Verify file is in watched directories
-- Check file watcher permissions
-- Look for build errors in console
+**Port conflict:** The server checks `/api/status` on startup and exits with an `lsof` command if the port is occupied.
 
-### Testing Issues
+**Static files not found:** Verify the file exists in `docs/`. Check the route table above for which directory is served.
 
-**Tests failing with HMR interference**:
-- Verify `PLAYWRIGHT=1` is set in test script
-- Check that no HMR scripts are injected in test pages
-- Look for WebSocket connection attempts in test logs
+## Future Improvements
 
-**Component tests not loading**:
-- Check component HTML files exist
-- Verify mock files are in correct directories
-- Test direct URLs like `/test/basic-hello`
+### API Documentation Section ✅
 
-### Server Issues
+The API section is implemented end-to-end. `apiEffect` runs TypeDoc, parses `globals.md`, and generates `docs-src/pages/api.md` with a grouped `{% listnav %}` index. `apiPagesEffect` processes individual API Markdown files through the Markdoc + Shiki pipeline and writes HTML fragments to `docs/api/<category>/<name>.html`. The `api.html` layout is served for direct navigation; lazy-loaded fragments are fetched by `module-lazyload` via listnav selection.
 
-**Server not starting**:
-- Check for port conflicts
-- Verify file permissions for watched directories
-- Look for missing dependencies or TypeScript errors
+**Remaining:** The `api.html` template variables (`{{ api-category }}`, `{{ api-name }}`, `{{ api-kind }}`, `{{ toc }}`) are not yet populated in `effects/pages.ts`, so breadcrumbs and sidebar TOC are empty on direct API page navigation.
 
-**Build errors during development**:
-- Build errors are displayed in the browser during development
-- Check server console for detailed error messages
-- File watching continues even after build failures
+### FAQ Section
 
-**Static files not found**:
-- Verify file exists in expected location
-- Check file permissions
-- Look for 404 errors in browser network tab
+Adding an FAQ section with collapsible question/answer blocks requires:
 
-## Production Deployment
+- A new `faq.markdoc.ts` schema (e.g., `{% faq %}` / `{% question %}`) that renders to `<details><summary>` elements or a custom `<module-faq>` component
+- Alternatively, reuse the native HTML `<details>` element directly in Markdoc content without a custom schema
+- Consider grouping questions by topic with anchor links for direct linking to individual answers
 
-### HMR in Production
+### Developer Experience
 
-- HMR is automatically disabled when `NODE_ENV !== 'production'`
-- WebSocket endpoint returns 404 in production
-- HMR scripts are not injected in production builds
-- File watching is disabled in production
-
-### Server Deployment
-
-For production deployment:
-
-```bash
-# Build static assets first
-bun run build:docs
-
-# Start production server
-NODE_ENV=production bun server/serve.ts --build-first
-
-# Or serve static files with any web server
-# The ./docs/ directory contains complete static site
-```
-
-## Integration with Build System
-
-The server integrates tightly with the build system:
-
-- **File watching**: Reuses build system file watchers
-- **Build notifications**: Receives build status updates
-- **Error handling**: Displays build errors in browser
-- **Asset serving**: Serves generated build outputs
-
-This integration provides a seamless development experience where code changes trigger builds, and completed builds trigger browser reloads.
-
-## Performance Considerations
-
-### File Watching Efficiency
-- Uses native `fs.watch()` for performance
-- Recursive watching with selective directory monitoring
-- Debouncing prevents excessive rebuilds
-- Memory efficient client connection management
-
-### Network Efficiency
-- WebSocket connections for real-time communication
-- JSON message protocol for structured data
-- Keep-alive pings prevent connection drops
-- Automatic cleanup of disconnected clients
-
-### Asset Serving
-- Static file caching with proper headers
-- Efficient file existence checking
-- MIME type detection and proper responses
-- Compression support for better performance
-
-## Migration from Previous Systems
-
-### Script Changes
-- `serve:dev` → `dev` (full development server)
-- `serve:production` → `serve` (basic server)
-- `serve:docs` → `serve:docs` (unchanged)
-- `serve:test` → `serve:examples` (for tests)
-
-### Feature Improvements
-- Unified server architecture
-- Better HMR integration
-- Improved error handling
-- More reliable WebSocket connections
-- Enhanced development experience
-
-The new server system provides a more robust, feature-complete development environment while maintaining compatibility with existing workflows.
+- **Incremental TypeDoc.** `apiEffect` runs `typedoc` via `execSync` on every library source change, regenerating all API docs. For large APIs, this is slow. TypeDoc's `--watch` mode or incremental output could help.
+- **Parallel effect execution.** Effects are registered sequentially in `build.ts`. Effects with independent dependency graphs (e.g., `cssEffect` and `sitemapEffect`) could run in parallel for faster builds.
+- **Error overlay improvements.** The HMR error overlay is a plain `div` injected into `document.body`. A more structured overlay with file/line info and dismiss functionality would improve the development experience.

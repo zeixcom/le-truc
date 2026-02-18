@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.16.1
+
+### Changed
+
+- **`createElementsMemo` mutation filtering**: The `MutationObserver` callback now uses a `couldMatch` helper to filter mutations, only invalidating when added/removed nodes match or contain matches for the selector. This prevents spurious effect re-runs caused by mutations *inside* matched elements (e.g., `innerHTML` changes on option buttons).
+- **`createElementsMemo` custom `equals`**: The memo now compares arrays by element identity (`length` + `every`). This currently only prevents propagation through chained memos; a future fix in Cause & Effect (`FLAG_CHECK` instead of `FLAG_DIRTY` for `invalidate()`) will extend this to terminal effects.
+- **Effect system simplified**: `runEffects` now uses `createScope()` to own all child effects. Dynamic collections are handled by a single `createEffect()` whose ownership graph automatically disposes per-element effects on re-run. The former `runElementsEffects` and `runElementEffects` helpers have been inlined.
+
+### Removed
+
+- **`runEffects` and `runElementEffects` removed from public API**: These were never intended for userland use and calling them directly could corrupt disposal. `runEffects` remains as internal helper.
+
+### Fixed
+
+- **`innerHTML` on matched elements no longer destroys reactivity**: Setting `innerHTML` on elements matched by `createElementsMemo` (e.g., `button[role="option"]`) previously caused the `MutationObserver` to fire spuriously, re-running and disposing effects without properly re-attaching them. Fixed by combining mutation filtering with ownership-based cleanup.
+
 ## 0.16.0
 
 ### Added

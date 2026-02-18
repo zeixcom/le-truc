@@ -199,10 +199,12 @@ function propagate(node, newFlag = FLAG_DIRTY) {
     for (let e = node.sinks;e; e = e.nextSink)
       propagate(e.sink, FLAG_CHECK);
   } else {
-    if (flags & FLAG_DIRTY)
+    if ((flags & (FLAG_DIRTY | FLAG_CHECK)) >= newFlag)
       return;
-    node.flags = FLAG_DIRTY;
-    queuedEffects.push(node);
+    const wasQueued = flags & (FLAG_DIRTY | FLAG_CHECK);
+    node.flags = newFlag;
+    if (!wasQueued)
+      queuedEffects.push(node);
   }
 }
 function setState(node, next) {
@@ -354,7 +356,7 @@ function flush() {
   try {
     for (let i = 0;i < queuedEffects.length; i++) {
       const effect = queuedEffects[i];
-      if (effect.flags & FLAG_DIRTY)
+      if (effect.flags & (FLAG_DIRTY | FLAG_CHECK))
         refresh(effect);
     }
     queuedEffects.length = 0;
@@ -797,9 +799,7 @@ function createMemo(fn, options) {
     if (activeSink) {
       if (!node.sinks)
         node.stop = watched(() => {
-          node.flags |= FLAG_DIRTY;
-          for (let e = node.sinks;e; e = e.nextSink)
-            propagate(e.sink);
+          propagate(node);
           if (batchDepth === 0)
             flush();
         });
@@ -848,9 +848,7 @@ function createTask(fn, options) {
     if (activeSink) {
       if (!node.sinks)
         node.stop = watched(() => {
-          node.flags |= FLAG_DIRTY;
-          for (let e = node.sinks;e; e = e.nextSink)
-            propagate(e.sink);
+          propagate(node);
           if (batchDepth === 0)
             flush();
         });
@@ -1656,6 +1654,13 @@ class InvalidEffectsError extends TypeError {
   }
 }
 
+class InvalidUIKeyError extends TypeError {
+  constructor(host, key, where) {
+    super(`Invalid UI key "${key}" in ${where} of component ${elementName(host)}`);
+    this.name = "InvalidUIKeyError";
+  }
+}
+
 class MissingElementError extends Error {
   constructor(host, selector, required) {
     super(`Missing required element <${selector}> in component ${elementName(host)}. ${required}`);
@@ -1699,81 +1704,27 @@ var getUpdateDescription = (op, name = "") => {
   };
   return ops[op] + name;
 };
-var runElementEffects = (host, target, effects) => {
-  const cleanups = [];
-  const run = (fn) => {
-    const cleanup = fn(host, target);
-    if (cleanup)
-      cleanups.push(cleanup);
-  };
-  if (Array.isArray(effects))
-    for (const fn of effects)
-      run(fn);
-  else
-    run(effects);
-  return () => {
-    cleanups.forEach((cleanup) => cleanup());
-    cleanups.length = 0;
-  };
-};
-var runElementsEffects = (host, elements, effects) => {
-  const cleanups = new Map;
-  const attach = (targets) => {
-    for (const target of targets) {
-      const cleanup = runElementEffects(host, target, effects);
-      if (cleanup)
-        cleanups.set(target, cleanup);
-    }
-  };
-  const detach = (targets) => {
-    for (const target of targets) {
-      cleanups.get(target)?.();
-      cleanups.delete(target);
-    }
-  };
-  const dispose = createEffect(() => {
-    const next = new Set(elements.get());
-    const added = [];
-    const removed = [];
-    for (const target of next)
-      if (!cleanups.has(target))
-        added.push(target);
-    for (const target of cleanups.keys())
-      if (!next.has(target))
-        removed.push(target);
-    attach(added);
-    detach(removed);
-  });
-  return () => {
-    for (const cleanup of cleanups.values())
-      cleanup();
-    cleanups.clear();
-    dispose();
-  };
-};
 var runEffects = (ui, effects) => {
   if (!isRecord(effects))
     throw new InvalidEffectsError(ui.host);
-  const cleanups = [];
-  const keys = Object.keys(effects);
-  for (const key of keys) {
-    const k = key;
-    if (!effects[k])
-      continue;
-    const elementEffects = Array.isArray(effects[k]) ? effects[k] : [effects[k]];
-    if (isMemo(ui[k])) {
-      cleanups.push(runElementsEffects(ui.host, ui[k], elementEffects));
-    } else if (ui[k]) {
-      const cleanup = runElementEffects(ui.host, ui[k], elementEffects);
-      if (cleanup)
-        cleanups.push(cleanup);
+  return createScope(() => {
+    for (const key of Object.keys(effects)) {
+      const k = key;
+      if (!effects[k])
+        continue;
+      const fns = Array.isArray(effects[k]) ? effects[k] : [effects[k]];
+      if (isMemo(ui[k])) {
+        createEffect(() => {
+          for (const target of ui[k].get())
+            for (const fn of fns)
+              fn(ui.host, target);
+        });
+      } else if (ui[k]) {
+        for (const fn of fns)
+          fn(ui.host, ui[k]);
+      }
     }
-  }
-  return () => {
-    for (const cleanup of cleanups)
-      cleanup();
-    cleanups.length = 0;
-  };
+  });
 };
 var resolveReactive = (reactive, host, target, context) => {
   try {
@@ -1867,6 +1818,7 @@ var extractAttributes = (selector) => {
 function createElementsMemo(parent, selector) {
   return createMemo(() => Array.from(parent.querySelectorAll(selector)), {
     value: [],
+    equals: (a, b) => a.length === b.length && a.every((el, i) => el === b[i]),
     watched: (invalidate) => {
       const observerConfig = {
         childList: true,
@@ -1877,7 +1829,22 @@ function createElementsMemo(parent, selector) {
         observerConfig.attributes = true;
         observerConfig.attributeFilter = observedAttributes;
       }
-      const observer = new MutationObserver(() => invalidate());
+      const couldMatch = (node) => node instanceof Element && (node.matches(selector) || node.querySelector(selector));
+      const maybeDirty = (mutation) => {
+        if (mutation.type === "attributes")
+          return true;
+        if (mutation.type === "childList")
+          return Array.from(mutation.addedNodes).some(couldMatch) || Array.from(mutation.removedNodes).some(couldMatch);
+        return false;
+      };
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (maybeDirty(mutation)) {
+            invalidate();
+            return;
+          }
+        }
+      });
       observer.observe(parent, observerConfig);
       return () => observer.disconnect();
     }
@@ -2392,8 +2359,6 @@ export {
   setProperty,
   setAttribute,
   schedule,
-  runElementEffects,
-  runEffects,
   requestContext,
   read,
   provideContexts,
@@ -2441,6 +2406,7 @@ export {
   asBoolean,
   NullishSignalValueError,
   MissingElementError,
+  InvalidUIKeyError,
   InvalidSignalValueError,
   InvalidReactivesError,
   InvalidPropertyNameError,

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
-import { broadcastToHMRClients } from './serve'
-import { build, setHMRBroadcast } from './build'
+import { broadcastToHMRClients, startServer } from './serve'
+import { build } from './build'
 
 /**
  * Unified Development Server
@@ -22,12 +22,14 @@ async function startDevServer() {
 	console.log('🔥 Starting Le Truc Development Server...')
 
 	if (!isDevelopment) {
-		console.warn('⚠️  Running dev server in production mode. Set NODE_ENV=development for optimal experience.')
+		console.warn(
+			'⚠️  Running dev server in production mode. Set NODE_ENV=development for optimal experience.',
+		)
 	}
 
 	try {
-		// Set up HMR integration between build system and server
-		setHMRBroadcast(broadcastToHMRClients)
+		// Start the HTTP server explicitly
+		await startServer()
 
 		// Start the build system in watch mode
 		console.log('📦 Initializing build system...')
@@ -36,8 +38,6 @@ async function startDevServer() {
 			hmrBroadcast: broadcastToHMRClients,
 		})
 
-		// The server is started via import, so it's already running
-		// We just need to wait and handle shutdown
 		console.log('🎯 Development server ready!')
 		console.log('💡 Features enabled:')
 		console.log('   • Hot Module Replacement (HMR)')
@@ -62,7 +62,6 @@ async function startDevServer() {
 
 		// Keep the process alive
 		await new Promise(() => {}) // Wait indefinitely
-
 	} catch (error) {
 		console.error('💥 Failed to start development server:', error)
 		process.exit(1)

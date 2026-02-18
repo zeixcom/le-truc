@@ -3,7 +3,7 @@ import {
 	requiredTitleAttribute,
 	standardChildren,
 	styleAttribute,
-} from '../markdoc-helpers'
+} from '../markdoc-constants'
 
 const slide: Schema = {
 	render: 'div',

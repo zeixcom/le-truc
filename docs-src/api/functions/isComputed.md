@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / isComputed
-
-# Function: isComputed()
+### Function: isComputed()
 
 > **isComputed**\<`T`\>(`value`): `value is Memo<T>`
 
@@ -12,26 +6,26 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:48
 
 Check if a value is a computed signal
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
-## Parameters
+#### Parameters
 
-### value
+##### value
 
 `unknown`
 
 Value to check
 
-## Returns
+#### Returns
 
 `value is Memo<T>`
 
 True if value is a computed signal, false otherwise
 
-## Since
+#### Since
 
 0.9.0

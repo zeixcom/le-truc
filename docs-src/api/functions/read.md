@@ -1,47 +1,41 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / read
-
-# Function: read()
+### Function: read()
 
 > **read**\<`T`, `U`\>(`reader`, `fallback`): [`Reader`](../type-aliases/Reader.md)\<`T`, `U`\>
 
-Defined in: [src/parsers.ts:69](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/parsers.ts#L69)
+Defined in: [src/parsers.ts:69](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/parsers.ts#L69)
 
 Read a value from a UI element
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
-### U
+##### U
 
 `U` *extends* [`UI`](../type-aliases/UI.md)
 
-## Parameters
+#### Parameters
 
-### reader
+##### reader
 
 [`LooseReader`](../type-aliases/LooseReader.md)\<`T`, `U`\>
 
 Reader function returning T | string | null | undefined
 
-### fallback
+##### fallback
 
 [`ParserOrFallback`](../type-aliases/ParserOrFallback.md)\<`T`, `U`\>
 
 Fallback value or parser function
 
-## Returns
+#### Returns
 
 [`Reader`](../type-aliases/Reader.md)\<`T`, `U`\>
 
 Parsed value or fallback value
 
-## Since
+#### Since
 
 0.15.0

@@ -1,32 +1,18 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / List
-
-# Type Alias: List\<T\>
+### Type Alias: List\<T\>
 
 > **List**\<`T`\> = `object`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:16
 
-Le Truc
+#### Type Parameters
 
-Version 0.16.0
-
-## Author
-
-Esther Brunner
-
-## Type Parameters
-
-### T
+##### T
 
 `T` *extends* `object`
 
-## Properties
+#### Properties
 
-### \[isConcatSpreadable\]
+##### \[isConcatSpreadable\]
 
 > `readonly` **\[isConcatSpreadable\]**: `true`
 
@@ -34,7 +20,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:18
 
 ***
 
-### \[toStringTag\]
+##### \[toStringTag\]
 
 > `readonly` **\[toStringTag\]**: `"List"`
 
@@ -42,83 +28,83 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:17
 
 ***
 
-### length
+##### length
 
 > `readonly` **length**: `number`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:20
 
-## Methods
+#### Methods
 
-### \[iterator\]()
+##### \[iterator\]()
 
 > **\[iterator\]**(): `IterableIterator`\<[`State`](State.md)\<`T`\>\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:19
 
-#### Returns
+###### Returns
 
 `IterableIterator`\<[`State`](State.md)\<`T`\>\>
 
 ***
 
-### add()
+##### add()
 
 > **add**(`value`): `string`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:29
 
-#### Parameters
+###### Parameters
 
 ##### value
 
 `T`
 
-#### Returns
+###### Returns
 
 `string`
 
 ***
 
-### at()
+##### at()
 
 > **at**(`index`): [`State`](State.md)\<`T`\> \| `undefined`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:24
 
-#### Parameters
+###### Parameters
 
 ##### index
 
 `number`
 
-#### Returns
+###### Returns
 
 [`State`](State.md)\<`T`\> \| `undefined`
 
 ***
 
-### byKey()
+##### byKey()
 
 > **byKey**(`key`): [`State`](State.md)\<`T`\> \| `undefined`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:26
 
-#### Parameters
+###### Parameters
 
 ##### key
 
 `string`
 
-#### Returns
+###### Returns
 
 [`State`](State.md)\<`T`\> \| `undefined`
 
 ***
 
-### deriveCollection()
+##### deriveCollection()
 
-#### Call Signature
+###### Call Signature
 
 > **deriveCollection**\<`R`\>(`callback`): [`Collection`](Collection.md)\<`R`\>
 
@@ -140,7 +126,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:33
 
 [`Collection`](Collection.md)\<`R`\>
 
-#### Call Signature
+###### Call Signature
 
 > **deriveCollection**\<`R`\>(`callback`): [`Collection`](Collection.md)\<`R`\>
 
@@ -164,127 +150,127 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:34
 
 ***
 
-### get()
+##### get()
 
 > **get**(): `T`[]
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:21
 
-#### Returns
+###### Returns
 
 `T`[]
 
 ***
 
-### indexOfKey()
+##### indexOfKey()
 
 > **indexOfKey**(`key`): `number`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:28
 
-#### Parameters
+###### Parameters
 
 ##### key
 
 `string`
 
-#### Returns
+###### Returns
 
 `number`
 
 ***
 
-### keyAt()
+##### keyAt()
 
 > **keyAt**(`index`): `string` \| `undefined`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:27
 
-#### Parameters
+###### Parameters
 
 ##### index
 
 `number`
 
-#### Returns
+###### Returns
 
 `string` \| `undefined`
 
 ***
 
-### keys()
+##### keys()
 
 > **keys**(): `IterableIterator`\<`string`\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:25
 
-#### Returns
+###### Returns
 
 `IterableIterator`\<`string`\>
 
 ***
 
-### remove()
+##### remove()
 
 > **remove**(`keyOrIndex`): `void`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:30
 
-#### Parameters
+###### Parameters
 
 ##### keyOrIndex
 
 `string` | `number`
 
-#### Returns
+###### Returns
 
 `void`
 
 ***
 
-### set()
+##### set()
 
 > **set**(`next`): `void`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:22
 
-#### Parameters
+###### Parameters
 
 ##### next
 
 `T`[]
 
-#### Returns
+###### Returns
 
 `void`
 
 ***
 
-### sort()
+##### sort()
 
 > **sort**(`compareFn?`): `void`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:31
 
-#### Parameters
+###### Parameters
 
 ##### compareFn?
 
 (`a`, `b`) => `number`
 
-#### Returns
+###### Returns
 
 `void`
 
 ***
 
-### splice()
+##### splice()
 
 > **splice**(`start`, `deleteCount?`, ...`items`): `T`[]
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:32
 
-#### Parameters
+###### Parameters
 
 ##### start
 
@@ -298,24 +284,24 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:32
 
 ...`T`[]
 
-#### Returns
+###### Returns
 
 `T`[]
 
 ***
 
-### update()
+##### update()
 
 > **update**(`fn`): `void`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:23
 
-#### Parameters
+###### Parameters
 
 ##### fn
 
 (`prev`) => `T`[]
 
-#### Returns
+###### Returns
 
 `void`

@@ -1,32 +1,26 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / batch
-
-# Function: batch()
+### Function: batch()
 
 > **batch**(`fn`): `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:175
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:176
 
 Batches multiple signal updates together.
 Effects will not run until the batch completes.
 Batches can be nested; effects run when the outermost batch completes.
 
-## Parameters
+#### Parameters
 
-### fn
+##### fn
 
 () => `void`
 
 The function to execute within the batch
 
-## Returns
+#### Returns
 
 `void`
 
-## Example
+#### Example
 
 ```ts
 const count = createState(0);

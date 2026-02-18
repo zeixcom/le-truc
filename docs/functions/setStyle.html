@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>setStyle – Le Truc API</title>
+		<meta name="description" content="API reference for setStyle (function)" />
+		<link
+			rel="preload"
+			href="../../assets/main.css?v=bbd3df2cbd926183"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="../../assets/main.js?v=3aad7c7c0b2829ea"
+		/>
+		<link
+			rel="stylesheet"
+			href="../../assets/main.css?v=bbd3df2cbd926183"
+		/>
+		<script
+			type="module"
+			src="../../assets/main.js?v=3aad7c7c0b2829ea"
+		></script>
+	</head>
+	<body class="api">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">Le Truc Docs <small>Version 0.16.0</small></h1>
+				<section-menu>
+		<nav>
+			<h2 class="visually-hidden">Main Menu</h2>
+			<ol>
+				<li>
+		<a href="index.html">
+			<span class="icon">📖</span>
+			<strong>Introduction</strong>
+			<small>Overview and key benefits of Le Truc</small>
+		</a>
+	</li><li>
+		<a href="getting-started.html">
+			<span class="icon">🚀</span>
+			<strong>Getting Started</strong>
+			<small>Installation, setup, and first steps</small>
+		</a>
+	</li><li>
+		<a href="components.html">
+			<span class="icon">🏗️</span>
+			<strong>Components</strong>
+			<small>Anatomy, lifecycle, signals, effects</small>
+		</a>
+	</li><li>
+		<a href="styling.html">
+			<span class="icon">🎨</span>
+			<strong>Styling</strong>
+			<small>Scoped styles, CSS custom properties</small>
+		</a>
+	</li><li>
+		<a href="data-flow.html">
+			<span class="icon">🔄</span>
+			<strong>Data Flow</strong>
+			<small>Passing state, events, context</small>
+		</a>
+	</li><li>
+		<a href="examples.html">
+			<span class="icon">🍽️</span>
+			<strong>Examples</strong>
+			<small>Common use cases and demos</small>
+		</a>
+	</li><li>
+		<a href="api.html">
+			<span class="icon">📖</span>
+			<strong>API</strong>
+			<small>API reference documentation</small>
+		</a>
+	</li><li>
+		<a href="about.html">
+			<span class="icon">🤝</span>
+			<strong>About</strong>
+			<small>License, versioning, getting involved</small>
+		</a>
+	</li>
+			</ol>
+		</nav>
+	</section-menu>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<div class="api-header">
+				<div class="content-grid">
+					<div class="content">
+						<nav class="api-breadcrumb" aria-label="Breadcrumb">
+							<a href="/api/">API</a> ›
+							<a href="/api/functions/">functions</a> › setStyle
+						</nav>
+						<h1 class="api-title">
+							setStyle
+							<span class="api-kind function">function</span>
+						</h1>
+					</div>
+				</div>
+			</div>
+			<main id="main" class="content-grid">
+				<div class="content api-content">
+					<div class="grid" style="grid-template-columns: 1fr 300px; gap: 2rem">
+						<article><section class="api-content">
+<h1 id="function-setstyle"><a name="function-setstyle" class="anchor" href="#function-setstyle"><span class="title">Function: setStyle()</span><span class="permalink">#</span></a></h1><blockquote><p><strong>setStyle</strong>&lt;<code>P</code>, <code>E</code>&gt;(<code>prop</code>, <code>reactive?</code>): <a href="../type-aliases/Effect.html"><code>Effect</code></a>&lt;<code>P</code>, <code>E</code>&gt;</p></blockquote><p>Defined in: <a href="https://github.com/zeixcom/le-truc/blob/d14510e550dfc154f9f0472e7b8adcdb3ab3002e/src/effects/style.ts#L15">src/effects/style.ts:15</a></p><p>Effect for setting a CSS style property on an element. Sets the specified style property with support for deletion via UNSET.</p><h2 id="type-parameters"><a name="type-parameters" class="anchor" href="#type-parameters"><span class="title">Type Parameters</span><span class="permalink">#</span></a></h2><h3 id="p"><a name="p" class="anchor" href="#p"><span class="title">P</span><span class="permalink">#</span></a></h3><p><code>P</code> <em>extends</em> <a href="../type-aliases/ComponentProps.html"><code>ComponentProps</code></a></p><h3 id="e"><a name="e" class="anchor" href="#e"><span class="title">E</span><span class="permalink">#</span></a></h3><p><code>E</code> <em>extends</em> <code>HTMLElement</code> | <code>SVGElement</code> | <code>MathMLElement</code></p><h2 id="parameters"><a name="parameters" class="anchor" href="#parameters"><span class="title">Parameters</span><span class="permalink">#</span></a></h2><h3 id="prop"><a name="prop" class="anchor" href="#prop"><span class="title">prop</span><span class="permalink">#</span></a></h3><p><code>string</code></p><p>Name of the CSS style property to set</p><h3 id="reactive"><a name="reactive" class="anchor" href="#reactive"><span class="title">reactive?</span><span class="permalink">#</span></a></h3><p><a href="../type-aliases/Reactive.html"><code>Reactive</code></a>&lt;<code>string</code>, <code>P</code>, <code>E</code>&gt; = <code>...</code></p><p>Reactive value bound to the style property value (defaults to property name)</p><h2 id="returns"><a name="returns" class="anchor" href="#returns"><span class="title">Returns</span><span class="permalink">#</span></a></h2><p><a href="../type-aliases/Effect.html"><code>Effect</code></a>&lt;<code>P</code>, <code>E</code>&gt;</p><p>Effect function that sets the style property on the element</p><h2 id="since"><a name="since" class="anchor" href="#since"><span class="title">Since</span><span class="permalink">#</span></a></h2><p>0.8.0</p>
+</section></article>
+						<aside class="api-sidebar">
+							<nav class="api-nav" aria-label="Page contents">
+								<h3>On this page</h3>
+								<ul>
+<li><a href="#type-parameters">Type Parameters</a></li>
+  <li><a href="#p">P</a></li>
+  <li><a href="#e">E</a></li>
+<li><a href="#parameters">Parameters</a></li>
+  <li><a href="#prop">prop</a></li>
+  <li><a href="#reactive">reactive?</a></li>
+<li><a href="#returns">Returns</a></li>
+<li><a href="#since">Since</a></li>
+</ul>
+							</nav>
+						</aside>
+					</div>
+				</div>
+			</main>
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2026 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

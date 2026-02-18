@@ -35,7 +35,18 @@ declare class InvalidEffectsError extends TypeError {
     constructor(host: HTMLElement, cause?: Error);
 }
 /**
- * Error thrown when a required desacendent element does not exist in a component's DOM subtree
+ * Error thrown if UI key is invalid
+ *
+ * @since 0.15.1
+ * @param {HTMLElement} host - Host component
+ * @param {string} key - Invalid key
+ * @param {string} where - Where the key is used
+ */
+declare class InvalidUIKeyError extends TypeError {
+    constructor(host: HTMLElement, key: string, where: string);
+}
+/**
+ * Error thrown when a required descendant element does not exist in a component's DOM subtree
  *
  * @since 0.14.0
  */
@@ -84,4 +95,4 @@ declare class InvalidCustomElementError extends TypeError {
      */
     constructor(target: HTMLElement, where: string);
 }
-export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPropertyNameError, InvalidEffectsError, InvalidReactivesError, MissingElementError, };
+export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPropertyNameError, InvalidEffectsError, InvalidReactivesError, InvalidUIKeyError, MissingElementError, };

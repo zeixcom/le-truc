@@ -1,39 +1,33 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / Parser
-
-# Type Alias: Parser()\<T, U\>
+### Type Alias: Parser()\<T, U\>
 
 > **Parser**\<`T`, `U`\> = (`ui`, `value`, `old?`) => `T`
 
-Defined in: [src/parsers.ts:6](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/parsers.ts#L6)
+Defined in: [src/parsers.ts:6](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/parsers.ts#L6)
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
-### U
+##### U
 
 `U` *extends* [`UI`](UI.md)
 
-## Parameters
+#### Parameters
 
-### ui
+##### ui
 
 `U`
 
-### value
+##### value
 
 `string` | `null` | `undefined`
 
-### old?
+##### old?
 
 `string` | `null`
 
-## Returns
+#### Returns
 
 `T`

@@ -1,21 +1,15 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / ElementEffects
-
-# Type Alias: ElementEffects\<P, E\>
+### Type Alias: ElementEffects\<P, E\>
 
 > **ElementEffects**\<`P`, `E`\> = [`Effect`](Effect.md)\<`P`, `E`\> \| [`Effect`](Effect.md)\<`P`, `E`\>[]
 
-Defined in: [src/effects.ts:25](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/effects.ts#L25)
+Defined in: [src/effects.ts:26](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/effects.ts#L26)
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](ComponentProps.md)
 
-### E
+##### E
 
 `E` *extends* `Element`

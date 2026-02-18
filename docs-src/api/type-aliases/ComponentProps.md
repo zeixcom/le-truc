@@ -1,11 +1,5 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / ComponentProps
-
-# Type Alias: ComponentProps
+### Type Alias: ComponentProps
 
 > **ComponentProps** = `Record`\<[`ComponentProp`](ComponentProp.md), `NonNullable`\<`unknown`\>\>
 
-Defined in: [src/component.ts:38](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/component.ts#L38)
+Defined in: [src/component.ts:38](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/component.ts#L38)

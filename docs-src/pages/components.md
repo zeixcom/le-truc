@@ -196,6 +196,9 @@ defineComponent(
 )
 ```
 
+{% /section %}
+
+{% section %}
 ## Managing State with Signals
 
 Le Truc manages state using **signals**, which are atomic reactive states that trigger updates when they change. We use regular properties for public component states:
@@ -239,7 +242,7 @@ defineComponent(
 )
 ```
 
-{% callout class="caution" %}
+{% callout .caution %}
 **Careful**: Attributes **may not be present** on the element or **parsing to the desired type may fail**. To ensure **non-nullability** of signals, Le Truc falls back to neutral defaults if no fallback value is provided:
 
 - `""` (empty string) for `string`
@@ -254,7 +257,6 @@ Le Truc provides several built-in parsers for common attribute types. See the [P
 {% /section %}
 
 {% section %}
-
 ## Selecting Elements
 
 Use the provided selector utilities to find descendant elements within your component:
@@ -321,7 +323,6 @@ Under the hood, a lazy `MutationObserver` watches for structural changes and inv
 {% /section %}
 
 {% section %}
-
 ## Adding Event Listeners
 
 Event listeners respond to user interactions. They are the main cause for changes in component state. Le Truc provides two approaches for handling events, each suited to different situations.
@@ -423,7 +424,6 @@ Use **`createEventsSensor()`** when you want to:
 {% /section %}
 
 {% section %}
-
 ## Synchronizing State with Effects
 
 Effects **automatically update the DOM** when signals change, avoiding manual DOM manipulation.
@@ -513,7 +513,7 @@ defineComponent(
 )
 ```
 
-{% callout class="tip" %}
+{% callout .tip %}
 **When to use**
 
 - **Use a signal key or a local signal** when the state is part of the component's public interface or internally reused.

@@ -1,48 +1,42 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / setStyle
-
-# Function: setStyle()
+### Function: setStyle()
 
 > **setStyle**\<`P`, `E`\>(`prop`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/style.ts:15](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/effects/style.ts#L15)
+Defined in: [src/effects/style.ts:15](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/effects/style.ts#L15)
 
 Effect for setting a CSS style property on an element.
 Sets the specified style property with support for deletion via UNSET.
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
 
-### E
+##### E
 
 `E` *extends* `HTMLElement` \| `SVGElement` \| `MathMLElement`
 
-## Parameters
+#### Parameters
 
-### prop
+##### prop
 
 `string`
 
 Name of the CSS style property to set
 
-### reactive?
+##### reactive?
 
 [`Reactive`](../type-aliases/Reactive.md)\<`string`, `P`, `E`\> = `...`
 
 Reactive value bound to the style property value (defaults to property name)
 
-## Returns
+#### Returns
 
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
 Effect function that sets the style property on the element
 
-## Since
+#### Since
 
 0.8.0

@@ -11,6 +11,7 @@ export default [
 			'index.dev.js',
 			'types/**/*.d.ts',
 			'docs/assets/**/*.js',
+			'server/typedoc-heading-shift.mjs',
 			'**/*.min.js',
 		],
 	},

@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { apiEffect } from './effects/api'
+import { apiPagesEffect } from './effects/api-pages'
 import { cssEffect } from './effects/css'
 import { examplesEffect } from './effects/examples'
 import { jsEffect } from './effects/js'
@@ -8,6 +9,7 @@ import { menuEffect } from './effects/menu'
 import { pagesEffect } from './effects/pages'
 import { serviceWorkerEffect } from './effects/service-worker'
 import { sitemapEffect } from './effects/sitemap'
+import { sourcesEffect } from './effects/sources'
 import { getFilePath } from './io'
 
 /**
@@ -61,6 +63,7 @@ export async function build(
 		console.log('🚀 Initializing effects...')
 
 		const apiCleanup = apiEffect()
+		const apiPagesCleanup = apiPagesEffect()
 		const cssCleanup = cssEffect()
 		const jsCleanup = jsEffect()
 		const serviceWorkerCleanup = serviceWorkerEffect()
@@ -75,14 +78,16 @@ export async function build(
 		const duration = performance.now() - startTime
 		console.log(`✅ Build completed in ${duration.toFixed(2)}ms`)
 
-		// Notify HMR clients of successful build
+		// Notify HMR clients of successful build and trigger reload
 		if (watch) {
 			notifyHMR('build-success')
+			hmrBroadcast?.('reload')
 		}
 
 		// Return cleanup function for graceful shutdown
 		return () => {
 			apiCleanup?.()
+			apiPagesCleanup?.()
 			cssCleanup?.()
 			jsCleanup?.()
 			serviceWorkerCleanup?.()

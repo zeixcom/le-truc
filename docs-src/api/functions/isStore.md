@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / isStore
-
-# Function: isStore()
+### Function: isStore()
 
 > **isStore**\<`T`\>(`value`): `value is Store<T>`
 
@@ -12,26 +6,26 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/store.d.ts:50
 
 Checks if a value is a Store signal.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `UnknownRecord`
 
-## Parameters
+#### Parameters
 
-### value
+##### value
 
 `unknown`
 
 The value to check
 
-## Returns
+#### Returns
 
 `value is Store<T>`
 
 True if the value is a Store
 
-## Since
+#### Since
 
 0.15.0

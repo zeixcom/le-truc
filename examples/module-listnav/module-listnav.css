@@ -1,0 +1,16 @@
+module-listnav {
+	display: grid;
+	grid-template-columns: 1fr 2fr;
+	gap: var(--space-xl);
+
+	module-lazyload {
+		h1,
+		h2,
+		h3,
+		h4,
+		h5,
+		h6 {
+			margin-top: 0;
+		}
+	}
+}

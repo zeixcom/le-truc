@@ -1,21 +1,15 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / asBoolean
-
-# Function: asBoolean()
+### Function: asBoolean()
 
 > **asBoolean**(): [`Parser`](../type-aliases/Parser.md)\<`boolean`, [`UI`](../type-aliases/UI.md)\>
 
-Defined in: [src/parsers/boolean.ts:11](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/parsers/boolean.ts#L11)
+Defined in: [src/parsers/boolean.ts:11](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/parsers/boolean.ts#L11)
 
 Parse a boolean attribute as an actual boolean value
 
-## Returns
+#### Returns
 
 [`Parser`](../type-aliases/Parser.md)\<`boolean`, [`UI`](../type-aliases/UI.md)\>
 
-## Since
+#### Since
 
 0.13.1

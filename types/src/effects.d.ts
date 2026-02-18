@@ -21,17 +21,6 @@ type ElementUpdater<E extends Element, T> = {
 };
 declare const RESET: any;
 /**
- * Run element effects
- *
- * @since 0.15.0
- * @param {U} host - Host component
- * @param {E} target - Target element
- * @param {ElementEffects<P, E>} effects - Effect functions to run
- * @returns {MaybeCleanup} - Cleanup function that runs collected cleanup functions
- * @throws {InvalidEffectsError} - If the effects are invalid
- */
-declare const runElementEffects: <P extends ComponentProps, E extends Element>(host: Component<P>, target: E, effects: ElementEffects<P, E>) => MaybeCleanup;
-/**
  * Run component effects
  *
  * @since 0.15.0
@@ -64,4 +53,4 @@ declare const resolveReactive: <T extends {}, P extends ComponentProps, E extend
  * @returns {Effect<P, E>} Effect function that manages the element property updates
  */
 declare const updateElement: <T extends {}, P extends ComponentProps, E extends Element>(reactive: Reactive<T, P, E>, updater: ElementUpdater<E, T>) => Effect<P, E>;
-export { type Effect, type Effects, type ElementEffects, type ElementUpdater, type Reactive, type UpdateOperation, runEffects, runElementEffects, resolveReactive, updateElement, RESET, };
+export { type Effect, type Effects, type ElementEffects, type ElementUpdater, type Reactive, type UpdateOperation, runEffects, resolveReactive, updateElement, RESET, };

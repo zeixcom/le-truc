@@ -1,65 +1,59 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / defineComponent
-
-# Function: defineComponent()
+### Function: defineComponent()
 
 > **defineComponent**\<`P`, `U`\>(`name`, `props?`, `select?`, `setup?`): [`Component`](../type-aliases/Component.md)\<`P`\>
 
-Defined in: [src/component.ts:81](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/component.ts#L81)
+Defined in: [src/component.ts:81](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/component.ts#L81)
 
 Define a component with dependency resolution and setup function (connectedCallback)
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
 
-### U
+##### U
 
 `U` *extends* [`UI`](../type-aliases/UI.md) = \{ \}
 
-## Parameters
+#### Parameters
 
-### name
+##### name
 
 `string`
 
 Custom element name
 
-### props?
+##### props?
 
 [`Initializers`](../type-aliases/Initializers.md)\<`P`, `U`\> = `...`
 
 Component properties
 
-### select?
+##### select?
 
 (`elementQueries`) => `U`
 
 Function to select UI elements
 
-### setup?
+##### setup?
 
 (`ui`) => [`Effects`](../type-aliases/Effects.md)\<`P`, [`ComponentUI`](../type-aliases/ComponentUI.md)\<`P`, `U`\>\>
 
 Setup function
 
-## Returns
+#### Returns
 
 [`Component`](../type-aliases/Component.md)\<`P`\>
 
-## Since
+#### Since
 
 0.15.0
 
-## Throws
+#### Throws
 
 If component name is invalid
 
-## Throws
+#### Throws
 
 If property name is invalid

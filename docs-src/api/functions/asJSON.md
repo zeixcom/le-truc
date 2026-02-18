@@ -1,49 +1,43 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / asJSON
-
-# Function: asJSON()
+### Function: asJSON()
 
 > **asJSON**\<`T`, `U`\>(`fallback`): [`Parser`](../type-aliases/Parser.md)\<`T`, `U`\>
 
-Defined in: [src/parsers/json.ts:14](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/parsers/json.ts#L14)
+Defined in: [src/parsers/json.ts:14](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/parsers/json.ts#L14)
 
 Parse a string as a JSON serialized object with a fallback
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
-### U
+##### U
 
 `U` *extends* [`UI`](../type-aliases/UI.md)
 
-## Parameters
+#### Parameters
 
-### fallback
+##### fallback
 
 [`Fallback`](../type-aliases/Fallback.md)\<`T`, `U`\>
 
 Fallback value or reader function
 
-## Returns
+#### Returns
 
 [`Parser`](../type-aliases/Parser.md)\<`T`, `U`\>
 
 Parser function
 
-## Since
+#### Since
 
 0.11.0
 
-## Throws
+#### Throws
 
 If the value and fallback are both null or undefined
 
-## Throws
+#### Throws
 
 If value is not a valid JSON string

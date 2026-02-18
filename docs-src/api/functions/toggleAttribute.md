@@ -1,48 +1,42 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / toggleAttribute
-
-# Function: toggleAttribute()
+### Function: toggleAttribute()
 
 > **toggleAttribute**\<`P`, `E`\>(`name`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/attribute.ts:66](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/effects/attribute.ts#L66)
+Defined in: [src/effects/attribute.ts:66](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/effects/attribute.ts#L66)
 
 Effect for toggling a boolean attribute on an element.
 When the reactive value is true, the attribute is present; when false, it's absent.
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
 
-### E
+##### E
 
 `E` *extends* `Element` = `HTMLElement`
 
-## Parameters
+#### Parameters
 
-### name
+##### name
 
 `string`
 
 Name of the attribute to toggle
 
-### reactive?
+##### reactive?
 
 [`Reactive`](../type-aliases/Reactive.md)\<`boolean`, `P`, `E`\> = `...`
 
 Reactive value bound to the attribute presence (defaults to attribute name)
 
-## Returns
+#### Returns
 
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
 Effect function that toggles the attribute on the element
 
-## Since
+#### Since
 
 0.8.0

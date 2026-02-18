@@ -1,37 +1,23 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / Signal
-
-# Type Alias: Signal\<T\>
+### Type Alias: Signal\<T\>
 
 > **Signal**\<`T`\> = `object`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:47
 
-Le Truc
+#### Type Parameters
 
-Version 0.16.0
-
-## Author
-
-Esther Brunner
-
-## Type Parameters
-
-### T
+##### T
 
 `T` *extends* `object`
 
-## Methods
+#### Methods
 
-### get()
+##### get()
 
 > **get**(): `T`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:48
 
-#### Returns
+###### Returns
 
 `T`

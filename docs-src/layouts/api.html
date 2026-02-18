@@ -29,7 +29,7 @@
 				<a href="#main" class="skiplink visually-hidden">
 					Skip to main content
 				</a>
-				<h1 class="content">Le Truc Docs <small>Version 0.15.0</small></h1>
+				<h1 class="content">Le Truc Docs <small>Version 0.16.1</small></h1>
 				{{ include 'menu.html' }}
 				<card-callout class="content danger" hidden>
 					<p class="error" role="alert" aria-live="assertive"></p>
@@ -40,8 +40,8 @@
 					<div class="content">
 						<nav class="api-breadcrumb" aria-label="Breadcrumb">
 							<a href="/api/">API</a> ›
-							<a href="/api/{{ api-category }}/">{{ api-category }}</a> ›
-							{{ api-name }}
+							<a href="/api/{{ api-category }}/">{{ api-category }}</a> › {{
+							api-name }}
 						</nav>
 						<h1 class="api-title">
 							{{ api-name }}
@@ -52,10 +52,8 @@
 			</div>
 			<main id="main" class="content-grid">
 				<div class="content api-content">
-					<div class="grid" style="grid-template-columns: 1fr 300px; gap: 2rem;">
-						<article></article>
-							{{ content }}
-						</article>
+					<div class="grid" style="grid-template-columns: 1fr 300px; gap: 2rem">
+						<article>{{ content }}</article>
 						<aside class="api-sidebar">
 							<nav class="api-nav" aria-label="Page contents">
 								<h3>On this page</h3>

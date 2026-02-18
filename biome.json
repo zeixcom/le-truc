@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.4.0/schema.json",
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
@@ -14,7 +14,9 @@
 			"!index.dev.js",
 			"!**/types/**/*",
 			"!**/docs/**/*",
-			"!**/test/components/main.js*"
+			"!**/test/components/main.js*",
+			"!**/server/typedoc-heading-shift.mjs",
+			"!**/docs-src/layouts/**/*"
 		]
 	},
 	"formatter": {

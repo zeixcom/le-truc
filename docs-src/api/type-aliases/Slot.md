@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / Slot
-
-# Type Alias: Slot\<T\>
+### Type Alias: Slot\<T\>
 
 > **Slot**\<`T`\> = `object`
 
@@ -18,17 +12,17 @@ The object shape is compatible with `Object.defineProperty()` descriptors:
 `get`, `set`, `configurable`, and `enumerable` are used by the property definition;
 `replace()` and `current()` are kept on the slot object for integration-layer control.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
 The type of value held by the delegated signal.
 
-## Properties
+#### Properties
 
-### \[toStringTag\]
+##### \[toStringTag\]
 
 > `readonly` **\[toStringTag\]**: `"Slot"`
 
@@ -36,7 +30,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:14
 
 ***
 
-### configurable
+##### configurable
 
 > **configurable**: `true`
 
@@ -46,7 +40,7 @@ Descriptor field: allows the property to be redefined or deleted.
 
 ***
 
-### enumerable
+##### enumerable
 
 > **enumerable**: `true`
 
@@ -54,9 +48,9 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:18
 
 Descriptor field: the property shows up during enumeration.
 
-## Methods
+#### Methods
 
-### current()
+##### current()
 
 > **current**(): [`Signal`](Signal.md)\<`T`\>
 
@@ -64,13 +58,13 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:26
 
 Returns the currently delegated signal.
 
-#### Returns
+###### Returns
 
 [`Signal`](Signal.md)\<`T`\>
 
 ***
 
-### get()
+##### get()
 
 > **get**(): `T`
 
@@ -78,13 +72,13 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:20
 
 Reads the current value from the delegated signal, tracking dependencies.
 
-#### Returns
+###### Returns
 
 `T`
 
 ***
 
-### replace()
+##### replace()
 
 > **replace**\<`U`\>(`next`): `void`
 
@@ -92,25 +86,25 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:24
 
 Swaps the backing signal, invalidating all downstream subscribers. Narrowing (`U extends T`) is allowed.
 
-#### Type Parameters
+###### Type Parameters
 
 ##### U
 
 `U` *extends* `object`
 
-#### Parameters
+###### Parameters
 
 ##### next
 
 [`Signal`](Signal.md)\<`U`\>
 
-#### Returns
+###### Returns
 
 `void`
 
 ***
 
-### set()
+##### set()
 
 > **set**(`next`): `void`
 
@@ -118,12 +112,12 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:22
 
 Writes a value to the delegated signal. Throws `ReadonlySignalError` if the delegated signal is read-only.
 
-#### Parameters
+###### Parameters
 
 ##### next
 
 `T`
 
-#### Returns
+###### Returns
 
 `void`

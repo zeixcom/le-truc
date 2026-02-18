@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / EffectCallback
-
-# Type Alias: EffectCallback()
+### Type Alias: EffectCallback()
 
 > **EffectCallback** = () => [`MaybeCleanup`](MaybeCleanup.md)
 
@@ -12,7 +6,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:112
 
 A callback function for effects that can perform side effects.
 
-## Returns
+#### Returns
 
 [`MaybeCleanup`](MaybeCleanup.md)
 

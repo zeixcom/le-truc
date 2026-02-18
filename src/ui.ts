@@ -168,6 +168,7 @@ function createElementsMemo<S extends string>(
 
 	return createMemo(() => Array.from(parent.querySelectorAll<E>(selector)), {
 		value: [],
+		equals: (a, b) => a.length === b.length && a.every((el, i) => el === b[i]),
 		watched: invalidate => {
 			const observerConfig: MutationObserverInit = {
 				childList: true,
@@ -178,7 +179,28 @@ function createElementsMemo<S extends string>(
 				observerConfig.attributes = true
 				observerConfig.attributeFilter = observedAttributes
 			}
-			const observer = new MutationObserver(() => invalidate())
+			const couldMatch = (node: Node) =>
+				node instanceof Element &&
+				(node.matches(selector) || node.querySelector(selector))
+
+			const maybeDirty = (mutation: MutationRecord) => {
+				if (mutation.type === 'attributes') return true
+				if (mutation.type === 'childList')
+					return (
+						Array.from(mutation.addedNodes).some(couldMatch) ||
+						Array.from(mutation.removedNodes).some(couldMatch)
+					)
+				return false
+			}
+
+			const observer = new MutationObserver(mutations => {
+				for (const mutation of mutations) {
+					if (maybeDirty(mutation)) {
+						invalidate()
+						return
+					}
+				}
+			})
 			observer.observe(parent, observerConfig)
 			return () => observer.disconnect()
 		},

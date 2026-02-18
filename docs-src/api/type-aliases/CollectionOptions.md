@@ -1,50 +1,36 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / CollectionOptions
-
-# Type Alias: CollectionOptions\<T\>
+### Type Alias: CollectionOptions\<T\>
 
 > **CollectionOptions**\<`T`\> = `object`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:24
 
-Le Truc
+#### Type Parameters
 
-Version 0.16.0
-
-## Author
-
-Esther Brunner
-
-## Type Parameters
-
-### T
+##### T
 
 `T` *extends* `object`
 
-## Properties
+#### Properties
 
-### createItem()?
+##### createItem()?
 
 > `optional` **createItem**: (`value`) => [`Signal`](Signal.md)\<`T`\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:27
 
-#### Parameters
+###### Parameters
 
 ##### value
 
 `T`
 
-#### Returns
+###### Returns
 
 [`Signal`](Signal.md)\<`T`\>
 
 ***
 
-### keyConfig?
+##### keyConfig?
 
 > `optional` **keyConfig**: `KeyConfig`\<`T`\>
 
@@ -52,7 +38,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:26
 
 ***
 
-### value?
+##### value?
 
 > `optional` **value**: `T`[]
 

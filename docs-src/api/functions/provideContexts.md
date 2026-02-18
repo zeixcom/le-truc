@@ -1,47 +1,41 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / provideContexts
-
-# Function: provideContexts()
+### Function: provideContexts()
 
 > **provideContexts**\<`P`\>(`contexts`): (`host`) => [`Cleanup`](../type-aliases/Cleanup.md)
 
-Defined in: [src/context.ts:105](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/context.ts#L105)
+Defined in: [src/context.ts:105](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/context.ts#L105)
 
 Provide a context for descendant component consumers
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
 
-## Parameters
+#### Parameters
 
-### contexts
+##### contexts
 
 keyof `P`[]
 
 Array of contexts to provide
 
-## Returns
+#### Returns
 
 Function to add an event listener for ContextRequestEvent returning a cleanup function to remove the event listener
 
 > (`host`): [`Cleanup`](../type-aliases/Cleanup.md)
 
-### Parameters
+##### Parameters
 
-#### host
+###### host
 
 [`Component`](../type-aliases/Component.md)\<`P`\>
 
-### Returns
+##### Returns
 
 [`Cleanup`](../type-aliases/Cleanup.md)
 
-## Since
+#### Since
 
 0.13.3

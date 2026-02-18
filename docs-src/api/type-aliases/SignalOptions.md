@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / SignalOptions
-
-# Type Alias: SignalOptions\<T\>
+### Type Alias: SignalOptions\<T\>
 
 > **SignalOptions**\<`T`\> = `object`
 
@@ -12,17 +6,17 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:60
 
 Options for configuring signal behavior.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
 The type of value in the signal
 
-## Properties
+#### Properties
 
-### equals()?
+##### equals()?
 
 > `optional` **equals**: (`a`, `b`) => `boolean`
 
@@ -32,7 +26,7 @@ Optional custom equality function.
 Used to determine if a new value is different from the old value.
 Defaults to reference equality (===).
 
-#### Parameters
+###### Parameters
 
 ##### a
 
@@ -42,15 +36,15 @@ Defaults to reference equality (===).
 
 `T`
 
-#### Returns
+###### Returns
 
 `boolean`
 
 ***
 
-### guard?
+##### guard?
 
-> `optional` **guard**: `Guard`\<`T`\>
+> `optional` **guard**: [`Guard`](Guard.md)\<`T`\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:65
 

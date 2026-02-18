@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / isList
-
-# Function: isList()
+### Function: isList()
 
 > **isList**\<`T`\>(`value`): `value is List<T>`
 
@@ -12,26 +6,26 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:65
 
 Checks if a value is a List signal.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
-## Parameters
+#### Parameters
 
-### value
+##### value
 
 `unknown`
 
 The value to check
 
-## Returns
+#### Returns
 
 `value is List<T>`
 
 True if the value is a List
 
-## Since
+#### Since
 
 0.15.0

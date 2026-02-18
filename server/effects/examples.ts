@@ -1,117 +1,172 @@
+import Markdoc from '@markdoc/markdoc'
 import { createEffect, match } from '@zeix/cause-effect'
 import { codeToHtml } from 'shiki'
-import { EXAMPLES_DIR } from '../config'
+import { COMPONENTS_DIR, CONTENT_MARKER, EXAMPLES_DIR } from '../config'
 import {
+	componentMarkdown,
 	componentMarkup,
-	componentScripts,
-	componentStyles,
 	type FileInfo,
 } from '../file-signals'
-import { writeFileSafe } from '../io'
-import { type PanelType, tabGroup } from '../templates/fragments'
+import { getFilePath, writeFileSafe } from '../io'
+import markdocConfig from '../markdoc.config'
 
-const highlightCode = async (content: string, type: string) =>
-	await codeToHtml(content, {
-		lang: type,
-		theme: 'monokai',
-	})
+/* === Internal Functions === */
 
-const generatePanels = async (
-	html: FileInfo,
-	css?: FileInfo,
-	ts?: FileInfo,
-) => {
-	const panels = [
-		{
-			type: 'html',
-			label: 'HTML',
-			filePath: html.path,
-			content: await highlightCode(html.content, 'html'),
-			selected: false,
-		},
-		css && {
-			type: 'css',
-			label: 'CSS',
-			filePath: css.path,
-			content: await highlightCode(css.content, 'css'),
-			selected: false,
-		},
-		ts && {
-			type: 'ts',
-			label: 'TypeScript',
-			filePath: ts.path,
-			content: await highlightCode(ts.content, 'typescript'),
-			selected: false,
-		},
-	].filter(Boolean) as PanelType[]
-
-	// Select the last panel by default (typically TypeScript)
-	panels[panels.length - 1].selected = true
-
-	return panels
-}
-
-// Build a path-keyed lookup from a FileInfo array
 const toPathMap = (files: FileInfo[]): Map<string, FileInfo> => {
 	const map = new Map<string, FileInfo>()
 	for (const file of files) map.set(file.path, file)
 	return map
 }
 
+const processExample = async (
+	componentName: string,
+	markdownContent: string,
+	componentHtml: string,
+): Promise<string> => {
+	// Replace {{ content }} placeholder with actual HTML wrapped in a fence block
+	const processedContent = markdownContent.replace(
+		CONTENT_MARKER,
+		`\`\`\`html\n${componentHtml}\n\`\`\``,
+	)
+
+	// Parse with Markdoc
+	const ast = Markdoc.parse(processedContent)
+
+	// Validate the document
+	const errors = Markdoc.validate(ast, markdocConfig)
+	if (errors.length > 0) {
+		console.warn(`Markdoc validation errors for ${componentName}:`, errors)
+	}
+
+	// Transform the AST
+	const transformed = Markdoc.transform(ast, markdocConfig)
+
+	// Render to HTML
+	let htmlContent = Markdoc.renderers.html(transformed)
+
+	// Remove automatic <article> wrapper added by Markdoc
+	htmlContent = htmlContent.replace(/^<article>([\s\S]*)<\/article>$/m, '$1')
+
+	// Process code blocks with syntax highlighting
+	const codeBlockRegex =
+		/<pre data-language="([^"]*)"><code class="language-[^"]*">([\s\S]*?)<\/code><\/pre>/g
+	let codeMatch: RegExpExecArray | null
+
+	while ((codeMatch = codeBlockRegex.exec(htmlContent)) !== null) {
+		const [fullMatch, lang, code] = codeMatch
+
+		const decodedCode = code
+			.replace(/&quot;/g, '"')
+			.replace(/&#39;/g, "'")
+			.replace(/&lt;/g, '<')
+			.replace(/&gt;/g, '>')
+			.replace(/&amp;/g, '&')
+
+		try {
+			const highlighted = await codeToHtml(decodedCode, {
+				lang: lang || 'text',
+				theme: 'monokai',
+			})
+
+			htmlContent = htmlContent.replace(fullMatch, highlighted)
+		} catch (error) {
+			console.warn(`Failed to highlight ${lang} code block:`, error)
+		}
+	}
+
+	// Process module-demo components with raw HTML
+	htmlContent = htmlContent.replace(
+		/<module-demo([^>]*) preview-html="([^"]*)"([^>]*)>([\s\S]*?)<\/module-demo>/g,
+		(_fullMatch, beforeAttrs, encodedHtml, afterAttrs, content) => {
+			const previewHtml = encodedHtml
+				.replace(/&quot;/g, '"')
+				.replace(/&#39;/g, "'")
+				.replace(/&lt;/g, '<')
+				.replace(/&gt;/g, '>')
+				.replace(/&amp;/g, '&')
+				.replace(/>\s{2,}</g, '><')
+				.replace(/\s{2,}/g, ' ')
+				.trim()
+
+			const previewDiv = `<div class="preview">${previewHtml}</div>`
+			return `<module-demo${beforeAttrs}${afterAttrs}>${previewDiv}${content}</module-demo>`
+		},
+	)
+
+	return htmlContent
+}
+
+/* === Exported Effect === */
+
 export const examplesEffect = () =>
 	createEffect(() => {
-		match(
-			[
-				componentMarkup.sources,
-				componentStyles.sources,
-				componentScripts.sources,
-			],
-			{
-				ok: async ([htmlFiles, cssFiles, tsFiles]) => {
-					try {
-						console.log('🔄 Rebuilding example fragments...')
+		match([componentMarkdown.sources, componentMarkup.sources], {
+			ok: async ([mdFiles, htmlFiles]) => {
+				try {
+					console.log('🔄 Rebuilding example documentation...')
 
-						const cssMap = toPathMap(cssFiles)
-						const tsMap = toPathMap(tsFiles)
+					const htmlMap = toPathMap(htmlFiles)
 
-						for (const html of htmlFiles) {
-							// Only process main component HTML files (examples/component-name/component-name.html)
-							// Skip test files and other auxiliary HTML files
-							const pathParts = html.path.split('/')
+					for (const md of mdFiles) {
+						const pathParts = md.path.split('/')
 
-							if (pathParts.length < 3) {
-								continue // Skip files not in component directories
-							}
+						if (pathParts.length < 3) continue
 
-							const componentName = pathParts[pathParts.length - 2] // Get directory name
-							const fileName = pathParts[pathParts.length - 1].replace(
-								/\.html$/,
-								'',
-							) // Get file name without extension
+						const componentName = pathParts[pathParts.length - 2]
+						const fileName = pathParts[pathParts.length - 1].replace(
+							/\.md$/,
+							'',
+						)
 
-							// Skip if filename doesn't match component directory name
-							if (componentName !== fileName) {
-								continue
-							}
+						// Only process markdown files that match their directory name
+						if (componentName !== fileName) continue
 
-							const name = html.path.replace(/\.html$/, '')
-							const css = cssMap.get(name + '.css')
-							const ts = tsMap.get(name + '.ts')
+						// Find corresponding HTML file
+						const htmlPath = getFilePath(
+							COMPONENTS_DIR,
+							componentName,
+							`${componentName}.html`,
+						)
+						const htmlFile = htmlMap.get(htmlPath)
 
-							const panels = await generatePanels(html, css, ts)
-							const outputPath = `${EXAMPLES_DIR}/${componentName}.html`
-							await writeFileSafe(outputPath, tabGroup(componentName, panels))
+						if (!htmlFile) {
+							console.warn(`No HTML file found for component: ${componentName}`)
+							continue
 						}
 
-						console.log('Example fragments successfully rebuilt')
-						return
-					} catch (error) {
-						console.error('Example fragments failed to rebuild:', String(error))
+						try {
+							const htmlContent = await processExample(
+								componentName,
+								md.content,
+								htmlFile.content,
+							)
+
+							const outputPath = getFilePath(
+								EXAMPLES_DIR,
+								`${componentName}.html`,
+							)
+							const success = await writeFileSafe(outputPath, htmlContent)
+
+							if (success) {
+								console.log(`✅ Generated examples/${componentName}.html`)
+							} else {
+								console.error(`❌ Failed to write ${outputPath}`)
+							}
+						} catch (error) {
+							console.error(
+								`Failed to process example ${componentName}:`,
+								error,
+							)
+						}
 					}
-				},
-				err: errors => {
-					console.error('Error in examples effect:', errors[0].message)
-				},
+
+					console.log('📝 Examples processing completed')
+				} catch (error) {
+					console.error('Failed to process examples:', error)
+				}
 			},
-		)
+			err: errors => {
+				console.error('Error in examples effect:', errors[0].message)
+			},
+		})
 	})

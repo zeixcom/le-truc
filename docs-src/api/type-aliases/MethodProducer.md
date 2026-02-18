@@ -1,31 +1,25 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / MethodProducer
-
-# Type Alias: MethodProducer()\<P, U\>
+### Type Alias: MethodProducer()\<P, U\>
 
 > **MethodProducer**\<`P`, `U`\> = (`ui`) => `void`
 
-Defined in: [src/component.ts:49](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/component.ts#L49)
+Defined in: [src/component.ts:49](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/component.ts#L49)
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](ComponentProps.md)
 
-### U
+##### U
 
 `U` *extends* [`UI`](UI.md)
 
-## Parameters
+#### Parameters
 
-### ui
+##### ui
 
 `U` & `object`
 
-## Returns
+#### Returns
 
 `void`

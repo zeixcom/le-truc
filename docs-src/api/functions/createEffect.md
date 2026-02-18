@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / createEffect
-
-# Function: createEffect()
+### Function: createEffect()
 
 > **createEffect**(`fn`): [`Cleanup`](../type-aliases/Cleanup.md)
 
@@ -14,25 +8,25 @@ Creates a reactive effect that automatically runs when its dependencies change.
 Effects run immediately upon creation and re-run when any tracked signal changes.
 Effects are executed during the flush phase, after all updates have been batched.
 
-## Parameters
+#### Parameters
 
-### fn
+##### fn
 
 [`EffectCallback`](../type-aliases/EffectCallback.md)
 
 The effect function that can track dependencies and register cleanup callbacks
 
-## Returns
+#### Returns
 
 [`Cleanup`](../type-aliases/Cleanup.md)
 
 A cleanup function that can be called to dispose of the effect
 
-## Since
+#### Since
 
 0.1.0
 
-## Examples
+#### Examples
 
 ```ts
 const count = createState(0);

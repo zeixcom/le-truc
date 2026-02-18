@@ -1,21 +1,15 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / Fallback
-
-# Type Alias: Fallback\<T, U\>
+### Type Alias: Fallback\<T, U\>
 
 > **Fallback**\<`T`, `U`\> = `T` \| [`Reader`](Reader.md)\<`T`, `U`\>
 
-Defined in: [src/parsers.ts:17](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/parsers.ts#L17)
+Defined in: [src/parsers.ts:17](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/parsers.ts#L17)
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
-### U
+##### U
 
 `U` *extends* [`UI`](UI.md)

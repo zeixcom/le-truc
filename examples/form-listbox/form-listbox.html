@@ -33,10 +33,20 @@
 	</form-listbox>
 </form>
 
-<!-- Declarative inline HTML example with groups -->
+<!-- Declarative inline HTML example with groups and filter -->
 <form>
 	<form-listbox id="fruits">
 		<input type="hidden" name="fruit" />
+		<label for="fruits-filter" class="visually-hidden">Filter fruits</label>
+		<div class="input">
+			<input
+				type="text"
+				id="fruits-filter"
+				class="filter"
+				placeholder="Filter fruits"
+			/>
+			<button type="button" class="clear" aria-label="Clear filter">✕</button>
+		</div>
 		<div role="listbox" aria-label="Fruits">
 			<div role="group" aria-labelledby="fruits-citrus">
 				<div role="presentation" id="fruits-citrus">Citrus</div>

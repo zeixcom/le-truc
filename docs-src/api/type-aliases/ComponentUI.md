@@ -1,27 +1,21 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / ComponentUI
-
-# Type Alias: ComponentUI\<P, U\>
+### Type Alias: ComponentUI\<P, U\>
 
 > **ComponentUI**\<`P`, `U`\> = `U` & `object`
 
-Defined in: [src/component.ts:41](https://github.com/zeixcom/le-truc/blob/755557440db1d4332483c0516277bf183e3ff944/src/component.ts#L41)
+Defined in: [src/component.ts:41](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/component.ts#L41)
 
-## Type Declaration
+#### Type Declaration
 
-### host
+##### host
 
 > **host**: [`Component`](Component.md)\<`P`\>
 
-## Type Parameters
+#### Type Parameters
 
-### P
+##### P
 
 `P` *extends* [`ComponentProps`](ComponentProps.md)
 
-### U
+##### U
 
 `U` *extends* [`UI`](UI.md)

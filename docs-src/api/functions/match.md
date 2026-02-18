@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / match
-
-# Function: match()
+### Function: match()
 
 > **match**\<`T`\>(`signals`, `handlers`): [`MaybeCleanup`](../type-aliases/MaybeCleanup.md)
 
@@ -13,30 +7,30 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:47
 Runs handlers based on the current values of signals.
 Must be called within an active owner (effect or scope) so async cleanup can be registered.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* readonly [`Signal`](../type-aliases/Signal.md)\<\{ \}\>[]
 
-## Parameters
+#### Parameters
 
-### signals
+##### signals
 
 readonly \[`T`\]
 
-### handlers
+##### handlers
 
 [`MatchHandlers`](../type-aliases/MatchHandlers.md)\<`T`\>
 
-## Returns
+#### Returns
 
 [`MaybeCleanup`](../type-aliases/MaybeCleanup.md)
 
-## Since
+#### Since
 
 0.15.0
 
-## Throws
+#### Throws
 
 RequiredOwnerError If called without an active owner.

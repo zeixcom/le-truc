@@ -1,20 +1,6 @@
-[**@zeix/le-truc**](../README.md)
+### Function: createTask()
 
-***
-
-[@zeix/le-truc](../globals.md) / createTask
-
-# Function: createTask()
-
-Le Truc
-
-Version 0.16.0
-
-## Author
-
-Esther Brunner
-
-## Call Signature
+#### Call Signature
 
 > **createTask**\<`T`\>(`fn`, `options`): [`Task`](../type-aliases/Task.md)\<`T`\>
 
@@ -24,39 +10,39 @@ Creates an asynchronous reactive computation (colorless async).
 The computation automatically tracks dependencies and re-executes when they change.
 Provides abort semantics - in-flight computations are aborted when dependencies change.
 
-### Type Parameters
+##### Type Parameters
 
-#### T
+###### T
 
 `T` *extends* `object`
 
 The type of value resolved by the task
 
-### Parameters
+##### Parameters
 
-#### fn
+###### fn
 
 (`prev`, `signal`) => `Promise`\<`T`\>
 
 The async computation function that receives the previous value and an AbortSignal
 
-#### options
+###### options
 
 [`SignalOptions`](../type-aliases/SignalOptions.md)\<`T`\> & `object` & `object`
 
 Optional configuration for the task
 
-### Returns
+##### Returns
 
 [`Task`](../type-aliases/Task.md)\<`T`\>
 
 A Task object with get(), isPending(), and abort() methods
 
-### Since
+##### Since
 
 0.18.0
 
-### Examples
+##### Examples
 
 ```ts
 const userId = createState(1);
@@ -76,7 +62,7 @@ if (user.isPending()) {
 }
 ```
 
-## Call Signature
+#### Call Signature
 
 > **createTask**\<`T`\>(`fn`, `options?`): [`Task`](../type-aliases/Task.md)\<`T`\>
 
@@ -86,39 +72,39 @@ Creates an asynchronous reactive computation (colorless async).
 The computation automatically tracks dependencies and re-executes when they change.
 Provides abort semantics - in-flight computations are aborted when dependencies change.
 
-### Type Parameters
+##### Type Parameters
 
-#### T
+###### T
 
 `T` *extends* `object`
 
 The type of value resolved by the task
 
-### Parameters
+##### Parameters
 
-#### fn
+###### fn
 
 [`TaskCallback`](../type-aliases/TaskCallback.md)\<`T`\>
 
 The async computation function that receives the previous value and an AbortSignal
 
-#### options?
+###### options?
 
 [`ComputedOptions`](../type-aliases/ComputedOptions.md)\<`T`\>
 
 Optional configuration for the task
 
-### Returns
+##### Returns
 
 [`Task`](../type-aliases/Task.md)\<`T`\>
 
 A Task object with get(), isPending(), and abort() methods
 
-### Since
+##### Since
 
 0.18.0
 
-### Examples
+##### Examples
 
 ```ts
 const userId = createState(1);

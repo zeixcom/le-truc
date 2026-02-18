@@ -1,7 +1,9 @@
 import {
 	asString,
 	type Component,
+	createEffect,
 	createElementsMemo,
+	createMemo,
 	createTask,
 	dangerouslySetInnerHTML,
 	defineComponent,
@@ -48,6 +50,8 @@ export type FormListboxProps = {
 
 type FormListboxUI = {
 	input: HTMLInputElement
+	filter?: HTMLInputElement
+	clear?: HTMLButtonElement
 	callout?: HTMLElement
 	loading?: HTMLElement
 	error?: HTMLElement
@@ -72,6 +76,8 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 	},
 	({ first, all }) => ({
 		input: first('input[type="hidden"]', 'Needed to store the selected value.'),
+		filter: first('input.filter'),
+		clear: first('button.clear'),
 		callout: first('card-callout'),
 		loading: first('.loading'),
 		error: first('.error'),
@@ -147,13 +153,23 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 			},
 			{ value: { ok: false, value: '', error: '', pending: true } },
 		)
-		const isSelected = (target: HTMLButtonElement) =>
-			host.value === target.value
+
+		const lowerFilter = createMemo(() => host.filter.toLowerCase())
+
 		const hasError = () => (host.src ? !!html.get().error : false)
 
 		return {
 			host: setAttribute('value'),
 			input: setProperty('value'),
+			filter: on('input', () => {
+				host.filter = ui.filter?.value ?? ''
+			}),
+			clear: [
+				show(() => !!lowerFilter.get()),
+				on('click', () => {
+					host.filter = ''
+				}),
+			],
 			callout: [
 				show(() => (host.src ? !html.get().ok : false)),
 				toggleClass('danger', hasError),
@@ -186,17 +202,22 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 				...maybeRender(),
 			],
 			options: [
-				setProperty('tabIndex', target => (isSelected(target) ? 0 : -1)),
-				show(target =>
-					target.textContent
-						?.trim()
-						.toLowerCase()
-						.includes(host.filter.toLowerCase()),
-				),
-				dangerouslySetInnerHTML(target =>
-					highlightMatch(target.textContent ?? '', host.filter),
-				),
-				setProperty('ariaSelected', target => String(isSelected(target))),
+				(_host, target) =>
+					createEffect(() => {
+						const textContent = target.textContent
+						const filterText = lowerFilter.get()
+						target.hidden = !textContent
+							?.trim()
+							.toLowerCase()
+							.includes(filterText)
+						target.innerHTML = highlightMatch(textContent, filterText)
+					}),
+				(_host, target) =>
+					createEffect(() => {
+						const isSelected = host.value === target.value
+						target.tabIndex = isSelected ? 0 : -1
+						target.ariaSelected = String(isSelected)
+					}),
 			],
 		}
 	},

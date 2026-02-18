@@ -1,6 +1,7 @@
 import {
 	type Cleanup,
 	createEffect,
+	createScope,
 	isFunction,
 	isMemo,
 	isRecord,
@@ -77,86 +78,6 @@ const getUpdateDescription = (
 /* === Exported Functions === */
 
 /**
- * Run element effects
- *
- * @since 0.15.0
- * @param {U} host - Host component
- * @param {E} target - Target element
- * @param {ElementEffects<P, E>} effects - Effect functions to run
- * @returns {MaybeCleanup} - Cleanup function that runs collected cleanup functions
- * @throws {InvalidEffectsError} - If the effects are invalid
- */
-const runElementEffects = <P extends ComponentProps, E extends Element>(
-	host: Component<P>,
-	target: E,
-	effects: ElementEffects<P, E>,
-): MaybeCleanup => {
-	const cleanups: Cleanup[] = []
-
-	const run = (fn: Effect<P, E>) => {
-		const cleanup = fn(host, target)
-		if (cleanup) cleanups.push(cleanup)
-	}
-
-	if (Array.isArray(effects)) for (const fn of effects) run(fn)
-	else run(effects)
-
-	return () => {
-		cleanups.forEach(cleanup => cleanup())
-		cleanups.length = 0
-	}
-}
-
-/**
- * Run effects for dynamic collection of elements matching a selector
- *
- * @since 0.16.0
- * @param {Component<P>} host - Host component
- * @param {Memo<E[]>} elements - Elements for selector
- * @param {ElementEffects<P, E>} effects - Element effects
- * @returns {Cleanup} - Cleanup function that runs collected cleanup functions
- * @throws {InvalidEffectsError} - If the effects are invalid
- */
-const runElementsEffects = <P extends ComponentProps, E extends Element>(
-	host: Component<P>,
-	elements: Memo<E[]>,
-	effects: ElementEffects<P, E>,
-): Cleanup => {
-	const cleanups: Map<E, Cleanup> = new Map()
-
-	const attach = (targets: readonly E[]) => {
-		for (const target of targets) {
-			const cleanup = runElementEffects(host, target, effects)
-			if (cleanup) cleanups.set(target, cleanup)
-		}
-	}
-	const detach = (targets: readonly E[]) => {
-		for (const target of targets) {
-			cleanups.get(target)?.()
-			cleanups.delete(target)
-		}
-	}
-
-	const dispose = createEffect(() => {
-		const next = new Set(elements.get())
-		const added: E[] = []
-		const removed: E[] = []
-
-		for (const target of next) if (!cleanups.has(target)) added.push(target)
-		for (const target of cleanups.keys())
-			if (!next.has(target)) removed.push(target)
-
-		attach(added)
-		detach(removed)
-	})
-	return () => {
-		for (const cleanup of cleanups.values()) cleanup()
-		cleanups.clear()
-		dispose()
-	}
-}
-
-/**
  * Run component effects
  *
  * @since 0.15.0
@@ -174,28 +95,23 @@ const runEffects = <
 ): Cleanup => {
 	if (!isRecord(effects)) throw new InvalidEffectsError(ui.host)
 
-	const cleanups: Cleanup[] = []
-	const keys = Object.keys(effects)
-	for (const key of keys) {
-		const k = key as keyof U
-		if (!effects[k]) continue
+	return createScope(() => {
+		for (const key of Object.keys(effects)) {
+			const k = key as keyof U
+			if (!effects[k]) continue
 
-		const elementEffects = Array.isArray(effects[k]) ? effects[k] : [effects[k]]
-		if (isMemo<ElementFromKey<U, typeof k>[]>(ui[k])) {
-			cleanups.push(runElementsEffects(ui.host, ui[k], elementEffects))
-		} else if (ui[k]) {
-			const cleanup = runElementEffects(
-				ui.host,
-				ui[k] as ElementFromKey<U, typeof k>,
-				elementEffects,
-			)
-			if (cleanup) cleanups.push(cleanup)
+			const fns = Array.isArray(effects[k]) ? effects[k] : [effects[k]]
+			if (isMemo<ElementFromKey<U, typeof k>[]>(ui[k])) {
+				createEffect(() => {
+					for (const target of (ui[k] as Memo<Element[]>).get())
+						for (const fn of fns)
+							fn(ui.host, target as ElementFromKey<U, typeof k>)
+				})
+			} else if (ui[k]) {
+				for (const fn of fns) fn(ui.host, ui[k] as ElementFromKey<U, typeof k>)
+			}
 		}
-	}
-	return () => {
-		for (const cleanup of cleanups) cleanup()
-		cleanups.length = 0
-	}
+	})
 }
 
 /**
@@ -320,7 +236,6 @@ export {
 	type Reactive,
 	type UpdateOperation,
 	runEffects,
-	runElementEffects,
 	resolveReactive,
 	updateElement,
 	RESET,

@@ -1,10 +1,4 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / isCollection
-
-# Function: isCollection()
+### Function: isCollection()
 
 > **isCollection**\<`T`\>(`value`): `value is Collection<T>`
 
@@ -12,26 +6,26 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:60
 
 Checks if a value is a Collection signal.
 
-## Type Parameters
+#### Type Parameters
 
-### T
+##### T
 
 `T` *extends* `object`
 
-## Parameters
+#### Parameters
 
-### value
+##### value
 
 `unknown`
 
 The value to check
 
-## Returns
+#### Returns
 
 `value is Collection<T>`
 
 True if the value is a Collection
 
-## Since
+#### Since
 
 0.17.2

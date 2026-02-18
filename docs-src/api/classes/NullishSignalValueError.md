@@ -1,22 +1,16 @@
-[**@zeix/le-truc**](../README.md)
-
-***
-
-[@zeix/le-truc](../globals.md) / NullishSignalValueError
-
-# Class: NullishSignalValueError
+### Class: NullishSignalValueError
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:24
 
 Error thrown when a signal value is null or undefined.
 
-## Extends
+#### Extends
 
 - `TypeError`
 
-## Constructors
+#### Constructors
 
-### Constructor
+##### Constructor
 
 > **new NullishSignalValueError**(`where`): `NullishSignalValueError`
 
@@ -24,7 +18,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:30
 
 Constructs a new NullishSignalValueError.
 
-#### Parameters
+###### Parameters
 
 ##### where
 
@@ -32,17 +26,17 @@ Constructs a new NullishSignalValueError.
 
 The location where the error occurred.
 
-#### Returns
+###### Returns
 
 `NullishSignalValueError`
 
-#### Overrides
+###### Overrides
 
 `TypeError.constructor`
 
-## Properties
+#### Properties
 
-### cause?
+##### cause?
 
 > `optional` **cause**: `unknown`
 
@@ -50,49 +44,49 @@ Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:26
 
 The cause of the error.
 
-#### Inherited from
+###### Inherited from
 
 `TypeError.cause`
 
 ***
 
-### message
+##### message
 
 > **message**: `string`
 
 Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
 
-#### Inherited from
+###### Inherited from
 
 `TypeError.message`
 
 ***
 
-### name
+##### name
 
 > **name**: `string`
 
 Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1076
 
-#### Inherited from
+###### Inherited from
 
 `TypeError.name`
 
 ***
 
-### stack?
+##### stack?
 
 > `optional` **stack**: `string`
 
 Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
 
-#### Inherited from
+###### Inherited from
 
 `TypeError.stack`
 
 ***
 
-### stackTraceLimit
+##### stackTraceLimit
 
 > `static` **stackTraceLimit**: `number`
 
@@ -108,15 +102,15 @@ will affect any stack trace captured _after_ the value has been changed.
 If set to a non-number value, or set to a negative number, stack traces will
 not capture any frames.
 
-#### Inherited from
+###### Inherited from
 
 `TypeError.stackTraceLimit`
 
-## Methods
+#### Methods
 
-### captureStackTrace()
+##### captureStackTrace()
 
-#### Call Signature
+###### Call Signature
 
 > `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
 
@@ -184,7 +178,7 @@ a();
 
 `TypeError.captureStackTrace`
 
-#### Call Signature
+###### Call Signature
 
 > `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
 
@@ -212,9 +206,9 @@ Create .stack property on a target object
 
 ***
 
-### isError()
+##### isError()
 
-#### Call Signature
+###### Call Signature
 
 > `static` **isError**(`error`): `error is Error`
 
@@ -236,7 +230,7 @@ Indicates whether the argument provided is a built-in Error instance or not.
 
 `TypeError.isError`
 
-#### Call Signature
+###### Call Signature
 
 > `static` **isError**(`value`): `value is Error`
 
@@ -264,13 +258,13 @@ True if the value is an instance of Error, false otherwise
 
 ***
 
-### prepareStackTrace()
+##### prepareStackTrace()
 
 > `static` **prepareStackTrace**(`err`, `stackTraces`): `any`
 
 Defined in: node\_modules/@types/node/globals.d.ts:56
 
-#### Parameters
+###### Parameters
 
 ##### err
 
@@ -280,14 +274,14 @@ Defined in: node\_modules/@types/node/globals.d.ts:56
 
 `CallSite`[]
 
-#### Returns
+###### Returns
 
 `any`
 
-#### See
+###### See
 
 https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
-#### Inherited from
+###### Inherited from
 
 `TypeError.prepareStackTrace`
