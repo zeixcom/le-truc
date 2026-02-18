@@ -51,8 +51,9 @@ const sortCategories = (categories: ApiCategory[]): ApiCategory[] => {
 }
 
 /**
- * Parse globals.md to extract grouped API entries.
- * TypeDoc generates sections like "## Classes", "## Functions" etc.
+ * Parse README.md to extract grouped API entries.
+ * TypeDoc generates sections like "#### Classes", "#### Functions" etc.
+ * (Note: Headings are H4 because our heading shift plugin converts H2 → H4)
  * Each entry is a markdown link: `- [Name](category/Name.md)`
  */
 const parseGlobals = (content: string): ApiCategory[] => {
@@ -60,8 +61,9 @@ const parseGlobals = (content: string): ApiCategory[] => {
 	let current: ApiCategory | null = null
 
 	for (const line of content.split('\n')) {
-		// Match category headings: ## Classes, ## Functions, etc.
-		const headingMatch = line.match(/^##\s+(.+)$/)
+		// Match category headings: #### Classes, #### Functions, etc.
+		// (H4 because our heading shift plugin converts H2 → H4)
+		const headingMatch = line.match(/^####\s+(.+)$/)
 		if (headingMatch) {
 			current = {
 				name: headingMatch[1].trim(),
@@ -95,13 +97,16 @@ const parseGlobals = (content: string): ApiCategory[] => {
  * Models the structure on docs-src/pages/examples.md.
  */
 const generateApiIndexMarkdown = (categories: ApiCategory[]): string => {
+	const defaultSelection = 'defineComponent'
+
 	const listItems = categories
 		.map(category => {
 			const items = category.entries
-				.map(
-					entry =>
-						`  - [${entry.name}](/api/${category.slug}/${entry.slug}.html)`,
-				)
+				.map(entry => {
+					const isDefault = entry.slug === defaultSelection
+					const selectedAttr = isDefault ? ' selected' : ''
+					return `  - [${entry.name}](./api/${category.slug}/${entry.slug}.html)${selectedAttr}`
+				})
 				.join('\n')
 			return `- ${category.name}\n${items}`
 		})
@@ -189,10 +194,11 @@ export const apiEffect = () =>
 					console.log('📚 API documentation rebuilt successfully')
 
 					// Generate listnav-compatible API index page
-					const globalsPath = getFilePath(API_DIR, 'globals.md')
-					if (fileExists(globalsPath)) {
-						const globalsContent = await getFileContent(globalsPath)
-						const categories = parseGlobals(globalsContent)
+					// TypeDoc 0.28+ uses README.md instead of globals.md
+					const readmePath = getFilePath(API_DIR, 'README.md')
+					if (fileExists(readmePath)) {
+						const readmeContent = await getFileContent(readmePath)
+						const categories = parseGlobals(readmeContent)
 
 						if (categories.length > 0) {
 							const apiIndexMd = generateApiIndexMarkdown(categories)
@@ -201,11 +207,11 @@ export const apiEffect = () =>
 								`📖 Generated API index with ${categories.length} categories`,
 							)
 						} else {
-							console.warn('⚠️ No API categories found in globals.md')
+							console.warn('⚠️ No API categories found in README.md')
 						}
 					} else {
 						console.warn(
-							'⚠️ globals.md not found, skipping API index generation',
+							'⚠️ README.md not found, skipping API index generation',
 						)
 					}
 				} catch (error) {

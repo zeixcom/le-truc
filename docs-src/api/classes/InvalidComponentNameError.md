@@ -1,6 +1,6 @@
 ### Class: InvalidComponentNameError
 
-Defined in: [src/errors.ts:11](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/errors.ts#L11)
+Defined in: [src/errors.ts:11](https://github.com/zeixcom/le-truc/blob/9899f5d34ea29fc1973736236835ba462d0ed87a/src/errors.ts#L11)
 
 Error thrown when component name violates rules for custom element names
 
@@ -18,7 +18,7 @@ Error thrown when component name violates rules for custom element names
 
 > **new InvalidComponentNameError**(`component`): `InvalidComponentNameError`
 
-Defined in: [src/errors.ts:15](https://github.com/zeixcom/le-truc/blob/e24d2793804f24d536ad713492cc94d3689bbbde/src/errors.ts#L15)
+Defined in: [src/errors.ts:15](https://github.com/zeixcom/le-truc/blob/9899f5d34ea29fc1973736236835ba462d0ed87a/src/errors.ts#L15)
 
 ###### Parameters
 
