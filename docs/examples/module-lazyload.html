@@ -1,289 +1,32 @@
-<module-tabgroup>
-		<div role="tablist">
-		<button
-		type="button"
-		role="tab"
-		id="trigger_module-lazyload_html"
-		aria-controls="panel_module-lazyload_html"
-		aria-selected="false"
-		tabindex="-1"
-	>
-		HTML
-	</button><button
-		type="button"
-		role="tab"
-		id="trigger_module-lazyload_ts"
-		aria-controls="panel_module-lazyload_ts"
-		aria-selected="true"
-		tabindex="0"
-	>
-		TypeScript
-	</button>
-	</div> <div
-		role="tabpanel"
-		id="panel_module-lazyload_html"
-		aria-labelledby="trigger_module-lazyload_html"
-		 hidden
-	>
-		<module-codeblock
-			language="html"
-			copy-success="Copied!"
-			copy-error="Error trying to copy to clipboard!"
-		>
-			<p class="meta">
-				<span class="file">module-lazyload.html</span>
-				<span class="language">html</span>
-			</p>
-			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#88846F">&#x3C;!-- Default example - tests basic loading functionality --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span><span style="color:#A6E22E"> src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/simple-text.html"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">&#x3C;!-- Complex content test - tests loading of components and styles --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
-<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"complex-content-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/with-styles.html"</span></span>
-<span class="line"><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading styled content...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">&#x3C;!-- Nested components test - tests initialization of nested custom components --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
-<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"nested-components-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/nested-components.html"</span></span>
-<span class="line"><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading nested components...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">&#x3C;!-- Empty content test - tests handling of empty/whitespace responses --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
-<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"empty-content-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/empty.html"</span></span>
-<span class="line"><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading empty content...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">&#x3C;!-- Original complex snippet test - tests the existing shake-hands component --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
-<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"original-snippet-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/snippet.html"</span></span>
-<span class="line"><span style="color:#A6E22E">	allow-scripts</span></span>
-<span class="line"><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">template</span><span style="color:#A6E22E"> shadowrootmode</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"open"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading shake-hands...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">slot</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">slot</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">template</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">&#x3C;!-- Invalid URL test - tests error handling for malformed URLs --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"invalid-url-test"</span><span style="color:#A6E22E"> src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"not-a-valid-url"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading invalid URL...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">&#x3C;!-- 404 error test - tests error handling for missing files --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
-<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"not-found-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/does-not-exist.html"</span></span>
-<span class="line"><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading non-existent file...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">&#x3C;!-- Cross-origin URL test - tests error handling for cross-origin requests --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"cross-origin-test"</span><span style="color:#A6E22E"> src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"https://example.com/test.html"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading cross-origin...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">&#x3C;!-- No src attribute test - tests handling when src is missing --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"no-src-test"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading without src...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">&#x3C;!-- Dynamic src test - tests programmatic src changes --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"dynamic-src-test"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading dynamic src...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">&#x3C;!-- Missing elements test - tests graceful handling when required elements are missing --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
-<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"missing-elements-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/simple-text.html"</span></span>
-<span class="line"><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#88846F">	&#x3C;!-- No card-callout wrapper --></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading without wrapper...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">&#x3C;!-- Recursive loading test - tests prevention of recursive loading --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
-<span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"recursive-test"</span></span>
-<span class="line"><span style="color:#A6E22E">	src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/recursive.html"</span></span>
-<span class="line"><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading recursive content...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span></code></pre>
-			<basic-button class="copy">
-				<button type="button" class="secondary small">
-					<span class="label">Copy</span>
-				</button>
-			</basic-button>
-		</module-codeblock>
-	</div>
-<div
-		role="tabpanel"
-		id="panel_module-lazyload_ts"
-		aria-labelledby="trigger_module-lazyload_ts"
-		
-	>
-		<module-codeblock
-			language="ts"
-			copy-success="Copied!"
-			copy-error="Error trying to copy to clipboard!"
-		>
-			<p class="meta">
-				<span class="file">module-lazyload.ts</span>
-				<span class="language">ts</span>
-			</p>
-			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">	asString,</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
-<span class="line"><span style="color:#F8F8F2">	createTask,</span></span>
-<span class="line"><span style="color:#F8F8F2">	dangerouslySetInnerHTML,</span></span>
-<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
-<span class="line"><span style="color:#F8F8F2">	setText,</span></span>
-<span class="line"><span style="color:#F8F8F2">	show,</span></span>
-<span class="line"><span style="color:#F8F8F2">	toggleClass,</span></span>
-<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { fetchWithCache, isRecursiveURL, isValidURL } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/fetch'</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleLazyloadProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">	src</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
-<span class="line"><span style="color:#F8F8F2">}</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleLazyloadUI</span><span style="color:#F92672"> =</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Record</span><span style="color:#F8F8F2">&#x3C;</span></span>
-<span class="line"><span style="color:#E6DB74">	'callout'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'loading'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'error'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'content'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span>	</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
-<span class="line"><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#E6DB74">		'module-lazyload'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleLazyloadProps</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	}</span></span>
-<span class="line"><span style="color:#F8F8F2">}</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleLazyloadProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">ModuleLazyloadUI</span><span style="color:#F8F8F2">>(</span></span>
-<span class="line"><span style="color:#E6DB74">	'module-lazyload'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	{</span></span>
-<span class="line"><span style="color:#F8F8F2">		src: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(),</span></span>
-<span class="line"><span style="color:#F8F8F2">	},</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">		callout: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">			'card-callout'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">			'Needed to display loading state and error messages.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">		loading: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.loading'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to display loading state.'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		error: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.error'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to display error messages.'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		content: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.content'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed to display content.'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">	}),</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">	ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> { host } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> ui</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> result </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createTask</span><span style="color:#F8F8F2">&#x3C;{</span></span>
-<span class="line"><span style="color:#F8F8F2">			ok</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
-<span class="line"><span style="color:#F8F8F2">			value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
-<span class="line"><span style="color:#F8F8F2">			error</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
-<span class="line"><span style="color:#F8F8F2">			pending</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
-<span class="line"><span style="color:#F8F8F2">		}>(</span></span>
-<span class="line"><span style="color:#F92672">			async</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">_prev</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">abort</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> url </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.src</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> error </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">url</span></span>
-<span class="line"><span style="color:#F92672">					?</span><span style="color:#E6DB74"> 'No URL provided'</span></span>
-<span class="line"><span style="color:#F92672">					:</span><span style="color:#F92672"> !</span><span style="color:#A6E22E">isValidURL</span><span style="color:#F8F8F2">(url)</span></span>
-<span class="line"><span style="color:#F92672">						?</span><span style="color:#E6DB74"> 'Invalid URL'</span></span>
-<span class="line"><span style="color:#F92672">						:</span><span style="color:#A6E22E"> isRecursiveURL</span><span style="color:#F8F8F2">(url, host)</span></span>
-<span class="line"><span style="color:#F92672">							?</span><span style="color:#E6DB74"> 'Recursive URL detected'</span></span>
-<span class="line"><span style="color:#F92672">							:</span><span style="color:#E6DB74"> ''</span></span>
-<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (error) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> { ok: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">, value: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, error, pending: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2"> }</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F92672">				try</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> { content } </span><span style="color:#F92672">=</span><span style="color:#F92672"> await</span><span style="color:#A6E22E"> fetchWithCache</span><span style="color:#F8F8F2">(url, abort)</span></span>
-<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> { ok: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">, value: content, error: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, pending: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2"> }</span></span>
-<span class="line"><span style="color:#F8F8F2">				} </span><span style="color:#F92672">catch</span><span style="color:#F8F8F2"> (error) {</span></span>
-<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">						ok: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">						value: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">						error: </span><span style="color:#E6DB74">`Failed to fetch content for "</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">url</span><span style="color:#F92672">}</span><span style="color:#E6DB74">": </span><span style="color:#F92672">${</span><span style="color:#A6E22E">String</span><span style="color:#F8F8F2">(error)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">						pending: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">					}</span></span>
-<span class="line"><span style="color:#F8F8F2">				}</span></span>
-<span class="line"><span style="color:#F8F8F2">			},</span></span>
-<span class="line"><span style="color:#F8F8F2">			{ value: { ok: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">, value: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, error: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, pending: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> } },</span></span>
-<span class="line"><span style="color:#F8F8F2">		)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> hasError</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !!</span><span style="color:#F8F8F2">result.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().error</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">			callout: [</span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">result.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().ok), </span><span style="color:#A6E22E">toggleClass</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'danger'</span><span style="color:#F8F8F2">, hasError)],</span></span>
-<span class="line"><span style="color:#F8F8F2">			loading: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !!</span><span style="color:#F8F8F2">result.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().pending),</span></span>
-<span class="line"><span style="color:#F8F8F2">			error: [</span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(hasError), </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> result.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().error </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">)],</span></span>
-<span class="line"><span style="color:#F8F8F2">			content: [</span></span>
-<span class="line"><span style="color:#A6E22E">				show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> result.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().ok),</span></span>
-<span class="line"><span style="color:#A6E22E">				dangerouslySetInnerHTML</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> result.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().value </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">, {</span></span>
-<span class="line"><span style="color:#F8F8F2">					allowScripts: host.</span><span style="color:#A6E22E">hasAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'allow-scripts'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			],</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span></span>
-<span class="line"><span style="color:#F8F8F2">	},</span></span>
-<span class="line"><span style="color:#F8F8F2">)</span></span>
-<span class="line"></span></code></pre>
-			<basic-button class="copy">
-				<button type="button" class="secondary small">
-					<span class="label">Copy</span>
-				</button>
-			</basic-button>
-		</module-codeblock>
-	</div>
-	</module-tabgroup>
+<h3 id="module-lazyload"><a name="module-lazyload" class="anchor" href="#module-lazyload"><span class="title">Module Lazyload</span><span class="permalink">#</span></a></h3><p>A lazy-loading component that fetches HTML from <code>src</code>, renders it into <code>.content</code>, and shows loading/error states.</p><h4 id="preview"><a name="preview" class="anchor" href="#preview"><span class="title">Preview</span><span class="permalink">#</span></a></h4><module-demo><div class="preview"><!-- Default example - tests basic loading functionality -->
+<module-lazyload src="/test/module-lazyload/mocks/simple-text.html"><card-callout><p class="loading" role="status">Loading...</p><p class="error" role="alert" aria-live="assertive" hidden></p></card-callout><div class="content" hidden></div>
+</module-lazyload><hr /><!-- Complex content test - tests loading of components and styles -->
+<module-lazyload id="complex-content-test" src="/test/module-lazyload/mocks/with-styles.html"
+><card-callout><p class="loading" role="status">Loading styled content...</p><p class="error" role="alert" aria-live="assertive" hidden></p></card-callout><div class="content" hidden></div>
+</module-lazyload><hr /><!-- Nested components test - tests initialization of nested custom components -->
+<module-lazyload id="nested-components-test" src="/test/module-lazyload/mocks/nested-components.html"
+><card-callout><p class="loading" role="status">Loading nested components...</p><p class="error" role="alert" aria-live="assertive" hidden></p></card-callout><div class="content" hidden></div>
+</module-lazyload><hr /><!-- Empty content test - tests handling of empty/whitespace responses -->
+<module-lazyload id="empty-content-test" src="/test/module-lazyload/mocks/empty.html"
+><card-callout><p class="loading" role="status">Loading empty content...</p><p class="error" role="alert" aria-live="assertive" hidden></p></card-callout><div class="content" hidden></div>
+</module-lazyload><hr /><!-- Original complex snippet test - tests the existing shake-hands component -->
+<module-lazyload id="original-snippet-test" src="/test/module-lazyload/mocks/snippet.html" allow-scripts
+><template shadowrootmode="open"><card-callout><p class="loading" role="status">Loading shake-hands...</p><p class="error" role="alert" aria-live="assertive" hidden></p></card-callout><div class="content" hidden><slot></slot></div></template>
+</module-lazyload><hr /><!-- Invalid URL test - tests error handling for malformed URLs -->
+<module-lazyload id="invalid-url-test" src="not-a-valid-url"><card-callout><p class="loading" role="status">Loading invalid URL...</p><p class="error" role="alert" aria-live="assertive" hidden></p></card-callout><div class="content" hidden></div>
+</module-lazyload><hr /><!-- 404 error test - tests error handling for missing files -->
+<module-lazyload id="not-found-test" src="/test/module-lazyload/mocks/does-not-exist.html"
+><card-callout><p class="loading" role="status">Loading non-existent file...</p><p class="error" role="alert" aria-live="assertive" hidden></p></card-callout><div class="content" hidden></div>
+</module-lazyload><hr /><!-- Cross-origin URL test - tests error handling for cross-origin requests -->
+<module-lazyload id="cross-origin-test" src="https://example.com/test.html"><card-callout><p class="loading" role="status">Loading cross-origin...</p><p class="error" role="alert" aria-live="assertive" hidden></p></card-callout><div class="content" hidden></div>
+</module-lazyload><hr /><!-- No src attribute test - tests handling when src is missing -->
+<module-lazyload id="no-src-test"><card-callout><p class="loading" role="status">Loading without src...</p><p class="error" role="alert" aria-live="assertive" hidden></p></card-callout><div class="content" hidden></div>
+</module-lazyload><hr /><!-- Dynamic src test - tests programmatic src changes -->
+<module-lazyload id="dynamic-src-test"><card-callout><p class="loading" role="status">Loading dynamic src...</p><p class="error" role="alert" aria-live="assertive" hidden></p></card-callout><div class="content" hidden></div>
+</module-lazyload><hr /><!-- Missing elements test - tests graceful handling when required elements are missing -->
+<module-lazyload id="missing-elements-test" src="/test/module-lazyload/simple-text.html"
+><!-- No card-callout wrapper --><p class="loading" role="status">Loading without wrapper...</p><p class="error" role="alert" aria-live="assertive" hidden></p><div class="content" hidden></div>
+</module-lazyload><hr /><!-- Recursive loading test - tests prevention of recursive loading -->
+<module-lazyload id="recursive-test" src="/test/module-lazyload/mocks/recursive.html"
+><card-callout><p class="loading" role="status">Loading recursive content...</p><p class="error" role="alert" aria-live="assertive" hidden></p></card-callout><div class="content" hidden></div>
+</module-lazyload></div><details title="Source code" src="../sources/module-lazyload.html"><summary>Source code</summary><module-lazyload src="../sources/module-lazyload.html"><card-callout><p class="loading" role="status" aria-live="polite">Loading...</p><p class="error" role="alert" aria-live="assertive" hidden="true"></p></card-callout><div class="content"></div></module-lazyload></details></module-demo><h4 id="tag-name"><a name="tag-name" class="anchor" href="#tag-name"><span class="title">Tag Name</span><span class="permalink">#</span></a></h4><p><code>module-lazyload</code></p><h4 id="reactive-properties"><a name="reactive-properties" class="anchor" href="#reactive-properties"><span class="title">Reactive Properties</span><span class="permalink">#</span></a></h4><module-scrollarea orientation="horizontal"><table><thead><tr><th>Name</th><th>Type</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><code>src</code></td><td><code>string</code></td><td><code>''</code></td><td>URL to fetch HTML content from</td></tr></tbody></table></module-scrollarea><h4 id="attributes"><a name="attributes" class="anchor" href="#attributes"><span class="title">Attributes</span><span class="permalink">#</span></a></h4><module-scrollarea orientation="horizontal"><table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td><code>allow-scripts</code></td><td>If present, scripts in fetched HTML are allowed when rendering <code>.content</code></td></tr></tbody></table></module-scrollarea><h4 id="descendant-elements"><a name="descendant-elements" class="anchor" href="#descendant-elements"><span class="title">Descendant Elements</span><span class="permalink">#</span></a></h4><module-scrollarea orientation="horizontal"><table><thead><tr><th>Selector</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td><code>first('card-callout')</code></td><td><code>HTMLElement</code></td><td><strong>required</strong></td><td>Callout wrapper for loading/error states</td></tr><tr><td><code>first('.loading')</code></td><td><code>HTMLElement</code></td><td><strong>required</strong></td><td>Loading state element</td></tr><tr><td><code>first('.error')</code></td><td><code>HTMLElement</code></td><td><strong>required</strong></td><td>Error message element</td></tr><tr><td><code>first('.content')</code></td><td><code>HTMLElement</code></td><td><strong>required</strong></td><td>Content container for fetched HTML</td></tr></tbody></table></module-scrollarea>

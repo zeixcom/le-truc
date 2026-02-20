@@ -27,7 +27,7 @@ form-textbox {
 		font-size: var(--font-size-m);
 		width: 100%;
 
-		&[aria-invalid='true'] {
+		&[aria-invalid="true"] {
 			box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
 		}
 

@@ -42,9 +42,9 @@ function getNumberFormatter(
 	const drops: string[] = []
 	if (style === 'currency') {
 		if (
-			!o.currency
-			|| typeof o.currency !== 'string'
-			|| o.currency.length !== 3
+			!o.currency ||
+			typeof o.currency !== 'string' ||
+			o.currency.length !== 3
 		) {
 			onError?.(
 				`style="currency" requires a 3-letter ISO currency (e.g. "CHF").`,

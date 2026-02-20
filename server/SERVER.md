@@ -158,7 +158,7 @@ Markdown files in `docs-src/pages/` are processed through:
 2. **Markdoc parse/validate/transform** — Using registered schemas from `markdoc.config.ts`
 3. **Markdoc render to HTML** — Produces raw HTML string
 4. **Shiki syntax highlighting** — Code blocks highlighted with Monokai theme
-5. **Post-processing** — `.md` → `.html` link rewriting, API content wrapping, `module-demo` HTML entity decoding
+5. **Final HTML shaping** — schema-driven link handling and `module-demo` preview HTML injection
 6. **Layout application** — `docs-src/layouts/page.html` with `{{ include }}` and `{{ variable }}` substitution
 
 ### Registered Schemas
@@ -181,7 +181,7 @@ Configured in `markdoc.config.ts`:
 | `{% hero %}` | `<section-hero>` | Hero section with extracted heading and TOC placeholder |
 | `{% tabgroup %}` | `<module-tabgroup>` | ARIA-compliant tabbed content |
 
-Note: `link.markdoc.ts` exists as a schema file but is **not registered** in `markdoc.config.ts`. Link `.md` → `.html` conversion is handled by `postProcessHtml()` in `markdoc-helpers.ts` instead.
+Note: `link.markdoc.ts` is registered as a node override in `markdoc.config.ts` and handles local `.md` → `.html` link conversion during Markdoc transform.
 
 ### Markdoc Constants
 
@@ -197,7 +197,6 @@ Note: `link.markdoc.ts` exists as a schema file but is **not registered** in `ma
 
 - **Node utilities:** `extractTextFromNode()`, `transformChildrenWithConfig()`, `splitContentBySeparator()`
 - **HTML generation:** `createNavigationButton()`, `createTabButton()`, `createAccessibleHeading()`, `createVisuallyHiddenHeading()`
-- **Post-processing:** `postProcessHtml()` — link rewriting, API content wrapping
 - **`html` tagged template literal** — A mini HTML parser that converts HTML strings to Markdoc `Tag` objects (distinct from the plain-string `html` in `templates/utils.ts`)
 
 ### Code Block Features

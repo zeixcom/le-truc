@@ -14,10 +14,22 @@ A CSS-only component that displays a callout message.
 
 Use `class` attribute to get a different style for the callout.
 
-| Class     | Description                  |
-| ---       | ---                          |
-| `info`    | For an informational message |
-| `tip`     | For a helpful tip            |
-| `caution` | For a warning message        |
-| `danger`  | For a critical message       |
-| `note`    | For a side note              |
+{% table %}
+* Class
+* Description
+---
+* `info`
+* For an informational message
+---
+* `tip`
+* For a helpful tip
+---
+* `caution`
+* For a warning message
+---
+* `danger`
+* For a critical message
+---
+* `note`
+* For a side note
+{% /table %}

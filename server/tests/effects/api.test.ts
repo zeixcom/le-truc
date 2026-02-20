@@ -232,7 +232,7 @@ describe('generateApiIndexMarkdown', () => {
 	test('includes listnav tag', () => {
 		const result = generateApiIndexMarkdown(sampleCategories)
 
-		expect(result).toContain('{% listnav title="Symbols" %}')
+		expect(result).toContain('{% listnav title="Select a Symbol" %}')
 		expect(result).toContain('{% /listnav %}')
 	})
 
@@ -269,7 +269,7 @@ describe('generateApiIndexMarkdown', () => {
 	test('handles empty categories array', () => {
 		const result = generateApiIndexMarkdown([])
 
-		expect(result).toContain('{% listnav title="Symbols" %}')
+		expect(result).toContain('{% listnav title="Select a Symbol" %}')
 		expect(result).toContain('{% /listnav %}')
 		// Should still be valid markdown, just with no list items
 		expect(result).toContain("title: 'API'")

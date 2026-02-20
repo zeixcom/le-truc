@@ -413,14 +413,7 @@ Create `server/tests/helpers.ts` with:
 | 5 | `createNavigationButton("next")` has correct aria-label | `aria-label: "Next"` |
 | 6 | `createTabButton` sets correct ARIA attributes | Has `role: "tab"`, `aria-controls`, `aria-selected` |
 
-#### 10.5 `postProcessHtml`
-
-| # | Test | Expected |
-|---|------|----------|
-| 1 | Wraps API section content | `section="api"` → output wrapped in `<section class="api-content">` |
-| 2 | Leaves non-API content unchanged | `section=undefined` → same string returned |
-
-#### 10.6 `html` tagged template literal (Markdoc version)
+#### 10.5 `html` tagged template literal (Markdoc version)
 
 | # | Test | Expected |
 |---|------|----------|
@@ -575,7 +568,7 @@ The `extractFrontmatter` function is not exported, but its behavior is observabl
 | 3 | Calculates correct `depth` for nested files | `api/functions/foo.md` → `depth: 2` |
 | 4 | Calculates correct `basePath` | `depth: 2` → `basePath: "../../"` |
 | 5 | Sets `basePath` to `"./"` for root files | `depth: 0` → `basePath: "./"` |
-| 6 | Applies `postProcessHtml` for API section | API file → output wrapped in `<section class="api-content">` |
+| 6 | Does not add API section wrapper post-processing | API file output is not wrapped in `<section class="api-content">` |
 | 7 | Extracts title from frontmatter | `title: "Guide"` → `processedFile.title === "Guide"` |
 | 8 | Extracts title from API heading when no frontmatter title | `# Function: foo()` → `title === "foo"` |
 

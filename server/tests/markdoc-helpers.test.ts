@@ -2,7 +2,7 @@
  * Unit Tests for markdoc-helpers.ts — Markdoc Utilities
  *
  * Tests for node utilities, ID/slug generation, tag helpers,
- * and HTML processing functions.
+ * and HTML template helpers.
  */
 
 import { describe, expect, test } from 'bun:test'
@@ -16,7 +16,6 @@ import {
 	extractTextFromNode,
 	generateId,
 	generateSlug,
-	postProcessHtml,
 	rawText,
 	splitContentBySeparator,
 } from '../markdoc-helpers'
@@ -376,34 +375,6 @@ describe('createVisuallyHiddenHeading', () => {
 		expect(heading.name).toBe('h2')
 		expect(heading.attributes.class).toBe('visually-hidden')
 		expect(heading.children).toContain('Hidden Heading')
-	})
-})
-
-/* === HTML Post-Processing === */
-
-describe('postProcessHtml', () => {
-	test('should wrap API content in section', () => {
-		const html = '<p>Content</p>'
-		const result = postProcessHtml(html, 'api')
-
-		expect(result).toContain('<section class="api-content">')
-		expect(result).toContain('</section>')
-		expect(result).toContain('<p>Content</p>')
-	})
-
-	test('should not wrap non-API content', () => {
-		const html = '<p>Content</p>'
-		const result = postProcessHtml(html)
-
-		expect(result).toBe('<p>Content</p>')
-		expect(result).not.toContain('<section')
-	})
-
-	test('should not wrap other sections', () => {
-		const html = '<p>Content</p>'
-		const result = postProcessHtml(html, 'other')
-
-		expect(result).toBe('<p>Content</p>')
 	})
 })
 

@@ -9,6 +9,7 @@ import listnav from './schema/listnav.markdoc'
 import section from './schema/section.markdoc'
 import slide from './schema/slide.markdoc'
 import sources from './schema/sources.markdoc'
+import table from './schema/table.markdoc'
 import tabgroup from './schema/tabgroup.markdoc'
 
 export const markdocConfig = {
@@ -26,6 +27,7 @@ export const markdocConfig = {
 		slide,
 		section,
 		hero,
+		table,
 		tabgroup,
 	},
 }

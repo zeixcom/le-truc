@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { stripBreadcrumbs, highlightCodeBlocks } from '../../effects/api-pages'
+import { highlightCodeBlocks, stripBreadcrumbs } from '../../effects/api-pages'
 
 /* === stripBreadcrumbs Tests === */
 

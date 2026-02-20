@@ -9,7 +9,9 @@ import { describe, expect, test } from 'bun:test'
 /**
  * Mock getBasePath helper (extracted from module-listnav.ts)
  */
-const getBasePath = (firstOptionValue: string): { base: string; ext: string } | null => {
+const getBasePath = (
+	firstOptionValue: string,
+): { base: string; ext: string } | null => {
 	if (!firstOptionValue) return null
 
 	const value = firstOptionValue

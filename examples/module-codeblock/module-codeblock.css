@@ -1,5 +1,7 @@
 module-codeblock {
 	--color-shiki-monokai-bg: #272822;
+	/* Shadow without extra transparency for dark background used in code blocks */
+	--color-shadow: var(--color-black);
 
 	position: relative;
 	display: block;
@@ -22,9 +24,14 @@ module-codeblock {
 
 	& pre {
 		font-size: var(--font-size-s);
-		padding: var(--space-s);
+		padding-block: var(--space-s);
 		border-radius: var(--space-s);
-		overflow: auto;
+	}
+
+	& code {
+		padding-inline: var(--space-s);
+		display: block;
+		line-height: var(--line-height-l);
 	}
 
 	.copy {

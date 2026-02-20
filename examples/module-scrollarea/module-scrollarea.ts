@@ -13,8 +13,8 @@ const observeOverflow =
 		const observer = new IntersectionObserver(
 			([entry]) => {
 				if (
-					entry.intersectionRatio > MIN_INTERSECTION_RATIO
-					&& entry.intersectionRatio < MAX_INTERSECTION_RATIO
+					entry.intersectionRatio > MIN_INTERSECTION_RATIO &&
+					entry.intersectionRatio < MAX_INTERSECTION_RATIO
 				)
 					overflowCallback()
 				else batch(noOverflowCallback)

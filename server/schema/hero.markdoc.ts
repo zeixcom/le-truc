@@ -3,6 +3,7 @@ import Markdoc, {
 	type Node,
 	type RenderableTreeNode,
 	type Schema,
+	Tag,
 } from '@markdoc/markdoc'
 import { commonAttributes, standardChildren } from '../markdoc-constants'
 
@@ -26,9 +27,7 @@ const hero: Schema = {
 				title = Markdoc.transform(child, config)
 			} else if (child.type === 'paragraph') {
 				const transformed = Markdoc.transform(child, config)
-				if (transformed) {
-					leadContent.push(transformed)
-				}
+				if (transformed) leadContent.push(transformed)
 			}
 		}
 
@@ -36,14 +35,12 @@ const hero: Schema = {
 		const children: RenderableTreeNode[] = []
 
 		// Add title (full width)
-		if (title) {
-			children.push(title)
-		}
+		if (title) children.push(title)
 
 		// Create two-column layout with lead content and TOC placeholder
 		if (leadContent.length > 0) {
-			const layoutDiv = new Markdoc.Tag('div', { class: 'hero-layout' }, [
-				new Markdoc.Tag('div', { class: 'lead' }, leadContent),
+			const layoutDiv = new Tag('div', { class: 'hero-layout' }, [
+				new Tag('div', { class: 'lead' }, leadContent),
 				tocPlaceholder,
 			])
 			children.push(layoutDiv)
@@ -52,7 +49,7 @@ const hero: Schema = {
 			children.push(tocPlaceholder)
 		}
 
-		return new Markdoc.Tag('section-hero', node.attributes, children)
+		return new Tag('section-hero', node.attributes, children)
 	},
 }
 

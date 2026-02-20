@@ -262,7 +262,7 @@ describe('fence schema - meta section', () => {
 /* === Code Placeholder Tests === */
 
 describe('fence schema - code placeholder', () => {
-	test('should create pre element with data attributes', () => {
+	test('should create module-scrollarea wrapper and pre data attributes', () => {
 		const code = 'const x = 1'
 		const node = new Node('fence', {
 			content: code,
@@ -270,10 +270,13 @@ describe('fence schema - code placeholder', () => {
 		})
 
 		const result = fence.transform!(node, {}) as Tag
-		const preElement = result.children.find(
-			child => child instanceof Tag && child.name === 'pre',
+		const scrollArea = result.children.find(
+			child => child instanceof Tag && child.name === 'module-scrollarea',
 		) as Tag
+		const preElement = scrollArea.children[0] as Tag
 
+		expect(scrollArea).toBeDefined()
+		expect(scrollArea.attributes.orientation).toBe('horizontal')
 		expect(preElement).toBeDefined()
 		expect(preElement.attributes['data-language']).toBe('typescript')
 		expect(preElement.attributes['data-code']).toBe(code)
@@ -286,9 +289,10 @@ describe('fence schema - code placeholder', () => {
 		})
 
 		const result = fence.transform!(node, {}) as Tag
-		const preElement = result.children.find(
-			child => child instanceof Tag && child.name === 'pre',
+		const scrollArea = result.children.find(
+			child => child instanceof Tag && child.name === 'module-scrollarea',
 		) as Tag
+		const preElement = scrollArea.children[0] as Tag
 
 		const codeElement = preElement.children[0] as Tag
 
@@ -304,9 +308,10 @@ describe('fence schema - code placeholder', () => {
 		})
 
 		const result = fence.transform!(node, {}) as Tag
-		const preElement = result.children.find(
-			child => child instanceof Tag && child.name === 'pre',
+		const scrollArea = result.children.find(
+			child => child instanceof Tag && child.name === 'module-scrollarea',
 		) as Tag
+		const preElement = scrollArea.children[0] as Tag
 
 		const codeElement = preElement.children[0] as Tag
 

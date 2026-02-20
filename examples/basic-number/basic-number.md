@@ -30,10 +30,16 @@ A component that displays a formatted number according to `Intl.NumberFormat` an
 
 #### Attributes
 
-| Name      | Description                                                                  |
-| ---       | ---                                                                          |
-| `lang`    | Language code to use as locale; if omitted, inherited from ancestor elements |
-| `options` | Options for `Intl.NumberFormat` as JSON                                      |
+{% table %}
+* Name
+* Description
+---
+* `lang`
+* Language code to use as locale; if omitted, inherited from ancestor elements
+---
+* `options`
+* Options for `Intl.NumberFormat` as JSON
+{% /table %}
 
 #### Descendant Elements
 

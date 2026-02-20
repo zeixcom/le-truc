@@ -27,6 +27,68 @@ form-radiogroup {
 		}
 	}
 
+	&.radio-group {
+		& label {
+			display: flex;
+			align-items: center;
+			gap: var(--space-xs);
+			cursor: pointer;
+
+			&::before {
+				content: '';
+				flex-shrink: 0;
+				display: inline-block;
+				box-sizing: border-box;
+				width: var(--space-l);
+				height: var(--space-l);
+				border-radius: 50%;
+				border: 1px solid var(--color-border);
+				background-color: var(--color-secondary);
+				transition:
+					background-color var(--transition-short) var(--easing-inout),
+					border-color var(--transition-short) var(--easing-inout);
+			}
+
+			&:hover::before {
+				background-color: var(--color-secondary-hover);
+			}
+
+			&:active::before {
+				background-color: var(--color-secondary-active);
+			}
+
+			&.selected {
+				&::before {
+					background-color: var(--color-input);
+					border-color: var(--color-selection-active);
+					background-image: radial-gradient(
+						circle,
+						var(--color-selection-selected) 48%,
+						transparent 50%
+					);
+					background-size: 100% 100%;
+					background-repeat: no-repeat;
+				}
+
+				&:hover::before {
+					background-image: radial-gradient(
+						circle,
+						var(--color-selection-active) 48%,
+						transparent 50%
+					);
+				}
+
+				&:active::before {
+					background-image: radial-gradient(
+						circle,
+						var(--color-selection-active) 48%,
+						transparent 50%
+					);
+				}
+			}
+		}
+	}
+
 	&.split-button {
 		& fieldset {
 			gap: 0;

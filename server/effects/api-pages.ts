@@ -1,11 +1,10 @@
 import Markdoc from '@markdoc/markdoc'
 import { createEffect, match } from '@zeix/cause-effect'
-import { codeToHtml } from 'shiki'
 import { API_DIR, OUTPUT_DIR } from '../config'
 import { apiMarkdown, type FileInfo } from '../file-signals'
+import { highlightCodeBlocks } from '../html-shaping'
 import { getFilePath, getRelativePath, writeFileSafe } from '../io'
 import markdocConfig from '../markdoc.config'
-import { postProcessHtml } from '../markdoc-helpers'
 
 /* === Internal Functions === */
 
@@ -17,36 +16,6 @@ const stripBreadcrumbs = (content: string): string => {
 		return content.substring(h1Index)
 	}
 	return content
-}
-
-/** Highlight code blocks in HTML using Shiki */
-const highlightCodeBlocks = async (html: string): Promise<string> => {
-	const codeBlockRegex =
-		/<pre data-language="([^"]*)" data-code="([^"]*)"><code class="language-[^"]*">[\s\S]*?<\/code><\/pre>/g
-	let result = html
-	let match: RegExpExecArray | null
-
-	while ((match = codeBlockRegex.exec(html)) !== null) {
-		const [fullMatch, lang, encodedCode] = match
-		const code = encodedCode
-			.replace(/&quot;/g, '"')
-			.replace(/&#39;/g, "'")
-			.replace(/&lt;/g, '<')
-			.replace(/&gt;/g, '>')
-			.replace(/&amp;/g, '&')
-
-		try {
-			const highlighted = await codeToHtml(code, {
-				lang: lang || 'text',
-				theme: 'monokai',
-			})
-			result = result.replace(fullMatch, highlighted)
-		} catch {
-			// Keep the original code block as fallback
-		}
-	}
-
-	return result
 }
 
 /**
@@ -87,9 +56,6 @@ const processApiFile = async (file: FileInfo): Promise<void> => {
 
 	// Highlight code blocks
 	htmlContent = await highlightCodeBlocks(htmlContent)
-
-	// Post-process HTML (wraps in api-content section)
-	htmlContent = postProcessHtml(htmlContent, 'api')
 
 	// Rewrite relative API cross-references to hash links
 	const category = relativePath.split('/')[0] // e.g. "type-aliases"

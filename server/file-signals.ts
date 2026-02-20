@@ -5,7 +5,6 @@ import {
 	type Memo,
 	type Task,
 } from '@zeix/cause-effect'
-import { codeToHtml } from 'shiki'
 import {
 	API_DIR,
 	COMPONENTS_DIR,
@@ -17,9 +16,9 @@ import {
 	TEMPLATES_DIR,
 } from './config'
 import { watchFiles } from './file-watcher'
+import { highlightCodeBlocks, injectModuleDemoPreview } from './html-shaping'
 import { getRelativePath } from './io'
 import markdocConfig from './markdoc.config'
-import { postProcessHtml } from './markdoc-helpers'
 
 /* === Types === */
 
@@ -224,58 +223,9 @@ const docsMarkdown: {
 					'$1',
 				)
 
-				// Process code blocks with syntax highlighting
-				const codeBlockRegex =
-					/<pre data-language="([^"]*)" data-code="([^"]*)"><code class="language-[^"]*">[\s\S]*?<\/code><\/pre>/g
-				let match: RegExpExecArray | null
-
-				while ((match = codeBlockRegex.exec(htmlContent)) !== null) {
-					const [fullMatch, lang, encodedCode] = match
-
-					// Decode HTML entities
-					const code = encodedCode
-						.replace(/&quot;/g, '"')
-						.replace(/&#39;/g, "'")
-						.replace(/&lt;/g, '<')
-						.replace(/&gt;/g, '>')
-						.replace(/&amp;/g, '&')
-
-					try {
-						const highlighted = await codeToHtml(code, {
-							lang: lang || 'text',
-							theme: 'monokai',
-						})
-
-						htmlContent = htmlContent.replace(fullMatch, highlighted)
-					} catch (error) {
-						console.warn(`Failed to highlight ${lang} code block:`, error)
-						// Keep the original code block as fallback
-					}
-				}
-
-				// Process module-demo components with raw HTML
-				htmlContent = htmlContent.replace(
-					/<module-demo([^>]*) preview-html="([^"]*)"([^>]*)>([\s\S]*?)<\/module-demo>/g,
-					(fullMatch, beforeAttrs, encodedHtml, afterAttrs, content) => {
-						// Decode HTML entities that may have been encoded
-						const previewHtml = encodedHtml
-							.replace(/&quot;/g, '"')
-							.replace(/&#39;/g, "'")
-							.replace(/&lt;/g, '<')
-							.replace(/&gt;/g, '>')
-							.replace(/&amp;/g, '&')
-							.replace(/>\s{2,}</g, '><')
-							.replace(/\s{2,}/g, ' ')
-							.trim()
-
-						// Build the complete module-demo structure
-						const previewDiv = `<div class="preview">${previewHtml}</div>`
-						return `<module-demo${beforeAttrs}${afterAttrs}>${previewDiv}${content}</module-demo>`
-					},
-				)
-
-				// Post-process HTML (fix links, wrap API content)
-				htmlContent = postProcessHtml(htmlContent, section)
+				// Apply shared HTML shaping for code fences and demo previews.
+				htmlContent = await highlightCodeBlocks(htmlContent)
+				htmlContent = injectModuleDemoPreview(htmlContent)
 
 				// Extract title
 				let title = frontmatter.title

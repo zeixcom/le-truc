@@ -1,13 +1,58 @@
-<module-codeblock
-	id="codeblock_module-codeblock-html"
-	collapsed
-	language="html"
->
+<module-codeblock id="codeblock_module-codeblock-ts" collapsed language="ts">
 	<p class="meta">
-		<span class="file">module-codeblock.html</span>
-		<span class="language">html</span>
+		<span class="file">module-codeblock.ts</span>
+		<span class="language">ts</span>
 	</p>
-	<pre><code class="language-html"></code></pre>
+	<module-scrollarea orientation="horizontal">
+		<pre><code class="language-ts"><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	asBoolean,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F8F8F2">	on,</span></span>
+<span class="line"><span style="color:#F8F8F2">	toggleAttribute,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F92672"> type</span><span style="color:#F8F8F2"> { BasicButtonProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../basic-button/basic-button'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { copyToClipboard } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../basic-button/copyToClipboard'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleCodeblockProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	collapsed</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleCodeblockUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	code</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	overlay</span><span style="color:#F92672">?:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	copy</span><span style="color:#F92672">?:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&lt;</span><span style="color:#A6E22E;text-decoration:underline">BasicButtonProps</span><span style="color:#F8F8F2">&gt;</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'module-codeblock'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&lt;</span><span style="color:#A6E22E;text-decoration:underline">ModuleCodeblockProps</span><span style="color:#F8F8F2">&gt;</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&lt;</span><span style="color:#A6E22E;text-decoration:underline">ModuleCodeblockProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">ModuleCodeblockUI</span><span style="color:#F8F8F2">&gt;(</span></span>
+<span class="line"><span style="color:#E6DB74">	'module-codeblock'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{ collapsed: </span><span style="color:#A6E22E">asBoolean</span><span style="color:#F8F8F2">() },</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=&gt;</span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		code: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'code'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Needed as source container to copy from.'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		overlay: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button.overlay'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		copy: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'basic-button.copy'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">code</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">copy</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=&gt;</span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		host: </span><span style="color:#A6E22E">toggleAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'collapsed'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		overlay: </span><span style="color:#A6E22E">on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=&gt;</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			host.collapsed </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">		}),</span></span>
+<span class="line"><span style="color:#F8F8F2">		copy: </span><span style="color:#A6E22E">copyToClipboard</span><span style="color:#F8F8F2">(code, {</span></span>
+<span class="line"><span style="color:#F8F8F2">			success: copy?.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'copy-success'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">||</span><span style="color:#E6DB74"> 'Copied!'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			error:</span></span>
+<span class="line"><span style="color:#F8F8F2">				copy?.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'copy-error'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">||</span></span>
+<span class="line"><span style="color:#E6DB74">				'Error trying to copy to clipboard!'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		}),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre>
+	</module-scrollarea>
 	<basic-button
 		class="copy"
 		copy-success="Copied!"
@@ -21,7 +66,7 @@
 		type="button"
 		class="overlay"
 		aria-expanded="false"
-		aria-controls="codeblock_module-codeblock-html"
+		aria-controls="codeblock_module-codeblock-ts"
 	>
 		Expand
 	</button>
