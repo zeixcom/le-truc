@@ -1,4 +1,4 @@
-import Markdoc, { type Node, type Schema } from '@markdoc/markdoc'
+import { type Node, type Schema, Tag } from '@markdoc/markdoc'
 
 const source: Schema = {
 	render: 'details',
@@ -17,16 +17,16 @@ const source: Schema = {
 		const { title, src } = node.attributes
 
 		// Create the summary element
-		const summary = new Markdoc.Tag('summary', {}, [title])
+		const summary = new Tag('summary', {}, [title])
 
 		// Create the module-lazyload structure
-		const loadingCallout = new Markdoc.Tag('card-callout', {}, [
-			new Markdoc.Tag(
+		const loadingCallout = new Tag('card-callout', {}, [
+			new Tag(
 				'p',
 				{ class: 'loading', role: 'status', 'aria-live': 'polite' },
 				['Loading...'],
 			),
-			new Markdoc.Tag(
+			new Tag(
 				'p',
 				{
 					class: 'error',
@@ -38,15 +38,15 @@ const source: Schema = {
 			),
 		])
 
-		const contentDiv = new Markdoc.Tag('div', { class: 'content' }, [])
+		const contentDiv = new Tag('div', { class: 'content' }, [])
 
-		const lazyload = new Markdoc.Tag('module-lazyload', { src }, [
+		const lazyload = new Tag('module-lazyload', { src }, [
 			loadingCallout,
 			contentDiv,
 		])
 
 		// Return the complete details structure
-		return new Markdoc.Tag('details', node.attributes, [summary, lazyload])
+		return new Tag('details', node.attributes, [summary, lazyload])
 	},
 }
 

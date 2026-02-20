@@ -1,5 +1,4 @@
 import { createEffect, match } from '@zeix/cause-effect'
-import { codeToHtml } from 'shiki'
 import { SOURCES_DIR } from '../config'
 import {
 	componentMarkup,
@@ -7,16 +6,11 @@ import {
 	componentStyles,
 	type FileInfo,
 } from '../file-signals'
+import { highlightSnippet } from '../html-shaping'
 import { getFilePath, writeFileSafe } from '../io'
 import { type PanelType, tabGroup } from '../templates/fragments'
 
 /* === Internal Functions === */
-
-const highlightCode = async (content: string, type: string) =>
-	await codeToHtml(content, {
-		lang: type,
-		theme: 'monokai',
-	})
 
 const toPathMap = (files: FileInfo[]): Map<string, FileInfo> => {
 	const map = new Map<string, FileInfo>()
@@ -34,21 +28,21 @@ const generatePanels = async (
 			type: 'html',
 			label: 'HTML',
 			filePath: html.path,
-			content: await highlightCode(html.content, 'html'),
+			content: await highlightSnippet(html.content, 'html'),
 			selected: false,
 		},
 		css && {
 			type: 'css',
 			label: 'CSS',
 			filePath: css.path,
-			content: await highlightCode(css.content, 'css'),
+			content: await highlightSnippet(css.content, 'css'),
 			selected: false,
 		},
 		ts && {
 			type: 'ts',
 			label: 'TypeScript',
 			filePath: ts.path,
-			content: await highlightCode(ts.content, 'typescript'),
+			content: await highlightSnippet(ts.content, 'typescript'),
 			selected: false,
 		},
 	].filter(Boolean) as PanelType[]
@@ -58,6 +52,8 @@ const generatePanels = async (
 
 	return panels
 }
+
+export { generatePanels }
 
 /* === Exported Effect === */
 

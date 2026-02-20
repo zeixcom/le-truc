@@ -116,7 +116,7 @@
 	--color-text: var(--color-neutral-90);
 	--color-text-soft: var(--color-neutral-80);
 	--color-text-inverted: var(--color-white);
-	--color-shadow: rgb(0 0 0 / 10%);
+	--color-shadow: rgb(0 0 0 / 0.1);
 
 	--font-family-sans: 'Helvetica Neue', Arial, Roboto, sans-serif;
 	--font-family-mono: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;

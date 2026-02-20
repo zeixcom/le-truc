@@ -1,12 +1,12 @@
 import Markdoc from '@markdoc/markdoc'
 import { createEffect, match } from '@zeix/cause-effect'
-import { codeToHtml } from 'shiki'
 import { COMPONENTS_DIR, CONTENT_MARKER, EXAMPLES_DIR } from '../config'
 import {
 	componentMarkdown,
 	componentMarkup,
 	type FileInfo,
 } from '../file-signals'
+import { highlightCodeBlocks, injectModuleDemoPreview } from '../html-shaping'
 import { getFilePath, writeFileSafe } from '../io'
 import markdocConfig from '../markdoc.config'
 
@@ -47,54 +47,13 @@ const processExample = async (
 	// Remove automatic <article> wrapper added by Markdoc
 	htmlContent = htmlContent.replace(/^<article>([\s\S]*)<\/article>$/m, '$1')
 
-	// Process code blocks with syntax highlighting
-	const codeBlockRegex =
-		/<pre data-language="([^"]*)"><code class="language-[^"]*">([\s\S]*?)<\/code><\/pre>/g
-	let codeMatch: RegExpExecArray | null
-
-	while ((codeMatch = codeBlockRegex.exec(htmlContent)) !== null) {
-		const [fullMatch, lang, code] = codeMatch
-
-		const decodedCode = code
-			.replace(/&quot;/g, '"')
-			.replace(/&#39;/g, "'")
-			.replace(/&lt;/g, '<')
-			.replace(/&gt;/g, '>')
-			.replace(/&amp;/g, '&')
-
-		try {
-			const highlighted = await codeToHtml(decodedCode, {
-				lang: lang || 'text',
-				theme: 'monokai',
-			})
-
-			htmlContent = htmlContent.replace(fullMatch, highlighted)
-		} catch (error) {
-			console.warn(`Failed to highlight ${lang} code block:`, error)
-		}
-	}
-
-	// Process module-demo components with raw HTML
-	htmlContent = htmlContent.replace(
-		/<module-demo([^>]*) preview-html="([^"]*)"([^>]*)>([\s\S]*?)<\/module-demo>/g,
-		(_fullMatch, beforeAttrs, encodedHtml, afterAttrs, content) => {
-			const previewHtml = encodedHtml
-				.replace(/&quot;/g, '"')
-				.replace(/&#39;/g, "'")
-				.replace(/&lt;/g, '<')
-				.replace(/&gt;/g, '>')
-				.replace(/&amp;/g, '&')
-				.replace(/>\s{2,}</g, '><')
-				.replace(/\s{2,}/g, ' ')
-				.trim()
-
-			const previewDiv = `<div class="preview">${previewHtml}</div>`
-			return `<module-demo${beforeAttrs}${afterAttrs}>${previewDiv}${content}</module-demo>`
-		},
-	)
+	htmlContent = await highlightCodeBlocks(htmlContent)
+	htmlContent = injectModuleDemoPreview(htmlContent)
 
 	return htmlContent
 }
+
+export { processExample }
 
 /* === Exported Effect === */
 

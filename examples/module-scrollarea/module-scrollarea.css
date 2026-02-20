@@ -1,77 +1,61 @@
-@media (prefers-reduced-motion: no-preference) {
-	module-scrollarea {
+/* @media (prefers-reduced-motion: no-preference) { */
+
+module-scrollarea {
+	display: block;
+	position: relative;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+
+	&::before,
+	&::after {
+		content: '';
+		position: sticky;
 		display: block;
-		position: relative;
-		overflow-y: auto;
-		-webkit-overflow-scrolling: touch;
+		width: 100%;
+		height: var(--space-m);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity var(--transition-short);
+		z-index: 1;
+	}
+
+	&::before {
+		top: 0;
+		background: linear-gradient(180deg, var(--color-shadow), transparent);
+	}
+
+	&::after {
+		bottom: 0;
+		background: linear-gradient(0deg, var(--color-shadow), transparent);
+	}
+
+	&.overflow-start::before {
+		opacity: 1;
+	}
+
+	&.overflow-end::after {
+		opacity: 1;
+	}
+
+	&[orientation='horizontal'] {
+		overflow-x: auto;
+		overflow-y: clip;
 
 		&::before,
 		&::after {
-			content: "";
-			position: sticky;
-			display: block;
-			width: 100%;
-			height: var(--space-m);
-			opacity: 0;
-			pointer-events: none;
-			transition: opacity var(--transition-short);
-			z-index: 1;
+			width: var(--space-m);
+			height: 1000vh;
+			margin-block-end: -1000vh;
 		}
 
 		&::before {
-			top: 0;
-			background: linear-gradient(
-				180deg,
-				color-mix(in srgb, var(--color-shadow), transparent 50%),
-				transparent
-			);
+			left: 0;
+			background: linear-gradient(90deg, var(--color-shadow), transparent);
 		}
 
 		&::after {
-			bottom: 0;
-			background: linear-gradient(
-				0deg,
-				color-mix(in srgb, var(--color-shadow), transparent 50%),
-				transparent
-			);
-		}
-
-		&.overflow-start::before {
-			opacity: 1;
-		}
-
-		&.overflow-end::after {
-			opacity: 1;
-		}
-
-		&[orientation="horizontal"] {
-			overflow-x: auto;
-			overflow-y: clip;
-
-			&::before,
-			&::after {
-				width: var(--space-m);
-				height: 100vh;
-				margin-block-end: -100vh;
-			}
-
-			&::before {
-				left: 0;
-				background: linear-gradient(
-					90deg,
-					color-mix(in srgb, var(--color-shadow), transparent 50%),
-					transparent
-				);
-			}
-
-			&::after {
-				left: calc(100% - var(--space-m));
-				background: linear-gradient(
-					270deg,
-					color-mix(in srgb, var(--color-shadow), transparent 50%),
-					transparent
-				);
-			}
+			left: calc(100% - var(--space-m));
+			background: linear-gradient(270deg, var(--color-shadow), transparent);
 		}
 	}
 }

@@ -233,16 +233,6 @@ export function renderValidationErrors(
 	</card-callout>` as RenderableTreeNode
 }
 
-/* === HTML Post-Processing === */
-
-export function postProcessHtml(htmlStr: string, section?: string): string {
-	if (section === 'api') {
-		htmlStr = `<section class="api-content">\n${htmlStr}\n</section>`
-	}
-
-	return htmlStr
-}
-
 /* === HTML Template Literal === */
 
 const isRawTextMarker = (value: any): value is RawTextMarker =>

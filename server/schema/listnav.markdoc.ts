@@ -28,9 +28,7 @@ const renderNavigationItems = (
 ) => {
 	// If no item has selected attribute, mark the first one as selected
 	const hasSelected = items.some(item => item.selected)
-	if (!hasSelected && items.length > 0) {
-		items[0].selected = true
-	}
+	if (!hasSelected && items.length > 0) items[0].selected = true
 
 	// Group items by their group property
 	const groups = new Map<
@@ -45,9 +43,7 @@ const renderNavigationItems = (
 
 	for (const item of items) {
 		if (item.group) {
-			if (!groups.has(item.group)) {
-				groups.set(item.group, [])
-			}
+			if (!groups.has(item.group)) groups.set(item.group, [])
 			groups.get(item.group)!.push({
 				label: item.label,
 				src: item.src,
@@ -193,9 +189,7 @@ const listnav: Schema = {
 				} else {
 					// Regular item without nesting
 					const itemContent = extractNavigationItem(item)
-					if (itemContent) {
-						navigationItems.push(itemContent)
-					}
+					if (itemContent) navigationItems.push(itemContent)
 				}
 			}
 		}

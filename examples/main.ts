@@ -25,3 +25,7 @@ import './module-todo/module-todo.ts'
 
 // Structural-only custom elements
 customElements.define('card-callout', class extends HTMLElement {})
+customElements.define('module-demo', class extends HTMLElement {})
+customElements.define('module-toc', class extends HTMLElement {})
+customElements.define('section-hero', class extends HTMLElement {})
+customElements.define('section-menu', class extends HTMLElement {})

@@ -40,9 +40,7 @@ const tabgroup: Schema = {
 				.join('')
 				.trim()
 
-			if (!label) {
-				throw new Error('Tab heading cannot be empty')
-			}
+			if (!label) throw new Error('Tab heading cannot be empty')
 
 			// Transform the remaining content (everything except the heading)
 			const contentNodes = section.slice(1)
@@ -93,9 +91,7 @@ const tabgroup: Schema = {
 				'aria-labelledby': triggerId,
 			}
 
-			if (!isSelected) {
-				attributes.hidden = ''
-			}
+			if (!isSelected) attributes.hidden = ''
 
 			return new Tag('div', attributes, [tab.content])
 		})

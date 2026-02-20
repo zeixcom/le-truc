@@ -122,12 +122,12 @@ layout: 'page'
 {% hero %}
 # 📖 API Reference
 
-**Browse the complete Le Truc API.** Classes, functions, type aliases, and variables — all generated from the TypeScript source.
+**Browse the complete Le Truc API.** Functions, error classes, variables, and type aliases — all generated from the TypeScript source.
 {% /hero %}
 
 {% section .breakout %}
 
-{% listnav title="Symbols" %}
+{% listnav title="Select a Symbol" %}
 ${listItems}
 {% /listnav %}
 

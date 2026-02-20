@@ -1,9 +1,4 @@
-import Markdoc, {
-	type Config,
-	type Node,
-	type Schema,
-	type Tag,
-} from '@markdoc/markdoc'
+import Markdoc, { type Config, type Node, type Schema } from '@markdoc/markdoc'
 import {
 	createAccessibleHeading,
 	extractTextFromNode,

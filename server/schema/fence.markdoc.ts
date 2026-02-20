@@ -24,17 +24,20 @@ const fence: Schema = {
 
 		// Create meta section
 		const metaContent: Tag[] = []
-		if (filename) {
+		if (filename)
 			metaContent.push(new Tag('span', { class: 'file' }, [filename]))
-		}
 		metaContent.push(new Tag('span', { class: 'language' }, [language]))
 		const metaSection = new Tag('p', { class: 'meta' }, metaContent)
 
 		// Create placeholder for syntax highlighted code that will be processed by file-signals
 		const codePlaceholder = new Tag(
-			'pre',
-			{ 'data-language': language, 'data-code': code },
-			[new Tag('code', { class: `language-${language}` }, [code])],
+			'module-scrollarea',
+			{ orientation: 'horizontal' },
+			[
+				new Tag('pre', { 'data-language': language, 'data-code': code }, [
+					new Tag('code', { class: `language-${language}` }, [code]),
+				]),
+			],
 		)
 
 		// Create copy button

@@ -1,4 +1,4 @@
-import Markdoc, { type Node, type Schema } from '@markdoc/markdoc'
+import { type Node, type Schema, Tag } from '@markdoc/markdoc'
 import { commonAttributes, richChildren } from '../markdoc-constants'
 import {
 	splitContentBySeparator,
@@ -55,7 +55,7 @@ const demo: Schema = {
 		).filter(Boolean)
 
 		// Store raw HTML as attribute for post-processing, similar to module-codeblock
-		return new Markdoc.Tag(
+		return new Tag(
 			'module-demo',
 			{
 				...node.attributes,
@@ -73,17 +73,14 @@ function extractRawContent(node: Node): string {
 		return content.replace(/\s+/g, ' ')
 	}
 
-	if (node.type === 'paragraph') {
+	if (node.type === 'paragraph')
 		return node.children?.map(extractRawContent).join(' ') || ''
-	}
 
-	if (node.type === 'inline') {
+	if (node.type === 'inline')
 		return node.children?.map(extractRawContent).join(' ') || ''
-	}
 
-	if (node.children && node.children.length > 0) {
+	if (node.children && node.children.length > 0)
 		return node.children.map(extractRawContent).join(' ')
-	}
 
 	return node.attributes?.content || ''
 }

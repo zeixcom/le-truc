@@ -11,12 +11,19 @@ form-spinbutton {
 		height: var(--input-height);
 		min-width: 3rem;
 		text-align: center;
+		color: var(--color-text);
+		background-color: var(--color-input);
 		font-size: var(--font-size-s);
 		padding: 0 var(--space-s);
 		line-height: 2;
 		flex-grow: 1;
 		appearance: textfield;
 		-moz-appearance: textfield;
+
+		&:disabled {
+			color: var(--color-text-soft);
+			background-color: var(--color-background);
+		}
 
 		&::-webkit-outer-spin-button,
 		&::-webkit-inner-spin-button {

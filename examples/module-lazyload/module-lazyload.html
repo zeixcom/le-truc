@@ -7,6 +7,8 @@
 	<div class="content" hidden></div>
 </module-lazyload>
 
+<hr />
+
 <!-- Complex content test - tests loading of components and styles -->
 <module-lazyload
 	id="complex-content-test"
@@ -18,6 +20,8 @@
 	</card-callout>
 	<div class="content" hidden></div>
 </module-lazyload>
+
+<hr />
 
 <!-- Nested components test - tests initialization of nested custom components -->
 <module-lazyload
@@ -31,6 +35,8 @@
 	<div class="content" hidden></div>
 </module-lazyload>
 
+<hr />
+
 <!-- Empty content test - tests handling of empty/whitespace responses -->
 <module-lazyload
 	id="empty-content-test"
@@ -42,6 +48,8 @@
 	</card-callout>
 	<div class="content" hidden></div>
 </module-lazyload>
+
+<hr />
 
 <!-- Original complex snippet test - tests the existing shake-hands component -->
 <module-lazyload
@@ -60,6 +68,8 @@
 	</template>
 </module-lazyload>
 
+<hr />
+
 <!-- Invalid URL test - tests error handling for malformed URLs -->
 <module-lazyload id="invalid-url-test" src="not-a-valid-url">
 	<card-callout>
@@ -68,6 +78,8 @@
 	</card-callout>
 	<div class="content" hidden></div>
 </module-lazyload>
+
+<hr />
 
 <!-- 404 error test - tests error handling for missing files -->
 <module-lazyload
@@ -81,6 +93,8 @@
 	<div class="content" hidden></div>
 </module-lazyload>
 
+<hr />
+
 <!-- Cross-origin URL test - tests error handling for cross-origin requests -->
 <module-lazyload id="cross-origin-test" src="https://example.com/test.html">
 	<card-callout>
@@ -89,6 +103,8 @@
 	</card-callout>
 	<div class="content" hidden></div>
 </module-lazyload>
+
+<hr />
 
 <!-- No src attribute test - tests handling when src is missing -->
 <module-lazyload id="no-src-test">
@@ -99,6 +115,8 @@
 	<div class="content" hidden></div>
 </module-lazyload>
 
+<hr />
+
 <!-- Dynamic src test - tests programmatic src changes -->
 <module-lazyload id="dynamic-src-test">
 	<card-callout>
@@ -107,6 +125,8 @@
 	</card-callout>
 	<div class="content" hidden></div>
 </module-lazyload>
+
+<hr />
 
 <!-- Missing elements test - tests graceful handling when required elements are missing -->
 <module-lazyload
@@ -118,6 +138,8 @@
 	<p class="error" role="alert" aria-live="assertive" hidden></p>
 	<div class="content" hidden></div>
 </module-lazyload>
+
+<hr />
 
 <!-- Recursive loading test - tests prevention of recursive loading -->
 <module-lazyload

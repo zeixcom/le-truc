@@ -67,7 +67,9 @@ export function tabPanel({ name, panel }: TabPanelProps): string {
 				<span class="file">${name}.${panel.type}</span>
 				<span class="language">${panel.type}</span>
 			</p>
-			${panel.content}
+			<module-scrollarea orientation="horizontal">
+				${panel.content}
+			</module-scrollarea>
 			<basic-button class="copy">
 				<button type="button" class="secondary small">
 					<span class="label">Copy</span>
