@@ -43,7 +43,8 @@
 				<span class="file">module-listnav.html</span>
 				<span class="language">html</span>
 			</p>
-			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-listnav</span><span style="color:#F8F8F2">></span></span>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-listnav</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">nav</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">h2</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"pages-label"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"visually-hidden"</span><span style="color:#F8F8F2">>Pages&#x3C;/</span><span style="color:#F92672">h2</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">form-listbox</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"pages"</span><span style="color:#A6E22E"> value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-listnav/mocks/page1.html"</span><span style="color:#F8F8F2">></span></span>
@@ -116,6 +117,7 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-listnav</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span></code></pre>
+			</module-scrollarea>
 			<basic-button class="copy">
 				<button type="button" class="secondary small">
 					<span class="label">Copy</span>
@@ -138,23 +140,31 @@
 				<span class="file">module-listnav.css</span>
 				<span class="language">css</span>
 			</p>
-			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">module-listnav</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">grid</span><span style="color:#F8F8F2">;</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	grid-template-columns</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">fr</span><span style="color:#AE81FF"> 2</span><span style="color:#F92672">fr</span><span style="color:#F8F8F2">;</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	gap</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xl);</span></span>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">module-listnav</span><span style="color:#F92672"> module-lazyload</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	contain</span><span style="color:#F8F8F2">: inline-size;</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">	module-lazyload {</span></span>
-<span class="line"><span style="color:#F8F8F2">		h1,</span></span>
-<span class="line"><span style="color:#F8F8F2">		h2,</span></span>
-<span class="line"><span style="color:#F8F8F2">		h3,</span></span>
-<span class="line"><span style="color:#F8F8F2">		h4,</span></span>
-<span class="line"><span style="color:#F8F8F2">		h5,</span></span>
-<span class="line"><span style="color:#F8F8F2">		h6 {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			margin-top</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F92672">@media</span><span style="color:#66D9EF"> screen</span><span style="color:#F92672"> and</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">min-width</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">48</span><span style="color:#F92672">em</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#F92672">	module-listnav</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">grid</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		grid-template-columns</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">fr</span><span style="color:#AE81FF"> 2</span><span style="color:#F92672">fr</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		gap</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xl);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26; module-lazyload {</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26; h1,</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26; h2,</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26; h3,</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26; h4,</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26; h5,</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26; h6 {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				margin-top</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span></code></pre>
+			</module-scrollarea>
 			<basic-button class="copy">
 				<button type="button" class="secondary small">
 					<span class="label">Copy</span>
@@ -177,13 +187,82 @@
 				<span class="file">module-listnav.ts</span>
 				<span class="language">ts</span>
 			</p>
-			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { </span><span style="color:#F92672">type</span><span style="color:#F8F8F2"> Component, defineComponent, pass } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { FormListboxProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../form-listbox/form-listbox'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { ModuleLazyloadProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../module-lazyload/module-lazyload'</span></span>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	batch,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createEffect,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F8F8F2">	pass,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F92672"> type</span><span style="color:#F8F8F2"> { FormListboxProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../form-listbox/form-listbox'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F92672"> type</span><span style="color:#F8F8F2"> { ModuleLazyloadProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../module-lazyload/module-lazyload'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleListnavUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	listbox</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormListboxProps</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	lazyload</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleLazyloadProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * Extract the base path (first path segment) from an option value.</span></span>
+<span class="line"><span style="color:#88846F"> * "./examples/form-combobox.html" → "./examples/"</span></span>
+<span class="line"><span style="color:#88846F"> * "./api/functions/defineComponent.html" → "./api/"</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#A6E22E"> getBasePath</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">	listbox</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> { base</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">; ext</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2"> } </span><span style="color:#F92672">|</span><span style="color:#66D9EF;font-style:italic"> null</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> firstOption </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> listbox.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#E6DB74">		'button[role="option"]'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	)</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">firstOption?.value) </span><span style="color:#F92672">return</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> firstOption.value</span></span>
+<span class="line"><span style="color:#88846F">	// Handle relative paths starting with "./"</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">value.</span><span style="color:#A6E22E">startsWith</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'./'</span><span style="color:#F8F8F2">)) </span><span style="color:#F92672">return</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">	// Find the second slash to get the first path segment: "./examples/"</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> secondSlash </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value.</span><span style="color:#A6E22E">indexOf</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'/'</span><span style="color:#F8F8F2">, </span><span style="color:#AE81FF">2</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (secondSlash </span><span style="color:#F92672">===</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">return</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">	return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">		base: value.</span><span style="color:#A6E22E">slice</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, secondSlash </span><span style="color:#F92672">+</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		ext: value.</span><span style="color:#A6E22E">slice</span><span style="color:#F8F8F2">(value.</span><span style="color:#A6E22E">lastIndexOf</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.'</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * Derive the option value from a location hash.</span></span>
+<span class="line"><span style="color:#88846F"> * "#functions/defineComponent" → "./api/functions/defineComponent.html"</span></span>
+<span class="line"><span style="color:#88846F"> * "#form-combobox" → "./examples/form-combobox.html"</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#A6E22E"> hashToValue</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">hash</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">listbox</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> null</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">hash) </span><span style="color:#F92672">return</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> fragment </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> hash.</span><span style="color:#A6E22E">slice</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">fragment) </span><span style="color:#F92672">return</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> paths </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> getBasePath</span><span style="color:#F8F8F2">(listbox)</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">paths) </span><span style="color:#F92672">return</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">	return</span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">paths.base</span><span style="color:#F92672">}${</span><span style="color:#F8F8F2">fragment</span><span style="color:#F92672">}${</span><span style="color:#F8F8F2">paths.ext</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * Derive a hash fragment from an option value.</span></span>
+<span class="line"><span style="color:#88846F"> * "./api/functions/defineComponent.html" → "functions/defineComponent"</span></span>
+<span class="line"><span style="color:#88846F"> * "./examples/form-combobox.html" → "form-combobox"</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#A6E22E"> valueToHash</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">listbox</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">value) </span><span style="color:#F92672">return</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> paths </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> getBasePath</span><span style="color:#F8F8F2">(listbox)</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">paths) </span><span style="color:#F92672">return</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	let</span><span style="color:#F8F8F2"> hash </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (hash.</span><span style="color:#A6E22E">startsWith</span><span style="color:#F8F8F2">(paths.base)) hash </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> hash.</span><span style="color:#A6E22E">slice</span><span style="color:#F8F8F2">(paths.base.length)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> dotIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> hash.</span><span style="color:#A6E22E">lastIndexOf</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (dotIndex </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">) hash </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> hash.</span><span style="color:#A6E22E">slice</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, dotIndex)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">	return</span><span style="color:#F8F8F2"> hash</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;{}, </span><span style="color:#A6E22E;text-decoration:underline">ModuleListnavUI</span><span style="color:#F8F8F2">>(</span></span>
@@ -193,11 +272,64 @@
 <span class="line"><span style="color:#F8F8F2">		listbox: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'form-listbox'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Required to select a partial to load'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">		lazyload: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'module-lazyload'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Required to load a partial into'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">	}),</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">listbox</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">		lazyload: </span><span style="color:#A6E22E">pass</span><span style="color:#F8F8F2">({ </span><span style="color:#A6E22E">src</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> listbox.value }),</span></span>
-<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">listbox</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> hasOption</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
+<span class="line"><span style="color:#F92672">			!!</span><span style="color:#F8F8F2">listbox.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">				`button[role="option"][value="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">CSS.</span><span style="color:#A6E22E">escape</span><span style="color:#F8F8F2">(value)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"]`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Set initial selection from hash</span></span>
+<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (location.hash) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> hashToValue</span><span style="color:#F8F8F2">(location.hash, listbox)</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (value </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> hasOption</span><span style="color:#F8F8F2">(value)) listbox.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Track whether we're updating the hash ourselves to avoid loops</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> updatingHash </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Update selection when hash changes (browser back/forward)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> onHashChange</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (updatingHash) </span><span style="color:#F92672">return</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> hashToValue</span><span style="color:#F8F8F2">(location.hash, listbox)</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (value </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> listbox.value </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> hasOption</span><span style="color:#F8F8F2">(value)) {</span></span>
+<span class="line"><span style="color:#A6E22E">				batch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					listbox.filter </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#F8F8F2">					listbox.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
+<span class="line"><span style="color:#F8F8F2">				})</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			lazyload: </span><span style="color:#A6E22E">pass</span><span style="color:#F8F8F2">({ </span><span style="color:#A6E22E">src</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> listbox.value }),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Sync location.hash ↔ listbox selection</span></span>
+<span class="line"><span style="color:#A6E22E">			host</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#88846F">				// Update hash when selection changes</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> cleanup </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createEffect</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> listbox.value</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">value) </span><span style="color:#F92672">return</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> hash </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> valueToHash</span><span style="color:#F8F8F2">(value, listbox)</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (hash </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> location.hash </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> `#</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">hash</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#F8F8F2">						updatingHash </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F8F8F2">						history.</span><span style="color:#A6E22E">replaceState</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">null</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">`#</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">hash</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">						updatingHash </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">				})</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">				window.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'hashchange'</span><span style="color:#F8F8F2">, onHashChange)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">					cleanup</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">					window.</span><span style="color:#A6E22E">removeEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'hashchange'</span><span style="color:#F8F8F2">, onHashChange)</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			},</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre>
+			</module-scrollarea>
 			<basic-button class="copy">
 				<button type="button" class="secondary small">
 					<span class="label">Copy</span>

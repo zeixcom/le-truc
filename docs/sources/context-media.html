@@ -34,7 +34,8 @@
 				<span class="file">context-media.html</span>
 				<span class="language">html</span>
 			</p>
-			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">context-media</span><span style="color:#F8F8F2">></span></span>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">context-media</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#88846F">	&#x3C;!-- Arbitrarily nested HTML with one or many context consumers --></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-mediaqueries</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">h2</span><span style="color:#F8F8F2">>With Context&#x3C;/</span><span style="color:#F92672">h2</span><span style="color:#F8F8F2">></span></span>
@@ -51,6 +52,7 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-mediaqueries</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">context-media</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span></code></pre>
+			</module-scrollarea>
 			<basic-button class="copy">
 				<button type="button" class="secondary small">
 					<span class="label">Copy</span>
@@ -73,7 +75,8 @@
 				<span class="file">context-media.ts</span>
 				<span class="language">ts</span>
 			</p>
-			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
 <span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Context,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createState,</span></span>
@@ -123,7 +126,7 @@
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ContextMediaProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'context-media'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	{</span></span>
-<span class="line"><span style="color:#88846F">		// Context for motion preference</span></span>
+<span class="line"><span style="color:#88846F">		// Context for motion preference; true for no-preference, false for reduce</span></span>
 <span class="line"><span style="color:#F8F8F2">		[MEDIA_MOTION]: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> mql </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'(prefers-reduced-motion: reduce)'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> motion </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(mql.matches </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'reduce'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'no-preference'</span><span style="color:#F8F8F2">)</span></span>
@@ -146,10 +149,11 @@
 <span class="line"><span style="color:#88846F">		// Context for screen viewport size</span></span>
 <span class="line"><span style="color:#F8F8F2">		[MEDIA_VIEWPORT]: (</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> { host</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#A6E22E"> getBreakpoint</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">attr</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">fallback</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> ui.host.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(attr)?.</span><span style="color:#A6E22E">trim</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">value) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> fallback</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> unit </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value.</span><span style="color:#A6E22E">match</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">/em</span><span style="color:#F92672">$</span><span style="color:#E6DB74">/</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'em'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'px'</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> v </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> parseFloat</span><span style="color:#F8F8F2">(value)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> ui.host.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(attr)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> trimmed </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value?.</span><span style="color:#A6E22E">trim</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">trimmed) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> fallback</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> unit </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> trimmed.</span><span style="color:#A6E22E">match</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">/em</span><span style="color:#F92672">$</span><span style="color:#E6DB74">/</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'em'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'px'</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> v </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> parseFloat</span><span style="color:#F8F8F2">(trimmed)</span></span>
 <span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> Number.</span><span style="color:#A6E22E">isFinite</span><span style="color:#F8F8F2">(v) </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> v </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> unit </span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> fallback</span></span>
 <span class="line"><span style="color:#F8F8F2">			}</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> mqlSM </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`(min-width: </span><span style="color:#F92672">${</span><span style="color:#A6E22E">getBreakpoint</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'sm'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'32em'</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">)`</span><span style="color:#F8F8F2">)</span></span>
@@ -200,6 +204,7 @@
 <span class="line"><span style="color:#F8F8F2">	}),</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre>
+			</module-scrollarea>
 			<basic-button class="copy">
 				<button type="button" class="secondary small">
 					<span class="label">Copy</span>

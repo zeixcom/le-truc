@@ -34,7 +34,8 @@
 				<span class="file">basic-pluralize.html</span>
 				<span class="language">html</span>
 			</p>
-			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Try changing the &#x3C;</span><span style="color:#F92672">code</span><span style="color:#F8F8F2">>count&#x3C;/</span><span style="color:#F92672">code</span><span style="color:#F8F8F2">> attribute in the inspector.&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span>
@@ -118,6 +119,7 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span></code></pre>
+			</module-scrollarea>
 			<basic-button class="copy">
 				<button type="button" class="secondary small">
 					<span class="label">Copy</span>
@@ -140,13 +142,14 @@
 				<span class="file">basic-pluralize.ts</span>
 				<span class="language">ts</span>
 			</p>
-			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	asInteger,</span></span>
 <span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
 <span class="line"><span style="color:#F8F8F2">	setText,</span></span>
 <span class="line"><span style="color:#F8F8F2">	show,</span></span>
-<span class="line"><span style="color:#F8F8F2">	UI,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> UI,</span></span>
 <span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicPluralizeProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
@@ -209,7 +212,11 @@
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">		// Basic effects</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> effects </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> effects</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			count</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ReturnType</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">typeof</span><span style="color:#F8F8F2"> setText></span></span>
+<span class="line"><span style="color:#F8F8F2">			none</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ReturnType</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">typeof</span><span style="color:#F8F8F2"> show></span></span>
+<span class="line"><span style="color:#F8F8F2">			some</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ReturnType</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">typeof</span><span style="color:#F8F8F2"> show></span></span>
+<span class="line"><span style="color:#F8F8F2">		} </span><span style="color:#F92672">&#x26;</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Partial</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">Record</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">Intl</span><span style="color:#F8F8F2">.</span><span style="color:#A6E22E;text-decoration:underline">LDMLPluralRule</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">ReturnType</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">typeof</span><span style="color:#F8F8F2"> show>>> </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">			count: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(host.count)),</span></span>
 <span class="line"><span style="color:#F8F8F2">			none: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.count </span><span style="color:#F92672">===</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">			some: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.count </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">),</span></span>
@@ -223,6 +230,7 @@
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre>
+			</module-scrollarea>
 			<basic-button class="copy">
 				<button type="button" class="secondary small">
 					<span class="label">Copy</span>

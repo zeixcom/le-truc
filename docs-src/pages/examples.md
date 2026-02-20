@@ -12,9 +12,8 @@ layout: 'page'
 {% /hero %}
 
 {% section .breakout %}
-## Components
 
-{% listnav title="Example Components" %}
+{% listnav title="Select a Component" %}
 - Basic
   - [Button](./examples/basic-button.html)
   - [Counter](./examples/basic-counter.html) selected

@@ -2,7 +2,7 @@
 
 > **Parser**\<`T`, `U`\> = (`ui`, `value`, `old?`) => `T`
 
-Defined in: [src/parsers.ts:6](https://github.com/zeixcom/le-truc/blob/9899f5d34ea29fc1973736236835ba462d0ed87a/src/parsers.ts#L6)
+Defined in: [src/parsers.ts:6](https://github.com/zeixcom/le-truc/blob/9bf1182113652328495f1c47a23356331bfe23f3/src/parsers.ts#L6)
 
 #### Type Parameters
 

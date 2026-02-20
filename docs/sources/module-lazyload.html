@@ -34,7 +34,8 @@
 				<span class="file">module-lazyload.html</span>
 				<span class="language">html</span>
 			</p>
-			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#88846F">&#x3C;!-- Default example - tests basic loading functionality --></span></span>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#88846F">&#x3C;!-- Default example - tests basic loading functionality --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span><span style="color:#A6E22E"> src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"/test/module-lazyload/mocks/simple-text.html"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"loading"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#F8F8F2">>Loading...&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
@@ -42,6 +43,8 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Complex content test - tests loading of components and styles --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
@@ -55,6 +58,8 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Nested components test - tests initialization of nested custom components --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
 <span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"nested-components-test"</span></span>
@@ -67,6 +72,8 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Empty content test - tests handling of empty/whitespace responses --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
 <span class="line"><span style="color:#A6E22E">	id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"empty-content-test"</span></span>
@@ -78,6 +85,8 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Original complex snippet test - tests the existing shake-hands component --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
@@ -96,6 +105,8 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">template</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Invalid URL test - tests error handling for malformed URLs --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"invalid-url-test"</span><span style="color:#A6E22E"> src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"not-a-valid-url"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
@@ -104,6 +115,8 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- 404 error test - tests error handling for missing files --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
@@ -117,6 +130,8 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Cross-origin URL test - tests error handling for cross-origin requests --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"cross-origin-test"</span><span style="color:#A6E22E"> src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"https://example.com/test.html"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
@@ -125,6 +140,8 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- No src attribute test - tests handling when src is missing --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"no-src-test"</span><span style="color:#F8F8F2">></span></span>
@@ -135,6 +152,8 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Dynamic src test - tests programmatic src changes --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"dynamic-src-test"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
@@ -143,6 +162,8 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-callout</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Missing elements test - tests graceful handling when required elements are missing --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
@@ -154,6 +175,8 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"alert"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">&#x3C;!-- Recursive loading test - tests prevention of recursive loading --></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-lazyload</span></span>
@@ -167,6 +190,7 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"content"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-lazyload</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span></code></pre>
+			</module-scrollarea>
 			<basic-button class="copy">
 				<button type="button" class="secondary small">
 					<span class="label">Copy</span>
@@ -189,7 +213,8 @@
 				<span class="file">module-lazyload.ts</span>
 				<span class="language">ts</span>
 			</p>
-			<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	asString,</span></span>
 <span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createTask,</span></span>
@@ -279,6 +304,7 @@
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre>
+			</module-scrollarea>
 			<basic-button class="copy">
 				<button type="button" class="secondary small">
 					<span class="label">Copy</span>
