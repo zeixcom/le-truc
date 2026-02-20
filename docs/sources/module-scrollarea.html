@@ -276,7 +276,7 @@
 <span class="line"></span>
 <span class="line"><span style="color:#F8F8F2">	&#x26;::before,</span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x26;::after {</span></span>
-<span class="line"><span style="color:#66D9EF">		content</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF">		content</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">""</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">sticky</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">block</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		width</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">100</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">;</span></span>
@@ -305,7 +305,7 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">		opacity</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">	&#x26;[</span><span style="color:#A6E22E">orientation</span><span style="color:#F92672">=</span><span style="color:#E6DB74">'horizontal'</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x26;[</span><span style="color:#A6E22E">orientation</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"horizontal"</span><span style="color:#F8F8F2">] {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		overflow-x</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">auto</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		overflow-y</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">clip</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"></span>
@@ -367,8 +367,8 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> observer </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> IntersectionObserver</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#F8F8F2">			([</span><span style="color:#FD971F;font-style:italic">entry</span><span style="color:#F8F8F2">]) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span></span>
-<span class="line"><span style="color:#F8F8F2">					entry.intersectionRatio </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> MIN_INTERSECTION_RATIO</span></span>
-<span class="line"><span style="color:#F92672">					&#x26;&#x26;</span><span style="color:#F8F8F2"> entry.intersectionRatio </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> MAX_INTERSECTION_RATIO</span></span>
+<span class="line"><span style="color:#F8F8F2">					entry.intersectionRatio </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> MIN_INTERSECTION_RATIO </span><span style="color:#F92672">&#x26;&#x26;</span></span>
+<span class="line"><span style="color:#F8F8F2">					entry.intersectionRatio </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> MAX_INTERSECTION_RATIO</span></span>
 <span class="line"><span style="color:#F8F8F2">				)</span></span>
 <span class="line"><span style="color:#A6E22E">					overflowCallback</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F92672">				else</span><span style="color:#A6E22E"> batch</span><span style="color:#F8F8F2">(noOverflowCallback)</span></span>

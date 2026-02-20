@@ -18,6 +18,32 @@
 
 <hr />
 
+<form-radiogroup class="radio-group">
+	<fieldset>
+		<legend>Theme</legend>
+		<label>
+			<input type="radio" class="visually-hidden" name="theme" value="light" />
+			<span>Light</span>
+		</label>
+		<label>
+			<input type="radio" class="visually-hidden" name="theme" value="dark" />
+			<span>Dark</span>
+		</label>
+		<label class="selected">
+			<input
+				type="radio"
+				class="visually-hidden"
+				name="theme"
+				value="system"
+				checked
+			/>
+			<span>Use system preference</span>
+		</label>
+	</fieldset>
+</form-radiogroup>
+
+<hr />
+
 <form-radiogroup class="split-button">
 	<fieldset>
 		<legend class="visually-hidden">Filter</legend>

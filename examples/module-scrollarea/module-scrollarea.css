@@ -8,7 +8,7 @@ module-scrollarea {
 
 	&::before,
 	&::after {
-		content: '';
+		content: "";
 		position: sticky;
 		display: block;
 		width: 100%;
@@ -37,7 +37,7 @@ module-scrollarea {
 		opacity: 1;
 	}
 
-	&[orientation='horizontal'] {
+	&[orientation="horizontal"] {
 		overflow-x: auto;
 		overflow-y: clip;
 

@@ -33,6 +33,27 @@ A checkbox component with a reactive checked state and label text, intended to w
 * Label text shown next to the checkbox
 {% /table %}
 
+#### Classes
+
+Use `class` attribute to get a different style for the checkbox.
+
+{% table %}
+* Class
+* Description
+---
+* none
+* Default browser style
+---
+* `checkbox`
+* For a styled checkbox
+---
+* `todo`
+* For an action item that can be active or completed
+---
+* `toggle`
+* For a toggle on/off switch setting
+{% /table %}
+
 #### Descendant Elements
 
 {% table %}

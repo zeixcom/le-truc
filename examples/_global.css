@@ -118,8 +118,8 @@
 	--color-text-inverted: var(--color-white);
 	--color-shadow: rgb(0 0 0 / 0.1);
 
-	--font-family-sans: 'Helvetica Neue', Arial, Roboto, sans-serif;
-	--font-family-mono: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+	--font-family-sans: "Helvetica Neue", Arial, Roboto, sans-serif;
+	--font-family-mono: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
 
 	--font-weight-regular: 400;
 	--font-weight-bold: 700;
@@ -448,7 +448,7 @@ a[href] {
 	}
 }
 
-[aria-hidden='true'],
+[aria-hidden="true"],
 [hidden] {
 	display: none !important;
 }

@@ -28,6 +28,24 @@ A radiogroup component that keeps the selected radio value in sync and provides 
 * Value of the currently checked radio input
 {% /table %}
 
+#### Classes
+
+Use `class` attribute to get a different style for the radio group.
+
+{% table %}
+* Class
+* Description
+---
+* none
+* Default browser style
+---
+* `radio-group`
+* For a styled radio group
+---
+* `split-button`
+* For a split button display
+{% /table %}
+
 #### Descendant Elements
 
 {% table %}
