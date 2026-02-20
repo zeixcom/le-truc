@@ -2,7 +2,7 @@
 
 > **asNumber**\<`U`\>(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`number`, `U`\>
 
-Defined in: [src/parsers/number.ts:51](https://github.com/zeixcom/le-truc/blob/b2bd37a6fe13095f4a2fd459382f54953f446e56/src/parsers/number.ts#L51)
+Defined in: [src/parsers/number.ts:51](https://github.com/zeixcom/le-truc/blob/569c3554a3bd73c7996dc67fec548045ec940d32/src/parsers/number.ts#L51)
 
 Parse a string as a number with a fallback
 
