@@ -1,6 +1,6 @@
 ### Basic Button
 
-A button component with a label, a disabled state, and an optional badge, intended to be controlled by a parent component.
+A reusable button component designed to be controlled by a parent component via `pass()`. Demonstrates `asBoolean()` and `asString()` parsers — including a reader fallback that reads the initial label from the DOM — and shows how optional UI elements (`span.label`, `span.badge`) are handled gracefully: when absent, the corresponding `setText()` and `setProperty()` effects simply have no target.
 
 #### Preview
 
@@ -60,4 +60,34 @@ A button component with a label, a disabled state, and an optional badge, intend
 * `HTMLSpanElement`
 * optional
 * Setting `label` property has no effect if the element is missing
+{% /table %}
+
+#### Classes
+
+Use `class` attribute on `button` to get a different style for the button.
+
+{% table %}
+* Class
+* Description
+---
+* `primary`
+* For a primary action
+---
+* (`secondary`)
+* For a secondary action (default - no class looks like that)
+---
+* `tertiary`
+* For a tertiary action
+---
+* `constructive`
+* For a constructive action
+---
+* `destructive`
+* For a destructive action
+---
+* `small`
+* For a small button
+---
+* `large`
+* For a large button
 {% /table %}

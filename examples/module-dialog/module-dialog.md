@@ -1,6 +1,6 @@
 ### Module Dialog
 
-A dialog component that opens a native `<dialog>`, locks body scroll, and restores focus when closed.
+A native `<dialog>` wrapper with scroll lock and focus restoration. Demonstrates initialising a reactive property with a static value (`open: false`) instead of a parser, and using a raw effect function on `host` that wraps `createEffect()` directly — showing how to manage complex imperative side effects (calling `showModal()`/`close()`, toggling body scroll classes, restoring focus) in a fully reactive way with proper cleanup.
 
 #### Preview
 

@@ -34,7 +34,7 @@ export default defineComponent<ModuleDialogProps, ModuleDialogUI>(
 			'Add a close button in the dialog.',
 		),
 	}),
-	({ host, dialog }) => {
+	({ host, dialog, closeButton }) => {
 		let scrollTop = 0
 		let activeElement: HTMLElement | null = null
 
@@ -47,6 +47,7 @@ export default defineComponent<ModuleDialogProps, ModuleDialogUI>(
 						dialog.showModal()
 						document.body.classList.add(SCROLL_LOCK_CLASS)
 						document.body.style.setProperty('top', `-${scrollTop}px`)
+						closeButton.focus()
 					} else {
 						document.body.classList.remove(SCROLL_LOCK_CLASS)
 						window.scrollTo({

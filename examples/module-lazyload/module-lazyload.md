@@ -1,6 +1,6 @@
 ### Module Lazyload
 
-A lazy-loading component that fetches HTML from `src`, renders it into `.content`, and shows loading/error states.
+The advanced async example from the documentation. Demonstrates `createTask()` — an async signal that re-runs whenever `host.src` changes, exposes `pending`/`ok`/`error` states, and supports aborting in-flight requests. `dangerouslySetInnerHTML()` renders the fetched HTML, `show()` and `toggleClass()` drive the loading and error UI reactively, and `asString()` makes `src` an attribute-driven reactive property so the component reacts to external `src` changes.
 
 #### Preview
 

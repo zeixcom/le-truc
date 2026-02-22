@@ -1,6 +1,6 @@
 ### Form Checkbox
 
-A checkbox component with a reactive checked state and label text, intended to wrap a native checkbox input.
+A wrapper for a native checkbox that exposes a read-only `checked` state. Demonstrates `createEventsSensor()` as a property initializer — `checked` updates only on `change` events, making it a read-only sensor rather than a mutable state. Also shows `read()` as the sensor's initial value to read the current DOM state, `asString()` with a reader fallback for the label, and `toggleAttribute()` applied to `host` to reflect `checked` as an attribute for CSS styling.
 
 #### Preview
 

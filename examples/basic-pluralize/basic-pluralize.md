@@ -1,6 +1,6 @@
 ### Basic Pluralize
 
-A simple component that displays a pluralized text according to `Intl.PluralRules` and the `lang` context for different plural forms.
+A locale-aware pluralisation component driven by `Intl.PluralRules`. Demonstrates writing a custom parser (`asPositiveInteger`) that wraps `asInteger()` with additional validation, `show()` for conditional visibility, and `setText()` for the count display. The setup function builds the effects object dynamically — only attaching `show()` effects for the plural categories that the given locale actually uses — showing that effects are plain JavaScript values that can be composed programmatically.
 
 #### Preview
 

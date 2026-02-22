@@ -1,6 +1,6 @@
 ### Module List
 
-A list-management component that clones items from a template, supports add/delete methods, and optionally integrates with form controls.
+A dynamic list that clones items from a `<template>` element. Demonstrates the MethodProducer pattern: both `add` and `delete` are initializer functions typed as `ComponentUI → void` that install imperative methods directly on `host` as side effects during `connectedCallback`, rather than creating signals. The setup function uses `on('submit')` on the optional form and `pass()` to drive the add button's `disabled` state. Shows how to mix method-style and signal-style properties in the same component.
 
 #### Preview
 

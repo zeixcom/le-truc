@@ -1,6 +1,6 @@
 ### Module Carousel
 
-A carousel component with previous/next controls, dot navigation, keyboard support, and scroll-synced active slide state.
+A scroll-snap carousel with dot navigation and keyboard controls. Demonstrates using raw effect functions on `host` — returning custom cleanup functions — to integrate native browser APIs (`IntersectionObserver`, `createEffect`) alongside standard Le Truc effects. `asInteger()` with a reader fallback initialises `index` from the DOM. The `all()` Memo targets (`dots`, `slides`, `buttons`) show how `setProperty()` and `on()` effects automatically iterate over dynamic element collections.
 
 #### Preview
 

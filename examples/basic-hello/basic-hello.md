@@ -1,6 +1,6 @@
 ### Basic Hello
 
-A Hello World component with an input field to enter the name and a greeting message.
+The Hello World example from the Quick Start guide. Shows the minimal Le Truc pattern: `asString()` with a reader fallback that reads the initial value from the `output` element, `on('input')` to update `host.name` as the user types, and `setText()` to keep the greeting in sync. Also demonstrates how the setup function can reference a queried UI element (`input`) directly alongside `host`.
 
 #### Preview
 

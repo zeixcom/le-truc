@@ -2,4 +2,4 @@
 
 > **UI** = `Record`\<`string`, `Element` \| [`Memo`](Memo.md)\<`Element`[]\>\>
 
-Defined in: [src/ui.ts:101](https://github.com/zeixcom/le-truc/blob/29beeda732ab654fc5e6eab73c276e5a5367d43a/src/ui.ts#L101)
+Defined in: [src/ui.ts:101](https://github.com/zeixcom/le-truc/blob/ce6fdde33897d7e14382a222c2fdd5e1804c6bd3/src/ui.ts#L101)

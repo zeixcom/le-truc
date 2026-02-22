@@ -1,6 +1,6 @@
 ### Basic Counter
 
-A counter component with a button to increment the count and a span to display the current count.
+The canonical introductory example for Le Truc. Demonstrates `read()` combined with `asInteger()` to initialise a reactive property from existing DOM content rather than an attribute, `on('click')` to update `host.count` imperatively, and `setText()` to keep the display in sync. The setup function receives `host` via the UI object, showing the standard pattern for reading and mutating reactive properties inside effects.
 
 #### Preview
 
