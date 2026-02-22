@@ -95,11 +95,15 @@ class ContextRequestEvent<T extends UnknownContext> extends Event {
 }
 
 /**
- * Provide a context for descendant component consumers
+ * Make reactive properties of this component available to descendant consumers via the context protocol.
+ *
+ * Returns a `MethodProducer` — use it as a property initializer in `defineComponent`.
+ * It attaches a `context-request` listener to the host; when a matching request arrives,
+ * it provides a getter `() => host[context]` to the requester.
  *
  * @since 0.13.3
- * @param {Context<string, P[K]>[]} contexts - Array of contexts to provide
- * @returns {(host: Component<P>) => Cleanup} Function to add an event listener for ContextRequestEvent returning a cleanup function to remove the event listener
+ * @param {Array<keyof P>} contexts - Reactive property names to expose as context
+ * @returns {(host: Component<P>) => Cleanup} MethodProducer that installs the listener and returns a cleanup function
  */
 const provideContexts =
 	<P extends ComponentProps>(
@@ -122,12 +126,17 @@ const provideContexts =
 	}
 
 /**
- * Consume a context value for a component
+ * Request a context value from an ancestor provider, returning a reactive `Memo<T>`.
+ *
+ * Use as a property initializer in `defineComponent`. During `connectedCallback`, dispatches
+ * a `context-request` event that bubbles up the DOM. If an ancestor provider intercepts it,
+ * the returned Memo reflects the provider's current value reactively. If no provider responds,
+ * the Memo falls back to `fallback`.
  *
  * @since 0.15.0
- * @param {Context<string, () => T>} context - Context key to consume
- * @param {Fallback<T, U>} fallback - Fallback value or reader function for fallback
- * @returns {Reader<Memo<T>, U>} Computed signal that returns the consumed context the fallback value
+ * @param {Context<string, () => T>} context - Context key to request
+ * @param {Fallback<T, U & { host: Component<P> }>} fallback - Static value or reader function used when no provider is found
+ * @returns {Reader<Memo<T>, U & { host: Component<P> }>} Reader that dispatches the request and wraps the result in a Memo
  */
 const requestContext =
 	<T extends {}, P extends ComponentProps, U extends UI>(

@@ -2,9 +2,12 @@
 
 > **asEnum**(`valid`): [`Parser`](../type-aliases/Parser.md)\<`string`, [`UI`](../type-aliases/UI.md)\>
 
-Defined in: [src/parsers/string.ts:24](https://github.com/zeixcom/le-truc/blob/569c3554a3bd73c7996dc67fec548045ec940d32/src/parsers/string.ts#L24)
+Defined in: [src/parsers/string.ts:27](https://github.com/zeixcom/le-truc/blob/29beeda732ab654fc5e6eab73c276e5a5367d43a/src/parsers/string.ts#L27)
 
-Parse a string as a multi-state value (for example: ['true', 'false', 'mixed'], defaulting to the first valid option
+Parser that constrains an attribute value to one of a fixed set of allowed strings.
+
+Comparison is case-insensitive. If the attribute value is absent or does not match
+any allowed value, the first entry of `valid` is returned as the default.
 
 #### Parameters
 
@@ -12,13 +15,13 @@ Parse a string as a multi-state value (for example: ['true', 'false', 'mixed'], 
 
 \[`string`, `...string[]`\]
 
-Array of valid values
+Non-empty array of allowed values; first entry is the default
 
 #### Returns
 
 [`Parser`](../type-aliases/Parser.md)\<`string`, [`UI`](../type-aliases/UI.md)\>
 
-Parser function
+Parser that returns a valid enum value
 
 #### Since
 

@@ -68,15 +68,18 @@ type MaybeSignal<T extends {}> =
 /* === Exported Functions === */
 
 /**
- * Define a component with dependency resolution and setup function (connectedCallback)
+ * Define and register a reactive custom element.
+ *
+ * Calls `customElements.define()` and returns the registered class.
+ * Reactive properties are initialised in `connectedCallback` and torn down in `disconnectedCallback`.
  *
  * @since 0.15.0
- * @param {string} name - Custom element name
- * @param {object} props - Component properties
- * @param {function} select - Function to select UI elements
- * @param {function} setup - Setup function
- * @throws {InvalidComponentNameError} If component name is invalid
- * @throws {InvalidPropertyNameError} If property name is invalid
+ * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
+ * @param {Initializers<P, U>} props - Initializers for reactive properties: static values, signals, parsers, or readers
+ * @param {function} select - Receives `{ first, all }` query helpers; returns the UI object (queried DOM elements used by effects)
+ * @param {function} setup - Receives the frozen UI object (plus `host`) and returns effects keyed by UI element name
+ * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
+ * @throws {InvalidPropertyNameError} If a property name conflicts with reserved words or inherited HTMLElement properties
  */
 function defineComponent<P extends ComponentProps, U extends UI = {}>(
 	name: string,
@@ -181,11 +184,13 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 		}
 
 		/**
-		 * Set the signal for a given key
+		 * Create or replace the Slot-backed property accessor for a reactive property.
+		 * Mutable signals are wrapped in a Slot so their backing signal can be swapped
+		 * later (e.g. by `attributeChangedCallback` or `pass()`).
 		 *
 		 * @since 0.15.0
-		 * @param {K} key - Key to set accessor for
-		 * @param {MaybeSignal<P[K]>} value - Initial value, signal or computed callback to create signal
+		 * @param {K} key - Reactive property name
+		 * @param {MaybeSignal<P[K]>} value - Static value, signal, or computed callback
 		 */
 		#setAccessor<K extends keyof P>(key: K, value: MaybeSignal<P[K]>): void {
 			const signal = isSignal(value)

@@ -208,11 +208,15 @@ function createElementsMemo<S extends string>(
 }
 
 /**
- * Create partially applied helper functions to get descendants and run effects on them
+ * Create `{ first, all }` query helpers and a dependency resolver for a component host.
+ *
+ * Queries are run against `host.shadowRoot` if present, otherwise against `host` itself.
+ * Any undefined custom elements found during queries are collected as dependencies;
+ * `resolveDependencies` waits for them to be defined before activating effects.
  *
  * @since 0.14.0
- * @param {HTMLElement} host - Host component
- * @returns {ElementSelectors<P>} - Helper functions for selecting descendants
+ * @param {HTMLElement} host - The component host element
+ * @returns {[ElementQueries, (callback: () => void) => void]} Query helpers and a dependency resolver
  */
 const getHelpers = (
 	host: HTMLElement,
@@ -221,14 +225,16 @@ const getHelpers = (
 	const dependencies: Set<string> = new Set()
 
 	/**
-	 * Get the first descendant element matching a selector
-	 * If the element is a custom elements it will be added to dependencies
+	 * Return the first descendant element matching a CSS selector.
+	 *
+	 * If the matched element is an undefined custom element, its tag name is added
+	 * to the dependency set so `resolveDependencies` can await its definition.
 	 *
 	 * @since 0.15.0
-	 * @param {S} selector - Selector for element to check for
-	 * @param {string} [required] - Optional reason for the assertion; if provided, throws on missing element
-	 * @returns {ElementFromSelector<S> | undefined} First matching descendant element, or void if not found and not required
-	 * @throws {MissingElementError} - Thrown when the element is required but not found
+	 * @param {S} selector - CSS selector
+	 * @param {string} [required] - If provided and no element is found, throws with this message as context
+	 * @returns {ElementFromSelector<S> | undefined} The first matching element, or `undefined` if not found and not required
+	 * @throws {MissingElementError} If `required` is set and no matching element exists
 	 */
 	function first<S extends string>(
 		selector: S,
@@ -254,14 +260,17 @@ const getHelpers = (
 	}
 
 	/**
-	 * Get all descendant elements matching a selector
-	 * If any element is a custom element it will be added to dependencies
+	 * Return a `Memo` of all descendant elements matching a CSS selector.
+	 *
+	 * The Memo is backed by a `MutationObserver` that activates lazily when first
+	 * read inside a reactive effect, and disconnects when no effects are watching.
+	 * Undefined custom elements found at query time are added to the dependency set.
 	 *
 	 * @since 0.15.0
-	 * @param {S} selector - Selector for elements to check for
-	 * @param {string} [required] - Optional reason for the assertion; if provided, throws on missing elements
-	 * @returns {ElementFromSelector<S>[]} All matching descendant elements
-	 * @throws {MissingElementError} - Thrown when elements are required but not found
+	 * @param {S} selector - CSS selector
+	 * @param {string} [required] - If provided and no elements are found at query time, throws with this message as context
+	 * @returns {Memo<ElementFromSelector<S>[]>} Reactive memo of current matching elements
+	 * @throws {MissingElementError} If `required` is set and no matching elements exist at query time
 	 */
 	function all<S extends string>(
 		selector: S,
@@ -288,9 +297,13 @@ const getHelpers = (
 	}
 
 	/**
-	 * Resolve dependencies and thereafter run the provided function
+	 * Wait for all collected custom element dependencies to be defined, then run `callback`.
 	 *
-	 * @param {() => void} callback - Function to run after resolving dependencies
+	 * If no dependencies were collected, `callback` runs synchronously. Otherwise, a
+	 * microtask filters out already-defined elements, then `Promise.all` awaits the rest
+	 * with a 200 ms timeout. On timeout, logs a `DependencyTimeoutError` and runs `callback` anyway.
+	 *
+	 * @param {() => void} callback - Function to run once dependencies are resolved
 	 */
 	const resolveDependencies = (callback: () => void) => {
 		if (dependencies.size) {

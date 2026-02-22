@@ -2,10 +2,12 @@
 
 > **setStyle**\<`P`, `E`\>(`prop`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/style.ts:15](https://github.com/zeixcom/le-truc/blob/569c3554a3bd73c7996dc67fec548045ec940d32/src/effects/style.ts#L15)
+Defined in: [src/effects/style.ts:17](https://github.com/zeixcom/le-truc/blob/29beeda732ab654fc5e6eab73c276e5a5367d43a/src/effects/style.ts#L17)
 
-Effect for setting a CSS style property on an element.
-Sets the specified style property with support for deletion via UNSET.
+Effect for setting a CSS custom property or inline style on an element.
+
+When the reactive value is `null`, the style property is removed via
+`el.style.removeProperty(prop)`. Otherwise it is set via `el.style.setProperty(prop, value)`.
 
 #### Type Parameters
 
@@ -23,19 +25,19 @@ Sets the specified style property with support for deletion via UNSET.
 
 `string`
 
-Name of the CSS style property to set
+CSS property name (e.g. `'color'`, `'--my-var'`)
 
 ##### reactive?
 
 [`Reactive`](../type-aliases/Reactive.md)\<`string`, `P`, `E`\> = `...`
 
-Reactive value bound to the style property value (defaults to property name)
+Reactive value for the style value (defaults to property name)
 
 #### Returns
 
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Effect function that sets the style property on the element
+Effect that sets or removes the style property on the element
 
 #### Since
 

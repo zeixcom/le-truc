@@ -2,9 +2,13 @@
 
 > **provideContexts**\<`P`\>(`contexts`): (`host`) => [`Cleanup`](../type-aliases/Cleanup.md)
 
-Defined in: [src/context.ts:105](https://github.com/zeixcom/le-truc/blob/569c3554a3bd73c7996dc67fec548045ec940d32/src/context.ts#L105)
+Defined in: [src/context.ts:109](https://github.com/zeixcom/le-truc/blob/29beeda732ab654fc5e6eab73c276e5a5367d43a/src/context.ts#L109)
 
-Provide a context for descendant component consumers
+Make reactive properties of this component available to descendant consumers via the context protocol.
+
+Returns a `MethodProducer` — use it as a property initializer in `defineComponent`.
+It attaches a `context-request` listener to the host; when a matching request arrives,
+it provides a getter `() => host[context]` to the requester.
 
 #### Type Parameters
 
@@ -18,11 +22,11 @@ Provide a context for descendant component consumers
 
 keyof `P`[]
 
-Array of contexts to provide
+Reactive property names to expose as context
 
 #### Returns
 
-Function to add an event listener for ContextRequestEvent returning a cleanup function to remove the event listener
+MethodProducer that installs the listener and returns a cleanup function
 
 > (`host`): [`Cleanup`](../type-aliases/Cleanup.md)
 

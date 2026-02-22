@@ -2,9 +2,9 @@
 
 > **asString**\<`U`\>(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`string`, `U`\>
 
-Defined in: [src/parsers/string.ts:12](https://github.com/zeixcom/le-truc/blob/569c3554a3bd73c7996dc67fec548045ec940d32/src/parsers/string.ts#L12)
+Defined in: [src/parsers/string.ts:12](https://github.com/zeixcom/le-truc/blob/29beeda732ab654fc5e6eab73c276e5a5367d43a/src/parsers/string.ts#L12)
 
-Pass through string with a fallback
+Parser that returns the attribute value as a string, or a fallback when absent.
 
 #### Type Parameters
 
@@ -18,13 +18,13 @@ Pass through string with a fallback
 
 [`Fallback`](../type-aliases/Fallback.md)\<`string`, `U`\> = `''`
 
-Fallback value or reader function
+Static fallback string or reader function
 
 #### Returns
 
 [`Parser`](../type-aliases/Parser.md)\<`string`, `U`\>
 
-Parser function
+Parser that returns the attribute string or the resolved fallback
 
 #### Since
 
