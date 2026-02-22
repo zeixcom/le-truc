@@ -2,9 +2,16 @@
 
 > **read**\<`T`, `U`\>(`reader`, `fallback`): [`Reader`](../type-aliases/Reader.md)\<`T`, `U`\>
 
-Defined in: [src/parsers.ts:69](https://github.com/zeixcom/le-truc/blob/569c3554a3bd73c7996dc67fec548045ec940d32/src/parsers.ts#L69)
+Defined in: [src/parsers.ts:78](https://github.com/zeixcom/le-truc/blob/ce6fdde33897d7e14382a222c2fdd5e1804c6bd3/src/parsers.ts#L78)
 
-Read a value from a UI element
+Compose a loose reader with a parser or fallback to produce a typed `Reader<T>`.
+
+Used to initialise a reactive property from the current DOM state rather than
+from an attribute. Example: `read(ui => ui.input.value, asInteger())` reads the
+input's text value, parses it as an integer, and falls back to `0` if missing.
+
+- If the reader returns a `string` and `fallback` is a Parser, the string is parsed.
+- Otherwise, the reader's return value is used directly, falling back to `getFallback`.
 
 #### Type Parameters
 
@@ -22,19 +29,19 @@ Read a value from a UI element
 
 [`LooseReader`](../type-aliases/LooseReader.md)\<`T`, `U`\>
 
-Reader function returning T | string | null | undefined
+Reads a raw value from the UI object (`T | string | null | undefined`)
 
 ##### fallback
 
 [`ParserOrFallback`](../type-aliases/ParserOrFallback.md)\<`T`, `U`\>
 
-Fallback value or parser function
+Parser used when the reader returns a string, or static/reader fallback
 
 #### Returns
 
 [`Reader`](../type-aliases/Reader.md)\<`T`, `U`\>
 
-Parsed value or fallback value
+A typed reader that always returns `T`
 
 #### Since
 

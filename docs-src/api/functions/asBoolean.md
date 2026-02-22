@@ -2,13 +2,19 @@
 
 > **asBoolean**(): [`Parser`](../type-aliases/Parser.md)\<`boolean`, [`UI`](../type-aliases/UI.md)\>
 
-Defined in: [src/parsers/boolean.ts:11](https://github.com/zeixcom/le-truc/blob/569c3554a3bd73c7996dc67fec548045ec940d32/src/parsers/boolean.ts#L11)
+Defined in: [src/parsers/boolean.ts:15](https://github.com/zeixcom/le-truc/blob/ce6fdde33897d7e14382a222c2fdd5e1804c6bd3/src/parsers/boolean.ts#L15)
 
-Parse a boolean attribute as an actual boolean value
+Parser that converts a boolean HTML attribute to an actual boolean.
+
+Returns `true` when the attribute is present (value is not `null`) and its value
+is not the string `'false'`. Returns `false` otherwise — matching standard HTML
+boolean attribute semantics while allowing explicit opt-out via `attr="false"`.
 
 #### Returns
 
 [`Parser`](../type-aliases/Parser.md)\<`boolean`, [`UI`](../type-aliases/UI.md)\>
+
+Parser that returns `true` if the attribute is set and not `"false"`, `false` otherwise
 
 #### Since
 

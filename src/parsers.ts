@@ -45,12 +45,14 @@ const isReader = <T extends {}, U extends UI>(
 ): value is Reader<T, U> => isFunction<T>(value)
 
 /**
- * Get a fallback value for an element
+ * Resolve a fallback to a concrete value using the UI object.
+ *
+ * If `fallback` is a Reader function, calls it with `ui`; otherwise returns it directly.
  *
  * @since 0.14.0
- * @param {U} ui - Component UI
- * @param {ParserOrFallback<T, U>} fallback - Fallback value or parser function
- * @returns {T} Fallback value or parsed value
+ * @param {U} ui - The frozen UI object (DOM elements + host)
+ * @param {ParserOrFallback<T, U>} fallback - Static fallback value, Reader function, or Parser
+ * @returns {T} The resolved fallback value
  */
 const getFallback = <T extends {}, U extends UI>(
 	ui: U,
@@ -58,12 +60,19 @@ const getFallback = <T extends {}, U extends UI>(
 ): T => (isReader<T, U>(fallback) ? fallback(ui) : (fallback as T))
 
 /**
- * Read a value from a UI element
+ * Compose a loose reader with a parser or fallback to produce a typed `Reader<T>`.
+ *
+ * Used to initialise a reactive property from the current DOM state rather than
+ * from an attribute. Example: `read(ui => ui.input.value, asInteger())` reads the
+ * input's text value, parses it as an integer, and falls back to `0` if missing.
+ *
+ * - If the reader returns a `string` and `fallback` is a Parser, the string is parsed.
+ * - Otherwise, the reader's return value is used directly, falling back to `getFallback`.
  *
  * @since 0.15.0
- * @param {LooseReader<T, U>} reader - Reader function returning T | string | null | undefined
- * @param {ParserOrFallback<T, U>} fallback - Fallback value or parser function
- * @returns {Reader<T, U>} Parsed value or fallback value
+ * @param {LooseReader<T, U>} reader - Reads a raw value from the UI object (`T | string | null | undefined`)
+ * @param {ParserOrFallback<T, U>} fallback - Parser used when the reader returns a string, or static/reader fallback
+ * @returns {Reader<T, U>} A typed reader that always returns `T`
  */
 const read =
 	<T extends {}, U extends UI>(

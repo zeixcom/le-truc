@@ -1,6 +1,6 @@
 ### Form Radiogroup
 
-A radiogroup component that keeps the selected radio value in sync and provides keyboard focus management.
+A roving-tabindex radio group with a read-only `value` sensor. Demonstrates `createEventsSensor()` with `all()` as the target — listening for `change` events across a live `Memo<HTMLInputElement[]>` collection — and `read()` to initialise the sensor from the currently checked radio. Also shows `setProperty()` and `toggleClass()` applied to `Memo` targets, which automatically re-run for each element in the collection whenever it changes.
 
 #### Preview
 

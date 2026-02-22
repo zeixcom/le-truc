@@ -1,6 +1,6 @@
 ### Form Spinbutton
 
-A spinbutton-style quantity component with increment/decrement controls, clamped integer values, and optional zero/non-zero UI states.
+A quantity spinbutton with increment/decrement buttons, clamped values, and keyboard support. Demonstrates `createEventsSensor()` with multiple event types (`change`, `click`, `keydown`) on a shared `all()` element collection — the sensor's handler inspects the event target to determine whether to increment, decrement, or validate a typed value. `read()` initialises both `value` and `max` from DOM state, and `createMemo()` derives a private `nonZero` signal used to show/hide zero-state UI without exposing it as a reactive property.
 
 #### Preview
 

@@ -1,6 +1,6 @@
 ### Module Codeblock
 
-A code block component with optional collapsed state, overlay expansion, and copy-to-clipboard support.
+A progressively enhanced code block that can collapse, expand, and copy its content. Demonstrates `asBoolean()` for a boolean attribute-backed property, `toggleAttribute()` to reflect `collapsed` back to the host element for CSS styling, and `on('click')` with simple imperative property updates. The `copy` effect is a custom reusable function (`copyToClipboard`) that returns an `Effect` — showing how to extract and share effect logic across components.
 
 #### Preview
 

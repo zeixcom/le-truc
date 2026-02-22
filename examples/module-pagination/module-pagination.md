@@ -1,6 +1,6 @@
 ### Module Pagination
 
-A pagination component with previous/next controls, keyboard shortcuts, and clamped numeric page selection.
+A keyboard-navigable page selector with clamped numeric input. Demonstrates `read()` with `asInteger()` to initialise both `value` and `max` from the input element's DOM properties, multiple effects per UI element (e.g. `input` gets both `on('change')` and `setProperty()`), `show()` on `host` to hide the entire control when there is only one page, and `setAttribute()` to keep `value` and `max` in sync as attributes for use by external CSS or components.
 
 #### Preview
 

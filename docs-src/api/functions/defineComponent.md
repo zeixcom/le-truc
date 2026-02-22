@@ -2,9 +2,12 @@
 
 > **defineComponent**\<`P`, `U`\>(`name`, `props?`, `select?`, `setup?`): [`Component`](../type-aliases/Component.md)\<`P`\>
 
-Defined in: [src/component.ts:81](https://github.com/zeixcom/le-truc/blob/569c3554a3bd73c7996dc67fec548045ec940d32/src/component.ts#L81)
+Defined in: [src/component.ts:84](https://github.com/zeixcom/le-truc/blob/ce6fdde33897d7e14382a222c2fdd5e1804c6bd3/src/component.ts#L84)
 
-Define a component with dependency resolution and setup function (connectedCallback)
+Define and register a reactive custom element.
+
+Calls `customElements.define()` and returns the registered class.
+Reactive properties are initialised in `connectedCallback` and torn down in `disconnectedCallback`.
 
 #### Type Parameters
 
@@ -22,25 +25,25 @@ Define a component with dependency resolution and setup function (connectedCallb
 
 `string`
 
-Custom element name
+Custom element name (must contain a hyphen and start with a lowercase letter)
 
 ##### props?
 
 [`Initializers`](../type-aliases/Initializers.md)\<`P`, `U`\> = `...`
 
-Component properties
+Initializers for reactive properties: static values, signals, parsers, or readers
 
 ##### select?
 
 (`elementQueries`) => `U`
 
-Function to select UI elements
+Receives `{ first, all }` query helpers; returns the UI object (queried DOM elements used by effects)
 
 ##### setup?
 
 (`ui`) => [`Effects`](../type-aliases/Effects.md)\<`P`, [`ComponentUI`](../type-aliases/ComponentUI.md)\<`P`, `U`\>\>
 
-Setup function
+Receives the frozen UI object (plus `host`) and returns effects keyed by UI element name
 
 #### Returns
 
@@ -52,8 +55,8 @@ Setup function
 
 #### Throws
 
-If component name is invalid
+If the component name is not a valid custom element name
 
 #### Throws
 
-If property name is invalid
+If a property name conflicts with reserved words or inherited HTMLElement properties

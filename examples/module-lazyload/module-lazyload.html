@@ -37,6 +37,29 @@
 
 <hr />
 
+<!-- Original complex snippet test - tests the existing shake-hands component -->
+<module-lazyload
+	id="original-snippet-test"
+	src="/test/module-lazyload/mocks/snippet.html"
+	allow-scripts
+>
+	<card-callout>
+		<p class="loading" role="status">Loading shake-hands...</p>
+		<p class="error" role="alert" aria-live="assertive" hidden></p>
+	</card-callout>
+	<div class="content" hidden></div>
+</module-lazyload>
+
+<hr />
+
+<card-callout class="caution">
+	<p>
+		The following examples show nothing or an error message for empty or invalid
+		content, or log error messages to the console. Do not copy. Intended to test
+		resilience of the component.
+	</p>
+</card-callout>
+
 <!-- Empty content test - tests handling of empty/whitespace responses -->
 <module-lazyload
 	id="empty-content-test"
@@ -47,25 +70,6 @@
 		<p class="error" role="alert" aria-live="assertive" hidden></p>
 	</card-callout>
 	<div class="content" hidden></div>
-</module-lazyload>
-
-<hr />
-
-<!-- Original complex snippet test - tests the existing shake-hands component -->
-<module-lazyload
-	id="original-snippet-test"
-	src="/test/module-lazyload/mocks/snippet.html"
-	allow-scripts
->
-	<template shadowrootmode="open">
-		<card-callout>
-			<p class="loading" role="status">Loading shake-hands...</p>
-			<p class="error" role="alert" aria-live="assertive" hidden></p>
-		</card-callout>
-		<div class="content" hidden>
-			<slot></slot>
-		</div>
-	</template>
 </module-lazyload>
 
 <hr />

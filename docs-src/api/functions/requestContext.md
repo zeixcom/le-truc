@@ -2,9 +2,14 @@
 
 > **requestContext**\<`T`, `P`, `U`\>(`context`, `fallback`): [`Reader`](../type-aliases/Reader.md)\<[`Memo`](../type-aliases/Memo.md)\<`T`\>, `U` & `object`\>
 
-Defined in: [src/context.ts:133](https://github.com/zeixcom/le-truc/blob/569c3554a3bd73c7996dc67fec548045ec940d32/src/context.ts#L133)
+Defined in: [src/context.ts:142](https://github.com/zeixcom/le-truc/blob/ce6fdde33897d7e14382a222c2fdd5e1804c6bd3/src/context.ts#L142)
 
-Consume a context value for a component
+Request a context value from an ancestor provider, returning a reactive `Memo<T>`.
+
+Use as a property initializer in `defineComponent`. During `connectedCallback`, dispatches
+a `context-request` event that bubbles up the DOM. If an ancestor provider intercepts it,
+the returned Memo reflects the provider's current value reactively. If no provider responds,
+the Memo falls back to `fallback`.
 
 #### Type Parameters
 
@@ -26,19 +31,19 @@ Consume a context value for a component
 
 [`Context`](../type-aliases/Context.md)\<`string`, () => `T`\>
 
-Context key to consume
+Context key to request
 
 ##### fallback
 
 [`Fallback`](../type-aliases/Fallback.md)\<`T`, `U` & `object`\>
 
-Fallback value or reader function for fallback
+Static value or reader function used when no provider is found
 
 #### Returns
 
 [`Reader`](../type-aliases/Reader.md)\<[`Memo`](../type-aliases/Memo.md)\<`T`\>, `U` & `object`\>
 
-Computed signal that returns the consumed context the fallback value
+Reader that dispatches the request and wraps the result in a Memo
 
 #### Since
 

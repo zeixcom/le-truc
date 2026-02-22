@@ -1,6 +1,6 @@
 ### Module Catalog
 
-A catalog component that aggregates quantities from descendant spinbuttons and passes a total badge/disabled state to a cart button.
+A coordinator component with no reactive properties of its own. Demonstrates the `pass()` effect as the primary composition tool: `createMemo()` derives a `total` from the reactive `value` properties of all descendant `form-spinbutton` elements (read via an `all()` Memo), then `pass()` pushes `disabled` and `badge` values into `basic-button` reactively. Shows how Le Truc components can act as pure orchestrators without exposing any public state.
 
 #### Preview
 

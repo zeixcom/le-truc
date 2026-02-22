@@ -1,6 +1,6 @@
 ### Basic Number
 
-A component that displays a formatted number according to `Intl.NumberFormat` and the `lang` context for decimals, units, and currencies.
+A locale-aware number display component that uses `Intl.NumberFormat` for decimals, units, and currencies. Demonstrates applying an effect directly to `host` using `setText()` — no descendant elements needed — and shows how standard HTML attributes (`lang`, `options`) can be read once in the setup function to configure non-reactive formatting behaviour. `asNumber()` initialises the reactive `value` property from the attribute.
 
 #### Preview
 

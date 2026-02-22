@@ -39,11 +39,15 @@ type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<U[K] extends 
 declare function createElementsMemo<S extends string>(parent: ParentNode, selector: S): Memo<ElementFromSelector<S>[]>;
 declare function createElementsMemo<E extends Element>(parent: ParentNode, selector: string): Memo<E[]>;
 /**
- * Create partially applied helper functions to get descendants and run effects on them
+ * Create `{ first, all }` query helpers and a dependency resolver for a component host.
+ *
+ * Queries are run against `host.shadowRoot` if present, otherwise against `host` itself.
+ * Any undefined custom elements found during queries are collected as dependencies;
+ * `resolveDependencies` waits for them to be defined before activating effects.
  *
  * @since 0.14.0
- * @param {HTMLElement} host - Host component
- * @returns {ElementSelectors<P>} - Helper functions for selecting descendants
+ * @param {HTMLElement} host - The component host element
+ * @returns {[ElementQueries, (callback: () => void) => void]} Query helpers and a dependency resolver
  */
 declare const getHelpers: (host: HTMLElement) => [ElementQueries, (run: () => void) => void];
 export { type AllElements, type ElementFromKey, type ElementFromSelector, type ElementsFromSelectorArray, type ElementFromSingleSelector, type ElementQueries, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, type FirstElement, type KnownTag, createElementsMemo, getHelpers, type SplitByComma, type TrimWhitespace, type UI, };

@@ -531,60 +531,41 @@ test.describe('module-lazyload component', () => {
 			expect(regularScript?.hasContent).toBe(true)
 		})
 
-		test('uses Declarative Shadow DOM for style encapsulation', async ({
-			page,
-		}) => {
+		test('loads snippet content into light DOM', async ({ page }) => {
 			const loader = page.locator('#original-snippet-test')
 
 			// Wait for content to load
 			const content = loader.locator('.content')
 			await expect(content).toBeVisible({ timeout: 1000 })
 
-			// Verify shadow root exists
+			// Verify no shadow root — content renders in light DOM
 			const hasShadowRoot = await loader.evaluate(el => !!el.shadowRoot)
-			expect(hasShadowRoot).toBe(true)
+			expect(hasShadowRoot).toBe(false)
 
-			// Verify content is loaded inside shadow DOM
-			const shadowContent = await loader.evaluate(el => {
-				const shadowRoot = el.shadowRoot
-				if (!shadowRoot) return null
-				const contentDiv = shadowRoot.querySelector('.content')
-				return contentDiv ? contentDiv.innerHTML : null
-			})
-			expect(shadowContent).toContain('shake-hands')
+			// Verify shake-hands component is present in light DOM .content
+			await expect(content.locator('shake-hands')).toBeVisible()
 
-			// Verify card-callout exists in shadow DOM but is hidden after loading
-			const shadowCallout = await loader.evaluate(el => {
-				const shadowRoot = el.shadowRoot
-				if (!shadowRoot) return { exists: false, hidden: false }
-				const callout = shadowRoot.querySelector('card-callout')
-				return {
-					exists: !!callout,
-					hidden:
-						callout?.hasAttribute('hidden') ||
-						(callout as HTMLElement).style.display === 'none',
-				}
-			})
-			expect(shadowCallout.exists).toBe(true)
+			// Verify card-callout is hidden after successful load
+			const callout = loader.locator('card-callout')
+			await expect(callout).toBeHidden()
 
-			// Verify styles are encapsulated - the shake-hands button styles
-			// should not affect elements outside the shadow DOM
+			// Styles from snippet.html are scoped to shake-hands, not body
 			const bodyBgColor = await page.evaluate(
 				() => getComputedStyle(document.body).backgroundColor,
 			)
-
-			// Body should not have crimson background from shake-hands styles
 			expect(bodyBgColor).not.toContain('crimson')
 		})
 
-		test('compares Shadow DOM vs regular DOM behavior', async ({ page }) => {
-			// Create a test module-lazyload without Shadow DOM for comparison
+		test('loads snippet content independently in multiple instances', async ({
+			page,
+		}) => {
+			// Create a second instance for comparison
 			await page.evaluate(() => {
 				const testContainer = document.createElement('div')
 				testContainer.innerHTML = `
-					<module-lazyload id="regular-dom-test" src="/test/module-lazyload/mocks/snippet.html" allow-scripts>
+					<module-lazyload id="second-snippet-test" src="/test/module-lazyload/mocks/snippet.html" allow-scripts>
 						<card-callout>
-							<p class="loading" role="status">Loading regular DOM...</p>
+							<p class="loading" role="status">Loading...</p>
 							<p class="error" role="alert" aria-live="assertive" hidden></p>
 						</card-callout>
 						<div class="content" hidden></div>
@@ -593,45 +574,40 @@ test.describe('module-lazyload component', () => {
 				document.body.appendChild(testContainer)
 			})
 
-			const shadowLoader = page.locator('#original-snippet-test')
-			const regularLoader = page.locator('#regular-dom-test')
+			const firstLoader = page.locator('#original-snippet-test')
+			const secondLoader = page.locator('#second-snippet-test')
 
 			// Wait for both to load
-			await expect(shadowLoader.locator('.content')).toBeVisible({
+			await expect(firstLoader.locator('.content')).toBeVisible({
 				timeout: 5000,
 			})
-			await expect(regularLoader.locator('.content')).toBeVisible({
+			await expect(secondLoader.locator('.content')).toBeVisible({
 				timeout: 5000,
 			})
 
-			// Verify Shadow DOM component has shadow root
-			const hasShadowRoot = await shadowLoader.evaluate(el => !!el.shadowRoot)
-			expect(hasShadowRoot).toBe(true)
+			// Neither instance uses shadow DOM
+			const firstHasShadowRoot = await firstLoader.evaluate(
+				el => !!el.shadowRoot,
+			)
+			const secondHasShadowRoot = await secondLoader.evaluate(
+				el => !!el.shadowRoot,
+			)
+			expect(firstHasShadowRoot).toBe(false)
+			expect(secondHasShadowRoot).toBe(false)
 
-			// Verify regular DOM component does not have shadow root
-			const hasNoShadowRoot = await regularLoader.evaluate(el => !el.shadowRoot)
-			expect(hasNoShadowRoot).toBe(true)
+			// Both should have functional scripts and independent counters
+			const firstButton = firstLoader.locator('shake-hands button')
+			const secondButton = secondLoader.locator('shake-hands button')
 
-			// Both should have functional scripts (both have allow-scripts)
-			const shadowButton = shadowLoader.locator('shake-hands button')
-			const regularButton = regularLoader.locator('shake-hands button')
+			await firstButton.click()
+			await expect(firstLoader.locator('shake-hands .count')).toHaveText('43')
 
-			// Test Shadow DOM functionality
-			await shadowButton.click()
-			await expect(shadowLoader.locator('shake-hands .count')).toHaveText('43')
+			await secondButton.click()
+			await expect(secondLoader.locator('shake-hands .count')).toHaveText('43')
 
-			// Test regular DOM functionality
-			await regularButton.click()
-			await expect(regularLoader.locator('shake-hands .count')).toHaveText('43')
-
-			// Verify style isolation difference
-			// Shadow DOM: styles are encapsulated
-			// Regular DOM: styles may leak (but shouldn't affect our test significantly)
-			const shadowShakeHands = shadowLoader.locator('shake-hands')
-			const regularShakeHands = regularLoader.locator('shake-hands')
-
-			await expect(shadowShakeHands).toBeVisible()
-			await expect(regularShakeHands).toBeVisible()
+			// Both shake-hands components are visible
+			await expect(firstLoader.locator('shake-hands')).toBeVisible()
+			await expect(secondLoader.locator('shake-hands')).toBeVisible()
 		})
 
 		test('properly isolates loaded content styles', async ({ page }) => {

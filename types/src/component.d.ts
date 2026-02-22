@@ -18,15 +18,18 @@ type Initializers<P extends ComponentProps, U extends UI> = {
 };
 type MaybeSignal<T extends {}> = T | Signal<T> | MemoCallback<T> | TaskCallback<T>;
 /**
- * Define a component with dependency resolution and setup function (connectedCallback)
+ * Define and register a reactive custom element.
+ *
+ * Calls `customElements.define()` and returns the registered class.
+ * Reactive properties are initialised in `connectedCallback` and torn down in `disconnectedCallback`.
  *
  * @since 0.15.0
- * @param {string} name - Custom element name
- * @param {object} props - Component properties
- * @param {function} select - Function to select UI elements
- * @param {function} setup - Setup function
- * @throws {InvalidComponentNameError} If component name is invalid
- * @throws {InvalidPropertyNameError} If property name is invalid
+ * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
+ * @param {Initializers<P, U>} props - Initializers for reactive properties: static values, signals, parsers, or readers
+ * @param {function} select - Receives `{ first, all }` query helpers; returns the UI object (queried DOM elements used by effects)
+ * @param {function} setup - Receives the frozen UI object (plus `host`) and returns effects keyed by UI element name
+ * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
+ * @throws {InvalidPropertyNameError} If a property name conflicts with reserved words or inherited HTMLElement properties
  */
 declare function defineComponent<P extends ComponentProps, U extends UI = {}>(name: string, props?: Initializers<P, U>, select?: (elementQueries: ElementQueries) => U, setup?: (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>>): Component<P>;
 export { defineComponent, type Component, type ComponentProp, type ComponentProps, type ComponentSetup, type ComponentUI, type Initializers, type MethodProducer, type MaybeSignal, type ReservedWords, };

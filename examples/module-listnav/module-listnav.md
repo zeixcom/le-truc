@@ -1,6 +1,6 @@
 ### Module Listnav
 
-A navigation coordinator that syncs a listbox selection with lazy-loaded content and browser hash state.
+A navigation coordinator with no reactive properties. Demonstrates `pass()` to push `form-listbox`'s `value` into `module-lazyload`'s `src` property reactively, and a custom raw effect on `host` that uses `createEffect()` to sync `location.hash` with the listbox selection in both directions (selection → hash on change, hash → selection on `popstate`). Shows how to wire two existing Le Truc components together without adding any new state to the coordinator.
 
 #### Preview
 

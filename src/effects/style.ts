@@ -4,13 +4,15 @@ import { type Effect, type Reactive, updateElement } from '../effects'
 /* === Exported Function === */
 
 /**
- * Effect for setting a CSS style property on an element.
- * Sets the specified style property with support for deletion via UNSET.
+ * Effect for setting a CSS custom property or inline style on an element.
+ *
+ * When the reactive value is `null`, the style property is removed via
+ * `el.style.removeProperty(prop)`. Otherwise it is set via `el.style.setProperty(prop, value)`.
  *
  * @since 0.8.0
- * @param {string} prop - Name of the CSS style property to set
- * @param {Reactive<string, P, E>} reactive - Reactive value bound to the style property value (defaults to property name)
- * @returns {Effect<P, E>} Effect function that sets the style property on the element
+ * @param {string} prop - CSS property name (e.g. `'color'`, `'--my-var'`)
+ * @param {Reactive<string, P, E>} [reactive] - Reactive value for the style value (defaults to property name)
+ * @returns {Effect<P, E>} Effect that sets or removes the style property on the element
  */
 const setStyle = <
 	P extends ComponentProps,

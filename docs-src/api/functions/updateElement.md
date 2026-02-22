@@ -2,11 +2,15 @@
 
 > **updateElement**\<`T`, `P`, `E`\>(`reactive`, `updater`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects.ts:171](https://github.com/zeixcom/le-truc/blob/569c3554a3bd73c7996dc67fec548045ec940d32/src/effects.ts#L171)
+Defined in: [src/effects.ts:186](https://github.com/zeixcom/le-truc/blob/ce6fdde33897d7e14382a222c2fdd5e1804c6bd3/src/effects.ts#L186)
 
-Core effect function for updating element properties based on reactive values.
-This function handles the lifecycle of reading, updating, and deleting element properties
-while providing proper error handling and debugging support.
+Shared abstraction used by all built-in DOM effects.
+
+Captures the current DOM value as a fallback, then creates a `createEffect` that
+re-runs whenever the reactive value changes. On each run:
+- `RESET` → restore the original DOM value
+- `null` → call `updater.delete` if available, else restore fallback
+- anything else → call `updater.update` if the value changed
 
 #### Type Parameters
 
@@ -28,19 +32,19 @@ while providing proper error handling and debugging support.
 
 [`Reactive`](../type-aliases/Reactive.md)\<`T`, `P`, `E`\>
 
-The reactive value that drives the element updates
+Reactive value driving the DOM update (property name, signal, or reader function)
 
 ##### updater
 
 [`ElementUpdater`](../type-aliases/ElementUpdater.md)\<`E`, `T`\>
 
-Configuration object defining how to read, update, and delete the element property
+Describes how to read, update, and optionally delete the DOM property
 
 #### Returns
 
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Effect function that manages the element property updates
+Effect that manages the reactive DOM update and returns a cleanup function
 
 #### Since
 
