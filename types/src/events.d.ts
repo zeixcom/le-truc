@@ -13,13 +13,22 @@ type EventHandlers<T extends {}, U extends UI, E extends Element> = {
     [K in keyof HTMLElementEventMap]?: SensorEventHandler<T, EventType<K>, U, E>;
 };
 /**
- * Produce an event-driven sensor from transformed event data
+ * Create a `Reader` that produces a `Sensor<T>` driven by DOM events on the host.
+ *
+ * Use this as a reactive property initializer when a single state value should be
+ * derived from multiple event types (e.g. combining `click` and `keyup` into a
+ * `selected` value), instead of updating host properties imperatively via `on()`.
+ *
+ * Event listeners are attached to the host element using event delegation.
+ * Each handler receives `{ event, ui, target, prev }` and returns the new value,
+ * or `void`/`Promise<void>` to leave the value unchanged. Passive events are
+ * deferred via `schedule()`.
  *
  * @since 0.16.0
- * @param {S} key - name of UI key
- * @param {ParserOrFallback<T>} init - Initial value, reader or parser
- * @param {EventHandlers<T, ElementFromSelector<S>, C>} events - Transformation functions for events
- * @returns {Extractor<Sensor<T>, C>} Extractor function for value from event
+ * @param {ParserOrFallback<T, U>} init - Initial value, static fallback, or reader function
+ * @param {K} key - Key of the UI object whose element(s) to listen on
+ * @param {EventHandlers<T, U, ElementFromKey<U, K>>} events - Map of event type to handler function
+ * @returns {(ui: U & { host: Component<P> }) => Sensor<T>} Reader that creates and returns the sensor
  */
 declare const createEventsSensor: <T extends {}, P extends ComponentProps, U extends UI, K extends keyof U>(init: ParserOrFallback<T, U>, key: K, events: EventHandlers<T, U, ElementFromKey<U, K>>) => ((ui: U & {
     host: Component<P>;
