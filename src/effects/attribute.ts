@@ -21,9 +21,15 @@ const safeSetAttribute = (
 	attr: string,
 	value: string,
 ): void => {
-	if (/^on/i.test(attr)) throw new Error(`Unsafe attribute: ${attr}`)
+	if (/^on/i.test(attr))
+		throw new Error(
+			`setAttribute: blocked unsafe attribute name '${attr}' on ${element.localName} — event handler attributes are not allowed`,
+		)
 	value = String(value).trim()
-	if (!isSafeURL(value)) throw new Error(`Unsafe URL for ${attr}: ${value}`)
+	if (!isSafeURL(value))
+		throw new Error(
+			`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`,
+		)
 	element.setAttribute(attr, value)
 }
 

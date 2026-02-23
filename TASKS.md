@@ -99,25 +99,9 @@ These items each map to a "Surprising Behavior" in `CLAUDE.md`. They are already
 
 ### 9b. `setAttribute` security validation — fail loudly
 
-**Current behaviour:** Passing a `javascript:` URL or an `on*` attribute name causes the effect to do nothing. No error is thrown, no warning is emitted, even in `DEV_MODE`.
+**Status: Done.**
 
-**Why it's surprising:** Silent failure is especially confusing when the blocked value comes from a dynamic reactive — the developer sees no feedback that the binding is a no-op.
-
-**Architect question:** Should blocked attempts log a `DEV_MODE` warning (or throw in development)? What is the right balance between failing fast for developers and being silently safe in production?
-
-**Decision: Throw a descriptive error unconditionally (not only in DEV_MODE).**
-
-Silent security failures violate the principle of least astonishment and are dangerous: a developer setting `href` to a `javascript:` URL from a reactive that works in testing (with a safe URL) may silently fail in a different code path. The error must be observable.
-
-Current code in `attribute.ts:safeSetAttribute` already constructs an `Error` with a message but never throws it — the `throw` statements are there but the error is swallowed by `updateElement`'s catch block which only logs in DEV_MODE.
-
-**Revised behaviour:**
-
-- `safeSetAttribute` throws unconditionally (it already does — this is correct).
-- `updateElement`'s `err()` callback must always log at `LOG_ERROR` level regardless of `DEV_MODE`, not just in dev mode. Security validation failures are never silent. The existing `log()` call already does this for `LOG_ERROR` — verify the call site uses `LOG_ERROR`.
-- The error message must identify the component, the attribute, and the blocked value: `"setAttribute: blocked unsafe value for 'href' on <my-element>: 'javascript:alert(1)'."`.
-
-This is a production-safe behaviour: throwing inside `createEffect` is caught by the scope and logged. No page-breaking uncaught exceptions.
+`safeSetAttribute` throws descriptive errors that identify the attribute name, the element, and the blocked value. These errors propagate to `updateElement`'s `err()` callback which logs at `LOG_ERROR` level unconditionally (already the case via `log()`). Security failures are never silent in any environment.
 
 ---
 
