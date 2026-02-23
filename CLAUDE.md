@@ -4,15 +4,15 @@
 
 ## Surprising Behaviors
 
-- **Parser vs Reader detection is fragile**: `isParser()` checks `fn.length >= 2`. Functions with default parameters, rest params, or destructuring will have unexpected `.length` values and may be misclassified. A parser `(ui, value = '') => ...` has `length === 1` and will be treated as a Reader.
+- **Parser branding is required for reliable detection**: `isParser()` checks for `PARSER_BRAND` first. Unbranded functions fall back to `fn.length >= 2`, which is unreliable (default params, rest params, and destructuring all affect `.length`). Always use `asParser()` to create custom parsers; in DEV_MODE, using an unbranded function triggers a `console.warn`.
 
-- **`pass()` replaces signals, not values**: `pass(props)` calls `slot.replace(signal)` on the child's internal signal map. This creates a live parent→child binding; the child loses its own signal entirely until disconnected.
+- **`pass()` replaces signals, not values**: `pass(props)` calls `slot.replace(signal)` on the child's internal signal map. This creates a live parent→child binding. The original signal is captured and restored when the parent disconnects, so the child regains its own independent state after detachment.
 
-- **`MethodProducer` is invisible to the type system**: `provideContexts()` returns a function `(ui) => void`. There's no runtime distinction between a Reader and a MethodProducer — it works because `#setAccessor` silently skips `undefined` return values.
+- **`MethodProducer` is branded, not structurally distinguished**: `isMethodProducer()` checks for `METHOD_BRAND`. Use `asMethod()` to create branded method producers. Unbranded functions that happen to return `void` may be misclassified as Readers.
 
 - **`all()` MutationObserver is lazy**: The observer only activates when the `Memo` is read inside a reactive effect. The observer watches attribute changes implied by the CSS selector (classes, IDs, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the memo's `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
 
-- **`setAttribute` has security validation**: Blocks `on*` event handler attributes and validates URL attributes against a safe-protocol allowlist (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`). This means `setAttribute('href', 'javascript:...')` will silently fail.
+- **`setAttribute` has security validation**: Blocks `on*` event handler attributes and validates URL attributes against a safe-protocol allowlist (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`). Violations throw a descriptive error logged at `LOG_ERROR` level — they are never silent.
 
 - **Dependency resolution times out at 200ms**: If a queried custom element isn't defined within 200ms, a `DependencyTimeoutError` is logged but effects proceed anyway.
 
@@ -22,6 +22,6 @@
 
 - **Context protocol is the Web Components Community Protocol**: `provideContexts` / `requestContext` implement the [webcomponents-cg context spec](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md), not a custom protocol.
 
-- **`RESET` sentinel restores original DOM value**: When a reactive resolves to the `RESET` symbol (e.g. after an error in a reader), the effect restores the DOM value captured at setup time — not a blank/null state.
+- **`undefined` from a reader restores original DOM value**: When a reactive resolves to `undefined` (e.g. after an error in a reader, or a missing property), the effect restores the DOM value captured at setup time — not a blank/null state. The `RESET` symbol no longer exists.
 
 - **Debug mode**: Set `host.debug = true` on a component instance for verbose per-instance logging. For project-wide enhanced errors and logging, build with `process.env.DEV_MODE=true`.

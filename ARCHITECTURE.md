@@ -172,10 +172,11 @@ All default their `reactive` parameter to the effect name (e.g., `setAttribute('
 
 ### pass() — inter-component binding
 
-`pass(props)` calls `createScope()` for proper restoration and creates a live reactive binding between a parent component and a descendant. It uses `getSignals(target)` to access the child's internal signal map. Two paths:
+`pass(props)` is a Le Truc–to–Le Truc optimization. It calls `createScope()` for proper cleanup and directly swaps the backing signal of a descendant component's Slot, creating a zero-overhead live binding: it uses `getSignals(target)` to access the child's internal signal map, captures `slot.current()` before replacing, then calls `slot.replace(signal)`. The cleanup restores the original signal with `slot.replace(original)` when the parent disconnects.
 
-- **Path A — Slot-backed (Le Truc child)**: Captures `slot.current()` before replacing, then calls `slot.replace(signal)`. Returns a cleanup that calls `slot.replace(original)` to restore the child's own signal when the parent disconnects.
-- **Path B — Object.defineProperty (non-Le Truc custom element)**: Installs a reactive getter (and optional setter for two-way binding) on the target instance via `Object.defineProperty`. Returns a cleanup that restores the original descriptor.
+This is more efficient than `setProperty()` for Le Truc targets: it eliminates the intermediate `createEffect` and property-assignment overhead on every reactive update. The parent and child share the exact same underlying signal node.
+
+**Scope is Le Truc components only.** For non-Le Truc custom elements (Lit, Stencil, FAST, etc.), use `setProperty()` instead. Installing a reactive getter via `Object.defineProperty` bypasses those frameworks' own change-detection cycles — the foreign component's render/update is never triggered when the signal changes, because it only fires when a value is *set* through the framework's setter, not when the property is *read*. `setProperty()` goes through the public setter and is always correct for any element.
 
 ## The UI Query System
 
@@ -251,7 +252,7 @@ This is used as a `MethodProducer` — a property initializer that returns `void
 
 | # | Item | Decision | Status |
 |---|------|----------|--------|
-| 7 | `pass()` for non-Le Truc elements | Add `Object.defineProperty` fallback for custom elements; defer plain HTML elements | Done |
+| 7 | `pass()` scope | Le Truc targets only (Slot swap); use `setProperty()` for foreign custom elements | See Task 11 |
 | 8 | Parser/MethodProducer branding | Symbol-branded `asParser()` / `asMethod()` wrappers; DEV_MODE warning for unbranded fallback | Done |
 | 9a | Attribute name typo | TypeScript catches it at compile time; add DEV_MODE runtime warning for JS/dynamic cases | Done |
 | 9b | Security validation silence | Always throw with a descriptive error; log at `LOG_ERROR` unconditionally | Done |
