@@ -67,4 +67,4 @@ declare const resolveReactive: <T extends {}, P extends ComponentProps, E extend
  * @returns {Effect<P, E>} Effect that manages the reactive DOM update and returns a cleanup function
  */
 declare const updateElement: <T extends {}, P extends ComponentProps, E extends Element>(reactive: Reactive<T, P, E>, updater: ElementUpdater<E, T>) => Effect<P, E>;
-export { type Effect, type Effects, type ElementEffects, type ElementUpdater, type Reactive, type UpdateOperation, runEffects, resolveReactive, updateElement };
+export { type Effect, type Effects, type ElementEffects, type ElementUpdater, type Reactive, type UpdateOperation, runEffects, resolveReactive, updateElement, };

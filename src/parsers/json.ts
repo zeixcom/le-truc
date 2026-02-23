@@ -1,4 +1,4 @@
-import { type Fallback, getFallback, type Parser } from '../parsers'
+import { asParser, type Fallback, getFallback, type Parser } from '../parsers'
 import type { UI } from '../ui'
 
 /**
@@ -10,9 +10,10 @@ import type { UI } from '../ui'
  * @throws {TypeError} If the value and fallback are both null or undefined
  * @throws {SyntaxError} If value is not a valid JSON string
  */
-const asJSON =
-	<T extends {}, U extends UI>(fallback: Fallback<T, U>): Parser<T, U> =>
-	(ui: U, value: string | null | undefined) => {
+const asJSON = <T extends {}, U extends UI>(
+	fallback: Fallback<T, U>,
+): Parser<T, U> =>
+	asParser((ui: U, value: string | null | undefined) => {
 		if ((value ?? fallback) == null)
 			throw new TypeError(
 				'asJSON: Value and fallback are both null or undefined',
@@ -28,6 +29,6 @@ const asJSON =
 			})
 		}
 		return result ?? getFallback(ui, fallback)
-	}
+	})
 
 export { asJSON }

@@ -1,4 +1,4 @@
-import type { Parser } from '../parsers';
+import { type Parser } from '../parsers';
 import type { UI } from '../ui';
 /**
  * Parser that converts a boolean HTML attribute to an actual boolean.

@@ -37,49 +37,16 @@ Currently `pass()` only works with Le Truc Slot-backed properties. The pre-0.16 
 
 ### 8. Parser/Reader/MethodProducer disambiguation
 
-**Effort:** Large | **API change:** Yes (branded types or wrapper) | **Status:** Needs design decision
+**Status: Done.**
 
-`isParser()` (`src/parsers.ts:30-33`) distinguishes parsers from readers by checking `fn.length >= 2`. This is fragile: default parameters, rest parameters, and destructuring all affect `function.length` in non-obvious ways. A custom parser `(ui, value = '') => ...` has `length === 1` and would be silently misclassified as a reader.
-
-**Action — choose one approach:**
-
-**8a. Branded functions (minimal API change):** Add a symbol property to parser functions. The built-in parsers already go through factory functions, so branding is easy. Custom parsers would use a helper: `asParser((ui, value) => ...)`.
-
-**8b. Explicit wrapper (clearer intent):** Require parsers to be wrapped — `{ count: asInteger(5) }` already works (factory), custom parsers use `asParser(fn)`. Readers remain unwrapped or use `read()`.
-
-Either approach also fixes the Reader vs MethodProducer ambiguity: branding makes intent explicit for all three kinds. `provideContexts()` and similar would be branded as side-effect initializers, distinguishable from value-returning readers at both the type level and runtime.
-
-**Constraints:**
-- `{ count: 0 }`, `{ count: asInteger(5) }`, `{ state: createState(false) }` must stay as-is.
-- Built-in parsers, `read()`, `createEventsSensor()`, `requestContext()`, `provideContexts()` must all continue to work.
-- Must work for both TypeScript and plain JavaScript.
-- Pre-1.0, so backward compat not required, but migration should be straightforward.
-
-**Decision: Do. Use symbol-branded functions. Introduce `asParser()` and `asMethod()` wrappers. Keep `function.length` detection only as a transitional DEV_MODE warning.**
-
-The `function.length` check is a pre-1.0 known-bug (REQUIREMENTS R1). It must be resolved before the API is frozen.
-
-**Chosen approach — symbol branding (8a), applied to all three kinds:**
-
-A private symbol `PARSER_BRAND` is added as a non-enumerable property to every parser function. `isParser()` checks for the symbol first, falls back to `fn.length >= 2` for backward compatibility, and in DEV_MODE warns when the fallback is triggered. After 1.0, the `fn.length` fallback is removed.
-
-Built-in parsers (`asInteger`, `asBoolean`, `asJSON`, `asString`, `asEnum`, `asNumber`) are already produced by factory functions — branding is a one-line addition in each factory. `read()` returns a Reader, not a Parser, so it is not branded.
-
-`provideContexts()` and any future MethodProducers return a function that is branded with a `METHOD_BRAND` symbol. `isMethodProducer()` checks for this brand. In `connectedCallback`, the dispatch order becomes explicit: branded Parser → branded MethodProducer → Reader → static/Signal. This removes the convention that "returns undefined → skip `#setAccessor`" and replaces it with an explicit check.
-
-**New public API surface (additive, no breaking changes to existing call sites):**
-
-```ts
-// For custom parsers:
-asParser((ui, value) => ...) → Parser<T, U>  (branded)
-
-// For custom MethodProducers:
-asMethod((ui) => { /* side effects */ }) → MethodProducer<P, U>  (branded)
-```
-
-Existing built-in parsers and `provideContexts()` are internally branded — no change for users of these APIs. Custom parsers and MethodProducers are rare today; the wrapper functions are acceptable ergonomically.
-
-**Type-level impact**: `Initializers<P, U>` can narrow the `Parser` branch to require the brand at the type level, making it a compile-time error to pass an unbranded two-argument function as a parser property initializer.
+- `PARSER_BRAND` and `METHOD_BRAND` symbols added to `src/parsers.ts`
+- `isParser()` now checks `PARSER_BRAND` first; falls back to `fn.length >= 2` with a DEV_MODE `console.warn` to prompt migration
+- All built-in parsers (`asInteger`, `asNumber`, `asBoolean`, `asJSON`, `asString`, `asEnum`) are branded via `asParser()` in their factory functions
+- `asParser()` and `asMethod()` exported as new public API for custom parsers/method-producers
+- `isMethodProducer()` exported for brand checking
+- `provideContexts()` now uses `asMethod()` to brand its returned function
+- `component.ts` `createSignal()` dispatch order is now explicit: Parser → MethodProducer → Reader → static/Signal
+- MethodProducer cleanup functions are now properly composed with the effect cleanup in `disconnectedCallback`
 
 ---
 

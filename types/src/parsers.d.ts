@@ -4,14 +4,34 @@ type LooseReader<T extends {}, U extends UI> = (ui: U) => T | string | null | un
 type Reader<T extends {}, U extends UI> = (ui: U) => T;
 type Fallback<T extends {}, U extends UI> = T | Reader<T, U>;
 type ParserOrFallback<T extends {}, U extends UI> = Parser<T, U> | Fallback<T, U>;
+/** A branded method-producer function (side-effect initializer, returns void). */
+type MethodProducerFn = ((...args: any[]) => void) & {
+    readonly [METHOD_BRAND]: true;
+};
+/** Symbol brand applied to all Parser functions. */
+declare const PARSER_BRAND: unique symbol;
+/** Symbol brand applied to all MethodProducer functions. */
+declare const METHOD_BRAND: unique symbol;
 /**
  * Check if a value is a parser
+ *
+ * Checks for the `PARSER_BRAND` symbol first. Falls back to `fn.length >= 2`
+ * for backward compatibility, emitting a DEV_MODE warning when the fallback
+ * is triggered so authors can migrate to `asParser()`.
  *
  * @since 0.14.0
  * @param {unknown} value - Value to check if it is a parser
  * @returns {boolean} True if the value is a parser, false otherwise
  */
 declare const isParser: <T extends {}, U extends UI>(value: unknown) => value is Parser<T, U>;
+/**
+ * Check if a value is a MethodProducer (branded side-effect initializer)
+ *
+ * @since 0.17.0
+ * @param {unknown} value - Value to check
+ * @returns {boolean} True if the value is a MethodProducer
+ */
+declare const isMethodProducer: (value: unknown) => value is MethodProducerFn;
 /**
  * Check if a value is a reader
  *
@@ -32,6 +52,31 @@ declare const isReader: <T extends {}, U extends UI>(value: unknown) => value is
  */
 declare const getFallback: <T extends {}, U extends UI>(ui: U, fallback: ParserOrFallback<T, U>) => T;
 /**
+ * Brand a custom parser function with the `PARSER_BRAND` symbol.
+ *
+ * Use this to wrap any custom two-argument parser so `isParser()` can
+ * identify it reliably even when default parameters or destructuring
+ * would otherwise reduce `function.length`.
+ *
+ * @since 0.17.0
+ * @param {Parser<T, U>} fn - Custom parser function to brand
+ * @returns {Parser<T, U>} The same function, branded
+ */
+declare const asParser: <T extends {}, U extends UI>(fn: Parser<T, U>) => Parser<T, U>;
+/**
+ * Brand a custom method-producer function with the `METHOD_BRAND` symbol.
+ *
+ * Use this to wrap any side-effect initializer so `isMethodProducer()` can
+ * identify it explicitly rather than relying on the absence of a return value.
+ *
+ * @since 0.17.0
+ * @param {(ui: U & { host: Component<P> }) => void} fn - Side-effect initializer to brand
+ * @returns Branded MethodProducer
+ */
+declare const asMethod: <T extends (...args: any[]) => void>(fn: T) => T & {
+    readonly [METHOD_BRAND]: true;
+};
+/**
  * Compose a loose reader with a parser or fallback to produce a typed `Reader<T>`.
  *
  * Used to initialise a reactive property from the current DOM state rather than
@@ -47,4 +92,4 @@ declare const getFallback: <T extends {}, U extends UI>(ui: U, fallback: ParserO
  * @returns {Reader<T, U>} A typed reader that always returns `T`
  */
 declare const read: <T extends {}, U extends UI>(reader: LooseReader<T, U>, fallback: ParserOrFallback<T, U>) => Reader<T, U>;
-export { type Parser, type LooseReader, type Reader, type Fallback, type ParserOrFallback, isParser, isReader, getFallback, read, };
+export { type Parser, type LooseReader, type Reader, type Fallback, type ParserOrFallback, PARSER_BRAND, METHOD_BRAND, isParser, isMethodProducer, isReader, getFallback, asParser, asMethod, read, };

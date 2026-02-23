@@ -119,7 +119,10 @@ export {
 	type SensorEventHandler,
 } from './src/events'
 export {
+	asMethod,
+	asParser,
 	type Fallback,
+	isMethodProducer,
 	isParser,
 	type LooseReader,
 	type Parser,

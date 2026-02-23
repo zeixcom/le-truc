@@ -6,7 +6,7 @@ import {
 } from '@zeix/cause-effect'
 
 import type { Component, ComponentProps } from './component'
-import { type Fallback, getFallback, type Reader } from './parsers'
+import { asMethod, type Fallback, getFallback, type Reader } from './parsers'
 import type { UI } from './ui'
 
 /** @see https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md */
@@ -105,11 +105,10 @@ class ContextRequestEvent<T extends UnknownContext> extends Event {
  * @param {Array<keyof P>} contexts - Reactive property names to expose as context
  * @returns {(host: Component<P>) => Cleanup} MethodProducer that installs the listener and returns a cleanup function
  */
-const provideContexts =
-	<P extends ComponentProps>(
-		contexts: Array<keyof P>,
-	): ((host: Component<P>) => Cleanup) =>
-	(host: Component<P>) => {
+const provideContexts = <P extends ComponentProps>(
+	contexts: Array<keyof P>,
+): ((host: Component<P>) => Cleanup) =>
+	asMethod((host: Component<P>) => {
 		const listener = (e: ContextRequestEvent<UnknownContext>) => {
 			const { context, callback } = e
 			if (
@@ -123,7 +122,7 @@ const provideContexts =
 		}
 		host.addEventListener(CONTEXT_REQUEST, listener)
 		return () => host.removeEventListener(CONTEXT_REQUEST, listener)
-	}
+	})
 
 /**
  * Request a context value from an ancestor provider, returning a reactive `Memo<T>`.

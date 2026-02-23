@@ -17,7 +17,7 @@ import {
 import { type Effects, runEffects } from './effects'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
 import { getSignals } from './internal'
-import { isParser, type Parser, type Reader } from './parsers'
+import { isMethodProducer, isParser, type Parser, type Reader } from './parsers'
 import { type ElementQueries, getHelpers, type UI } from './ui'
 import { validatePropertyName } from './util'
 
@@ -48,7 +48,7 @@ type ComponentSetup<P extends ComponentProps, U extends UI> = (
 
 type MethodProducer<P extends ComponentProps, U extends UI> = (
 	ui: U & { host: Component<P> },
-) => void
+) => MaybeCleanup
 
 type Initializers<P extends ComponentProps, U extends UI> = {
 	[K in keyof P]?:
@@ -117,24 +117,29 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 			this.#ui = ui
 			Object.freeze(this.#ui)
 
-			// Initialize signals
-			const isReaderOrMethodProducer = <K extends keyof P & string>(
-				value: unknown,
-			): value is
-				| Reader<P[K], ComponentUI<P, U>>
-				| MethodProducer<P, ComponentUI<P, U>> => {
-				return isFunction(value)
-			}
+			// Initialize signals — dispatch order: Parser → MethodProducer → Reader → static/Signal
+			const methodCleanups: (() => void)[] = []
 			const createSignal = <K extends keyof P & string>(
 				key: K,
 				initializer: Initializers<P, U>[K],
 			) => {
-				const result = isParser<P[K], ComponentUI<P, U>>(initializer)
-					? initializer(ui, this.getAttribute(key))
-					: isReaderOrMethodProducer<K>(initializer)
-						? initializer(ui)
-						: (initializer as MaybeSignal<P[K]>)
-				if (result != null) this.#setAccessor(key, result)
+				if (isParser<P[K], ComponentUI<P, U>>(initializer)) {
+					const result = initializer(ui, this.getAttribute(key))
+					if (result != null) this.#setAccessor(key, result)
+				} else if (isMethodProducer(initializer)) {
+					const cleanup = (initializer as MethodProducer<P, ComponentUI<P, U>>)(
+						ui,
+					)
+					if (isFunction(cleanup)) methodCleanups.push(cleanup)
+				} else if (isFunction<MaybeSignal<P[K]>>(initializer)) {
+					const result = (
+						initializer as Reader<MaybeSignal<P[K]>, ComponentUI<P, U>>
+					)(ui)
+					if (result != null) this.#setAccessor(key, result)
+				} else {
+					const value = initializer as MaybeSignal<P[K]>
+					if (value != null) this.#setAccessor(key, value)
+				}
 			}
 			for (const [prop, initializer] of Object.entries(props)) {
 				if (initializer == null || prop in this) continue
@@ -143,7 +148,13 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 
 			// Resolve dependencies and run setup function
 			resolveDependencies(() => {
-				this.#cleanup = runEffects(ui, setup(ui))
+				const effectCleanup = runEffects(ui, setup(ui))
+				this.#cleanup = methodCleanups.length
+					? () => {
+							for (const c of methodCleanups) c()
+							effectCleanup()
+						}
+					: effectCleanup
 			})
 		}
 

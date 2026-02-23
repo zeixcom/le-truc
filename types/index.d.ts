@@ -12,7 +12,7 @@ export { setStyle } from './src/effects/style';
 export { setText } from './src/effects/text';
 export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidEffectsError, InvalidPropertyNameError, InvalidReactivesError, InvalidUIKeyError, MissingElementError, } from './src/errors';
 export { createEventsSensor, type EventHandlers, type SensorEventHandler, } from './src/events';
-export { type Fallback, isParser, type LooseReader, type Parser, type ParserOrFallback, type Reader, read, } from './src/parsers';
+export { asMethod, asParser, type Fallback, isMethodProducer, isParser, type LooseReader, type Parser, type ParserOrFallback, type Reader, read, } from './src/parsers';
 export { asBoolean } from './src/parsers/boolean';
 export { asJSON } from './src/parsers/json';
 export { asInteger, asNumber } from './src/parsers/number';
