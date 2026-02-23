@@ -107,21 +107,9 @@ These items each map to a "Surprising Behavior" in `CLAUDE.md`. They are already
 
 ### 9c. `on()` handler return value
 
-**Current behaviour:** An event handler returning `{ prop: newValue }` updates host properties via `batch()`; returning `undefined` (or nothing) is a no-op side-effect. Both are valid and silently accepted.
+**Status: Done.**
 
-**Why it's surprising:** This is a hidden dual-mode API. The type `EventHandler` allows both, but there is no syntactic distinction between an intentional side-effect handler and one that accidentally returns nothing. An early-return branch that forgets to return an update object silently becomes a no-op.
-
-**Architect question:** Could the two modes be split into distinct APIs (e.g. `on()` for side-effects only, `update()` or a second argument for property-updating handlers)? Or is the unified return-value convention ergonomic enough to keep, and the type system provides sufficient guidance?
-
-**Decision: Keep the unified API. Improve types and JSDoc. No API split.**
-
-Splitting `on()` into two functions (side-effect-only vs. property-updating) would be an additive API change with no ergonomic gain — the type system already discriminates via the return type `{ [K in keyof P]?: P[K] } | void | Promise<void>`. The "dual mode" is not a hidden feature; it follows the exact pattern of `addEventListener` callbacks returning values for auto-batching, which is a documented shortcut.
-
-The real issue is discoverability. The fix is documentation and types:
-
-1. **JSDoc**: Clarify that returning an object is the shortcut for `batch(() => { host.prop = value })`. Make explicit that side-effect-only handlers return `void` and that is always correct. Add an `@example` showing both forms.
-2. **Type rename**: `EventHandler<P, Evt>` is accurate but opaque. Consider a comment in the type definition explaining the two return modes.
-3. **No new API**: `update()` as a second function would create two overlapping APIs with no mechanical difference. Reject.
+The `EventHandler` type now has a JSDoc comment explaining both return modes. The `on()` JSDoc was updated to document both modes explicitly, with `@example` blocks showing side-effect-only handlers and the property-update shortcut. No API changes.
 
 ---
 
