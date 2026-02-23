@@ -51,11 +51,6 @@ type ElementUpdater<E extends Element, T> = {
 	reject?: (error: unknown) => void
 }
 
-/* === Constants === */
-
-// Special value explicitly marked as any so it can be used as signal value of any type
-const RESET: any = Symbol('RESET')
-
 /* === Internal Functions === */
 
 const getUpdateDescription = (
@@ -126,13 +121,13 @@ const runEffects = <
  * - `Signal<T>` → calls `.get()` (registers signal dependency)
  * - `(target: E) => T` → calls the reader function
  *
- * Returns `RESET` on error, which causes `updateElement` to restore the original DOM value.
+ * Returns `undefined` on error, which causes `updateElement` to restore the original DOM value.
  *
  * @param {Reactive<T, P, E>} reactive - Reactive property name, signal, or reader function
  * @param {Component<P>} host - The component host element
  * @param {E} target - The target element the effect operates on
  * @param {string} [context] - Description used in error log messages
- * @returns {T} Resolved value, or `RESET` if resolution failed
+ * @returns {T | undefined} Resolved value, or `undefined` if resolution failed
  */
 const resolveReactive = <
 	T extends {},
@@ -143,7 +138,7 @@ const resolveReactive = <
 	host: Component<P>,
 	target: E,
 	context?: string,
-): T => {
+): T | undefined => {
 	try {
 		return typeof reactive === 'string'
 			? (host[reactive] as unknown as T)
@@ -151,7 +146,7 @@ const resolveReactive = <
 				? reactive.get()
 				: isFunction(reactive)
 					? (reactive(target) as unknown as T)
-					: RESET
+					: undefined
 	} catch (error) {
 		if (context) {
 			log(
@@ -164,7 +159,7 @@ const resolveReactive = <
 				LOG_ERROR,
 			)
 		}
-		return RESET
+		return undefined
 	}
 }
 
@@ -173,7 +168,7 @@ const resolveReactive = <
  *
  * Captures the current DOM value as a fallback, then creates a `createEffect` that
  * re-runs whenever the reactive value changes. On each run:
- * - `RESET` → restore the original DOM value
+ * - `undefined` → restore the original DOM value
  * - `null` → call `updater.delete` if available, else restore fallback
  * - anything else → call `updater.update` if the value changed
  *
@@ -215,7 +210,7 @@ const updateElement =
 		return createEffect(() => {
 			const value = resolveReactive(reactive, host, target, operationDesc)
 			const resolvedValue =
-				value === RESET
+				value === undefined
 					? fallback
 					: value === null
 						? updater.delete
@@ -253,5 +248,4 @@ export {
 	runEffects,
 	resolveReactive,
 	updateElement,
-	RESET,
 }

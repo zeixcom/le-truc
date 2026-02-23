@@ -19,7 +19,6 @@ type ElementUpdater<E extends Element, T> = {
     resolve?: (element: E) => void;
     reject?: (error: unknown) => void;
 };
-declare const RESET: any;
 /**
  * Activate effects returned by the setup function inside a reactive scope.
  *
@@ -44,21 +43,21 @@ declare const runEffects: <P extends ComponentProps, U extends UI & {
  * - `Signal<T>` → calls `.get()` (registers signal dependency)
  * - `(target: E) => T` → calls the reader function
  *
- * Returns `RESET` on error, which causes `updateElement` to restore the original DOM value.
+ * Returns `undefined` on error, which causes `updateElement` to restore the original DOM value.
  *
  * @param {Reactive<T, P, E>} reactive - Reactive property name, signal, or reader function
  * @param {Component<P>} host - The component host element
  * @param {E} target - The target element the effect operates on
  * @param {string} [context] - Description used in error log messages
- * @returns {T} Resolved value, or `RESET` if resolution failed
+ * @returns {T | undefined} Resolved value, or `undefined` if resolution failed
  */
-declare const resolveReactive: <T extends {}, P extends ComponentProps, E extends Element>(reactive: Reactive<T, P, E>, host: Component<P>, target: E, context?: string) => T;
+declare const resolveReactive: <T extends {}, P extends ComponentProps, E extends Element>(reactive: Reactive<T, P, E>, host: Component<P>, target: E, context?: string) => T | undefined;
 /**
  * Shared abstraction used by all built-in DOM effects.
  *
  * Captures the current DOM value as a fallback, then creates a `createEffect` that
  * re-runs whenever the reactive value changes. On each run:
- * - `RESET` → restore the original DOM value
+ * - `undefined` → restore the original DOM value
  * - `null` → call `updater.delete` if available, else restore fallback
  * - anything else → call `updater.update` if the value changed
  *
@@ -68,4 +67,4 @@ declare const resolveReactive: <T extends {}, P extends ComponentProps, E extend
  * @returns {Effect<P, E>} Effect that manages the reactive DOM update and returns a cleanup function
  */
 declare const updateElement: <T extends {}, P extends ComponentProps, E extends Element>(reactive: Reactive<T, P, E>, updater: ElementUpdater<E, T>) => Effect<P, E>;
-export { type Effect, type Effects, type ElementEffects, type ElementUpdater, type Reactive, type UpdateOperation, runEffects, resolveReactive, updateElement, RESET, };
+export { type Effect, type Effects, type ElementEffects, type ElementUpdater, type Reactive, type UpdateOperation, runEffects, resolveReactive, updateElement };

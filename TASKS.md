@@ -175,18 +175,6 @@ No change to the runtime behaviour. The DEV_MODE warning is adequate. Document t
 
 ### 9f. Remove the `RESET` sentinel
 
-**Current behaviour:** `RESET` is exported from `src/effects.ts` (used by `resolveReactive` and `updateElement`). Custom effects that use `resolveReactive` directly must handle `RESET` correctly or risk restoring stale DOM values unexpectedly.
+**Status: Done.**
 
-**Why it's surprising:** `RESET` looks like an error marker but acts as a restore instruction — the semantics aren't obvious from the name. Custom effect authors who encounter it for the first time may mishandle it.
-
-**Architect question:** Should `RESET` be renamed to something that better communicates "restore original DOM value" (e.g. `RESTORE` or `USE_FALLBACK`)? And should `resolveReactive` be part of the public API at 1.0, or kept internal, requiring custom effects to call `createEffect` directly?
-
-**Decision: Do. Replace `RESET` with `undefined` in the effect-layer semantics. Keep the DOM restore behaviour.**
-
-`RESET` was introduced as a typed escape hatch because `undefined` was not a valid signal value in earlier versions of `cause-effect`. As of 0.18.x, the library removed its own `UNSET` sentinel for the same reason. `RESET` is used exclusively inside `updateElement` and `resolveReactive` — it does not travel through the signal graph. It is therefore safe to replace.
-
-**Mechanics**: `resolveReactive()` currently returns `RESET` on error. Replace with a two-value return: a discriminated result or a local `undefined` sentinel that is never exported. The simplest approach: change the error-case return to `undefined` and update `updateElement` to treat `undefined` the same way it currently treats `RESET` (restore the fallback DOM value). Remove the `RESET` export from `effects.ts`.
-
-**Impact on custom effects**: Any consumer calling `resolveReactive` directly and checking `=== RESET` will break. But `resolveReactive` is not intended to be part of the stable public API (the architectural goal is to keep custom effects using `createEffect` directly). Remove it from the public export at 1.0 or document it as unstable/internal.
-
-**Backward compatibility**: Pre-1.0, so no compat obligation. Any existing custom effect using `RESET` is trivially migrated: `=== RESET` → `=== undefined`.
+`resolveReactive()` now returns `undefined` on error. `updateElement` treats `undefined` as the restore-fallback signal. The `RESET` symbol and its export have been removed from `effects.ts`. The `types/src/effects.d.ts` declaration file was updated accordingly.
