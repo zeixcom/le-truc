@@ -2,13 +2,13 @@
 
 > **updateElement**\<`T`, `P`, `E`\>(`reactive`, `updater`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects.ts:186](https://github.com/zeixcom/le-truc/blob/ce6fdde33897d7e14382a222c2fdd5e1804c6bd3/src/effects.ts#L186)
+Defined in: [src/effects.ts:190](https://github.com/zeixcom/le-truc/blob/45798dee9dae4e450a431014c6b066824d261d20/src/effects.ts#L190)
 
 Shared abstraction used by all built-in DOM effects.
 
 Captures the current DOM value as a fallback, then creates a `createEffect` that
 re-runs whenever the reactive value changes. On each run:
-- `RESET` → restore the original DOM value
+- `undefined` → restore the original DOM value
 - `null` → call `updater.delete` if available, else restore fallback
 - anything else → call `updater.update` if the value changed
 

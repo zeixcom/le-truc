@@ -1,10 +1,11 @@
 import {
+	type Cleanup,
 	createComputed,
+	createScope,
 	isFunction,
 	isRecord,
 	isSignal,
 	isSlot,
-	type MaybeCleanup,
 	type Signal,
 } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from '../component'
@@ -50,94 +51,95 @@ const pass =
 	<P extends ComponentProps, Q extends ComponentProps>(
 		props: PassedProps<P, Q> | ((target: Component<Q>) => PassedProps<P, Q>),
 	): Effect<P, Component<Q>> =>
-	(host, target): MaybeCleanup => {
-		if (!isCustomElement(target))
-			throw new InvalidCustomElementError(
-				target,
-				`pass from ${elementName(host)}`,
-			)
-		const reactives = isFunction(props) ? props(target) : props
-		if (!isRecord(reactives))
-			throw new InvalidReactivesError(host, target, reactives)
+	(host, target): Cleanup =>
+		createScope(() => {
+			if (!isCustomElement(target))
+				throw new InvalidCustomElementError(
+					target,
+					`pass from ${elementName(host)}`,
+				)
+			const reactives = isFunction(props) ? props(target) : props
+			if (!isRecord(reactives))
+				throw new InvalidReactivesError(host, target, reactives)
 
-		// Resolve a reactive value to a Signal
-		const toSignal = (value: unknown): Signal<any> | undefined => {
-			if (isSignal(value)) return value
-			const fn =
-				typeof value === 'string' && value in host
-					? () => host[value as keyof typeof host]
-					: isFunction(value)
-						? value
-						: undefined
-			return fn ? createComputed(fn as () => NonNullable<unknown>) : undefined
-		}
-
-		const signals = getSignals(target)
-		const targetName = elementName(target)
-		const cleanups: (() => void)[] = []
-
-		for (const [prop, reactive] of Object.entries(reactives)) {
-			if (reactive == null) continue
-			if (!(prop in target)) {
-				if (DEV_MODE)
-					console[LOG_WARN](
-						`pass(): property '${prop}' does not exist on ${targetName}`,
-					)
-				continue
+			// Resolve a reactive value to a Signal
+			const toSignal = (value: unknown): Signal<any> | undefined => {
+				if (isSignal(value)) return value
+				const fn =
+					typeof value === 'string' && value in host
+						? () => host[value as keyof typeof host]
+						: isFunction(value)
+							? value
+							: undefined
+				return fn ? createComputed(fn as () => NonNullable<unknown>) : undefined
 			}
 
-			// Resolve the reactive to a signal
-			const applied =
-				isFunction(reactive) && reactive.length === 1
-					? reactive(target)
-					: reactive
-			const isArray = Array.isArray(applied) && applied.length === 2
-			const signal = toSignal(isArray ? applied[0] : applied)
-			if (!signal) continue
+			const signals = getSignals(target)
+			const targetName = elementName(target)
+			const cleanups: (() => void)[] = []
 
-			// Path A: Slot-backed (Le Truc component) — replace and restore on cleanup
-			const slot = signals[prop]
-			if (isSlot(slot)) {
-				const original = slot.current()
-				slot.replace(signal)
-				cleanups.push(() => slot.replace(original))
-				continue
+			for (const [prop, reactive] of Object.entries(reactives)) {
+				if (reactive == null) continue
+				if (!(prop in target)) {
+					if (DEV_MODE)
+						console[LOG_WARN](
+							`pass(): property '${prop}' does not exist on ${targetName}`,
+						)
+					continue
+				}
+
+				// Resolve the reactive to a signal
+				const applied =
+					isFunction(reactive) && reactive.length === 1
+						? reactive(target)
+						: reactive
+				const isArray = Array.isArray(applied) && applied.length === 2
+				const signal = toSignal(isArray ? applied[0] : applied)
+				if (!signal) continue
+
+				// Path A: Slot-backed (Le Truc component) — replace and restore on cleanup
+				const slot = signals[prop]
+				if (isSlot(slot)) {
+					const original = slot.current()
+					slot.replace(signal)
+					cleanups.push(() => slot.replace(original))
+					continue
+				}
+
+				// Path B: Object.defineProperty fallback for other custom elements
+				const descriptor =
+					Object.getOwnPropertyDescriptor(target, prop) ??
+					Object.getOwnPropertyDescriptor(Object.getPrototypeOf(target), prop)
+
+				if (!descriptor) continue
+
+				if (!descriptor.configurable) {
+					if (DEV_MODE)
+						console[LOG_WARN](
+							`pass(): property '${prop}' on ${targetName} has a non-configurable descriptor — binding skipped`,
+						)
+					continue
+				}
+
+				// Install reactive getter (and optional setter for two-way binding)
+				const setter = isArray
+					? (applied[1] as (value: unknown) => void)
+					: undefined
+				Object.defineProperty(target, prop, {
+					get: () => signal.get(),
+					set: setter,
+					configurable: true,
+					enumerable: descriptor.enumerable ?? true,
+				})
+
+				// Restore original descriptor on cleanup
+				cleanups.push(() => Object.defineProperty(target, prop, descriptor))
 			}
 
-			// Path B: Object.defineProperty fallback for other custom elements
-			const descriptor =
-				Object.getOwnPropertyDescriptor(target, prop) ??
-				Object.getOwnPropertyDescriptor(Object.getPrototypeOf(target), prop)
-
-			if (!descriptor) continue
-
-			if (!descriptor.configurable) {
-				if (DEV_MODE)
-					console[LOG_WARN](
-						`pass(): property '${prop}' on ${targetName} has a non-configurable descriptor — binding skipped`,
-					)
-				continue
-			}
-
-			// Install reactive getter (and optional setter for two-way binding)
-			const setter = isArray
-				? (applied[1] as (value: unknown) => void)
-				: undefined
-			Object.defineProperty(target, prop, {
-				get: () => signal.get(),
-				set: setter,
-				configurable: true,
-				enumerable: descriptor.enumerable ?? true,
-			})
-
-			// Restore original descriptor on cleanup
-			cleanups.push(() => Object.defineProperty(target, prop, descriptor))
-		}
-
-		if (cleanups.length)
-			return () => {
-				for (const c of cleanups) c()
-			}
-	}
+			if (cleanups.length)
+				return () => {
+					for (const c of cleanups) c()
+				}
+		})
 
 export { type PassedProp, type PassedProps, pass }

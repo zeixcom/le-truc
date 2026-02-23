@@ -72,3 +72,17 @@ The `resolveDependencies` JSDoc now documents the 200ms timeout, the degraded-bu
 **Status: Done.**
 
 `resolveReactive()` now returns `undefined` on error. `updateElement` treats `undefined` as the restore-fallback signal. The `RESET` symbol and its export have been removed from `effects.ts`. The `types/src/effects.d.ts` declaration file was updated accordingly.
+
+---
+
+### 10. `runEffects` cleanup fix — architecture decision
+
+**Status: Done. No further implementation work needed.**
+
+The `createScope(() => fn(host, target))` wrapper in `runEffects` is the correct and final solution.
+
+**Decision**: Keep the `createScope` wrapper in `runEffects`. Do not move scope ownership into `on()` or `pass()`.
+
+**Rationale**: The alternative — having `on()` and `pass()` self-register with the ambient owner using `registerCleanup(activeOwner, cleanup)` — requires importing `registerCleanup` and `activeOwner` from `@zeix/cause-effect`. These are exported from the internal `src/graph` module but intentionally absent from the public `index.ts`. Using them would couple Le Truc to private implementation details that can change without a semver bump. The uniform `createScope` wrapper at the call site in `runEffects` is the correct abstraction boundary: `runEffects` already owns the component's top-level scope, and wrapping each effect in a child scope is a natural extension of that ownership. The extra scope node for `updateElement`-based effects (which already self-register via `createEffect`) is structurally harmless — `createEffect` registers with the child scope as its owner, not with both scopes.
+
+**Invariant established**: Every effect function in the effects map runs inside its own child `createScope`. Cleanup always propagates correctly on component disconnect, regardless of whether the effect calls `createEffect` internally or returns a plain cleanup function.

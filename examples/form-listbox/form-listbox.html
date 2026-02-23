@@ -79,3 +79,15 @@
 		</div>
 	</form-listbox>
 </form>
+
+<!-- safeSetAttribute security test fixtures (hidden, used by form-listbox.spec.ts) -->
+
+<!-- security-onevil: sets onclick attribute — always blocked (on* name) -->
+<security-onevil id="sec-evil" hidden src="test">
+	<a href="#">trigger</a>
+</security-onevil>
+
+<!-- security-urlhref: sets href attribute — safe protocols pass, unsafe are blocked -->
+<security-urlhref id="sec-href" hidden href="https://example.com">
+	<a href="#">link</a>
+</security-urlhref>

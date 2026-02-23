@@ -444,3 +444,146 @@ test.describe('form-listbox component', () => {
 		}
 	})
 })
+
+// ===== SETATTRIBUTE SECURITY (safeSetAttribute) =====
+// safeSetAttribute blocks two categories of unsafe inputs:
+// 1. Attribute names starting with 'on' (event handler injection)
+// 2. Values containing '://' with a non-safe protocol (vbscript://, custom://, etc.)
+//    Safe protocols: http:, https:, ftp:, mailto:, tel: — and bare relative paths
+//
+// Tests use security-onevil and security-urlhref components registered in main.ts.
+// Both are present as hidden fixtures in form-listbox.html and connect on page load.
+// - security-onevil: uses setAttribute('onclick') → always blocked
+// - security-urlhref: uses setAttribute('href') → blocked for unsafe protocols
+
+test.describe('setAttribute security (safeSetAttribute)', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto('http://localhost:3000/test/form-listbox')
+		await page.waitForSelector('form-listbox')
+		await page.waitForSelector('security-onevil', { state: 'attached' })
+	})
+
+	test('blocks on* attribute name: console.error is emitted', async ({ page }) => {
+		// security-onevil is in the HTML fixture and calls setAttribute('onclick', 'src')
+		// when it connects. safeSetAttribute throws for 'on*' names; updateElement catches
+		// the error and logs it via console.error. Collect errors before page load.
+		const errors: string[] = []
+		page.on('console', msg => {
+			if (msg.type() === 'error') errors.push(msg.text())
+		})
+
+		// Navigate fresh so we capture the error emitted during connectedCallback
+		await page.goto('http://localhost:3000/test/form-listbox')
+		await page.waitForSelector('security-onevil', { state: 'attached' })
+		await page.waitForTimeout(100)
+
+		// A console.error must mention the blocked 'onclick' attribute name
+		const securityError = errors.find(e => /onclick/i.test(e))
+		expect(securityError).toBeDefined()
+		expect(securityError).toMatch(/onclick/)
+		expect(securityError).toMatch(/security-onevil/)
+	})
+
+	test('blocks on* attribute: the blocked attribute is not set on the element', async ({
+		page,
+	}) => {
+		// security-onevil tries to set onclick — but safeSetAttribute throws, so the
+		// attribute must never be applied to the inner <a> element.
+		const onclickAttr = await page.evaluate(() => {
+			return document
+				.querySelector('#sec-evil a')
+				?.getAttribute('onclick')
+		})
+		expect(onclickAttr).toBeNull()
+	})
+
+	test('blocks unsafe protocol URL: setAttribute with vbscript:// is rejected', async ({
+		page,
+	}) => {
+		// Set href to vbscript://run-something — triggers the URL security check in safeSetAttribute
+		const errors: string[] = []
+		page.on('console', msg => {
+			if (msg.type() === 'error') errors.push(msg.text())
+		})
+
+		await page.evaluate(() => {
+			// Programmatically update the href attribute to an unsafe value
+			const el = document.querySelector('#sec-href') as any
+			if (el) el.setAttribute('href', 'vbscript://run-something')
+		})
+		await page.waitForTimeout(200)
+
+		// The attribute on the inner <a> must not be the unsafe URL
+		const hrefAttr = await page.evaluate(() => {
+			return document.querySelector('#sec-href a')?.getAttribute('href')
+		})
+		expect(hrefAttr).not.toBe('vbscript://run-something')
+
+		// A console.error must be logged about the failed update
+		const securityError = errors.find(e => /security-urlhref/i.test(e))
+		expect(securityError).toBeDefined()
+		expect(securityError).toMatch(/href/)
+	})
+
+	test('error message for unsafe protocol includes element tag and blocked value', async ({
+		page,
+	}) => {
+		const errors: string[] = []
+		page.on('console', msg => {
+			if (msg.type() === 'error') errors.push(msg.text())
+		})
+
+		await page.evaluate(() => {
+			const el = document.querySelector('#sec-href') as any
+			if (el) el.setAttribute('href', 'custom://bad-protocol')
+		})
+		await page.waitForTimeout(200)
+
+		// Error message must include the element tag name
+		const securityError = errors.find(e => /security-urlhref/i.test(e))
+		expect(securityError).toBeDefined()
+		expect(securityError).toMatch(/href/)
+	})
+
+	test('allows safe https:// URL values without error', async ({ page }) => {
+		const errors: string[] = []
+		page.on('console', msg => {
+			if (msg.type() === 'error') errors.push(msg.text())
+		})
+
+		await page.evaluate(() => {
+			const el = document.querySelector('#sec-href') as any
+			if (el) el.setAttribute('href', 'https://example.com/safe')
+		})
+		await page.waitForTimeout(100)
+
+		// The safe https:// URL must be set on the inner <a>
+		const hrefAttr = await page.evaluate(() => {
+			return document.querySelector('#sec-href a')?.getAttribute('href')
+		})
+		expect(hrefAttr).toBe('https://example.com/safe')
+
+		// No security errors for safe https:// URLs
+		expect(errors.filter(e => /blocked unsafe/i.test(e))).toHaveLength(0)
+	})
+
+	test('allows mailto: URL values without error', async ({ page }) => {
+		const errors: string[] = []
+		page.on('console', msg => {
+			if (msg.type() === 'error') errors.push(msg.text())
+		})
+
+		await page.evaluate(() => {
+			const el = document.querySelector('#sec-href') as any
+			if (el) el.setAttribute('href', 'mailto:test@example.com')
+		})
+		await page.waitForTimeout(100)
+
+		// mailto: is a safe protocol — must be set on the inner <a>
+		const hrefAttr = await page.evaluate(() => {
+			return document.querySelector('#sec-href a')?.getAttribute('href')
+		})
+		expect(hrefAttr).toBe('mailto:test@example.com')
+		expect(errors.filter(e => /blocked unsafe/i.test(e))).toHaveLength(0)
+	})
+})

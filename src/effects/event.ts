@@ -1,4 +1,4 @@
-import { batch, type Cleanup, isRecord } from '@zeix/cause-effect'
+import { batch, type Cleanup, createScope, isRecord } from '@zeix/cause-effect'
 import type { ComponentProps } from '../component'
 import type { Effect } from '../effects'
 import type { EventType } from '../events'
@@ -61,32 +61,33 @@ const on =
 		handler: EventHandler<P, EventType<K>>,
 		options: AddEventListenerOptions = {},
 	): Effect<P, E> =>
-	(host, target): Cleanup => {
-		if (!('passive' in options))
-			options = { ...options, passive: PASSIVE_EVENTS.has(type) }
-		const listener = (e: Event) => {
-			const task = () => {
-				const result = handler(e as EventType<K>)
-				if (!isRecord(result)) return
-				batch(() => {
-					for (const [key, value] of Object.entries(result)) {
-						try {
-							host[key as keyof P] = value
-						} catch (error) {
-							log(
-								error,
-								`Reactive property "${key}" on ${elementName(host)} from event ${type} on ${elementName(target)} could not be set, because it is read-only.`,
-								LOG_ERROR,
-							)
+	(host, target): Cleanup =>
+		createScope(() => {
+			if (!('passive' in options))
+				options = { ...options, passive: PASSIVE_EVENTS.has(type) }
+			const listener = (e: Event) => {
+				const task = () => {
+					const result = handler(e as EventType<K>)
+					if (!isRecord(result)) return
+					batch(() => {
+						for (const [key, value] of Object.entries(result)) {
+							try {
+								host[key as keyof P] = value
+							} catch (error) {
+								log(
+									error,
+									`Reactive property "${key}" on ${elementName(host)} from event ${type} on ${elementName(target)} could not be set, because it is read-only.`,
+									LOG_ERROR,
+								)
+							}
 						}
-					}
-				})
+					})
+				}
+				if (options.passive) schedule(target, task)
+				else task()
 			}
-			if (options.passive) schedule(target, task)
-			else task()
-		}
-		target.addEventListener(type, listener, options)
-		return () => target.removeEventListener(type, listener)
-	}
+			target.addEventListener(type, listener, options)
+			return () => target.removeEventListener(type, listener)
+		})
 
 export { type EventHandler, type EventType, on }

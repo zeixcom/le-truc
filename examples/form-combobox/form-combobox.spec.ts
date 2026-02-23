@@ -978,3 +978,58 @@ test.describe('form-combobox component', () => {
 		})
 	})
 })
+
+// ===== PASS() — SLOT PATH CLEANUP =====
+// Verify that the Slot-backed binding created by pass() is properly restored
+// when the parent component is disconnected. After disconnection, the child
+// should resume its own independent signal (not still bound to the parent).
+
+test.describe('pass() Slot cleanup and restore', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto('http://localhost:3000/test/form-combobox')
+		await page.waitForSelector('form-combobox')
+	})
+
+	test('restores child signal after parent is detached', async ({ page }) => {
+		// 1. Confirm initial binding: typing in combobox drives listbox.filter.
+		//    Use scoped selector to avoid ambiguity with the second form-combobox.
+		const combobox = page.locator('form-combobox').first()
+		const textbox = combobox.locator('input[role="combobox"]')
+		await textbox.fill('New')
+		await page.waitForTimeout(50)
+
+		const filterBefore = await page.evaluate(() => {
+			return (document.querySelector('form-combobox form-listbox') as any)?.filter
+		})
+		expect(filterBefore).toBe('New')
+
+		// 2. Detach the form-combobox parent — pass() cleanup must restore the
+		//    child's own Slot-backed signal so it operates independently again.
+		//    The key invariant: after detach, setting filter must NOT throw
+		//    ReadonlySignalError (which would happen if the Slot were still backed
+		//    by the computed from pass()).
+		const result = await page.evaluate(async () => {
+			const el = document.querySelector('form-combobox')!
+			// Capture reference to listbox BEFORE removal — after removal,
+			// querySelector('form-listbox') returns the second listbox.
+			const listbox = el.querySelector('form-listbox') as any
+			const parent = el.parentElement!
+
+			el.remove()
+			await new Promise(r => setTimeout(r, 50))
+
+			let setError: string | null = null
+			try {
+				listbox.filter = 'restored'
+			} catch (e: any) {
+				setError = e.message ?? String(e)
+			}
+
+			return { parent: parent.tagName, setError }
+		})
+
+		// pass() cleanup restored the original mutable Slot — no ReadonlySignalError
+		expect(result.setError).toBeNull()
+		expect(result.parent).toBeTruthy()
+	})
+})

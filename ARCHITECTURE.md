@@ -138,9 +138,9 @@ updateElement(reactive, { op, name, read, update, delete? })
   │
   └─ createEffect(() => {
        value = resolveReactive(reactive)   ← auto-tracks signal deps
-       if value === RESET   → use fallback
-       if value === null    → delete(target) if available, else use fallback
-       if value !== current → update(target, value)
+       if value === undefined → use fallback (error in reader, or prop missing)
+       if value === null      → delete(target) if available, else use fallback
+       if value !== current   → update(target, value)
      })
 ```
 
@@ -150,10 +150,6 @@ The `Reactive<T>` type is a union of three forms:
 - `(target: E) => T` — a reader function
 
 `resolveReactive()` handles all three and returns the concrete value. Because it calls `.get()` inside a `createEffect`, signal dependencies are automatically tracked.
-
-### The RESET sentinel
-
-`RESET` is a `Symbol('RESET')` typed as `any`. When a reactive resolves to `RESET` (e.g., the reader function threw an error), the effect restores the original DOM value captured at setup time.
 
 ### Built-in effects at a glance
 
@@ -172,11 +168,14 @@ All default their `reactive` parameter to the effect name (e.g., `setAttribute('
 
 ### on() — event listener effect
 
-`on(type, handler, options?)` is different from `updateElement`-based effects. It directly attaches an event listener to the target element. The handler receives the event and may return a partial property update object like `{ count: host.count + 1 }`. If it does, the updates are applied to the host in a `batch()`. For passive events (scroll, resize, touch, wheel), execution is deferred via `schedule()`.
+`on(type, handler, options?)` is different from `updateElement`-based effects. It calls `createScope()` for proper disposal and directly attaches an event listener to the target element. The handler receives the event and may return a partial property update object like `{ count: host.count + 1 }`. If it does, the updates are applied to the host in a `batch()`. For passive events (scroll, resize, touch, wheel), execution is deferred via `schedule()`.
 
 ### pass() — inter-component binding
 
-`pass(props)` replaces the backing signal of a child Le Truc component's Slot properties. It uses `getSignals(target)` to access the child's internal signal map, then for each passed prop calls `slot.replace(signal)` with a new signal derived from the parent's reactive value. This creates a live reactive binding between parent and child without the child needing to know about the parent. No cleanup/restore is needed: when the parent unmounts, the child is torn down as well.
+`pass(props)` calls `createScope()` for proper restoration and creates a live reactive binding between a parent component and a descendant. It uses `getSignals(target)` to access the child's internal signal map. Two paths:
+
+- **Path A — Slot-backed (Le Truc child)**: Captures `slot.current()` before replacing, then calls `slot.replace(signal)`. Returns a cleanup that calls `slot.replace(original)` to restore the child's own signal when the parent disconnects.
+- **Path B — Object.defineProperty (non-Le Truc custom element)**: Installs a reactive getter (and optional setter for two-way binding) on the target instance via `Object.defineProperty`. Returns a cleanup that restores the original descriptor.
 
 ## The UI Query System
 
@@ -248,21 +247,16 @@ This is used as a `MethodProducer` — a property initializer that returns `void
 
 ---
 
-## Pre-1.0 Design Decisions
-
-These decisions resolve the open questions from TASKS.md items 7–9. Each entry states the decision, the reasoning, and what is explicitly deferred or rejected.
-
----
-
 ## Key Decisions Summary
 
 | # | Item | Decision | Status |
 |---|------|----------|--------|
-| 7 | `pass()` for non-Le Truc elements | Add `Object.defineProperty` fallback for custom elements; defer plain HTML elements | Do before 1.0 |
-| 8 | Parser/MethodProducer branding | Symbol-branded `asParser()` / `asMethod()` wrappers; DEV_MODE warning for unbranded fallback | Do before 1.0 |
-| 9a | Attribute name typo | TypeScript catches it at compile time; add DEV_MODE runtime warning for JS/dynamic cases | Do before 1.0 |
-| 9b | Security validation silence | Always throw with a descriptive error; log at `LOG_ERROR` unconditionally | Do before 1.0 |
-| 9c | `on()` dual return mode | Keep unified API; improve JSDoc and `@example` | Do before 1.0 (docs only) |
-| 9d | `pass()` signal restore | Restore original signal in cleanup; resolved with item 7 | Do before 1.0 |
-| 9e | Dependency timeout visibility | Keep current DEV_MODE warning; document behaviour in JSDoc | Do before 1.0 (docs only) |
-| 9f | `RESET` sentinel | Replace with `undefined`; remove `RESET` export; make `resolveReactive` internal | Do before 1.0 |
+| 7 | `pass()` for non-Le Truc elements | Add `Object.defineProperty` fallback for custom elements; defer plain HTML elements | Done |
+| 8 | Parser/MethodProducer branding | Symbol-branded `asParser()` / `asMethod()` wrappers; DEV_MODE warning for unbranded fallback | Done |
+| 9a | Attribute name typo | TypeScript catches it at compile time; add DEV_MODE runtime warning for JS/dynamic cases | Done |
+| 9b | Security validation silence | Always throw with a descriptive error; log at `LOG_ERROR` unconditionally | Done |
+| 9c | `on()` dual return mode | Keep unified API; improve JSDoc and `@example` | Done |
+| 9d | `pass()` signal restore | Restore original signal in cleanup; resolved with item 7 | Done |
+| 9e | Dependency timeout visibility | Keep current DEV_MODE warning; document behaviour in JSDoc | Done |
+| 9f | `RESET` sentinel | Replace with `undefined`; remove `RESET` export; make `resolveReactive` internal | Done |
+| 10 | `runEffects` cleanup fix placement | Use `createScope` wrapper in `on()` / `pass()` | Done |

@@ -1690,7 +1690,6 @@ class InvalidCustomElementError extends TypeError {
 }
 
 // src/effects.ts
-var RESET = Symbol("RESET");
 var getUpdateDescription = (op, name = "") => {
   const ops = {
     a: "attribute ",
@@ -1728,12 +1727,18 @@ var runEffects = (ui, effects) => {
 };
 var resolveReactive = (reactive, host, target, context) => {
   try {
-    return typeof reactive === "string" ? host[reactive] : isSignal(reactive) ? reactive.get() : isFunction(reactive) ? reactive(target) : RESET;
+    if (typeof reactive === "string") {
+      if (DEV_MODE && !(reactive in host)) {
+        log(reactive, `resolveReactive: property '${reactive}' does not exist on ${elementName(host)}`, LOG_WARN);
+      }
+      return host[reactive];
+    }
+    return isSignal(reactive) ? reactive.get() : isFunction(reactive) ? reactive(target) : undefined;
   } catch (error) {
     if (context) {
       log(error, `Failed to resolve value of ${valueString(reactive)}${context ? ` for ${context}` : ""} in ${elementName(target)}${host !== target ? ` in ${elementName(host)}` : ""}`, LOG_ERROR);
     }
-    return RESET;
+    return;
   }
 };
 var updateElement = (reactive, updater) => (host, target) => {
@@ -1752,7 +1757,7 @@ var updateElement = (reactive, updater) => (host, target) => {
   const fallback = read(target);
   return createEffect(() => {
     const value = resolveReactive(reactive, host, target, operationDesc);
-    const resolvedValue = value === RESET ? fallback : value === null ? updater.delete ? null : fallback : value;
+    const resolvedValue = value === undefined ? fallback : value === null ? updater.delete ? null : fallback : value;
     if (updater.delete && resolvedValue === null) {
       try {
         updater.delete(target);
@@ -1786,9 +1791,26 @@ var getSignals = (el) => {
 };
 
 // src/parsers.ts
-var isParser = (value) => isFunction(value) && value.length >= 2;
+var PARSER_BRAND = Symbol("parser");
+var METHOD_BRAND = Symbol("method");
+var isParser = (value) => {
+  if (!isFunction(value))
+    return false;
+  if (PARSER_BRAND in value)
+    return true;
+  if (value.length >= 2) {
+    if (DEV_MODE) {
+      console.warn(`isParser: unbranded two-argument function detected. Wrap custom parsers with asParser() to avoid misclassification when using default parameters or destructuring.`, value);
+    }
+    return true;
+  }
+  return false;
+};
+var isMethodProducer = (value) => isFunction(value) && (METHOD_BRAND in value);
 var isReader = (value) => isFunction(value);
 var getFallback = (ui, fallback) => isReader(fallback) ? fallback(ui) : fallback;
+var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
+var asMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 var read = (reader, fallback) => (ui) => {
   const value = reader(ui);
   return typeof value === "string" && isParser(fallback) ? fallback(ui, value) : value ?? getFallback(ui, fallback);
@@ -1924,13 +1946,25 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
       };
       this.#ui = ui;
       Object.freeze(this.#ui);
-      const isReaderOrMethodProducer = (value) => {
-        return isFunction(value);
-      };
+      const methodCleanups = [];
       const createSignal2 = (key, initializer) => {
-        const result = isParser(initializer) ? initializer(ui, this.getAttribute(key)) : isReaderOrMethodProducer(initializer) ? initializer(ui) : initializer;
-        if (result != null)
-          this.#setAccessor(key, result);
+        if (isParser(initializer)) {
+          const result = initializer(ui, this.getAttribute(key));
+          if (result != null)
+            this.#setAccessor(key, result);
+        } else if (isMethodProducer(initializer)) {
+          const cleanup = initializer(ui);
+          if (isFunction(cleanup))
+            methodCleanups.push(cleanup);
+        } else if (isFunction(initializer)) {
+          const result = initializer(ui);
+          if (result != null)
+            this.#setAccessor(key, result);
+        } else {
+          const value = initializer;
+          if (value != null)
+            this.#setAccessor(key, value);
+        }
       };
       for (const [prop, initializer] of Object.entries(props)) {
         if (initializer == null || prop in this)
@@ -1938,7 +1972,12 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
         createSignal2(prop, initializer);
       }
       resolveDependencies(() => {
-        this.#cleanup = runEffects(ui, setup(ui));
+        const effectCleanup = runEffects(ui, setup(ui));
+        this.#cleanup = methodCleanups.length ? () => {
+          for (const c of methodCleanups)
+            c();
+          effectCleanup();
+        } : effectCleanup;
       });
     }
     disconnectedCallback() {
@@ -1997,7 +2036,7 @@ class ContextRequestEvent extends Event {
     this.subscribe = subscribe;
   }
 }
-var provideContexts = (contexts) => (host) => {
+var provideContexts = (contexts) => asMethod((host) => {
   const listener = (e) => {
     const { context, callback } = e;
     if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
@@ -2007,7 +2046,7 @@ var provideContexts = (contexts) => (host) => {
   };
   host.addEventListener(CONTEXT_REQUEST, listener);
   return () => host.removeEventListener(CONTEXT_REQUEST, listener);
-};
+});
 var requestContext = (context, fallback) => (ui) => {
   let consumed = () => getFallback(ui, fallback);
   ui.host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
@@ -2031,10 +2070,10 @@ var isSafeURL = (value) => {
 };
 var safeSetAttribute = (element, attr, value) => {
   if (/^on/i.test(attr))
-    throw new Error(`Unsafe attribute: ${attr}`);
+    throw new Error(`setAttribute: blocked unsafe attribute name '${attr}' on ${element.localName} — event handler attributes are not allowed`);
   value = String(value).trim();
   if (!isSafeURL(value))
-    throw new Error(`Unsafe URL for ${attr}: ${value}`);
+    throw new Error(`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`);
   element.setAttribute(attr, value);
 };
 var setAttribute = (name, reactive = name) => updateElement(reactive, {
@@ -2096,7 +2135,7 @@ var schedule = (element, task) => {
 };
 
 // src/effects/event.ts
-var on = (type, handler, options = {}) => (host, target) => {
+var on = (type, handler, options = {}) => (host, target) => createScope(() => {
   if (!("passive" in options))
     options = { ...options, passive: PASSIVE_EVENTS.has(type) };
   const listener = (e) => {
@@ -2121,7 +2160,7 @@ var on = (type, handler, options = {}) => (host, target) => {
   };
   target.addEventListener(type, listener, options);
   return () => target.removeEventListener(type, listener);
-};
+});
 // src/effects/html.ts
 var dangerouslySetInnerHTML = (reactive, options = {}) => updateElement(reactive, {
   op: "h",
@@ -2167,7 +2206,7 @@ var dangerouslySetInnerHTML = (reactive, options = {}) => updateElement(reactive
   }
 });
 // src/effects/pass.ts
-var pass = (props) => (host, target) => {
+var pass = (props) => (host, target) => createScope(() => {
   if (!isCustomElement(target))
     throw new InvalidCustomElementError(target, `pass from ${elementName(host)}`);
   const reactives = isFunction(props) ? props(target) : props;
@@ -2181,6 +2220,7 @@ var pass = (props) => (host, target) => {
   };
   const signals = getSignals(target);
   const targetName = elementName(target);
+  const cleanups = [];
   for (const [prop, reactive] of Object.entries(reactives)) {
     if (reactive == null)
       continue;
@@ -2196,12 +2236,34 @@ var pass = (props) => (host, target) => {
       continue;
     const slot = signals[prop];
     if (isSlot(slot)) {
+      const original = slot.current();
       slot.replace(signal);
-    } else if (DEV_MODE) {
-      console[LOG_WARN](`pass(): property '${prop}' on ${targetName} has no Slot — binding skipped`);
+      cleanups.push(() => slot.replace(original));
+      continue;
     }
+    const descriptor = Object.getOwnPropertyDescriptor(target, prop) ?? Object.getOwnPropertyDescriptor(Object.getPrototypeOf(target), prop);
+    if (!descriptor)
+      continue;
+    if (!descriptor.configurable) {
+      if (DEV_MODE)
+        console[LOG_WARN](`pass(): property '${prop}' on ${targetName} has a non-configurable descriptor — binding skipped`);
+      continue;
+    }
+    const setter = isArray ? applied[1] : undefined;
+    Object.defineProperty(target, prop, {
+      get: () => signal.get(),
+      set: setter,
+      configurable: true,
+      enumerable: descriptor.enumerable ?? true
+    });
+    cleanups.push(() => Object.defineProperty(target, prop, descriptor));
   }
-};
+  if (cleanups.length)
+    return () => {
+      for (const c of cleanups)
+        c();
+    };
+});
 // src/effects/property.ts
 var setProperty = (key, reactive = key) => updateElement(reactive, {
   op: "p",
@@ -2303,9 +2365,9 @@ var createEventsSensor = (init, key, events) => (ui) => {
   }, { value });
 };
 // src/parsers/boolean.ts
-var asBoolean = () => (_, value) => value != null && value !== "false";
+var asBoolean = () => asParser((_, value) => value != null && value !== "false");
 // src/parsers/json.ts
-var asJSON = (fallback) => (ui, value) => {
+var asJSON = (fallback) => asParser((ui, value) => {
   if ((value ?? fallback) == null)
     throw new TypeError("asJSON: Value and fallback are both null or undefined");
   if (value == null)
@@ -2321,7 +2383,7 @@ var asJSON = (fallback) => (ui, value) => {
     });
   }
   return result ?? getFallback(ui, fallback);
-};
+});
 // src/parsers/number.ts
 var parseNumber = (parseFn, value) => {
   if (value == null)
@@ -2329,7 +2391,7 @@ var parseNumber = (parseFn, value) => {
   const parsed = parseFn(value);
   return Number.isFinite(parsed) ? parsed : undefined;
 };
-var asInteger = (fallback = 0) => (ui, value) => {
+var asInteger = (fallback = 0) => asParser((ui, value) => {
   if (value == null)
     return getFallback(ui, fallback);
   const trimmed = value.trim();
@@ -2337,17 +2399,17 @@ var asInteger = (fallback = 0) => (ui, value) => {
     return parseNumber((v) => parseInt(v, 16), trimmed) ?? getFallback(ui, fallback);
   const parsed = parseNumber(parseFloat, value);
   return parsed != null ? Math.trunc(parsed) : getFallback(ui, fallback);
-};
-var asNumber = (fallback = 0) => (ui, value) => parseNumber(parseFloat, value) ?? getFallback(ui, fallback);
+});
+var asNumber = (fallback = 0) => asParser((ui, value) => parseNumber(parseFloat, value) ?? getFallback(ui, fallback));
 // src/parsers/string.ts
-var asString = (fallback = "") => (ui, value) => value ?? getFallback(ui, fallback);
-var asEnum = (valid) => (_, value) => {
+var asString = (fallback = "") => asParser((ui, value) => value ?? getFallback(ui, fallback));
+var asEnum = (valid) => asParser((_, value) => {
   if (value == null)
     return valid[0];
   const lowerValue = value.toLowerCase();
   const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
   return matchingValid ? value : valid[0];
-};
+});
 export {
   valueString,
   updateElement,
@@ -2374,6 +2436,7 @@ export {
   isRecord,
   isParser,
   isMutableSignal,
+  isMethodProducer,
   isMemo,
   isList,
   isFunction,
@@ -2399,7 +2462,9 @@ export {
   createCollection,
   batch,
   asString,
+  asParser,
   asNumber,
+  asMethod,
   asJSON,
   asInteger,
   asEnum,

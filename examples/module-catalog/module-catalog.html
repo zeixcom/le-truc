@@ -1,4 +1,4 @@
-<module-catalog>
+<module-catalog id="default-test">
 	<header>
 		<p>Shop</p>
 		<basic-button disabled>
@@ -68,6 +68,49 @@
 					value="0"
 					min="0"
 					max="20"
+					readonly
+					disabled
+					hidden
+				/>
+				<button type="button" class="increment" aria-label="Increment">
+					<span class="zero">Add to Cart</span>
+					<span class="other" hidden>+</span>
+				</button>
+			</form-spinbutton>
+		</li>
+	</ul>
+</module-catalog>
+
+<!-- Vanilla CE test fixture for pass() Object.defineProperty fallback (Path B).
+     vanilla-button is a plain custom element (no Le Truc internals / no Slots).
+     module-catalog uses pass({ disabled, badge }) on both basic-button (Slot path)
+     and vanilla-button (Object.defineProperty path).
+     This fixture tests that the defineProperty path works correctly. -->
+<module-catalog id="vanilla-test">
+	<header>
+		<p>Vanilla Shop</p>
+		<basic-button hidden disabled>
+			<button type="button" disabled>
+				<span class="label">Cart</span>
+				<span class="badge"></span>
+			</button>
+		</basic-button>
+		<vanilla-button></vanilla-button>
+	</header>
+	<ul>
+		<li>
+			<p>Product A</p>
+			<form-spinbutton>
+				<button type="button" class="decrement" aria-label="Decrement" hidden>
+					−
+				</button>
+				<input
+					type="number"
+					class="value"
+					name="amount-product-a"
+					value="0"
+					min="0"
+					max="5"
 					readonly
 					disabled
 					hidden

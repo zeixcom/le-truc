@@ -11,7 +11,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('renders initial state correctly', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const button = catalog.locator('basic-button button')
 		const badge = catalog.locator('basic-button .badge')
 		const spinbuttons = catalog.locator('form-spinbutton')
@@ -36,7 +36,7 @@ test.describe('module-catalog component', () => {
 	test('calculates total and enables button when items are added', async ({
 		page,
 	}) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const button = catalog.locator('basic-button button')
 		const badge = catalog.locator('basic-button .badge')
 
@@ -79,7 +79,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('updates total when items are decremented', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const button = catalog.locator('basic-button button')
 		const badge = catalog.locator('basic-button .badge')
 
@@ -137,7 +137,7 @@ test.describe('module-catalog component', () => {
 	test('handles reaching maximum values for individual products', async ({
 		page,
 	}) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const badge = catalog.locator('basic-button .badge')
 
 		// Product 1 max is 10, Product 2 max is 5, Product 3 max is 20
@@ -169,7 +169,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('reactive computation updates immediately', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const badge = catalog.locator('basic-button .badge')
 
 		const product1Increment = catalog
@@ -189,7 +189,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('total reflects component property values', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 
 		// Add items to different products
 		const product1Increment = catalog
@@ -214,7 +214,7 @@ test.describe('module-catalog component', () => {
 
 		// Verify component properties match expected values
 		const componentValues = await page.evaluate(() => {
-			const spinbuttons = document.querySelectorAll('form-spinbutton')
+			const spinbuttons = document.querySelectorAll('#default-test form-spinbutton')
 			return Array.from(spinbuttons).map((sb: any) => sb.value)
 		})
 
@@ -226,7 +226,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('button disabled state changes correctly', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const button = catalog.locator('basic-button button')
 
 		const product1Increment = catalog
@@ -264,7 +264,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('handles mixed interactions across all products', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const badge = catalog.locator('basic-button .badge')
 		const button = catalog.locator('basic-button button')
 
@@ -315,7 +315,7 @@ test.describe('module-catalog component', () => {
 	test('badge text is always string representation of total', async ({
 		page,
 	}) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const badge = catalog.locator('basic-button .badge')
 
 		const product1Increment = catalog
@@ -333,7 +333,7 @@ test.describe('module-catalog component', () => {
 	test('component coordination works with keyboard interactions', async ({
 		page,
 	}) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const badge = catalog.locator('basic-button .badge')
 
 		// Use keyboard on first product
@@ -354,7 +354,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('all spinbuttons contribute to total calculation', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const badge = catalog.locator('basic-button .badge')
 
 		// Verify all 3 spinbuttons are found and contribute
@@ -375,7 +375,7 @@ test.describe('module-catalog component', () => {
 
 		// Verify each spinbutton has value 1
 		const values = await page.evaluate(() => {
-			const spinbuttons = document.querySelectorAll('form-spinbutton')
+			const spinbuttons = document.querySelectorAll('#default-test form-spinbutton')
 			return Array.from(spinbuttons).map((sb: any) => sb.value)
 		})
 		expect(values).toEqual([1, 1, 1])
@@ -384,7 +384,7 @@ test.describe('module-catalog component', () => {
 	test('component has no public properties exposed', async ({ page }) => {
 		// Verify the component doesn't expose any public interface
 		const hasPublicProps = await page.evaluate(() => {
-			const catalog = document.querySelector('module-catalog') as any
+			const catalog = document.querySelector('#default-test') as any
 			// Try to access common property names, should all be undefined or internal
 			const props = ['total', 'disabled', 'badge', 'value', 'count', 'items']
 			return props.some(prop => catalog[prop] !== undefined)
@@ -392,5 +392,155 @@ test.describe('module-catalog component', () => {
 
 		// Component should not expose public properties
 		expect(hasPublicProps).toBe(false)
+	})
+})
+
+// ===== PASS() OBJECT.DEFINEPROPERTY FALLBACK (Path B) =====
+// pass() has two code paths:
+// - Path A: Slot-backed — replaces the child's internal signal (tested via form-combobox → form-listbox)
+// - Path B: Object.defineProperty — used when the target is NOT a Le Truc component (no Slots)
+//
+// The vanilla-button in the #vanilla-test fixture is a plain HTMLElement CE with no Le Truc
+// internals. pass({ disabled, badge }) exercises the Object.defineProperty path: it installs
+// getters on the target that return the parent's reactive values. On parent disconnect,
+// the original property descriptor is restored.
+
+test.describe('pass() Object.defineProperty fallback (vanilla CE target)', () => {
+	test.beforeEach(async ({ page }) => {
+		page.on('console', msg => {
+			if (msg.type() === 'error') {
+				console.log(`[browser] error: ${msg.text()}`)
+			}
+		})
+
+		await page.goto('http://localhost:3000/test/module-catalog')
+		await page.waitForSelector('module-catalog')
+	})
+
+	test('vanilla-button.disabled reflects reactive value (true when total=0)', async ({
+		page,
+	}) => {
+		// No items added yet — total = 0, disabled should be true
+		const disabled = await page.evaluate(() => {
+			return (
+				document.querySelector('#vanilla-test vanilla-button') as any
+			)?.disabled
+		})
+		expect(disabled).toBe(true)
+	})
+
+	test('vanilla-button.disabled becomes false when items are added', async ({
+		page,
+	}) => {
+		const vanillaIncrement = page
+			.locator('#vanilla-test form-spinbutton')
+			.locator('button.increment')
+
+		await vanillaIncrement.click()
+
+		const disabled = await page.evaluate(() => {
+			return (
+				document.querySelector('#vanilla-test vanilla-button') as any
+			)?.disabled
+		})
+		expect(disabled).toBe(false)
+	})
+
+	test('vanilla-button.badge reflects total count as string', async ({
+		page,
+	}) => {
+		const vanillaIncrement = page
+			.locator('#vanilla-test form-spinbutton')
+			.locator('button.increment')
+
+		// Add 3 items
+		await vanillaIncrement.click()
+		await vanillaIncrement.click()
+		await vanillaIncrement.click()
+
+		const badge = await page.evaluate(() => {
+			return (
+				document.querySelector('#vanilla-test vanilla-button') as any
+			)?.badge
+		})
+		expect(badge).toBe('3')
+	})
+
+	test('vanilla-button.badge is empty string when total=0', async ({ page }) => {
+		const badge = await page.evaluate(() => {
+			return (
+				document.querySelector('#vanilla-test vanilla-button') as any
+			)?.badge
+		})
+		expect(badge).toBe('')
+	})
+
+	test('restores original property descriptor on parent disconnect', async ({
+		page,
+	}) => {
+		// Confirm binding is active — disabled reflects reactive (true, total=0)
+		// Then remove parent — pass() cleanup restores original descriptor (false)
+		const result = await page.evaluate(async () => {
+			const vb = document.querySelector(
+				'#vanilla-test vanilla-button',
+			) as any
+			if (!vb) return { found: false, disabledBefore: null, disabledAfter: null }
+
+			const disabledBefore = vb.disabled
+
+			// Disconnect parent — pass() cleanup runs → original value descriptor restored
+			document.querySelector('#vanilla-test')?.remove()
+			await new Promise(r => setTimeout(r, 50))
+
+			// After disconnect, vanilla-button.disabled should revert to its own initial value (false)
+			const disabledAfter = vb.disabled
+
+			return { found: true, disabledBefore, disabledAfter }
+		})
+
+		expect(result.found).toBe(true)
+		expect(result.disabledBefore).toBe(true)
+		expect(result.disabledAfter).toBe(false)
+	})
+
+	test('reactive updates propagate from spinbutton to vanilla-button', async ({
+		page,
+	}) => {
+		const vanillaIncrement = page
+			.locator('#vanilla-test form-spinbutton')
+			.locator('button.increment')
+		const vanillaDecrement = page
+			.locator('#vanilla-test form-spinbutton')
+			.locator('button.decrement')
+
+		// Start: disabled=true, badge=''
+		let state = await page.evaluate(() => {
+			const el = document.querySelector('#vanilla-test vanilla-button') as any
+			return { disabled: el?.disabled, badge: el?.badge }
+		})
+		expect(state.disabled).toBe(true)
+		expect(state.badge).toBe('')
+
+		// Add 2 items
+		await vanillaIncrement.click()
+		await vanillaIncrement.click()
+
+		state = await page.evaluate(() => {
+			const el = document.querySelector('#vanilla-test vanilla-button') as any
+			return { disabled: el?.disabled, badge: el?.badge }
+		})
+		expect(state.disabled).toBe(false)
+		expect(state.badge).toBe('2')
+
+		// Remove 2 items (back to 0)
+		await vanillaDecrement.click()
+		await vanillaDecrement.click()
+
+		state = await page.evaluate(() => {
+			const el = document.querySelector('#vanilla-test vanilla-button') as any
+			return { disabled: el?.disabled, badge: el?.badge }
+		})
+		expect(state.disabled).toBe(true)
+		expect(state.badge).toBe('')
 	})
 })
