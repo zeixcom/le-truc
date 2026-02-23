@@ -1,4 +1,4 @@
-import { type MaybeCleanup, type MemoCallback, type Signal, type TaskCallback } from '@zeix/cause-effect';
+import { type MemoCallback, type Signal, type TaskCallback } from '@zeix/cause-effect';
 import { type Effects } from './effects';
 import { type Parser, type Reader } from './parsers';
 import { type ElementQueries, type UI } from './ui';
@@ -12,7 +12,7 @@ type ComponentUI<P extends ComponentProps, U extends UI> = U & {
 type ComponentSetup<P extends ComponentProps, U extends UI> = (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>>;
 type MethodProducer<P extends ComponentProps, U extends UI> = (ui: U & {
     host: Component<P>;
-}) => MaybeCleanup;
+}) => void;
 type Initializers<P extends ComponentProps, U extends UI> = {
     [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K], ComponentUI<P, U>> | Reader<MaybeSignal<P[K]>, ComponentUI<P, U>> | MethodProducer<P, ComponentUI<P, U>>;
 };

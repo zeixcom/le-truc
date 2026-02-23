@@ -26,11 +26,19 @@ type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
 /* === Exported Function === */
 
 /**
- * Effect for passing reactive values to a descendant Le Truc component
- * by replacing the backing signal of the target's Slot.
+ * Effect for passing reactive values to a descendant component.
  *
- * No cleanup/restore is needed: when the parent unmounts, the child
- * is torn down as well. For re-parenting scenarios, use context instead.
+ * **Le Truc targets (Slot-backed properties):** Replaces the backing signal of the
+ * target's Slot, creating a live parent→child binding. The original signal is restored
+ * on cleanup so the child can be safely detached and reattached.
+ *
+ * **Other custom elements (Object.defineProperty fallback):** Overrides the property
+ * descriptor on the target instance with a reactive getter (and optional setter for
+ * two-way binding). The original descriptor is restored on cleanup. In DEV_MODE, logs
+ * a warning if the descriptor is non-configurable and the binding cannot be installed.
+ *
+ * Scope: custom elements only (elements whose `localName` contains a hyphen).
+ * For plain HTML elements, use `setProperty()` instead.
  *
  * @since 0.15.0
  * @param {PassedProps<P, Q>} props - Reactive values to pass
@@ -66,6 +74,7 @@ const pass =
 
 		const signals = getSignals(target)
 		const targetName = elementName(target)
+		const cleanups: (() => void)[] = []
 
 		for (const [prop, reactive] of Object.entries(reactives)) {
 			if (reactive == null) continue
@@ -86,16 +95,49 @@ const pass =
 			const signal = toSignal(isArray ? applied[0] : applied)
 			if (!signal) continue
 
-			// Replace the backing signal of the target's Slot
+			// Path A: Slot-backed (Le Truc component) — replace and restore on cleanup
 			const slot = signals[prop]
 			if (isSlot(slot)) {
+				const original = slot.current()
 				slot.replace(signal)
-			} else if (DEV_MODE) {
-				console[LOG_WARN](
-					`pass(): property '${prop}' on ${targetName} has no Slot — binding skipped`,
-				)
+				cleanups.push(() => slot.replace(original))
+				continue
 			}
+
+			// Path B: Object.defineProperty fallback for other custom elements
+			const descriptor =
+				Object.getOwnPropertyDescriptor(target, prop) ??
+				Object.getOwnPropertyDescriptor(Object.getPrototypeOf(target), prop)
+
+			if (!descriptor) continue
+
+			if (!descriptor.configurable) {
+				if (DEV_MODE)
+					console[LOG_WARN](
+						`pass(): property '${prop}' on ${targetName} has a non-configurable descriptor — binding skipped`,
+					)
+				continue
+			}
+
+			// Install reactive getter (and optional setter for two-way binding)
+			const setter = isArray
+				? (applied[1] as (value: unknown) => void)
+				: undefined
+			Object.defineProperty(target, prop, {
+				get: () => signal.get(),
+				set: setter,
+				configurable: true,
+				enumerable: descriptor.enumerable ?? true,
+			})
+
+			// Restore original descriptor on cleanup
+			cleanups.push(() => Object.defineProperty(target, prop, descriptor))
 		}
+
+		if (cleanups.length)
+			return () => {
+				for (const c of cleanups) c()
+			}
 	}
 
 export { type PassedProp, type PassedProps, pass }
