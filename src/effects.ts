@@ -14,7 +14,7 @@ import {
 import type { Component, ComponentProps } from './component'
 import { InvalidEffectsError } from './errors'
 import type { ElementFromKey, UI } from './ui'
-import { DEV_MODE, elementName, LOG_ERROR, log } from './util'
+import { DEV_MODE, elementName, LOG_ERROR, LOG_WARN, log } from './util'
 
 /* === Types === */
 
@@ -140,13 +140,21 @@ const resolveReactive = <
 	context?: string,
 ): T | undefined => {
 	try {
-		return typeof reactive === 'string'
-			? (host[reactive] as unknown as T)
-			: isSignal(reactive)
-				? reactive.get()
-				: isFunction(reactive)
-					? (reactive(target) as unknown as T)
-					: undefined
+		if (typeof reactive === 'string') {
+			if (DEV_MODE && !(reactive in host)) {
+				log(
+					reactive,
+					`resolveReactive: property '${reactive}' does not exist on ${elementName(host)}`,
+					LOG_WARN,
+				)
+			}
+			return host[reactive] as unknown as T
+		}
+		return isSignal(reactive)
+			? reactive.get()
+			: isFunction(reactive)
+				? (reactive(target) as unknown as T)
+				: undefined
 	} catch (error) {
 		if (context) {
 			log(

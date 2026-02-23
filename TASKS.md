@@ -91,19 +91,9 @@ These items each map to a "Surprising Behavior" in `CLAUDE.md`. They are already
 
 ### 9a. `setAttribute`/`toggleAttribute` default reactive typo detection
 
-**Current behaviour:** `setAttribute('href')` is shorthand for `setAttribute('href', 'href')` — it reads `host.href`. The second argument defaults to the first.
+**Status: Done.**
 
-**Why it's surprising:** A typo in the attribute name silently reads a non-existent host property (resolves to `undefined` → `RESET` → restores original DOM value), producing no visible error in production.
-
-**Architect question:** Should the default be kept for ergonomics, but emit a `DEV_MODE` warning when the resolved property name does not exist on the host? Or is the convention clear enough from the type signature that it's acceptable as-is?
-
-**Decision: DEV_MODE warning. The type-level guard is sufficient for TypeScript users; runtime warning covers JavaScript and catches dynamic cases.**
-
-**Type-level analysis**: The `reactive` parameter of `setAttribute` is typed as `Reactive<string, P, E>`, which is `keyof P | Signal<string> | ((target: E) => string | null | undefined)`. When the reactive is omitted and defaults to the attribute name string literal, TypeScript checks that the string is `keyof P`. This means `setAttribute('hreff')` when `host.hreff` doesn't exist **is a type error in strict TypeScript** — the string literal `'hreff'` is not assignable to `keyof P`.
-
-However, this guard only works when `P` is concretely inferred (inside `setup()` where the component type is known). For JavaScript consumers and any dynamic attribute name, there is no protection. A DEV_MODE runtime warning in `resolveReactive()` when a string reactive resolves to `undefined` on the host closes this gap adequately.
-
-**Implementation**: Add a branch in `resolveReactive()`: when `reactive` is a string and `reactive in host` is false, emit a DEV_MODE console warning naming the component and the missing property. No error is thrown — this is a developer ergonomics warning, not a security concern.
+`resolveReactive()` now emits a DEV_MODE `console.warn` when a string reactive property name is not found on the host. This catches typos like `setAttribute('hreff')` in JavaScript and dynamic cases not covered by TypeScript's type-level `keyof P` guard.
 
 ---
 
