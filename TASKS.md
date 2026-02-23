@@ -115,23 +115,9 @@ The `EventHandler` type now has a JSDoc comment explaining both return modes. Th
 
 ### 9e. Dependency resolution timeout
 
-**Current behaviour:** If a queried custom element isn't defined within 200ms, a `DependencyTimeoutError` is logged to the console and effects proceed anyway — potentially in a degraded or broken state.
+**Status: Done.**
 
-**Why it's surprising:** "Log and continue" makes the component appear to work while actually running effects against undefined dependencies. The error is easy to miss in production (console-only).
-
-**Architect question:** Should a timed-out dependency emit the error through a more visible channel (e.g. a custom event on the host, or an `aria-errormessage` attribute in `DEV_MODE`)? Or should effects be blocked entirely when a required dependency times out, with an explicit opt-in to the "proceed anyway" behaviour?
-
-**Decision: DEV_MODE warning (existing behaviour) is sufficient. Non-declared elements must not break the component.**
-
-A single undefined custom element should never break an entire component. The "proceed anyway" behaviour is the correct default — it is what makes progressive enhancement viable. Blocking effects entirely would be a regression.
-
-The existing behaviour (log `DependencyTimeoutError`, then run effects) is correct. What needs improvement is visibility in DEV_MODE:
-
-- The warning already fires via `console.warn`. This is adequate for development.
-- A custom event on the host (`host.dispatchEvent(new CustomEvent('dependency-timeout', ...))`) is over-engineered — it adds API surface and event handling complexity for a scenario that should not happen in production if the component is correctly assembled.
-- An `aria-errormessage` attribute in DEV_MODE is inappropriate: ARIA attributes are semantic; injecting them as debug markers would pollute accessibility trees.
-
-No change to the runtime behaviour. The DEV_MODE warning is adequate. Document the timeout value (200ms) and the degraded-but-functional outcome in JSDoc on `resolveDependencies`.
+The `resolveDependencies` JSDoc now documents the 200ms timeout, the degraded-but-functional outcome, and the rationale (progressive enhancement). No runtime behaviour changes — the existing DEV_MODE warning via `console.warn` is adequate.
 
 ---
 

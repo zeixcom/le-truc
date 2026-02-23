@@ -301,9 +301,14 @@ const getHelpers = (
 	 *
 	 * If no dependencies were collected, `callback` runs synchronously. Otherwise, a
 	 * microtask filters out already-defined elements, then `Promise.all` awaits the rest
-	 * with a 200 ms timeout. On timeout, logs a `DependencyTimeoutError` and runs `callback` anyway.
+	 * with a 200 ms timeout (see `DEPENDENCY_TIMEOUT`).
 	 *
-	 * @param {() => void} callback - Function to run once dependencies are resolved
+	 * On timeout, a `DependencyTimeoutError` is logged in DEV_MODE and `callback` runs
+	 * anyway — effects proceed in a degraded-but-functional state. A single undefined
+	 * dependency should never block the entire component: progressive enhancement means
+	 * the component remains usable even when a queried child element is not yet registered.
+	 *
+	 * @param {() => void} callback - Function to run once dependencies are resolved (or timed out)
 	 */
 	const resolveDependencies = (callback: () => void) => {
 		if (dependencies.size) {
