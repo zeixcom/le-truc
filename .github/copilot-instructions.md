@@ -1,63 +1,19 @@
-# Copilot / AI Agent Instructions — Le Truc
+# Copilot Instructions — Le Truc
 
-This file gives focused, actionable guidance for AI coding agents working on the `@zeix/le-truc` repository.
+Focused guidance for AI agents reviewing or writing code in `@zeix/le-truc`.
 
-Keep these goals in mind:
-- Preserve the public API surface exported from `index.ts` / `index.js` / `types/index.d.ts`.
-- Follow the component patterns in `src/component.ts` and DOM helpers in `src/ui.ts`.
-- Prefer small, minimal changes and add or update `examples/` entries to demonstrate usage.
+## Review priorities
+- Preserve the public API surface: exports in `index.ts`, types in `types/index.d.ts`.
+- Prefer minimal changes; new behaviour should be demonstrated in `examples/`.
+- Do not break the `customElements.define()` registration in `src/component.ts` — `getHelpers` in `src/ui.ts` relies on it for dependency detection.
 
-Quick project overview
-- Language: TypeScript (targeted for publishing as ESM). Source entry is `index.ts`.
-- Build: `bun` is used. Key scripts in `package.json`: `build:prod`, `build:dev`, `build`.
-- Linting: `biome` via `bunx biome` (scripts `lint` and `lint:examples`).
-- Types: shipped in `types/` and referenced by `types/index.d.ts`.
-- Examples: `examples/` show canonical usage (each example has `.html`, `.ts`, and optional `.css`).
+## Conventions to enforce
+- Component names must include a hyphen and match `/^[a-z][a-z0-9-]*$/`.
+- Props initializers: plain values, `Signal`s, parsers from `src/parsers/*`, or callbacks — parsers are auto-added to `observedAttributes`.
+- New parsers must be exported from root `index.ts`; follow the `(ui, value, old?) => T` signature.
+- Side-effects belong inside `runEffects`; cleanup must be returned.
 
-Important patterns & conventions (use these exactly)
-- Components: Use the `defineComponent(name, props, select, setup)` helper in `src/component.ts`.
-  - `name` must include a hyphen and match `/^[a-z][a-z0-9-]*$/` (see validation in `defineComponent`).
-  - `props` initializers can be: plain values, `Signal`s, parser functions from `src/parsers/*`, or initializer callbacks.
-  - Parsers used for attributes are auto-added to `observedAttributes`. See `static observedAttributes`.
-- Parsers: Implement parser functions following `src/parsers/*` signatures and export them from root `index.ts`.
-  - Example builtin parser: `asJSON` in `src/parsers/json.ts` — when used as a prop initializer it will parse attribute strings.
-- UI helpers & dependencies: Use `getHelpers(host)` from `src/ui.ts` to obtain `first`, `all` and automatic dependency detection.
-  - If `getHelpers` finds a not-yet-defined custom element, it adds that tag to the dependency list; `defineComponent` waits for `customElements.whenDefined`.
-  - There is a dependency timeout (`DEPENDENCY_TIMEOUT = 50`) in `src/ui.ts` — expect code to try running effects even if deps time out.
-- Effects & reactive model: This repo uses `@zeix/cause-effect` signals/computed/effects. Keep side-effects inside `runEffects` and cleanup in returned cleanup functions.
-
-Files to consult for examples and authoritative patterns
-- Public API: `index.ts`
-- Component implementation & lifecycle: `src/component.ts`
-- Selector helpers & mutation-observer logic: `src/ui.ts`
-- Parser implementations: `src/parsers/*.ts` (e.g. `json.ts`, `number.ts`, `string.ts`)
-- Effect implementations: `src/effects/*.ts` (exported from root `index.ts`)
-- Event-driven sensors: `src/events.ts` (createEventsSensor)
-- Element memos: `createElementsMemo` in `src/ui.ts`
-- Examples demonstrating usage: `examples/*` (start from `basic-hello` and `basic-counter`)
-
-Developer workflows (essential commands)
-- Build production bundle: `bun run build:prod`
-- Build dev bundle: `bun run build:dev`
-- Full build + typecheck + lint: `bun run build` (runs `tsc` via `bunx tsc` and `biome`)
-- Lint source: `bun run lint`
-- Lint examples: `bun run lint:examples`
-
-What to change (and what to avoid)
-- Change: small refactors that preserve exported API in `index.ts` and `.d.ts` files.
-- Change: add or update examples in `examples/` to demonstrate new or changed behavior.
-- Avoid: breaking changes to public exports without updating `index.ts` and re-building (`bun run build`).
-- Avoid: changing the custom element registration pattern (i.e., calling `customElements.define`) in a way that prevents `getHelpers` dependency detection.
-
-PR guidance / descriptions
-- Describe intent: feature, bugfix, or refactor. Note whether public API changed.
-- If API changes: list required updates to `types/`, `index.ts`, and `examples/`.
-- Test by: building (`bun run build:dev`) and verifying relevant example under `examples/`.
-
-Examples (copyable patterns)
-- Define a component (refer `src/component.ts`):
-  - `defineComponent('my-widget', { count: 0 }, q => ({ btn: q.first('button') }), ui => ({ btn: on('click', () => ({ count: ui.host.count + 1 })) }))`
-- Parser signature (refer `src/parsers/json.ts`):
-  - `const parser = (ui, value, old) => parsedValue` — return value becomes the property value.
-- Reader pattern (refer `src/parsers.ts`):
-  - `read(ui => ui.input.value, asString())` — read value from DOM with parser fallback.
+## PR descriptions
+- State intent: feature, bugfix, or refactor. Note if public API changed.
+- If API changed: list updates needed in `types/`, `index.ts`, and `examples/`.
+- Verify by building (`bun run build:dev`) and testing the relevant example.

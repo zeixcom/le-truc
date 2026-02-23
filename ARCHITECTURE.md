@@ -129,7 +129,7 @@ Calls the cleanup function returned by `runEffects()`, which tears down all effe
 
 ### updateElement — the shared abstraction
 
-Every built-in effect (`setAttribute`, `toggleClass`, `setText`, `setProperty`, `setStyle`, `toggleAttribute`, `dangerouslySetInnerHTML`, `callMethod`, `focus`, `show`) follows the same pattern via `updateElement(reactive, updater)`:
+Every built-in effect (`setAttribute`, `toggleClass`, `setText`, `setProperty`, `setStyle`, `toggleAttribute`, `dangerouslySetInnerHTML`, `show`) follows the same pattern via `updateElement(reactive, updater)`:
 
 ```
 updateElement(reactive, { op, name, read, update, delete? })
@@ -194,7 +194,7 @@ The `MutationObserver` config is smart about which attributes to watch: `extract
 
 **Mutation filtering**: The observer's callback uses a `couldMatch` helper that checks `node.matches(selector)` and `node.querySelector(selector)` on added/removed nodes. This prevents spurious invalidations from mutations *inside* matched elements (e.g., `innerHTML` changes on a `button[role="option"]` that add/remove `<mark>` tags).
 
-**Custom `equals`**: The memo uses `(a, b) => a.length === b.length && a.every((el, i) => el === b[i])` to compare arrays by element identity. This currently only prevents propagation through chained memos, because `cause-effect`'s `invalidate()` propagates `FLAG_DIRTY` directly to terminal effects, bypassing the `equals` check. A future fix in Cause & Effect (propagating `FLAG_CHECK` instead) will allow effects to skip re-runs when `equals` returns `true`, unlocking a further optimization.
+**Custom `equals`**: The memo uses `(a, b) => a.length === b.length && a.every((el, i) => el === b[i])` to compare arrays by element identity. Since `cause-effect` 0.18.4, `invalidate()` propagates `FLAG_CHECK` instead of `FLAG_DIRTY`, so effects correctly skip re-runs when `equals` returns `true`. The `couldMatch` filter and the `equals` check together ensure effects only re-run when the matched element set actually changes.
 
 ### Dependency resolution
 
@@ -248,16 +248,21 @@ This is used as a `MethodProducer` — a property initializer that returns `void
 
 ---
 
-## Open Questions
+## Pre-1.0 Design Decisions
 
-### Parser/Reader distinction via `function.length`
+These decisions resolve the open questions from TASKS.md items 7–9. Each entry states the decision, the reasoning, and what is explicitly deferred or rejected.
 
-The distinction between Parser (≥2 params) and Reader (1 param) is detected at runtime via `value.length >= 2`. This is fragile — default parameters, rest parameters, and destructuring all affect `function.length` in non-obvious ways. A function `(ui, value = '') => ...` has `length === 1` and would be misclassified as a Reader. This is a potential source of subtle bugs. Would a branded type, a wrapper function, or a static property be a more robust marker?
+---
 
-### MethodProducer is invisible in the type system
+## Key Decisions Summary
 
-`MethodProducer<P, U>` is defined as `(ui) => void`, but `isReaderOrMethodProducer` just checks `isFunction`. There's no way to distinguish a `Reader` from a `MethodProducer` at runtime — the only difference is that a MethodProducer returns `void` and relies on side effects (like `provideContexts`). Since `#setAccessor` is only called when the result is non-null, this works by convention, but the flow is non-obvious: the MethodProducer's return value (`undefined`) causes `#setAccessor` to be silently skipped, which is the desired behavior but isn't explicitly documented in the code.
-
-### `cause-effect` `invalidate()` propagates `FLAG_DIRTY` to effects
-
-When a `Memo` with a `watched` callback calls `invalidate()`, `cause-effect` propagates `FLAG_DIRTY` directly to terminal effect sinks. This bypasses the memo's `equals` check — effects always re-run even when the memo's value hasn't changed. The correct behavior would be to propagate `FLAG_CHECK`, which forces effects to refresh their sources and respect `equals` at every level. This is tracked as a bug to report to the Cause & Effect team. Once fixed, the `couldMatch` mutation filter in `createElementsMemo` becomes a performance optimization rather than a correctness requirement.
+| # | Item | Decision | Status |
+|---|------|----------|--------|
+| 7 | `pass()` for non-Le Truc elements | Add `Object.defineProperty` fallback for custom elements; defer plain HTML elements | Do before 1.0 |
+| 8 | Parser/MethodProducer branding | Symbol-branded `asParser()` / `asMethod()` wrappers; DEV_MODE warning for unbranded fallback | Do before 1.0 |
+| 9a | Attribute name typo | TypeScript catches it at compile time; add DEV_MODE runtime warning for JS/dynamic cases | Do before 1.0 |
+| 9b | Security validation silence | Always throw with a descriptive error; log at `LOG_ERROR` unconditionally | Do before 1.0 |
+| 9c | `on()` dual return mode | Keep unified API; improve JSDoc and `@example` | Do before 1.0 (docs only) |
+| 9d | `pass()` signal restore | Restore original signal in cleanup; resolved with item 7 | Do before 1.0 |
+| 9e | Dependency timeout visibility | Keep current DEV_MODE warning; document behaviour in JSDoc | Do before 1.0 (docs only) |
+| 9f | `RESET` sentinel | Replace with `undefined`; remove `RESET` export; make `resolveReactive` internal | Do before 1.0 |

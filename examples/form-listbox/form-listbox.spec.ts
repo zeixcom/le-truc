@@ -344,6 +344,64 @@ test.describe('form-listbox component', () => {
 		await expect(greenOption).toHaveAttribute('aria-selected', 'false')
 	})
 
+	// ===== SPURIOUS EFFECT PREVENTION =====
+	// After cause-effect 0.18.4 fixed FLAG_CHECK propagation, the equals check
+	// on createElementsMemo should prevent effects from re-running when innerHTML
+	// mutations don't add or remove matched elements.
+
+	test('innerHTML mutation on matched elements does not trigger spurious selection effect re-runs', async ({
+		page,
+	}) => {
+		const greenOption = page.locator(
+			'#colors button[role="option"][value="green"]',
+		)
+
+		// Establish a selection
+		await greenOption.click()
+		await expect(greenOption).toHaveAttribute('aria-selected', 'true')
+
+		// Install an observer to count aria-selected mutations BEFORE the innerHTML change
+		await page.evaluate(() => {
+			;(window as any).__ariaSelectedChanges = 0
+			const observer = new MutationObserver(mutations => {
+				for (const m of mutations) {
+					if (
+						m.type === 'attributes' &&
+						m.attributeName === 'aria-selected'
+					) {
+						;(window as any).__ariaSelectedChanges++
+					}
+				}
+			})
+			observer.observe(
+				document.querySelector('#colors [role="listbox"]') as Element,
+				{ subtree: true, attributes: true, attributeFilter: ['aria-selected'] },
+			)
+			;(window as any).__ariaSelectedObserver = observer
+		})
+
+		// Mutate innerHTML on all options — same elements, no list change
+		await page.evaluate(() => {
+			const options = document.querySelectorAll('#colors button[role="option"]')
+			for (const option of options) {
+				const text = option.textContent?.trim() ?? ''
+				option.innerHTML = `<mark>${text[0]}</mark>${text.slice(1)}`
+			}
+		})
+
+		// Wait for any async effect flush
+		await page.waitForTimeout(200)
+
+		const changes = await page.evaluate(() => {
+			;(window as any).__ariaSelectedObserver.disconnect()
+			return (window as any).__ariaSelectedChanges
+		})
+
+		// With FLAG_CHECK fix in cause-effect 0.18.4, equals() is respected:
+		// the element list didn't change, so the selection effect must not re-run.
+		expect(changes).toBe(0)
+	})
+
 	test('repeated innerHTML mutations do not break reactivity', async ({
 		page,
 	}) => {

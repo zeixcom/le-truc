@@ -2,7 +2,7 @@
 
 Prioritized from top (quick fixes, no API changes) to bottom (design decisions needed).
 
-## 7. Add `Object.defineProperty` fallback to `pass()` for non-Le Truc components
+### 7. `pass()` fallback for non-Le Truc components
 
 **Effort:** Medium | **API change:** None (expanded behavior) | **Status:** Needs investigation
 
@@ -18,9 +18,24 @@ Currently `pass()` only works with Le Truc Slot-backed properties. The pre-0.16 
 - Should `pass()` also work with plain HTML elements (e.g. `input.value`)? This would significantly expand scope — consider deferring to a separate effect like `setProperty()`.
 - Are there Web Component libraries where property descriptors are non-configurable? Acceptable to warn and skip in those cases.
 
+**Decision: Do. Extend `pass()` with an `Object.defineProperty` fallback, scoped to custom elements only.**
+
+`pass()` today silently skips properties without a Slot and only emits a DEV_MODE warning. The pre-0.16 behaviour — overriding the property descriptor with a reactive getter/setter — worked with any custom element. Restoring it as a fallback path makes `pass()` composable with Lit, Stencil, and vanilla Web Components without changing the existing Slot-fast-path.
+
+**Integration analysis:**
+
+- **Vanilla custom elements**: Property descriptors defined in the constructor or class body with `Object.defineProperty` are configurable by default. The fallback will work and must save and restore the original descriptor on cleanup.
+- **Lit**: Lit reactive properties are defined on the class prototype via `@property()` or `static properties`. Prototype-level descriptors are configurable. The fallback's `Object.defineProperty` on the *instance* will shadow the prototype descriptor correctly. Lit's internal `_$changedProperties` mechanism fires `update()` on set; overriding via instance property descriptor bypasses Lit's setter, meaning Lit's reactive rendering **will not re-run** — which is the desired behavior (Le Truc is driving the update, not Lit).
+- **Stencil**: Stencil components expose reactive props as instance properties with configurable descriptors. The fallback works. Same caveat: Stencil's internal change detection won't fire, which is acceptable in a `pass()` binding scenario.
+- **Non-configurable descriptors**: Some libraries (e.g. sealed/frozen class fields via TC39 class fields without explicit `configurable: true`) produce non-configurable descriptors. The fallback must detect this via `Object.getOwnPropertyDescriptor()` and log a DEV_MODE warning rather than throw.
+
+**Scope boundary**: `pass()` targets custom elements (elements whose `localName` contains a hyphen). Extending to plain HTML elements (e.g. `input.value`) is explicitly **deferred** — it overlaps with `setProperty()` and the scope expansion is not justified by current use cases.
+
+**Signal restore on cleanup (9d resolved here)**: Because the fallback path requires an explicit cleanup function (to restore the original descriptor), this is the right moment to also restore the original signal in the Slot-backed path. The assumption "child always dies with parent" holds for the *primary* use case, but signal restore is cheap (one `slot.replace(originalSignal)` call) and removes a latent bug if a child component is ever detached and reattached without its parent. Make `pass()` return a cleanup function that restores both the Slot's original signal and any overridden property descriptors.
+
 ---
 
-## 8. Eliminate `function.length` detection for parsers
+### 8. Parser/Reader/MethodProducer disambiguation
 
 **Effort:** Large | **API change:** Yes (branded types or wrapper) | **Status:** Needs design decision
 
@@ -39,3 +54,139 @@ Either approach also fixes the Reader vs MethodProducer ambiguity: branding make
 - Built-in parsers, `read()`, `createEventsSensor()`, `requestContext()`, `provideContexts()` must all continue to work.
 - Must work for both TypeScript and plain JavaScript.
 - Pre-1.0, so backward compat not required, but migration should be straightforward.
+
+**Decision: Do. Use symbol-branded functions. Introduce `asParser()` and `asMethod()` wrappers. Keep `function.length` detection only as a transitional DEV_MODE warning.**
+
+The `function.length` check is a pre-1.0 known-bug (REQUIREMENTS R1). It must be resolved before the API is frozen.
+
+**Chosen approach — symbol branding (8a), applied to all three kinds:**
+
+A private symbol `PARSER_BRAND` is added as a non-enumerable property to every parser function. `isParser()` checks for the symbol first, falls back to `fn.length >= 2` for backward compatibility, and in DEV_MODE warns when the fallback is triggered. After 1.0, the `fn.length` fallback is removed.
+
+Built-in parsers (`asInteger`, `asBoolean`, `asJSON`, `asString`, `asEnum`, `asNumber`) are already produced by factory functions — branding is a one-line addition in each factory. `read()` returns a Reader, not a Parser, so it is not branded.
+
+`provideContexts()` and any future MethodProducers return a function that is branded with a `METHOD_BRAND` symbol. `isMethodProducer()` checks for this brand. In `connectedCallback`, the dispatch order becomes explicit: branded Parser → branded MethodProducer → Reader → static/Signal. This removes the convention that "returns undefined → skip `#setAccessor`" and replaces it with an explicit check.
+
+**New public API surface (additive, no breaking changes to existing call sites):**
+
+```ts
+// For custom parsers:
+asParser((ui, value) => ...) → Parser<T, U>  (branded)
+
+// For custom MethodProducers:
+asMethod((ui) => { /* side effects */ }) → MethodProducer<P, U>  (branded)
+```
+
+Existing built-in parsers and `provideContexts()` are internally branded — no change for users of these APIs. Custom parsers and MethodProducers are rare today; the wrapper functions are acceptable ergonomically.
+
+**Type-level impact**: `Initializers<P, U>` can narrow the `Parser` branch to require the brand at the type level, making it a compile-time error to pass an unbranded two-argument function as a parser property initializer.
+
+---
+
+## 9. API Least-Astonishment Review (pre-1.0 checklist)
+
+These items each map to a "Surprising Behavior" in `CLAUDE.md`. They are already working correctly; the question for each is whether the current design is the right one to ship at 1.0, or whether a small API adjustment would make the behavior more discoverable and predictable for users.
+
+---
+
+### 9a. `setAttribute`/`toggleAttribute` default reactive typo detection
+
+**Current behaviour:** `setAttribute('href')` is shorthand for `setAttribute('href', 'href')` — it reads `host.href`. The second argument defaults to the first.
+
+**Why it's surprising:** A typo in the attribute name silently reads a non-existent host property (resolves to `undefined` → `RESET` → restores original DOM value), producing no visible error in production.
+
+**Architect question:** Should the default be kept for ergonomics, but emit a `DEV_MODE` warning when the resolved property name does not exist on the host? Or is the convention clear enough from the type signature that it's acceptable as-is?
+
+**Decision: DEV_MODE warning. The type-level guard is sufficient for TypeScript users; runtime warning covers JavaScript and catches dynamic cases.**
+
+**Type-level analysis**: The `reactive` parameter of `setAttribute` is typed as `Reactive<string, P, E>`, which is `keyof P | Signal<string> | ((target: E) => string | null | undefined)`. When the reactive is omitted and defaults to the attribute name string literal, TypeScript checks that the string is `keyof P`. This means `setAttribute('hreff')` when `host.hreff` doesn't exist **is a type error in strict TypeScript** — the string literal `'hreff'` is not assignable to `keyof P`.
+
+However, this guard only works when `P` is concretely inferred (inside `setup()` where the component type is known). For JavaScript consumers and any dynamic attribute name, there is no protection. A DEV_MODE runtime warning in `resolveReactive()` when a string reactive resolves to `undefined` on the host closes this gap adequately.
+
+**Implementation**: Add a branch in `resolveReactive()`: when `reactive` is a string and `reactive in host` is false, emit a DEV_MODE console warning naming the component and the missing property. No error is thrown — this is a developer ergonomics warning, not a security concern.
+
+---
+
+### 9b. `setAttribute` security validation — fail loudly
+
+**Current behaviour:** Passing a `javascript:` URL or an `on*` attribute name causes the effect to do nothing. No error is thrown, no warning is emitted, even in `DEV_MODE`.
+
+**Why it's surprising:** Silent failure is especially confusing when the blocked value comes from a dynamic reactive — the developer sees no feedback that the binding is a no-op.
+
+**Architect question:** Should blocked attempts log a `DEV_MODE` warning (or throw in development)? What is the right balance between failing fast for developers and being silently safe in production?
+
+**Decision: Throw a descriptive error unconditionally (not only in DEV_MODE).**
+
+Silent security failures violate the principle of least astonishment and are dangerous: a developer setting `href` to a `javascript:` URL from a reactive that works in testing (with a safe URL) may silently fail in a different code path. The error must be observable.
+
+Current code in `attribute.ts:safeSetAttribute` already constructs an `Error` with a message but never throws it — the `throw` statements are there but the error is swallowed by `updateElement`'s catch block which only logs in DEV_MODE.
+
+**Revised behaviour:**
+
+- `safeSetAttribute` throws unconditionally (it already does — this is correct).
+- `updateElement`'s `err()` callback must always log at `LOG_ERROR` level regardless of `DEV_MODE`, not just in dev mode. Security validation failures are never silent. The existing `log()` call already does this for `LOG_ERROR` — verify the call site uses `LOG_ERROR`.
+- The error message must identify the component, the attribute, and the blocked value: `"setAttribute: blocked unsafe value for 'href' on <my-element>: 'javascript:alert(1)'."`.
+
+This is a production-safe behaviour: throwing inside `createEffect` is caught by the scope and logged. No page-breaking uncaught exceptions.
+
+---
+
+### 9c. `on()` handler return value
+
+**Current behaviour:** An event handler returning `{ prop: newValue }` updates host properties via `batch()`; returning `undefined` (or nothing) is a no-op side-effect. Both are valid and silently accepted.
+
+**Why it's surprising:** This is a hidden dual-mode API. The type `EventHandler` allows both, but there is no syntactic distinction between an intentional side-effect handler and one that accidentally returns nothing. An early-return branch that forgets to return an update object silently becomes a no-op.
+
+**Architect question:** Could the two modes be split into distinct APIs (e.g. `on()` for side-effects only, `update()` or a second argument for property-updating handlers)? Or is the unified return-value convention ergonomic enough to keep, and the type system provides sufficient guidance?
+
+**Decision: Keep the unified API. Improve types and JSDoc. No API split.**
+
+Splitting `on()` into two functions (side-effect-only vs. property-updating) would be an additive API change with no ergonomic gain — the type system already discriminates via the return type `{ [K in keyof P]?: P[K] } | void | Promise<void>`. The "dual mode" is not a hidden feature; it follows the exact pattern of `addEventListener` callbacks returning values for auto-batching, which is a documented shortcut.
+
+The real issue is discoverability. The fix is documentation and types:
+
+1. **JSDoc**: Clarify that returning an object is the shortcut for `batch(() => { host.prop = value })`. Make explicit that side-effect-only handlers return `void` and that is always correct. Add an `@example` showing both forms.
+2. **Type rename**: `EventHandler<P, Evt>` is accurate but opaque. Consider a comment in the type definition explaining the two return modes.
+3. **No new API**: `update()` as a second function would create two overlapping APIs with no mechanical difference. Reject.
+
+---
+
+### 9e. Dependency resolution timeout
+
+**Current behaviour:** If a queried custom element isn't defined within 200ms, a `DependencyTimeoutError` is logged to the console and effects proceed anyway — potentially in a degraded or broken state.
+
+**Why it's surprising:** "Log and continue" makes the component appear to work while actually running effects against undefined dependencies. The error is easy to miss in production (console-only).
+
+**Architect question:** Should a timed-out dependency emit the error through a more visible channel (e.g. a custom event on the host, or an `aria-errormessage` attribute in `DEV_MODE`)? Or should effects be blocked entirely when a required dependency times out, with an explicit opt-in to the "proceed anyway" behaviour?
+
+**Decision: DEV_MODE warning (existing behaviour) is sufficient. Non-declared elements must not break the component.**
+
+A single undefined custom element should never break an entire component. The "proceed anyway" behaviour is the correct default — it is what makes progressive enhancement viable. Blocking effects entirely would be a regression.
+
+The existing behaviour (log `DependencyTimeoutError`, then run effects) is correct. What needs improvement is visibility in DEV_MODE:
+
+- The warning already fires via `console.warn`. This is adequate for development.
+- A custom event on the host (`host.dispatchEvent(new CustomEvent('dependency-timeout', ...))`) is over-engineered — it adds API surface and event handling complexity for a scenario that should not happen in production if the component is correctly assembled.
+- An `aria-errormessage` attribute in DEV_MODE is inappropriate: ARIA attributes are semantic; injecting them as debug markers would pollute accessibility trees.
+
+No change to the runtime behaviour. The DEV_MODE warning is adequate. Document the timeout value (200ms) and the degraded-but-functional outcome in JSDoc on `resolveDependencies`.
+
+---
+
+### 9f. Remove the `RESET` sentinel
+
+**Current behaviour:** `RESET` is exported from `src/effects.ts` (used by `resolveReactive` and `updateElement`). Custom effects that use `resolveReactive` directly must handle `RESET` correctly or risk restoring stale DOM values unexpectedly.
+
+**Why it's surprising:** `RESET` looks like an error marker but acts as a restore instruction — the semantics aren't obvious from the name. Custom effect authors who encounter it for the first time may mishandle it.
+
+**Architect question:** Should `RESET` be renamed to something that better communicates "restore original DOM value" (e.g. `RESTORE` or `USE_FALLBACK`)? And should `resolveReactive` be part of the public API at 1.0, or kept internal, requiring custom effects to call `createEffect` directly?
+
+**Decision: Do. Replace `RESET` with `undefined` in the effect-layer semantics. Keep the DOM restore behaviour.**
+
+`RESET` was introduced as a typed escape hatch because `undefined` was not a valid signal value in earlier versions of `cause-effect`. As of 0.18.x, the library removed its own `UNSET` sentinel for the same reason. `RESET` is used exclusively inside `updateElement` and `resolveReactive` — it does not travel through the signal graph. It is therefore safe to replace.
+
+**Mechanics**: `resolveReactive()` currently returns `RESET` on error. Replace with a two-value return: a discriminated result or a local `undefined` sentinel that is never exported. The simplest approach: change the error-case return to `undefined` and update `updateElement` to treat `undefined` the same way it currently treats `RESET` (restore the fallback DOM value). Remove the `RESET` export from `effects.ts`.
+
+**Impact on custom effects**: Any consumer calling `resolveReactive` directly and checking `=== RESET` will break. But `resolveReactive` is not intended to be part of the stable public API (the architectural goal is to keep custom effects using `createEffect` directly). Remove it from the public export at 1.0 or document it as unstable/internal.
+
+**Backward compatibility**: Pre-1.0, so no compat obligation. Any existing custom effect using `RESET` is trivially migrated: `=== RESET` → `=== undefined`.
