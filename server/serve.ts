@@ -240,7 +240,7 @@ async function startServer() {
 					})
 
 				const success = server.upgrade(req, { data: {} })
-				if (success) return new Response()
+				if (success) return // connection hijacked — must not return a Response
 
 				return new Response('WebSocket upgrade failed', { status: 400 })
 			},
