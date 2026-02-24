@@ -63,9 +63,10 @@ const getLayoutForPath = (urlPath: string): string => {
 }
 
 const getCachedLayout = async (file: string) => {
-	if (!layoutsCache.has(file)) {
+	if (isDevelopment || !layoutsCache.has(file)) {
 		const layoutContent = await Bun.file(getFilePath(LAYOUTS_DIR, file)).text()
-		layoutsCache.set(file, layoutContent)
+		if (!isDevelopment) layoutsCache.set(file, layoutContent)
+		return layoutContent
 	}
 	return layoutsCache.get(file) || ''
 }
