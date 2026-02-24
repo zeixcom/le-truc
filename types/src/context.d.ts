@@ -64,13 +64,14 @@ declare class ContextRequestEvent<T extends UnknownContext> extends Event {
 /**
  * Make reactive properties of this component available to descendant consumers via the context protocol.
  *
- * Returns a `MethodProducer` — use it as a property initializer in `defineComponent`.
- * It attaches a `context-request` listener to the host; when a matching request arrives,
- * it provides a getter `() => host[context]` to the requester.
+ * Use in the setup function as `host: provideContexts([...])` — it is an `Effect`, not a property
+ * initializer. It attaches a `context-request` listener to the host via `createScope`; when a
+ * matching request arrives, it provides a getter `() => host[context]` to the requester.
+ * The listener is removed on `disconnectedCallback` via the effect cleanup.
  *
  * @since 0.13.3
  * @param {Array<keyof P>} contexts - Reactive property names to expose as context
- * @returns {(host: Component<P>) => Cleanup} MethodProducer that installs the listener and returns a cleanup function
+ * @returns {Effect} Effect that installs the context-request listener and returns a cleanup function
  */
 declare const provideContexts: <P extends ComponentProps>(contexts: Array<keyof P>) => ((host: Component<P>) => Cleanup);
 /**

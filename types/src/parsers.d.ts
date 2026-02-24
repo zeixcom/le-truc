@@ -5,7 +5,7 @@ type Reader<T extends {}, U extends UI> = (ui: U) => T;
 type Fallback<T extends {}, U extends UI> = T | Reader<T, U>;
 type ParserOrFallback<T extends {}, U extends UI> = Parser<T, U> | Fallback<T, U>;
 /** A branded method-producer function (side-effect initializer, returns void). */
-type MethodProducerFn = ((...args: any[]) => void) & {
+type MethodProducer = ((...args: any[]) => void) & {
     readonly [METHOD_BRAND]: true;
 };
 /** Symbol brand applied to all Parser functions. */
@@ -31,7 +31,7 @@ declare const isParser: <T extends {}, U extends UI>(value: unknown) => value is
  * @param {unknown} value - Value to check
  * @returns {boolean} True if the value is a MethodProducer
  */
-declare const isMethodProducer: (value: unknown) => value is MethodProducerFn;
+declare const isMethodProducer: (value: unknown) => value is MethodProducer;
 /**
  * Check if a value is a reader
  *
@@ -92,4 +92,4 @@ declare const asMethod: <T extends (...args: any[]) => void>(fn: T) => T & {
  * @returns {Reader<T, U>} A typed reader that always returns `T`
  */
 declare const read: <T extends {}, U extends UI>(reader: LooseReader<T, U>, fallback: ParserOrFallback<T, U>) => Reader<T, U>;
-export { type Parser, type LooseReader, type Reader, type Fallback, type ParserOrFallback, PARSER_BRAND, METHOD_BRAND, isParser, isMethodProducer, isReader, getFallback, asParser, asMethod, read, };
+export { type Parser, type LooseReader, type Reader, type Fallback, type ParserOrFallback, type MethodProducer, PARSER_BRAND, METHOD_BRAND, isParser, isMethodProducer, isReader, getFallback, asParser, asMethod, read, };

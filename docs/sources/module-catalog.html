@@ -126,49 +126,6 @@
 <span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">ul</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-catalog</span><span style="color:#F8F8F2">></span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">&#x3C;!-- Vanilla CE test fixture for pass() Object.defineProperty fallback (Path B).</span></span>
-<span class="line"><span style="color:#88846F">     vanilla-button is a plain custom element (no Le Truc internals / no Slots).</span></span>
-<span class="line"><span style="color:#88846F">     module-catalog uses pass({ disabled, badge }) on both basic-button (Slot path)</span></span>
-<span class="line"><span style="color:#88846F">     and vanilla-button (Object.defineProperty path).</span></span>
-<span class="line"><span style="color:#88846F">     This fixture tests that the defineProperty path works correctly. --></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-catalog</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"vanilla-test"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">header</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Vanilla Shop&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">basic-button</span><span style="color:#A6E22E"> hidden</span><span style="color:#A6E22E"> disabled</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> disabled</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">>Cart&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"badge"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">basic-button</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">vanilla-button</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">vanilla-button</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">header</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">ul</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Product A&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">form-spinbutton</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"decrement"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Decrement"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">					−</span></span>
-<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">input</span></span>
-<span class="line"><span style="color:#A6E22E">					type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"number"</span></span>
-<span class="line"><span style="color:#A6E22E">					class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"value"</span></span>
-<span class="line"><span style="color:#A6E22E">					name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"amount-product-a"</span></span>
-<span class="line"><span style="color:#A6E22E">					value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span></span>
-<span class="line"><span style="color:#A6E22E">					min</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span></span>
-<span class="line"><span style="color:#A6E22E">					max</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"5"</span></span>
-<span class="line"><span style="color:#A6E22E">					readonly</span></span>
-<span class="line"><span style="color:#A6E22E">					disabled</span></span>
-<span class="line"><span style="color:#A6E22E">					hidden</span></span>
-<span class="line"><span style="color:#F8F8F2">				/></span></span>
-<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"increment"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Increment"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"zero"</span><span style="color:#F8F8F2">>Add to Cart&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"other"</span><span style="color:#A6E22E"> hidden</span><span style="color:#F8F8F2">>+&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">form-spinbutton</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">ul</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-catalog</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span></code></pre>
 			</module-scrollarea>
 			<basic-button class="copy">
@@ -245,7 +202,6 @@
 <span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createMemo,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Effect,</span></span>
 <span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Memo,</span></span>
 <span class="line"><span style="color:#F8F8F2">	pass,</span></span>
 <span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
@@ -256,7 +212,6 @@
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleCatalogUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	button</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicButtonProps</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	vanillaButton</span><span style="color:#F92672">?:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
 <span class="line"><span style="color:#F8F8F2">	spinbuttons</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Memo</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormSpinbuttonProps</span><span style="color:#F8F8F2">>[]></span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
@@ -265,7 +220,6 @@
 <span class="line"><span style="color:#F8F8F2">	{},</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
 <span class="line"><span style="color:#F8F8F2">		button: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'basic-button'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a button to go to the Shopping Cart'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		vanillaButton: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'vanilla-button'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">		spinbuttons: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">			'form-spinbutton'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#E6DB74">			'Add spinbutton components to calculate sum from.'</span><span style="color:#F8F8F2">,</span></span>
@@ -275,14 +229,11 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> total </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createMemo</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
 <span class="line"><span style="color:#F8F8F2">			spinbuttons.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().</span><span style="color:#A6E22E">reduce</span><span style="color:#F8F8F2">((</span><span style="color:#FD971F;font-style:italic">sum</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> sum </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> item.value, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> passProps </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> pass</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleCatalogProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">BasicButtonProps</span><span style="color:#F8F8F2">>({</span></span>
-<span class="line"><span style="color:#A6E22E">			disabled</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">total.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(),</span></span>
-<span class="line"><span style="color:#A6E22E">			badge</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (total.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> ?</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(total.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()) </span><span style="color:#F92672">:</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		})</span></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">			button: passProps,</span></span>
-<span class="line"><span style="color:#88846F">			// Cast: pass() also works on vanilla CEs via Object.defineProperty (Path B)</span></span>
-<span class="line"><span style="color:#F8F8F2">			vanillaButton: passProps </span><span style="color:#F92672">as</span><span style="color:#66D9EF;font-style:italic"> unknown</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Effect</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleCatalogProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">>,</span></span>
+<span class="line"><span style="color:#F8F8F2">			button: </span><span style="color:#A6E22E">pass</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleCatalogProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">BasicButtonProps</span><span style="color:#F8F8F2">>({</span></span>
+<span class="line"><span style="color:#A6E22E">				disabled</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">total.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#A6E22E">				badge</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (total.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> ?</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(total.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()) </span><span style="color:#F92672">:</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>

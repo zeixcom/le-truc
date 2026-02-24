@@ -92,7 +92,7 @@ connectedCallback()
   └─ 4. resolveDependencies(() => {
            this.#cleanup = runEffects(ui, setup(ui))
          })
-         Waits for child custom elements to be defined (50ms timeout),
+         Waits for child custom elements to be defined (200ms timeout),
          then runs the setup function and activates effects.
 ```
 
@@ -198,7 +198,7 @@ The `MutationObserver` config is smart about which attributes to watch: `extract
 
 ### Dependency resolution
 
-During `first()` and `all()` calls, any matched custom element that isn't yet defined (matches `:not(:defined)`) is collected. `resolveDependencies(callback)` then awaits `customElements.whenDefined()` for all of them with a 50ms timeout. On timeout, it logs a `DependencyTimeoutError` but still runs the callback — effects proceed even if dependencies aren't ready.
+During `first()` and `all()` calls, any matched custom element that isn't yet defined (matches `:not(:defined)`) is collected. `resolveDependencies(callback)` then awaits `customElements.whenDefined()` for all of them with a 200ms timeout. On timeout, it logs a `DependencyTimeoutError` but still runs the callback — effects proceed even if dependencies aren't ready.
 
 ### Compile-time selector type inference
 
@@ -228,9 +228,7 @@ Implements the [W3C Community Protocol for Context](https://github.com/webcompon
 
 ### Provider side
 
-`provideContexts(['theme', 'user'])` returns a function `(host) => Cleanup` that adds a `context-request` event listener. When a matching request arrives, it stops propagation and provides a getter `() => host[context]` to the callback.
-
-This is used as a `MethodProducer` — a property initializer that returns `void` and exists only for its side effects (setting up the listener).
+`provideContexts(['theme', 'user'])` is an `Effect` — use it in the setup function as `host: provideContexts([...])`. It installs a `context-request` event listener via `createScope`; when a matching request arrives, it stops propagation and provides a getter `() => host[context]` to the callback. The listener is removed on `disconnectedCallback` via the effect cleanup.
 
 ### Consumer side
 
@@ -245,19 +243,3 @@ This is used as a `MethodProducer` — a property initializer that returns `void
 `setAttribute()` includes security validation:
 - Blocks `on*` event handler attributes (prevents XSS via attribute injection)
 - Validates URLs against an allowlist of safe protocols (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`) — blocks `javascript:`, `data:`, etc.
-
----
-
-## Key Decisions Summary
-
-| # | Item | Decision | Status |
-|---|------|----------|--------|
-| 7 | `pass()` scope | Le Truc targets only (Slot swap); use `setProperty()` for foreign custom elements | See Task 11 |
-| 8 | Parser/MethodProducer branding | Symbol-branded `asParser()` / `asMethod()` wrappers; DEV_MODE warning for unbranded fallback | Done |
-| 9a | Attribute name typo | TypeScript catches it at compile time; add DEV_MODE runtime warning for JS/dynamic cases | Done |
-| 9b | Security validation silence | Always throw with a descriptive error; log at `LOG_ERROR` unconditionally | Done |
-| 9c | `on()` dual return mode | Keep unified API; improve JSDoc and `@example` | Done |
-| 9d | `pass()` signal restore | Restore original signal in cleanup; resolved with item 7 | Done |
-| 9e | Dependency timeout visibility | Keep current DEV_MODE warning; document behaviour in JSDoc | Done |
-| 9f | `RESET` sentinel | Replace with `undefined`; remove `RESET` export; make `resolveReactive` internal | Done |
-| 10 | `runEffects` cleanup fix placement | Use `createScope` wrapper in `on()` / `pass()` | Done |

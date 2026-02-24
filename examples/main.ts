@@ -27,13 +27,6 @@ import './module-todo/module-todo.ts'
 // Structural-only custom elements
 customElements.define('card-callout', class extends HTMLElement {})
 customElements.define('module-demo', class extends HTMLElement {})
-
-// Vanilla custom element used by module-catalog for pass() Object.defineProperty path testing
-class VanillaButton extends HTMLElement {
-	disabled = false
-	badge = ''
-}
-customElements.define('vanilla-button', VanillaButton)
 customElements.define('module-toc', class extends HTMLElement {})
 customElements.define('section-hero', class extends HTMLElement {})
 customElements.define('section-menu', class extends HTMLElement {})

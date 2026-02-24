@@ -29,14 +29,21 @@ type ExtractRightmostSelector<S extends string> =
 					: S
 
 // Extract tag name from a simple selector (without combinators)
+// Check `[` before `:` so `button[attr]:pseudo` yields `button`, not `button[attr]`.
+// But only use the `[` match when the prefix contains no `:` — otherwise the `[`
+// is inside a pseudo-class argument like `:not([hidden])` and `:` should win.
 type ExtractTagFromSimpleSelector<S extends string> =
 	S extends `${infer T}.${string}`
 		? T
 		: S extends `${infer T}#${string}`
 			? T
-			: S extends `${infer T}:${string}`
-				? T
-				: S extends `${infer T}[${string}`
+			: S extends `${infer T}[${string}`
+				? T extends `${string}:${string}`
+					? S extends `${infer U}:${string}`
+						? U
+						: S
+					: T
+				: S extends `${infer T}:${string}`
 					? T
 					: S
 

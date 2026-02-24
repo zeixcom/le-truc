@@ -70,7 +70,6 @@ export {
 	defineComponent,
 	type Initializers,
 	type MaybeSignal,
-	type MethodProducer,
 	type ReservedWords,
 } from './src/component'
 export {
@@ -125,6 +124,7 @@ export {
 	isMethodProducer,
 	isParser,
 	type LooseReader,
+	type MethodProducer,
 	type Parser,
 	type ParserOrFallback,
 	type Reader,

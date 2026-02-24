@@ -2,7 +2,7 @@
 
 > **MaybeSignal**\<`T`\> = `T` \| [`Signal`](Signal.md)\<`T`\> \| [`MemoCallback`](MemoCallback.md)\<`T`\> \| [`TaskCallback`](TaskCallback.md)\<`T`\>
 
-Defined in: [src/component.ts:62](https://github.com/zeixcom/le-truc/blob/45798dee9dae4e450a431014c6b066824d261d20/src/component.ts#L62)
+Defined in: [src/component.ts:58](https://github.com/zeixcom/le-truc/blob/62f34241868753829f1b0628a59b7cbc4dc09d76/src/component.ts#L58)
 
 #### Type Parameters
 

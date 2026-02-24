@@ -254,32 +254,14 @@ test.describe('card-mediaqueries component', () => {
 		expect(firstOrientation).toBe(secondOrientation)
 	})
 
-	// ===== METHOD BRANDING (asMethod) — OBSERVABLE BEHAVIOR =====
-	// asMethod() brands a function with METHOD_BRAND so isMethodProducer()
-	// identifies it as a side-effect initializer rather than a Reader.
-	// The key difference: a MethodProducer runs once during connectedCallback
-	// and does NOT create a signal (no property accessor is installed on host).
-	//
-	// context-media uses provideContexts() which is internally branded with
-	// asMethod(). If the brand is detected correctly:
-	// - provideContexts() runs as a side-effect (MethodProducer), not as a Reader
-	// - All four media contexts are provided to child card-mediaqueries components
-
-	test('asMethod()-branded provideContexts() runs as side-effect', async ({
-		page,
-	}) => {
-		// context-media's provideContexts() is branded with asMethod().
-		// If isMethodProducer() correctly detects the brand, the context is provided
-		// and card-mediaqueries inside context-media shows real values, not 'unknown'.
+	test('provideContexts() runs as side-effect', async ({ page }) => {
 		const cardWithContext = page.locator('context-media card-mediaqueries')
 		const motionText = await cardWithContext.locator('.motion').textContent()
 		// Real context values — not the 'unknown' fallback shown without context
 		expect(['no-preference', 'reduce']).toContain(motionText?.trim())
 	})
 
-	test('asMethod() brand: context-media provides all four media contexts', async ({
-		page,
-	}) => {
+	test('context-media provides all four media contexts', async ({ page }) => {
 		const cardWithContext = page.locator('context-media card-mediaqueries')
 
 		const texts = {
@@ -289,27 +271,10 @@ test.describe('card-mediaqueries component', () => {
 			orientation: await cardWithContext.locator('.orientation').textContent(),
 		}
 
-		// All four contexts must be non-empty — proof that provideContexts()
-		// (branded MethodProducer) ran successfully and provided all contexts
 		expect(texts.motion).toBeTruthy()
 		expect(texts.theme).toBeTruthy()
 		expect(texts.viewport).toBeTruthy()
 		expect(texts.orientation).toBeTruthy()
-	})
-
-	test('asMethod() brand: context-media does not install property accessor on host', async ({
-		page,
-	}) => {
-		// A MethodProducer (asMethod-branded) is NOT a Reader — it must not install
-		// a reactive property on the host. Verify context-media has no 'motion',
-		// 'theme', 'viewport', 'orientation' properties (these belong only to card-mediaqueries).
-		const hasContextMediaProps = await page.evaluate(() => {
-			const el = document.querySelector('context-media') as any
-			return ['motion', 'theme', 'viewport', 'orientation'].some(
-				prop => prop in el && el[prop] !== undefined,
-			)
-		})
-		expect(hasContextMediaProps).toBe(false)
 	})
 
 	// TODO: Re-enable this test when context-theme component is implemented

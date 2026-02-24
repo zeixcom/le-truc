@@ -1,8 +1,8 @@
 ### Function: isMethodProducer()
 
-> **isMethodProducer**(`value`): `value is MethodProducerFn`
+> **isMethodProducer**(`value`): `value is MethodProducer`
 
-Defined in: [src/parsers.ts:74](https://github.com/zeixcom/le-truc/blob/45798dee9dae4e450a431014c6b066824d261d20/src/parsers.ts#L74)
+Defined in: [src/parsers.ts:74](https://github.com/zeixcom/le-truc/blob/62f34241868753829f1b0628a59b7cbc4dc09d76/src/parsers.ts#L74)
 
 Check if a value is a MethodProducer (branded side-effect initializer)
 
@@ -16,7 +16,7 @@ Value to check
 
 #### Returns
 
-`value is MethodProducerFn`
+`value is MethodProducer`
 
 True if the value is a MethodProducer
 

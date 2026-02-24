@@ -22,7 +22,7 @@ type ParserOrFallback<T extends {}, U extends UI> =
 	| Fallback<T, U>
 
 /** A branded method-producer function (side-effect initializer, returns void). */
-type MethodProducerFn = ((...args: any[]) => void) & {
+type MethodProducer = ((...args: any[]) => void) & {
 	readonly [METHOD_BRAND]: true
 }
 
@@ -71,7 +71,7 @@ const isParser = <T extends {}, U extends UI>(
  * @param {unknown} value - Value to check
  * @returns {boolean} True if the value is a MethodProducer
  */
-const isMethodProducer = (value: unknown): value is MethodProducerFn =>
+const isMethodProducer = (value: unknown): value is MethodProducer =>
 	isFunction(value) && METHOD_BRAND in value
 
 /**
@@ -162,6 +162,7 @@ export {
 	type Reader,
 	type Fallback,
 	type ParserOrFallback,
+	type MethodProducer,
 	PARSER_BRAND,
 	METHOD_BRAND,
 	isParser,

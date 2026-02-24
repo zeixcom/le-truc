@@ -2,7 +2,7 @@
 
 > **PassedProps**\<`P`, `Q`\> = `{ [K in keyof Q & string]?: PassedProp<Q[K], P, Component<Q>> }`
 
-Defined in: [src/effects/pass.ts:22](https://github.com/zeixcom/le-truc/blob/45798dee9dae4e450a431014c6b066824d261d20/src/effects/pass.ts#L22)
+Defined in: [src/effects/pass.ts:25](https://github.com/zeixcom/le-truc/blob/62f34241868753829f1b0628a59b7cbc4dc09d76/src/effects/pass.ts#L25)
 
 #### Type Parameters
 

@@ -1,23 +1,21 @@
 import type { Component, ComponentProps } from '../component';
 import type { Effect, Reactive } from '../effects';
-type PassedProp<T, P extends ComponentProps, E extends HTMLElement> = Reactive<T, P, E> | [Reactive<T, P, E>, (value: T) => void];
+type PassedProp<T, P extends ComponentProps, E extends HTMLElement> = Reactive<T, P, E>;
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
     [K in keyof Q & string]?: PassedProp<Q[K], P, Component<Q>>;
 };
 /**
- * Effect for passing reactive values to a descendant component.
+ * Effect for passing reactive values to a descendant Le Truc component.
  *
- * **Le Truc targets (Slot-backed properties):** Replaces the backing signal of the
- * target's Slot, creating a live parent→child binding. The original signal is restored
- * on cleanup so the child can be safely detached and reattached.
+ * Replaces the backing signal of the target's Slot, creating a live
+ * parent→child binding. The original signal is captured and restored when the
+ * parent disconnects, so the child regains its own independent state after
+ * detachment.
  *
- * **Other custom elements (Object.defineProperty fallback):** Overrides the property
- * descriptor on the target instance with a reactive getter (and optional setter for
- * two-way binding). The original descriptor is restored on cleanup. In DEV_MODE, logs
- * a warning if the descriptor is non-configurable and the binding cannot be installed.
- *
- * Scope: custom elements only (elements whose `localName` contains a hyphen).
- * For plain HTML elements, use `setProperty()` instead.
+ * Scope: Le Truc components only (targets whose properties are Slot-backed).
+ * For non-Le Truc custom elements or plain HTML elements, use `setProperty()`
+ * instead — it goes through the element's public setter and is always correct
+ * regardless of the child's internal framework.
  *
  * @since 0.15.0
  * @param {PassedProps<P, Q>} props - Reactive values to pass

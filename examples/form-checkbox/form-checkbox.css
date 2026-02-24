@@ -25,7 +25,7 @@ form-checkbox {
 		&::before {
 			display: inline-block;
 			box-sizing: border-box;
-			content: "";
+			content: '';
 			text-align: center;
 			width: var(--space-l);
 			height: var(--space-l);
@@ -51,7 +51,7 @@ form-checkbox {
 			background-color: var(--color-selection-selected);
 			border-color: var(--color-selection-active);
 			text-shadow: 0 0 var(--space-xs) var(--color-success-active);
-			content: "✔︎";
+			content: '✔︎';
 		}
 
 		&:hover::before {
@@ -73,7 +73,7 @@ form-checkbox {
 		&::before {
 			display: inline-block;
 			box-sizing: border-box;
-			content: "";
+			content: '';
 			text-align: center;
 			width: var(--space-l);
 			height: var(--space-l);
@@ -105,7 +105,7 @@ form-checkbox {
 			background-color: var(--color-success);
 			border-color: var(--color-success-active);
 			text-shadow: 0 0 var(--space-xs) var(--color-success-active);
-			content: "✔︎";
+			content: '✔︎';
 		}
 
 		&:hover::before {
@@ -129,7 +129,7 @@ form-checkbox {
 			display: inline-block;
 			flex-shrink: 0;
 			box-sizing: border-box;
-			content: "";
+			content: '';
 			width: calc(var(--space-l) * 2);
 			height: var(--space-l);
 			line-height: var(--space-l);
@@ -140,7 +140,7 @@ form-checkbox {
 			border: 1px solid var(--color-border);
 			background-image: radial-gradient(
 				circle,
-				var(--color-white) 33%,
+				var(--color-input) 33%,
 				transparent 34%
 			);
 			background-size: var(--toggle-knob-size);
@@ -165,7 +165,7 @@ form-checkbox {
 		&::before {
 			background-color: var(--color-selection-selected);
 			border-color: var(--color-selection-active);
-			content: "✔︎";
+			content: '✔︎';
 			text-shadow: 0 0 var(--space-xs) var(--color-success-active);
 			padding-left: var(--space-s);
 			background-position: left calc(0.5 * var(--space-l)) center;

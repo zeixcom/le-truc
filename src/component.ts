@@ -46,17 +46,13 @@ type ComponentSetup<P extends ComponentProps, U extends UI> = (
 	ui: ComponentUI<P, U>,
 ) => Effects<P, ComponentUI<P, U>>
 
-type MethodProducer<P extends ComponentProps, U extends UI> = (
-	ui: U & { host: Component<P> },
-) => void
-
 type Initializers<P extends ComponentProps, U extends UI> = {
 	[K in keyof P]?:
 		| P[K]
 		| Signal<P[K]>
 		| Parser<P[K], ComponentUI<P, U>>
 		| Reader<MaybeSignal<P[K]>, ComponentUI<P, U>>
-		| MethodProducer<P, ComponentUI<P, U>>
+		| ((ui: ComponentUI<P, U>) => void)
 }
 
 type MaybeSignal<T extends {}> =
@@ -118,7 +114,6 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 			Object.freeze(this.#ui)
 
 			// Initialize signals — dispatch order: Parser → MethodProducer → Reader → static/Signal
-			const methodCleanups: (() => void)[] = []
 			const createSignal = <K extends keyof P & string>(
 				key: K,
 				initializer: Initializers<P, U>[K],
@@ -127,12 +122,7 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 					const result = initializer(ui, this.getAttribute(key))
 					if (result != null) this.#setAccessor(key, result)
 				} else if (isMethodProducer(initializer)) {
-					// Cast to any: branded MethodProducers may return a Cleanup even though
-					// the MethodProducer type declares void (e.g. provideContexts).
-					const cleanup = (initializer as (ui: ComponentUI<P, U>) => unknown)(
-						ui,
-					)
-					if (isFunction(cleanup)) methodCleanups.push(cleanup as () => void)
+					initializer(ui)
 				} else if (isFunction<MaybeSignal<P[K]>>(initializer)) {
 					const result = (
 						initializer as Reader<MaybeSignal<P[K]>, ComponentUI<P, U>>
@@ -150,13 +140,7 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 
 			// Resolve dependencies and run setup function
 			resolveDependencies(() => {
-				const effectCleanup = runEffects(ui, setup(ui))
-				this.#cleanup = methodCleanups.length
-					? () => {
-							for (const c of methodCleanups) c()
-							effectCleanup()
-						}
-					: effectCleanup
+				this.#cleanup = runEffects(ui, setup(ui))
 			})
 		}
 
@@ -242,7 +226,6 @@ export {
 	type ComponentSetup,
 	type ComponentUI,
 	type Initializers,
-	type MethodProducer,
 	type MaybeSignal,
 	type ReservedWords,
 }

@@ -7,20 +7,20 @@
 		<meta name="description" content="Passing state, events, context" />
 		<link
 			rel="preload"
-			href="./assets/main.css?v=882b127393357d7f"
+			href="./assets/main.css?v=b6ab1e54dac7b2d2"
 			as="style"
 		/>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=f34f0f6430293b40"
+			href="./assets/main.js?v=bd73028e6446c244"
 		/>
 		<link
 			rel="stylesheet"
-			href="./assets/main.css?v=882b127393357d7f"
+			href="./assets/main.css?v=b6ab1e54dac7b2d2"
 		/>
 		<script
 			type="module"
-			src="./assets/main.js?v=f34f0f6430293b40"
+			src="./assets/main.js?v=bd73028e6446c244"
 		></script>
 	</head>
 
@@ -106,7 +106,7 @@
 <span class="line"><span style="color:#88846F">    // Component setup</span></span>
 <span class="line"><span style="color:#F8F8F2">  },</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
-<span class="line"></span></code></pre></module-scrollarea><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><p>In contrast to a static <code>querySelectorAll()</code> call, the <code>Memo&lt;E[]&gt;</code> returned by <code>all()</code> is reactive and updates whenever new elements are added or removed from the DOM.</p><p>Then, we need to convert the total of all product quantities to a string and pass it on to the <code>BasicButton</code> component. In Le Truc we use the <code>pass()</code> function to share state with descendant components:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="file">module-catalog.js</span><span class="language">js</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"></span></code></pre></module-scrollarea><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><p>In contrast to a static <code>querySelectorAll()</code> call, the <code>Memo&lt;E[]&gt;</code> returned by <code>all()</code> is reactive and updates whenever new elements are added or removed from the DOM.</p><p>Then, we need to convert the total of all product quantities to a string and pass it on to the <code>BasicButton</code> component. In Le Truc we use the <code>pass()</code> function to share state with descendant Le Truc components:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="file">module-catalog.js</span><span class="language">js</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">  'module-catalog'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">  {},</span></span>
 <span class="line"><span style="color:#F8F8F2">  ({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
@@ -128,7 +128,7 @@
 <span class="line"><span style="color:#F8F8F2">    }</span></span>
 <span class="line"><span style="color:#F8F8F2">  },</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
-<span class="line"></span></code></pre></module-scrollarea><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><p>Allright, that's it!</p><ul><li>Whenever one of the <code>value</code> signals of a <code>&lt;form-spinbutton&gt;</code> updates, the total in the badge of <code>&lt;basic-button&gt;</code> automatically updates.</li><li>No need for event listeners or manual updates!</li></ul><h3 id="child-component-basicbutton"><a name="child-component-basicbutton" class="anchor" href="#child-component-basicbutton"><span class="title">Child Component: BasicButton</span><span class="permalink">#</span></a></h3><p>The <code>BasicButton</code> component <strong>displays a badge when needed</strong> – it does not know about any other component nor track state itself. It just exposes a reactive properties <code>badge</code> of type <code>string</code> and <code>disabled</code> of type <code>boolean</code> and has effects to react to state changes that updates the DOM subtree.</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="file">basic-button.js</span><span class="language">js</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"></span></code></pre></module-scrollarea><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><p>Allright, that's it!</p><ul><li>Whenever one of the <code>value</code> signals of a <code>&lt;form-spinbutton&gt;</code> updates, the total in the badge of <code>&lt;basic-button&gt;</code> automatically updates.</li><li>No need for event listeners or manual updates!</li></ul><card-callout class="tip" title="pass() works with Le Truc components only"><p><code>pass()</code> replaces the backing signal of the child's reactive property directly — this only works for Le Truc components whose properties are Slot-backed. For non-Le Truc custom elements (Lit, Stencil, FAST, etc.) or plain HTML elements, use <code>setProperty()</code> instead. It goes through the element's public setter and works correctly regardless of the child's internal framework.</p></card-callout><h3 id="child-component-basicbutton"><a name="child-component-basicbutton" class="anchor" href="#child-component-basicbutton"><span class="title">Child Component: BasicButton</span><span class="permalink">#</span></a></h3><p>The <code>BasicButton</code> component <strong>displays a badge when needed</strong> – it does not know about any other component nor track state itself. It just exposes a reactive properties <code>badge</code> of type <code>string</code> and <code>disabled</code> of type <code>boolean</code> and has effects to react to state changes that updates the DOM subtree.</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="file">basic-button.js</span><span class="language">js</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">  'basic-button'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">  {</span></span>
 <span class="line"><span style="color:#F8F8F2">    disabled: </span><span style="color:#A6E22E">asBoolean</span><span style="color:#F8F8F2">(),</span></span>

@@ -169,8 +169,8 @@
 			<module-scrollarea orientation="horizontal">
 				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	asInteger,</span></span>
+<span class="line"><span style="color:#F8F8F2">	asMethod,</span></span>
 <span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> ComponentUI,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
 <span class="line"><span style="color:#F8F8F2">	MissingElementError,</span></span>
 <span class="line"><span style="color:#F8F8F2">	on,</span></span>
@@ -203,11 +203,7 @@
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleListProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">ModuleListUI</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'module-list'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	{</span></span>
-<span class="line"><span style="color:#A6E22E">		add</span><span style="color:#F8F8F2">: ({</span></span>
-<span class="line"><span style="color:#F8F8F2">			host,</span></span>
-<span class="line"><span style="color:#F8F8F2">			container,</span></span>
-<span class="line"><span style="color:#F8F8F2">			template,</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ComponentUI</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleListProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">ModuleListUI</span><span style="color:#F8F8F2">>) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">		add: </span><span style="color:#A6E22E">asMethod</span><span style="color:#F8F8F2">(({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">container</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">template</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			let</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span></span>
 <span class="line"><span style="color:#F8F8F2">			host.</span><span style="color:#A6E22E">add</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">process</span><span style="color:#F92672">?:</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> void</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> item </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (template.content.</span><span style="color:#A6E22E">cloneNode</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">DocumentFragment</span><span style="color:#F8F8F2">)</span></span>
@@ -224,16 +220,13 @@
 <span class="line"><span style="color:#F8F8F2">					)</span></span>
 <span class="line"><span style="color:#F8F8F2">				}</span></span>
 <span class="line"><span style="color:#F8F8F2">			}</span></span>
-<span class="line"><span style="color:#F8F8F2">		},</span></span>
-<span class="line"><span style="color:#A6E22E">		delete</span><span style="color:#F8F8F2">: ({</span></span>
-<span class="line"><span style="color:#F8F8F2">			host,</span></span>
-<span class="line"><span style="color:#F8F8F2">			container,</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ComponentUI</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleListProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">ModuleListUI</span><span style="color:#F8F8F2">>) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">		}),</span></span>
+<span class="line"><span style="color:#F8F8F2">		delete: </span><span style="color:#A6E22E">asMethod</span><span style="color:#F8F8F2">(({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">container</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">			host.</span><span style="color:#A6E22E">delete</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">key</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> item </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> container.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`[data-key="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">key</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"]`</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (item) item.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">			}</span></span>
-<span class="line"><span style="color:#F8F8F2">		},</span></span>
+<span class="line"><span style="color:#F8F8F2">		}),</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
 <span class="line"><span style="color:#F8F8F2">		container: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'[data-container]'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a container element for items.'</span><span style="color:#F8F8F2">),</span></span>
@@ -264,8 +257,8 @@
 <span class="line"><span style="color:#F8F8F2">			host: </span><span style="color:#A6E22E">on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> { target } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> e</span></span>
 <span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span></span>
-<span class="line"><span style="color:#F8F8F2">					target </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> &#x26;&#x26;</span></span>
-<span class="line"><span style="color:#F8F8F2">					target.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'basic-button.delete'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					target </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
+<span class="line"><span style="color:#F92672">					&#x26;&#x26;</span><span style="color:#F8F8F2"> target.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'basic-button.delete'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F8F8F2">				) {</span></span>
 <span class="line"><span style="color:#F8F8F2">					e.</span><span style="color:#A6E22E">stopPropagation</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">					target.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'[data-key]'</span><span style="color:#F8F8F2">)?.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">()</span></span>

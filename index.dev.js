@@ -1946,16 +1946,13 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
       };
       this.#ui = ui;
       Object.freeze(this.#ui);
-      const methodCleanups = [];
       const createSignal2 = (key, initializer) => {
         if (isParser(initializer)) {
           const result = initializer(ui, this.getAttribute(key));
           if (result != null)
             this.#setAccessor(key, result);
         } else if (isMethodProducer(initializer)) {
-          const cleanup = initializer(ui);
-          if (isFunction(cleanup))
-            methodCleanups.push(cleanup);
+          initializer(ui);
         } else if (isFunction(initializer)) {
           const result = initializer(ui);
           if (result != null)
@@ -1972,12 +1969,7 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
         createSignal2(prop, initializer);
       }
       resolveDependencies(() => {
-        const effectCleanup = runEffects(ui, setup(ui));
-        this.#cleanup = methodCleanups.length ? () => {
-          for (const c of methodCleanups)
-            c();
-          effectCleanup();
-        } : effectCleanup;
+        this.#cleanup = runEffects(ui, setup(ui));
       });
     }
     disconnectedCallback() {
@@ -2036,7 +2028,7 @@ class ContextRequestEvent extends Event {
     this.subscribe = subscribe;
   }
 }
-var provideContexts = (contexts) => asMethod((host) => {
+var provideContexts = (contexts) => (host) => createScope(() => {
   const listener = (e) => {
     const { context, callback } = e;
     if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
@@ -2229,9 +2221,7 @@ var pass = (props) => (host, target) => createScope(() => {
         console[LOG_WARN](`pass(): property '${prop}' does not exist on ${targetName}`);
       continue;
     }
-    const applied = isFunction(reactive) && reactive.length === 1 ? reactive(target) : reactive;
-    const isArray = Array.isArray(applied) && applied.length === 2;
-    const signal = toSignal(isArray ? applied[0] : applied);
+    const signal = toSignal(reactive);
     if (!signal)
       continue;
     const slot = signals[prop];
@@ -2241,22 +2231,8 @@ var pass = (props) => (host, target) => createScope(() => {
       cleanups.push(() => slot.replace(original));
       continue;
     }
-    const descriptor = Object.getOwnPropertyDescriptor(target, prop) ?? Object.getOwnPropertyDescriptor(Object.getPrototypeOf(target), prop);
-    if (!descriptor)
-      continue;
-    if (!descriptor.configurable) {
-      if (DEV_MODE)
-        console[LOG_WARN](`pass(): property '${prop}' on ${targetName} has a non-configurable descriptor — binding skipped`);
-      continue;
-    }
-    const setter = isArray ? applied[1] : undefined;
-    Object.defineProperty(target, prop, {
-      get: () => signal.get(),
-      set: setter,
-      configurable: true,
-      enumerable: descriptor.enumerable ?? true
-    });
-    cleanups.push(() => Object.defineProperty(target, prop, descriptor));
+    if (DEV_MODE)
+      console[LOG_WARN](`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`);
   }
   if (cleanups.length)
     return () => {

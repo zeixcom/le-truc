@@ -1,5 +1,5 @@
 export { batch, CircularDependencyError, type Cleanup, type Collection, type CollectionChanges, type CollectionOptions, type ComputedOptions, createCollection, createComputed, createEffect, createList, createMemo, createMutableSignal, createScope, createSensor, createSlot, createState, createStore, createTask, type EffectCallback, type Guard, InvalidCallbackError, InvalidSignalValueError, isAsyncFunction, isCollection, isComputed, isEqual, isFunction, isList, isMemo, isMutableSignal, isRecord, isSensor, isSignal, isSlot, isState, isStore, isTask, type List, type ListOptions, type MatchHandlers, type MaybeCleanup, type Memo, type MemoCallback, match, NullishSignalValueError, type Sensor, type SensorOptions, type Signal, type SignalOptions, type Slot, type State, type Store, type StoreOptions, type Task, type TaskCallback, valueString, } from '@zeix/cause-effect';
-export { type Component, type ComponentProp, type ComponentProps, type ComponentSetup, type ComponentUI, defineComponent, type Initializers, type MaybeSignal, type MethodProducer, type ReservedWords, } from './src/component';
+export { type Component, type ComponentProp, type ComponentProps, type ComponentSetup, type ComponentUI, defineComponent, type Initializers, type MaybeSignal, type ReservedWords, } from './src/component';
 export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, provideContexts, requestContext, type UnknownContext, } from './src/context';
 export { type Effect, type Effects, type ElementEffects, type ElementUpdater, type Reactive, type UpdateOperation, updateElement, } from './src/effects';
 export { setAttribute, toggleAttribute } from './src/effects/attribute';
@@ -12,7 +12,7 @@ export { setStyle } from './src/effects/style';
 export { setText } from './src/effects/text';
 export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidEffectsError, InvalidPropertyNameError, InvalidReactivesError, InvalidUIKeyError, MissingElementError, } from './src/errors';
 export { createEventsSensor, type EventHandlers, type SensorEventHandler, } from './src/events';
-export { asMethod, asParser, type Fallback, isMethodProducer, isParser, type LooseReader, type Parser, type ParserOrFallback, type Reader, read, } from './src/parsers';
+export { asMethod, asParser, type Fallback, isMethodProducer, isParser, type LooseReader, type MethodProducer, type Parser, type ParserOrFallback, type Reader, read, } from './src/parsers';
 export { asBoolean } from './src/parsers/boolean';
 export { asJSON } from './src/parsers/json';
 export { asInteger, asNumber } from './src/parsers/number';

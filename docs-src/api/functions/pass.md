@@ -2,21 +2,19 @@
 
 > **pass**\<`P`, `Q`\>(`props`): [`Effect`](../type-aliases/Effect.md)\<`P`, [`Component`](../type-aliases/Component.md)\<`Q`\>\>
 
-Defined in: [src/effects/pass.ts:50](https://github.com/zeixcom/le-truc/blob/45798dee9dae4e450a431014c6b066824d261d20/src/effects/pass.ts#L50)
+Defined in: [src/effects/pass.ts:51](https://github.com/zeixcom/le-truc/blob/62f34241868753829f1b0628a59b7cbc4dc09d76/src/effects/pass.ts#L51)
 
-Effect for passing reactive values to a descendant component.
+Effect for passing reactive values to a descendant Le Truc component.
 
-**Le Truc targets (Slot-backed properties):** Replaces the backing signal of the
-target's Slot, creating a live parent→child binding. The original signal is restored
-on cleanup so the child can be safely detached and reattached.
+Replaces the backing signal of the target's Slot, creating a live
+parent→child binding. The original signal is captured and restored when the
+parent disconnects, so the child regains its own independent state after
+detachment.
 
-**Other custom elements (Object.defineProperty fallback):** Overrides the property
-descriptor on the target instance with a reactive getter (and optional setter for
-two-way binding). The original descriptor is restored on cleanup. In DEV_MODE, logs
-a warning if the descriptor is non-configurable and the binding cannot be installed.
-
-Scope: custom elements only (elements whose `localName` contains a hyphen).
-For plain HTML elements, use `setProperty()` instead.
+Scope: Le Truc components only (targets whose properties are Slot-backed).
+For non-Le Truc custom elements or plain HTML elements, use `setProperty()`
+instead — it goes through the element's public setter and is always correct
+regardless of the child's internal framework.
 
 #### Type Parameters
 

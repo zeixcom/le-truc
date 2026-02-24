@@ -16,9 +16,11 @@ import { DEV_MODE, elementName, isCustomElement, LOG_WARN } from '../util'
 
 /* === Types === */
 
-type PassedProp<T, P extends ComponentProps, E extends HTMLElement> =
-	| Reactive<T, P, E>
-	| [Reactive<T, P, E>, (value: T) => void]
+type PassedProp<T, P extends ComponentProps, E extends HTMLElement> = Reactive<
+	T,
+	P,
+	E
+>
 
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
 	[K in keyof Q & string]?: PassedProp<Q[K], P, Component<Q>>
@@ -27,19 +29,17 @@ type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
 /* === Exported Function === */
 
 /**
- * Effect for passing reactive values to a descendant component.
+ * Effect for passing reactive values to a descendant Le Truc component.
  *
- * **Le Truc targets (Slot-backed properties):** Replaces the backing signal of the
- * target's Slot, creating a live parent→child binding. The original signal is restored
- * on cleanup so the child can be safely detached and reattached.
+ * Replaces the backing signal of the target's Slot, creating a live
+ * parent→child binding. The original signal is captured and restored when the
+ * parent disconnects, so the child regains its own independent state after
+ * detachment.
  *
- * **Other custom elements (Object.defineProperty fallback):** Overrides the property
- * descriptor on the target instance with a reactive getter (and optional setter for
- * two-way binding). The original descriptor is restored on cleanup. In DEV_MODE, logs
- * a warning if the descriptor is non-configurable and the binding cannot be installed.
- *
- * Scope: custom elements only (elements whose `localName` contains a hyphen).
- * For plain HTML elements, use `setProperty()` instead.
+ * Scope: Le Truc components only (targets whose properties are Slot-backed).
+ * For non-Le Truc custom elements or plain HTML elements, use `setProperty()`
+ * instead — it goes through the element's public setter and is always correct
+ * regardless of the child's internal framework.
  *
  * @since 0.15.0
  * @param {PassedProps<P, Q>} props - Reactive values to pass
@@ -88,16 +88,10 @@ const pass =
 					continue
 				}
 
-				// Resolve the reactive to a signal
-				const applied =
-					isFunction(reactive) && reactive.length === 1
-						? reactive(target)
-						: reactive
-				const isArray = Array.isArray(applied) && applied.length === 2
-				const signal = toSignal(isArray ? applied[0] : applied)
+				const signal = toSignal(reactive)
 				if (!signal) continue
 
-				// Path A: Slot-backed (Le Truc component) — replace and restore on cleanup
+				// Slot-backed (Le Truc component) — replace and restore on cleanup
 				const slot = signals[prop]
 				if (isSlot(slot)) {
 					const original = slot.current()
@@ -106,34 +100,10 @@ const pass =
 					continue
 				}
 
-				// Path B: Object.defineProperty fallback for other custom elements
-				const descriptor =
-					Object.getOwnPropertyDescriptor(target, prop) ??
-					Object.getOwnPropertyDescriptor(Object.getPrototypeOf(target), prop)
-
-				if (!descriptor) continue
-
-				if (!descriptor.configurable) {
-					if (DEV_MODE)
-						console[LOG_WARN](
-							`pass(): property '${prop}' on ${targetName} has a non-configurable descriptor — binding skipped`,
-						)
-					continue
-				}
-
-				// Install reactive getter (and optional setter for two-way binding)
-				const setter = isArray
-					? (applied[1] as (value: unknown) => void)
-					: undefined
-				Object.defineProperty(target, prop, {
-					get: () => signal.get(),
-					set: setter,
-					configurable: true,
-					enumerable: descriptor.enumerable ?? true,
-				})
-
-				// Restore original descriptor on cleanup
-				cleanups.push(() => Object.defineProperty(target, prop, descriptor))
+				if (DEV_MODE)
+					console[LOG_WARN](
+						`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`,
+					)
 			}
 
 			if (cleanups.length)
