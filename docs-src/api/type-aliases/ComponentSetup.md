@@ -2,7 +2,7 @@
 
 > **ComponentSetup**\<`P`, `U`\> = (`ui`) => [`Effects`](Effects.md)\<`P`, [`ComponentUI`](ComponentUI.md)\<`P`, `U`\>\>
 
-Defined in: [src/component.ts:45](https://github.com/zeixcom/le-truc/blob/bd432f985e61e9e2dae7b18991cbac4902b95d05/src/component.ts#L45)
+Defined in: [src/component.ts:45](https://github.com/zeixcom/le-truc/blob/ad10154c718841d91c46c4591c11dba351180731/src/component.ts#L45)
 
 #### Type Parameters
 

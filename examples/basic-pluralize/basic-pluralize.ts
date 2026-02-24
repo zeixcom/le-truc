@@ -1,5 +1,6 @@
 import {
 	asInteger,
+	asParser,
 	type Component,
 	defineComponent,
 	setText,
@@ -39,10 +40,10 @@ const FALLBACK_LOCALE = 'en'
  */
 const asPositiveInteger =
 	() =>
-	<U extends UI>(ui: U, value: string | null | undefined) => {
+	asParser(<U extends UI>(ui: U, value: string | null | undefined) => {
 		const parsed = asInteger()(ui, value)
 		return parsed < 0 ? 0 : parsed
-	}
+	})
 
 export default defineComponent<BasicPluralizeProps, BasicPluralizeUI>(
 	'basic-pluralize',
