@@ -1,5 +1,5 @@
 import { createEffect, match } from '@zeix/cause-effect'
-import { API_DIR, PAGES_DIR } from '../config'
+import { API_DIR, PAGES_DIR, ROOT } from '../config'
 import { libraryScripts } from '../file-signals'
 import {
 	calculateFileHash,
@@ -180,10 +180,11 @@ export const apiEffect = () => {
 					console.log('📚 Rebuilding API documentation...')
 
 					// Generate API docs using TypeDoc (async)
-					// Configuration is in typedoc.json
+					// Configuration is in typedoc.json at project root
 					const proc = Bun.spawn(['typedoc'], {
 						stdout: 'inherit',
 						stderr: 'inherit',
+						cwd: ROOT,
 					})
 					const exitCode = await proc.exited
 

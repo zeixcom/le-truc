@@ -1,30 +1,35 @@
+import { join } from 'path'
+
 /**
  * Development server configuration
  */
 const BASE_URL = 'https://zeixcom.github.io/le-truc'
 
+// Absolute path to project root — avoids relying on process.chdir
+const ROOT = join(import.meta.dir, '..')
+
 // Path constants
-const SRC_DIR = './src'
+const SRC_DIR = join(ROOT, 'src')
 
-const COMPONENTS_DIR = './examples'
-const CSS_FILE = './examples/main.css'
-const TS_FILE = './examples/main.ts'
+const COMPONENTS_DIR = join(ROOT, 'examples')
+const CSS_FILE = join(ROOT, 'examples/main.css')
+const TS_FILE = join(ROOT, 'examples/main.ts')
 
-const TEMPLATES_DIR = './server/templates'
+const TEMPLATES_DIR = join(ROOT, 'server/templates')
 
-const INPUT_DIR = './docs-src'
-const PAGES_DIR = './docs-src/pages'
-const API_DIR = './docs-src/api'
-const LAYOUTS_DIR = './docs-src/layouts'
-const INCLUDES_DIR = './docs-src/includes'
-const MENU_FILE = './docs-src/includes/menu.html'
+const INPUT_DIR = join(ROOT, 'docs-src')
+const PAGES_DIR = join(ROOT, 'docs-src/pages')
+const API_DIR = join(ROOT, 'docs-src/api')
+const LAYOUTS_DIR = join(ROOT, 'docs-src/layouts')
+const INCLUDES_DIR = join(ROOT, 'docs-src/includes')
+const MENU_FILE = join(ROOT, 'docs-src/includes/menu.html')
 
-const OUTPUT_DIR = './docs'
-const ASSETS_DIR = './docs/assets'
-const EXAMPLES_DIR = './docs/examples'
-const SOURCES_DIR = './docs/sources'
-const TEST_DIR = './docs/test'
-const SITEMAP_FILE = './docs/sitemap.xml'
+const OUTPUT_DIR = join(ROOT, 'docs')
+const ASSETS_DIR = join(ROOT, 'docs/assets')
+const EXAMPLES_DIR = join(ROOT, 'docs/examples')
+const SOURCES_DIR = join(ROOT, 'docs/sources')
+const TEST_DIR = join(ROOT, 'docs/test')
+const SITEMAP_FILE = join(ROOT, 'docs/sitemap.xml')
 
 // Page ordering configuration
 const PAGE_ORDER = [
@@ -102,6 +107,7 @@ const COMPRESSIBLE_TYPES = [
 ] as const
 
 export {
+	ROOT,
 	BASE_URL,
 	SRC_DIR,
 	COMPONENTS_DIR,

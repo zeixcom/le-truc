@@ -1,4 +1,5 @@
 import { createEffect, match } from '@zeix/cause-effect'
+import { relative } from 'path'
 import { COMPONENTS_DIR, TEST_DIR } from '../config'
 import { componentMocks } from '../file-signals'
 import { getFilePath, writeFileSafe } from '../io'
@@ -6,9 +7,8 @@ import { getFilePath, writeFileSafe } from '../io'
 /* === Internal Functions === */
 
 export const getMockOutputPath = (filePath: string): string => {
-	const prefix = getFilePath(COMPONENTS_DIR) + '/'
-	const relative = filePath.replace(prefix, '')
-	return getFilePath(TEST_DIR, relative)
+	const rel = relative(COMPONENTS_DIR, filePath)
+	return getFilePath(TEST_DIR, rel)
 }
 
 /* === Exported Effect === */

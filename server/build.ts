@@ -11,7 +11,6 @@ import { pagesEffect } from './effects/pages'
 import { serviceWorkerEffect } from './effects/service-worker'
 import { sitemapEffect } from './effects/sitemap'
 import { sourcesEffect } from './effects/sources'
-import { getFilePath } from './io'
 
 /**
  * Simple reactive build system orchestration with HMR integration
@@ -33,11 +32,6 @@ export async function build(
 	console.log(`🚀 Starting ${watch ? 'watch' : 'build'} mode...`)
 
 	try {
-		// Change to project root directory since config paths are relative to it
-		const projectRoot = getFilePath(import.meta.dir, '..')
-		process.chdir(projectRoot)
-		console.log(`📁 Working directory: ${process.cwd()}`)
-
 		// Initialize effects in order
 		// API docs should be generated first, then CSS/JS, then pages processing
 		console.log('🚀 Initializing effects...')
