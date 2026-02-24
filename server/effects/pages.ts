@@ -28,7 +28,11 @@ const getAssetHashes = async (): Promise<{ css: string; js: string }> => {
 
 const loadIncludes = async (html: string): Promise<string> => {
 	const includeRegex = /{{\s*include\s+'(.+?)'\s*}}/g
-	let result = html
+
+	// Collect all matches with their positions first, then apply replacements
+	// from right to left so earlier offsets remain valid.
+	const replacements: { start: number; end: number; replacement: string }[] =
+		[]
 	let match: RegExpExecArray | null
 
 	while ((match = includeRegex.exec(html)) !== null) {
@@ -37,11 +41,26 @@ const loadIncludes = async (html: string): Promise<string> => {
 			const includeContent = await getFileContent(
 				getFilePath(INCLUDES_DIR, filename),
 			)
-			result = result.replace(fullMatch, includeContent)
+			replacements.push({
+				start: match.index,
+				end: match.index + fullMatch.length,
+				replacement: includeContent,
+			})
 		} catch (error) {
 			console.warn(`Failed to load include ${filename}:`, error)
-			result = result.replace(fullMatch, '')
+			replacements.push({
+				start: match.index,
+				end: match.index + fullMatch.length,
+				replacement: '',
+			})
 		}
+	}
+
+	// Apply replacements right-to-left so earlier positions stay valid.
+	let result = html
+	for (let i = replacements.length - 1; i >= 0; i--) {
+		const { start, end, replacement } = replacements[i]
+		result = result.slice(0, start) + replacement + result.slice(end)
 	}
 
 	return result

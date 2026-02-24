@@ -84,7 +84,7 @@ const processApiFile = async (file: FileInfo): Promise<void> => {
 /* === Exported Functions === */
 
 // Exported for testing
-export { stripBreadcrumbs, highlightCodeBlocks }
+export { stripBreadcrumbs }
 
 export const apiPagesEffect = () =>
 	createEffect(() => {
