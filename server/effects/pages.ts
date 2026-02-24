@@ -66,6 +66,46 @@ const loadIncludes = async (html: string): Promise<string> => {
 	return result
 }
 
+const API_KIND_MAP: Record<string, string> = {
+	functions: 'Function',
+	classes: 'Class',
+	'type-aliases': 'Type Alias',
+	variables: 'Variable',
+	interfaces: 'Interface',
+	enumerations: 'Enumeration',
+}
+
+/** Extract h2/h3 headings from HTML and build a nav list for TOC */
+const buildToc = (htmlContent: string): string => {
+	const headingRegex = /<h([23])[^>]*id="([^"]*)"[^>]*>([\s\S]*?)<\/h[23]>/gi
+	const items: string[] = []
+	let match: RegExpExecArray | null
+	while ((match = headingRegex.exec(htmlContent)) !== null) {
+		const level = match[1]
+		const id = match[2]
+		// Strip inner tags to get plain text
+		const text = match[3].replace(/<[^>]+>/g, '').trim()
+		const indent = level === '3' ? ' style="padding-left:1rem"' : ''
+		items.push(`<a href="#${id}"${indent}>${text}</a>`)
+	}
+	return items.length > 0 ? `<nav>${items.join('\n')}</nav>` : ''
+}
+
+/** Compute api-category, api-name, api-kind for api layout pages */
+const getApiVariables = (
+	relativePath: string,
+): { 'api-category': string; 'api-name': string; 'api-kind': string } => {
+	// relativePath e.g. "api/functions/defineComponent.md"
+	const parts = relativePath.replace(/\\/g, '/').replace(/\.md$/, '').split('/')
+	const category = parts[1] || ''
+	const name = parts[2] || ''
+	return {
+		'api-category': category,
+		'api-name': name,
+		'api-kind': API_KIND_MAP[category] || category,
+	}
+}
+
 const analyzePageForPreloads = (htmlContent: string): string[] => {
 	const preloads: string[] = []
 
@@ -114,6 +154,7 @@ const applyTemplate = async (
 			'js-hash': assetHashes.js,
 			'performance-hints': performanceHintsHtml,
 			'additional-preloads': additionalPreloads.join('\n\t\t'),
+			toc: buildToc(processedFile.htmlContent),
 			// Convert metadata values to strings
 			...Object.fromEntries(
 				Object.entries(processedFile.metadata).map(([key, value]) => [
@@ -121,6 +162,10 @@ const applyTemplate = async (
 					String(value || ''),
 				]),
 			),
+			// API layout variables
+			...(layoutName === 'api'
+				? getApiVariables(processedFile.relativePath)
+				: {}),
 		}
 
 		return layout.replace(/{{\s*(.*?)\s*}}/g, (_, key) => {
