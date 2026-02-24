@@ -177,11 +177,11 @@ const docsMarkdown: {
 		for (const [path, file] of files) {
 			try {
 				// Calculate relative path from pages directory
-				const pagesDir = PAGES_DIR.replace(/^\.\//, '')
-				const relativePath = path
-					.replace(PAGES_DIR + '/', '')
-					.replace(pagesDir + '/', '')
-					.replace(/\\/g, '/')
+				const relativePath = getRelativePath(PAGES_DIR, path)?.replace(
+					/\\/g,
+					'/',
+				)
+				if (!relativePath) continue
 
 				// Calculate path info
 				const pathParts = relativePath.split('/')
