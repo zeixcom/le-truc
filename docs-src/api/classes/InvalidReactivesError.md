@@ -1,6 +1,6 @@
 ### Class: InvalidReactivesError
 
-Defined in: [src/errors.ts:120](https://github.com/zeixcom/le-truc/blob/a15d81f5442bf8607f9db7d5c4ecfccdb568a946/src/errors.ts#L120)
+Defined in: [src/errors.ts:120](https://github.com/zeixcom/le-truc/blob/d3151c8acd4577999007fad73e21cf0cc45337e4/src/errors.ts#L120)
 
 Error thrown when reactives passed to a component are invalid
 
@@ -18,7 +18,7 @@ Error thrown when reactives passed to a component are invalid
 
 > **new InvalidReactivesError**(`host`, `target`, `reactives`): `InvalidReactivesError`
 
-Defined in: [src/errors.ts:126](https://github.com/zeixcom/le-truc/blob/a15d81f5442bf8607f9db7d5c4ecfccdb568a946/src/errors.ts#L126)
+Defined in: [src/errors.ts:126](https://github.com/zeixcom/le-truc/blob/d3151c8acd4577999007fad73e21cf0cc45337e4/src/errors.ts#L126)
 
 ###### Parameters
 
