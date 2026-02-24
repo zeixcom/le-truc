@@ -2,7 +2,7 @@
 
 > **Reactive**\<`T`, `P`, `E`\> = keyof `P` \| [`Signal`](Signal.md)\<`T` & `object`\> \| (`target`) => `T` \| `null` \| `undefined`
 
-Defined in: [src/effects.ts:37](https://github.com/zeixcom/le-truc/blob/216682a13a682782a7a31b91ce98c0ec9f53511a/src/effects.ts#L37)
+Defined in: [src/effects.ts:37](https://github.com/zeixcom/le-truc/blob/86fb9468cbc91aefb5ba2e30aa8cbb9b82db97bb/src/effects.ts#L37)
 
 #### Type Parameters
 

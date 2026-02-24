@@ -1,4 +1,5 @@
 import { createEffect, match } from '@zeix/cause-effect'
+import pkg from '../../package.json'
 import { ASSETS_DIR, INCLUDES_DIR, LAYOUTS_DIR, OUTPUT_DIR } from '../config'
 import { docsMarkdown, type ProcessedMarkdownFile } from '../file-signals'
 import {
@@ -31,8 +32,7 @@ const loadIncludes = async (html: string): Promise<string> => {
 
 	// Collect all matches with their positions first, then apply replacements
 	// from right to left so earlier offsets remain valid.
-	const replacements: { start: number; end: number; replacement: string }[] =
-		[]
+	const replacements: { start: number; end: number; replacement: string }[] = []
 	let match: RegExpExecArray | null
 
 	while ((match = includeRegex.exec(html)) !== null) {
@@ -150,6 +150,7 @@ const applyTemplate = async (
 			section: processedFile.section || '',
 			'base-path': processedFile.basePath,
 			title: processedFile.title,
+			version: pkg.version,
 			'css-hash': assetHashes.css,
 			'js-hash': assetHashes.js,
 			'performance-hints': performanceHintsHtml,
@@ -182,7 +183,9 @@ const applyTemplate = async (
 
 export const pagesEffect = () => {
 	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => { resolve = res })
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
 	const cleanup = createEffect(() => {
 		match([docsMarkdown.fullyProcessed], {
 			ok: async ([processedFiles]) => {

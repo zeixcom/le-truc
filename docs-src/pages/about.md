@@ -44,7 +44,7 @@ A copy of the license can be found in the [LICENSE](https://github.com/zeixcom/l
 
 ## Version History
 
-### Current Version: 0.16.2
+### Current Version: {{ version }}
 
 {% callout .caution %}
 
