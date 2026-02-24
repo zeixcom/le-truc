@@ -1,5 +1,5 @@
 <!-- Default example - tests basic loading functionality -->
-<module-lazyload src="../test/module-lazyload/mocks/simple-text.html">
+<module-lazyload src="./test/module-lazyload/mocks/simple-text.html">
 	<card-callout>
 		<p class="loading" role="status">Loading...</p>
 		<p class="error" role="alert" aria-live="assertive" hidden></p>
@@ -12,7 +12,7 @@
 <!-- Complex content test - tests loading of components and styles -->
 <module-lazyload
 	id="complex-content-test"
-	src="../test/module-lazyload/mocks/with-styles.html"
+	src="./test/module-lazyload/mocks/with-styles.html"
 >
 	<card-callout>
 		<p class="loading" role="status">Loading styled content...</p>
@@ -26,7 +26,7 @@
 <!-- Nested components test - tests initialization of nested custom components -->
 <module-lazyload
 	id="nested-components-test"
-	src="../test/module-lazyload/mocks/nested-components.html"
+	src="./test/module-lazyload/mocks/nested-components.html"
 >
 	<card-callout>
 		<p class="loading" role="status">Loading nested components...</p>
@@ -40,7 +40,7 @@
 <!-- Original complex snippet test - tests the existing shake-hands component -->
 <module-lazyload
 	id="original-snippet-test"
-	src="../test/module-lazyload/mocks/snippet.html"
+	src="./test/module-lazyload/mocks/snippet.html"
 	allow-scripts
 >
 	<card-callout>
@@ -63,7 +63,7 @@
 <!-- Empty content test - tests handling of empty/whitespace responses -->
 <module-lazyload
 	id="empty-content-test"
-	src="../test/module-lazyload/mocks/empty.html"
+	src="./test/module-lazyload/mocks/empty.html"
 >
 	<card-callout>
 		<p class="loading" role="status">Loading empty content...</p>
@@ -88,7 +88,7 @@
 <!-- 404 error test - tests error handling for missing files -->
 <module-lazyload
 	id="not-found-test"
-	src="../test/module-lazyload/mocks/does-not-exist.html"
+	src="./test/module-lazyload/mocks/does-not-exist.html"
 >
 	<card-callout>
 		<p class="loading" role="status">Loading non-existent file...</p>
@@ -135,7 +135,7 @@
 <!-- Missing elements test - tests graceful handling when required elements are missing -->
 <module-lazyload
 	id="missing-elements-test"
-	src="../test/module-lazyload/simple-text.html"
+	src="./test/module-lazyload/simple-text.html"
 >
 	<!-- No card-callout wrapper -->
 	<p class="loading" role="status">Loading without wrapper...</p>
@@ -148,7 +148,7 @@
 <!-- Recursive loading test - tests prevention of recursive loading -->
 <module-lazyload
 	id="recursive-test"
-	src="../test/module-lazyload/mocks/recursive.html"
+	src="./test/module-lazyload/mocks/recursive.html"
 >
 	<card-callout>
 		<p class="loading" role="status">Loading recursive content...</p>

@@ -129,7 +129,7 @@ test.describe('form-combobox component', () => {
 			// Listbox should have src attribute for loading
 			await expect(listbox).toHaveAttribute(
 				'src',
-				'/test/form-listbox/mocks/timezones.json',
+				'./test/form-listbox/mocks/timezones.json',
 			)
 		})
 	})
@@ -218,9 +218,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement &&
-					listboxElement.options &&
-					listboxElement.options.length > 0
+					listboxElement
+					&& listboxElement.options
+					&& listboxElement.options.length > 0
 				)
 			})
 
@@ -268,9 +268,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement &&
-					listboxElement.options &&
-					listboxElement.options.length > 0
+					listboxElement
+					&& listboxElement.options
+					&& listboxElement.options.length > 0
 				)
 			})
 
@@ -303,9 +303,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement &&
-					listboxElement.options &&
-					listboxElement.options.length > 0
+					listboxElement
+					&& listboxElement.options
+					&& listboxElement.options.length > 0
 				)
 			})
 
@@ -341,9 +341,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement &&
-					listboxElement.options &&
-					listboxElement.options.length > 0
+					listboxElement
+					&& listboxElement.options
+					&& listboxElement.options.length > 0
 				)
 			})
 
@@ -999,7 +999,8 @@ test.describe('pass() Slot cleanup and restore', () => {
 		await page.waitForTimeout(50)
 
 		const filterBefore = await page.evaluate(() => {
-			return (document.querySelector('form-combobox form-listbox') as any)?.filter
+			return (document.querySelector('form-combobox form-listbox') as any)
+				?.filter
 		})
 		expect(filterBefore).toBe('New')
 
