@@ -11,7 +11,6 @@ import { pagesEffect } from './effects/pages'
 import { serviceWorkerEffect } from './effects/service-worker'
 import { sitemapEffect } from './effects/sitemap'
 import { sourcesEffect } from './effects/sources'
-import { getFilePath } from './io'
 
 /**
  * Simple reactive build system orchestration with HMR integration
@@ -20,19 +19,6 @@ import { getFilePath } from './io'
  * in the correct order for both initial builds and incremental updates.
  * In development mode, it also integrates with HMR for live reloading.
  */
-
-// Global reference to HMR broadcast function
-let hmrBroadcast: ((message: any) => void) | null = null
-
-export function setHMRBroadcast(broadcast: (message: any) => void) {
-	hmrBroadcast = broadcast
-}
-
-function notifyHMR(type: string, message?: string, path?: string) {
-	if (hmrBroadcast && process.env.NODE_ENV !== 'production') {
-		hmrBroadcast({ type, message, path })
-	}
-}
 
 export async function build(
 	options: {
@@ -45,69 +31,68 @@ export async function build(
 
 	console.log(`🚀 Starting ${watch ? 'watch' : 'build'} mode...`)
 
-	// Set up HMR broadcast if provided
-	if (broadcast) {
-		setHMRBroadcast(broadcast)
-	}
-
 	try {
-		// Change to project root directory since config paths are relative to it
-		const projectRoot = getFilePath(import.meta.dir, '..')
-		process.chdir(projectRoot)
-		console.log(`📁 Working directory: ${process.cwd()}`)
-
-		// Wait a moment for file watchers to initialize
-		await new Promise(resolve => setTimeout(resolve, 1000))
-
 		// Initialize effects in order
 		// API docs should be generated first, then CSS/JS, then pages processing
 		console.log('🚀 Initializing effects...')
 
-		const apiCleanup = apiEffect()
-		const apiPagesCleanup = apiPagesEffect()
-		const cssCleanup = cssEffect()
-		const jsCleanup = jsEffect()
-		const serviceWorkerCleanup = serviceWorkerEffect()
-		const examplesCleanup = examplesEffect()
-		const mocksCleanup = mocksEffect()
-		const sourcesCleanup = sourcesEffect()
-		const pagesCleanup = pagesEffect()
-		const menuCleanup = menuEffect()
-		const sitemapCleanup = sitemapEffect()
+		const api = apiEffect()
+		const apiPages = apiPagesEffect()
+		const css = cssEffect()
+		const js = jsEffect()
+		const sw = serviceWorkerEffect()
+		const examples = examplesEffect()
+		const mocks = mocksEffect()
+		const sources = sourcesEffect()
+		const pages = pagesEffect()
+		const menuEff = menuEffect()
+		const sitemap = sitemapEffect()
 
-		// Wait a moment for initial processing to complete
-		await new Promise(resolve => setTimeout(resolve, 500))
+		// Wait for all effects to complete their first run
+		await Promise.all([
+			api.ready,
+			apiPages.ready,
+			css.ready,
+			js.ready,
+			sw.ready,
+			examples.ready,
+			mocks.ready,
+			sources.ready,
+			pages.ready,
+			menuEff.ready,
+			sitemap.ready,
+		])
 
 		const duration = performance.now() - startTime
 		console.log(`✅ Build completed in ${duration.toFixed(2)}ms`)
 
 		// Notify HMR clients of successful build and trigger reload
-		if (watch) {
-			notifyHMR('build-success')
-			hmrBroadcast?.('reload')
+		if (watch && broadcast) {
+			broadcast({ type: 'build-success' })
+			broadcast('reload')
 		}
 
 		// Return cleanup function for graceful shutdown
 		return () => {
-			apiCleanup?.()
-			apiPagesCleanup?.()
-			cssCleanup?.()
-			jsCleanup?.()
-			serviceWorkerCleanup?.()
-			examplesCleanup?.()
-			mocksCleanup?.()
-			sourcesCleanup?.()
-			pagesCleanup?.()
-			menuCleanup?.()
-			sitemapCleanup?.()
+			api.cleanup?.()
+			apiPages.cleanup?.()
+			css.cleanup?.()
+			js.cleanup?.()
+			sw.cleanup?.()
+			examples.cleanup?.()
+			mocks.cleanup?.()
+			sources.cleanup?.()
+			pages.cleanup?.()
+			menuEff.cleanup?.()
+			sitemap.cleanup?.()
 		}
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		console.error('❌ Build failed:', errorMessage)
 
 		// Notify HMR clients of build error
-		if (watch) {
-			notifyHMR('build-error', errorMessage)
+		if (watch && broadcast) {
+			broadcast({ type: 'build-error', message: errorMessage })
 		}
 
 		if (!watch) {

@@ -16,6 +16,7 @@ import {
 	extractTextFromNode,
 	generateId,
 	generateSlug,
+	html,
 	rawText,
 	splitContentBySeparator,
 } from '../markdoc-helpers'
@@ -393,5 +394,57 @@ describe('rawText', () => {
 		const marker = rawText(content)
 
 		expect(marker.content).toBe(content)
+	})
+})
+
+/* === §10.5 html tagged template literal (Markdoc version) === */
+
+describe('html (Markdoc template literal)', () => {
+	test('single element returns a Tag with the correct name', () => {
+		const result = html`<div>hello</div>`
+		expect(result).toBeInstanceOf(Tag)
+		expect((result as Tag).name).toBe('div')
+	})
+
+	test('nested elements produce correct child Tags', () => {
+		const result = html`<div><p>hi</p></div>` as Tag
+		expect(result.name).toBe('div')
+		const child = result.children[0] as Tag
+		expect(child).toBeInstanceOf(Tag)
+		expect(child.name).toBe('p')
+	})
+
+	test('attributes are parsed from HTML', () => {
+		const result = html`<div class="foo" id="bar"></div>` as Tag
+		expect(result.attributes.class).toBe('foo')
+		expect(result.attributes.id).toBe('bar')
+	})
+
+	test('string interpolation in children is included', () => {
+		const text = 'hello'
+		const result = html`<p>${text}</p>` as Tag
+		expect(result.children).toContain('hello')
+	})
+
+	test('Tag interpolation in children is included', () => {
+		const inner = new Tag('span', {}, ['inner'])
+		const result = html`<div>${inner}</div>` as Tag
+		expect(result.children).toContain(inner)
+	})
+
+	test('self-closing elements produce Tag with empty children', () => {
+		const result = html`<input type="text" />` as Tag
+		expect(result).toBeInstanceOf(Tag)
+		expect(result.name).toBe('input')
+		expect(result.children).toHaveLength(0)
+	})
+
+	test('invalid HTML returns an error callout Tag', () => {
+		// Missing closing tag triggers the error handler
+		const result = html`<div><p>unclosed` as Tag
+		expect(result).toBeInstanceOf(Tag)
+		// Should be an error callout (card-callout with danger class)
+		expect(result.name).toBe('card-callout')
+		expect(result.attributes.class).toBe('danger')
 	})
 })

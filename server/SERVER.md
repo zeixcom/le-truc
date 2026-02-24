@@ -36,20 +36,9 @@ The system has two cooperating halves — a **reactive build pipeline** and an *
 ### How `dev.ts` Wires Them Together
 
 1. Imports `serve.ts` — which starts `Bun.serve()` as a side-effect on import
-2. Calls `setHMRBroadcast(broadcastToHMRClients)` to connect build notifications to WebSocket clients
-3. Calls `build({ watch: true })` to start the reactive pipeline with file watching
+2. Passes `broadcastToHMRClients` from `serve.ts` directly as `hmrBroadcast` to `build()`
+3. Calls `build({ watch: true, hmrBroadcast })` to start the reactive pipeline with file watching
 4. Handles `SIGINT`/`SIGTERM` for graceful shutdown
-
-### Two Independent File Watchers
-
-The system has two separate file-watching mechanisms:
-
-| Watcher | Location | Purpose |
-|---------|----------|---------|
-| **Build watcher** | `file-watcher.ts` via `@zeix/cause-effect` `createList` | Feeds reactive signals; triggers rebuilds through the effect graph |
-| **Server watcher** | `serve.ts` `setupFileWatcher()` via Node `fs.watch` | Broadcasts `file-changed` + `reload` to HMR WebSocket clients |
-
-The build watcher drives correctness (rebuilds); the server watcher drives liveness (browser reload).
 
 ## Scripts Reference
 
@@ -75,7 +64,7 @@ The build system is powered by `@zeix/cause-effect` reactive signals:
 
 - **`file-watcher.ts`** — `watchFiles(directory, include, exclude?)` creates a reactive `List<FileInfo>` backed by `Bun.Glob` scanning. Under non-Playwright conditions, attaches `fs.watch` for incremental updates via the `watched` option of `createList`.
 - **`file-signals.ts`** — Defines all source signals and the Markdoc processing pipeline.
-- **`build.ts`** — Orchestrates effects; plumbs HMR notifications via `setHMRBroadcast` / `notifyHMR`.
+- **`build.ts`** — Orchestrates effects; forwards HMR notifications via `options.hmrBroadcast`.
 
 ### File Signals
 
@@ -104,7 +93,7 @@ sources (List<FileInfo>)
 
 ### Effects
 
-Each effect calls `createEffect(() => match([...signals], { ok, err }))` and returns a cleanup function.
+Each effect factory calls `createEffect(() => match([...signals], { ok, err }))` and returns `{ cleanup: Cleanup, ready: Promise<void> }`. `ready` resolves after the first `ok`/`err` handler completes; `build()` awaits all `ready` promises to know when the initial build is done.
 
 | Effect | Depends On | Output | Tool |
 |--------|-----------|--------|------|
@@ -114,6 +103,7 @@ Each effect calls `createEffect(() => match([...signals], { ok, err }))` and ret
 | `jsEffect` | `docsScripts`, `libraryScripts`, `componentScripts` | `docs/assets/main.js` + sourcemap | `bun build` |
 | `serviceWorkerEffect` | All style + script sources | `docs/sw.js` | Template generation |
 | `examplesEffect` | `componentMarkdown`, `componentMarkup` | `docs/examples/<name>.html` | Markdoc + Shiki |
+| `mocksEffect` | `componentMocks.sources` | `docs/test/<component>/mocks/*` | File copy |
 | `sourcesEffect` | `componentMarkup`, `componentStyles`, `componentScripts` | `docs/sources/<name>.html` | Shiki-highlighted tab groups |
 | `pagesEffect` | `docsMarkdown.fullyProcessed` | `docs/**/*.html` | Layout templating |
 | `menuEffect` | `docsMarkdown.pageInfos` | `docs-src/includes/menu.html` | Template generation |
@@ -135,6 +125,8 @@ docs/
 │   └── <name>.html       # Pre-built example pages
 ├── sources/
 │   └── <name>.html       # Syntax-highlighted source tab groups
+├── test/
+│   └── <component>/mocks/ # Copied mock files for component tests
 ├── <page>.html           # Documentation pages
 ├── sw.js                 # Service worker
 └── sitemap.xml           # SEO sitemap
@@ -180,6 +172,7 @@ Configured in `markdoc.config.ts`:
 | `{% section %}` | `<section>` | Styled content section |
 | `{% hero %}` | `<section-hero>` | Hero section with extracted heading and TOC placeholder |
 | `{% tabgroup %}` | `<module-tabgroup>` | ARIA-compliant tabbed content |
+| `{% table %}` | `<table>` | Markdown table with optional caption |
 
 Note: `link.markdoc.ts` is registered as a node override in `markdoc.config.ts` and handles local `.md` → `.html` link conversion during Markdoc transform.
 
@@ -220,6 +213,7 @@ The `fence` schema override provides:
 | `GET /api/:category/:page` | API doc fragment | `docs/api/<category>/<page>` |
 | `GET /assets/:file` | Static assets | `docs/assets/` |
 | `GET /examples/:component` | Pre-built example HTML | `docs/examples/` |
+| `GET /sources/:file` | Source code fragments | `docs/sources/` |
 | `GET /test/:component/mocks/:mock` | Test mock files | `examples/<component>/mocks/` |
 | `GET /test/:component` | Component test page | `docs-src/layouts/test.html` + `examples/<component>/<component>.html` |
 | `GET /:page` | Documentation page | `docs/<page>.html` |
@@ -242,7 +236,7 @@ Layouts live in `docs-src/layouts/`:
 
 Templates use `{{ variable }}` substitution and `{{ include 'file' }}` directives (resolved from `docs-src/includes/`).
 
-Layout files are cached in a `Map<string, string>` in `serve.ts` for performance.
+Layout files are cached in a `Map<string, string>` in `serve.ts` for performance. In development mode the cache is bypassed so layout changes take effect immediately without a server restart.
 
 ### Static File Handling
 
@@ -265,9 +259,8 @@ The `handleStaticFile` function:
 
 | Component | File | Role |
 |-----------|------|------|
-| WebSocket server | `serve.ts` | Manages client connections, broadcasts messages |
-| File watcher | `serve.ts` `setupFileWatcher()` | Detects changes, triggers reload broadcast |
-| Build integration | `build.ts` `setHMRBroadcast()` | Forwards build success/error to server |
+| WebSocket server | `serve.ts` | Manages client connections, broadcasts messages via `broadcastToHMRClients()` |
+| Build integration | `build.ts` `options.hmrBroadcast` | Calls the broadcast function passed in from `dev.ts` on build success/error |
 | Client script | `templates/hmr.ts` | Browser-side WebSocket client, injected into HTML |
 
 ### Message Protocol
@@ -309,7 +302,7 @@ hmrScriptTag({
 
 | File | Exports | Used By |
 |------|---------|---------|
-| `utils.ts` | `html`, `xml`, `css`, `js` tagged template literals; `escapeHtml`, `escapeXml`, `generateSlug`, `createOrderedSort`, validation helpers | All templates |
+| `utils.ts` | `html`, `xml`, `css`, `js` tagged template literals; `raw()` / `RawHtml` for pre-rendered content; `escapeHtml`, `escapeXml`, `generateSlug`, `createOrderedSort`, validation helpers | All templates |
 | `constants.ts` | `MIME_TYPES`, `RESOURCE_TYPE_MAP`, `PAGE_ORDER`, `SERVICE_WORKER_EVENTS`, `SITEMAP_PRIORITIES`, etc. | Config, templates |
 | `fragments.ts` | `tabButton`, `tabPanel`, `tabGroup`, `componentInfo` | `sourcesEffect` |
 | `hmr.ts` | `hmrClient()`, `hmrScriptTag()` | `serve.ts` |
@@ -339,13 +332,23 @@ The server has a test suite using **Bun's built-in test runner** (`bun:test`). T
 server/tests/
 ├── helpers/
 │   └── test-utils.ts              # Shared utilities (temp dirs, mocks, assertions)
+├── effects/
+│   ├── api-pages.test.ts          # stripBreadcrumbs, highlightCodeBlocks
+│   ├── api.test.ts                # parseGlobals, generateApiIndexMarkdown, sortCategories
+│   ├── examples.test.ts           # processExample
+│   ├── mocks.test.ts              # getMockOutputPath
+│   └── sources.test.ts            # generatePanels
 ├── io.test.ts                     # IO utilities
 ├── markdoc-constants.test.ts      # Attribute classes and constant definitions
 ├── markdoc-helpers.test.ts        # Node utilities, tag helpers, post-processing
 ├── schema/
 │   ├── fence.test.ts              # Code block schema
-│   └── heading.test.ts            # Heading schema
+│   ├── heading.test.ts            # Heading schema
+│   ├── listnav.test.ts            # Listnav schema
+│   ├── sources.test.ts            # Sources schema
+│   └── table.test.ts              # Table schema
 └── templates/
+    ├── fragments.test.ts           # Tab group fragments
     └── utils.test.ts              # Tagged template literals, escaping, validation
 ```
 
@@ -357,18 +360,27 @@ server/tests/
 | **Integration** | Minimal | Temp dirs | No | < 500 ms per test |
 | **Server** | Build pipeline | Temp dirs | localhost HTTP | < 2 s per test |
 
-### Current Coverage (P0 — highest priority)
+### Current Coverage
 
-| Test file | Tests | Module |
-|-----------|-------|--------|
-| `io.test.ts` | 39 | File hashing, paths, compression, safe writes |
-| `templates/utils.test.ts` | 95 | Tagged templates, escaping, slugs, sorting, validation |
-| `schema/fence.test.ts` | 28 | Code block transformation pipeline |
-| `markdoc-helpers.test.ts` | 45 | Node utilities, tag helpers, post-processing |
-| `markdoc-constants.test.ts` | 40 | Attribute classes, constant definitions |
-| `schema/heading.test.ts` | 29 | Heading levels, anchors, ID generation |
+| Test file | Module |
+|-----------|--------|
+| `io.test.ts` | File hashing, paths, compression, safe writes |
+| `templates/utils.test.ts` | Tagged templates, escaping, slugs, sorting, validation |
+| `templates/fragments.test.ts` | Tab group fragment generation |
+| `schema/fence.test.ts` | Code block transformation pipeline |
+| `schema/heading.test.ts` | Heading levels, anchors, ID generation |
+| `schema/listnav.test.ts` | Listnav schema rendering |
+| `schema/sources.test.ts` | Sources schema rendering |
+| `schema/table.test.ts` | Table schema rendering |
+| `markdoc-helpers.test.ts` | Node utilities, tag helpers, post-processing |
+| `markdoc-constants.test.ts` | Attribute classes, constant definitions |
+| `effects/api-pages.test.ts` | `stripBreadcrumbs`, `highlightCodeBlocks` |
+| `effects/api.test.ts` | `parseGlobals`, `generateApiIndexMarkdown`, `sortCategories` |
+| `effects/examples.test.ts` | `processExample` |
+| `effects/mocks.test.ts` | `getMockOutputPath` |
+| `effects/sources.test.ts` | `generatePanels` |
 
-**Total:** 276 tests, ~200 ms execution time.
+**Total:** 345 tests, ~500 ms execution time.
 
 ### Test Helpers
 
@@ -390,23 +402,27 @@ server/tests/
 
 ### Directory Constants
 
-| Constant | Path | Description |
-|----------|------|-------------|
-| `SRC_DIR` | `./src` | Library source |
-| `COMPONENTS_DIR` | `./examples` | Component examples |
-| `CSS_FILE` | `./examples/main.css` | CSS entry point |
-| `TS_FILE` | `./examples/main.ts` | JS entry point |
-| `TEMPLATES_DIR` | `./server/templates` | Template functions |
-| `INPUT_DIR` | `./docs-src` | Documentation source root |
-| `PAGES_DIR` | `./docs-src/pages` | Markdown pages |
-| `API_DIR` | `./docs-src/api` | TypeDoc output (intermediate) |
-| `LAYOUTS_DIR` | `./docs-src/layouts` | HTML layout templates |
-| `INCLUDES_DIR` | `./docs-src/includes` | Includable HTML fragments |
-| `MENU_FILE` | `./docs-src/includes/menu.html` | Generated menu |
-| `OUTPUT_DIR` | `./docs` | Final build output |
-| `ASSETS_DIR` | `./docs/assets` | Built assets |
-| `EXAMPLES_DIR` | `./docs/examples` | Built example pages |
-| `SOURCES_DIR` | `./docs/sources` | Highlighted source fragments |
+All path constants are **absolute paths** computed from `ROOT = join(import.meta.dir, '..')` at module load time, so the server never needs to `process.chdir`.
+
+| Constant | Path (relative to project root) | Description |
+|----------|--------------------------------|-------------|
+| `ROOT` | `.` | Project root (absolute) |
+| `SRC_DIR` | `src/` | Library source |
+| `COMPONENTS_DIR` | `examples/` | Component examples |
+| `CSS_FILE` | `examples/main.css` | CSS entry point |
+| `TS_FILE` | `examples/main.ts` | JS entry point |
+| `TEMPLATES_DIR` | `server/templates/` | Template functions |
+| `INPUT_DIR` | `docs-src/` | Documentation source root |
+| `PAGES_DIR` | `docs-src/pages/` | Markdown pages |
+| `API_DIR` | `docs-src/api/` | TypeDoc output (intermediate) |
+| `LAYOUTS_DIR` | `docs-src/layouts/` | HTML layout templates |
+| `INCLUDES_DIR` | `docs-src/includes/` | Includable HTML fragments |
+| `MENU_FILE` | `docs-src/includes/menu.html` | Generated menu |
+| `OUTPUT_DIR` | `docs/` | Final build output |
+| `ASSETS_DIR` | `docs/assets/` | Built assets |
+| `EXAMPLES_DIR` | `docs/examples/` | Built example pages |
+| `SOURCES_DIR` | `docs/sources/` | Highlighted source fragments |
+| `TEST_DIR` | `docs/test/` | Copied mock files for component tests |
 
 ### Page Ordering
 
@@ -440,7 +456,7 @@ server/tests/
 
 The API section is implemented end-to-end. `apiEffect` runs TypeDoc, parses `globals.md`, and generates `docs-src/pages/api.md` with a grouped `{% listnav %}` index. `apiPagesEffect` processes individual API Markdown files through the Markdoc + Shiki pipeline and writes HTML fragments to `docs/api/<category>/<name>.html`. The `api.html` layout is served for direct navigation; lazy-loaded fragments are fetched by `module-lazyload` via listnav selection.
 
-**Remaining:** The `api.html` template variables (`{{ api-category }}`, `{{ api-name }}`, `{{ api-kind }}`, `{{ toc }}`) are not yet populated in `effects/pages.ts`, so breadcrumbs and sidebar TOC are empty on direct API page navigation.
+The `api.html` template variables (`{{ api-category }}`, `{{ api-name }}`, `{{ api-kind }}`, `{{ toc }}`) are populated by `pagesEffect` in `effects/pages.ts` — breadcrumbs and sidebar TOC are filled on direct API page navigation.
 
 ### FAQ Section
 
@@ -452,6 +468,6 @@ Adding an FAQ section with collapsible question/answer blocks requires:
 
 ### Developer Experience
 
-- **Incremental TypeDoc.** `apiEffect` runs `typedoc` via `execSync` on every library source change, regenerating all API docs. For large APIs, this is slow. TypeDoc's `--watch` mode or incremental output could help.
+- **Incremental TypeDoc.** `apiEffect` runs `typedoc` via `Bun.spawn` on every library source change, regenerating all API docs. For large APIs, this is slow. TypeDoc's `--watch` mode or incremental output could help.
 - **Parallel effect execution.** Effects are registered sequentially in `build.ts`. Effects with independent dependency graphs (e.g., `cssEffect` and `sitemapEffect`) could run in parallel for faster builds.
 - **Error overlay improvements.** The HMR error overlay is a plain `div` injected into `document.body`. A more structured overlay with file/line info and dismiss functionality would improve the development experience.

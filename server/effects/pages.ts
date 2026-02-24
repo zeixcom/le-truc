@@ -1,4 +1,5 @@
 import { createEffect, match } from '@zeix/cause-effect'
+import pkg from '../../package.json'
 import { ASSETS_DIR, INCLUDES_DIR, LAYOUTS_DIR, OUTPUT_DIR } from '../config'
 import { docsMarkdown, type ProcessedMarkdownFile } from '../file-signals'
 import {
@@ -7,6 +8,7 @@ import {
 	getFilePath,
 	writeFileSafe,
 } from '../io'
+import { escapeHtml } from '../templates/utils'
 import { performanceHints } from '../templates/performance-hints'
 
 /* === Internal Functionals === */
@@ -28,7 +30,10 @@ const getAssetHashes = async (): Promise<{ css: string; js: string }> => {
 
 const loadIncludes = async (html: string): Promise<string> => {
 	const includeRegex = /{{\s*include\s+'(.+?)'\s*}}/g
-	let result = html
+
+	// Collect all matches with their positions first, then apply replacements
+	// from right to left so earlier offsets remain valid.
+	const replacements: { start: number; end: number; replacement: string }[] = []
 	let match: RegExpExecArray | null
 
 	while ((match = includeRegex.exec(html)) !== null) {
@@ -37,14 +42,70 @@ const loadIncludes = async (html: string): Promise<string> => {
 			const includeContent = await getFileContent(
 				getFilePath(INCLUDES_DIR, filename),
 			)
-			result = result.replace(fullMatch, includeContent)
+			replacements.push({
+				start: match.index,
+				end: match.index + fullMatch.length,
+				replacement: includeContent,
+			})
 		} catch (error) {
 			console.warn(`Failed to load include ${filename}:`, error)
-			result = result.replace(fullMatch, '')
+			replacements.push({
+				start: match.index,
+				end: match.index + fullMatch.length,
+				replacement: '',
+			})
 		}
 	}
 
+	// Apply replacements right-to-left so earlier positions stay valid.
+	let result = html
+	for (let i = replacements.length - 1; i >= 0; i--) {
+		const { start, end, replacement } = replacements[i]
+		result = result.slice(0, start) + replacement + result.slice(end)
+	}
+
 	return result
+}
+
+const API_KIND_MAP: Record<string, string> = {
+	functions: 'Function',
+	classes: 'Class',
+	'type-aliases': 'Type Alias',
+	variables: 'Variable',
+	interfaces: 'Interface',
+	enumerations: 'Enumeration',
+}
+
+/** Extract h2/h3 headings from HTML and build a nav list for TOC */
+const buildToc = (htmlContent: string): string => {
+	const headingRegex = /<h([23])[^>]*id="([^"]*)"[^>]*>([\s\S]*?)<\/h[23]>/gi
+	const items: string[] = []
+	let match: RegExpExecArray | null
+	while ((match = headingRegex.exec(htmlContent)) !== null) {
+		const level = match[1]
+		const id = escapeHtml(match[2])
+		// Normalize whitespace in heading text, then HTML-escape what remains
+		const rawText = match[3].replace(/\s+/g, ' ').trim()
+		const text = escapeHtml(rawText)
+		const indent = level === '3' ? ' style="padding-left:1rem"' : ''
+		items.push(`<a href="#${id}"${indent}>${text}</a>`)
+	}
+	return items.length > 0 ? `<nav>${items.join('\n')}</nav>` : ''
+}
+
+/** Compute api-category, api-name, api-kind for api layout pages */
+const getApiVariables = (
+	relativePath: string,
+): { 'api-category': string; 'api-name': string; 'api-kind': string } => {
+	// relativePath e.g. "api/functions/defineComponent.md"
+	const parts = relativePath.replace(/\\/g, '/').replace(/\.md$/, '').split('/')
+	const category = parts[1] || ''
+	const name = parts[2] || ''
+	return {
+		'api-category': category,
+		'api-name': name,
+		'api-kind': API_KIND_MAP[category] || category,
+	}
 }
 
 const analyzePageForPreloads = (htmlContent: string): string[] => {
@@ -91,10 +152,12 @@ const applyTemplate = async (
 			section: processedFile.section || '',
 			'base-path': processedFile.basePath,
 			title: processedFile.title,
+			version: pkg.version,
 			'css-hash': assetHashes.css,
 			'js-hash': assetHashes.js,
 			'performance-hints': performanceHintsHtml,
 			'additional-preloads': additionalPreloads.join('\n\t\t'),
+			toc: buildToc(processedFile.htmlContent),
 			// Convert metadata values to strings
 			...Object.fromEntries(
 				Object.entries(processedFile.metadata).map(([key, value]) => [
@@ -102,6 +165,10 @@ const applyTemplate = async (
 					String(value || ''),
 				]),
 			),
+			// API layout variables
+			...(layoutName === 'api'
+				? getApiVariables(processedFile.relativePath)
+				: {}),
 		}
 
 		return layout.replace(/{{\s*(.*?)\s*}}/g, (_, key) => {
@@ -116,8 +183,12 @@ const applyTemplate = async (
 	}
 }
 
-export const pagesEffect = () =>
-	createEffect(() => {
+export const pagesEffect = () => {
+	let resolve: (() => void) | undefined
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
+	const cleanup = createEffect(() => {
 		match([docsMarkdown.fullyProcessed], {
 			ok: async ([processedFiles]) => {
 				try {
@@ -164,10 +235,17 @@ export const pagesEffect = () =>
 					)
 				} catch (error) {
 					console.error('Failed to generate HTML pages:', error)
+				} finally {
+					resolve?.()
+					resolve = undefined
 				}
 			},
 			err: errors => {
 				console.error('Error in pages effect:', errors[0].message)
+				resolve?.()
+				resolve = undefined
 			},
 		})
 	})
+	return { cleanup, ready }
+}

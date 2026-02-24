@@ -5,7 +5,7 @@
  * Used by the fragment plugin to create tabbed interfaces for components.
  */
 
-import { createValidator, html } from './utils'
+import { createValidator, html, raw } from './utils'
 
 export interface PanelType {
 	type: 'html' | 'css' | 'js' | 'ts'
@@ -68,7 +68,7 @@ export function tabPanel({ name, panel }: TabPanelProps): string {
 				<span class="language">${panel.type}</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				${panel.content}
+				${raw(panel.content)}
 			</module-scrollarea>
 			<basic-button class="copy">
 				<button type="button" class="secondary small">
@@ -104,7 +104,7 @@ export function tabGroup(name: string, panels: PanelType[]): string {
 	}
 
 	return html` <module-tabgroup>
-		${tabList(name, panels)} ${tabPanels(name, panels)}
+		${raw(tabList(name, panels))} ${raw(tabPanels(name, panels))}
 	</module-tabgroup>`
 }
 

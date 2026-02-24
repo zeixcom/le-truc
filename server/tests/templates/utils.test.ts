@@ -19,6 +19,8 @@ import {
 	js,
 	mapSafe,
 	minify,
+	raw,
+	RawHtml,
 	requiresCrossorigin,
 	type SortableItem,
 	safeRender,
@@ -41,17 +43,22 @@ describe('html tagged template', () => {
 		expect(result).toBe('<p>Hello world</p>')
 	})
 
-	test('should not escape string values (strings are assumed safe)', () => {
+	test('should escape string values', () => {
 		const value = '<script>alert("xss")</script>'
 		const result = html`<div>${value}</div>`
-		// Strings are passed through directly, not escaped
-		expect(result).toBe('<div><script>alert("xss")</script></div>')
+		expect(result).toBe('<div>&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;</div>')
 	})
 
-	test('should not escape pre-escaped HTML strings', () => {
-		const safeHtml = '<strong>Bold</strong>'
+	test('should pass through RawHtml values unescaped', () => {
+		const safeHtml = raw('<strong>Bold</strong>')
 		const result = html`<div>${safeHtml}</div>`
 		expect(result).toBe('<div><strong>Bold</strong></div>')
+	})
+
+	test('raw() wraps a string in RawHtml', () => {
+		const wrapped = raw('<em>test</em>')
+		expect(wrapped).toBeInstanceOf(RawHtml)
+		expect(wrapped.value).toBe('<em>test</em>')
 	})
 
 	test('should handle arrays', () => {
@@ -94,11 +101,17 @@ describe('xml tagged template', () => {
 		expect(result).toBe('<item>Test</item>')
 	})
 
-	test('should not escape XML string values (strings are assumed safe)', () => {
-		const value = '<tag>&"\'</tag>'
+	test('should escape XML string values', () => {
+		const value = '<tag>&"\''
 		const result = xml`<item>${value}</item>`
-		// Strings are passed through directly, not escaped
-		expect(result).toContain('<tag>')
+		expect(result).toContain('&lt;tag&gt;')
+		expect(result).toContain('&amp;')
+	})
+
+	test('should pass through RawHtml values unescaped in xml', () => {
+		const fragment = raw('<nested>value</nested>')
+		const result = xml`<item>${fragment}</item>`
+		expect(result).toBe('<item><nested>value</nested></item>')
 	})
 
 	test('should handle arrays', () => {

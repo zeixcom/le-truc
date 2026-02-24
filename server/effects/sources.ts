@@ -57,8 +57,10 @@ export { generatePanels }
 
 /* === Exported Effect === */
 
-export const sourcesEffect = () =>
-	createEffect(() => {
+export const sourcesEffect = () => {
+	let resolve: (() => void) | undefined
+	const ready = new Promise<void>(res => { resolve = res })
+	const cleanup = createEffect(() => {
 		match(
 			[
 				componentMarkup.sources,
@@ -104,11 +106,18 @@ export const sourcesEffect = () =>
 						console.log('Source fragments successfully rebuilt')
 					} catch (error) {
 						console.error('Source fragments failed to rebuild:', String(error))
+					} finally {
+						resolve?.()
+						resolve = undefined
 					}
 				},
 				err: errors => {
 					console.error('Error in sources effect:', errors[0].message)
+					resolve?.()
+					resolve = undefined
 				},
 			},
 		)
 	})
+	return { cleanup, ready }
+}

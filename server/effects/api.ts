@@ -1,5 +1,5 @@
 import { createEffect, match } from '@zeix/cause-effect'
-import { API_DIR, PAGES_DIR } from '../config'
+import { API_DIR, PAGES_DIR, ROOT } from '../config'
 import { libraryScripts } from '../file-signals'
 import {
 	calculateFileHash,
@@ -163,8 +163,10 @@ export {
 }
 export type { ApiCategory }
 
-export const apiEffect = () =>
-	createEffect(() => {
+export const apiEffect = () => {
+	let resolve: (() => void) | undefined
+	const ready = new Promise<void>(res => { resolve = res })
+	const cleanup = createEffect(() => {
 		match([libraryScripts.sources], {
 			ok: async ([sources]) => {
 				try {
@@ -178,10 +180,11 @@ export const apiEffect = () =>
 					console.log('📚 Rebuilding API documentation...')
 
 					// Generate API docs using TypeDoc (async)
-					// Configuration is in typedoc.json
+					// Configuration is in typedoc.json at project root
 					const proc = Bun.spawn(['typedoc'], {
 						stdout: 'inherit',
 						stderr: 'inherit',
+						cwd: ROOT,
 					})
 					const exitCode = await proc.exited
 
@@ -216,10 +219,17 @@ export const apiEffect = () =>
 					}
 				} catch (error) {
 					console.error('Failed to rebuild API documentation:', error)
+				} finally {
+					resolve?.()
+					resolve = undefined
 				}
 			},
 			err: errors => {
 				console.error('API reference failed to rebuild', String(errors[0]))
+				resolve?.()
+				resolve = undefined
 			},
 		})
 	})
+	return { cleanup, ready }
+}

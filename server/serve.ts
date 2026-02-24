@@ -1,3 +1,4 @@
+import pkg from '../package.json'
 import { buildOnce } from './build'
 import {
 	ASSETS_DIR,
@@ -7,10 +8,10 @@ import {
 	OUTPUT_DIR,
 	PAGES_DIR,
 	ROUTE_LAYOUT_MAP,
-	SOURCES_DIR,
 	SERVER_CONFIG,
+	SOURCES_DIR,
 } from './config'
-import { fileExists, getFilePath } from './io'
+import { fileExists, getFilePath, getRelativePath } from './io'
 import { hmrScriptTag } from './templates/hmr'
 
 /* === Command Line Args === */
@@ -40,9 +41,9 @@ export type HMRMessage = {
 
 /* === HMR State === */
 
-const hmrClients = new Set<any>()
+const hmrClients = new Set<import('bun').ServerWebSocket<unknown>>()
 const isDevelopment =
-	process.env.NODE_ENV !== 'production' && !process.env.PLAYWRIGHT
+	process.env.NODE_ENV === 'development' && !process.env.PLAYWRIGHT
 
 /* === Utility Functions === */
 
@@ -63,9 +64,10 @@ const getLayoutForPath = (urlPath: string): string => {
 }
 
 const getCachedLayout = async (file: string) => {
-	if (!layoutsCache.has(file)) {
+	if (isDevelopment || !layoutsCache.has(file)) {
 		const layoutContent = await Bun.file(getFilePath(LAYOUTS_DIR, file)).text()
-		layoutsCache.set(file, layoutContent)
+		if (!isDevelopment) layoutsCache.set(file, layoutContent)
+		return layoutContent
 	}
 	return layoutsCache.get(file) || ''
 }
@@ -119,6 +121,7 @@ const handleComponentTest = async (
 		let finalContent = replaceTemplateVariables(layoutContent, {
 			content: componentContent,
 			title: componentName,
+			version: pkg.version,
 		})
 
 		// Inject HMR script in development
@@ -159,14 +162,21 @@ const handleStaticFile = async (filePath: string): Promise<Response> => {
 	}
 }
 
+/**
+ * Guard a resolved file path against directory traversal.
+ * Returns null if the path escapes the expected base directory.
+ */
+const guardPath = (baseDir: string, resolvedPath: string): string | null =>
+	getRelativePath(baseDir, resolvedPath) !== null ? resolvedPath : null
+
 const acceptsMarkdown = (req: Request): boolean =>
 	(req.headers.get('Accept') || '').includes('text/markdown')
 
 const handleMarkdownSource = async (
 	pageName: string,
 ): Promise<Response | null> => {
-	const mdPath = getFilePath(PAGES_DIR, `${pageName}.md`)
-	if (!fileExists(mdPath)) return null
+	const mdPath = guardPath(PAGES_DIR, getFilePath(PAGES_DIR, `${pageName}.md`))
+	if (!mdPath || !fileExists(mdPath)) return null
 	return new Response(Bun.file(mdPath), {
 		headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
 	})
@@ -177,7 +187,7 @@ const handleMarkdownSource = async (
 const broadcastToHMRClients = (message: HMRMessage | string) => {
 	const data = typeof message === 'string' ? message : JSON.stringify(message)
 
-	for (const client of Array.from(hmrClients)) {
+	for (const client of hmrClients) {
 		try {
 			client.send(data)
 		} catch (error) {
@@ -240,45 +250,81 @@ async function startServer() {
 					})
 
 				const success = server.upgrade(req, { data: {} })
-				if (success) return new Response()
+				if (success) return // connection hijacked — must not return a Response
 
 				return new Response('WebSocket upgrade failed', { status: 400 })
 			},
 
 			// Static assets
-			'/assets/:file': req =>
-				handleStaticFile(getFilePath(ASSETS_DIR, req.params.file)),
+			'/assets/:file': req => {
+				const filePath = guardPath(
+					ASSETS_DIR,
+					getFilePath(ASSETS_DIR, req.params.file),
+				)
+				return filePath
+					? handleStaticFile(filePath)
+					: new Response('Not Found', { status: 404 })
+			},
 
 			// Example component's source code
-			'/examples/:component': req =>
-				handleStaticFile(getFilePath(EXAMPLES_DIR, req.params.component)),
+			'/examples/:component': req => {
+				const filePath = guardPath(
+					EXAMPLES_DIR,
+					getFilePath(EXAMPLES_DIR, req.params.component),
+				)
+				return filePath
+					? handleStaticFile(filePath)
+					: new Response('Not Found', { status: 404 })
+			},
 
 			// Source code fragments for documentation
-			'/sources/:file': req =>
-				handleStaticFile(getFilePath(SOURCES_DIR, req.params.file)),
+			'/sources/:file': req => {
+				const filePath = guardPath(
+					SOURCES_DIR,
+					getFilePath(SOURCES_DIR, req.params.file),
+				)
+				return filePath
+					? handleStaticFile(filePath)
+					: new Response('Not Found', { status: 404 })
+			},
 
 			// Component tests mock files
-			'/test/:component/mocks/:mock': req =>
-				handleStaticFile(
+			'/test/:component/mocks/:mock': req => {
+				const filePath = guardPath(
+					COMPONENTS_DIR,
 					getFilePath(
 						COMPONENTS_DIR,
 						req.params.component,
 						'mocks',
 						req.params.mock,
 					),
-				),
+				)
+				return filePath
+					? handleStaticFile(filePath)
+					: new Response('Not Found', { status: 404 })
+			},
 
 			// Component tests
-			'/test/:component': req => handleComponentTest(req.params.component),
+			'/test/:component': req => {
+				const resolved = getFilePath(COMPONENTS_DIR, req.params.component)
+				if (!guardPath(COMPONENTS_DIR, resolved))
+					return new Response('Not Found', { status: 404 })
+				return handleComponentTest(req.params.component)
+			},
 
 			// Not found for test routes
 			'/test/*': new Response('Not Found', { status: 404 }),
 
 			// API documentation fragments (lazy-loaded by listnav)
-			'/api/:category/:page': req =>
-				handleStaticFile(
+			'/api/:category/:page': req => {
+				const filePath = guardPath(
+					OUTPUT_DIR,
 					getFilePath(OUTPUT_DIR, 'api', req.params.category, req.params.page),
-				),
+				)
+				return filePath
+					? handleStaticFile(filePath)
+					: new Response('Not Found', { status: 404 })
+			},
 
 			// Documentation pages
 			'/:page': async req => {
@@ -287,7 +333,13 @@ async function startServer() {
 					const mdResponse = await handleMarkdownSource(pageName)
 					if (mdResponse) return mdResponse
 				}
-				return handleStaticFile(getFilePath(OUTPUT_DIR, req.params.page))
+				const filePath = guardPath(
+					OUTPUT_DIR,
+					getFilePath(OUTPUT_DIR, req.params.page),
+				)
+				return filePath
+					? handleStaticFile(filePath)
+					: new Response('Not Found', { status: 404 })
 			},
 
 			// Serve favicon
@@ -316,12 +368,12 @@ async function startServer() {
 				}
 			},
 			open: ws => {
-				hmrClients.add(ws as any)
+				hmrClients.add(ws)
 				console.log(`🔌 HMR client connected (${hmrClients.size} total)`)
 				ws.send(JSON.stringify({ type: 'build-success' }))
 			},
 			close: ws => {
-				hmrClients.delete(ws as any)
+				hmrClients.delete(ws)
 				console.log(`🔌 HMR client disconnected (${hmrClients.size} total)`)
 			},
 		},
@@ -347,4 +399,10 @@ if (import.meta.main) {
 	startServer()
 }
 
-export { broadcastToHMRClients, clearLayoutCache, hmrClients, startServer }
+export {
+	broadcastToHMRClients,
+	clearLayoutCache,
+	getLayoutForPath,
+	hmrClients,
+	startServer,
+}

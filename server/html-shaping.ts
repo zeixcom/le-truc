@@ -20,7 +20,11 @@ export const highlightSnippet = async (
 export const highlightCodeBlocks = async (html: string): Promise<string> => {
 	const codeBlockRegex =
 		/<pre([^>]*)data-language="([^"]*)"([^>]*)>\s*<code class="language-[^"]*">([\s\S]*?)<\/code>\s*<\/pre>/g
-	let result = html
+
+	// Collect all matches with their positions first, then apply replacements
+	// from right to left so earlier offsets remain valid.
+	const replacements: { start: number; end: number; replacement: string }[] =
+		[]
 	let match: RegExpExecArray | null
 
 	while ((match = codeBlockRegex.exec(html)) !== null) {
@@ -35,10 +39,21 @@ export const highlightCodeBlocks = async (html: string): Promise<string> => {
 				lang: lang || 'text',
 				theme: 'monokai',
 			})
-			result = result.replace(fullMatch, highlighted)
+			replacements.push({
+				start: match.index,
+				end: match.index + fullMatch.length,
+				replacement: highlighted,
+			})
 		} catch {
 			// Keep the original code block as fallback.
 		}
+	}
+
+	// Apply replacements right-to-left so earlier positions stay valid.
+	let result = html
+	for (let i = replacements.length - 1; i >= 0; i--) {
+		const { start, end, replacement } = replacements[i]
+		result = result.slice(0, start) + replacement + result.slice(end)
 	}
 
 	return result

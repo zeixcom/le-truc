@@ -1,188 +1,93 @@
-# Implementation Tasks — Future Improvements
+# Implementation Tasks
 
-Prioritized task list derived from [SERVER.md § Future Improvements](./SERVER.md#future-improvements). Tasks are grouped by feature and ordered so each task builds on the previous one. A developer can work through them top-to-bottom.
+Prioritized task list for `server/`. All P0–P4 correctness, security, design, and documentation tasks from the 2026-02-24 code review are complete, as are all testing tasks (T-1–T-13). See [TESTS.md](./TESTS.md) for the current test strategy and conventions.
 
-**Testing:** A test suite is in place (`server/tests/`) with P0 coverage of core modules. The circular dependency between `markdoc-helpers.ts` and schema files has been resolved by extracting shared constants to `markdoc-constants.ts`. New features should include tests — see [TESTS.md](./TESTS.md) for specifications and [SERVER.md § Testing](./SERVER.md#testing-servertests) for an overview.
-
----
-
-## 1 · API Documentation Section ✅
-
-The API section is fully implemented. TypeDoc generates Markdown into `docs-src/api/`, which is processed through a dedicated pipeline and served as lazy-loaded HTML fragments via the listnav navigation pattern.
-
-### 1.1 — Enable the `apiMarkdown` file signal ✅
-
-**File:** `server/file-signals.ts` — `apiMarkdown` signal enabled, watches `docs-src/api/**/*.md`, exported.
-
-### 1.2 — Generate a listnav-compatible API index in `apiEffect` ✅
-
-**File:** `server/effects/api.ts` — Chose Option A: `apiEffect` parses `globals.md`, generates `docs-src/pages/api.md` with grouped `{% listnav %}` entries (Classes, Type Aliases, Variables, Functions).
-
-### 1.3 — Add server routes for nested API paths ✅
-
-**File:** `server/serve.ts` — Route `/api/:category/:page` added before the `/:page` catch-all. Serves HTML fragments from `docs/api/<category>/<page>`.
-
-### 1.4 — Process API Markdown through the Markdoc pipeline ✅
-
-**File:** `server/effects/api-pages.ts` (new file) — Separate pipeline: strips TypeDoc breadcrumbs, parses/validates/transforms with Markdoc, highlights code blocks with Shiki, post-processes HTML, rewrites cross-reference links to hash anchors. Outputs HTML fragments (no full page wrapper) for lazy-loading by `module-lazyload`.
-
-### 1.5 — Populate `api.html` template variables and write API pages ⚠️ Partial
-
-**File:** `server/effects/api-pages.ts` — API pages are written as HTML fragments to `docs/api/<category>/<name>.html`. The `api.html` layout template variables (`{{ api-category }}`, `{{ api-name }}`, `{{ api-kind }}`, `{{ toc }}`) are **not yet populated** in `effects/pages.ts`. This only affects direct navigation to API pages (breadcrumbs and sidebar TOC are empty); lazy-loaded fragments via listnav work correctly.
-
-### 1.6 — Register `apiPagesEffect` in the build orchestrator ✅
-
-**File:** `server/build.ts` — `apiPagesEffect` imported, registered after `apiEffect`, cleanup wired into the returned cleanup function.
+**Testing:** Run `bun run test:server` after each change to catch regressions.
 
 ---
 
-## 2 · FAQ Section
+## Backlog
 
-### 2.1 — Decide on rendering approach
+Features deferred from the current implementation scope. Revisit when needed.
 
-Before writing code, choose one of:
+### FAQ Section
 
-- **Custom Markdoc schema** (`{% faq %}` / `{% question %}` tags) → renders to `<details><summary>` elements. More structured, validates content.
-- **Native `<details>` in Markdown** → no schema needed, but no validation or custom styling hooks.
-- **Custom component** (`<module-faq>`) → more work, but interactive (search, filter, deep-link).
+Add a FAQ page with collapsible question/answer blocks.
 
-Recommendation: start with a **custom Markdoc schema** for consistency with the existing tag library. It can always render to plain `<details><summary>` without a client-side component.
+**Approach:** Custom Markdoc schema (`{% faq %}` / `{% question %}`) rendering to `<details><summary>` elements is recommended for consistency with the existing tag library. Native `<details>` in plain Markdown is an acceptable lower-effort alternative.
+
+**When ready, implement:**
+1. `server/schema/faq.markdoc.ts` — `{% faq %}` wrapper + `{% question %}` tag (extracts first paragraph as `<summary>`, generates slug-based `id` for anchor linking). Reference `callout.markdoc.ts` for the child-extraction pattern. Import attribute definitions from `markdoc-constants.ts`.
+2. Register `faq` (and `question` if separate) in `server/markdoc.config.ts`.
+3. Create `docs-src/pages/faq.md` with frontmatter and starter questions grouped by topic.
+4. Add `'faq'` to `PAGE_ORDER` in `server/config.ts`.
+5. Tests in `server/tests/schema/faq.test.ts`.
+
+### Improved HMR error overlay
+
+The current overlay is a plain `<div>` with no dismiss button, no file/line info, and no structure.
+
+**When ready, implement in `server/templates/hmr.ts`:**
+- Structured layout: header + dismiss (×) button + scrollable monospace body.
+- Parse error message for file paths and line numbers; highlight them visually.
+- Dismiss stores acknowledgement in `sessionStorage` so the same error doesn't reappear until the next build attempt.
+- Consider using `<dialog>` or a backdrop `<div>` instead of a body-prepended element.
+- Keep self-contained (inline styles, no external deps).
 
 ---
 
-### 2.2 — Create `faq.markdoc.ts` schema
+## Previously completed (record only)
 
-**File:** `server/schema/faq.markdoc.ts`
+### Testing tasks (T-1–T-13)
 
-Define two tags:
-
-| Tag | Renders as | Attributes |
+| | Task | File(s) |
 |---|---|---|
-| `{% faq %}` | `<div class="faq">` (wrapper) | `class`, `id` |
-| `{% question %}` | `<details><summary>…</summary>…</details>` | `open` (boolean, default false) |
+| ✅ | T-1: `config.test.ts` | `server/tests/config.test.ts` |
+| ✅ | T-2: `serve.test.ts` | `server/tests/serve.test.ts` |
+| ✅ | T-3: `templates/menu.test.ts`, `templates/sitemap.test.ts` | `server/tests/templates/menu.test.ts`, `sitemap.test.ts` |
+| ✅ | T-4: `schema/callout.test.ts`, `schema/hero.test.ts`, `schema/demo.test.ts` | `server/tests/schema/callout.test.ts`, `hero.test.ts`, `demo.test.ts` |
+| ✅ | T-5: `schema/section.test.ts`, `schema/carousel.test.ts` | `server/tests/schema/section.test.ts`, `carousel.test.ts` |
+| ✅ | T-6: Complete `templates/fragments.test.ts` | `server/tests/templates/fragments.test.ts` |
+| ✅ | T-7: Markdoc `html()` template literal tests | `server/tests/markdoc-helpers.test.ts` |
+| ✅ | T-8: `file-signals.test.ts` | `server/tests/file-signals.test.ts` |
+| ✅ | T-9: `file-watcher.test.ts` | `server/tests/file-watcher.test.ts` |
+| ✅ | T-10: Complete `effects/examples.test.ts`, `effects/sources.test.ts` | `server/tests/effects/examples.test.ts`, `sources.test.ts` |
+| ✅ | T-11: `effects/pages.test.ts`, `effects/menu.test.ts`, `effects/sitemap.test.ts` | `server/tests/effects/pages.test.ts`, `menu.test.ts`, `sitemap.test.ts` |
+| ✅ | T-12: `templates/hmr.test.ts`, `templates/service-worker.test.ts`, `templates/performance-hints.test.ts`, `effects/service-worker.test.ts` | `server/tests/templates/hmr.test.ts`, `service-worker.test.ts`, `performance-hints.test.ts`, `effects/service-worker.test.ts` |
+| ✅ | T-13: `build.test.ts` | `server/tests/build.test.ts` |
 
-The `{% question %}` tag should:
+### 2026-02-24 — Code review fixes (P0–P4)
 
-- Use the **first child paragraph** (or an explicit `title` attribute) as the `<summary>` text.
-- Render remaining children as the `<details>` body.
-- Generate an `id` from the summary text (via `generateSlug` from `markdoc-helpers.ts`) for anchor linking.
-
-Reference `server/schema/callout.markdoc.ts` for the pattern of extracting child content and rendering to a custom element. Import shared attribute definitions from `markdoc-constants.ts` (not `markdoc-helpers.ts`) to avoid circular dependencies.
-
-**Done when:** `{% faq %}{% question %}…{% /question %}{% /faq %}` parses, validates, and renders to accessible HTML. Tests added to `server/tests/schema/faq.test.ts`.
-
----
-
-### 2.3 — Register the FAQ schema in Markdoc config
-
-**File:** `server/markdoc.config.ts`
-
-- Import `faq` and `question` from `./schema/faq.markdoc`.
-- Add both to the `tags` object.
-
----
-
-### 2.4 — Create `docs-src/pages/faq.md`
-
-**File:** `docs-src/pages/faq.md`
-
-Write an initial FAQ page with frontmatter (`title: 'FAQ'`, `emoji: '❓'`, `layout: 'page'`) and a few starter questions grouped by topic (e.g. "Getting Started", "Components", "Reactivity"). Use anchor links for direct linking.
-
----
-
-### 2.5 — Add `faq` to page ordering
-
-**File:** `server/config.ts`
-
-Add `'faq'` to the `PAGE_ORDER` array (after `'api'` or `'about'`, depending on desired nav position).
-
-**Done when:** `bun run build:docs` generates `docs/faq.html` and it appears in the navigation menu.
-
----
-
-## 3 · Developer Experience
-
-### 3.1 — Incremental TypeDoc ✅
-
-**File:** `server/effects/api.ts`
-
-**Implemented:** Hash-based skip — `computeSourcesHash` computes a composite SHA-256 hash of all library source file hashes (sorted for order-independence). The hash is compared to the previous successful run; if unchanged, TypeDoc is skipped entirely. Additionally, the `execSync` call was replaced with `Bun.spawn` so TypeDoc runs asynchronously, unblocking the event loop for other effects.
-
-**Done when:** ~~Editing a single file in `src/` no longer triggers a full TypeDoc regeneration.~~ ✅ Implemented.
-
----
-
-### 3.2 — Parallel effect execution
-
-**File:** `server/build.ts`
-
-**Problem:** Effects are registered sequentially. Independent effects block each other unnecessarily.
-
-**Approach:**
-
-Identify effects with independent dependency graphs and run them concurrently:
-
-| Group | Effects | Shared dependency |
+| | Task | File(s) |
 |---|---|---|
-| API | `apiEffect` | `libraryScripts` |
-| Styles | `cssEffect` | `docsStyles`, `componentStyles` |
-| Scripts | `jsEffect` | `docsScripts`, `libraryScripts`, `componentScripts` |
-| Content | `pagesEffect`, `menuEffect`, `sitemapEffect` | `docsMarkdown` |
-| Examples | `examplesEffect`, `sourcesEffect` | `componentMarkdown`, `componentMarkup` |
-| Infra | `serviceWorkerEffect` | all style + script sources |
+| ✅ | B-1: Fix regex-exec/replace in `html-shaping.ts` + `pages.ts` | `html-shaping.ts`, `effects/pages.ts` |
+| ✅ | B-2: Fix path stripping in `file-signals.ts` | `file-signals.ts` |
+| ✅ | B-3: Fix WebSocket upgrade returns `Response` | `serve.ts` |
+| ✅ | B-4: Remove timing-based build completion | `build.ts` |
+| ✅ | S-1: Guard URL params against path traversal | `serve.ts`, `io.ts` |
+| ✅ | S-2: Fix HMR WebSocket URL for HTTPS | `templates/hmr.ts` |
+| ✅ | D-1: Consolidate HMR broadcast to single API | `build.ts`, `dev.ts` |
+| ✅ | D-2: Replace `execSync` with `Bun.spawn` in CSS/JS effects | `effects/css.ts`, `effects/js.ts` |
+| ✅ | D-3: Replace `process.chdir` with `import.meta.dir` paths | `config.ts`, `build.ts` |
+| ✅ | D-4: Parallelise `watchFiles` calls | `file-signals.ts` |
+| ✅ | D-5: Fix layout cache not cleared in dev mode | `serve.ts` |
+| ✅ | Doc-1–7: Correct SERVER.md documentation drift | `SERVER.md` |
+| ✅ | A-1: Populate `api.html` template variables | `effects/pages.ts` |
+| ✅ | N-1: Type `hmrClients` as `ServerWebSocket<unknown>` | `serve.ts` |
+| ✅ | N-2: Iterate `hmrClients` directly in broadcast | `serve.ts` |
+| ✅ | N-3: Add `recursive` parameter to `watchFiles` | `file-watcher.ts` |
+| ✅ | N-4: Remove `highlightCodeBlocks` re-export from `api-pages.ts` | `effects/api-pages.ts` |
+| ✅ | N-5: Comment `componentMocks`/`componentMarkup` exclude relationship | `file-signals.ts` |
+| ✅ | `isDevelopment` check: `!== 'production'` → `=== 'development'` | `serve.ts` |
+| ✅ | `html`/`xml` templates: escape strings by default; add `raw()`/`RawHtml` | `templates/utils.ts`, `templates/fragments.ts` |
 
-Effects within different groups can be initialized in parallel (e.g. using `Promise.all` for any async init work). The reactive system already handles execution ordering at runtime through signal dependencies, so the main gain is in **initial build** where multiple independent effects can kick off simultaneously.
+### Pre-review completions
 
-Wrap independent groups in `Promise.all`:
-
-```text
-await Promise.all([
-  apiEffect(),
-  cssEffect(),
-  jsEffect(),
-])
-// then effects that depend on the above
-```
-
-**Done when:** `bun run build:docs` completes measurably faster (benchmark before/after).
-
----
-
-### 3.3 — Improved HMR error overlay
-
-**File:** `server/templates/hmr.ts`
-
-**Problem:** The build error overlay is a plain unstyled `<div>` with no dismiss button, no file/line info, and no structure.
-
-**Improvements:**
-
-1. **Structured layout** — header bar with "Build Error" title + dismiss (×) button, scrollable body with monospace error text.
-2. **File/line info** — Parse the error message for file paths and line numbers. Display them as a clickable breadcrumb (or at minimum, visually highlighted).
-3. **Dismiss functionality** — Add a close button that removes the overlay. Store dismissal in `sessionStorage` so it doesn't reappear for the same error until the next build attempt.
-4. **Styling** — Use a `<dialog>` element or a fixed overlay with a semi-transparent backdrop instead of a plain `<div>` pushed into `document.body`.
-
-Keep the overlay self-contained (inline styles + no external dependencies) since it's injected as a raw script.
-
-**Done when:** Build errors display in a dismissible, readable overlay with file path information.
-
----
-
-## Summary — Suggested execution order
-
-| Priority | Task | Status | Tests |
-|---|---|---|---|
-| 🔴 P0 | 1.1 Enable `apiMarkdown` signal | ✅ Done | `effects/api.test.ts` |
-| 🔴 P0 | 1.2 Generate listnav API index | ✅ Done | `effects/api.test.ts` |
-| 🔴 P0 | 1.3 Add API server routes | ✅ Done | — |
-| 🔴 P0 | 1.4 Process API Markdown through pipeline | ✅ Done | `effects/api-pages.test.ts` |
-| 🔴 P0 | 1.5 Populate `api.html` template variables | ⚠️ Partial | — |
-| 🔴 P0 | 1.6 Register effect in build orchestrator | ✅ Done | — |
-| 🟡 P1 | 2.2 Create FAQ Markdoc schema | Pending | `schema/faq.test.ts` |
-| 🟡 P1 | 2.3 Register FAQ schema | Pending | — |
-| 🟡 P1 | 2.4 Create FAQ page | Pending | — |
-| 🟡 P1 | 2.5 Add FAQ to page ordering | Pending | `config.test.ts` |
-| 🟢 P2 | 3.1 Incremental TypeDoc | ✅ Done | `effects/api.test.ts` |
-| 🟢 P2 | 3.2 Parallel effect execution | Pending | `build.test.ts` |
-| 🟢 P2 | 3.3 Improved error overlay | Pending | `templates/hmr.test.ts` |
-
-**Testing note:** Run `bun run test:server` after each task to verify no regressions. See [TESTS.md](./TESTS.md) for detailed test specifications per module.
+| | Task | File(s) |
+|---|---|---|
+| ✅ | API signal enabled (`apiMarkdown`) | `file-signals.ts` |
+| ✅ | API listnav index generation (`apiEffect`) | `effects/api.ts` |
+| ✅ | API server routes | `serve.ts` |
+| ✅ | API Markdown pipeline (`apiPagesEffect`) | `effects/api-pages.ts` |
+| ✅ | `apiPagesEffect` registered in build orchestrator | `build.ts` |
+| ✅ | Incremental TypeDoc (hash-based skip + `Bun.spawn`) | `effects/api.ts` |

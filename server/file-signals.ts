@@ -177,11 +177,11 @@ const docsMarkdown: {
 		for (const [path, file] of files) {
 			try {
 				// Calculate relative path from pages directory
-				const pagesDir = PAGES_DIR.replace(/^\.\//, '')
-				const relativePath = path
-					.replace(PAGES_DIR + '/', '')
-					.replace(pagesDir + '/', '')
-					.replace(/\\/g, '/')
+				const relativePath = getRelativePath(PAGES_DIR, path)?.replace(
+					/\\/g,
+					'/',
+				)
+				if (!relativePath) continue
 
 				// Calculate path info
 				const pathParts = relativePath.split('/')
@@ -269,13 +269,29 @@ const docsMarkdown: {
 	}
 })()
 
-const docsStyles = {
-	sources: await watchFiles(INPUT_DIR, '*.css'),
-}
-
-const docsScripts = {
-	sources: await watchFiles(INPUT_DIR, '*.ts'),
-}
+const [
+	docsStylesSources,
+	docsScriptsSources,
+	templateScriptsSources,
+	libraryScriptsSources,
+	apiMarkdownSources,
+	componentMarkupSources,
+	componentMocksSources,
+	componentMarkdownSources,
+	componentStylesSources,
+	componentScriptsSources,
+] = await Promise.all([
+	watchFiles(INPUT_DIR, '*.css'),
+	watchFiles(INPUT_DIR, '*.ts'),
+	watchFiles(TEMPLATES_DIR, '**/*.ts'),
+	watchFiles(SRC_DIR, '**/*.ts'),
+	watchFiles(API_DIR, '**/*.md'),
+	watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'), // componentMarkup excludes mocks (handled separately below)
+	watchFiles(COMPONENTS_DIR, '**/mocks/**'), // componentMocks: only mock files excluded from componentMarkup
+	watchFiles(COMPONENTS_DIR, '**/*.md'),
+	watchFiles(COMPONENTS_DIR, '**/*.css'),
+	watchFiles(COMPONENTS_DIR, '**/*.ts'),
+])
 
 /* const layoutFiles = {
 	sources: await watchFiles(LAYOUTS_DIR, '*.html'),
@@ -285,37 +301,16 @@ const includeFiles = {
 	sources: await watchFiles(INCLUDES_DIR, '*.html'),
 } */
 
-const templateScripts = {
-	sources: await watchFiles(TEMPLATES_DIR, '**/*.ts'),
-}
-
-const libraryScripts = {
-	sources: await watchFiles(SRC_DIR, '**/*.ts'),
-}
-
-const apiMarkdown = {
-	sources: await watchFiles(API_DIR, '**/*.md'),
-}
-
-const componentMarkup = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'),
-}
-
-const componentMocks = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/mocks/**'),
-}
-
-const componentMarkdown = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/*.md'),
-}
-
-const componentStyles = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/*.css'),
-}
-
-const componentScripts = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/*.ts'),
-}
+const docsStyles = { sources: docsStylesSources }
+const docsScripts = { sources: docsScriptsSources }
+const templateScripts = { sources: templateScriptsSources }
+const libraryScripts = { sources: libraryScriptsSources }
+const apiMarkdown = { sources: apiMarkdownSources }
+const componentMarkup = { sources: componentMarkupSources }
+const componentMocks = { sources: componentMocksSources }
+const componentMarkdown = { sources: componentMarkdownSources }
+const componentStyles = { sources: componentStylesSources }
+const componentScripts = { sources: componentScriptsSources }
 
 export {
 	apiMarkdown,

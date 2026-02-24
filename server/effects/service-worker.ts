@@ -18,8 +18,10 @@ import {
 	serviceWorker,
 } from '../templates/service-worker'
 
-export const serviceWorkerEffect = () =>
-	createEffect(() => {
+export const serviceWorkerEffect = () => {
+	let resolve: (() => void) | undefined
+	const ready = new Promise<void>(res => { resolve = res })
+	const cleanup = createEffect(() => {
 		match(
 			[
 				docsStyles.sources,
@@ -53,11 +55,18 @@ export const serviceWorkerEffect = () =>
 						console.log('🔧 Service worker generated successfully')
 					} catch (error) {
 						console.error('Failed to generate service worker:', error)
+					} finally {
+						resolve?.()
+						resolve = undefined
 					}
 				},
 				err: errors => {
 					console.error('Error in service worker effect:', errors[0].message)
+					resolve?.()
+					resolve = undefined
 				},
 			},
 		)
 	})
+	return { cleanup, ready }
+}
