@@ -56,7 +56,7 @@ export function hmrClient(config: HMRConfig = {}): string {
 
 	${enableLogging ? log('Client initialized') : ''}
 
-	const wsUrl = 'ws://' + ${hostExpression} + '${path}';
+	const wsUrl = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + ${hostExpression} + '${path}';
 	let ws = null;
 	let reconnectAttempts = 0;
 	let reconnectTimer = null;
@@ -238,7 +238,7 @@ export function hmrClient(config: HMRConfig = {}): string {
 export function hmrClientMinimal(): string {
 	return js`
 (function(){
-	const ws=new WebSocket('ws://'+window.location.host+'/ws');
+	const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');
 	ws.onmessage=e=>e.data==='reload'&&location.reload();
 	ws.onclose=()=>setTimeout(()=>location.reload(),1000);
 })();
