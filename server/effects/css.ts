@@ -3,8 +3,10 @@ import { execSync } from 'child_process'
 import { ASSETS_DIR, CSS_FILE } from '../config'
 import { componentStyles, docsStyles } from '../file-signals'
 
-export const cssEffect = () =>
-	createEffect(() => {
+export const cssEffect = () => {
+	let resolve: (() => void) | undefined
+	const ready = new Promise<void>(res => { resolve = res })
+	const cleanup = createEffect(() => {
 		match([componentStyles.sources, docsStyles.sources], {
 			ok: () => {
 				try {
@@ -17,9 +19,15 @@ export const cssEffect = () =>
 				} catch (error) {
 					console.error('CSS failed to rebuild:', String(error))
 				}
+				resolve?.()
+				resolve = undefined
 			},
 			err: errors => {
 				console.error('Error in CSS effect:', errors[0].message)
+				resolve?.()
+				resolve = undefined
 			},
 		})
 	})
+	return { cleanup, ready }
+}

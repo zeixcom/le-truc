@@ -135,8 +135,10 @@ const applyTemplate = async (
 	}
 }
 
-export const pagesEffect = () =>
-	createEffect(() => {
+export const pagesEffect = () => {
+	let resolve: (() => void) | undefined
+	const ready = new Promise<void>(res => { resolve = res })
+	const cleanup = createEffect(() => {
 		match([docsMarkdown.fullyProcessed], {
 			ok: async ([processedFiles]) => {
 				try {
@@ -183,10 +185,17 @@ export const pagesEffect = () =>
 					)
 				} catch (error) {
 					console.error('Failed to generate HTML pages:', error)
+				} finally {
+					resolve?.()
+					resolve = undefined
 				}
 			},
 			err: errors => {
 				console.error('Error in pages effect:', errors[0].message)
+				resolve?.()
+				resolve = undefined
 			},
 		})
 	})
+	return { cleanup, ready }
+}

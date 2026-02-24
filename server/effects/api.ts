@@ -163,8 +163,10 @@ export {
 }
 export type { ApiCategory }
 
-export const apiEffect = () =>
-	createEffect(() => {
+export const apiEffect = () => {
+	let resolve: (() => void) | undefined
+	const ready = new Promise<void>(res => { resolve = res })
+	const cleanup = createEffect(() => {
 		match([libraryScripts.sources], {
 			ok: async ([sources]) => {
 				try {
@@ -216,10 +218,17 @@ export const apiEffect = () =>
 					}
 				} catch (error) {
 					console.error('Failed to rebuild API documentation:', error)
+				} finally {
+					resolve?.()
+					resolve = undefined
 				}
 			},
 			err: errors => {
 				console.error('API reference failed to rebuild', String(errors[0]))
+				resolve?.()
+				resolve = undefined
 			},
 		})
 	})
+	return { cleanup, ready }
+}

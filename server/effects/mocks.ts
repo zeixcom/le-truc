@@ -13,18 +13,29 @@ export const getMockOutputPath = (filePath: string): string => {
 
 /* === Exported Effect === */
 
-export const mocksEffect = () =>
-	createEffect(() => {
+export const mocksEffect = () => {
+	let resolve: (() => void) | undefined
+	const ready = new Promise<void>(res => { resolve = res })
+	const cleanup = createEffect(() => {
 		match([componentMocks.sources], {
 			ok: async ([mockFiles]) => {
-				console.log('🔄 Copying mock files...')
-				for (const file of mockFiles) {
-					await writeFileSafe(getMockOutputPath(file.path), file.content)
+				try {
+					console.log('🔄 Copying mock files...')
+					for (const file of mockFiles) {
+						await writeFileSafe(getMockOutputPath(file.path), file.content)
+					}
+					console.log(`✅ Copied ${mockFiles.length} mock file(s) to docs/test/`)
+				} finally {
+					resolve?.()
+					resolve = undefined
 				}
-				console.log(`✅ Copied ${mockFiles.length} mock file(s) to docs/test/`)
 			},
 			err: errors => {
 				console.error('Error in mocks effect:', errors[0].message)
+				resolve?.()
+				resolve = undefined
 			},
 		})
 	})
+	return { cleanup, ready }
+}

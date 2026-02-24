@@ -4,8 +4,10 @@ import { docsMarkdown } from '../file-signals'
 import { writeFileSafe } from '../io'
 import { sitemap } from '../templates/sitemap'
 
-export const sitemapEffect = () =>
-	createEffect(() => {
+export const sitemapEffect = () => {
+	let resolve: (() => void) | undefined
+	const ready = new Promise<void>(res => { resolve = res })
+	const cleanup = createEffect(() => {
 		match([docsMarkdown.pageInfos], {
 			ok: async ([pageInfos]): Promise<void> => {
 				try {
@@ -13,10 +15,17 @@ export const sitemapEffect = () =>
 					console.log('Sitemap file written successfully')
 				} catch (error) {
 					console.error('Failed to write sitemap file:', error)
+				} finally {
+					resolve?.()
+					resolve = undefined
 				}
 			},
 			err: errors => {
 				console.error('Error writing sitemap file:', String(errors[0]))
+				resolve?.()
+				resolve = undefined
 			},
 		})
 	})
+	return { cleanup, ready }
+}

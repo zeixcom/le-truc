@@ -57,8 +57,10 @@ export { processExample }
 
 /* === Exported Effect === */
 
-export const examplesEffect = () =>
-	createEffect(() => {
+export const examplesEffect = () => {
+	let resolve: (() => void) | undefined
+	const ready = new Promise<void>(res => { resolve = res })
+	const cleanup = createEffect(() => {
 		match([componentMarkdown.sources, componentMarkup.sources], {
 			ok: async ([mdFiles, htmlFiles]) => {
 				try {
@@ -122,10 +124,17 @@ export const examplesEffect = () =>
 					console.log('📝 Examples processing completed')
 				} catch (error) {
 					console.error('Failed to process examples:', error)
+				} finally {
+					resolve?.()
+					resolve = undefined
 				}
 			},
 			err: errors => {
 				console.error('Error in examples effect:', errors[0].message)
+				resolve?.()
+				resolve = undefined
 			},
 		})
 	})
+	return { cleanup, ready }
+}

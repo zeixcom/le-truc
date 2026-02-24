@@ -56,27 +56,36 @@ export async function build(
 		process.chdir(projectRoot)
 		console.log(`📁 Working directory: ${process.cwd()}`)
 
-		// Wait a moment for file watchers to initialize
-		await new Promise(resolve => setTimeout(resolve, 1000))
-
 		// Initialize effects in order
 		// API docs should be generated first, then CSS/JS, then pages processing
 		console.log('🚀 Initializing effects...')
 
-		const apiCleanup = apiEffect()
-		const apiPagesCleanup = apiPagesEffect()
-		const cssCleanup = cssEffect()
-		const jsCleanup = jsEffect()
-		const serviceWorkerCleanup = serviceWorkerEffect()
-		const examplesCleanup = examplesEffect()
-		const mocksCleanup = mocksEffect()
-		const sourcesCleanup = sourcesEffect()
-		const pagesCleanup = pagesEffect()
-		const menuCleanup = menuEffect()
-		const sitemapCleanup = sitemapEffect()
+		const api = apiEffect()
+		const apiPages = apiPagesEffect()
+		const css = cssEffect()
+		const js = jsEffect()
+		const sw = serviceWorkerEffect()
+		const examples = examplesEffect()
+		const mocks = mocksEffect()
+		const sources = sourcesEffect()
+		const pages = pagesEffect()
+		const menuEff = menuEffect()
+		const sitemap = sitemapEffect()
 
-		// Wait a moment for initial processing to complete
-		await new Promise(resolve => setTimeout(resolve, 500))
+		// Wait for all effects to complete their first run
+		await Promise.all([
+			api.ready,
+			apiPages.ready,
+			css.ready,
+			js.ready,
+			sw.ready,
+			examples.ready,
+			mocks.ready,
+			sources.ready,
+			pages.ready,
+			menuEff.ready,
+			sitemap.ready,
+		])
 
 		const duration = performance.now() - startTime
 		console.log(`✅ Build completed in ${duration.toFixed(2)}ms`)
@@ -89,17 +98,17 @@ export async function build(
 
 		// Return cleanup function for graceful shutdown
 		return () => {
-			apiCleanup?.()
-			apiPagesCleanup?.()
-			cssCleanup?.()
-			jsCleanup?.()
-			serviceWorkerCleanup?.()
-			examplesCleanup?.()
-			mocksCleanup?.()
-			sourcesCleanup?.()
-			pagesCleanup?.()
-			menuCleanup?.()
-			sitemapCleanup?.()
+			api.cleanup?.()
+			apiPages.cleanup?.()
+			css.cleanup?.()
+			js.cleanup?.()
+			sw.cleanup?.()
+			examples.cleanup?.()
+			mocks.cleanup?.()
+			sources.cleanup?.()
+			pages.cleanup?.()
+			menuEff.cleanup?.()
+			sitemap.cleanup?.()
 		}
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
