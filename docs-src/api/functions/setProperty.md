@@ -2,7 +2,7 @@
 
 > **setProperty**\<`P`, `E`, `K`\>(`key`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/property.ts:15](https://github.com/zeixcom/le-truc/blob/62f34241868753829f1b0628a59b7cbc4dc09d76/src/effects/property.ts#L15)
+Defined in: [src/effects/property.ts:15](https://github.com/zeixcom/le-truc/blob/cbc935087cbb74b599ebc3d8a11ba560b180d4b1/src/effects/property.ts#L15)
 
 Effect for setting a property on an element.
 Sets the specified property directly on the element object.

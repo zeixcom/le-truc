@@ -2,4 +2,4 @@
 
 > **ComponentProps** = `Record`\<[`ComponentProp`](ComponentProp.md), `NonNullable`\<`unknown`\>\>
 
-Defined in: [src/component.ts:38](https://github.com/zeixcom/le-truc/blob/62f34241868753829f1b0628a59b7cbc4dc09d76/src/component.ts#L38)
+Defined in: [src/component.ts:38](https://github.com/zeixcom/le-truc/blob/cbc935087cbb74b599ebc3d8a11ba560b180d4b1/src/component.ts#L38)

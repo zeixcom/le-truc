@@ -2,7 +2,7 @@
 
 > **Effect**\<`P`, `E`\> = (`host`, `target`) => [`MaybeCleanup`](MaybeCleanup.md)
 
-Defined in: [src/effects.ts:21](https://github.com/zeixcom/le-truc/blob/62f34241868753829f1b0628a59b7cbc4dc09d76/src/effects.ts#L21)
+Defined in: [src/effects.ts:21](https://github.com/zeixcom/le-truc/blob/cbc935087cbb74b599ebc3d8a11ba560b180d4b1/src/effects.ts#L21)
 
 #### Type Parameters
 

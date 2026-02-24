@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.16.2
+
+### Added
+
+- **`asParser(fn)`**: Brands a custom parser with `PARSER_BRAND` so `isParser()` can identify it reliably regardless of `function.length`. Use this for any custom two-argument parser (especially those using default parameters or destructuring).
+- **`asMethod(fn)`**: Brands a side-effect initializer with `METHOD_BRAND`, producing a `MethodProducer` that `defineComponent` dispatches explicitly rather than treating as a `Reader`.
+- **`isMethodProducer(value)`**: Type guard that checks for `METHOD_BRAND`. Replaces the old implicit `isFunction` fallback for method producers.
+
+### Changed
+
+- **`isParser()` checks `PARSER_BRAND` first**: Falls back to `fn.length >= 2` for backward compatibility, but emits a `console.warn` in `DEV_MODE` when the fallback path is taken. Migrate custom parsers to `asParser()` to silence the warning.
+- **`defineComponent` signal dispatch is explicit**: Initialization order is now `Parser → MethodProducer → Reader → static/Signal`. Previously, method producers and readers were both handled by an `isFunction` branch with no distinction.
+- **`on()` and `pass()` wrap their body in `createScope()`**: Both effects now own a reactive scope internally. This ensures proper child-effect disposal and signal restoration when the component disconnects, without requiring callers to manage scopes.
+- **`pass()` captures and restores the original Slot signal on cleanup**: When the parent disconnects, the child's Slot is restored to the signal it held before `pass()` ran, so the child regains its own independent state after detachment.
+- **`pass()` is scoped to Le Truc components only**: The `[Reactive, callback]` two-way binding form has been removed from `PassedProp`. For non-Le Truc custom elements, use `setProperty()` instead.
+- **`RESET` sentinel replaced by `undefined`**: `resolveReactive()` now returns `undefined` on error. `updateElement` treats `undefined` the same way it treated `RESET` — restoring the original DOM fallback value.
+- **`resolveReactive()` warns on missing property names in `DEV_MODE`**: When a string reactive refers to a property that does not exist on the host, a `console.warn` is emitted. This catches typos for JavaScript consumers not covered by TypeScript's `keyof P` guard.
+- **`EventHandler` type is now documented**: JSDoc on `EventHandler` explains both the side-effect-only (`void`) and property-update-shortcut (`{ prop: value }`) return modes. `on()` JSDoc includes `@example` blocks for both forms.
+
+### Fixed
+
+- **`pass()` no longer silently drops bindings on child detach**: The original Slot signal is captured before replacement and restored on cleanup, preventing stale parent signals from persisting in detached children.
+- **`pass()` warns in `DEV_MODE` when target property is not Slot-backed**: Emits `console.warn` and skips the binding (instead of silently doing nothing) when `pass()` is used on a non-Le Truc element.
+- **`MethodProducer` cleanup correctly composed with effect cleanup**: Cleanup functions returned by method producers are now composed with the surrounding effect cleanup in `defineComponent`, preventing disposal leaks.
+
 ## 0.16.1
 
 ### Changed
