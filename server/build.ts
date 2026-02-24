@@ -21,19 +21,6 @@ import { getFilePath } from './io'
  * In development mode, it also integrates with HMR for live reloading.
  */
 
-// Global reference to HMR broadcast function
-let hmrBroadcast: ((message: any) => void) | null = null
-
-export function setHMRBroadcast(broadcast: (message: any) => void) {
-	hmrBroadcast = broadcast
-}
-
-function notifyHMR(type: string, message?: string, path?: string) {
-	if (hmrBroadcast && process.env.NODE_ENV !== 'production') {
-		hmrBroadcast({ type, message, path })
-	}
-}
-
 export async function build(
 	options: {
 		watch?: boolean
@@ -44,11 +31,6 @@ export async function build(
 	const { watch = false, hmrBroadcast: broadcast } = options
 
 	console.log(`🚀 Starting ${watch ? 'watch' : 'build'} mode...`)
-
-	// Set up HMR broadcast if provided
-	if (broadcast) {
-		setHMRBroadcast(broadcast)
-	}
 
 	try {
 		// Change to project root directory since config paths are relative to it
@@ -91,9 +73,9 @@ export async function build(
 		console.log(`✅ Build completed in ${duration.toFixed(2)}ms`)
 
 		// Notify HMR clients of successful build and trigger reload
-		if (watch) {
-			notifyHMR('build-success')
-			hmrBroadcast?.('reload')
+		if (watch && broadcast) {
+			broadcast({ type: 'build-success' })
+			broadcast('reload')
 		}
 
 		// Return cleanup function for graceful shutdown
@@ -115,8 +97,8 @@ export async function build(
 		console.error('❌ Build failed:', errorMessage)
 
 		// Notify HMR clients of build error
-		if (watch) {
-			notifyHMR('build-error', errorMessage)
+		if (watch && broadcast) {
+			broadcast({ type: 'build-error', message: errorMessage })
 		}
 
 		if (!watch) {
