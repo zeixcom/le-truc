@@ -84,8 +84,9 @@ const buildToc = (htmlContent: string): string => {
 	while ((match = headingRegex.exec(htmlContent)) !== null) {
 		const level = match[1]
 		const id = escapeHtml(match[2])
-		// Strip inner tags to get plain text, then HTML-escape what remains
-		const text = escapeHtml(match[3].replace(/<[^>]+>/g, '').trim())
+		// Normalize whitespace in heading text, then HTML-escape what remains
+		const rawText = match[3].replace(/\s+/g, ' ').trim()
+		const text = escapeHtml(rawText)
 		const indent = level === '3' ? ' style="padding-left:1rem"' : ''
 		items.push(`<a href="#${id}"${indent}>${text}</a>`)
 	}
