@@ -66,7 +66,6 @@ export {
 	defineComponent,
 	type Initializers,
 	type MaybeSignal,
-	type MethodProducer,
 	type ReservedWords,
 } from './src/component'
 export {

@@ -1,4 +1,4 @@
-import type { Parser } from '../parsers'
+import { asParser, type Parser } from '../parsers'
 import type { UI } from '../ui'
 
 /**
@@ -11,8 +11,10 @@ import type { UI } from '../ui'
  * @since 0.13.1
  * @returns {Parser<boolean, UI>} Parser that returns `true` if the attribute is set and not `"false"`, `false` otherwise
  */
-const asBoolean =
-	(): Parser<boolean, UI> => (_: UI, value: string | null | undefined) =>
-		value != null && value !== 'false'
+const asBoolean = (): Parser<boolean, UI> =>
+	asParser(
+		(_: UI, value: string | null | undefined) =>
+			value != null && value !== 'false',
+	)
 
 export { asBoolean }

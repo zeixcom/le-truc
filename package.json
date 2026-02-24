@@ -1,6 +1,6 @@
 {
 	"name": "@zeix/le-truc",
-	"version": "0.16.1",
+	"version": "0.16.2",
 	"description": "Le Truc - the thing for type-safe reactive web components",
 	"keywords": [
 		"Le Truc",
@@ -55,7 +55,7 @@
 		"@zeix/cause-effect": "^0.18.4"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.4.2",
+		"@biomejs/biome": "^2.4.4",
 		"@markdoc/markdoc": "^0.5.4",
 		"@playwright/test": "^1.58.2",
 		"@types/bun": "latest",

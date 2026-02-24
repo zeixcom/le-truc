@@ -1,4 +1,4 @@
-import { type Fallback, getFallback, type Parser } from '../parsers'
+import { asParser, type Fallback, getFallback, type Parser } from '../parsers'
 import type { UI } from '../ui'
 
 /* === Internal Functions === */
@@ -23,9 +23,10 @@ const parseNumber = (
  * @param {Fallback<number, U>} [fallback=0] - Fallback value or reader function
  * @returns {Parser<number, U>} Parser function
  */
-const asInteger =
-	<U extends UI>(fallback: Fallback<number, U> = 0): Parser<number, U> =>
-	(ui: U, value: string | null | undefined) => {
+const asInteger = <U extends UI>(
+	fallback: Fallback<number, U> = 0,
+): Parser<number, U> =>
+	asParser((ui: U, value: string | null | undefined) => {
 		if (value == null) return getFallback(ui, fallback)
 
 		// Handle hexadecimal notation
@@ -38,7 +39,7 @@ const asInteger =
 		// Handle other formats (including scientific notation)
 		const parsed = parseNumber(parseFloat, value)
 		return parsed != null ? Math.trunc(parsed) : getFallback(ui, fallback)
-	}
+	})
 
 /**
  * Parse a string as a number with a fallback
@@ -47,9 +48,12 @@ const asInteger =
  * @param {Fallback<number, U>} [fallback=0] - Fallback value or reader function
  * @returns {Parser<number, U>} Parser function
  */
-const asNumber =
-	<U extends UI>(fallback: Fallback<number, U> = 0): Parser<number, U> =>
-	(ui: U, value: string | null | undefined) =>
-		parseNumber(parseFloat, value) ?? getFallback(ui, fallback)
+const asNumber = <U extends UI>(
+	fallback: Fallback<number, U> = 0,
+): Parser<number, U> =>
+	asParser(
+		(ui: U, value: string | null | undefined) =>
+			parseNumber(parseFloat, value) ?? getFallback(ui, fallback),
+	)
 
 export { asInteger, asNumber }

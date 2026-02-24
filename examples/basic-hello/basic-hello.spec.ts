@@ -108,3 +108,46 @@ test.describe('basic-hello component', () => {
 		await expect(output).toHaveText('<script>alert("test")</script>')
 	})
 })
+
+// ===== PARSER BRANDING (asParser) — OBSERVABLE BEHAVIOR =====
+// asParser() brands a function with PARSER_BRAND so isParser() reliably
+// identifies it. The key observable effect: branded parsers are added to
+// `observedAttributes`, which means `attributeChangedCallback` fires when
+// the corresponding attribute changes and the reactive value updates.
+//
+// basic-hello uses asString() (internally branded with asParser()) as its
+// parser for the `name` attribute. These tests confirm the end-to-end effect.
+
+test.describe('parser branding: asParser() observable effects', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto('http://localhost:3000/test/basic-hello')
+		await page.waitForSelector('basic-hello')
+	})
+
+	test('asParser()-branded parser causes attribute to be observed', async ({
+		page,
+	}) => {
+		// asString() is branded with asParser(). If the brand is detected,
+		// 'name' is included in observedAttributes and the attribute change
+		// will trigger attributeChangedCallback → reactive update → DOM update.
+		const element = page.locator('basic-hello').first()
+		const output = element.locator('output')
+
+		await expect(output).toHaveText('World')
+
+		await element.evaluate(el => el.setAttribute('name', 'Parser Test'))
+		await expect(output).toHaveText('Parser Test')
+	})
+
+	test('attribute is included in observedAttributes', async ({ page }) => {
+		// Confirm that 'name' appears in observedAttributes — the evidence that
+		// isParser() returned true for asString(), triggering observation.
+		const observed = await page.evaluate(() => {
+			return Array.from(
+				(customElements.get('basic-hello') as any)?.observedAttributes ?? [],
+			)
+		})
+		expect(observed).toContain('name')
+	})
+})
+

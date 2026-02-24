@@ -92,7 +92,7 @@ connectedCallback()
   └─ 4. resolveDependencies(() => {
            this.#cleanup = runEffects(ui, setup(ui))
          })
-         Waits for child custom elements to be defined (50ms timeout),
+         Waits for child custom elements to be defined (200ms timeout),
          then runs the setup function and activates effects.
 ```
 
@@ -129,7 +129,7 @@ Calls the cleanup function returned by `runEffects()`, which tears down all effe
 
 ### updateElement — the shared abstraction
 
-Every built-in effect (`setAttribute`, `toggleClass`, `setText`, `setProperty`, `setStyle`, `toggleAttribute`, `dangerouslySetInnerHTML`, `callMethod`, `focus`, `show`) follows the same pattern via `updateElement(reactive, updater)`:
+Every built-in effect (`setAttribute`, `toggleClass`, `setText`, `setProperty`, `setStyle`, `toggleAttribute`, `dangerouslySetInnerHTML`, `show`) follows the same pattern via `updateElement(reactive, updater)`:
 
 ```
 updateElement(reactive, { op, name, read, update, delete? })
@@ -138,9 +138,9 @@ updateElement(reactive, { op, name, read, update, delete? })
   │
   └─ createEffect(() => {
        value = resolveReactive(reactive)   ← auto-tracks signal deps
-       if value === RESET   → use fallback
-       if value === null    → delete(target) if available, else use fallback
-       if value !== current → update(target, value)
+       if value === undefined → use fallback (error in reader, or prop missing)
+       if value === null      → delete(target) if available, else use fallback
+       if value !== current   → update(target, value)
      })
 ```
 
@@ -150,10 +150,6 @@ The `Reactive<T>` type is a union of three forms:
 - `(target: E) => T` — a reader function
 
 `resolveReactive()` handles all three and returns the concrete value. Because it calls `.get()` inside a `createEffect`, signal dependencies are automatically tracked.
-
-### The RESET sentinel
-
-`RESET` is a `Symbol('RESET')` typed as `any`. When a reactive resolves to `RESET` (e.g., the reader function threw an error), the effect restores the original DOM value captured at setup time.
 
 ### Built-in effects at a glance
 
@@ -172,11 +168,15 @@ All default their `reactive` parameter to the effect name (e.g., `setAttribute('
 
 ### on() — event listener effect
 
-`on(type, handler, options?)` is different from `updateElement`-based effects. It directly attaches an event listener to the target element. The handler receives the event and may return a partial property update object like `{ count: host.count + 1 }`. If it does, the updates are applied to the host in a `batch()`. For passive events (scroll, resize, touch, wheel), execution is deferred via `schedule()`.
+`on(type, handler, options?)` is different from `updateElement`-based effects. It calls `createScope()` for proper disposal and directly attaches an event listener to the target element. The handler receives the event and may return a partial property update object like `{ count: host.count + 1 }`. If it does, the updates are applied to the host in a `batch()`. For passive events (scroll, resize, touch, wheel), execution is deferred via `schedule()`.
 
 ### pass() — inter-component binding
 
-`pass(props)` replaces the backing signal of a child Le Truc component's Slot properties. It uses `getSignals(target)` to access the child's internal signal map, then for each passed prop calls `slot.replace(signal)` with a new signal derived from the parent's reactive value. This creates a live reactive binding between parent and child without the child needing to know about the parent. No cleanup/restore is needed: when the parent unmounts, the child is torn down as well.
+`pass(props)` is a Le Truc–to–Le Truc optimization. It calls `createScope()` for proper cleanup and directly swaps the backing signal of a descendant component's Slot, creating a zero-overhead live binding: it uses `getSignals(target)` to access the child's internal signal map, captures `slot.current()` before replacing, then calls `slot.replace(signal)`. The cleanup restores the original signal with `slot.replace(original)` when the parent disconnects.
+
+This is more efficient than `setProperty()` for Le Truc targets: it eliminates the intermediate `createEffect` and property-assignment overhead on every reactive update. The parent and child share the exact same underlying signal node.
+
+**Scope is Le Truc components only.** For non-Le Truc custom elements (Lit, Stencil, FAST, etc.), use `setProperty()` instead. Installing a reactive getter via `Object.defineProperty` bypasses those frameworks' own change-detection cycles — the foreign component's render/update is never triggered when the signal changes, because it only fires when a value is *set* through the framework's setter, not when the property is *read*. `setProperty()` goes through the public setter and is always correct for any element.
 
 ## The UI Query System
 
@@ -194,11 +194,11 @@ The `MutationObserver` config is smart about which attributes to watch: `extract
 
 **Mutation filtering**: The observer's callback uses a `couldMatch` helper that checks `node.matches(selector)` and `node.querySelector(selector)` on added/removed nodes. This prevents spurious invalidations from mutations *inside* matched elements (e.g., `innerHTML` changes on a `button[role="option"]` that add/remove `<mark>` tags).
 
-**Custom `equals`**: The memo uses `(a, b) => a.length === b.length && a.every((el, i) => el === b[i])` to compare arrays by element identity. This currently only prevents propagation through chained memos, because `cause-effect`'s `invalidate()` propagates `FLAG_DIRTY` directly to terminal effects, bypassing the `equals` check. A future fix in Cause & Effect (propagating `FLAG_CHECK` instead) will allow effects to skip re-runs when `equals` returns `true`, unlocking a further optimization.
+**Custom `equals`**: The memo uses `(a, b) => a.length === b.length && a.every((el, i) => el === b[i])` to compare arrays by element identity. Since `cause-effect` 0.18.4, `invalidate()` propagates `FLAG_CHECK` instead of `FLAG_DIRTY`, so effects correctly skip re-runs when `equals` returns `true`. The `couldMatch` filter and the `equals` check together ensure effects only re-run when the matched element set actually changes.
 
 ### Dependency resolution
 
-During `first()` and `all()` calls, any matched custom element that isn't yet defined (matches `:not(:defined)`) is collected. `resolveDependencies(callback)` then awaits `customElements.whenDefined()` for all of them with a 50ms timeout. On timeout, it logs a `DependencyTimeoutError` but still runs the callback — effects proceed even if dependencies aren't ready.
+During `first()` and `all()` calls, any matched custom element that isn't yet defined (matches `:not(:defined)`) is collected. `resolveDependencies(callback)` then awaits `customElements.whenDefined()` for all of them with a 200ms timeout. On timeout, it logs a `DependencyTimeoutError` but still runs the callback — effects proceed even if dependencies aren't ready.
 
 ### Compile-time selector type inference
 
@@ -228,9 +228,7 @@ Implements the [W3C Community Protocol for Context](https://github.com/webcompon
 
 ### Provider side
 
-`provideContexts(['theme', 'user'])` returns a function `(host) => Cleanup` that adds a `context-request` event listener. When a matching request arrives, it stops propagation and provides a getter `() => host[context]` to the callback.
-
-This is used as a `MethodProducer` — a property initializer that returns `void` and exists only for its side effects (setting up the listener).
+`provideContexts(['theme', 'user'])` is an `Effect` — use it in the setup function as `host: provideContexts([...])`. It installs a `context-request` event listener via `createScope`; when a matching request arrives, it stops propagation and provides a getter `() => host[context]` to the callback. The listener is removed on `disconnectedCallback` via the effect cleanup.
 
 ### Consumer side
 
@@ -245,19 +243,3 @@ This is used as a `MethodProducer` — a property initializer that returns `void
 `setAttribute()` includes security validation:
 - Blocks `on*` event handler attributes (prevents XSS via attribute injection)
 - Validates URLs against an allowlist of safe protocols (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`) — blocks `javascript:`, `data:`, etc.
-
----
-
-## Open Questions
-
-### Parser/Reader distinction via `function.length`
-
-The distinction between Parser (≥2 params) and Reader (1 param) is detected at runtime via `value.length >= 2`. This is fragile — default parameters, rest parameters, and destructuring all affect `function.length` in non-obvious ways. A function `(ui, value = '') => ...` has `length === 1` and would be misclassified as a Reader. This is a potential source of subtle bugs. Would a branded type, a wrapper function, or a static property be a more robust marker?
-
-### MethodProducer is invisible in the type system
-
-`MethodProducer<P, U>` is defined as `(ui) => void`, but `isReaderOrMethodProducer` just checks `isFunction`. There's no way to distinguish a `Reader` from a `MethodProducer` at runtime — the only difference is that a MethodProducer returns `void` and relies on side effects (like `provideContexts`). Since `#setAccessor` is only called when the result is non-null, this works by convention, but the flow is non-obvious: the MethodProducer's return value (`undefined`) causes `#setAccessor` to be silently skipped, which is the desired behavior but isn't explicitly documented in the code.
-
-### `cause-effect` `invalidate()` propagates `FLAG_DIRTY` to effects
-
-When a `Memo` with a `watched` callback calls `invalidate()`, `cause-effect` propagates `FLAG_DIRTY` directly to terminal effect sinks. This bypasses the memo's `equals` check — effects always re-run even when the memo's value hasn't changed. The correct behavior would be to propagate `FLAG_CHECK`, which forces effects to refresh their sources and respect `equals` at every level. This is tracked as a bug to report to the Cause & Effect team. Once fixed, the `couldMatch` mutation filter in `createElementsMemo` becomes a performance optimization rather than a correctness requirement.

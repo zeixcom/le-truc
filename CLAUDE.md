@@ -1,219 +1,27 @@
 # Claude AI Context — Le Truc
 
-**Le Truc** is a modern TypeScript library for building reactive custom elements (web components) with a signal-based reactive system. It provides a declarative approach to component development with automatic dependency management, type safety, and minimal runtime overhead.
+> This file lists things an LLM should know about Le Truc that may be surprising, non-obvious, or easy to get wrong. It is not a general introduction — see `ARCHITECTURE.md` for structure and `package.json` for project metadata.
 
-## Library Overview and Philosophy
+## Surprising Behaviors
 
-### Core Philosophy
+- **Parser branding is required for reliable detection**: `isParser()` checks for `PARSER_BRAND` first. Unbranded functions fall back to `fn.length >= 2`, which is unreliable (default params, rest params, and destructuring all affect `.length`). Always use `asParser()` to create custom parsers; in DEV_MODE, using an unbranded function triggers a `console.warn`.
 
-Le Truc embraces the web platform's native custom elements API while providing modern developer ergonomics through:
+- **`pass()` is Le Truc–only and replaces signals, not values**: `pass(props)` calls `slot.replace(signal)` on the child's internal Slot map — it only works for Le Truc components whose properties are Slot-backed. For any other custom element or plain HTML element, use `setProperty()` instead. The original signal is captured and restored when the parent disconnects, so the child regains its own independent state after detachment.
 
-- **Reactive by Default**: Built on the `@zeix/cause-effect` signal system for fine-grained reactivity
-- **Type-First Design**: Full TypeScript support with compile-time safety for component properties and DOM queries
-- **Zero Dependencies**: Self-contained runtime with minimal overhead
-- **Web Standards Compliant**: Uses native custom elements, no virtual DOM or proprietary abstractions
-- **Progressive Enhancement**: Components work with or without JavaScript, gracefully degrading
+- **`MethodProducer` is branded, not structurally distinguished**: `isMethodProducer()` checks for `METHOD_BRAND`. Always wrap method producer initializers with `asMethod()` — e.g. `clearMethod`, `add`, `delete` in `module-list`. Unbranded `(ui) => void` functions are treated as Readers, not method producers. `provideContexts()` is an `Effect`, not a method producer — use it in the setup function as `host: provideContexts([...])`.
 
-### Mental Model
+- **`all()` MutationObserver is lazy**: The observer only activates when the `Memo` is read inside a reactive effect. The observer watches attribute changes implied by the CSS selector (classes, IDs, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the memo's `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
 
-Think of Le Truc components as **reactive shells around DOM elements**:
+- **`setAttribute` has security validation**: Blocks `on*` event handler attributes and validates URL attributes against a safe-protocol allowlist (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`). Violations throw a descriptive error logged at `LOG_ERROR` level — they are never silent.
 
-1. **Define** the component with properties, UI selectors, and effects
-2. **Properties** are signals that automatically sync with attributes
-3. **UI selectors** find and track DOM elements within the component
-4. **Effects** run when signals change, updating the DOM reactively
+- **Dependency resolution times out at 200ms**: If a queried custom element isn't defined within 200ms, a `DependencyTimeoutError` is logged but effects proceed anyway.
 
-```typescript
-// Mental model: Property → Signal → Effect → DOM Update
-defineComponent(
-  'my-widget',                        // Must contain hyphen, lowercase
-  { count: 0 },                       // Properties become signals
-  q => ({ btn: q.first('button') }),  // UI elements are queried once
-  ui => ({ btn: on('click', ...) })   // Effects run reactively
-)
-```
+- **`toggleAttribute` and `setAttribute` default their reactive to the effect name**: `toggleAttribute('loading')` reads `host.loading`. The second argument may be omitted when the property name matches the attribute name.
 
-### Key Differentiators
+- **`on()` handler return value updates host**: If an event handler returns `{ prop: value }`, those updates are applied to the host in a `batch()`. Returning nothing (or `undefined`) is a no-op.
 
-**vs React/Vue**: No virtual DOM, uses native web platform APIs
-**vs Lit**: Signal-based reactivity instead of property-driven re-renders
-**vs Angular Elements**: Lighter weight, functional composition over class inheritance
-**vs Stencil**: Runtime reactivity instead of compile-time optimizations
+- **Context protocol is the Web Components Community Protocol**: `provideContexts` / `requestContext` implement the [webcomponents-cg context spec](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md), not a custom protocol.
 
-## Architectural Deep Dive
+- **`undefined` from a reader restores original DOM value**: When a reactive resolves to `undefined` (e.g. after an error in a reader, or a missing property), the effect restores the DOM value captured at setup time — not a blank/null state. The `RESET` symbol no longer exists.
 
-### Signal-Based Reactivity
-
-The foundation is `@zeix/cause-effect`, providing:
-
-- **Signals**: `createState(value)` - mutable reactive values
-- **Computed**: `createComputed(() => ...)` - derived reactive values
-- **Effects**: `createEffect(() => ...)` - side effects that run when dependencies change
-- **Batching**: `batch(() => ...)` - group multiple signal updates
-
-```typescript
-// Core reactivity pattern
-const count = createState(0)
-const doubled = createComputed(() => count.get() * 2)
-const cleanup = createEffect(() => {
-  console.log(`Count: ${count.get()}, Doubled: ${doubled.get()}`)
-})
-```
-
-### Component Lifecycle
-
-1. **Registration**: `customElements.define()` registers the component class
-2. **Connection**: `connectedCallback()` initializes UI queries and properties
-3. **Dependency Resolution**: Waits for child custom elements to be defined
-4. **Effect Setup**: Runs the setup function to attach reactive effects
-5. **Reactive Updates**: Effects run automatically when signals change
-6. **Disconnection**: `disconnectedCallback()` cleans up effects and listeners
-
-### Property System
-
-Properties are the bridge between HTML attributes and JavaScript signals:
-
-```typescript
-defineComponent('my-widget', {
-  // Static value
-  message: 'Hello',
-
-  // Signal
-  count: createState(0),
-
-  // Parser (attribute → property)
-  config: asJSON({ theme: 'light' }), // with default value
-
-  // Initializer function
-  timestamp: ui => ui.host.hasAttribute('created')
-    ? Number(ui.host.getAttribute('created'))
-    : Date.now(),
-
-  // Reader (DOM → property)
-  value: read(ui => ui.input.value, asInteger())
-})
-```
-
-**Parser Functions** transform attribute strings into typed values:
-- `asString()`, `asNumber()`, `asInteger()`, `asBoolean()`, `asJSON()`
-- Custom parsers: `(ui, value, oldValue) => parsedValue`
-- Auto-added to `observedAttributes` for efficient attribute watching
-
-### UI Query System
-
-The `getHelpers()` function provides type-safe DOM queries with dependency tracking:
-
-```typescript
-const select = ({ first, all }) => ({
-  // Single element with type inference
-  button?: first('button'),             // HTMLButtonElement | undefined
-  input?: first('input[type="text"]'),  // HTMLInputElement | undefined
-
-  // Element collections
-  items: all('.item'),                  // Memo<HTMLElement[]>
-
-  // Required elements (throws if missing)
-  form: first('form', 'Form is required'),
-
-  // Generic typing
-  customEl?: first<MyCustomElement>('my-custom')
-})
-```
-
-**Dependency Detection**: Custom elements found in queries are automatically added to dependencies, ensuring they're defined before effects run.
-
-**Element Memos**: `all()` returns `Memo<E[]>` created by `createElementsMemo()`:
-- Lazily backed by a `MutationObserver` that activates only when read within a reactive effect
-- Always contains the current matching elements; added/removed diffs are derived downstream
-- Access via `.get()` to retrieve the current element array
-
-### Effect System
-
-Effects are functions that run reactively and return cleanup functions:
-
-```typescript
-// Effects are keyed by UI element name; the setup function receives the full ui object
-({ host }) => ({
-  button: [
-    // Event handling — handler receives the DOM event
-    on('click', () => ({ count: host.count + 1 })),
-
-    // Property updates from reactive values
-    setProperty('disabled', 'loading'),
-
-    // Attribute management using functions or reactive values
-    setAttribute('aria-pressed', () => String(host.active)),
-    toggleAttribute('loading'), // 'loading' for value may be omitted if the same
-
-    // Class management
-    toggleClass('active'),
-
-    // Text content
-    setText('count'),
-
-    // Custom effects
-    (host, target) => createEffect(() => {
-      target.style.color = host.color
-      return () => target.style.color = 'transparent'
-    })
-  ]
-})
-```
-
-**Built-in Effects**:
-- `on(event, handler)` - Event listeners; handler receives the event and may return `{ prop: value }` to update host
-- `setText(property)` - Reactive text content
-- `setProperty(prop, reactive)` - Element property updates
-- `setAttribute(attr, reactive)` - Attribute management
-- `toggleAttribute(attr, reactive)` - Boolean attribute: present when truthy
-- `toggleClass(class, property)` - Conditional CSS classes
-- `setStyle(prop, reactive)` - Inline style updates
-- `show(reactive)` - Toggle element visibility via `hidden`
-- `pass(props)` - Pass reactive values to child Le Truc components via Slot signal replacement
-- `dangerouslySetInnerHTML(reactive, opts?)` - Set innerHTML (use only for trusted sources)
-
-### Parser Architecture
-
-Parsers handle the attribute ↔ property transformation:
-
-```typescript
-// Parser signature
-type Parser<T, U extends UI> = (
-  ui: U,                           // Access to component UI
-  value: string | null | undefined, // Attribute value
-  old?: string | null              // Previous value
-) => T
-
-// Example: JSON parser
-const asJSON = <T>(fallback?: T) =>
-  (ui: UI, value: string | null): T => {
-    if (!value) return fallback
-    try {
-      return JSON.parse(value)
-    } catch {
-      return fallback
-    }
-  }
-```
-
-**Parser Integration**:
-- Used as property initializers: `{ config: asJSON({ theme: 'light' }) }`
-- Automatically added to `observedAttributes`
-- Called on `attributeChangedCallback`
-- Can access component UI for contextual parsing
-
-### Error Handling & Debugging
-
-**Development Mode**: Set `process.env.DEV_MODE=true` for enhanced debugging:
-- Detailed error messages with component context
-- Effect execution logging
-- Dependency resolution warnings
-
-**Error Types**:
-- `InvalidComponentNameError` - Component name validation
-- `InvalidPropertyNameError` - Property name conflicts
-- `MissingElementError` - Required UI elements not found
-- `DependencyTimeoutError` - Custom element dependencies timeout
-- `InvalidEffectsError` - Effect setup failures
-
-**Debug Mode**: Set `host.debug = true` on component instances for verbose logging.
+- **Debug mode**: Set `host.debug = true` on a component instance for verbose per-instance logging. For project-wide enhanced errors and logging, build with `process.env.DEV_MODE=true`.

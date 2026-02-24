@@ -1,6 +1,7 @@
 import './basic-hello/basic-hello.ts'
 import './basic-button/basic-button.ts'
 import './basic-counter/basic-counter.ts'
+import './security-test/security-test.ts'
 import './basic-number/basic-number.ts'
 import './basic-pluralize/basic-pluralize.ts'
 import './card-mediaqueries/card-mediaqueries.ts'

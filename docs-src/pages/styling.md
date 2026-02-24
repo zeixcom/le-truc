@@ -176,7 +176,7 @@ customElements.define('card-callout', class extends HTMLElement {})
 
 This tells the browser (and Le Truc) that the element is defined and ready. The registration has no runtime cost — the element simply upgrades to a plain `HTMLElement` immediately.
 
-{% callout class="tip" %}
+{% callout .tip %}
 **As a rule of thumb**, every custom element tag you use in HTML should have a corresponding `customElements.define()` call. This is the web platform's contract: a hyphenated tag name is a custom element, and defining it — even with an empty class — ensures it upgrades correctly and doesn't block other components.
 {% /callout %}
 

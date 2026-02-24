@@ -29,14 +29,21 @@ type ExtractRightmostSelector<S extends string> =
 					: S
 
 // Extract tag name from a simple selector (without combinators)
+// Check `[` before `:` so `button[attr]:pseudo` yields `button`, not `button[attr]`.
+// But only use the `[` match when the prefix contains no `:` — otherwise the `[`
+// is inside a pseudo-class argument like `:not([hidden])` and `:` should win.
 type ExtractTagFromSimpleSelector<S extends string> =
 	S extends `${infer T}.${string}`
 		? T
 		: S extends `${infer T}#${string}`
 			? T
-			: S extends `${infer T}:${string}`
-				? T
-				: S extends `${infer T}[${string}`
+			: S extends `${infer T}[${string}`
+				? T extends `${string}:${string}`
+					? S extends `${infer U}:${string}`
+						? U
+						: S
+					: T
+				: S extends `${infer T}:${string}`
 					? T
 					: S
 
@@ -301,9 +308,14 @@ const getHelpers = (
 	 *
 	 * If no dependencies were collected, `callback` runs synchronously. Otherwise, a
 	 * microtask filters out already-defined elements, then `Promise.all` awaits the rest
-	 * with a 200 ms timeout. On timeout, logs a `DependencyTimeoutError` and runs `callback` anyway.
+	 * with a 200 ms timeout (see `DEPENDENCY_TIMEOUT`).
 	 *
-	 * @param {() => void} callback - Function to run once dependencies are resolved
+	 * On timeout, a `DependencyTimeoutError` is logged in DEV_MODE and `callback` runs
+	 * anyway — effects proceed in a degraded-but-functional state. A single undefined
+	 * dependency should never block the entire component: progressive enhancement means
+	 * the component remains usable even when a queried child element is not yet registered.
+	 *
+	 * @param {() => void} callback - Function to run once dependencies are resolved (or timed out)
 	 */
 	const resolveDependencies = (callback: () => void) => {
 		if (dependencies.size) {

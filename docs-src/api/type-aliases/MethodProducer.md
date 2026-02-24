@@ -1,25 +1,13 @@
-### Type Alias: MethodProducer()\<P, U\>
+### Type Alias: MethodProducer
 
-> **MethodProducer**\<`P`, `U`\> = (`ui`) => `void`
+> **MethodProducer** = (...`args`) => `void` & `object`
 
-Defined in: [src/component.ts:49](https://github.com/zeixcom/le-truc/blob/ce6fdde33897d7e14382a222c2fdd5e1804c6bd3/src/component.ts#L49)
+Defined in: [src/parsers.ts:25](https://github.com/zeixcom/le-truc/blob/cbc935087cbb74b599ebc3d8a11ba560b180d4b1/src/parsers.ts#L25)
 
-#### Type Parameters
+A branded method-producer function (side-effect initializer, returns void).
 
-##### P
+#### Type Declaration
 
-`P` *extends* [`ComponentProps`](ComponentProps.md)
+##### \[METHOD\_BRAND\]
 
-##### U
-
-`U` *extends* [`UI`](UI.md)
-
-#### Parameters
-
-##### ui
-
-`U` & `object`
-
-#### Returns
-
-`void`
+> `readonly` **\[METHOD\_BRAND\]**: `true`

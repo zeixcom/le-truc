@@ -316,7 +316,7 @@ On the other hand, the `all()` function returns a `Memo<E[]>` — a memoized, re
 
 Under the hood, a lazy `MutationObserver` watches for structural changes and invalidates the memo when needed. Le Truc then diffs the new element list against the previous one, applies effects to newly added elements, and runs cleanup functions on removed ones.
 
-{% callout class="tip" %}
+{% callout .tip %}
 **Tip**: `all()` sets up a `MutationObserver` and re-runs effects on every structural change. Prefer `first()` when targeting a single element known to be present at connection time.
 {% /callout %}
 
@@ -405,7 +405,7 @@ The sensor is created as a **property initializer** (second parameter of `define
 
 ### When to Use Which?
 
-{% callout class="tip" %}
+{% callout .tip %}
 **Choosing the right approach**
 
 Use **`on()`** when you want to:

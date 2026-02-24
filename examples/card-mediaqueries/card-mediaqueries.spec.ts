@@ -254,6 +254,29 @@ test.describe('card-mediaqueries component', () => {
 		expect(firstOrientation).toBe(secondOrientation)
 	})
 
+	test('provideContexts() runs as side-effect', async ({ page }) => {
+		const cardWithContext = page.locator('context-media card-mediaqueries')
+		const motionText = await cardWithContext.locator('.motion').textContent()
+		// Real context values — not the 'unknown' fallback shown without context
+		expect(['no-preference', 'reduce']).toContain(motionText?.trim())
+	})
+
+	test('context-media provides all four media contexts', async ({ page }) => {
+		const cardWithContext = page.locator('context-media card-mediaqueries')
+
+		const texts = {
+			motion: await cardWithContext.locator('.motion').textContent(),
+			theme: await cardWithContext.locator('.theme').textContent(),
+			viewport: await cardWithContext.locator('.viewport').textContent(),
+			orientation: await cardWithContext.locator('.orientation').textContent(),
+		}
+
+		expect(texts.motion).toBeTruthy()
+		expect(texts.theme).toBeTruthy()
+		expect(texts.viewport).toBeTruthy()
+		expect(texts.orientation).toBeTruthy()
+	})
+
 	// TODO: Re-enable this test when context-theme component is implemented
 	// This test doesn't make sense with context-media since it always returns
 	// the same browser/system values regardless of nesting

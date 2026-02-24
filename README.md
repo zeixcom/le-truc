@@ -1,6 +1,6 @@
 # Le Truc
 
-Version 0.16.1
+Version 0.16.2
 
 **Le Truc - the thing for type-safe reactive Web Components**
 

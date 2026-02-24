@@ -2,7 +2,18 @@
 
 > **EventHandler**\<`P`, `Evt`\> = (`event`) => `{ [K in keyof P]?: P[K] }` \| `void` \| `Promise`\<`void`\>
 
-Defined in: [src/effects/event.ts:10](https://github.com/zeixcom/le-truc/blob/ce6fdde33897d7e14382a222c2fdd5e1804c6bd3/src/effects/event.ts#L10)
+Defined in: [src/effects/event.ts:22](https://github.com/zeixcom/le-truc/blob/cbc935087cbb74b599ebc3d8a11ba560b180d4b1/src/effects/event.ts#L22)
+
+Event handler for use with `on()`.
+
+Two return modes are valid:
+- **Side-effect only** — return `void` (or nothing). The component state is
+  not automatically updated. This is always safe and is the right choice for
+  handlers that call external APIs, dispatch custom events, etc.
+- **Property update shortcut** — return a partial `{ [key: keyof P]: value }`
+  object. All returned key/value pairs are applied to the host inside a single
+  `batch()`, equivalent to writing `batch(() => { host.prop = value })` by hand.
+  Use this when the handler's only job is to update one or more host properties.
 
 #### Type Parameters
 

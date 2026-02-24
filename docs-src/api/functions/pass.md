@@ -2,13 +2,19 @@
 
 > **pass**\<`P`, `Q`\>(`props`): [`Effect`](../type-aliases/Effect.md)\<`P`, [`Component`](../type-aliases/Component.md)\<`Q`\>\>
 
-Defined in: [src/effects/pass.ts:42](https://github.com/zeixcom/le-truc/blob/ce6fdde33897d7e14382a222c2fdd5e1804c6bd3/src/effects/pass.ts#L42)
+Defined in: [src/effects/pass.ts:51](https://github.com/zeixcom/le-truc/blob/cbc935087cbb74b599ebc3d8a11ba560b180d4b1/src/effects/pass.ts#L51)
 
-Effect for passing reactive values to a descendant Le Truc component
-by replacing the backing signal of the target's Slot.
+Effect for passing reactive values to a descendant Le Truc component.
 
-No cleanup/restore is needed: when the parent unmounts, the child
-is torn down as well. For re-parenting scenarios, use context instead.
+Replaces the backing signal of the target's Slot, creating a live
+parent→child binding. The original signal is captured and restored when the
+parent disconnects, so the child regains its own independent state after
+detachment.
+
+Scope: Le Truc components only (targets whose properties are Slot-backed).
+For non-Le Truc custom elements or plain HTML elements, use `setProperty()`
+instead — it goes through the element's public setter and is always correct
+regardless of the child's internal framework.
 
 #### Type Parameters
 

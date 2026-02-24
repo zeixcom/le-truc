@@ -2,9 +2,13 @@
 
 > **isParser**\<`T`, `U`\>(`value`): `value is Parser<T, U>`
 
-Defined in: [src/parsers.ts:32](https://github.com/zeixcom/le-truc/blob/ce6fdde33897d7e14382a222c2fdd5e1804c6bd3/src/parsers.ts#L32)
+Defined in: [src/parsers.ts:50](https://github.com/zeixcom/le-truc/blob/cbc935087cbb74b599ebc3d8a11ba560b180d4b1/src/parsers.ts#L50)
 
 Check if a value is a parser
+
+Checks for the `PARSER_BRAND` symbol first. Falls back to `fn.length >= 2`
+for backward compatibility, emitting a DEV_MODE warning when the fallback
+is triggered so authors can migrate to `asParser()`.
 
 #### Type Parameters
 

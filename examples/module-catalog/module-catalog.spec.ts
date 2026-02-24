@@ -11,7 +11,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('renders initial state correctly', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const button = catalog.locator('basic-button button')
 		const badge = catalog.locator('basic-button .badge')
 		const spinbuttons = catalog.locator('form-spinbutton')
@@ -36,7 +36,7 @@ test.describe('module-catalog component', () => {
 	test('calculates total and enables button when items are added', async ({
 		page,
 	}) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const button = catalog.locator('basic-button button')
 		const badge = catalog.locator('basic-button .badge')
 
@@ -79,7 +79,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('updates total when items are decremented', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const button = catalog.locator('basic-button button')
 		const badge = catalog.locator('basic-button .badge')
 
@@ -137,7 +137,7 @@ test.describe('module-catalog component', () => {
 	test('handles reaching maximum values for individual products', async ({
 		page,
 	}) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const badge = catalog.locator('basic-button .badge')
 
 		// Product 1 max is 10, Product 2 max is 5, Product 3 max is 20
@@ -169,7 +169,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('reactive computation updates immediately', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const badge = catalog.locator('basic-button .badge')
 
 		const product1Increment = catalog
@@ -189,7 +189,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('total reflects component property values', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 
 		// Add items to different products
 		const product1Increment = catalog
@@ -214,7 +214,7 @@ test.describe('module-catalog component', () => {
 
 		// Verify component properties match expected values
 		const componentValues = await page.evaluate(() => {
-			const spinbuttons = document.querySelectorAll('form-spinbutton')
+			const spinbuttons = document.querySelectorAll('#default-test form-spinbutton')
 			return Array.from(spinbuttons).map((sb: any) => sb.value)
 		})
 
@@ -226,7 +226,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('button disabled state changes correctly', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const button = catalog.locator('basic-button button')
 
 		const product1Increment = catalog
@@ -264,7 +264,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('handles mixed interactions across all products', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const badge = catalog.locator('basic-button .badge')
 		const button = catalog.locator('basic-button button')
 
@@ -315,7 +315,7 @@ test.describe('module-catalog component', () => {
 	test('badge text is always string representation of total', async ({
 		page,
 	}) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const badge = catalog.locator('basic-button .badge')
 
 		const product1Increment = catalog
@@ -333,7 +333,7 @@ test.describe('module-catalog component', () => {
 	test('component coordination works with keyboard interactions', async ({
 		page,
 	}) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const badge = catalog.locator('basic-button .badge')
 
 		// Use keyboard on first product
@@ -354,7 +354,7 @@ test.describe('module-catalog component', () => {
 	})
 
 	test('all spinbuttons contribute to total calculation', async ({ page }) => {
-		const catalog = page.locator('module-catalog')
+		const catalog = page.locator('#default-test')
 		const badge = catalog.locator('basic-button .badge')
 
 		// Verify all 3 spinbuttons are found and contribute
@@ -375,7 +375,7 @@ test.describe('module-catalog component', () => {
 
 		// Verify each spinbutton has value 1
 		const values = await page.evaluate(() => {
-			const spinbuttons = document.querySelectorAll('form-spinbutton')
+			const spinbuttons = document.querySelectorAll('#default-test form-spinbutton')
 			return Array.from(spinbuttons).map((sb: any) => sb.value)
 		})
 		expect(values).toEqual([1, 1, 1])
@@ -384,7 +384,7 @@ test.describe('module-catalog component', () => {
 	test('component has no public properties exposed', async ({ page }) => {
 		// Verify the component doesn't expose any public interface
 		const hasPublicProps = await page.evaluate(() => {
-			const catalog = document.querySelector('module-catalog') as any
+			const catalog = document.querySelector('#default-test') as any
 			// Try to access common property names, should all be undefined or internal
 			const props = ['total', 'disabled', 'badge', 'value', 'count', 'items']
 			return props.some(prop => catalog[prop] !== undefined)
@@ -394,3 +394,4 @@ test.describe('module-catalog component', () => {
 		expect(hasPublicProps).toBe(false)
 	})
 })
+

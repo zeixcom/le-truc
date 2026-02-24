@@ -2,13 +2,14 @@
 
 > **provideContexts**\<`P`\>(`contexts`): (`host`) => [`Cleanup`](../type-aliases/Cleanup.md)
 
-Defined in: [src/context.ts:109](https://github.com/zeixcom/le-truc/blob/ce6fdde33897d7e14382a222c2fdd5e1804c6bd3/src/context.ts#L109)
+Defined in: [src/context.ts:111](https://github.com/zeixcom/le-truc/blob/cbc935087cbb74b599ebc3d8a11ba560b180d4b1/src/context.ts#L111)
 
 Make reactive properties of this component available to descendant consumers via the context protocol.
 
-Returns a `MethodProducer` — use it as a property initializer in `defineComponent`.
-It attaches a `context-request` listener to the host; when a matching request arrives,
-it provides a getter `() => host[context]` to the requester.
+Use in the setup function as `host: provideContexts([...])` — it is an `Effect`, not a property
+initializer. It attaches a `context-request` listener to the host via `createScope`; when a
+matching request arrives, it provides a getter `() => host[context]` to the requester.
+The listener is removed on `disconnectedCallback` via the effect cleanup.
 
 #### Type Parameters
 
@@ -26,7 +27,7 @@ Reactive property names to expose as context
 
 #### Returns
 
-MethodProducer that installs the listener and returns a cleanup function
+Effect that installs the context-request listener and returns a cleanup function
 
 > (`host`): [`Cleanup`](../type-aliases/Cleanup.md)
 

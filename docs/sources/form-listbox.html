@@ -125,6 +125,18 @@
 <span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">form-listbox</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">form</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- safeSetAttribute security test fixtures (hidden, used by form-listbox.spec.ts) --></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- security-onevil: sets onclick attribute — always blocked (on* name) --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">security-onevil</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"sec-evil"</span><span style="color:#A6E22E"> hidden</span><span style="color:#A6E22E"> src</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"test"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">a</span><span style="color:#A6E22E"> href</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"#"</span><span style="color:#F8F8F2">>trigger&#x3C;/</span><span style="color:#F92672">a</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">security-onevil</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- security-urlhref: sets href attribute — safe protocols pass, unsafe are blocked --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">security-urlhref</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"sec-href"</span><span style="color:#A6E22E"> hidden</span><span style="color:#A6E22E"> href</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"https://example.com"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">a</span><span style="color:#A6E22E"> href</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"#"</span><span style="color:#F8F8F2">>link&#x3C;/</span><span style="color:#F92672">a</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">security-urlhref</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span></code></pre>
 			</module-scrollarea>
 			<basic-button class="copy">

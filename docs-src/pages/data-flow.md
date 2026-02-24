@@ -52,7 +52,7 @@ defineComponent(
 
 In contrast to a static `querySelectorAll()` call, the `Memo<E[]>` returned by `all()` is reactive and updates whenever new elements are added or removed from the DOM.
 
-Then, we need to convert the total of all product quantities to a string and pass it on to the `BasicButton` component. In Le Truc we use the `pass()` function to share state with descendant components:
+Then, we need to convert the total of all product quantities to a string and pass it on to the `BasicButton` component. In Le Truc we use the `pass()` function to share state with descendant Le Truc components:
 
 ```js#module-catalog.js
 defineComponent(
@@ -83,6 +83,10 @@ Allright, that's it!
 
 - Whenever one of the `value` signals of a `<form-spinbutton>` updates, the total in the badge of `<basic-button>` automatically updates.
 - No need for event listeners or manual updates!
+
+{% callout .tip title="pass() works with Le Truc components only" %}
+`pass()` replaces the backing signal of the child's reactive property directly — this only works for Le Truc components whose properties are Slot-backed. For non-Le Truc custom elements (Lit, Stencil, FAST, etc.) or plain HTML elements, use `setProperty()` instead. It goes through the element's public setter and works correctly regardless of the child's internal framework.
+{% /callout %}
 
 ### Child Component: BasicButton
 

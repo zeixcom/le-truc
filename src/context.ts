@@ -1,6 +1,7 @@
 import {
 	type Cleanup,
 	createMemo,
+	createScope,
 	isFunction,
 	type Memo,
 } from '@zeix/cause-effect'
@@ -97,33 +98,35 @@ class ContextRequestEvent<T extends UnknownContext> extends Event {
 /**
  * Make reactive properties of this component available to descendant consumers via the context protocol.
  *
- * Returns a `MethodProducer` — use it as a property initializer in `defineComponent`.
- * It attaches a `context-request` listener to the host; when a matching request arrives,
- * it provides a getter `() => host[context]` to the requester.
+ * Use in the setup function as `host: provideContexts([...])` — it is an `Effect`, not a property
+ * initializer. It attaches a `context-request` listener to the host via `createScope`; when a
+ * matching request arrives, it provides a getter `() => host[context]` to the requester.
+ * The listener is removed on `disconnectedCallback` via the effect cleanup.
  *
  * @since 0.13.3
  * @param {Array<keyof P>} contexts - Reactive property names to expose as context
- * @returns {(host: Component<P>) => Cleanup} MethodProducer that installs the listener and returns a cleanup function
+ * @returns {Effect} Effect that installs the context-request listener and returns a cleanup function
  */
 const provideContexts =
 	<P extends ComponentProps>(
 		contexts: Array<keyof P>,
 	): ((host: Component<P>) => Cleanup) =>
-	(host: Component<P>) => {
-		const listener = (e: ContextRequestEvent<UnknownContext>) => {
-			const { context, callback } = e
-			if (
-				typeof context === 'string' &&
-				contexts.includes(context as unknown as Extract<keyof P, string>) &&
-				isFunction(callback)
-			) {
-				e.stopImmediatePropagation()
-				callback(() => host[context])
+	(host: Component<P>) =>
+		createScope(() => {
+			const listener = (e: ContextRequestEvent<UnknownContext>) => {
+				const { context, callback } = e
+				if (
+					typeof context === 'string' &&
+					contexts.includes(context as unknown as Extract<keyof P, string>) &&
+					isFunction(callback)
+				) {
+					e.stopImmediatePropagation()
+					callback(() => host[context])
+				}
 			}
-		}
-		host.addEventListener(CONTEXT_REQUEST, listener)
-		return () => host.removeEventListener(CONTEXT_REQUEST, listener)
-	}
+			host.addEventListener(CONTEXT_REQUEST, listener)
+			return () => host.removeEventListener(CONTEXT_REQUEST, listener)
+		})
 
 /**
  * Request a context value from an ancestor provider, returning a reactive `Memo<T>`.

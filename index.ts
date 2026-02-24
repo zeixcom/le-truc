@@ -1,4 +1,4 @@
-// Le Truc 0.16.1
+// Le Truc 0.16.2
 
 // From Cause & Effect
 export {
@@ -70,7 +70,6 @@ export {
 	defineComponent,
 	type Initializers,
 	type MaybeSignal,
-	type MethodProducer,
 	type ReservedWords,
 } from './src/component'
 export {
@@ -119,9 +118,13 @@ export {
 	type SensorEventHandler,
 } from './src/events'
 export {
+	asMethod,
+	asParser,
 	type Fallback,
+	isMethodProducer,
 	isParser,
 	type LooseReader,
+	type MethodProducer,
 	type Parser,
 	type ParserOrFallback,
 	type Reader,
