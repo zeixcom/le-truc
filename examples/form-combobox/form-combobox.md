@@ -41,10 +41,17 @@ An advanced form component that coordinates a text input with a popup `form-list
 * `string`
 * Text content of `.description`
 * Assistive/help text shown in `.description`
+{% /table %}
+
+#### Methods
+
+{% table %}
+* Name
+* Type
+* Description
 ---
 * `clear`
-* `() => void` (readonly)
-* Clears value, error, and validity state
+* `() => void`
 * Method to clear the textbox and emit input/change events
 {% /table %}
 

@@ -41,10 +41,17 @@ A general-purpose text field wrapper for `input` or `textarea` elements. Demonst
 * `string`
 * Text content of `.description`
 * Description/help text (or remaining characters when `data-remaining` is set)
+{% /table %}
+
+#### Methods
+
+{% table %}
+* Name
+* Type
+* Description
 ---
 * `clear`
-* `() => void` (readonly)
-* Clears value, error, and validity state
+* `() => void`
 * Method to clear the textbox and emit input/change events
 {% /table %}
 
