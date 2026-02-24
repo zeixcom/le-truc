@@ -1,0 +1,27 @@
+<h3>Module Script Test</h3>
+<p>This content includes a module script to test type attribute preservation:</p>
+
+<div id="module-test-output"></div>
+
+<script type="module">
+	// Test ES6 module script execution
+	const output = document.getElementById('module-test-output');
+	if (output) {
+		output.textContent = 'Module script executed successfully!';
+		output.setAttribute('data-module-executed', 'true');
+	}
+
+	// Also test module features like import/export syntax
+	const testData = { message: 'ES6 modules work!', timestamp: Date.now() };
+
+	// Set a global for testing
+	window.moduleTestResult = testData;
+</script>
+
+<script type="text/javascript">
+	// Regular script for comparison
+	console.log('Regular script also executed');
+	window.regularScriptExecuted = true;
+</script>
+
+<p>This content tests both module and regular script execution.</p>

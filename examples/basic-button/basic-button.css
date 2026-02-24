@@ -99,12 +99,12 @@ basic-button {
 				opacity: var(--opacity-solid);
 
 				&:hover {
-					background-color: rgba(0, 0, 0, 0.05);
+					background-color: rgb(0 0 0 / 0.05);
 					color: var(--color-primary-hover);
 				}
 
 				&:active {
-					background-color: rgba(0, 0, 0, 0.1);
+					background-color: rgb(0 0 0 / 0.1);
 					color: var(--color-primary-active);
 				}
 			}
