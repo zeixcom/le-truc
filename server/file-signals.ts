@@ -269,13 +269,29 @@ const docsMarkdown: {
 	}
 })()
 
-const docsStyles = {
-	sources: await watchFiles(INPUT_DIR, '*.css'),
-}
-
-const docsScripts = {
-	sources: await watchFiles(INPUT_DIR, '*.ts'),
-}
+const [
+	docsStylesSources,
+	docsScriptsSources,
+	templateScriptsSources,
+	libraryScriptsSources,
+	apiMarkdownSources,
+	componentMarkupSources,
+	componentMocksSources,
+	componentMarkdownSources,
+	componentStylesSources,
+	componentScriptsSources,
+] = await Promise.all([
+	watchFiles(INPUT_DIR, '*.css'),
+	watchFiles(INPUT_DIR, '*.ts'),
+	watchFiles(TEMPLATES_DIR, '**/*.ts'),
+	watchFiles(SRC_DIR, '**/*.ts'),
+	watchFiles(API_DIR, '**/*.md'),
+	watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'),
+	watchFiles(COMPONENTS_DIR, '**/mocks/**'),
+	watchFiles(COMPONENTS_DIR, '**/*.md'),
+	watchFiles(COMPONENTS_DIR, '**/*.css'),
+	watchFiles(COMPONENTS_DIR, '**/*.ts'),
+])
 
 /* const layoutFiles = {
 	sources: await watchFiles(LAYOUTS_DIR, '*.html'),
@@ -285,37 +301,16 @@ const includeFiles = {
 	sources: await watchFiles(INCLUDES_DIR, '*.html'),
 } */
 
-const templateScripts = {
-	sources: await watchFiles(TEMPLATES_DIR, '**/*.ts'),
-}
-
-const libraryScripts = {
-	sources: await watchFiles(SRC_DIR, '**/*.ts'),
-}
-
-const apiMarkdown = {
-	sources: await watchFiles(API_DIR, '**/*.md'),
-}
-
-const componentMarkup = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'),
-}
-
-const componentMocks = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/mocks/**'),
-}
-
-const componentMarkdown = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/*.md'),
-}
-
-const componentStyles = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/*.css'),
-}
-
-const componentScripts = {
-	sources: await watchFiles(COMPONENTS_DIR, '**/*.ts'),
-}
+const docsStyles = { sources: docsStylesSources }
+const docsScripts = { sources: docsScriptsSources }
+const templateScripts = { sources: templateScriptsSources }
+const libraryScripts = { sources: libraryScriptsSources }
+const apiMarkdown = { sources: apiMarkdownSources }
+const componentMarkup = { sources: componentMarkupSources }
+const componentMocks = { sources: componentMocksSources }
+const componentMarkdown = { sources: componentMarkdownSources }
+const componentStyles = { sources: componentStylesSources }
+const componentScripts = { sources: componentScriptsSources }
 
 export {
 	apiMarkdown,
