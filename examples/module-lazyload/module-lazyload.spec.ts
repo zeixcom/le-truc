@@ -432,7 +432,7 @@ test.describe('module-lazyload component', () => {
 			await page.evaluate(() => {
 				const testContainer = document.createElement('div')
 				testContainer.innerHTML = `
-					<module-lazyload id="no-scripts-test" src="/test/module-lazyload/mocks/snippet.html">
+					<module-lazyload id="no-scripts-test" src="./test/module-lazyload/mocks/snippet.html">
 						<card-callout>
 							<p class="loading" role="status">Loading...</p>
 							<p class="error" role="alert" aria-live="assertive" hidden></p>
@@ -471,7 +471,7 @@ test.describe('module-lazyload component', () => {
 			await page.evaluate(() => {
 				const testContainer = document.createElement('div')
 				testContainer.innerHTML = `
-					<module-lazyload id="module-script-test" src="/test/module-lazyload/mocks/module-with-type.html" allow-scripts>
+					<module-lazyload id="module-script-test" src="./test/module-lazyload/mocks/module-with-type.html" allow-scripts>
 						<card-callout>
 							<p class="loading" role="status">Loading module script test...</p>
 							<p class="error" role="alert" aria-live="assertive" hidden></p>
@@ -563,7 +563,7 @@ test.describe('module-lazyload component', () => {
 			await page.evaluate(() => {
 				const testContainer = document.createElement('div')
 				testContainer.innerHTML = `
-					<module-lazyload id="second-snippet-test" src="/test/module-lazyload/mocks/snippet.html" allow-scripts>
+					<module-lazyload id="second-snippet-test" src="./test/module-lazyload/mocks/snippet.html" allow-scripts>
 						<card-callout>
 							<p class="loading" role="status">Loading...</p>
 							<p class="error" role="alert" aria-live="assertive" hidden></p>

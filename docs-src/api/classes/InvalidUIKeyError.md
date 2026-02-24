@@ -1,6 +1,6 @@
 ### Class: InvalidUIKeyError
 
-Defined in: [src/errors.ts:69](https://github.com/zeixcom/le-truc/blob/2cea8afdd3d4dfbc6a9eee6db9acf561d507d360/src/errors.ts#L69)
+Defined in: [src/errors.ts:69](https://github.com/zeixcom/le-truc/blob/a15d81f5442bf8607f9db7d5c4ecfccdb568a946/src/errors.ts#L69)
 
 Error thrown if UI key is invalid
 
@@ -30,7 +30,7 @@ Where the key is used
 
 > **new InvalidUIKeyError**(`host`, `key`, `where`): `InvalidUIKeyError`
 
-Defined in: [src/errors.ts:70](https://github.com/zeixcom/le-truc/blob/2cea8afdd3d4dfbc6a9eee6db9acf561d507d360/src/errors.ts#L70)
+Defined in: [src/errors.ts:70](https://github.com/zeixcom/le-truc/blob/a15d81f5442bf8607f9db7d5c4ecfccdb568a946/src/errors.ts#L70)
 
 ###### Parameters
 

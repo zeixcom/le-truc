@@ -2,7 +2,7 @@
 
 > **Reader**\<`T`, `U`\> = (`ui`) => `T`
 
-Defined in: [src/parsers.ts:16](https://github.com/zeixcom/le-truc/blob/2cea8afdd3d4dfbc6a9eee6db9acf561d507d360/src/parsers.ts#L16)
+Defined in: [src/parsers.ts:16](https://github.com/zeixcom/le-truc/blob/a15d81f5442bf8607f9db7d5c4ecfccdb568a946/src/parsers.ts#L16)
 
 #### Type Parameters
 

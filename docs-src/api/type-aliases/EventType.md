@@ -2,7 +2,7 @@
 
 > **EventType**\<`K`\> = `K` *extends* keyof `HTMLElementEventMap` ? `HTMLElementEventMap`\[`K`\] : `Event`
 
-Defined in: [src/events.ts:9](https://github.com/zeixcom/le-truc/blob/2cea8afdd3d4dfbc6a9eee6db9acf561d507d360/src/events.ts#L9)
+Defined in: [src/events.ts:9](https://github.com/zeixcom/le-truc/blob/a15d81f5442bf8607f9db7d5c4ecfccdb568a946/src/events.ts#L9)
 
 #### Type Parameters
 

@@ -2,7 +2,7 @@
 
 > **Component**\<`P`\> = `HTMLElement` & `P`
 
-Defined in: [src/component.ts:40](https://github.com/zeixcom/le-truc/blob/2cea8afdd3d4dfbc6a9eee6db9acf561d507d360/src/component.ts#L40)
+Defined in: [src/component.ts:40](https://github.com/zeixcom/le-truc/blob/a15d81f5442bf8607f9db7d5c4ecfccdb568a946/src/component.ts#L40)
 
 #### Type Parameters
 
