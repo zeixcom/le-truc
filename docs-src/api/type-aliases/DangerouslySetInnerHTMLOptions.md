@@ -2,7 +2,7 @@
 
 > **DangerouslySetInnerHTMLOptions** = `object`
 
-Defined in: [src/effects/html.ts:7](https://github.com/zeixcom/le-truc/blob/86fb9468cbc91aefb5ba2e30aa8cbb9b82db97bb/src/effects/html.ts#L7)
+Defined in: [src/effects/html.ts:7](https://github.com/zeixcom/le-truc/blob/2cea8afdd3d4dfbc6a9eee6db9acf561d507d360/src/effects/html.ts#L7)
 
 #### Properties
 
@@ -10,7 +10,7 @@ Defined in: [src/effects/html.ts:7](https://github.com/zeixcom/le-truc/blob/86fb
 
 > `optional` **allowScripts**: `boolean`
 
-Defined in: [src/effects/html.ts:9](https://github.com/zeixcom/le-truc/blob/86fb9468cbc91aefb5ba2e30aa8cbb9b82db97bb/src/effects/html.ts#L9)
+Defined in: [src/effects/html.ts:9](https://github.com/zeixcom/le-truc/blob/2cea8afdd3d4dfbc6a9eee6db9acf561d507d360/src/effects/html.ts#L9)
 
 ***
 
@@ -18,4 +18,4 @@ Defined in: [src/effects/html.ts:9](https://github.com/zeixcom/le-truc/blob/86fb
 
 > `optional` **shadowRootMode**: `ShadowRootMode`
 
-Defined in: [src/effects/html.ts:8](https://github.com/zeixcom/le-truc/blob/86fb9468cbc91aefb5ba2e30aa8cbb9b82db97bb/src/effects/html.ts#L8)
+Defined in: [src/effects/html.ts:8](https://github.com/zeixcom/le-truc/blob/2cea8afdd3d4dfbc6a9eee6db9acf561d507d360/src/effects/html.ts#L8)

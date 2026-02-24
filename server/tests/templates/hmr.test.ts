@@ -109,8 +109,8 @@ describe('hmrClient', () => {
 describe('hmrScriptTag', () => {
 	test('wraps output in a <script> element', () => {
 		const result = hmrScriptTag()
-		expect(result).toMatch(/^<script>/)
-		expect(result).toMatch(/<\/script>$/)
+		expect(result).toMatch(/^<script>/i)
+		expect(result).toMatch(/<\/script>$/i)
 	})
 
 	test('script content contains the IIFE', () => {
@@ -136,7 +136,7 @@ describe('hmrScriptTag', () => {
 	test('does not HTML-escape angle brackets in the script body', () => {
 		const result = hmrScriptTag()
 		// Strip the outer <script> tags before checking, so we only look inside
-		const inner = result.replace(/^<script>/, '').replace(/<\/script>$/, '')
+		const inner = result.replace(/^<script>/i, '').replace(/<\/script>$/i, '')
 		expect(inner).not.toContain('&lt;')
 		expect(inner).not.toContain('&gt;')
 	})

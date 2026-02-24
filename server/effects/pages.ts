@@ -8,6 +8,7 @@ import {
 	getFilePath,
 	writeFileSafe,
 } from '../io'
+import { escapeHtml } from '../templates/utils'
 import { performanceHints } from '../templates/performance-hints'
 
 /* === Internal Functionals === */
@@ -82,9 +83,9 @@ const buildToc = (htmlContent: string): string => {
 	let match: RegExpExecArray | null
 	while ((match = headingRegex.exec(htmlContent)) !== null) {
 		const level = match[1]
-		const id = match[2]
-		// Strip inner tags to get plain text
-		const text = match[3].replace(/<[^>]+>/g, '').trim()
+		const id = escapeHtml(match[2])
+		// Strip inner tags to get plain text, then HTML-escape what remains
+		const text = escapeHtml(match[3].replace(/<[^>]+>/g, '').trim())
 		const indent = level === '3' ? ' style="padding-left:1rem"' : ''
 		items.push(`<a href="#${id}"${indent}>${text}</a>`)
 	}

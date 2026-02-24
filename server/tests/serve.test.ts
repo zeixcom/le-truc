@@ -8,9 +8,9 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { OUTPUT_DIR, ASSETS_DIR, EXAMPLES_DIR, SOURCES_DIR, COMPONENTS_DIR } from '../config'
-import { getLayoutForPath } from '../serve'
+import { ASSETS_DIR, EXAMPLES_DIR, OUTPUT_DIR, SOURCES_DIR } from '../config'
 import { fileExists, getFilePath } from '../io'
+import { getLayoutForPath } from '../serve'
 import { hmrScriptTag } from '../templates/hmr'
 
 /* === §14.4 getLayoutForPath — unit tests (no server needed) === */
@@ -87,8 +87,10 @@ function startTestServer(opts: { development?: boolean } = {}): TestServer {
 			reconnectInterval: 1000,
 			pingInterval: 30000,
 		})
-		if (html.includes('</head>')) return html.replace('</head>', `${script}\n</head>`)
-		if (html.includes('</body>')) return html.replace('</body>', `${script}\n</body>`)
+		if (html.includes('</head>'))
+			return html.replace('</head>', `${script}\n</head>`)
+		if (html.includes('</body>'))
+			return html.replace('</body>', `${script}\n</body>`)
 		return html + script
 	}
 
@@ -108,8 +110,7 @@ function startTestServer(opts: { development?: boolean } = {}): TestServer {
 		routes: {
 			'/api/status': new Response('OK'),
 
-			'/ws': () =>
-				new Response('Not available in production', { status: 404 }),
+			'/ws': () => new Response('Not available in production', { status: 404 }),
 
 			'/assets/:file': req => {
 				const filePath = getFilePath(ASSETS_DIR, req.params.file)
