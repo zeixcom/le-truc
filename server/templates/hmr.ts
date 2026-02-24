@@ -5,7 +5,7 @@
  * development server via WebSocket for live reloading.
  */
 
-import { html, js } from './utils'
+import { html, js, raw } from './utils'
 
 export interface HMRConfig {
 	host?: string
@@ -210,23 +210,25 @@ export function hmrClient(config: HMRConfig = {}): string {
 	// Start initial connection
 	connect();
 
-	// Expose HMR API for debugging
-	if (${enableLogging}) {
-		window.__HMR__ = {
-			connect,
-			disconnect: () => {
-				if (ws) {
-					ws.close();
-				}
-				stopPing();
-				clearTimeout(reconnectTimer);
-			},
-			status: () => ws ? ws.readyState : 'not connected',
-			reconnect: () => {
-				reconnectAttempts = 0;
-				connect();
+	${
+		enableLogging
+			? `// Expose HMR API for debugging
+	window.__HMR__ = {
+		connect,
+		disconnect: () => {
+			if (ws) {
+				ws.close();
 			}
-		};
+			stopPing();
+			clearTimeout(reconnectTimer);
+		},
+		status: () => ws ? ws.readyState : 'not connected',
+		reconnect: () => {
+			reconnectAttempts = 0;
+			connect();
+		}
+	};`
+			: ''
 	}
 })();
 `
@@ -250,7 +252,7 @@ export function hmrClientMinimal(): string {
  */
 export function hmrScriptTag(config?: HMRConfig): string {
 	return html`<script>
-		${hmrClient(config)}
+		${raw(hmrClient(config))}
 	</script>`
 }
 

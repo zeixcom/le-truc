@@ -302,7 +302,7 @@ hmrScriptTag({
 
 | File | Exports | Used By |
 |------|---------|---------|
-| `utils.ts` | `html`, `xml`, `css`, `js` tagged template literals; `escapeHtml`, `escapeXml`, `generateSlug`, `createOrderedSort`, validation helpers | All templates |
+| `utils.ts` | `html`, `xml`, `css`, `js` tagged template literals; `raw()` / `RawHtml` for pre-rendered content; `escapeHtml`, `escapeXml`, `generateSlug`, `createOrderedSort`, validation helpers | All templates |
 | `constants.ts` | `MIME_TYPES`, `RESOURCE_TYPE_MAP`, `PAGE_ORDER`, `SERVICE_WORKER_EVENTS`, `SITEMAP_PRIORITIES`, etc. | Config, templates |
 | `fragments.ts` | `tabButton`, `tabPanel`, `tabGroup`, `componentInfo` | `sourcesEffect` |
 | `hmr.ts` | `hmrClient()`, `hmrScriptTag()` | `serve.ts` |
@@ -456,7 +456,7 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 
 The API section is implemented end-to-end. `apiEffect` runs TypeDoc, parses `globals.md`, and generates `docs-src/pages/api.md` with a grouped `{% listnav %}` index. `apiPagesEffect` processes individual API Markdown files through the Markdoc + Shiki pipeline and writes HTML fragments to `docs/api/<category>/<name>.html`. The `api.html` layout is served for direct navigation; lazy-loaded fragments are fetched by `module-lazyload` via listnav selection.
 
-**Remaining:** The `api.html` template variables (`{{ api-category }}`, `{{ api-name }}`, `{{ api-kind }}`, `{{ toc }}`) are not yet populated in `effects/pages.ts`, so breadcrumbs and sidebar TOC are empty on direct API page navigation.
+The `api.html` template variables (`{{ api-category }}`, `{{ api-name }}`, `{{ api-kind }}`, `{{ toc }}`) are populated by `pagesEffect` in `effects/pages.ts` — breadcrumbs and sidebar TOC are filled on direct API page navigation.
 
 ### FAQ Section
 

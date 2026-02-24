@@ -15,6 +15,24 @@ import {
 	VALIDATION_PATTERNS,
 } from './constants'
 
+/**
+ * Wrapper for pre-rendered HTML/XML strings that should bypass escaping.
+ * Use `raw(str)` when interpolating a string that is already safe HTML —
+ * e.g. the output of another template function or a syntax-highlighted fragment.
+ * Plain strings interpolated without `raw()` are escaped automatically.
+ */
+export class RawHtml {
+	readonly value: string
+	constructor(value: string) {
+		this.value = value
+	}
+}
+
+/** Mark a string as pre-rendered and safe to interpolate without escaping. */
+export function raw(value: string): RawHtml {
+	return new RawHtml(value)
+}
+
 // HTML template tag with automatic escaping
 export function html(
 	strings: TemplateStringsArray,
@@ -63,6 +81,9 @@ function processTemplate(
 
 			if (value === null || value === undefined) {
 				continue
+			} else if (value instanceof RawHtml) {
+				// Pre-rendered content — bypass escaping
+				result += value.value
 			} else if (Array.isArray(value)) {
 				// Handle arrays based on template type
 				if (type === 'js') {
@@ -74,11 +95,8 @@ function processTemplate(
 				} else {
 					result += value.join('')
 				}
-			} else if (typeof value === 'string') {
-				// Add strings directly (assume they're already safe)
-				result += value
 			} else {
-				// Convert other types to string and escape if needed
+				// Convert to string and escape as required by template type
 				const stringValue = String(value)
 				if (type === 'html') {
 					result += escapeHtml(stringValue)

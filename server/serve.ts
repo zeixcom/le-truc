@@ -42,7 +42,7 @@ export type HMRMessage = {
 
 const hmrClients = new Set<import('bun').ServerWebSocket<unknown>>()
 const isDevelopment =
-	process.env.NODE_ENV !== 'production' && !process.env.PLAYWRIGHT
+	process.env.NODE_ENV === 'development' && !process.env.PLAYWRIGHT
 
 /* === Utility Functions === */
 
@@ -379,4 +379,4 @@ if (import.meta.main) {
 	startServer()
 }
 
-export { broadcastToHMRClients, clearLayoutCache, hmrClients, startServer }
+export { broadcastToHMRClients, clearLayoutCache, getLayoutForPath, hmrClients, startServer }

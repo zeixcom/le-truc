@@ -1,4 +1,4 @@
-import { createList, type List } from '@zeix/cause-effect'
+import { batch, createList, type List } from '@zeix/cause-effect'
 import { Glob } from 'bun'
 import type { FileInfo } from './file-signals'
 import { createFileInfo, getFilePath, isPlaywrightRunning } from './io'
@@ -38,27 +38,55 @@ export const watchFiles = async (
 
 	const shouldWatch = !playwrightDetected
 
-	const handleFileChange = async (
-		fileList: List<FileInfo>,
-		filename: string,
-	) => {
-		if (!isMatching(filename)) return
+	// Collect pending filenames and debounce rapid bursts (e.g. TypeDoc writing
+	// 140 files) into a single batch update so downstream effects run once.
+	const pendingChanges = new Set<string>()
+	let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-		const filePath = join(directory, filename)
-		if (!existsSync(filePath)) {
-			fileList.remove(filePath)
-		} else {
-			const fileInfo = await createFileInfo(
-				filePath,
-				filename.split(/[\\/]/).pop() || '',
-			)
-			const existing = fileList.byKey(filePath)
-			if (existing) {
-				if (existing.get().hash !== fileInfo.hash) existing.set(fileInfo)
-			} else {
-				fileList.add(fileInfo)
+	const flushChanges = async (fileList: List<FileInfo>) => {
+		const filenames = [...pendingChanges]
+		pendingChanges.clear()
+
+		// Resolve all file infos in parallel before touching signals
+		const updates = await Promise.all(
+			filenames.map(async filename => {
+				const filePath = join(directory, filename)
+				if (!existsSync(filePath)) {
+					return { filePath, fileInfo: null } as const
+				}
+				const fileInfo = await createFileInfo(
+					filePath,
+					filename.split(/[\\/]/).pop() || '',
+				)
+				return { filePath, fileInfo } as const
+			}),
+		)
+
+		// Apply all signal mutations in one batch → effects re-run only once
+		batch(() => {
+			for (const { filePath, fileInfo } of updates) {
+				if (!fileInfo) {
+					fileList.remove(filePath)
+				} else {
+					const existing = fileList.byKey(filePath)
+					if (existing) {
+						if (existing.get().hash !== fileInfo.hash) existing.set(fileInfo)
+					} else {
+						fileList.add(fileInfo)
+					}
+				}
 			}
-		}
+		})
+	}
+
+	const handleFileChange = (fileList: List<FileInfo>, filename: string) => {
+		if (!isMatching(filename)) return
+		pendingChanges.add(filename)
+		if (debounceTimer !== null) clearTimeout(debounceTimer)
+		debounceTimer = setTimeout(() => {
+			debounceTimer = null
+			flushChanges(fileList)
+		}, 50)
 	}
 
 	const fileList = createList<FileInfo>(initialFiles, {
@@ -73,9 +101,9 @@ export const watchFiles = async (
 								recursive: isRecursive,
 								persistent: true,
 							},
-							async (_event, filename) => {
+							(_event, filename) => {
 								if (!filename) return
-								await handleFileChange(fileList, filename)
+								handleFileChange(fileList, filename)
 							},
 						)
 						return () => watcher.close()
