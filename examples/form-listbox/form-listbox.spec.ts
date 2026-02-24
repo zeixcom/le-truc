@@ -385,7 +385,9 @@ test.describe('form-listbox component', () => {
 			const options = document.querySelectorAll('#colors button[role="option"]')
 			for (const option of options) {
 				const text = option.textContent?.trim() ?? ''
-				option.innerHTML = `<mark>${text[0]}</mark>${text.slice(1)}`
+				const mark = document.createElement('mark')
+				mark.textContent = text[0] ?? ''
+				option.replaceChildren(mark, document.createTextNode(text.slice(1)))
 			}
 		})
 
