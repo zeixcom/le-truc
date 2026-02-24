@@ -1,5 +1,4 @@
 import { createEffect, match } from '@zeix/cause-effect'
-import { execSync } from 'child_process'
 import { ASSETS_DIR, TS_FILE } from '../config'
 import { componentScripts, docsScripts, libraryScripts } from '../file-signals'
 
@@ -10,19 +9,31 @@ export const jsEffect = () => {
 		match(
 			[docsScripts.sources, libraryScripts.sources, componentScripts.sources],
 			{
-				ok: () => {
+				ok: async () => {
 					try {
 						console.log('🔧 Rebuilding JS assets...')
-						execSync(
-							`bun build ${TS_FILE} --outdir ${ASSETS_DIR}/ --minify --define process.env.DEV_MODE=false --sourcemap=external`,
-							{ stdio: 'inherit' },
+						const proc = Bun.spawn(
+							[
+								'bun', 'build', TS_FILE,
+								'--outdir', `${ASSETS_DIR}/`,
+								'--minify',
+								'--define', 'process.env.DEV_MODE=false',
+								'--sourcemap=external',
+							],
+							{ stdout: 'inherit', stderr: 'inherit' },
 						)
-						console.log('JS successfully rebuilt')
+						const exitCode = await proc.exited
+						if (exitCode !== 0) {
+							console.error(`JS rebuild failed with exit code ${exitCode}`)
+						} else {
+							console.log('JS successfully rebuilt')
+						}
 					} catch (error) {
 						console.error('JS failed to rebuild:', String(error))
+					} finally {
+						resolve?.()
+						resolve = undefined
 					}
-					resolve?.()
-					resolve = undefined
 				},
 				err: errors => {
 					console.error('Error in JS effect:', errors[0].message)
