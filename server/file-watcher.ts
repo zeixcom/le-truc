@@ -11,10 +11,12 @@ export const watchFiles = async (
 	directory: string,
 	include: string,
 	exclude?: string,
+	recursive?: boolean,
 ): Promise<List<FileInfo>> => {
 	const glob = new Glob(include)
 	const excludeGlob = exclude ? new Glob(exclude) : null
 	const playwrightDetected = isPlaywrightRunning()
+	const isRecursive = recursive ?? include.includes('**/')
 
 	const isMatching = (file: string): boolean => {
 		if (!glob.match(file)) return false
@@ -68,7 +70,7 @@ export const watchFiles = async (
 						const watcher = watch(
 							directory,
 							{
-								recursive: include.includes('**/'),
+								recursive: isRecursive,
 								persistent: true,
 							},
 							async (_event, filename) => {

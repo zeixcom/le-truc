@@ -286,8 +286,8 @@ const [
 	watchFiles(TEMPLATES_DIR, '**/*.ts'),
 	watchFiles(SRC_DIR, '**/*.ts'),
 	watchFiles(API_DIR, '**/*.md'),
-	watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'),
-	watchFiles(COMPONENTS_DIR, '**/mocks/**'),
+	watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'), // componentMarkup excludes mocks (handled separately below)
+	watchFiles(COMPONENTS_DIR, '**/mocks/**'), // componentMocks: only mock files excluded from componentMarkup
 	watchFiles(COMPONENTS_DIR, '**/*.md'),
 	watchFiles(COMPONENTS_DIR, '**/*.css'),
 	watchFiles(COMPONENTS_DIR, '**/*.ts'),

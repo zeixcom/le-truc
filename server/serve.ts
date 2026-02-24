@@ -40,7 +40,7 @@ export type HMRMessage = {
 
 /* === HMR State === */
 
-const hmrClients = new Set<any>()
+const hmrClients = new Set<import('bun').ServerWebSocket<unknown>>()
 const isDevelopment =
 	process.env.NODE_ENV !== 'production' && !process.env.PLAYWRIGHT
 
@@ -185,7 +185,7 @@ const handleMarkdownSource = async (
 const broadcastToHMRClients = (message: HMRMessage | string) => {
 	const data = typeof message === 'string' ? message : JSON.stringify(message)
 
-	for (const client of Array.from(hmrClients)) {
+	for (const client of hmrClients) {
 		try {
 			client.send(data)
 		} catch (error) {
@@ -348,12 +348,12 @@ async function startServer() {
 				}
 			},
 			open: ws => {
-				hmrClients.add(ws as any)
+				hmrClients.add(ws)
 				console.log(`🔌 HMR client connected (${hmrClients.size} total)`)
 				ws.send(JSON.stringify({ type: 'build-success' }))
 			},
 			close: ws => {
-				hmrClients.delete(ws as any)
+				hmrClients.delete(ws)
 				console.log(`🔌 HMR client disconnected (${hmrClients.size} total)`)
 			},
 		},

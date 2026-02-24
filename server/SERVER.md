@@ -125,6 +125,8 @@ docs/
 │   └── <name>.html       # Pre-built example pages
 ├── sources/
 │   └── <name>.html       # Syntax-highlighted source tab groups
+├── test/
+│   └── <component>/mocks/ # Copied mock files for component tests
 ├── <page>.html           # Documentation pages
 ├── sw.js                 # Service worker
 └── sitemap.xml           # SEO sitemap
@@ -170,6 +172,7 @@ Configured in `markdoc.config.ts`:
 | `{% section %}` | `<section>` | Styled content section |
 | `{% hero %}` | `<section-hero>` | Hero section with extracted heading and TOC placeholder |
 | `{% tabgroup %}` | `<module-tabgroup>` | ARIA-compliant tabbed content |
+| `{% table %}` | `<table>` | Markdown table with optional caption |
 
 Note: `link.markdoc.ts` is registered as a node override in `markdoc.config.ts` and handles local `.md` → `.html` link conversion during Markdoc transform.
 
@@ -210,6 +213,7 @@ The `fence` schema override provides:
 | `GET /api/:category/:page` | API doc fragment | `docs/api/<category>/<page>` |
 | `GET /assets/:file` | Static assets | `docs/assets/` |
 | `GET /examples/:component` | Pre-built example HTML | `docs/examples/` |
+| `GET /sources/:file` | Source code fragments | `docs/sources/` |
 | `GET /test/:component/mocks/:mock` | Test mock files | `examples/<component>/mocks/` |
 | `GET /test/:component` | Component test page | `docs-src/layouts/test.html` + `examples/<component>/<component>.html` |
 | `GET /:page` | Documentation page | `docs/<page>.html` |
@@ -418,6 +422,7 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 | `ASSETS_DIR` | `docs/assets/` | Built assets |
 | `EXAMPLES_DIR` | `docs/examples/` | Built example pages |
 | `SOURCES_DIR` | `docs/sources/` | Highlighted source fragments |
+| `TEST_DIR` | `docs/test/` | Copied mock files for component tests |
 
 ### Page Ordering
 
