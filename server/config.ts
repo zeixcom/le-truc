@@ -23,6 +23,7 @@ const OUTPUT_DIR = './docs'
 const ASSETS_DIR = './docs/assets'
 const EXAMPLES_DIR = './docs/examples'
 const SOURCES_DIR = './docs/sources'
+const TEST_DIR = './docs/test'
 const SITEMAP_FILE = './docs/sitemap.xml'
 
 // Page ordering configuration
@@ -117,6 +118,7 @@ export {
 	OUTPUT_DIR,
 	ASSETS_DIR,
 	SOURCES_DIR,
+	TEST_DIR,
 	SITEMAP_FILE,
 	PAGE_ORDER,
 	SERVER_CONFIG,

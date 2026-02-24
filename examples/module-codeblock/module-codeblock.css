@@ -1,7 +1,7 @@
 module-codeblock {
 	--color-shiki-monokai-bg: #272822;
-	/* Shadow without extra transparency for dark background used in code blocks */
-	--color-shadow: var(--color-black);
+	/* Shadow with reduced transparency for dark background used in code blocks */
+	--color-shadow: rgb(0 0 0 / 0.4);
 
 	position: relative;
 	display: block;
@@ -50,7 +50,7 @@ module-codeblock {
 		border-radius: var(--space-s) var(--space-s) 0 0;
 
 		&::after {
-			content: "";
+			content: '';
 			display: block;
 			position: absolute;
 			bottom: 0;
@@ -58,13 +58,13 @@ module-codeblock {
 			height: var(--space-m);
 			background:
 				linear-gradient(-135deg, var(--color-secondary) 0.5rem, transparent 0) 0
-				0.5rem,
+					0.5rem,
 				linear-gradient(
-					135deg,
-					var(--color-secondary) 0.5rem,
-					var(--color-background) 0
-				)
-				0 0.5rem;
+						135deg,
+						var(--color-secondary) 0.5rem,
+						var(--color-background) 0
+					)
+					0 0.5rem;
 			background-color: var(--color-secondary);
 			background-size: var(--space-m) var(--space-m);
 			background-position: bottom;

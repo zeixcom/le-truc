@@ -6,6 +6,7 @@ import { cssEffect } from './effects/css'
 import { examplesEffect } from './effects/examples'
 import { jsEffect } from './effects/js'
 import { menuEffect } from './effects/menu'
+import { mocksEffect } from './effects/mocks'
 import { pagesEffect } from './effects/pages'
 import { serviceWorkerEffect } from './effects/service-worker'
 import { sitemapEffect } from './effects/sitemap'
@@ -68,6 +69,7 @@ export async function build(
 		const jsCleanup = jsEffect()
 		const serviceWorkerCleanup = serviceWorkerEffect()
 		const examplesCleanup = examplesEffect()
+		const mocksCleanup = mocksEffect()
 		const sourcesCleanup = sourcesEffect()
 		const pagesCleanup = pagesEffect()
 		const menuCleanup = menuEffect()
@@ -93,6 +95,7 @@ export async function build(
 			jsCleanup?.()
 			serviceWorkerCleanup?.()
 			examplesCleanup?.()
+			mocksCleanup?.()
 			sourcesCleanup?.()
 			pagesCleanup?.()
 			menuCleanup?.()

@@ -14,22 +14,19 @@ A dynamic list that clones items from a `<template>` element. Demonstrates the M
 
 `module-list`
 
-#### Reactive Properties
+#### Methods
 
 {% table %}
 * Name
 * Type
-* Default
 * Description
 ---
 * `add`
 * `(process?: (item: HTMLElement) => void) => void`
-* Adds one item from `template` to `[data-container]`
 * Method to append a new item, optionally post-processed before insert
 ---
 * `delete`
 * `(key: string) => void`
-* Removes matching `[data-key]` item if found
 * Method to remove an item by key
 {% /table %}
 

@@ -301,6 +301,10 @@ const componentMarkup = {
 	sources: await watchFiles(COMPONENTS_DIR, '**/*.html', '**/mocks/**'),
 }
 
+const componentMocks = {
+	sources: await watchFiles(COMPONENTS_DIR, '**/mocks/**'),
+}
+
 const componentMarkdown = {
 	sources: await watchFiles(COMPONENTS_DIR, '**/*.md'),
 }
@@ -317,6 +321,7 @@ export {
 	apiMarkdown,
 	componentMarkdown,
 	componentMarkup,
+	componentMocks,
 	componentScripts,
 	componentStyles,
 	docsMarkdown,
