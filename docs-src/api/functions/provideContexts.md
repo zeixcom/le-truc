@@ -2,7 +2,7 @@
 
 > **provideContexts**\<`P`\>(`contexts`): (`host`) => [`Cleanup`](../type-aliases/Cleanup.md)
 
-Defined in: [src/context.ts:111](https://github.com/zeixcom/le-truc/blob/d3151c8acd4577999007fad73e21cf0cc45337e4/src/context.ts#L111)
+Defined in: [src/context.ts:111](https://github.com/zeixcom/le-truc/blob/a92b4399bad64857b5ce4a84d167b4b3258577af/src/context.ts#L111)
 
 Make reactive properties of this component available to descendant consumers via the context protocol.
 

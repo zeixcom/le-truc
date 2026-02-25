@@ -209,16 +209,15 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 				...maybeRender(),
 			],
 			options: [
-				(_host, target) =>
-					createEffect(() => {
-						const textContent = target.textContent
+				(_host, target) => {
+					const textContent = target.textContent
+					const lowerText = textContent?.trim().toLowerCase()
+					return createEffect(() => {
 						const filterText = lowerFilter.get()
-						target.hidden = !textContent
-							?.trim()
-							.toLowerCase()
-							.includes(filterText)
+						target.hidden = !lowerText.includes(filterText)
 						target.innerHTML = highlightMatch(textContent, filterText)
-					}),
+					})
+				},
 				(_host, target) =>
 					createEffect(() => {
 						const isSelected = host.value === target.value
