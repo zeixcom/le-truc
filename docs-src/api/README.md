@@ -15,6 +15,9 @@
 - [InvalidUIKeyError](classes/InvalidUIKeyError.md)
 - [MissingElementError](classes/MissingElementError.md)
 - [NullishSignalValueError](classes/NullishSignalValueError.md)
+- [ReadonlySignalError](classes/ReadonlySignalError.md)
+- [RequiredOwnerError](classes/RequiredOwnerError.md)
+- [UnsetSignalValueError](classes/UnsetSignalValueError.md)
 
 #### Type Aliases
 
@@ -90,6 +93,7 @@
 #### Variables
 
 - [CONTEXT\_REQUEST](variables/CONTEXT_REQUEST.md)
+- [SKIP\_EQUALITY](variables/SKIP_EQUALITY.md)
 
 #### Functions
 
@@ -112,6 +116,7 @@
 - [createMutableSignal](functions/createMutableSignal.md)
 - [createScope](functions/createScope.md)
 - [createSensor](functions/createSensor.md)
+- [createSignal](functions/createSignal.md)
 - [createSlot](functions/createSlot.md)
 - [createState](functions/createState.md)
 - [createStore](functions/createStore.md)
@@ -127,6 +132,7 @@
 - [isMemo](functions/isMemo.md)
 - [isMethodProducer](functions/isMethodProducer.md)
 - [isMutableSignal](functions/isMutableSignal.md)
+- [isObjectOfType](functions/isObjectOfType.md)
 - [isParser](functions/isParser.md)
 - [isRecord](functions/isRecord.md)
 - [isSensor](functions/isSensor.md)
@@ -149,5 +155,7 @@
 - [show](functions/show.md)
 - [toggleAttribute](functions/toggleAttribute.md)
 - [toggleClass](functions/toggleClass.md)
+- [unown](functions/unown.md)
+- [untrack](functions/untrack.md)
 - [updateElement](functions/updateElement.md)
 - [valueString](functions/valueString.md)

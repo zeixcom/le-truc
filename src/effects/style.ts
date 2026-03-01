@@ -19,7 +19,7 @@ const setStyle = <
 	E extends HTMLElement | SVGElement | MathMLElement,
 >(
 	prop: string,
-	reactive: Reactive<string, P, E> = prop as Reactive<string, P, E>,
+	reactive: Reactive<string, P, E> = prop as keyof P,
 ): Effect<P, E> =>
 	updateElement(reactive, {
 		op: 's',

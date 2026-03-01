@@ -1,4 +1,4 @@
-// Le Truc 0.16.2
+// Le Truc 0.16.3
 
 // From Cause & Effect
 export {
@@ -17,6 +17,7 @@ export {
 	createMutableSignal,
 	createScope,
 	createSensor,
+	createSignal,
 	createSlot,
 	createState,
 	createStore,
@@ -33,6 +34,7 @@ export {
 	isList,
 	isMemo,
 	isMutableSignal,
+	isObjectOfType,
 	isRecord,
 	isSensor,
 	isSignal,
@@ -48,16 +50,22 @@ export {
 	type MemoCallback,
 	match,
 	NullishSignalValueError,
+	ReadonlySignalError,
+	RequiredOwnerError,
 	type Sensor,
 	type SensorOptions,
 	type Signal,
 	type SignalOptions,
+	SKIP_EQUALITY,
 	type Slot,
 	type State,
 	type Store,
 	type StoreOptions,
 	type Task,
 	type TaskCallback,
+	UnsetSignalValueError,
+	unown,
+	untrack,
 	valueString,
 } from '@zeix/cause-effect'
 

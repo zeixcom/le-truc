@@ -1,6 +1,6 @@
 ### Form Checkbox
 
-A wrapper for a native checkbox that exposes a read-only `checked` state. Demonstrates `createEventsSensor()` as a property initializer — `checked` updates only on `change` events, making it a read-only sensor rather than a mutable state. Also shows `read()` as the sensor's initial value to read the current DOM state, `asString()` with a reader fallback for the label, and `toggleAttribute()` applied to `host` to reflect `checked` as an attribute for CSS styling.
+A wrapper for a native checkbox that shows `read()` as the `checked` state's initial value to read the current DOM state, `asString()` with a reader fallback for the label, and `toggleAttribute()` applied to `host` to reflect `checked` as an attribute for CSS styling.
 
 #### Preview
 
@@ -23,7 +23,7 @@ A wrapper for a native checkbox that exposes a read-only `checked` state. Demons
 * Description
 ---
 * `checked`
-* `boolean` (readonly)
+* `boolean`
 * `false`
 * Whether the native checkbox is checked
 ---

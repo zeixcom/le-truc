@@ -399,6 +399,15 @@ function createScope(fn) {
     activeOwner = prevOwner;
   }
 }
+function unown(fn) {
+  const prev = activeOwner;
+  activeOwner = null;
+  try {
+    return fn();
+  } finally {
+    activeOwner = prev;
+  }
+}
 // node_modules/@zeix/cause-effect/src/nodes/state.ts
 function createState(value, options) {
   validateSignalValue(TYPE_STATE, value, options?.guard);
@@ -1502,6 +1511,21 @@ function isStore(value) {
 function createComputed(callback, options) {
   return isAsyncFunction(callback) ? createTask(callback, options) : createMemo(callback, options);
 }
+function createSignal(value) {
+  if (isSignal(value))
+    return value;
+  if (value == null)
+    throw new InvalidSignalValueError("createSignal", value);
+  if (isAsyncFunction(value))
+    return createTask(value);
+  if (isFunction(value))
+    return createMemo(value);
+  if (isUniformArray(value))
+    return createList(value);
+  if (isRecord(value))
+    return createStore(value);
+  return createState(value);
+}
 function createMutableSignal(value) {
   if (isMutableSignal(value))
     return value;
@@ -1969,7 +1993,7 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
         createSignal2(prop, initializer);
       }
       resolveDependencies(() => {
-        this.#cleanup = runEffects(ui, setup(ui));
+        this.#cleanup = unown(() => runEffects(ui, setup(ui)));
       });
     }
     disconnectedCallback() {
@@ -2389,6 +2413,8 @@ var asEnum = (valid) => asParser((_, value) => {
 export {
   valueString,
   updateElement,
+  untrack,
+  unown,
   toggleClass,
   toggleAttribute,
   show,
@@ -2411,6 +2437,7 @@ export {
   isSensor,
   isRecord,
   isParser,
+  isObjectOfType,
   isMutableSignal,
   isMethodProducer,
   isMemo,
@@ -2426,6 +2453,7 @@ export {
   createStore,
   createState,
   createSlot,
+  createSignal,
   createSensor,
   createScope,
   createMutableSignal,
@@ -2445,6 +2473,10 @@ export {
   asInteger,
   asEnum,
   asBoolean,
+  UnsetSignalValueError,
+  SKIP_EQUALITY,
+  RequiredOwnerError,
+  ReadonlySignalError,
   NullishSignalValueError,
   MissingElementError,
   InvalidUIKeyError,

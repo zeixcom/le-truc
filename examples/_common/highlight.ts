@@ -27,7 +27,7 @@ export function highlightMatch(
 		typeof highlightPattern === 'string'
 			? new RegExp(
 					highlightPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
-					'gi',
+					'giu',
 				)
 			: highlightPattern
 

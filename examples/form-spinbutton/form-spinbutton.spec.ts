@@ -347,48 +347,56 @@ test.describe('form-spinbutton component', () => {
 		expect(ariaLabel).toBe('Add to Cart')
 	})
 
-	test('value property is readonly (sensor-based)', async ({ page }) => {
-		// Test that the value property reflects DOM state but can't be controlled externally
+	test('value property is mutable (controlled + uncontrolled)', async ({
+		page,
+	}) => {
+		const spinbutton = page.locator('form-spinbutton').first()
+		const input = spinbutton.locator('input.value')
+
 		const initialValue = await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
 			return element.value
 		})
 		expect(initialValue).toBe(0)
 
-		// Click the increment button
-		const incrementButton = page
-			.locator('form-spinbutton button.increment')
-			.first()
+		// Uncontrolled path: user interaction updates value
+		const incrementButton = spinbutton.locator('button.increment')
 		await incrementButton.click()
 
-		// Property should now reflect the updated state
 		const valueAfterClick = await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
 			return element.value
 		})
 		expect(valueAfterClick).toBe(1)
 
-		// Verify that trying to set the value property directly doesn't work
-		// (since it's a readonly sensor)
+		// Controlled path: programmatic assignment drives the DOM
 		await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
-			try {
-				element.value = 5
-			} catch (_e) {
-				// Expected - property might be readonly
-			}
+			element.value = 5
 		})
 
-		// Value should still be 1 (not changed to 5)
-		const input = page.locator('form-spinbutton input.value').first()
-		await expect(input).toHaveValue('1')
+		await expect(input).toHaveValue('5')
+		await expect(input).toBeVisible()
 
-		// The property should still reflect the DOM state
-		const valueAfterAttemptedChange = await page.evaluate(() => {
+		const valueAfterSet = await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
 			return element.value
 		})
-		expect(valueAfterAttemptedChange).toBe(1)
+		expect(valueAfterSet).toBe(5)
+
+		// Reset to 0 via programmatic assignment hides input and decrement
+		await page.evaluate(() => {
+			const element = document.querySelector('form-spinbutton') as any
+			element.value = 0
+		})
+
+		await expect(input).toBeHidden()
+
+		const valueAfterReset = await page.evaluate(() => {
+			const element = document.querySelector('form-spinbutton') as any
+			return element.value
+		})
+		expect(valueAfterReset).toBe(0)
 	})
 
 	test('handles rapid button clicks correctly', async ({ page }) => {
@@ -611,17 +619,6 @@ test.describe('form-spinbutton component', () => {
 	})
 
 	test('form integration works correctly', async ({ page }) => {
-		// Create a form wrapper around the interactive input test component
-		await page.evaluate(() => {
-			const form = document.createElement('form')
-			form.id = 'test-form'
-			const spinbutton = document.querySelector('#interactive-input-test')
-			if (spinbutton?.parentNode) {
-				spinbutton.parentNode.insertBefore(form, spinbutton)
-				form.appendChild(spinbutton)
-			}
-		})
-
 		const incrementButton = page.locator(
 			'#interactive-input-test button.increment',
 		)

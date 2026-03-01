@@ -84,21 +84,23 @@
 <hr />
 
 <!-- Test with interactive input field -->
-<form-spinbutton id="interactive-input-test">
-	<button type="button" class="decrement" aria-label="Decrement" hidden>
-		−
-	</button>
-	<input
-		type="number"
-		class="value"
-		name="interactive"
-		value="0"
-		min="0"
-		max="12"
-		hidden
-	/>
-	<button type="button" class="increment" aria-label="Increment">
-		<span class="zero">Begin</span>
-		<span class="other" hidden>+</span>
-	</button>
-</form-spinbutton>
+<form id="test-form">
+	<form-spinbutton id="interactive-input-test">
+		<button type="button" class="decrement" aria-label="Decrement" hidden>
+			−
+		</button>
+		<input
+			type="number"
+			class="value"
+			name="interactive"
+			value="0"
+			min="0"
+			max="12"
+			hidden
+		/>
+		<button type="button" class="increment" aria-label="Increment">
+			<span class="zero">Begin</span>
+			<span class="other" hidden>+</span>
+		</button>
+	</form-spinbutton>
+</form>
