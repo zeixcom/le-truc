@@ -30,8 +30,8 @@ type EventHandler<P extends ComponentProps, Evt extends Event> = (event: Evt) =>
  * Returns a cleanup function that removes the listener when the component disconnects.
  *
  * @since 0.14.0
- * @param {K} type - Event type (e.g. `'click'`, `'input'`)
- * @param {EventHandler<P, EventType<K>>} handler - Handler receiving the event
+ * @param {T} type - Event type (e.g. `'click'`, `'input'`)
+ * @param {EventHandler<P, EventType<T>>} handler - Handler receiving the event
  * @param {AddEventListenerOptions} [options] - Listener options; `passive` is set automatically for high-frequency events
  * @returns {Effect<P, E>} Effect that attaches the listener and returns a cleanup function
  *
@@ -42,5 +42,5 @@ type EventHandler<P extends ComponentProps, Evt extends Event> = (event: Evt) =>
  * // Equivalent to: on('click', () => { host.count += 1 })
  * on('click', () => ({ count: host.count + 1 }))
  */
-declare const on: <K extends keyof HTMLElementEventMap | string, P extends ComponentProps, E extends Element = HTMLElement>(type: K, handler: EventHandler<P, EventType<K>>, options?: AddEventListenerOptions) => Effect<P, E>;
+declare const on: <T extends keyof HTMLElementEventMap | string, P extends ComponentProps, E extends Element = HTMLElement>(type: T, handler: EventHandler<P, EventType<T>>, options?: AddEventListenerOptions) => Effect<P, E>;
 export { type EventHandler, type EventType, on };

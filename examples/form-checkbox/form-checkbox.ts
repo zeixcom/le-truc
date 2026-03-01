@@ -1,15 +1,16 @@
 import {
 	asString,
 	type Component,
-	createEventsSensor,
 	defineComponent,
+	on,
 	read,
+	setProperty,
 	setText,
 	toggleAttribute,
 } from '../..'
 
 export type FormCheckboxProps = {
-	readonly checked: boolean
+	checked: boolean
 	label: string
 }
 
@@ -27,13 +28,7 @@ declare global {
 export default defineComponent<FormCheckboxProps, FormCheckboxUI>(
 	'form-checkbox',
 	{
-		checked: createEventsSensor(
-			read(ui => ui.checkbox.checked, false),
-			'checkbox',
-			{
-				change: ({ target }) => target.checked,
-			},
-		),
+		checked: read(ui => ui.checkbox.checked, false),
 		label: asString(
 			({ host, label }) =>
 				label?.textContent ?? host.querySelector('label')?.textContent ?? '',
@@ -43,8 +38,14 @@ export default defineComponent<FormCheckboxProps, FormCheckboxUI>(
 		checkbox: first('input[type="checkbox"]', 'Add a native checkbox.'),
 		label: first('.label'),
 	}),
-	() => ({
+	({ host, checkbox }) => ({
 		host: toggleAttribute('checked'),
+		checkbox: [
+			on('change', () => {
+				host.checked = checkbox.checked
+			}),
+			setProperty('checked'),
+		],
 		label: setText('label'),
 	}),
 )

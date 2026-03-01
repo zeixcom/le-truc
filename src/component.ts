@@ -12,6 +12,7 @@ import {
 	type Signal,
 	type State,
 	type TaskCallback,
+	unown,
 } from '@zeix/cause-effect'
 
 import { type Effects, runEffects } from './effects'
@@ -140,7 +141,7 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 
 			// Resolve dependencies and run setup function
 			resolveDependencies(() => {
-				this.#cleanup = runEffects(ui, setup(ui))
+				this.#cleanup = unown(() => runEffects(ui, setup(ui)))
 			})
 		}
 

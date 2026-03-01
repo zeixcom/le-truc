@@ -23,7 +23,7 @@ type EventHandler<P extends ComponentProps, Evt extends Event> = (
 	event: Evt,
 ) => { [K in keyof P]?: P[K] } | void | Promise<void>
 
-/* === Exported Function === */
+/* === Exported Functions === */
 
 /**
  * Effect for attaching an event listener to a UI element.
@@ -39,8 +39,8 @@ type EventHandler<P extends ComponentProps, Evt extends Event> = (
  * Returns a cleanup function that removes the listener when the component disconnects.
  *
  * @since 0.14.0
- * @param {K} type - Event type (e.g. `'click'`, `'input'`)
- * @param {EventHandler<P, EventType<K>>} handler - Handler receiving the event
+ * @param {T} type - Event type (e.g. `'click'`, `'input'`)
+ * @param {EventHandler<P, EventType<T>>} handler - Handler receiving the event
  * @param {AddEventListenerOptions} [options] - Listener options; `passive` is set automatically for high-frequency events
  * @returns {Effect<P, E>} Effect that attaches the listener and returns a cleanup function
  *
@@ -53,12 +53,12 @@ type EventHandler<P extends ComponentProps, Evt extends Event> = (
  */
 const on =
 	<
-		K extends keyof HTMLElementEventMap | string,
+		T extends keyof HTMLElementEventMap | string,
 		P extends ComponentProps,
 		E extends Element = HTMLElement,
 	>(
-		type: K,
-		handler: EventHandler<P, EventType<K>>,
+		type: T,
+		handler: EventHandler<P, EventType<T>>,
 		options: AddEventListenerOptions = {},
 	): Effect<P, E> =>
 	(host, target): Cleanup =>
@@ -67,7 +67,7 @@ const on =
 				options = { ...options, passive: PASSIVE_EVENTS.has(type) }
 			const listener = (e: Event) => {
 				const task = () => {
-					const result = handler(e as EventType<K>)
+					const result = handler(e as EventType<T>)
 					if (!isRecord(result)) return
 					batch(() => {
 						for (const [key, value] of Object.entries(result)) {

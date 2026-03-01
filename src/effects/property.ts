@@ -18,11 +18,7 @@ const setProperty = <
 	K extends keyof E & string,
 >(
 	key: K,
-	reactive: Reactive<E[K] & {}, P, E> = key as unknown as Reactive<
-		E[K] & {},
-		P,
-		E
-	>,
+	reactive: Reactive<E[K] & {}, P, E> = key as keyof P,
 ): Effect<P, E> =>
 	updateElement<E[K] & {}, P, E>(reactive, {
 		op: 'p',

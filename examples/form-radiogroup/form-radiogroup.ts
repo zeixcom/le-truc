@@ -1,21 +1,19 @@
 import {
 	type Component,
-	createEventsSensor,
+	createEffect,
 	defineComponent,
 	type Memo,
+	on,
 	read,
-	setProperty,
-	toggleClass,
 } from '../..'
 import { manageFocus } from '../_common/focus'
 
 export type FormRadiogroupProps = {
-	readonly value: string
+	value: string
 }
 
 type FormRadiogroupUI = {
 	radios: Memo<HTMLInputElement[]>
-	labels: Memo<HTMLLabelElement[]>
 }
 
 declare global {
@@ -30,32 +28,31 @@ const getIndex = (radios: HTMLInputElement[]) =>
 export default defineComponent<FormRadiogroupProps, FormRadiogroupUI>(
 	'form-radiogroup',
 	{
-		value: createEventsSensor(
-			read(({ radios }) => {
-				const radiosArray = radios.get()
-				return radiosArray[getIndex(radiosArray)]?.value
-			}, ''),
-			'radios',
-			{
-				change: ({ target }) => target.value,
-			},
-		),
+		value: read(({ radios }) => {
+			const radiosArray = radios.get()
+			return radiosArray[getIndex(radiosArray)]?.value
+		}, ''),
 	},
 	({ all }) => ({
 		radios: all(
 			'input[type="radio"]',
 			'Add at least two native radio buttons.',
 		),
-		labels: all('label', 'Wrap radio buttons with labels.'),
 	}),
 	({ host, radios }) => ({
 		host: manageFocus(() => radios.get(), getIndex),
-		radios: setProperty('tabIndex', target =>
-			target.value === host.value ? 0 : -1,
-		),
-		labels: toggleClass(
-			'selected',
-			target => host.value === target.querySelector('input')?.value,
-		),
+		radios: [
+			on('change', e => {
+				host.value = (e.target as HTMLInputElement).value
+			}),
+			(_host, target) =>
+				createEffect(() => {
+					const isChecked = target.value === host.value
+					target.checked = isChecked
+					target.tabIndex = isChecked ? 0 : -1
+					const label = target.closest('label')
+					if (label) label.classList.toggle('selected', isChecked)
+				}),
+		],
 	}),
 )

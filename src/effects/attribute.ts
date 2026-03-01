@@ -46,7 +46,7 @@ const safeSetAttribute = (
  */
 const setAttribute = <P extends ComponentProps, E extends Element>(
 	name: string,
-	reactive: Reactive<string, P, E> = name as Reactive<string, P, E>,
+	reactive: Reactive<string, P, E> = name as keyof P,
 ): Effect<P, E> =>
 	updateElement(reactive, {
 		op: 'a',
@@ -74,7 +74,7 @@ const toggleAttribute = <
 	E extends Element = HTMLElement,
 >(
 	name: string,
-	reactive: Reactive<boolean, P, E> = name as Reactive<boolean, P, E>,
+	reactive: Reactive<boolean, P, E> = name as keyof P,
 ): Effect<P, E> =>
 	updateElement(reactive, {
 		op: 'a',

@@ -266,47 +266,40 @@ test.describe('form-checkbox component', () => {
 		expect(formData).toEqual({ testCheckbox: 'on' })
 	})
 
-	test('checked property is readonly (sensor-based)', async ({ page }) => {
-		// Test that the checked property reflects DOM state but doesn't control it
+	test('checked property is mutable (controlled + uncontrolled)', async ({
+		page,
+	}) => {
 		const initialChecked = await page.evaluate(() => {
 			const element = document.querySelector('form-checkbox') as any
 			return element.checked
 		})
 		expect(initialChecked).toBe(false)
 
-		// Click the actual checkbox
+		// Uncontrolled path: user interaction updates state
 		const checkbox = page
 			.locator('form-checkbox input[type="checkbox"]')
 			.first()
 		await checkbox.click()
 
-		// Property should now reflect the checked state
 		const checkedAfterClick = await page.evaluate(() => {
 			const element = document.querySelector('form-checkbox') as any
 			return element.checked
 		})
 		expect(checkedAfterClick).toBe(true)
 
-		// Verify that trying to set the checked property doesn't change the checkbox
-		// (since it's a readonly sensor)
+		// Controlled path: programmatic assignment drives the DOM
 		await page.evaluate(() => {
 			const element = document.querySelector('form-checkbox') as any
-			try {
-				element.checked = false
-			} catch (_e) {
-				// Expected - property might be readonly
-			}
+			element.checked = false
 		})
 
-		// Checkbox should still be checked
-		await expect(checkbox).toBeChecked()
+		await expect(checkbox).not.toBeChecked()
 
-		// The property should still reflect true because it reads from DOM
-		const checkedAfterAttemptedChange = await page.evaluate(() => {
+		const checkedAfterSet = await page.evaluate(() => {
 			const element = document.querySelector('form-checkbox') as any
 			return element.checked
 		})
-		expect(checkedAfterAttemptedChange).toBe(true)
+		expect(checkedAfterSet).toBe(false)
 	})
 
 	test('sensor updates when checkbox state changes programmatically', async ({

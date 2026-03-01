@@ -34,6 +34,7 @@ layout: 'page'
   - [createMutableSignal](./api/functions/createMutableSignal.html)
   - [createScope](./api/functions/createScope.html)
   - [createSensor](./api/functions/createSensor.html)
+  - [createSignal](./api/functions/createSignal.html)
   - [createSlot](./api/functions/createSlot.html)
   - [createState](./api/functions/createState.html)
   - [createStore](./api/functions/createStore.html)
@@ -49,6 +50,7 @@ layout: 'page'
   - [isMemo](./api/functions/isMemo.html)
   - [isMethodProducer](./api/functions/isMethodProducer.html)
   - [isMutableSignal](./api/functions/isMutableSignal.html)
+  - [isObjectOfType](./api/functions/isObjectOfType.html)
   - [isParser](./api/functions/isParser.html)
   - [isRecord](./api/functions/isRecord.html)
   - [isSensor](./api/functions/isSensor.html)
@@ -71,6 +73,8 @@ layout: 'page'
   - [show](./api/functions/show.html)
   - [toggleAttribute](./api/functions/toggleAttribute.html)
   - [toggleClass](./api/functions/toggleClass.html)
+  - [unown](./api/functions/unown.html)
+  - [untrack](./api/functions/untrack.html)
   - [updateElement](./api/functions/updateElement.html)
   - [valueString](./api/functions/valueString.html)
 - Classes
@@ -87,8 +91,12 @@ layout: 'page'
   - [InvalidUIKeyError](./api/classes/InvalidUIKeyError.html)
   - [MissingElementError](./api/classes/MissingElementError.html)
   - [NullishSignalValueError](./api/classes/NullishSignalValueError.html)
+  - [ReadonlySignalError](./api/classes/ReadonlySignalError.html)
+  - [RequiredOwnerError](./api/classes/RequiredOwnerError.html)
+  - [UnsetSignalValueError](./api/classes/UnsetSignalValueError.html)
 - Variables
   - [CONTEXT\_REQUEST](./api/variables/CONTEXT_REQUEST.html)
+  - [SKIP\_EQUALITY](./api/variables/SKIP_EQUALITY.html)
 - Type Aliases
   - [AllElements](./api/type-aliases/AllElements.html)
   - [Cleanup](./api/type-aliases/Cleanup.html)

@@ -1,6 +1,6 @@
 {
 	"name": "@zeix/le-truc",
-	"version": "0.16.2",
+	"version": "0.16.3",
 	"description": "Le Truc - the thing for type-safe reactive web components",
 	"keywords": [
 		"Le Truc",
@@ -52,7 +52,7 @@
 		"test:server:watch": "bun test server/tests --watch"
 	},
 	"dependencies": {
-		"@zeix/cause-effect": "^0.18.4"
+		"@zeix/cause-effect": "^0.18.5"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.4",
@@ -60,7 +60,7 @@
 		"@playwright/test": "^1.58.2",
 		"@types/bun": "latest",
 		"lightningcss-cli": "^1.31.1",
-		"shiki": "^3.22.0",
+		"shiki": "^3.23.0",
 		"typedoc": "^0.28.17",
 		"typedoc-plugin-markdown": "^4.10.0"
 	},

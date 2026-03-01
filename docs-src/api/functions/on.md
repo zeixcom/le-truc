@@ -1,8 +1,8 @@
 ### Function: on()
 
-> **on**\<`K`, `P`, `E`\>(`type`, `handler`, `options?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
+> **on**\<`T`, `P`, `E`\>(`type`, `handler`, `options?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/event.ts:55](https://github.com/zeixcom/le-truc/blob/a92b4399bad64857b5ce4a84d167b4b3258577af/src/effects/event.ts#L55)
+Defined in: [src/effects/event.ts:55](https://github.com/zeixcom/le-truc/blob/23167c4de345bf28cd627a58ae4ea4e29243c54c/src/effects/event.ts#L55)
 
 Effect for attaching an event listener to a UI element.
 
@@ -18,9 +18,9 @@ Returns a cleanup function that removes the listener when the component disconne
 
 #### Type Parameters
 
-##### K
+##### T
 
-`K` *extends* `string`
+`T` *extends* `string`
 
 ##### P
 
@@ -34,13 +34,13 @@ Returns a cleanup function that removes the listener when the component disconne
 
 ##### type
 
-`K`
+`T`
 
 Event type (e.g. `'click'`, `'input'`)
 
 ##### handler
 
-[`EventHandler`](../type-aliases/EventHandler.md)\<`P`, [`EventType`](../type-aliases/EventType.md)\<`K`\>\>
+[`EventHandler`](../type-aliases/EventHandler.md)\<`P`, [`EventType`](../type-aliases/EventType.md)\<`T`\>\>
 
 Handler receiving the event
 

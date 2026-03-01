@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.16.3
+
+### Added
+
+- **New re-exports from `@zeix/cause-effect`**: `createSignal`, `unown`, `untrack`, `isObjectOfType`, `SKIP_EQUALITY`, and error classes `ReadonlySignalError`, `RequiredOwnerError`, `UnsetSignalValueError` — previously omitted from Le Truc's public API surface.
+
+### Changed
+
+- **`@zeix/cause-effect` upgraded to `0.18.5`**: Adds `unown()` and fixes a scope disposal bug in components connected inside re-runnable effects (see Fixed below).
+- **`form-checkbox`, `form-radiogroup`, and `form-spinbutton` examples updated**: All three examples now support controlled component usage, accepting externally managed state in addition to their built-in uncontrolled behaviour.
+
+### Fixed
+
+- **Scope disposal bug when `connectedCallback` fires inside a re-runnable effect**: `createScope` inside a reactive effect (e.g. a list-sync effect) registered its dispose on that effect's cleanup list. When the effect re-ran — for example because a `MutationObserver` fired — it disposed all child scopes including those of already-connected components, silently removing their live event listeners and reactive subscriptions. Fixed by wrapping the `connectedCallback` body in `unown()`, detaching each component's scope from the surrounding effect's ownership tree so effect re-runs no longer dispose it.
+
 ## 0.16.2
 
 ### Added

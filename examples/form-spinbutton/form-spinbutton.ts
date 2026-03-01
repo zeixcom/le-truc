@@ -1,17 +1,17 @@
 import {
 	asInteger,
 	type Component,
-	createEventsSensor,
 	createMemo,
 	defineComponent,
 	type Memo,
+	on,
 	read,
 	setProperty,
 	show,
 } from '../..'
 
 export type FormSpinbuttonProps = {
-	readonly value: number
+	value: number
 	max: number
 }
 
@@ -33,43 +33,7 @@ declare global {
 export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 	'form-spinbutton',
 	{
-		value: createEventsSensor(
-			read(ui => ui.input.value, asInteger()),
-			'controls',
-			{
-				change: ({ ui, target, prev }) => {
-					if (!(target instanceof HTMLInputElement)) return prev
-
-					const resetTo = (next: number) => {
-						target.value = String(next)
-						target.checkValidity()
-						return next
-					}
-
-					const next = Number(target.value)
-					if (!Number.isInteger(next)) return resetTo(prev)
-					const clamped = Math.min(ui.host.max, Math.max(0, next))
-					if (next !== clamped) return resetTo(clamped)
-					return clamped
-				},
-				click: ({ target, prev }) =>
-					prev +
-					(target.classList.contains('decrement')
-						? -1
-						: target.classList.contains('increment')
-							? 1
-							: 0),
-				keydown: ({ ui, event, prev }) => {
-					const { key } = event as KeyboardEvent
-					if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
-						event.stopPropagation()
-						event.preventDefault()
-						const next = prev + (key === 'ArrowDown' || key === '-' ? -1 : 1)
-						return Math.min(ui.host.max, Math.max(0, next))
-					}
-				},
-			},
-		),
+		value: read(ui => ui.input.value, asInteger()),
 		max: read(ui => ui.input.max, asInteger(10)),
 	},
 	({ all, first }) => ({
@@ -94,9 +58,45 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 		)
 
 		return {
+			controls: [
+				on('change', e => {
+					const target = e.currentTarget as HTMLInputElement
+					if (!(target instanceof HTMLInputElement)) return
+
+					const next = Number(target.value)
+					if (!Number.isInteger(next)) {
+						target.value = String(host.value)
+						target.checkValidity()
+						return
+					}
+					const clamped = Math.min(host.max, Math.max(0, next))
+					if (next !== clamped) {
+						target.value = String(clamped)
+						target.checkValidity()
+					}
+					host.value = clamped
+				}),
+				on('click', e => {
+					const el = e.currentTarget as Element
+					if (el.classList.contains('decrement')) {
+						host.value = Math.max(0, host.value - 1)
+					} else if (el.classList.contains('increment')) {
+						host.value = Math.min(host.max, host.value + 1)
+					}
+				}),
+				on('keydown', e => {
+					const { key } = e as KeyboardEvent
+					if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
+						e.stopPropagation()
+						e.preventDefault()
+						const delta = key === 'ArrowDown' || key === '-' ? -1 : 1
+						host.value = Math.min(host.max, Math.max(0, host.value + delta))
+					}
+				}),
+			],
 			input: [
 				show(nonZero),
-				setProperty('value'),
+				setProperty('value', () => String(host.value)),
 				setProperty('max', () => String(host.max)),
 			],
 			decrement: show(nonZero),

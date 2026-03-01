@@ -14,7 +14,7 @@ import { type Effect, type Reactive, updateElement } from '../effects'
  */
 const toggleClass = <P extends ComponentProps, E extends Element>(
 	token: string,
-	reactive: Reactive<boolean, P, E> = token as Reactive<boolean, P, E>,
+	reactive: Reactive<boolean, P, E> = token as keyof P,
 ): Effect<P, E> =>
 	updateElement(reactive, {
 		op: 'c',

@@ -317,56 +317,60 @@ test.describe('form-radiogroup component', () => {
 		await expect(hiddenInputs).toHaveCount(3)
 	})
 
-	test('value property is readonly (sensor-based)', async ({ page }) => {
-		// Test that the value property reflects radio state but doesn't control it
+	test('value property is mutable (controlled + uncontrolled)', async ({
+		page,
+	}) => {
+		const radiogroupComponent = page.locator('form-radiogroup').first()
+
 		const initialValue = await page.evaluate(() => {
 			const element = document.querySelector('form-radiogroup') as any
 			return element.value
 		})
 		expect(initialValue).toBe('other')
 
-		// Click a different radio
-		const femaleRadio = page
-			.locator('form-radiogroup input[value="female"]')
-			.first()
+		// Uncontrolled path: user click updates value
+		const femaleRadio = radiogroupComponent.locator('input[value="female"]')
 		await femaleRadio.click()
 
-		// Property should now reflect the selected value
 		const valueAfterClick = await page.evaluate(() => {
 			const element = document.querySelector('form-radiogroup') as any
 			return element.value
 		})
 		expect(valueAfterClick).toBe('female')
 
-		// Verify that trying to set the value property doesn't change the selection
-		// (since it's a readonly sensor)
+		// Controlled path: programmatic assignment drives the DOM
 		await page.evaluate(() => {
 			const element = document.querySelector('form-radiogroup') as any
-			try {
-				element.value = 'male'
-			} catch (_e) {
-				// Expected - property might be readonly
-			}
+			element.value = 'male'
 		})
 
-		// Radio should still be female
-		await expect(femaleRadio).toBeChecked()
+		const maleRadio = radiogroupComponent.locator('input[value="male"]')
+		await expect(maleRadio).toBeChecked()
+		await expect(femaleRadio).not.toBeChecked()
 
-		// The property should still reflect female because it reads from DOM
-		const valueAfterAttemptedChange = await page.evaluate(() => {
+		const maleLabel = radiogroupComponent
+			.locator('label')
+			.filter({ has: page.locator('input[value="male"]') })
+		const femaleLabel = radiogroupComponent
+			.locator('label')
+			.filter({ has: page.locator('input[value="female"]') })
+		await expect(maleLabel).toHaveClass(/selected/)
+		await expect(femaleLabel).not.toHaveClass(/selected/)
+
+		const valueAfterSet = await page.evaluate(() => {
 			const element = document.querySelector('form-radiogroup') as any
 			return element.value
 		})
-		expect(valueAfterAttemptedChange).toBe('female')
+		expect(valueAfterSet).toBe('male')
 	})
 
-	test('sensor updates when radio state changes programmatically', async ({
+	test('value updates when radio state changes via DOM events', async ({
 		page,
 	}) => {
 		const radiogroupComponent = page.locator('form-radiogroup').first()
 		const maleRadio = radiogroupComponent.locator('input[value="male"]')
 
-		// Change the radio state directly via DOM
+		// Change the radio state directly via DOM and dispatch a change event
 		await page.evaluate(() => {
 			const input = document.querySelector(
 				'form-radiogroup input[value="male"]',

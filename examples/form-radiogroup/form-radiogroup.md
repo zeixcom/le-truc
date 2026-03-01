@@ -1,6 +1,6 @@
 ### Form Radiogroup
 
-A roving-tabindex radio group with a read-only `value` sensor. Demonstrates `createEventsSensor()` with `all()` as the target — listening for `change` events across a live `Memo<HTMLInputElement[]>` collection — and `read()` to initialise the sensor from the currently checked radio. Also shows `setProperty()` and `toggleClass()` applied to `Memo` targets, which automatically re-run for each element in the collection whenever it changes.
+A roving-tabindex radio group that works both **controlled** and **uncontrolled**. Demonstrates `read()` to initialise `value` from the currently checked radio, and `on('change', ...)` applied to the `radios` Memo so that user interaction propagates back to `host.value`. A `createEffect` on each radio element drives `checked`, `tabIndex`, and the `selected` label class from `host.value`, which means assigning `host.value = 'option'` programmatically is enough to move the selection — no event needed.
 
 #### Preview
 
@@ -23,9 +23,9 @@ A roving-tabindex radio group with a read-only `value` sensor. Demonstrates `cre
 * Description
 ---
 * `value`
-* `string` (readonly)
+* `string`
 * `''`
-* Value of the currently checked radio input
+* Value of the currently checked radio input; settable for controlled use
 {% /table %}
 
 #### Classes

@@ -1,6 +1,6 @@
 ### Form Spinbutton
 
-A quantity spinbutton with increment/decrement buttons, clamped values, and keyboard support. Demonstrates `createEventsSensor()` with multiple event types (`change`, `click`, `keydown`) on a shared `all()` element collection — the sensor's handler inspects the event target to determine whether to increment, decrement, or validate a typed value. `read()` initialises both `value` and `max` from DOM state, and `createMemo()` derives a private `nonZero` signal used to show/hide zero-state UI without exposing it as a reactive property.
+A quantity spinbutton with increment/decrement buttons, clamped values, and keyboard support that works both **controlled** and **uncontrolled**. Demonstrates `read()` to initialise both `value` and `max` from DOM state, and `on()` effects on the shared `controls` collection for all three event types (`change`, `click`, `keydown`) — each handler inspects the event target to determine whether to increment, decrement, or validate a typed value, then writes back to `host.value`. `createMemo()` derives a private `nonZero` signal used to show/hide zero-state UI without exposing it as a reactive property. Assigning `host.value = n` programmatically drives all downstream DOM effects directly.
 
 #### Preview
 
@@ -23,9 +23,9 @@ A quantity spinbutton with increment/decrement buttons, clamped values, and keyb
 * Description
 ---
 * `value`
-* `number` (integer, readonly)
+* `number` (integer)
 * Parsed from `input.value` (`0` if invalid/missing)
-* Current clamped value in range `0..max`
+* Current clamped value in range `0..max`; settable for controlled use
 ---
 * `max`
 * `number` (integer)
