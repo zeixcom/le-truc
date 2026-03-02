@@ -14,7 +14,7 @@ export type ModuleCarouselProps = {
 }
 
 type ModuleCarouselUI = {
-	dots: Memo<HTMLElement[]>
+	dots: Memo<HTMLButtonElement[]>
 	slides: Memo<HTMLElement[]>
 	buttons: Memo<HTMLElement[]>
 	prev: HTMLButtonElement
@@ -41,13 +41,13 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 		),
 	},
 	({ all, first }) => ({
-		dots: all('[role="tab"]'),
+		dots: all('button[role="tab"]'),
 		slides: all('[role="tabpanel"]'),
 		buttons: all('nav button'),
 		prev: first('button.prev', 'Add a previous button'),
 		next: first('button.next', 'Add a next button'),
 	}),
-	({ host, slides, prev, next }) => {
+	({ host, slides, prev, next, dots }) => {
 		let isNavigating = false
 		let isScrolling = false
 
@@ -139,9 +139,15 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 							? length - 1
 							: clamp(host.index + (key === 'ArrowLeft' ? -1 : 1), length)
 				host.index = newIndex
-				if (newIndex === 0 && document.activeElement === prev) next.focus()
-				else if (newIndex === length - 1 && document.activeElement === next)
+				if (newIndex === 0 && document.activeElement === prev) {
+					next.focus()
+				} else if (newIndex === length - 1 && document.activeElement === next) {
 					prev.focus()
+				} else if (document.activeElement) {
+					const dotElements = dots.get()
+					if (dotElements.includes(document.activeElement as HTMLButtonElement))
+						dotElements[newIndex].focus()
+				}
 			}),
 
 			// Active slide indicator

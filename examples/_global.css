@@ -22,6 +22,7 @@
 	--line-height-s: 1.2;
 	--line-height-m: 1.414;
 	--line-height-l: 1.618;
+	--line-height-xl: 2;
 
 	--color-white: white;
 	--color-black: black;
@@ -118,8 +119,8 @@
 	--color-text-inverted: var(--color-white);
 	--color-shadow: rgb(0 0 0 / 0.1);
 
-	--font-family-sans: "Helvetica Neue", Arial, Roboto, sans-serif;
-	--font-family-mono: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+	--font-family-sans: 'Helvetica Neue', Arial, Roboto, sans-serif;
+	--font-family-mono: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
 
 	--font-weight-regular: 400;
 	--font-weight-bold: 700;
@@ -326,8 +327,16 @@ hr {
 	margin: var(--space-l) 0;
 }
 
-details[open] summary {
-	margin-block-end: var(--space-m);
+details {
+	summary {
+		height: var(--input-height);
+		line-height: var(--line-height-xl);
+		border-radius: var(--space-xs);
+	}
+
+	&[open] summary {
+		margin-block-end: var(--space-m);
+	}
 }
 
 header {
@@ -448,7 +457,7 @@ a[href] {
 	}
 }
 
-[aria-hidden="true"],
+[aria-hidden='true'],
 [hidden] {
 	display: none !important;
 }

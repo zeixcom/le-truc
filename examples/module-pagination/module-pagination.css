@@ -50,6 +50,10 @@ module-pagination {
 		cursor: pointer;
 		transition: all var(--transition-shorter) var(--easing-inout);
 
+		&:focus {
+			z-index: 1;
+		}
+
 		&:disabled {
 			opacity: var(--opacity-translucent);
 		}

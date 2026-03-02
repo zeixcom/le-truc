@@ -74,7 +74,10 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 			host: [
 				setAttribute('value'),
 				on('keyup', ({ key }) => {
-					if (key === 'Escape') showPopup.set(false)
+					if (key === 'Escape') {
+						showPopup.set(false)
+						textbox.focus()
+					}
 					if (key === 'Delete') host.clear()
 				}),
 			],
@@ -121,8 +124,8 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 				}),
 			],
 			clear: [...clearEffects(ui)],
-			error: [setText('error')],
-			description: [setText('description')],
+			error: setText('error'),
+			description: setText('description'),
 		}
 	},
 )
