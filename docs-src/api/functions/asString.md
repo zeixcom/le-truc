@@ -2,7 +2,7 @@
 
 > **asString**\<`U`\>(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`string`, `U`\>
 
-Defined in: [src/parsers/string.ts:11](https://github.com/zeixcom/le-truc/blob/23167c4de345bf28cd627a58ae4ea4e29243c54c/src/parsers/string.ts#L11)
+Defined in: [src/parsers/string.ts:11](https://github.com/zeixcom/le-truc/blob/edad4c801b543cdd501c3fa349dfe3a14224b24f/src/parsers/string.ts#L11)
 
 Parser that returns the attribute value as a string, or a fallback when absent.
 

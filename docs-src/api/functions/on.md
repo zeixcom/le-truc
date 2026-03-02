@@ -2,7 +2,7 @@
 
 > **on**\<`T`, `P`, `E`\>(`type`, `handler`, `options?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/event.ts:55](https://github.com/zeixcom/le-truc/blob/23167c4de345bf28cd627a58ae4ea4e29243c54c/src/effects/event.ts#L55)
+Defined in: [src/effects/event.ts:55](https://github.com/zeixcom/le-truc/blob/edad4c801b543cdd501c3fa349dfe3a14224b24f/src/effects/event.ts#L55)
 
 Effect for attaching an event listener to a UI element.
 

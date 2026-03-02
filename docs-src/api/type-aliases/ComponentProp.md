@@ -2,4 +2,4 @@
 
 > **ComponentProp** = `Exclude`\<`string`, keyof `HTMLElement` \| [`ReservedWords`](ReservedWords.md)\>
 
-Defined in: [src/component.ts:38](https://github.com/zeixcom/le-truc/blob/23167c4de345bf28cd627a58ae4ea4e29243c54c/src/component.ts#L38)
+Defined in: [src/component.ts:38](https://github.com/zeixcom/le-truc/blob/edad4c801b543cdd501c3fa349dfe3a14224b24f/src/component.ts#L38)

@@ -47,116 +47,104 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 		prev: first('button.prev', 'Add a previous button'),
 		next: first('button.next', 'Add a next button'),
 	}),
-	({ host, slides }) => {
+	({ host, slides, prev, next }) => {
 		let isNavigating = false
 		let isScrolling = false
 
-		const scrollToSlide = (index: number) => {
-			const slide = slides.get()[index]
-			if (!slide) return
-
-			isNavigating = true
-			slide.scrollIntoView({
-				behavior: 'smooth',
-				block: 'nearest',
-			})
-		}
-
-		const isCurrentDot = (target: HTMLElement) =>
-			target.dataset.index === String(host.index)
-
 		return {
 			host: [
+				// Set up IntersectionObserver to detect scroll-based navigation
 				() => {
-					const config = {
-						root: host,
-						threshold: 0.5,
-					}
-					const observer = new IntersectionObserver(entries => {
-						for (const entry of entries) {
-							if (entry.intersectionRatio > config.threshold) {
-								const slideIndex = slides
-									.get()
-									.findIndex(slide => slide === entry.target)
-
-								if (isNavigating) {
-									if (slideIndex === host.index) isNavigating = false
-								} else if (slideIndex !== host.index && slideIndex >= 0) {
-									isScrolling = true
-									host.index = slideIndex
-									isScrolling = false
+					const observer = new IntersectionObserver(
+						entries => {
+							for (const entry of entries) {
+								if (entry.intersectionRatio > 0.5) {
+									const slideIndex = slides
+										.get()
+										.findIndex(slide => slide === entry.target)
+									if (isNavigating) {
+										if (slideIndex === host.index) isNavigating = false
+									} else if (slideIndex !== host.index && slideIndex >= 0) {
+										isScrolling = true
+										host.index = slideIndex
+										isScrolling = false
+									}
+									break
 								}
-								break
 							}
+						},
+						{ root: host, threshold: 0.5 },
+					)
+					for (const slide of slides.get()) observer.observe(slide)
+					return () => observer.disconnect()
+				},
+				// Scroll to slide when index changes
+				() =>
+					createEffect(() => {
+						if (!isScrolling) {
+							isNavigating = true
+							slides.get()[host.index]?.scrollIntoView({
+								behavior: 'smooth',
+								block: 'nearest',
+							})
 						}
-					}, config)
-
-					const slideArray = slides.get()
-					for (const slide of slideArray) observer.observe(slide)
-					return () => {
-						observer.disconnect()
-					}
-				},
-				() => {
-					let prevIndex = host.index
-					return createEffect(() => {
-						if (prevIndex === host.index) return
-						const newIndex = host.index
-						prevIndex = newIndex
-
-						// Only scroll if this change wasn't from user scroll
-						if (!isScrolling) scrollToSlide(newIndex)
-					})
-				},
+					}),
 			],
 
-			// Visibility of navigation buttons
-			prev: show(() => host.index !== 0),
-			next: show(() => host.index !== slides.get().length - 1),
-
-			// Handle navigation button click and keyup events
-			buttons: [
-				on('click', ({ target }) => {
-					if (!(target instanceof HTMLElement)) return
-
-					const slidesLength = slides.get().length
-					const nextIndex = target.classList.contains('prev')
-						? host.index - 1
-						: target.classList.contains('next')
-							? host.index + 1
-							: parseInt(target.dataset.index || '0')
-					host.index = Number.isInteger(nextIndex)
-						? clamp(nextIndex, slidesLength)
-						: 0
-				}),
-				on('keyup', e => {
-					const { key } = e
-					if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) {
-						e.preventDefault()
-						e.stopPropagation()
-
-						const slidesLength = slides.get().length
-						const nextIndex =
-							key === 'Home'
-								? 0
-								: key === 'End'
-									? slidesLength - 1
-									: clamp(
-											host.index + (key === 'ArrowLeft' ? -1 : 1),
-											slidesLength,
-										)
-						host.index = nextIndex
-					}
+			// Prev button: hide on first slide; move focus to next when hidden
+			prev: [
+				show(() => host.index !== 0),
+				on('click', () => {
+					const newIndex = clamp(host.index - 1, slides.get().length)
+					host.index = newIndex
+					if (newIndex === 0) next.focus()
 				}),
 			],
 
-			// Set the active slide in the navigation
+			// Next button: hide on last slide; move focus to prev when hidden
+			next: [
+				show(() => host.index !== slides.get().length - 1),
+				on('click', () => {
+					const newIndex = clamp(host.index + 1, slides.get().length)
+					host.index = newIndex
+					if (newIndex === slides.get().length - 1) prev.focus()
+				}),
+			],
+
+			// Dot navigation
 			dots: [
-				setProperty('ariaSelected', target => String(isCurrentDot(target))),
-				setProperty('tabIndex', target => (isCurrentDot(target) ? 0 : -1)),
+				on('click', ({ target }) => {
+					if (target instanceof HTMLElement)
+						host.index = parseInt(target.dataset.index || '0')
+				}),
+				setProperty('ariaSelected', target =>
+					String(target.dataset.index === String(host.index)),
+				),
+				setProperty('tabIndex', target =>
+					target.dataset.index === String(host.index) ? 0 : -1,
+				),
 			],
 
-			// Set the active slide in the slides
+			// Keyboard navigation for all nav buttons (prev, next, dots)
+			buttons: on('keyup', e => {
+				const { key } = e
+				if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return
+				e.preventDefault()
+				e.stopPropagation()
+				const length = slides.get().length
+				const newIndex =
+					key === 'Home'
+						? 0
+						: key === 'End'
+							? length - 1
+							: clamp(host.index + (key === 'ArrowLeft' ? -1 : 1), length)
+				host.index = newIndex
+				if (newIndex === 0 && document.activeElement === prev) next.focus()
+				else if (newIndex === length - 1 && document.activeElement === next)
+					prev.focus()
+			}),
+
+			// Active slide indicator
 			slides: setProperty('ariaCurrent', target =>
 				String(target.id === slides.get()[host.index].id),
 			),
