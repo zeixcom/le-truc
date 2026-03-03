@@ -379,7 +379,7 @@
 <span class="line"><span style="color:#F8F8F2">	}),</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">slides</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">prev</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">next</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">dots</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> isNavigating </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> isScrolling </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> lastScrolled </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.index</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">			host: [</span></span>
@@ -395,9 +395,8 @@
 <span class="line"><span style="color:#F92672">									if</span><span style="color:#F8F8F2"> (isNavigating) {</span></span>
 <span class="line"><span style="color:#F92672">										if</span><span style="color:#F8F8F2"> (slideIndex </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> host.index) isNavigating </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"><span style="color:#F8F8F2">									} </span><span style="color:#F92672">else</span><span style="color:#F92672"> if</span><span style="color:#F8F8F2"> (slideIndex </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> host.index </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> slideIndex </span><span style="color:#F92672">>=</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">) {</span></span>
-<span class="line"><span style="color:#F8F8F2">										isScrolling </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F8F8F2">										lastScrolled </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slideIndex</span></span>
 <span class="line"><span style="color:#F8F8F2">										host.index </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slideIndex</span></span>
-<span class="line"><span style="color:#F8F8F2">										isScrolling </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"><span style="color:#F8F8F2">									}</span></span>
 <span class="line"><span style="color:#F92672">									break</span></span>
 <span class="line"><span style="color:#F8F8F2">								}</span></span>
@@ -408,12 +407,14 @@
 <span class="line"><span style="color:#F92672">					for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> slide </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()) observer.</span><span style="color:#A6E22E">observe</span><span style="color:#F8F8F2">(slide)</span></span>
 <span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> observer.</span><span style="color:#A6E22E">disconnect</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">				},</span></span>
-<span class="line"><span style="color:#88846F">				// Scroll to slide when index changes</span></span>
+<span class="line"><span style="color:#88846F">				// Scroll to slide when index changes (skip if IO already scrolled there)</span></span>
 <span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
 <span class="line"><span style="color:#A6E22E">					createEffect</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">isScrolling) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> idx </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.index</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (lastScrolled </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> idx) {</span></span>
+<span class="line"><span style="color:#F8F8F2">							lastScrolled </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> idx</span></span>
 <span class="line"><span style="color:#F8F8F2">							isNavigating </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
-<span class="line"><span style="color:#F8F8F2">							slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()[host.index]?.</span><span style="color:#A6E22E">scrollIntoView</span><span style="color:#F8F8F2">({</span></span>
+<span class="line"><span style="color:#F8F8F2">							slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()[idx].</span><span style="color:#A6E22E">scrollIntoView</span><span style="color:#F8F8F2">({</span></span>
 <span class="line"><span style="color:#F8F8F2">								behavior: </span><span style="color:#E6DB74">'smooth'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">								block: </span><span style="color:#E6DB74">'nearest'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">							})</span></span>
@@ -461,6 +462,7 @@
 <span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">[</span><span style="color:#E6DB74">'ArrowLeft'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'ArrowRight'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Home'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'End'</span><span style="color:#F8F8F2">].</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(key)) </span><span style="color:#F92672">return</span></span>
 <span class="line"><span style="color:#F8F8F2">				e.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">				e.</span><span style="color:#A6E22E">stopPropagation</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> length </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> newIndex </span><span style="color:#F92672">=</span></span>
 <span class="line"><span style="color:#F8F8F2">					key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'Home'</span></span>

@@ -49,7 +49,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 	}),
 	({ host, slides, prev, next, dots }) => {
 		let isNavigating = false
-		let isScrolling = false
+		let lastScrolled = host.index
 
 		return {
 			host: [
@@ -65,9 +65,8 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 									if (isNavigating) {
 										if (slideIndex === host.index) isNavigating = false
 									} else if (slideIndex !== host.index && slideIndex >= 0) {
-										isScrolling = true
+										lastScrolled = slideIndex
 										host.index = slideIndex
-										isScrolling = false
 									}
 									break
 								}
@@ -78,12 +77,14 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 					for (const slide of slides.get()) observer.observe(slide)
 					return () => observer.disconnect()
 				},
-				// Scroll to slide when index changes
+				// Scroll to slide when index changes (skip if IO already scrolled there)
 				() =>
 					createEffect(() => {
-						if (!isScrolling) {
+						const idx = host.index
+						if (lastScrolled !== idx) {
+							lastScrolled = idx
 							isNavigating = true
-							slides.get()[host.index]?.scrollIntoView({
+							slides.get()[idx].scrollIntoView({
 								behavior: 'smooth',
 								block: 'nearest',
 							})
@@ -131,6 +132,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 				if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return
 				e.preventDefault()
 				e.stopPropagation()
+
 				const length = slides.get().length
 				const newIndex =
 					key === 'Home'
