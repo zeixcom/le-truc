@@ -54,6 +54,8 @@ export function hmrClient(config: HMRConfig = {}): string {
 (function () {
 	'use strict';
 
+	if (navigator.webdriver) return;
+
 	${enableLogging ? log('Client initialized') : ''}
 
 	const wsUrl = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + ${hostExpression} + '${path}';

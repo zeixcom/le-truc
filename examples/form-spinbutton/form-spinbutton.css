@@ -99,4 +99,8 @@ form-spinbutton {
 			background-color: var(--color-primary-active);
 		}
 	}
+
+	> *:focus {
+		z-index: 1;
+	}
 }

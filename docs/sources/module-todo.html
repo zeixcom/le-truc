@@ -176,12 +176,16 @@
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">	></span><span style="color:#F92672"> module-list</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x26;[</span><span style="color:#66D9EF;font-style:italic">filter</span><span style="color:#F8F8F2">="completed"] li:not(:has([checked])) {</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;[</span><span style="color:#66D9EF;font-style:italic">filter</span><span style="color:#F8F8F2">='completed'] li:not(:has([checked])) {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">		&#x26;[</span><span style="color:#A6E22E">filter</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"active"</span><span style="color:#F8F8F2">] </span><span style="color:#F92672">li</span><span style="color:#A6E22E">:has</span><span style="color:#F8F8F2">([</span><span style="color:#A6E22E">checked</span><span style="color:#F8F8F2">]) {</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;[</span><span style="color:#A6E22E">filter</span><span style="color:#F92672">=</span><span style="color:#E6DB74">'active'</span><span style="color:#F8F8F2">] </span><span style="color:#F92672">li</span><span style="color:#A6E22E">:has</span><span style="color:#F8F8F2">([</span><span style="color:#A6E22E">checked</span><span style="color:#F8F8F2">]) {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26; </span><span style="color:#F92672">li</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			border-bottom</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"></span>
@@ -205,7 +209,7 @@
 <span class="line"><span style="color:#F92672">	></span><span style="color:#F92672"> footer</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">grid</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		grid-template-columns</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">fr</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672">fr</span><span style="color:#F8F8F2">;</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		grid-template-areas</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">"filter filter"</span><span style="color:#E6DB74"> "count clear"</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		grid-template-areas</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">'filter filter'</span><span style="color:#E6DB74"> 'count clear'</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		align-items</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">center</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		gap</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m);</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		margin</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
@@ -241,7 +245,7 @@
 <span class="line"></span>
 <span class="line"><span style="color:#F8F8F2">		&#x26; </span><span style="color:#F92672">footer</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			grid-template-columns</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">fr</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672">fr</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672">fr</span><span style="color:#F8F8F2">;</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			grid-template-areas</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">"count filter clear"</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			grid-template-areas</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">'count filter clear'</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>

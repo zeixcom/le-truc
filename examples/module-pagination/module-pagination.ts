@@ -48,7 +48,7 @@ export default defineComponent<ModulePaginationProps, ModulePaginationUI>(
 		value: first('.value'),
 		max: first('.max'),
 	}),
-	({ host, input }) => ({
+	({ host, input, prev, next }) => ({
 		host: [
 			show(() => host.max > 1),
 			setAttribute('value', () => String(host.value)),
@@ -58,6 +58,9 @@ export default defineComponent<ModulePaginationProps, ModulePaginationUI>(
 				if ((key === 'ArrowLeft' || key === '-') && host.value > 1) host.value--
 				else if ((key === 'ArrowRight' || key === '+') && host.value < host.max)
 					host.value++
+				if (document.activeElement === prev && host.value <= 1) next.focus()
+				else if (document.activeElement === next && host.value >= host.max)
+					prev.focus()
 			}),
 		],
 		input: [
@@ -73,12 +76,14 @@ export default defineComponent<ModulePaginationProps, ModulePaginationUI>(
 		prev: [
 			on('click', () => {
 				host.value--
+				if (host.value <= 1) next.focus()
 			}),
 			setProperty('disabled', () => host.value <= 1),
 		],
 		next: [
 			on('click', () => {
 				host.value++
+				if (host.value >= host.max) prev.focus()
 			}),
 			setProperty('disabled', () => host.value >= host.max),
 		],

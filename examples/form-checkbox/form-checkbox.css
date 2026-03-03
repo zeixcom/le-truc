@@ -1,10 +1,6 @@
 form-checkbox {
+	display: inline-block;
 	flex-grow: 1;
-	border-radius: var(--space-xs);
-
-	&:has(:focus-visible) {
-		box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
-	}
 
 	& input:focus {
 		outline: none;
@@ -13,10 +9,15 @@ form-checkbox {
 
 	& label {
 		font-size: var(--font-size-s);
+		border-radius: var(--space-xs);
+
+		&:has(:focus-visible) {
+			box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
+		}
 	}
 
 	&.checkbox label {
-		display: flex;
+		display: inline-flex;
 		gap: var(--space-s);
 		line-height: var(--input-height);
 		cursor: pointer;
@@ -25,11 +26,11 @@ form-checkbox {
 		&::before {
 			display: inline-block;
 			box-sizing: border-box;
-			content: '';
+			content: ' ';
 			text-align: center;
 			width: var(--space-l);
 			height: var(--space-l);
-			line-height: var(--space-l);
+			line-height: 1.5;
 			border: 1px solid var(--color-border);
 			border-radius: var(--space-xs);
 			background-color: var(--color-secondary);
@@ -64,7 +65,7 @@ form-checkbox {
 	}
 
 	&.todo label {
-		display: flex;
+		display: inline-flex;
 		gap: var(--space-s);
 		line-height: var(--input-height);
 		cursor: pointer;
@@ -73,11 +74,11 @@ form-checkbox {
 		&::before {
 			display: inline-block;
 			box-sizing: border-box;
-			content: '';
+			content: ' ';
 			text-align: center;
 			width: var(--space-l);
 			height: var(--space-l);
-			line-height: var(--space-l);
+			line-height: 1.5;
 			border: 1px solid var(--color-border);
 			border-radius: var(--space-xs);
 			background-color: var(--color-secondary);
@@ -120,19 +121,20 @@ form-checkbox {
 	&.toggle label {
 		--toggle-knob-size: calc(var(--space-l) * 2);
 
-		display: flex;
-		align-items: center;
+		display: inline-flex;
 		gap: var(--space-s);
+		line-height: var(--input-height);
 		cursor: pointer;
+		align-items: center;
 
 		&::before {
 			display: inline-block;
 			flex-shrink: 0;
 			box-sizing: border-box;
-			content: '';
+			content: ' ';
 			width: calc(var(--space-l) * 2);
 			height: var(--space-l);
-			line-height: var(--space-l);
+			line-height: 1.5;
 			padding-left: var(--space-l);
 			border-radius: calc(var(--input-height) / 2);
 			background-color: var(--color-secondary);
@@ -140,10 +142,9 @@ form-checkbox {
 			border: 1px solid var(--color-border);
 			background-image: radial-gradient(
 				circle,
-				var(--color-input) 33%,
-				transparent 34%
+				var(--color-input) 35%,
+				transparent 36%
 			);
-			background-size: var(--toggle-knob-size);
 			background-position: left calc(-0.5 * var(--space-l)) center;
 			background-repeat: no-repeat;
 			transition:

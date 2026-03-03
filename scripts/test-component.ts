@@ -12,7 +12,7 @@
  */
 
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 function showHelp() {
@@ -39,7 +39,7 @@ Additional Playwright options can be passed after --:
 `)
 }
 
-function getComponentPath(componentName) {
+function getComponentPath(componentName: string) {
   // Try different possible paths for the component
   const possiblePaths = [
     `examples/${componentName}/${componentName}.spec.ts`,
@@ -66,7 +66,6 @@ function listAvailableComponents() {
       return
     }
 
-    const { readdirSync, statSync } = require('node:fs')
     const items = readdirSync(examplesDir)
 
     const components = items
@@ -86,11 +85,11 @@ function listAvailableComponents() {
       })
     }
   } catch (error) {
-    console.log('  Error reading examples directory:', error.message)
+    console.log('  Error reading examples directory:', error instanceof Error ? error.message : error)
   }
 }
 
-function runPlaywrightTest(testPath, playwrightArgs = []) {
+function runPlaywrightTest(testPath: string, playwrightArgs: string[] = []) {
   console.log(`🎭 Running tests for: ${testPath}`)
   console.log('')
 
@@ -101,12 +100,12 @@ function runPlaywrightTest(testPath, playwrightArgs = []) {
     shell: process.platform === 'win32'
   })
 
-  child.on('close', (code) => {
+  child.on('close', (code: number | null) => {
     if (code === 0) {
       console.log(`\n✅ Tests completed successfully for ${testPath}`)
     } else {
       console.log(`\n❌ Tests failed with exit code ${code}`)
-      process.exit(code)
+      process.exit(code ?? 1)
     }
   })
 
