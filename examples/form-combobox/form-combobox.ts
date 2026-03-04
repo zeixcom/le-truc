@@ -119,6 +119,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 							host.value = target.value
 							host.error = textbox.validationMessage ?? ''
 							showPopup.set(false)
+							textbox.focus()
 						})
 					}
 				}),
