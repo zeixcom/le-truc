@@ -32,7 +32,7 @@ export const highlightCodeBlocks = async (html: string): Promise<string> => {
 			match
 		const attrs = `${beforeLanguageAttrs}${afterLanguageAttrs}`
 		const dataCode = attrs.match(/\sdata-code="([^"]*)"/)?.[1]
-		const decodedCode = decodeHtmlEntities(dataCode ?? codeHtml)
+		const decodedCode = decodeHtmlEntities(dataCode ?? codeHtml ?? '')
 
 		try {
 			const highlighted = await codeToHtml(decodedCode, {
@@ -52,7 +52,7 @@ export const highlightCodeBlocks = async (html: string): Promise<string> => {
 	// Apply replacements right-to-left so earlier positions stay valid.
 	let result = html
 	for (let i = replacements.length - 1; i >= 0; i--) {
-		const { start, end, replacement } = replacements[i]
+		const { start, end, replacement } = replacements[i]!
 		result = result.slice(0, start) + replacement + result.slice(end)
 	}
 

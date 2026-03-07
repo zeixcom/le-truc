@@ -148,7 +148,7 @@ test.describe('module-list component', () => {
 
 			// Check content of each item
 			for (let i = 0; i < itemTexts.length; i++) {
-				await expect(items.nth(i)).toContainText(itemTexts[i])
+				await expect(items.nth(i)).toContainText(itemTexts[i]!)
 			}
 		})
 

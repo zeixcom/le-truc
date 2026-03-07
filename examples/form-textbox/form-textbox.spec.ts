@@ -502,7 +502,7 @@ test.describe('form-textbox component', () => {
 		// Should show very few remaining characters
 		const remainingMatch = remainingText?.match(/(\d+) characters remaining/)
 		if (remainingMatch) {
-			expect(parseInt(remainingMatch[1])).toBeLessThanOrEqual(10)
+			expect(parseInt(remainingMatch[1]!)).toBeLessThanOrEqual(10)
 		}
 	})
 

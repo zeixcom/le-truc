@@ -40,7 +40,7 @@ export type PageInfo = {
 	filename: string
 	relativePath: string
 	lastModified: number
-	section?: string
+	section: string | undefined
 }
 
 export type PageMetadata = {
@@ -58,7 +58,7 @@ export type ProcessedMarkdownFile = FileInfo & {
 	metadata: PageMetadata
 	processedContent: string
 	htmlContent: string
-	section?: string
+	section: string | undefined
 	depth: number
 	relativePath: string
 	basePath: string
@@ -80,7 +80,7 @@ function extractFrontmatter(content: string): {
 
 	try {
 		// Simple YAML-like parsing for basic frontmatter
-		const yamlContent = match[1]
+		const yamlContent = match[1]!
 		const metadata: PageMetadata = {}
 
 		const lines = yamlContent.split('\n')
@@ -115,7 +115,7 @@ function extractFrontmatter(content: string): {
 			}
 		}
 
-		return { metadata, content: match[2] }
+		return { metadata, content: match[2]! }
 	} catch (error) {
 		console.warn(`Failed to parse frontmatter in content:`, error)
 		return { metadata: {}, content: match[2] || content }
@@ -163,7 +163,7 @@ const docsMarkdown: {
 				filename: file.filename,
 				relativePath,
 				lastModified: file.lastModified,
-				section: relativePath.includes('/') ? relativePath.split('/')[0] : '',
+				section: relativePath.includes('/') ? relativePath.split('/')[0] ?? '' : undefined,
 			})
 		}
 		return pageInfos
@@ -185,7 +185,7 @@ const docsMarkdown: {
 
 				// Calculate path info
 				const pathParts = relativePath.split('/')
-				const section = pathParts.length > 1 ? pathParts[0] : undefined
+				const section = pathParts.length > 1 ? pathParts[0]! : undefined
 				const depth = pathParts.length - 1
 				const basePath = depth > 0 ? '../'.repeat(depth) : './'
 
@@ -234,11 +234,11 @@ const docsMarkdown: {
 						/^#\s+(Function|Type Alias|Variable):\s*(.+?)(?:\(\))?$/m,
 					)
 					if (headingMatch) {
-						title = headingMatch[2].trim()
+						title = headingMatch[2]!.trim()
 					} else {
 						const fallbackMatch = processedContent.match(/^#\s+(.+)$/m)
 						if (fallbackMatch) {
-							title = fallbackMatch[1].replace(/\(.*?\)$/, '').trim()
+							title = fallbackMatch[1]!.replace(/\(.*?\)$/, '').trim()
 						}
 					}
 				}

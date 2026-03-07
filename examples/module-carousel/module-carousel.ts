@@ -84,7 +84,7 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 						if (lastScrolled !== idx) {
 							lastScrolled = idx
 							isNavigating = true
-							slides.get()[idx].scrollIntoView({
+							slides.get()[idx]!.scrollIntoView({
 								behavior: 'smooth',
 								block: 'nearest',
 							})
@@ -148,13 +148,13 @@ export default defineComponent<ModuleCarouselProps, ModuleCarouselUI>(
 				} else if (document.activeElement) {
 					const dotElements = dots.get()
 					if (dotElements.includes(document.activeElement as HTMLButtonElement))
-						dotElements[newIndex].focus()
+						dotElements[newIndex]!.focus()
 				}
 			}),
 
 			// Active slide indicator
 			slides: setProperty('ariaCurrent', target =>
-				String(target.id === slides.get()[host.index].id),
+				String(target.id === slides.get()[host.index]!.id),
 			),
 		}
 	},

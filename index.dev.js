@@ -1852,7 +1852,7 @@ var extractAttributes = (selector) => {
     const parts = selector.split("[");
     for (let i = 1;i < parts.length; i++) {
       const part = parts[i];
-      if (!part.includes("]"))
+      if (!part || !part.includes("]"))
         continue;
       const attrName = part.split("=")[0].trim().replace(/[^a-zA-Z0-9_-]/g, "");
       if (attrName)

@@ -30,7 +30,7 @@ describe('listnav schema - validation', () => {
 		const node = new Node('tag', { tag: 'listnav' }, [])
 		const errors = await listnav.validate!(node, {} as any)
 		expect(errors.length).toBeGreaterThan(0)
-		expect(errors[0].id).toBe('listnav-no-list')
+		expect(errors[0]!.id).toBe('listnav-no-list')
 	})
 
 	test('rejects empty list', async () => {

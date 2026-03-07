@@ -1,5 +1,5 @@
 ### Type Alias: UI
 
-> **UI** = `Record`\<`string`, `Element` \| [`Memo`](Memo.md)\<`Element`[]\>\>
+> **UI** = `Record`\<`string`, `Element` \| [`Memo`](Memo.md)\<`Element`[]\> \| `undefined`\>
 
-Defined in: [src/ui.ts:108](https://github.com/zeixcom/le-truc/blob/3b85b2090c0536c825d82eb975bbb1c205d93bce/src/ui.ts#L108)
+Defined in: [src/ui.ts:108](https://github.com/zeixcom/le-truc/blob/d21d8e109ed0c58eae71b351fda147a12cbf8896/src/ui.ts#L108)

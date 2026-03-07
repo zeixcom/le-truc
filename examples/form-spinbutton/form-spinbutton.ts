@@ -20,8 +20,8 @@ type FormSpinbuttonUI = {
 	increment: HTMLButtonElement
 	decrement: HTMLButtonElement
 	input: HTMLInputElement
-	zero?: HTMLElement
-	other?: HTMLElement
+	zero?: HTMLElement | undefined
+	other?: HTMLElement | undefined
 }
 
 declare global {

@@ -24,7 +24,7 @@ type ElementQueries = {
     first: FirstElement;
     all: AllElements;
 };
-type UI = Record<string, Element | Memo<Element[]>>;
+type UI = Record<string, Element | Memo<Element[]> | undefined>;
 type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<U[K] extends Memo<infer E extends Element[]> ? E[number] : U[K] extends Element ? U[K] : never>;
 /**
  * Create a memo of elements matching a CSS selector.

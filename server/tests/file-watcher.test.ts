@@ -72,7 +72,7 @@ describe('watchFiles — initial scan', () => {
 		await writeTempFile(dir, 'test.md', '# Hello')
 
 		const list = await watchFiles(dir, '*.md')
-		const file = list.get()[0]
+		const file = list.get()[0]!
 
 		expect(file.path).toContain('test.md')
 		expect(file.filename).toBe('test.md')

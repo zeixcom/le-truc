@@ -23,11 +23,11 @@ const tabgroup: Schema = {
 		const tabs: { label: string; content: Tag; id: string }[] = []
 
 		for (let index = 0; index < sections.length; index++) {
-			const section = sections[index]
+			const section = sections[index]!
 			if (section.length === 0) continue
 
 			// First node should be a heading
-			const firstNode = section[0]
+			const firstNode = section[0]!
 
 			if (firstNode.type !== 'heading' || firstNode.attributes.level !== 4) {
 				throw new Error(

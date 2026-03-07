@@ -84,7 +84,7 @@ describe('CalloutClassAttribute', () => {
 	test('rejects invalid class', () => {
 		const errors = attr.validate('invalid')
 		expect(errors.length).toBeGreaterThan(0)
-		expect(errors[0].message).toContain('info')
+		expect(errors[0]!.message).toContain('info')
 	})
 
 	test('rejects empty string', () => {

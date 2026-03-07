@@ -315,9 +315,9 @@ describe('createOrderedSort', () => {
 
 		const sorted = items.sort(createOrderedSort(order))
 
-		expect(sorted[0].filename).toBe('third.md')
-		expect(sorted[1].filename).toBe('first.md')
-		expect(sorted[2].filename).toBe('second.md')
+		expect(sorted[0]!.filename).toBe('third.md')
+		expect(sorted[1]!.filename).toBe('first.md')
+		expect(sorted[2]!.filename).toBe('second.md')
 	})
 
 	test('should prioritize ordered items over unordered', () => {
@@ -330,7 +330,7 @@ describe('createOrderedSort', () => {
 
 		const sorted = items.sort(createOrderedSort(order))
 
-		expect(sorted[0].filename).toBe('important.md')
+		expect(sorted[0]!.filename).toBe('important.md')
 	})
 
 	test('should sort unordered items alphabetically', () => {
@@ -343,9 +343,9 @@ describe('createOrderedSort', () => {
 
 		const sorted = items.sort(createOrderedSort(order))
 
-		expect(sorted[0].filename).toBe('apple.md')
-		expect(sorted[1].filename).toBe('banana.md')
-		expect(sorted[2].filename).toBe('zebra.md')
+		expect(sorted[0]!.filename).toBe('apple.md')
+		expect(sorted[1]!.filename).toBe('banana.md')
+		expect(sorted[2]!.filename).toBe('zebra.md')
 	})
 
 	test('should handle .html extensions', () => {
@@ -357,8 +357,8 @@ describe('createOrderedSort', () => {
 
 		const sorted = items.sort(createOrderedSort(order))
 
-		expect(sorted[0].filename).toBe('first.html')
-		expect(sorted[1].filename).toBe('second.html')
+		expect(sorted[0]!.filename).toBe('first.html')
+		expect(sorted[1]!.filename).toBe('second.html')
 	})
 
 	test('should handle empty order array', () => {
@@ -369,8 +369,8 @@ describe('createOrderedSort', () => {
 
 		const sorted = items.sort(createOrderedSort([]))
 
-		expect(sorted[0].filename).toBe('apple.md')
-		expect(sorted[1].filename).toBe('zebra.md')
+		expect(sorted[0]!.filename).toBe('apple.md')
+		expect(sorted[1]!.filename).toBe('zebra.md')
 	})
 })
 

@@ -18,7 +18,7 @@ const demo: Schema = {
 
 		if (sections.length >= 2) {
 			// First section is HTML preview, remaining sections are Markdown
-			const previewSection = sections[0]
+			const previewSection = sections[0]!
 			markdownNodes = sections.slice(1).flat()
 
 			// Extract raw HTML from preview section
@@ -26,7 +26,7 @@ const demo: Schema = {
 				.map((child: Node) => extractRawContent(child))
 				.join('\n')
 		} else if (sections.length === 1) {
-			const children = sections[0]
+			const children = sections[0]!
 
 			// Check if a fence node is present (code block style demo)
 			const fenceIndex = children.findIndex(
@@ -35,7 +35,7 @@ const demo: Schema = {
 
 			if (fenceIndex !== -1) {
 				// Fence content is the HTML preview
-				previewContent = children[fenceIndex].attributes.content || ''
+				previewContent = children[fenceIndex]!.attributes.content || ''
 				// Remaining nodes after the fence are markdown (e.g. {% sources %})
 				markdownNodes = children.filter(
 					(_: Node, i: number) => i !== fenceIndex,

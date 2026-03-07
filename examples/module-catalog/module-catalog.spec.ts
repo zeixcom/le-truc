@@ -283,31 +283,31 @@ test.describe('module-catalog component', () => {
 		]
 
 		// Complex interaction pattern
-		await increments[0].click() // Product 1: 1, Total: 1
+		await increments[0]!.click() // Product 1: 1, Total: 1
 		await expect(badge).toHaveText('1')
 
-		await increments[1].click() // Product 2: 1, Total: 2
-		await increments[1].click() // Product 2: 2, Total: 3
+		await increments[1]!.click() // Product 2: 1, Total: 2
+		await increments[1]!.click() // Product 2: 2, Total: 3
 		await expect(badge).toHaveText('3')
 
-		await increments[2].click() // Product 3: 1, Total: 4
-		await increments[0].click() // Product 1: 2, Total: 5
+		await increments[2]!.click() // Product 3: 1, Total: 4
+		await increments[0]!.click() // Product 1: 2, Total: 5
 		await expect(badge).toHaveText('5')
 
 		// Now some decrements
-		await decrements[1].click() // Product 2: 1, Total: 4
+		await decrements[1]!.click() // Product 2: 1, Total: 4
 		await expect(badge).toHaveText('4')
 
-		await decrements[0].click() // Product 1: 1, Total: 3
-		await decrements[0].click() // Product 1: 0, Total: 2
+		await decrements[0]!.click() // Product 1: 1, Total: 3
+		await decrements[0]!.click() // Product 1: 0, Total: 2
 		await expect(badge).toHaveText('2')
 
 		// Still enabled because other products have items
 		await expect(button).not.toBeDisabled()
 
 		// Remove remaining items
-		await decrements[1].click() // Product 2: 0, Total: 1
-		await decrements[2].click() // Product 3: 0, Total: 0
+		await decrements[1]!.click() // Product 2: 0, Total: 1
+		await decrements[2]!.click() // Product 3: 0, Total: 0
 		await expect(badge).toHaveText('')
 		await expect(button).toBeDisabled()
 	})

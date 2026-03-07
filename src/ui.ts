@@ -105,7 +105,7 @@ type ElementQueries = {
 	all: AllElements
 }
 
-type UI = Record<string, Element | Memo<Element[]>>
+type UI = Record<string, Element | Memo<Element[]> | undefined>
 
 type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<
 	U[K] extends Memo<infer E extends Element[]>
@@ -136,9 +136,9 @@ const extractAttributes = (selector: string): string[] => {
 		const parts = selector.split('[')
 		for (let i = 1; i < parts.length; i++) {
 			const part = parts[i]
-			if (!part.includes(']')) continue
+			if (!part || !part.includes(']')) continue
 			const attrName = part
-				.split('=')[0]
+				.split('=')[0]!
 				.trim()
 				.replace(/[^a-zA-Z0-9_-]/g, '')
 			if (attrName) attributes.add(attrName)

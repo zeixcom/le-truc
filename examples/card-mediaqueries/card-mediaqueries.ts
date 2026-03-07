@@ -10,7 +10,7 @@ type CardMediaqueriesPropKeys = 'motion' | 'theme' | 'viewport' | 'orientation'
 
 export type CardMediaqueriesProps = Record<CardMediaqueriesPropKeys, string>
 
-type CardMediaqueriesUI = Partial<Record<CardMediaqueriesPropKeys, HTMLElement>>
+type CardMediaqueriesUI = Partial<Record<CardMediaqueriesPropKeys, HTMLElement | undefined>>
 
 declare global {
 	interface HTMLElementTagNameMap {

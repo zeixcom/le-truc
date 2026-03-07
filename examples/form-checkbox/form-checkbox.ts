@@ -16,7 +16,7 @@ export type FormCheckboxProps = {
 
 type FormCheckboxUI = {
 	checkbox: HTMLInputElement
-	label?: HTMLElement
+	label?: HTMLElement | undefined
 }
 
 declare global {

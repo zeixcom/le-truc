@@ -18,9 +18,9 @@ export type ModuleListProps = {
 type ModuleListUI = {
 	container: HTMLElement
 	template: HTMLTemplateElement
-	form?: HTMLFormElement
-	textbox?: Component<FormTextboxProps>
-	add?: Component<BasicButtonProps>
+	form?: HTMLFormElement | undefined
+	textbox?: Component<FormTextboxProps> | undefined
+	add?: Component<BasicButtonProps> | undefined
 }
 
 declare global {

@@ -17,6 +17,10 @@
 		// Best practices
 		"strict": true,
 		"skipLibCheck": true,
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true,
+		"useUnknownInCatchVariables": true,
+		"noUncheckedSideEffectImports": true,
 		"noFallthroughCasesInSwitch": true,
 
 		// Some stricter flags (disabled by default)

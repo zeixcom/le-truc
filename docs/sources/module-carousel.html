@@ -414,7 +414,7 @@
 <span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (lastScrolled </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> idx) {</span></span>
 <span class="line"><span style="color:#F8F8F2">							lastScrolled </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> idx</span></span>
 <span class="line"><span style="color:#F8F8F2">							isNavigating </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
-<span class="line"><span style="color:#F8F8F2">							slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()[idx].</span><span style="color:#A6E22E">scrollIntoView</span><span style="color:#F8F8F2">({</span></span>
+<span class="line"><span style="color:#F8F8F2">							slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()[idx]</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">.</span><span style="color:#A6E22E">scrollIntoView</span><span style="color:#F8F8F2">({</span></span>
 <span class="line"><span style="color:#F8F8F2">								behavior: </span><span style="color:#E6DB74">'smooth'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">								block: </span><span style="color:#E6DB74">'nearest'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">							})</span></span>
@@ -478,13 +478,13 @@
 <span class="line"><span style="color:#F8F8F2">				} </span><span style="color:#F92672">else</span><span style="color:#F92672"> if</span><span style="color:#F8F8F2"> (document.activeElement) {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> dotElements </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> dots.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (dotElements.</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(document.activeElement </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span><span style="color:#F8F8F2">))</span></span>
-<span class="line"><span style="color:#F8F8F2">						dotElements[newIndex].</span><span style="color:#A6E22E">focus</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">						dotElements[newIndex]</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">.</span><span style="color:#A6E22E">focus</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">				}</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">			// Active slide indicator</span></span>
 <span class="line"><span style="color:#F8F8F2">			slides: </span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'ariaCurrent'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
-<span class="line"><span style="color:#A6E22E">				String</span><span style="color:#F8F8F2">(target.id </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()[host.index].id),</span></span>
+<span class="line"><span style="color:#A6E22E">				String</span><span style="color:#F8F8F2">(target.id </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> slides.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()[host.index]</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">.id),</span></span>
 <span class="line"><span style="color:#F8F8F2">			),</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>

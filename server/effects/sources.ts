@@ -48,7 +48,7 @@ const generatePanels = async (
 	].filter(Boolean) as PanelType[]
 
 	// Select the last panel by default (typically TypeScript)
-	panels[panels.length - 1].selected = true
+	panels[panels.length - 1]!.selected = true
 
 	return panels
 }
@@ -82,8 +82,8 @@ export const sourcesEffect = () => {
 
 							if (pathParts.length < 3) continue
 
-							const componentName = pathParts[pathParts.length - 2]
-							const fileName = pathParts[pathParts.length - 1].replace(
+							const componentName = pathParts[pathParts.length - 2]!
+							const fileName = pathParts[pathParts.length - 1]!.replace(
 								/\.html$/,
 								'',
 							)
@@ -112,7 +112,7 @@ export const sourcesEffect = () => {
 					}
 				},
 				err: errors => {
-					console.error('Error in sources effect:', errors[0].message)
+					console.error('Error in sources effect:', errors[0]!.message)
 					resolve?.()
 					resolve = undefined
 				},
