@@ -2,7 +2,7 @@
 
 > **Reactive**\<`T`, `P`, `E`\> = keyof `P` \| [`Signal`](Signal.md)\<`T` & `object`\> \| (`target`) => `T` \| `null` \| `undefined`
 
-Defined in: [src/effects.ts:64](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/effects.ts#L64)
+Defined in: [src/effects.ts:64](https://github.com/zeixcom/le-truc/blob/14ef3b3a4505e8f037ef7291b9f267a41aa5b5e3/src/effects.ts#L64)
 
 A reactive value driving a DOM update inside an `updateElement` effect.
 

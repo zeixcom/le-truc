@@ -2,6 +2,7 @@ import pkg from '../package.json'
 import { buildOnce } from './build'
 import {
 	ASSETS_DIR,
+	BLOG_OUTPUT_DIR,
 	COMPONENTS_DIR,
 	EXAMPLES_DIR,
 	LAYOUTS_DIR,
@@ -255,11 +256,12 @@ async function startServer() {
 				return new Response('WebSocket upgrade failed', { status: 400 })
 			},
 
-			// Static assets
-			'/assets/:file': req => {
+			// Static assets (wildcard to support subdirectories like img/avatar/)
+			'/assets/*': req => {
+				const assetPath = new URL(req.url).pathname.slice('/assets/'.length)
 				const filePath = guardPath(
 					ASSETS_DIR,
-					getFilePath(ASSETS_DIR, req.params.file),
+					getFilePath(ASSETS_DIR, assetPath),
 				)
 				return filePath
 					? handleStaticFile(filePath)
@@ -320,6 +322,18 @@ async function startServer() {
 				const filePath = guardPath(
 					OUTPUT_DIR,
 					getFilePath(OUTPUT_DIR, 'api', req.params.category, req.params.page),
+				)
+				return filePath
+					? handleStaticFile(filePath)
+					: new Response('Not Found', { status: 404 })
+			},
+
+			// Individual blog post pages
+			'/blog/:slug': req => {
+				const slug = req.params.slug.replace(/\.html$/, '')
+				const filePath = guardPath(
+					BLOG_OUTPUT_DIR,
+					getFilePath(BLOG_OUTPUT_DIR, `${slug}.html`),
 				)
 				return filePath
 					? handleStaticFile(filePath)

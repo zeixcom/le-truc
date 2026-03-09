@@ -2,7 +2,7 @@
 
 > **setStyle**\<`P`, `E`\>(`prop`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/style.ts:17](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/effects/style.ts#L17)
+Defined in: [src/effects/style.ts:17](https://github.com/zeixcom/le-truc/blob/14ef3b3a4505e8f037ef7291b9f267a41aa5b5e3/src/effects/style.ts#L17)
 
 Effect for setting a CSS custom property or inline style on an element.
 

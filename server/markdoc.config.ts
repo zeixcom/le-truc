@@ -1,3 +1,5 @@
+import blogmeta from './schema/blogmeta.markdoc'
+import blogpost from './schema/blogpost.markdoc'
 import callout from './schema/callout.markdoc'
 import carousel from './schema/carousel.markdoc'
 import demo from './schema/demo.markdoc'
@@ -9,8 +11,8 @@ import listnav from './schema/listnav.markdoc'
 import section from './schema/section.markdoc'
 import slide from './schema/slide.markdoc'
 import sources from './schema/sources.markdoc'
-import table from './schema/table.markdoc'
 import tabgroup from './schema/tabgroup.markdoc'
+import table from './schema/table.markdoc'
 
 export const markdocConfig = {
 	nodes: {
@@ -29,6 +31,8 @@ export const markdocConfig = {
 		hero,
 		table,
 		tabgroup,
+		blogmeta,
+		blogpost,
 	},
 }
 

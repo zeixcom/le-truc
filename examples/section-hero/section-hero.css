@@ -1,4 +1,6 @@
 section-hero {
+	--color-text-soft: var(--color-primary-30);
+
 	display: grid;
 	grid-column: fullwidth;
 	grid-template-columns: inherit;
@@ -18,6 +20,12 @@ section-hero {
 
 	.lead p {
 		font-size: var(--font-size-l);
+	}
+}
+
+@media (prefers-color-scheme: dark) {
+	section-hero {
+		--color-text-soft: var(--color-primary-70);
 	}
 }
 

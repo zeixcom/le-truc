@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Introducing Le Truc – Le Truc Blog</title>
+		<meta name="description" content="A reactive custom elements library that brings fine-grained reactivity directly to the web platform — no virtual DOM, no framework overhead." />
+		<meta name="author" content="Esther Brunner" />
+		<meta name="article:published_time" content="2026-03-09" />
+		<meta name="article:modified_time" content="" />
+		<link
+			rel="preload"
+			href="../assets/main.css?v=2ef4b56f1767eb46"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="../assets/main.js?v=1e0485e310079e30"
+		/>
+		<link
+			rel="stylesheet"
+			href="../assets/main.css?v=2ef4b56f1767eb46"
+		/>
+		<script
+			type="module"
+			src="../assets/main.js?v=1e0485e310079e30"
+		></script>
+	</head>
+	<body class="blog">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">
+					<a href="../blog.html">Le Truc Blog</a>
+					<small>1.0.0</small>
+				</h1>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<main id="main" class="content-grid">
+				<section-hero>
+					<h1>🎉 Introducing Le Truc</h1>
+					<div class="hero-layout">
+						<div class="lead">
+							<card-blogmeta>
+								<span>
+									<img src="../assets/img/avatar/esther-brunner.jpg" alt="Avatar of Esther Brunner" />
+									<span>Esther Brunner</span>
+								</span>
+								<time datetime="2026-03-09">
+									2026-03-09
+								</time>
+								<span>2 min read</span>
+							</card-blogmeta>
+							<p>A reactive custom elements library that brings fine-grained reactivity directly to the web platform — no virtual DOM, no framework overhead.</p>
+						</div>
+					</div>
+				</section-hero>
+				<section class="" id="undefined"><h2 id="why-le-truc"><a name="why-le-truc" class="anchor" href="#why-le-truc"><span class="title">Why Le Truc?</span><span class="permalink">#</span></a></h2><p>Most JavaScript frameworks come with significant trade-offs: a large runtime, a proprietary component model, or a steep learning curve. Le Truc takes a different approach — it enhances the native custom elements API with a minimal reactive layer, keeping your components close to the web platform.</p><h2 id="core-ideas"><a name="core-ideas" class="anchor" href="#core-ideas"><span class="title">Core Ideas</span><span class="permalink">#</span></a></h2><p><strong>Signals drive the DOM.</strong> Every property on a Le Truc component is a reactive signal. When a signal changes, only the DOM nodes that depend on it update — no diffing, no re-renders.</p><p><strong>Parsers connect attributes to state.</strong> The <code>asString()</code>, <code>asInteger()</code>, <code>asBoolean()</code> parsers read HTML attributes and feed them into signals. Attribute changes automatically flow through to the DOM.</p><p><strong>Effects are composable.</strong> <code>setAttribute</code>, <code>setText</code>, <code>toggleClass</code>, <code>on</code> — each effect is a small focused function. Compose them in a <code>setup</code> function and Le Truc wires up the reactivity for you.</p></section><section class="" id="undefined"><h2 id="getting-started"><a name="getting-started" class="anchor" href="#getting-started"><span class="title">Getting Started</span><span class="permalink">#</span></a></h2><module-codeblock language="ts" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">ts</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { defineComponent, asInteger, on, setText } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '@zeix/le-truc'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">  'basic-counter'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">  { count: </span><span style="color:#A6E22E">asInteger</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">) },</span></span>
+<span class="line"><span style="color:#F8F8F2">  ({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({ button: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button'</span><span style="color:#F8F8F2">), output: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'output'</span><span style="color:#F8F8F2">) }),</span></span>
+<span class="line"><span style="color:#F8F8F2">  ({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">    button: </span><span style="color:#A6E22E">on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> { host.count</span><span style="color:#F92672">++</span><span style="color:#F8F8F2"> }),</span></span>
+<span class="line"><span style="color:#F8F8F2">    output: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'count'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">  }),</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre></module-scrollarea><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><p>Read the <a href="/getting-started">Getting Started</a> guide for a full walkthrough.</p></section>
+			</main>
+			<!-- <div class="blog-nav">
+				<div class="content-grid">
+					<div class="content">
+						<nav class="blog-nav-links" aria-label="Blog navigation">
+							<a href="" class="blog-nav-link prev">
+								<span class="blog-nav-label">← Previous</span>
+								<span class="blog-nav-title"></span>
+							</a>
+							<a href="../blog.html" class="blog-nav-link">
+								📋 All Posts
+							</a>
+							<a href="" class="blog-nav-link next">
+								<span class="blog-nav-label">Next →</span>
+								<span class="blog-nav-title"></span>
+							</a>
+						</nav>
+					</div>
+				</div>
+			</div> -->
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2026 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

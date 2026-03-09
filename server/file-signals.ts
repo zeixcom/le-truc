@@ -52,6 +52,10 @@ export type PageMetadata = {
 	order?: number
 	draft?: boolean
 	tags?: string[]
+	date?: string
+	author?: string
+	'author-avatar'?: string
+	'author-bio'?: string
 }
 
 export type ProcessedMarkdownFile = FileInfo & {
@@ -101,6 +105,10 @@ function extractFrontmatter(content: string): {
 				case 'emoji':
 				case 'section':
 				case 'layout':
+				case 'date':
+				case 'author':
+				case 'author-avatar':
+				case 'author-bio':
 					metadata[key] = value
 					break
 				case 'order':

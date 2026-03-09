@@ -21,6 +21,8 @@ layout: 'page'
   - [Number](./examples/basic-number.html)
   - [Pluralize](./examples/basic-pluralize.html)
 - Card
+  - [Blogmeta](./examples/card-blogmeta.html)
+  - [Blogpost](./examples/card-blogpost.html)
   - [Callout](./examples/card-callout.html)
 - Context
   - [Media](./examples/context-media.html)
