@@ -177,7 +177,7 @@ describe('generateBlogExcerpts', () => {
 	test('includes slug-based URL in card link', () => {
 		const post = makePost({ slug: '2026-03-09-hello', date: '2026-03-09' })
 		const result = generateBlogExcerpts([post])
-		expect(result).toContain('href="/blog/2026-03-09-hello"')
+		expect(result).toContain('href="./blog/2026-03-09-hello.html"')
 	})
 
 	test('includes card-blogmeta with time and author span', () => {
@@ -273,15 +273,15 @@ describe('computeBlogPrevNext', () => {
 	test('newest post has prev-post pointing to the second post', () => {
 		const map = computeBlogPrevNext(posts)
 		const newest = map.get(posts[0]!.path)!
-		expect(newest['prev-post']).toBe('/blog/feb')
+		expect(newest['prev-post']).toBe('../blog/feb.html')
 		expect(newest['prev-post-title']).toBe('Feb Post')
 	})
 
 	test('middle post has both prev and next', () => {
 		const map = computeBlogPrevNext(posts)
 		const middle = map.get(posts[1]!.path)!
-		expect(middle['prev-post']).toBe('/blog/jan')
-		expect(middle['next-post']).toBe('/blog/march')
+		expect(middle['prev-post']).toBe('../blog/jan.html')
+		expect(middle['next-post']).toBe('../blog/march.html')
 	})
 
 	test('oldest post has no prev-post (it is already the earliest)', () => {
@@ -294,7 +294,7 @@ describe('computeBlogPrevNext', () => {
 	test('oldest post has next-post pointing to the middle post', () => {
 		const map = computeBlogPrevNext(posts)
 		const oldest = map.get(posts[2]!.path)!
-		expect(oldest['next-post']).toBe('/blog/feb')
+		expect(oldest['next-post']).toBe('../blog/feb.html')
 		expect(oldest['next-post-title']).toBe('Feb Post')
 	})
 
@@ -311,10 +311,10 @@ describe('computeBlogPrevNext', () => {
 		expect(map.size).toBe(0)
 	})
 
-	test('URLs use /blog/<slug> format stripping blog/ prefix and .md', () => {
+	test('URLs are basePath-relative with .html extension, stripping blog/ prefix and .md', () => {
 		const map = computeBlogPrevNext(posts)
 		const newest = map.get(posts[0]!.path)!
-		expect(newest['prev-post']).toMatch(/^\/blog\/[^/]+$/)
+		expect(newest['prev-post']).toMatch(/^\.\.\/blog\/[^/]+\.html$/)
 		expect(newest['prev-post']).not.toContain('.md')
 		expect(newest['prev-post']).not.toContain('blog/blog/')
 	})

@@ -185,9 +185,9 @@ export const computeBlogPrevNext = (
 		const next = sortedPosts[i - 1] // newer
 
 		map.set(post.path, {
-			'prev-post': prev ? `/blog/${slug(prev)}` : '',
+			'prev-post': prev ? `${post.basePath}blog/${slug(prev)}.html` : '',
 			'prev-post-title': prev?.title ?? '',
-			'next-post': next ? `/blog/${slug(next)}` : '',
+			'next-post': next ? `${post.basePath}blog/${slug(next)}.html` : '',
 			'next-post-title': next?.title ?? '',
 		})
 	})
@@ -206,7 +206,7 @@ export const generateBlogExcerpts = (
 		.slice(0, 3)
 		.map(post => {
 			const slug = post.relativePath.replace(/^blog\//, '').replace(/\.md$/, '')
-			const url = `/blog/${slug}`
+			const url = `${basePath}blog/${slug}.html`
 			const { 'reading-time': readingTime } = getBlogVariables(post)
 			const date = escapeHtml(post.metadata.date ?? '')
 			const rawAuthor = post.metadata.author ?? ''

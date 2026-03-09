@@ -59,6 +59,38 @@ export const highlightCodeBlocks = async (html: string): Promise<string> => {
 	return result
 }
 
+/**
+ * Rewrite internal links in markdown-generated HTML to be basePath-relative
+ * with `.html` extensions, so they work on GitHub Pages.
+ *
+ * - `href="./foo.md"` → `href="./foo.html"`
+ * - `href="/foo.md"` → `href="${basePath}foo.html"`
+ * - `href="/foo.html"` → `href="${basePath}foo.html"` (markdoc already converts .md → .html)
+ * - `href="/blog/slug"` (no extension) → `href="${basePath}blog/slug.html"`
+ *
+ * External URLs, anchors, and paths with a file extension are left untouched.
+ */
+export const resolveInternalLinks = (html: string, basePath: string): string =>
+	html.replace(/href="([^"#?]*)"/g, (_match, href: string) => {
+		if (/^(?:https?:|mailto:|tel:|\/\/)/.test(href)) return _match
+		if (href.endsWith('.md')) {
+			const resolved = href.startsWith('/')
+				? `${basePath}${href.slice(1, -3)}.html`
+				: `${href.slice(0, -3)}.html`
+			return `href="${resolved}"`
+		}
+		if (href.startsWith('/') && !href.endsWith('/')) {
+			const lastSegment = href.slice(href.lastIndexOf('/') + 1)
+			if (!lastSegment.includes('.')) {
+				return `href="${basePath}${href.slice(1)}.html"`
+			}
+			if (lastSegment.endsWith('.html')) {
+				return `href="${basePath}${href.slice(1)}"`
+			}
+		}
+		return _match
+	})
+
 export const injectModuleDemoPreview = (html: string): string =>
 	html.replace(
 		/<module-demo([^>]*) preview-html="([^"]*)"([^>]*)>([\s\S]*?)<\/module-demo>/g,
