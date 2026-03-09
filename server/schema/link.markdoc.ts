@@ -7,12 +7,16 @@ const link: Schema = {
 		let href = node.attributes.href as string | undefined
 		const title = node.attributes.title as string | undefined
 
-		if (
-			typeof href === 'string'
-			&& href.endsWith('.md')
-			&& !href.includes('://')
-		) {
-			href = href.replace(/\.md$/, '.html')
+		if (typeof href === 'string' && !href.includes('://') && !href.startsWith('//')) {
+			const basePath = config.variables?.['basePath'] as string | undefined
+
+			if (href.endsWith('.md')) {
+				href = href.slice(0, -3) + '.html'
+			}
+
+			if (basePath && href.startsWith('/') && !href.endsWith('/')) {
+				href = basePath + href.slice(1)
+			}
 		}
 
 		const attrs: Record<string, unknown> = {}

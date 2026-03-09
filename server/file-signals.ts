@@ -16,7 +16,11 @@ import {
 	TEMPLATES_DIR,
 } from './config'
 import { watchFiles } from './file-watcher'
-import { highlightCodeBlocks, injectModuleDemoPreview } from './html-shaping'
+import {
+	highlightCodeBlocks,
+	injectModuleDemoPreview,
+	resolveInternalLinks,
+} from './html-shaping'
 import { getRelativePath } from './io'
 import markdocConfig from './markdoc.config'
 
@@ -219,8 +223,11 @@ const docsMarkdown: {
 					console.warn(`Markdoc validation errors for ${path}:`, errors)
 				}
 
-				// Transform the AST
-				const transformed = Markdoc.transform(ast, markdocConfig)
+				// Transform the AST (pass basePath so link schema can resolve absolute hrefs)
+				const transformed = Markdoc.transform(ast, {
+					...markdocConfig,
+					variables: { basePath },
+				})
 
 				// Render to HTML
 				let htmlContent = Markdoc.renderers.html(transformed)
@@ -234,6 +241,7 @@ const docsMarkdown: {
 				// Apply shared HTML shaping for code fences and demo previews.
 				htmlContent = await highlightCodeBlocks(htmlContent)
 				htmlContent = injectModuleDemoPreview(htmlContent)
+				htmlContent = resolveInternalLinks(htmlContent, basePath)
 
 				// Extract title
 				let title = frontmatter.title

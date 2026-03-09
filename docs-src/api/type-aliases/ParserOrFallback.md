@@ -2,7 +2,7 @@
 
 > **ParserOrFallback**\<`T`, `U`\> = [`Parser`](Parser.md)\<`T`, `U`\> \| [`Fallback`](Fallback.md)\<`T`, `U`\>
 
-Defined in: [src/parsers.ts:20](https://github.com/zeixcom/le-truc/blob/3c6c7508028647082cdb37ad7cc35a4e25e83a85/src/parsers.ts#L20)
+Defined in: [src/parsers.ts:20](https://github.com/zeixcom/le-truc/blob/d8168684fc4cb8d811d0fffec6f48f3c78b3f3fb/src/parsers.ts#L20)
 
 #### Type Parameters
 
