@@ -173,6 +173,8 @@ Configured in `markdoc.config.ts`:
 | `{% hero %}` | `<section-hero>` | Hero section with extracted heading and TOC placeholder |
 | `{% tabgroup %}` | `<module-tabgroup>` | ARIA-compliant tabbed content |
 | `{% table %}` | `<table>` | Markdown table with optional caption |
+| `{% blogmeta %}` | `<card-blogmeta>` | Blog post publication metadata (date, author, avatar, reading time) — self-closing |
+| `{% blogpost %}` | `<card-blogpost>` | Blog excerpt card wrapping a heading (linked) and optional description |
 
 Note: `link.markdoc.ts` is registered as a node override in `markdoc.config.ts` and handles local `.md` → `.html` link conversion during Markdoc transform.
 
@@ -216,6 +218,7 @@ The `fence` schema override provides:
 | `GET /sources/:file` | Source code fragments | `docs/sources/` |
 | `GET /test/:component/mocks/:mock` | Test mock files | `examples/<component>/mocks/` |
 | `GET /test/:component` | Component test page | `docs-src/layouts/test.html` + `examples/<component>/<component>.html` |
+| `GET /blog/:slug` | Individual blog post | `docs/blog/<slug>.html` |
 | `GET /:page` | Documentation page | `docs/<page>.html` |
 | `GET /favicon.ico` | Favicon | `docs/favicon.ico` |
 
@@ -335,6 +338,7 @@ server/tests/
 ├── effects/
 │   ├── api-pages.test.ts          # stripBreadcrumbs, highlightCodeBlocks
 │   ├── api.test.ts                # parseGlobals, generateApiIndexMarkdown, sortCategories
+│   ├── blog-pages.test.ts         # getBlogVariables, generateBlogExcerpts, computeBlogPrevNext
 │   ├── examples.test.ts           # processExample
 │   ├── mocks.test.ts              # getMockOutputPath
 │   └── sources.test.ts            # generatePanels
@@ -376,11 +380,12 @@ server/tests/
 | `markdoc-constants.test.ts` | Attribute classes, constant definitions |
 | `effects/api-pages.test.ts` | `stripBreadcrumbs`, `highlightCodeBlocks` |
 | `effects/api.test.ts` | `parseGlobals`, `generateApiIndexMarkdown`, `sortCategories` |
+| `effects/blog-pages.test.ts` | `getBlogVariables`, `generateBlogExcerpts`, `computeBlogPrevNext` |
 | `effects/examples.test.ts` | `processExample` |
 | `effects/mocks.test.ts` | `getMockOutputPath` |
 | `effects/sources.test.ts` | `generatePanels` |
 
-**Total:** 345 tests, ~500 ms execution time.
+**Total:** ~373 tests, ~700 ms execution time.
 
 ### Test Helpers
 
@@ -420,6 +425,7 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 | `MENU_FILE` | `docs-src/includes/menu.html` | Generated menu |
 | `OUTPUT_DIR` | `docs/` | Final build output |
 | `ASSETS_DIR` | `docs/assets/` | Built assets |
+| `BLOG_OUTPUT_DIR` | `docs/blog/` | Built blog post HTML pages |
 | `EXAMPLES_DIR` | `docs/examples/` | Built example pages |
 | `SOURCES_DIR` | `docs/sources/` | Highlighted source fragments |
 | `TEST_DIR` | `docs/test/` | Copied mock files for component tests |
@@ -457,6 +463,114 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 The API section is implemented end-to-end. `apiEffect` runs TypeDoc, parses `globals.md`, and generates `docs-src/pages/api.md` with a grouped `{% listnav %}` index. `apiPagesEffect` processes individual API Markdown files through the Markdoc + Shiki pipeline and writes HTML fragments to `docs/api/<category>/<name>.html`. The `api.html` layout is served for direct navigation; lazy-loaded fragments are fetched by `module-lazyload` via listnav selection.
 
 The `api.html` template variables (`{{ api-category }}`, `{{ api-name }}`, `{{ api-kind }}`, `{{ toc }}`) are populated by `pagesEffect` in `effects/pages.ts` — breadcrumbs and sidebar TOC are filled on direct API page navigation.
+
+### Blog Section ✅
+
+The blog section is fully implemented. See `server/TASKS.md` for the completed task list.
+
+#### Overview
+
+Blog posts live in `docs-src/pages/blog/` — a subdirectory of the existing pages directory. They are processed by the existing `docsMarkdown` signal and `pagesEffect` with no new signals or build effects. The blog overview page (`docs-src/pages/blog.md`) is authored content whose main body is generated at build time (3 latest post excerpts injected by `pagesEffect`).
+
+```
+docs-src/pages/blog/          ← blog post markdown files
+  YYYY-MM-DD-slug.md          ← recommended naming (date prefix enables natural sorting)
+
+docs-src/pages/blog.md        ← blog index page (frontmatter authored; body generated)
+
+docs/blog/                    ← build output (individual post HTML files)
+docs/blog.html                ← build output (overview page)
+```
+
+#### Data Flow
+
+```
+docs-src/pages/blog/*.md
+       │
+       ▼  docsMarkdown (existing watchFiles on PAGES_DIR/**/*.md)
+       │  extractFrontmatter → PageMetadata (+ date, author fields)
+       │  Markdoc parse/transform/render
+       ▼
+pagesEffect
+  ├─ sorts blog posts (section === 'blog') by metadata.date desc
+  ├─ for each blog post: injects prev/next vars → applyTemplate → docs/blog/<slug>.html
+  └─ for blog.md: replaces htmlContent with 3-excerpt card HTML → applyTemplate → docs/blog.html
+```
+
+#### Extended `PageMetadata`
+
+Two new optional fields on the existing type (parsed in `extractFrontmatter`):
+
+```ts
+date?: string          // YYYY-MM-DD — required for blog posts, used for sort order
+author?: string        // display name; maps to {{ author }} in blog.html layout
+```
+
+The `blog.html` layout also uses `author-avatar` and `author-bio`. These are read directly from frontmatter via the existing `...Object.fromEntries(metadata)` spread in `applyTemplate`, so no additional type changes are needed for those.
+
+#### Components
+
+Two new custom elements handle blog-specific rendering:
+
+**`card-blogmeta`** (`examples/card-blogmeta/`) — reactive Le Truc component for publication metadata.
+- **Attributes:** `date` (ISO string), `author`, `avatar` (URL, optional), `reading-time` (pre-computed string, optional)
+- **Behaviour:** formats `date` into locale-aware display text on the inner `<time>` element via `toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })`; shows/hides avatar `<img>`; sets author name text. Using `undefined` as locale picks up the user's system locale; the ISO date is a valid fallback without JS.
+- **Used in:** `blog.html` layout header; inside `<card-blogpost>` excerpt cards; available via `{% blogmeta %}` Markdoc tag.
+
+**`card-blogpost`** (`examples/card-blogpost/`) — CSS-only structural component scoping excerpt card styles.
+- No `.ts` file — registered as a bare `HTMLElement` (same pattern as `card-callout`).
+- **Used in:** blog overview page (3 excerpt cards generated by `pagesEffect`); available via `{% blogpost %}` Markdoc tag for manual use.
+
+#### Blog-Specific Template Variables
+
+Injected by `applyTemplate` (via optional `extraReplacements`) when rendering blog posts (`section === 'blog'`):
+
+| Variable | Source |
+|---|---|
+| `published-date` | `metadata.date` — ISO string passed to `card-blogmeta date="…"` attribute |
+| `reading-time` | `Math.ceil(wordCount / 200)` — word count from HTML-stripped content |
+| `blog-tags` | `<span class="tag">…</span>` elements joined from `metadata.tags ?? []` |
+| `prev-post` | URL of chronologically previous post (empty string at boundary) |
+| `prev-post-title` | Title of previous post |
+| `next-post` | URL of chronologically next post (empty string at boundary) |
+| `next-post-title` | Title of next post |
+
+`applyTemplate` gains an optional `extraReplacements: Record<string, string>` parameter. `pagesEffect` pre-computes prev/next by sorting all blog posts (date desc) before the per-file render loop.
+
+#### Blog Overview Excerpt Injection
+
+In `pagesEffect`, before calling `applyTemplate` for `blog.md` (`relativePath === 'blog.md'`), replace `processedFile.htmlContent` with 3 `<card-blogpost>` elements generated from the sorted post list. Each card contains: emoji, title wrapped in `<a href="/blog/<slug>">`, a `<card-blogmeta>` element with date/author/reading-time, and a description `<p>`.
+
+#### Layouts
+
+| Route | Layout file | Set by |
+|---|---|---|
+| `/blog` | `page.html` | `layout: page` in `blog.md` frontmatter |
+| `/blog/<slug>` | `blog.html` | `layout: blog` in each post's frontmatter |
+
+`blog.html` already exists with a full-featured post template. The `.blog-meta` block is replaced with `<card-blogmeta>` (the existing markup with the typo is removed entirely). `overview.html` is mapped in `ROUTE_LAYOUT_MAP` but does not affect the build pipeline — `layout: page` is the correct choice for 3 static excerpts.
+
+#### Routing
+
+A new route must be added to `serve.ts` before the catch-all `/:page`:
+
+```
+GET /blog/:slug  →  serve docs/blog/<slug>.html  (guarded by BLOG_OUTPUT_DIR)
+```
+
+`BLOG_OUTPUT_DIR = join(OUTPUT_DIR, 'blog')` is a new constant in `config.ts` used for path-traversal guarding.
+
+#### Key Decisions
+
+| Decision | Choice | Alternatives | Rationale |
+|---|---|---|---|
+| Blog post location | `docs-src/pages/blog/` | Separate `docs-src/blog/` dir with new signal | Reuses existing `docsMarkdown` pipeline; zero new infrastructure |
+| Overview content generation | Inject `<card-blogpost>` HTML into `blog.md` in `pagesEffect` | Custom Markdoc tag; separate `blogEffect` | Fewest moving parts; reactive chain is automatic |
+| Blog index layout | `page.html` | `overview.html` | `overview.html`'s search/filter/sort JS is overkill for 3 static excerpts |
+| Post ordering | `metadata.date` desc | `lastModified` | Explicit date in frontmatter is author-controlled and predictable |
+| Prev/next nav | Pre-computed in `pagesEffect` loop | Separate navigation pass | All data already available in the same `pagesEffect` run |
+| Post filename convention | `YYYY-MM-DD-slug.md` (recommended) | Any filename with `date` frontmatter | Date prefix enables natural sort in file explorers; frontmatter `date` is the authoritative value |
+| Date formatting | `card-blogmeta` component (`toLocaleDateString(undefined, …)`) | Server-side formatting; inline script | Uses user's actual locale; ISO date is a valid no-JS fallback; scoped to the component |
 
 ### FAQ Section
 

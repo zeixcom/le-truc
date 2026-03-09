@@ -1,0 +1,27 @@
+card-blogmeta {
+	display: flex;
+	align-items: center;
+	gap: var(--space-m);
+	font-size: var(--font-size-s);
+	color: var(--color-text-soft);
+	flex-wrap: wrap;
+	margin-bottom: var(--space-l);
+
+	& span {
+		display: flex;
+		align-items: center;
+		gap: var(--space-xs);
+	}
+
+	& img {
+		width: var(--input-height);
+		height: var(--input-height);
+		border-radius: 50%;
+		object-fit: cover;
+		flex-shrink: 0;
+	}
+
+	& time {
+		font-variant-numeric: tabular-nums;
+	}
+}

@@ -8,7 +8,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { ASSETS_DIR, EXAMPLES_DIR, OUTPUT_DIR, SOURCES_DIR } from '../config'
+import { ASSETS_DIR, BLOG_OUTPUT_DIR, EXAMPLES_DIR, OUTPUT_DIR, SOURCES_DIR } from '../config'
 import { fileExists, getFilePath } from '../io'
 import { getLayoutForPath } from '../serve'
 import { hmrScriptTag } from '../templates/hmr'
@@ -112,8 +112,9 @@ function startTestServer(opts: { development?: boolean } = {}): TestServer {
 
 			'/ws': () => new Response('Not available in production', { status: 404 }),
 
-			'/assets/:file': req => {
-				const filePath = getFilePath(ASSETS_DIR, req.params.file)
+			'/assets/*': req => {
+				const assetPath = new URL(req.url).pathname.slice('/assets/'.length)
+				const filePath = getFilePath(ASSETS_DIR, assetPath)
 				return serveFile(filePath)
 			},
 
@@ -125,6 +126,16 @@ function startTestServer(opts: { development?: boolean } = {}): TestServer {
 			'/sources/:file': req => {
 				const filePath = getFilePath(SOURCES_DIR, req.params.file)
 				return serveFile(filePath)
+			},
+
+			'/blog/:slug': req => {
+				const slug = req.params.slug.replace(/\.html$/, '')
+				const filePath = getFilePath(BLOG_OUTPUT_DIR, `${slug}.html`)
+				// Guard against path traversal
+				const rel = filePath.startsWith(BLOG_OUTPUT_DIR)
+					? filePath
+					: null
+				return rel ? serveFile(rel) : new Response('Not Found', { status: 404 })
 			},
 
 			'/:page': req => {
@@ -269,6 +280,42 @@ describe('path traversal', () => {
 		if (res.status === 200) {
 			const body = await res.text()
 			// Should not contain source code from config.ts
+			expect(body).not.toContain('SERVER_CONFIG')
+		} else {
+			expect(res.status).toBe(404)
+		}
+	})
+})
+
+/* === §14.6 Blog route (/blog/:slug) === */
+
+describe('/blog/:slug route', () => {
+	let server: TestServer
+
+	beforeAll(() => {
+		server = startTestServer()
+	})
+
+	afterAll(() => {
+		server.close()
+	})
+
+	test('GET /blog/unknown-post → 404', async () => {
+		const res = await fetch(`${server.url}/blog/unknown-post`)
+		expect(res.status).toBe(404)
+	})
+
+	test('GET /blog/unknown-post.html → 404', async () => {
+		const res = await fetch(`${server.url}/blog/unknown-post.html`)
+		expect(res.status).toBe(404)
+	})
+
+	test('GET /blog/../config → 404 (path traversal rejected)', async () => {
+		const res = await fetch(`${server.url}/blog/../config`)
+		// Bun normalises the URL before routing, so this hits /config (404)
+		// rather than the blog route. Either way, server/config.ts must not leak.
+		if (res.status === 200) {
+			const body = await res.text()
 			expect(body).not.toContain('SERVER_CONFIG')
 		} else {
 			expect(res.status).toBe(404)

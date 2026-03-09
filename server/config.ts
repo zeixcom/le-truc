@@ -26,6 +26,7 @@ const MENU_FILE = join(ROOT, 'docs-src/includes/menu.html')
 
 const OUTPUT_DIR = join(ROOT, 'docs')
 const ASSETS_DIR = join(ROOT, 'docs/assets')
+const BLOG_OUTPUT_DIR = join(ROOT, 'docs/blog')
 const EXAMPLES_DIR = join(ROOT, 'docs/examples')
 const SOURCES_DIR = join(ROOT, 'docs/sources')
 const TEST_DIR = join(ROOT, 'docs/test')
@@ -123,6 +124,7 @@ export {
 	MENU_FILE,
 	OUTPUT_DIR,
 	ASSETS_DIR,
+	BLOG_OUTPUT_DIR,
 	SOURCES_DIR,
 	TEST_DIR,
 	SITEMAP_FILE,
