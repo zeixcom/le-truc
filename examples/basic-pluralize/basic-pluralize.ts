@@ -23,7 +23,7 @@ type BasicPluralizeUI = Partial<
 		| 'few'
 		| 'many'
 		| 'other',
-		HTMLElement
+		HTMLElement | undefined
 	>
 >
 

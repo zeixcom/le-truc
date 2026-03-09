@@ -514,8 +514,9 @@ function diffArrays(prev, next, prevKeys, generateKey, contentBased) {
   const prevByKey = new Map;
   for (let i = 0;i < prev.length; i++) {
     const key = prevKeys[i];
-    if (key && prev[i])
-      prevByKey.set(key, prev[i]);
+    const item = prev[i];
+    if (key && item !== undefined)
+      prevByKey.set(key, item);
   }
   const seenKeys = new Set;
   for (let i = 0;i < next.length; i++) {
@@ -679,7 +680,8 @@ function createList(value, options) {
       list.set(fn(list.get()));
     },
     at(index) {
-      return signals.get(keys[index]);
+      const key = keys[index];
+      return key !== undefined ? signals.get(key) : undefined;
     },
     keys() {
       subscribe();
@@ -711,6 +713,8 @@ function createList(value, options) {
     },
     remove(keyOrIndex) {
       const key = typeof keyOrIndex === "number" ? keys[keyOrIndex] : keyOrIndex;
+      if (key === undefined)
+        return;
       const ok = signals.delete(key);
       if (ok) {
         const index = typeof keyOrIndex === "number" ? keyOrIndex : keys.indexOf(key);
@@ -1012,7 +1016,8 @@ function deriveCollection(source, callback) {
       return node.value;
     },
     at(index) {
-      return signals.get(keys[index]);
+      const key = keys[index];
+      return key !== undefined ? signals.get(key) : undefined;
     },
     byKey(key) {
       return signals.get(key);
@@ -1167,7 +1172,8 @@ function createCollection(watched, options) {
       return node.value;
     },
     at(index) {
-      return signals.get(keys[index]);
+      const key = keys[index];
+      return key !== undefined ? signals.get(key) : undefined;
     },
     byKey(key) {
       return signals.get(key);
@@ -1852,7 +1858,7 @@ var extractAttributes = (selector) => {
     const parts = selector.split("[");
     for (let i = 1;i < parts.length; i++) {
       const part = parts[i];
-      if (!part.includes("]"))
+      if (!part || !part.includes("]"))
         continue;
       const attrName = part.split("=")[0].trim().replace(/[^a-zA-Z0-9_-]/g, "");
       if (attrName)

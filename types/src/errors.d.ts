@@ -38,11 +38,13 @@ declare class InvalidEffectsError extends TypeError {
  * Error thrown if UI key is invalid
  *
  * @since 0.15.1
- * @param {HTMLElement} host - Host component
- * @param {string} key - Invalid key
- * @param {string} where - Where the key is used
  */
 declare class InvalidUIKeyError extends TypeError {
+    /**
+     * @param {HTMLElement} host - Host component
+     * @param {string} key - Invalid key
+     * @param {string} where - Where the key is used
+     */
     constructor(host: HTMLElement, key: string, where: string);
 }
 /**

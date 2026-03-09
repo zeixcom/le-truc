@@ -19,8 +19,8 @@ type ModulePaginationUI = {
 	input: HTMLInputElement
 	prev: HTMLButtonElement
 	next: HTMLButtonElement
-	value?: HTMLElement
-	max?: HTMLElement
+	value?: HTMLElement | undefined
+	max?: HTMLElement | undefined
 }
 
 declare global {

@@ -36,7 +36,8 @@ export const manageFocus = <E extends HTMLInputElement | HTMLButtonElement>(
 				index =
 					(index + (INCREMENT_KEYS.includes(key) ? 1 : -1) + elements.length) %
 					elements.length
-			if (elements[index]) elements[index].focus()
+			const focused = elements[index]
+			if (focused) focused.focus()
 		}),
 		on('keyup', ({ key }) => {
 			if (key !== ENTER_KEY) return

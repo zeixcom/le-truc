@@ -64,7 +64,7 @@ component.ts ───── effects.ts, errors.ts, parsers.ts,│
                    ui.ts, util.ts                    │
 ```
 
-The single external dependency is `@zeix/cause-effect`, which provides the reactive primitives: `createState`, `createComputed`, `createEffect`, `createMemo`, `createSensor`, `Signal`, `Memo`, `Sensor`, `batch`, and various type guards.
+The single external dependency is `@zeix/cause-effect`, which provides the reactive primitives used by Le Truc: `createState`, `createComputed`, `createEffect`, `createMemo`, `createScope`, `createSensor`, `createSlot`, `createTask`, `createStore`, `createList`, `createCollection`, `Signal`, `Memo`, `Sensor`, `Slot`, `batch`, `match`, `unown`, `untrack`, and various type guards and utility functions. See `index.ts` for the full re-export surface.
 
 ## The Component Lifecycle
 

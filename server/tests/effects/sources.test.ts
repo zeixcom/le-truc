@@ -22,9 +22,9 @@ describe('generatePanels', () => {
 		const panels = await generatePanels(html)
 
 		expect(panels).toHaveLength(1)
-		expect(panels[0].type).toBe('html')
-		expect(panels[0].selected).toBe(true)
-		expect(panels[0].content).toContain('<pre class="shiki')
+		expect(panels[0]!.type).toBe('html')
+		expect(panels[0]!.selected).toBe(true)
+		expect(panels[0]!.content).toContain('<pre class="shiki')
 	})
 
 	test('selects the last panel by default when html, css, and ts are provided', async () => {
@@ -36,8 +36,8 @@ describe('generatePanels', () => {
 
 		expect(panels).toHaveLength(3)
 		expect(panels.map(panel => panel.type)).toEqual(['html', 'css', 'ts'])
-		expect(panels[0].selected).toBe(false)
-		expect(panels[1].selected).toBe(false)
-		expect(panels[2].selected).toBe(true)
+		expect(panels[0]!.selected).toBe(false)
+		expect(panels[1]!.selected).toBe(false)
+		expect(panels[2]!.selected).toBe(true)
 	})
 })

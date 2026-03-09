@@ -51,13 +51,13 @@ export type FormListboxProps = {
 
 type FormListboxUI = {
 	input: HTMLInputElement
-	filter?: HTMLInputElement
-	clear?: HTMLButtonElement
-	callout?: HTMLElement
-	loading?: HTMLElement
-	error?: HTMLElement
 	listbox: HTMLElement
 	options: Memo<HTMLButtonElement[]>
+	filter?: HTMLInputElement | undefined
+	clear?: HTMLButtonElement | undefined
+	callout?: HTMLElement | undefined
+	loading?: HTMLElement | undefined
+	error?: HTMLElement | undefined
 }
 
 declare global {

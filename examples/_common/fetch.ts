@@ -3,9 +3,9 @@
 type CacheEntry<T = unknown> = {
 	content: T
 	timestamp: number
-	etag?: string
-	lastModified?: string
-	maxAge?: number
+	etag: string | undefined
+	lastModified: string | undefined
+	maxAge: number | undefined
 }
 
 /* === Internal Stuff === */
@@ -14,7 +14,7 @@ const cache = new Map<string, CacheEntry>()
 
 const parseCacheControl = (
 	header: string,
-): { maxAge?: number; noCache: boolean; noStore: boolean } => {
+): { maxAge: number | undefined; noCache: boolean; noStore: boolean } => {
 	const directives = header
 		.toLowerCase()
 		.split(',')
@@ -103,7 +103,7 @@ export const fetchWithCache = async <T = string>(
 	if (cached?.etag) headers['If-None-Match'] = cached.etag
 	if (cached?.lastModified) headers['If-Modified-Since'] = cached.lastModified
 
-	const response = await fetch(url, { signal, headers })
+	const response = await fetch(url, { signal: signal ?? null, headers })
 
 	// Handle 304 Not Modified
 	if (response.status === 304 && cached)
@@ -119,7 +119,7 @@ export const fetchWithCache = async <T = string>(
 	// Parse cache directives
 	const cacheDirectives = cacheControl
 		? parseCacheControl(cacheControl)
-		: { noCache: false, noStore: false }
+		: { noCache: false, noStore: false, maxAge: undefined }
 
 	// Store in cache if allowed
 	if (!cacheDirectives.noStore) {

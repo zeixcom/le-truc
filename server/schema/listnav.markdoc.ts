@@ -28,17 +28,17 @@ const renderNavigationItems = (
 ) => {
 	// If no item has selected attribute, mark the first one as selected
 	const hasSelected = items.some(item => item.selected)
-	if (!hasSelected && items.length > 0) items[0].selected = true
+	if (!hasSelected && items.length > 0) items[0]!.selected = true
 
 	// Group items by their group property
 	const groups = new Map<
 		string,
-		Array<{ label: string; src: string; selected?: boolean }>
+		Array<{ label: string; src: string; selected?: boolean | undefined }>
 	>()
 	const ungroupedItems: Array<{
 		label: string
 		src: string
-		selected?: boolean
+		selected?: boolean | undefined
 	}> = []
 
 	for (const item of items) {

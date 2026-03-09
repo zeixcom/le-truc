@@ -3,12 +3,29 @@ import type { Component, ComponentProps } from './component';
 import { type ParserOrFallback } from './parsers';
 import type { ElementFromKey, UI } from './ui';
 type EventType<K extends string> = K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K] : Event;
+/**
+ * Handler for a single event type inside `createEventsSensor`.
+ *
+ * Receives a context object with:
+ * - `event` — the original DOM event (typed to the specific event type)
+ * - `ui` — the full component UI object
+ * - `target` — the matched element (properly typed, unlike `event.target`)
+ * - `prev` — the current sensor value before this event
+ *
+ * Return the new sensor value to update it, or `void` / `Promise<void>` to
+ * leave the value unchanged.
+ */
 type SensorEventHandler<T extends {}, Evt extends Event, U extends UI, E extends Element> = (context: {
     event: Evt;
     ui: U;
     target: E;
     prev: T;
 }) => T | void | Promise<void>;
+/**
+ * Map of event type names to `SensorEventHandler` functions, passed as the
+ * third argument to `createEventsSensor`. Each handler derives the new sensor
+ * value from the event, or returns `void` to leave it unchanged.
+ */
 type EventHandlers<T extends {}, U extends UI, E extends Element> = {
     [K in keyof HTMLElementEventMap]?: SensorEventHandler<T, EventType<K>, U, E>;
 };

@@ -314,8 +314,8 @@ const parseHTML = (html: string): ParsedElement | string => {
 		)
 	}
 
-	const tagName = openTagMatch[1]
-	const attributesString = openTagMatch[2].trim()
+	const tagName = openTagMatch[1]!
+	const attributesString = openTagMatch[2]!.trim()
 
 	const isSelfClosing =
 		attributesString.endsWith('/')
@@ -383,10 +383,10 @@ const parseChildren = (content: string): (ParsedElement | string)[] => {
 	let pos = 0
 
 	while (pos < content.length) {
-		while (pos < content.length && /\s/.test(content[pos])) pos++
+		while (pos < content.length && /\s/.test(content.charAt(pos))) pos++
 		if (pos >= content.length) break
 
-		if (content[pos] === '<') {
+		if (content.charAt(pos) === '<') {
 			const tagMatch = content.slice(pos).match(/^<([a-zA-Z0-9-]+)/)
 			if (!tagMatch) {
 				pos++
@@ -460,7 +460,7 @@ const parseAttributes = (attributesString: string): Record<string, any> => {
 	const attrRegex = /([a-zA-Z0-9-]+)(?:=(?:"([^"]*)"|'([^']*)'|([^\s]+)))?/g
 	let match: RegExpExecArray | null | undefined
 	while ((match = attrRegex.exec(attributesString)) !== null) {
-		const [, name, doubleQuoted, singleQuoted, unquoted] = match
+		const [, name = '', doubleQuoted, singleQuoted, unquoted] = match
 		attributes[name] = doubleQuoted ?? singleQuoted ?? unquoted ?? true
 	}
 

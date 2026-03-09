@@ -66,8 +66,8 @@ const parseGlobals = (content: string): ApiCategory[] => {
 		const headingMatch = line.match(/^####\s+(.+)$/)
 		if (headingMatch) {
 			current = {
-				name: headingMatch[1].trim(),
-				slug: headingMatch[1].trim().toLowerCase().replace(/\s+/g, '-'),
+				name: headingMatch[1]!.trim(),
+				slug: headingMatch[1]!.trim().toLowerCase().replace(/\s+/g, '-'),
 				entries: [],
 			}
 			categories.push(current)
@@ -78,8 +78,8 @@ const parseGlobals = (content: string): ApiCategory[] => {
 		if (current) {
 			const entryMatch = line.match(/^-\s+\[([^\]]+)\]\(([^)]+)\/([^)]+)\.md\)/)
 			if (entryMatch) {
-				const name = entryMatch[1]
-				const filename = entryMatch[3]
+				const name = entryMatch[1]!
+				const filename = entryMatch[3]!
 				current.entries.push({
 					name,
 					slug: filename,

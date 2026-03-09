@@ -21,9 +21,9 @@ export type FormTextboxProps = {
 
 type FormTextboxUI = {
 	textbox: HTMLInputElement | HTMLTextAreaElement
-	clear?: HTMLButtonElement
-	error?: HTMLElement
-	description?: HTMLElement
+	clear?: HTMLButtonElement | undefined
+	error?: HTMLElement | undefined
+	description?: HTMLElement | undefined
 }
 
 declare global {

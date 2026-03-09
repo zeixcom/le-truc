@@ -15,8 +15,8 @@ export type BasicButtonProps = {
 
 type BasicButtonUI = {
 	button: HTMLButtonElement
-	label?: HTMLSpanElement
-	badge?: HTMLSpanElement
+	label?: HTMLSpanElement | undefined
+	badge?: HTMLSpanElement | undefined
 }
 
 declare global {

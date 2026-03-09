@@ -2,7 +2,17 @@
 
 > **Reactive**\<`T`, `P`, `E`\> = keyof `P` \| [`Signal`](Signal.md)\<`T` & `object`\> \| (`target`) => `T` \| `null` \| `undefined`
 
-Defined in: [src/effects.ts:37](https://github.com/zeixcom/le-truc/blob/0b894ae96d4e011ef23dbb48c30fa71b1f97f087/src/effects.ts#L37)
+Defined in: [src/effects.ts:64](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/effects.ts#L64)
+
+A reactive value driving a DOM update inside an `updateElement` effect.
+
+Three forms are accepted:
+- `keyof P` — a string property name on the host; reads `host[name]` and
+  registers it as a signal dependency automatically.
+- `Signal<T>` — any signal; `.get()` is called inside the effect.
+- `(target: E) => T | null | undefined` — a reader function receiving the
+  target element; return `null` to delete the DOM value, `undefined` to
+  restore the original fallback captured at setup time.
 
 #### Type Parameters
 

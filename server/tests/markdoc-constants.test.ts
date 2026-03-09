@@ -39,8 +39,8 @@ describe('ClassAttribute', () => {
 	test('should reject invalid types', () => {
 		const errors = classAttr.validate(123)
 		expect(errors.length).toBeGreaterThan(0)
-		expect(errors[0].id).toBe('invalid-class-type')
-		expect(errors[0].level).toBe('error')
+		expect(errors[0]!.id).toBe('invalid-class-type')
+		expect(errors[0]!.level).toBe('error')
 	})
 
 	test('should reject null', () => {
@@ -99,8 +99,8 @@ describe('IdAttribute', () => {
 	test('should reject non-string id', () => {
 		const errors = idAttr.validate(123)
 		expect(errors.length).toBeGreaterThan(0)
-		expect(errors[0].id).toBe('invalid-id-type')
-		expect(errors[0].level).toBe('error')
+		expect(errors[0]!.id).toBe('invalid-id-type')
+		expect(errors[0]!.level).toBe('error')
 	})
 
 	test('should reject null', () => {
@@ -145,9 +145,9 @@ describe('CalloutClassAttribute', () => {
 	test('should reject invalid string values', () => {
 		const errors = calloutAttr.validate('invalid-class')
 		expect(errors.length).toBeGreaterThan(0)
-		expect(errors[0].id).toBe('attribute-value-invalid')
-		expect(errors[0].level).toBe('error')
-		expect(errors[0].message).toContain('invalid-class')
+		expect(errors[0]!.id).toBe('attribute-value-invalid')
+		expect(errors[0]!.level).toBe('error')
+		expect(errors[0]!.message).toContain('invalid-class')
 	})
 
 	test('should reject invalid case variations', () => {

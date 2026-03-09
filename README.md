@@ -43,16 +43,21 @@ bun add @zeix/le-truc
 import { asString, defineComponent, on, setText } from '@zeix/le-truc'
 
 defineComponent(
-  'basic-hello',               // Component name (must contain a hyphen)
-  { name: asString('World') }, // Reactive property — parsed from attribute
-  q => ({                      // Select DOM elements
-    input: q.first('input'),
-    output: q.first('output'),
+  'basic-hello',         // Component name (must contain a hyphen)
+  {                      // Reactive property — fallback read from DOM
+    name: asString(ui => ui.output.textContent)
+  },
+  ({ first }) => ({      // Select DOM elements
+    input: first('input', 'Needed to enter the name.'),
+    output: first('output', 'Needed to display the name.'),
   }),
-  ({ host, input }) => ({      // Wire behaviour
-    input: on('input', () => { host.name = input.value }),
-    output: setText('name'),
-  }),
+  ({ host, input }) => { // Wire behaviour
+    const fallback = host.name
+    return {
+      input: on('input', () => { host.name = input.value || fallback }),
+      output: setText('name'),
+    }
+  },
 )
 ```
 

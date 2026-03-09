@@ -73,8 +73,8 @@ export const examplesEffect = () => {
 
 						if (pathParts.length < 3) continue
 
-						const componentName = pathParts[pathParts.length - 2]
-						const fileName = pathParts[pathParts.length - 1].replace(
+						const componentName = pathParts[pathParts.length - 2]!
+						const fileName = pathParts[pathParts.length - 1]!.replace(
 							/\.md$/,
 							'',
 						)
@@ -130,7 +130,7 @@ export const examplesEffect = () => {
 				}
 			},
 			err: errors => {
-				console.error('Error in examples effect:', errors[0].message)
+				console.error('Error in examples effect:', errors[0]!.message)
 				resolve?.()
 				resolve = undefined
 			},

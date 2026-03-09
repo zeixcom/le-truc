@@ -1,6 +1,15 @@
 import type { Component, ComponentProps } from '../component';
 import type { Effect, Reactive } from '../effects';
+/**
+ * A single reactive value to pass to a descendant Le Truc component property.
+ * Accepts the same forms as `Reactive<T, P, E>`: a host property name,
+ * a `Signal`, or a reader function.
+ */
 type PassedProp<T, P extends ComponentProps, E extends HTMLElement> = Reactive<T, P, E>;
+/**
+ * A map of child component property names to the reactive values to inject into them.
+ * Passed as the argument to `pass()`. Keys must be property names of the target component `Q`.
+ */
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
     [K in keyof Q & string]?: PassedProp<Q[K], P, Component<Q>>;
 };

@@ -33,7 +33,7 @@ const getSelected = (
 ) => {
 	const currentIndex = tabs.findIndex(isCurrent)
 	const newIndex = (currentIndex + offset + tabs.length) % tabs.length
-	return getAriaControls(tabs[newIndex])
+	return getAriaControls(tabs[newIndex]!)
 }
 
 export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
@@ -64,15 +64,15 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 						const tabs = ui.tabs.get()
 						const next =
 							key === 'Home'
-								? getAriaControls(tabs[0])
+								? getAriaControls(tabs[0]!)
 								: key === 'End'
-									? getAriaControls(tabs[tabs.length - 1])
+									? getAriaControls(tabs[tabs.length - 1]!)
 									: getSelected(
 											tabs,
 											tab => tab === target,
 											key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1,
 										)
-						tabs.filter(tab => getAriaControls(tab) === next)[0].focus()
+						tabs.filter(tab => getAriaControls(tab) === next)[0]!.focus()
 						return next
 					}
 				},

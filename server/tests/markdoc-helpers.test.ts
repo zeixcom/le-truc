@@ -102,7 +102,7 @@ describe('splitContentBySeparator', () => {
 		const sections = splitContentBySeparator([node1, node2])
 
 		expect(sections.length).toBe(1)
-		expect(sections[0].length).toBe(2)
+		expect(sections[0]!.length).toBe(2)
 	})
 
 	test('should ignore leading separator', () => {

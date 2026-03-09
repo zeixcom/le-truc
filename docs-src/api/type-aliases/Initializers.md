@@ -2,7 +2,19 @@
 
 > **Initializers**\<`P`, `U`\> = \{ \[K in keyof P\]?: P\[K\] \| Signal\<P\[K\]\> \| Parser\<P\[K\], ComponentUI\<P, U\>\> \| Reader\<MaybeSignal\<P\[K\]\>, ComponentUI\<P, U\>\> \| ((ui: ComponentUI\<P, U\>) =\> void) \}
 
-Defined in: [src/component.ts:50](https://github.com/zeixcom/le-truc/blob/0b894ae96d4e011ef23dbb48c30fa71b1f97f087/src/component.ts#L50)
+Defined in: [src/component.ts:80](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/component.ts#L80)
+
+The `props` argument of `defineComponent` — a map from property names to their initializers.
+
+Each value may be:
+- A **static value** or **`Signal`** — used directly as the initial signal value.
+- A **`Parser`** (two-argument function branded with `asParser()`) — called with
+  `(ui, attributeValue)` at connect time and again on every attribute change.
+- A **`Reader`** (one-argument function) — called with `ui` at connect time; if it
+  returns a function or `TaskCallback`, a computed/task signal is created; otherwise
+  a mutable state signal is created.
+- A **`MethodProducer`** (branded with `asMethod()`) — called for side effect of
+  creating the method only; its return value is ignored.
 
 #### Type Parameters
 

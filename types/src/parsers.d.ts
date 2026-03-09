@@ -70,8 +70,8 @@ declare const asParser: <T extends {}, U extends UI>(fn: Parser<T, U>) => Parser
  * identify it explicitly rather than relying on the absence of a return value.
  *
  * @since 0.17.0
- * @param {(ui: U & { host: Component<P> }) => void} fn - Side-effect initializer to brand
- * @returns Branded MethodProducer
+ * @param {T} fn - Side-effect initializer to brand
+ * @returns {T & { readonly [METHOD_BRAND]: true }} The same function, branded as a `MethodProducer`
  */
 declare const asMethod: <T extends (...args: any[]) => void>(fn: T) => T & {
     readonly [METHOD_BRAND]: true;

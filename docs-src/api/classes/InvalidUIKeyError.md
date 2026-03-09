@@ -1,24 +1,12 @@
 ### Class: InvalidUIKeyError
 
-Defined in: [src/errors.ts:69](https://github.com/zeixcom/le-truc/blob/0b894ae96d4e011ef23dbb48c30fa71b1f97f087/src/errors.ts#L69)
+Defined in: [src/errors.ts:66](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/errors.ts#L66)
 
 Error thrown if UI key is invalid
 
 #### Since
 
 0.15.1
-
-#### Param
-
-Host component
-
-#### Param
-
-Invalid key
-
-#### Param
-
-Where the key is used
 
 #### Extends
 
@@ -30,7 +18,7 @@ Where the key is used
 
 > **new InvalidUIKeyError**(`host`, `key`, `where`): `InvalidUIKeyError`
 
-Defined in: [src/errors.ts:70](https://github.com/zeixcom/le-truc/blob/0b894ae96d4e011ef23dbb48c30fa71b1f97f087/src/errors.ts#L70)
+Defined in: [src/errors.ts:72](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/errors.ts#L72)
 
 ###### Parameters
 
@@ -38,13 +26,19 @@ Defined in: [src/errors.ts:70](https://github.com/zeixcom/le-truc/blob/0b894ae96
 
 `HTMLElement`
 
+Host component
+
 ##### key
 
 `string`
 
+Invalid key
+
 ##### where
 
 `string`
+
+Where the key is used
 
 ###### Returns
 

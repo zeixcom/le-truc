@@ -134,7 +134,7 @@ test.describe('module-todo component', () => {
 
 			// Check each item content
 			for (let i = 0; i < todoTexts.length; i++) {
-				await expect(items.nth(i)).toContainText(todoTexts[i])
+				await expect(items.nth(i)).toContainText(todoTexts[i]!)
 				await expect(
 					items.nth(i).locator('form-checkbox input'),
 				).not.toBeChecked()

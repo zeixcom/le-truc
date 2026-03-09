@@ -84,7 +84,7 @@ export default defineComponent<{}, ModuleTodoUI>(
 				on('click', () => {
 					const items = completed.get()
 					for (let i = items.length - 1; i >= 0; i--)
-						items[i].closest('li')?.remove()
+						items[i]!.closest('li')?.remove()
 				}),
 			],
 		}

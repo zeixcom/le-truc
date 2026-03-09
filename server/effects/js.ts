@@ -36,7 +36,7 @@ export const jsEffect = () => {
 					}
 				},
 				err: errors => {
-					console.error('Error in JS effect:', errors[0].message)
+					console.error('Error in JS effect:', errors[0]!.message)
 					resolve?.()
 					resolve = undefined
 				},

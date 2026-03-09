@@ -2,11 +2,13 @@
 
 > **schedule**(`element`, `task`): `void`
 
-Defined in: [src/scheduler.ts:41](https://github.com/zeixcom/le-truc/blob/0b894ae96d4e011ef23dbb48c30fa71b1f97f087/src/scheduler.ts#L41)
+Defined in: [src/scheduler.ts:44](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/scheduler.ts#L44)
 
 Schedule a task to be executed on the next animation frame, with automatic
-deduplication per component. If the same component schedules multiple tasks
+deduplication per element. If the same element schedules multiple tasks
 before the next frame, only the latest task will be executed.
+
+Used internally by `on()` for passive events and by `dangerouslySetInnerHTML`.
 
 #### Parameters
 
@@ -14,14 +16,18 @@ before the next frame, only the latest task will be executed.
 
 `Element`
 
-Element for deduplication
+Element used as the deduplication key
 
 ##### task
 
 () => `void`
 
-Function to execute (typically calls batch() or sets a signal)
+Function to execute on the next animation frame
 
 #### Returns
 
 `void`
+
+#### Since
+
+0.11.0

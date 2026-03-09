@@ -2,7 +2,7 @@
 
 > **defineComponent**\<`P`, `U`\>(`name`, `props?`, `select?`, `setup?`): [`Component`](../type-aliases/Component.md)\<`P`\>
 
-Defined in: [src/component.ts:81](https://github.com/zeixcom/le-truc/blob/0b894ae96d4e011ef23dbb48c30fa71b1f97f087/src/component.ts#L81)
+Defined in: [src/component.ts:118](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/component.ts#L118)
 
 Define and register a reactive custom element.
 

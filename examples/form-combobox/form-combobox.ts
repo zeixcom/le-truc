@@ -27,9 +27,9 @@ export type FormComboboxProps = {
 type FormComboboxUI = {
 	textbox: HTMLInputElement
 	listbox: Component<FormListboxProps>
-	clear?: HTMLButtonElement
-	error?: HTMLElement
-	description?: HTMLElement
+	clear?: HTMLButtonElement | undefined
+	error?: HTMLElement | undefined
+	description?: HTMLElement | undefined
 }
 
 declare global {
@@ -119,6 +119,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 							host.value = target.value
 							host.error = textbox.validationMessage ?? ''
 							showPopup.set(false)
+							textbox.focus()
 						})
 					}
 				}),

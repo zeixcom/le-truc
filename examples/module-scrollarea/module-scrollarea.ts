@@ -12,6 +12,7 @@ const observeOverflow =
 	(container: HTMLElement) => {
 		const observer = new IntersectionObserver(
 			([entry]) => {
+				if (!entry) return
 				if (
 					entry.intersectionRatio > MIN_INTERSECTION_RATIO &&
 					entry.intersectionRatio < MAX_INTERSECTION_RATIO

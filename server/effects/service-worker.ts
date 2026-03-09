@@ -61,7 +61,7 @@ export const serviceWorkerEffect = () => {
 					}
 				},
 				err: errors => {
-					console.error('Error in service worker effect:', errors[0].message)
+					console.error('Error in service worker effect:', errors[0]!.message)
 					resolve?.()
 					resolve = undefined
 				},

@@ -2,7 +2,18 @@
 
 > **SensorEventHandler**\<`T`, `Evt`, `U`, `E`\> = (`context`) => `T` \| `void` \| `Promise`\<`void`\>
 
-Defined in: [src/events.ts:13](https://github.com/zeixcom/le-truc/blob/0b894ae96d4e011ef23dbb48c30fa71b1f97f087/src/events.ts#L13)
+Defined in: [src/events.ts:25](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/events.ts#L25)
+
+Handler for a single event type inside `createEventsSensor`.
+
+Receives a context object with:
+- `event` — the original DOM event (typed to the specific event type)
+- `ui` — the full component UI object
+- `target` — the matched element (properly typed, unlike `event.target`)
+- `prev` — the current sensor value before this event
+
+Return the new sensor value to update it, or `void` / `Promise<void>` to
+leave the value unchanged.
 
 #### Type Parameters
 

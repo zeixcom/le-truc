@@ -14,8 +14,8 @@ export type ModuleCodeblockProps = {
 
 type ModuleCodeblockUI = {
 	code: HTMLElement
-	overlay?: HTMLButtonElement
-	copy?: Component<BasicButtonProps>
+	overlay?: HTMLButtonElement | undefined
+	copy?: Component<BasicButtonProps> | undefined
 }
 
 declare global {

@@ -29,10 +29,10 @@ describe('parseGlobals', () => {
 		const result = parseGlobals(content)
 
 		expect(result).toHaveLength(1)
-		expect(result[0].name).toBe('Functions')
-		expect(result[0].slug).toBe('functions')
-		expect(result[0].entries).toHaveLength(3)
-		expect(result[0].entries[0]).toEqual({
+		expect(result[0]!.name).toBe('Functions')
+		expect(result[0]!.slug).toBe('functions')
+		expect(result[0]!.entries).toHaveLength(3)
+		expect(result[0]!.entries[0]).toEqual({
 			name: 'defineComponent',
 			slug: 'defineComponent',
 		})
@@ -63,15 +63,15 @@ describe('parseGlobals', () => {
 
 		expect(result).toHaveLength(4)
 		// Categories should be sorted: Functions, Classes, Variables, Type Aliases
-		expect(result[0].name).toBe('Functions')
-		expect(result[0].entries).toHaveLength(1)
-		expect(result[1].name).toBe('Classes')
-		expect(result[1].entries).toHaveLength(2)
-		expect(result[2].name).toBe('Variables')
-		expect(result[2].entries).toHaveLength(1)
-		expect(result[3].name).toBe('Type Aliases')
-		expect(result[3].slug).toBe('type-aliases')
-		expect(result[3].entries).toHaveLength(2)
+		expect(result[0]!.name).toBe('Functions')
+		expect(result[0]!.entries).toHaveLength(1)
+		expect(result[1]!.name).toBe('Classes')
+		expect(result[1]!.entries).toHaveLength(2)
+		expect(result[2]!.name).toBe('Variables')
+		expect(result[2]!.entries).toHaveLength(1)
+		expect(result[3]!.name).toBe('Type Aliases')
+		expect(result[3]!.slug).toBe('type-aliases')
+		expect(result[3]!.entries).toHaveLength(2)
 	})
 
 	test('sorts categories in custom order: Functions, Classes, Variables, Type Aliases', () => {
@@ -107,23 +107,23 @@ describe('parseGlobals', () => {
 
 		expect(result).toHaveLength(6)
 		// Verify custom order: Functions first
-		expect(result[0].name).toBe('Functions')
-		expect(result[0].slug).toBe('functions')
+		expect(result[0]!.name).toBe('Functions')
+		expect(result[0]!.slug).toBe('functions')
 		// Then Classes
-		expect(result[1].name).toBe('Classes')
-		expect(result[1].slug).toBe('classes')
+		expect(result[1]!.name).toBe('Classes')
+		expect(result[1]!.slug).toBe('classes')
 		// Then Variables
-		expect(result[2].name).toBe('Variables')
-		expect(result[2].slug).toBe('variables')
+		expect(result[2]!.name).toBe('Variables')
+		expect(result[2]!.slug).toBe('variables')
 		// Then Type Aliases
-		expect(result[3].name).toBe('Type Aliases')
-		expect(result[3].slug).toBe('type-aliases')
+		expect(result[3]!.name).toBe('Type Aliases')
+		expect(result[3]!.slug).toBe('type-aliases')
 		// Then Interfaces
-		expect(result[4].name).toBe('Interfaces')
-		expect(result[4].slug).toBe('interfaces')
+		expect(result[4]!.name).toBe('Interfaces')
+		expect(result[4]!.slug).toBe('interfaces')
 		// Then Enumerations
-		expect(result[5].name).toBe('Enumerations')
-		expect(result[5].slug).toBe('enumerations')
+		expect(result[5]!.name).toBe('Enumerations')
+		expect(result[5]!.slug).toBe('enumerations')
 	})
 
 	test('filters out empty categories from README.md', () => {
@@ -136,7 +136,7 @@ describe('parseGlobals', () => {
 		const result = parseGlobals(content)
 
 		expect(result).toHaveLength(1)
-		expect(result[0].name).toBe('Functions')
+		expect(result[0]!.name).toBe('Functions')
 	})
 
 	test('returns empty array for content with no categories', () => {
@@ -160,8 +160,8 @@ Some introductory text without any headings.
 `
 		const result = parseGlobals(content)
 
-		expect(result[0].entries[0].name).toBe('ComponentProp')
-		expect(result[0].entries[0].slug).toBe('ComponentProp')
+		expect(result[0]!.entries[0]!.name).toBe('ComponentProp')
+		expect(result[0]!.entries[0]!.slug).toBe('ComponentProp')
 	})
 
 	test('ignores lines that are not headings or list entries', () => {
@@ -177,7 +177,7 @@ Another paragraph.
 `
 		const result = parseGlobals(content)
 
-		expect(result[0].entries).toHaveLength(2)
+		expect(result[0]!.entries).toHaveLength(2)
 	})
 
 	test('handles entries with special characters in names', () => {
@@ -188,8 +188,8 @@ Another paragraph.
 `
 		const result = parseGlobals(content)
 
-		expect(result[0].entries[0].name).toBe('ElementFromKey')
-		expect(result[0].entries[1].name).toBe('UI')
+		expect(result[0]!.entries[0]!.name).toBe('ElementFromKey')
+		expect(result[0]!.entries[1]!.name).toBe('UI')
 	})
 })
 
@@ -369,10 +369,10 @@ describe('sortCategories', () => {
 
 		const sorted = sortCategories(unsorted)
 
-		expect(sorted[0].slug).toBe('functions')
-		expect(sorted[1].slug).toBe('classes')
-		expect(sorted[2].slug).toBe('variables')
-		expect(sorted[3].slug).toBe('type-aliases')
+		expect(sorted[0]!.slug).toBe('functions')
+		expect(sorted[1]!.slug).toBe('classes')
+		expect(sorted[2]!.slug).toBe('variables')
+		expect(sorted[3]!.slug).toBe('type-aliases')
 	})
 
 	test('places unknown categories at the end, sorted alphabetically', () => {
@@ -385,10 +385,10 @@ describe('sortCategories', () => {
 
 		const sorted = sortCategories(categories)
 
-		expect(sorted[0].slug).toBe('functions')
-		expect(sorted[1].slug).toBe('classes')
-		expect(sorted[2].slug).toBe('aaa-custom')
-		expect(sorted[3].slug).toBe('zzz-custom')
+		expect(sorted[0]!.slug).toBe('functions')
+		expect(sorted[1]!.slug).toBe('classes')
+		expect(sorted[2]!.slug).toBe('aaa-custom')
+		expect(sorted[3]!.slug).toBe('zzz-custom')
 	})
 
 	test('does not mutate original array', () => {
@@ -399,8 +399,8 @@ describe('sortCategories', () => {
 
 		const sorted = sortCategories(original)
 
-		expect(original[0].slug).toBe('variables')
-		expect(sorted[0].slug).toBe('functions')
+		expect(original[0]!.slug).toBe('variables')
+		expect(sorted[0]!.slug).toBe('functions')
 	})
 
 	test('handles empty array', () => {

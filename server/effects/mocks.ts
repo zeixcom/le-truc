@@ -31,7 +31,7 @@ export const mocksEffect = () => {
 				}
 			},
 			err: errors => {
-				console.error('Error in mocks effect:', errors[0].message)
+				console.error('Error in mocks effect:', errors[0]!.message)
 				resolve?.()
 				resolve = undefined
 			},
