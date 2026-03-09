@@ -90,7 +90,7 @@ Le Truc shines when you want:
 
 **Key Benefits:**
 
-- ~10kB gzipped with no dependencies
+- ~10kB gzipped
 - TypeScript support with full type safety
 - Works with any backend or build setup
 - Progressive enhancement friendly

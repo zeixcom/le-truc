@@ -1,9 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## 1.0.0
 
 ### Changed
 
+- **`@zeix/cause-effect` upgraded from `^0.18.5` to `^1.0.0`**.
 - **`UI` type now includes `| undefined` in its index signature**: `type UI = Record<string, Element | Memo<Element[]> | undefined>`. This is a breaking change for TypeScript consumers who access component UI values without narrowing — index access on a `UI`-typed object now yields `Element | Memo<Element[]> | undefined` rather than `Element | Memo<Element[]>`. Component UI types with optional elements should declare them as `prop?: ElementType | undefined` (rather than `prop?: ElementType`) to satisfy `exactOptionalPropertyTypes`.
 
 ## 0.16.3

@@ -48,7 +48,7 @@ For projects using Le Truc:
 
 For the library itself:
 
-- Very few bug reports surface after 1.0 release; none of them requireing a major refactoring
+- Very few bug reports surface after 1.0 release; none of them requiring a major refactoring
 - Le Truc proves it can scale well in complex web applications with 1000+ frequently updated elements
 - Performance in benchmarks (js-reactivity-benchmark for Cause & Effect, js-framework-benchmark for Le Truc) is among the 5 best-in-class
 - Bundle size remains below 14 kB gzipped (TCP segment threshold); target is ≤10 kB
@@ -229,7 +229,7 @@ Extend the CSS selector type parser to cover `SVGElementTagNameMap` and `MathMLE
 
 ### Dependencies
 
-- `@zeix/cause-effect` ≥0.18.4 — reactive primitive layer. Le Truc and Cause & Effect are co-developed at Zeix AG and will reach 1.0 together.
+- `@zeix/cause-effect` ^1.0.0 — reactive primitive layer. Le Truc and Cause & Effect are co-developed at Zeix AG and released 1.0 together.
 - Playwright — browser-based integration tests
 - Bun — build tooling and test runner script
 
@@ -275,50 +275,3 @@ Extend the CSS selector type parser to cover `SVGElementTagNameMap` and `MathMLE
 - **Polyfills**: No legacy browser support.
 - **IE11 or non-evergreen browsers**.
 - **Full styled component library**: Planned as a separate project built on top of Le Truc.
-
----
-
-## 9. Open Questions
-
-### Q1. Replacement API for Parser/Reader distinction (S1)
-
-What should the explicit API look like? Options include:
-- A `defineParser(fn)` wrapper that brands the function
-- A static property on the function (`fn.__isParser = true`)
-- A separate `parsers` object in `defineComponent` (structural separation rather than tagging)
-
-The choice affects the public API surface and must be finalized before 1.0 to avoid a breaking change post-release.
-
-### Q2. MethodProducer explicit API (S2)
-
-Same question as Q1 but for side-effect-only property initializers. A `defineMethod(fn)` wrapper is one option. Needs design decision before 1.0.
-
-### Q3. Exact 1.0 API freeze checklist
-
-Which specific APIs are still candidates for breaking changes before 1.0? The answers to Q1 and Q2 are known candidates. Are there others? A checklist should be compiled and tracked to avoid surprises at release.
-
----
-
-## 10. Acceptance Criteria
-
-Le Truc 1.0 is complete and successful when:
-
-1. **API stability**: The public API is frozen. No breaking changes are introduced after 1.0. A documented changelog exists for all pre-1.0 breaking changes.
-
-2. **Parser/Reader distinction**: The fragile `function.length` mechanism is replaced by an explicit, unambiguous API (Q1 resolved).
-
-3. **MethodProducer**: Made explicit and type-safe in the public API (Q2 resolved).
-
-4. **Test coverage**: All example components have Playwright tests covering functionality, accessibility attributes, keyboard interaction, and edge cases (empty states, missing optional elements, async error states).
-
-5. **Bundle size**: Core library ships at ≤10 kB gzipped; does not exceed 14 kB under any production build configuration.
-
-6. **Browser compatibility**: All tests pass in Chrome, Firefox, and Safari (latest stable) in CI.
-
-7. **TypeScript**: Library compiles without errors under TypeScript strict mode. Selector type inference works correctly for HTML tag selectors in VSCode and WebStorm without plugins.
-
-8. **Documentation accuracy**: README, ARCHITECTURE.md, and inline JSDoc accurately reflect the 1.0 implementation. No references to outdated claims (swappable reactivity engine, "works without JS") remain. The ARCHITECTURE.md open questions section is resolved or updated.
-
-9. **Production use**: First projects are using Le Truc in production. Developer teams report subjective improvement in refactoring confidence compared to prior approach.
-
-10. **Reuse demonstrated**: Some components are used without modification across distinct client projects with different backends.

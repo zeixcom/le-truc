@@ -2,7 +2,11 @@
 
 > **PassedProp**\<`T`, `P`, `E`\> = [`Reactive`](Reactive.md)\<`T`, `P`, `E`\>
 
-Defined in: [src/effects/pass.ts:19](https://github.com/zeixcom/le-truc/blob/d21d8e109ed0c58eae71b351fda147a12cbf8896/src/effects/pass.ts#L19)
+Defined in: [src/effects/pass.ts:24](https://github.com/zeixcom/le-truc/blob/2572527650262b9f6697a458b486f766495416eb/src/effects/pass.ts#L24)
+
+A single reactive value to pass to a descendant Le Truc component property.
+Accepts the same forms as `Reactive<T, P, E>`: a host property name,
+a `Signal`, or a reader function.
 
 #### Type Parameters
 

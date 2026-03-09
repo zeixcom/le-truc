@@ -2,7 +2,7 @@
 
 > **asMethod**\<`T`\>(`fn`): `T` & `object`
 
-Defined in: [src/parsers.ts:127](https://github.com/zeixcom/le-truc/blob/d21d8e109ed0c58eae71b351fda147a12cbf8896/src/parsers.ts#L127)
+Defined in: [src/parsers.ts:127](https://github.com/zeixcom/le-truc/blob/2572527650262b9f6697a458b486f766495416eb/src/parsers.ts#L127)
 
 Brand a custom method-producer function with the `METHOD_BRAND` symbol.
 
@@ -27,7 +27,7 @@ Side-effect initializer to brand
 
 `T` & `object`
 
-Branded MethodProducer
+The same function, branded as a `MethodProducer`
 
 #### Since
 

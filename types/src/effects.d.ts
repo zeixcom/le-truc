@@ -1,15 +1,65 @@
 import { type Cleanup, type MaybeCleanup, type Signal } from '@zeix/cause-effect';
 import type { Component, ComponentProps } from './component';
 import type { ElementFromKey, UI } from './ui';
+/**
+ * A single effect function bound to a host component and a target element.
+ * Returned by built-in effect factories (`setText`, `setAttribute`, `on`, etc.)
+ * and by `updateElement`. May return a cleanup function that runs when the
+ * component disconnects or when the target element is removed.
+ */
 type Effect<P extends ComponentProps, E extends Element> = (host: Component<P>, target: E) => MaybeCleanup;
+/**
+ * One or more effects for a single UI element.
+ * The setup function may return a single `Effect` or an array of `Effect`s
+ * for each key of the UI object.
+ */
 type ElementEffects<P extends ComponentProps, E extends Element> = Effect<P, E> | Effect<P, E>[];
+/**
+ * The return type of the `setup` function passed to `defineComponent`.
+ * Keys correspond to keys of the UI object (queried elements and `host`);
+ * values are one or more effects to run for that element.
+ */
 type Effects<P extends ComponentProps, U extends UI & {
     host: Component<P>;
 }> = {
     [K in keyof U]?: ElementEffects<P, ElementFromKey<U, K>>;
 };
+/**
+ * A reactive value driving a DOM update inside an `updateElement` effect.
+ *
+ * Three forms are accepted:
+ * - `keyof P` — a string property name on the host; reads `host[name]` and
+ *   registers it as a signal dependency automatically.
+ * - `Signal<T>` — any signal; `.get()` is called inside the effect.
+ * - `(target: E) => T | null | undefined` — a reader function receiving the
+ *   target element; return `null` to delete the DOM value, `undefined` to
+ *   restore the original fallback captured at setup time.
+ */
 type Reactive<T, P extends ComponentProps, E extends Element> = keyof P | Signal<T & {}> | ((target: E) => T | null | undefined);
+/**
+ * Operation code used internally by `updateElement` for debug logging.
+ *
+ * | Code | Operation      |
+ * |------|----------------|
+ * | `a`  | attribute      |
+ * | `c`  | CSS class      |
+ * | `d`  | dataset        |
+ * | `h`  | innerHTML      |
+ * | `m`  | method call    |
+ * | `p`  | property       |
+ * | `s`  | style property |
+ * | `t`  | text content   |
+ */
 type UpdateOperation = 'a' | 'c' | 'd' | 'h' | 'm' | 'p' | 's' | 't';
+/**
+ * Descriptor passed to `updateElement` that defines how to read, update, and
+ * optionally delete a single DOM property or attribute.
+ *
+ * - `read` — captures the current DOM value as the fallback at setup time.
+ * - `update` — called with the resolved reactive value when it changes.
+ * - `delete` — called when the reactive returns `null` (removes the value).
+ * - `resolve` / `reject` — optional lifecycle hooks for debug instrumentation.
+ */
 type ElementUpdater<E extends Element, T> = {
     op: UpdateOperation;
     name?: string;

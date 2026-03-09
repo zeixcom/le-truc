@@ -216,11 +216,10 @@ Signals in Le Truc are of a **static type** and **non-nullable**. This allows to
 - If you use **TypeScript** (recommended), **you will be warned** that `null` or `undefined` cannot be assigned to a signal or if you try to assign a value of a wrong type.
 - If you use vanilla **JavaScript** without a build step, setting a signal to `null` or `undefined` **will throw a `NullishSignalValueError`**. However, strict type checking is not enforced at runtime.
 
-Because of the **non-nullable nature of signals** in Le Truc, there is a special value that can be assigned to any signal type:
+Effects have two special return values:
 
-- **`RESET`**: Will **reset to the server-rendered version** that was there before Le Truc took control. This is what you want to do most of the times when a signal lacks a specific value.
-
-To unset an attribute or style property in effects, return `null` from the reactive function. This signals to the effect system that the value should be removed.
+- **`undefined`**: Returned from a reader on error or when a property is missing — restores the **original server-rendered DOM value** that was captured when the component connected. This is the right thing to do when a value is temporarily unavailable.
+- **`null`**: Removes the attribute or style property from the element (e.g. `setAttribute` deletes the attribute; `setStyle` removes the inline style). Use `null` when the value should be explicitly absent.
 
 ### Initializing State from Attributes
 
@@ -231,7 +230,7 @@ defineComponent(
   'my-component',
   {
     count: asInteger(), // Bundled parser: Convert '42' -> 42
-    date: (_, v) => new Date(v), // Custom parser: '2025-12-12' -> Date object
+    date: asParser((_, v) => new Date(v)), // Custom parser: '2025-12-12' -> Date object
   },
   () => ({
     // Component UI
@@ -310,7 +309,7 @@ defineComponent(
 )
 ```
 
-The `first()` function expects the matched element to be present at connection time. If not, it will silently ignore the call.
+Without a hint string (second argument), `first()` returns `undefined` if no match is found and effects for that key are silently skipped. With a hint string, `first()` throws a `MissingElementError` if the element is missing — use this when the element is truly required for the component to function.
 
 On the other hand, the `all()` function returns a `Memo<E[]>` — a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array of elements. Because it's memoized, unwrapping it multiple times is almost free. And because it's reactive, effects that read from it automatically re-run whenever elements are added, removed, or rearranged in the DOM.
 

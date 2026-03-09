@@ -24,7 +24,13 @@ type ElementQueries = {
     first: FirstElement;
     all: AllElements;
 };
+/** The shape of the UI object returned by the `select` function of `defineComponent`. */
 type UI = Record<string, Element | Memo<Element[]> | undefined>;
+/**
+ * Extracts the element type stored at key `K` of a UI object `U`.
+ * - If `U[K]` is a `Memo<E[]>`, resolves to `E`.
+ * - If `U[K]` is a single `Element`, resolves to that element type.
+ */
 type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<U[K] extends Memo<infer E extends Element[]> ? E[number] : U[K] extends Element ? U[K] : never>;
 /**
  * Create a memo of elements matching a CSS selector.
@@ -32,9 +38,9 @@ type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<U[K] extends 
  * the memo, and disconnected when no effects are watching.
  *
  * @since 0.16.0
- * @param parent - The parent node to search within
- * @param selector - The CSS selector to match elements
- * @returns A Memo of current matching elements
+ * @param {ParentNode} parent - The parent node to search within
+ * @param {string} selector - The CSS selector to match elements
+ * @returns {Memo<ElementFromSelector<S>[]>} Reactive memo of current matching elements
  */
 declare function createElementsMemo<S extends string>(parent: ParentNode, selector: S): Memo<ElementFromSelector<S>[]>;
 declare function createElementsMemo<E extends Element>(parent: ParentNode, selector: string): Memo<E[]>;
