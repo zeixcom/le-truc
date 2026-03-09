@@ -2,7 +2,7 @@
 
 > **Context**\<`K`, `V`\> = `K` & `object`
 
-Defined in: [src/context.ts:24](https://github.com/zeixcom/le-truc/blob/2572527650262b9f6697a458b486f766495416eb/src/context.ts#L24)
+Defined in: [src/context.ts:24](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/context.ts#L24)
 
 A context key.
 

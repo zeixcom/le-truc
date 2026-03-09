@@ -2,7 +2,7 @@
 
 > **updateElement**\<`T`, `P`, `E`\>(`reactive`, `updater`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects.ts:239](https://github.com/zeixcom/le-truc/blob/2572527650262b9f6697a458b486f766495416eb/src/effects.ts#L239)
+Defined in: [src/effects.ts:239](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/effects.ts#L239)
 
 Shared abstraction used by all built-in DOM effects.
 

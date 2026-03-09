@@ -2,7 +2,7 @@
 
 > **schedule**(`element`, `task`): `void`
 
-Defined in: [src/scheduler.ts:44](https://github.com/zeixcom/le-truc/blob/2572527650262b9f6697a458b486f766495416eb/src/scheduler.ts#L44)
+Defined in: [src/scheduler.ts:44](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/scheduler.ts#L44)
 
 Schedule a task to be executed on the next animation frame, with automatic
 deduplication per element. If the same element schedules multiple tasks

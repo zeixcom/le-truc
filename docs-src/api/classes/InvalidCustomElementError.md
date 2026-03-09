@@ -1,6 +1,6 @@
 ### Class: InvalidCustomElementError
 
-Defined in: [src/errors.ts:141](https://github.com/zeixcom/le-truc/blob/2572527650262b9f6697a458b486f766495416eb/src/errors.ts#L141)
+Defined in: [src/errors.ts:141](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/errors.ts#L141)
 
 Error thrown when target element is not a custom element as expected
 
@@ -18,7 +18,7 @@ Error thrown when target element is not a custom element as expected
 
 > **new InvalidCustomElementError**(`target`, `where`): `InvalidCustomElementError`
 
-Defined in: [src/errors.ts:146](https://github.com/zeixcom/le-truc/blob/2572527650262b9f6697a458b486f766495416eb/src/errors.ts#L146)
+Defined in: [src/errors.ts:146](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/errors.ts#L146)
 
 ###### Parameters
 

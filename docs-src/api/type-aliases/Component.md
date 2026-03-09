@@ -2,7 +2,7 @@
 
 > **Component**\<`P`\> = `HTMLElement` & `P`
 
-Defined in: [src/component.ts:49](https://github.com/zeixcom/le-truc/blob/2572527650262b9f6697a458b486f766495416eb/src/component.ts#L49)
+Defined in: [src/component.ts:49](https://github.com/zeixcom/le-truc/blob/e8c0d32e69c325915ecdafadce2c86cae289ff85/src/component.ts#L49)
 
 An `HTMLElement` extended with a component's reactive properties as signal-backed accessors.
 
