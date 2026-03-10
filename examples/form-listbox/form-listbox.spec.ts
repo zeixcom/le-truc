@@ -243,7 +243,9 @@ test.describe('form-listbox component', () => {
 					.replace(/"/g, '&quot;')
 					.replace(/'/g, '&#39;')
 
-			const options = document.querySelectorAll('#colors button[role="option"]')
+			const options = Array.from(
+				document.querySelectorAll('#colors button[role="option"]'),
+			)
 			for (const option of options) {
 				const text = option.textContent?.trim() ?? ''
 				const firstChar = escapeHTML(text.charAt(0))
@@ -285,7 +287,9 @@ test.describe('form-listbox component', () => {
 					.replace(/"/g, '&quot;')
 					.replace(/'/g, '&#39;')
 
-			const options = document.querySelectorAll('#fruits button[role="option"]')
+			const options = Array.from(
+				document.querySelectorAll('#fruits button[role="option"]'),
+			)
 			for (const option of options) {
 				const text = option.textContent?.trim() ?? ''
 				option.innerHTML = escapeHTML(text)
@@ -327,7 +331,9 @@ test.describe('form-listbox component', () => {
 					.replace(/"/g, '&quot;')
 					.replace(/'/g, '&#39;')
 
-			const options = document.querySelectorAll('#colors button[role="option"]')
+			const options = Array.from(
+				document.querySelectorAll('#colors button[role="option"]'),
+			)
 			requestAnimationFrame(() => {
 				for (const option of options) {
 					const text = option.textContent?.trim() ?? ''
@@ -365,10 +371,7 @@ test.describe('form-listbox component', () => {
 			;(window as any).__ariaSelectedChanges = 0
 			const observer = new MutationObserver(mutations => {
 				for (const m of mutations) {
-					if (
-						m.type === 'attributes' &&
-						m.attributeName === 'aria-selected'
-					) {
+					if (m.type === 'attributes' && m.attributeName === 'aria-selected') {
 						;(window as any).__ariaSelectedChanges++
 					}
 				}
@@ -382,7 +385,9 @@ test.describe('form-listbox component', () => {
 
 		// Mutate innerHTML on all options — same elements, no list change
 		await page.evaluate(() => {
-			const options = document.querySelectorAll('#colors button[role="option"]')
+			const options = Array.from(
+				document.querySelectorAll('#colors button[role="option"]'),
+			)
 			for (const option of options) {
 				const text = option.textContent?.trim() ?? ''
 				const mark = document.createElement('mark')
@@ -427,7 +432,9 @@ test.describe('form-listbox component', () => {
 						.replace(/"/g, '&quot;')
 						.replace(/'/g, '&#39;')
 
-				const btns = document.querySelectorAll('#colors button[role="option"]')
+				const btns = Array.from(
+					document.querySelectorAll('#colors button[role="option"]'),
+				)
 				for (const btn of btns) {
 					const text = btn.textContent?.trim() ?? ''
 					btn.innerHTML = escapeHTML(text)
@@ -465,7 +472,9 @@ test.describe('setAttribute security (safeSetAttribute)', () => {
 		await page.waitForSelector('security-onevil', { state: 'attached' })
 	})
 
-	test('blocks on* attribute name: console.error is emitted', async ({ page }) => {
+	test('blocks on* attribute name: console.error is emitted', async ({
+		page,
+	}) => {
 		// security-onevil is in the HTML fixture and calls setAttribute('onclick', 'src')
 		// when it connects. safeSetAttribute throws for 'on*' names; updateElement catches
 		// the error and logs it via console.error. Collect errors before page load.
@@ -492,9 +501,7 @@ test.describe('setAttribute security (safeSetAttribute)', () => {
 		// security-onevil tries to set onclick — but safeSetAttribute throws, so the
 		// attribute must never be applied to the inner <a> element.
 		const onclickAttr = await page.evaluate(() => {
-			return document
-				.querySelector('#sec-evil a')
-				?.getAttribute('onclick')
+			return document.querySelector('#sec-evil a')?.getAttribute('onclick')
 		})
 		expect(onclickAttr).toBeNull()
 	})
