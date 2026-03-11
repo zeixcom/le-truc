@@ -72,6 +72,53 @@ import { asString, defineComponent, on, setText } from '@zeix/le-truc'
 
 {% section %}
 
+## Progressive Enhancement
+
+Le Truc is built around **progressive enhancement**: your HTML exists first, works without JavaScript, and Le Truc layers reactivity on top when it loads.
+
+This is the opposite of a framework that renders HTML from JavaScript. In Le Truc, the server provides the markup — including meaningful content and initial values — and the component enhances it in place.
+
+### The upgrade lifecycle
+
+```
+HTML is parsed → content is visible to user
+JS loads → component connects → effects run
+```
+
+Between the first and last step, your page is fully usable. Le Truc reads the existing DOM values as initial state rather than replacing them.
+
+### Wrapping existing HTML
+
+A Le Truc component is a custom element that **wraps** whatever HTML is already on the page. The children inside it are the server-rendered content — Le Truc queries them with `first()` and `all()` and applies effects on top.
+
+If you have existing HTML like this:
+
+```html
+<div id="dynamic-area">
+  <p>Current status: <output>idle</output></p>
+</div>
+```
+
+You wrap it with a custom element — either by renaming the element in your template, or by adding a parent wrapper:
+
+```html
+<status-display>
+  <div id="dynamic-area">
+    <p>Current status: <output>idle</output></p>
+  </div>
+</status-display>
+```
+
+Le Truc cannot enhance a plain `<div>` directly (custom elements require a hyphenated name), but wrapping is low-cost: one extra element, no structural changes to the children. The `<div>` and all its children are still there, unchanged — Le Truc just has a defined upgrade point.
+
+{% callout .tip %}
+**Naming convention**: The custom element name becomes the hook for both JavaScript (`defineComponent('status-display', ...)`) and CSS (`status-display { ... }`). Keep it descriptive and specific to the component's role.
+{% /callout %}
+
+{% /section %}
+
+{% section %}
+
 ## Creating Your First Component
 
 Now, let's create an interactive Web Component to verify your setup.
