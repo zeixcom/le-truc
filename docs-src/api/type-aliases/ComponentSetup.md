@@ -2,7 +2,7 @@
 
 > **ComponentSetup**\<`P`, `U`\> = (`ui`) => [`Effects`](Effects.md)\<`P`, [`ComponentUI`](ComponentUI.md)\<`P`, `U`\>\>
 
-Defined in: [src/component.ts:63](https://github.com/zeixcom/le-truc/blob/ecfd71ac3d27d86bcfc647fabb6e10e7d9f11413/src/component.ts#L63)
+Defined in: [src/component.ts:63](https://github.com/zeixcom/le-truc/blob/57d2b0db1f6c756c7b3c7143d93400fec84a7617/src/component.ts#L63)
 
 The type of the `setup` function passed to `defineComponent`.
 Receives the frozen UI object (including `host`) and returns an `Effects` record.

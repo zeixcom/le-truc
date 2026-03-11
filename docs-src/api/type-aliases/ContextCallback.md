@@ -2,7 +2,7 @@
 
 > **ContextCallback**\<`V`\> = (`value`, `unsubscribe?`) => `void`
 
-Defined in: [src/context.ts:41](https://github.com/zeixcom/le-truc/blob/ecfd71ac3d27d86bcfc647fabb6e10e7d9f11413/src/context.ts#L41)
+Defined in: [src/context.ts:41](https://github.com/zeixcom/le-truc/blob/57d2b0db1f6c756c7b3c7143d93400fec84a7617/src/context.ts#L41)
 
 A callback which is provided by a context requester and is called with the value satisfying the request.
 This callback can be called multiple times by context providers as the requested value is changed.
