@@ -91,29 +91,35 @@ Between the first and last step, your page is fully usable. Le Truc reads the ex
 
 A Le Truc component is a custom element that **wraps** whatever HTML is already on the page. The children inside it are the server-rendered content — Le Truc queries them with `first()` and `all()` and applies effects on top.
 
-If you have existing HTML like this:
+Take this HTML as a starting point:
 
 ```html
-<div id="dynamic-area">
-  <p>Current status: <output>idle</output></p>
-</div>
+<label>
+  Your name<br />
+  <input name="name" type="text" autocomplete="given-name" />
+</label>
+<p>Hello, <output>World</output>!</p>
 ```
 
-You wrap it with a custom element — either by renaming the element in your template, or by adding a parent wrapper:
+This renders a greeting and an input field. It is fully usable before any JavaScript loads — the user sees "Hello, World!" immediately. To make it reactive, you wrap it in a custom element:
 
 ```html
-<status-display>
-  <div id="dynamic-area">
-    <p>Current status: <output>idle</output></p>
-  </div>
-</status-display>
+<basic-hello>
+  <label>
+    Your name<br />
+    <input name="name" type="text" autocomplete="given-name" />
+  </label>
+  <p>Hello, <output>World</output>!</p>
+</basic-hello>
 ```
 
-Le Truc cannot enhance a plain `<div>` directly (custom elements require a hyphenated name), but wrapping is low-cost: one extra element, no structural changes to the children. The `<div>` and all its children are still there, unchanged — Le Truc just has a defined upgrade point.
+Le Truc cannot enhance a plain `<div>` directly — custom elements require a hyphenated name. But wrapping is low-cost: one extra element, no structural changes to the children. If you have existing HTML inside a `<div>`, either rename the element in your template or add a custom element as a parent wrapper. The children stay exactly as they are; Le Truc just has a defined upgrade point.
 
 {% callout .tip %}
-**Naming convention**: The custom element name becomes the hook for both JavaScript (`defineComponent('status-display', ...)`) and CSS (`status-display { ... }`). Keep it descriptive and specific to the component's role.
+**Naming convention**: The custom element name becomes the hook for both JavaScript (`defineComponent('basic-hello', ...)`) and CSS (`basic-hello { ... }`). Keep it descriptive and specific to the component's role.
 {% /callout %}
+
+The next section shows how to define this component — and how Le Truc reads `"World"` from the `<output>` element as the initial state value when it connects.
 
 {% /section %}
 
@@ -121,16 +127,11 @@ Le Truc cannot enhance a plain `<div>` directly (custom elements require a hyphe
 
 ## Creating Your First Component
 
-Now, let's create an interactive Web Component to verify your setup.
-
-**What This Component Does**
-
-- Displays `Hello, World!` by default.
-- Updates dynamically when you type into the input field.
+The `<basic-hello>` HTML above is already on the page. Now add the component definition that makes it reactive — typing into the input updates the greeting.
 
 ### Markup
 
-Include the following in your server-rendered HTML:
+The server-rendered HTML (from the previous section):
 
 ```html#page.html
 <basic-hello>
