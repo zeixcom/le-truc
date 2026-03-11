@@ -15,6 +15,12 @@ description: 'Anatomy, lifecycle, signals, effects'
 
 Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built-in state management and reactive updates**.
 
+{% callout .tip title="Le Truc enhances HTML — it doesn't replace it" %}
+A Le Truc component **wraps existing server-rendered content**. The HTML inside the custom element is the starting point: it is parsed and visible to users before any JavaScript runs. The component connects, reads initial values from the DOM, and applies effects on top. Nothing is re-rendered from scratch.
+
+This is progressive enhancement: your page works without JavaScript, and Le Truc layers interactivity on when it loads. See [Progressive Enhancement](getting-started.html#progressive-enhancement) in Getting Started for how to wrap existing HTML.
+{% /callout %}
+
 Le Truc creates components using the `defineComponent()` function:
 
 ```js
@@ -42,7 +48,19 @@ Once registered, the component can be used like any native HTML element:
 
 ### Anatomy of a Component
 
-Let's examine a complete component example to understand how Le Truc works:
+Let's examine a complete component example to understand how Le Truc works. The HTML it enhances looks like this:
+
+```html
+<basic-hello>
+  <label>
+    Your name<br />
+    <input name="name" type="text" autocomplete="given-name" />
+  </label>
+  <p>Hello, <output>World</output>!</p>
+</basic-hello>
+```
+
+Before any JavaScript runs, the user sees "Hello, World!" — a complete, meaningful page. When Le Truc connects, it reads `"World"` from the `<output>` element as the initial state value, then applies effects on top. This is the progressive enhancement pattern in action.
 
 ```js
 defineComponent(
@@ -77,8 +95,8 @@ defineComponent(
 This creates a reactive property called `name`:
 
 - `asString()` observes the attribute `name` and assigns its value as a string to the `name` property
-- `ui => ...` is an instruction how to get the fallback value in the DOM if there is no name attribute
-- Le Truc automatically reads "World" from the `<output>` element as the initial value
+- `ui => ui.output.textContent` is a fallback reader — it reads the initial value from the DOM when no `name` attribute is present
+- Le Truc automatically reads `"World"` from the `<output>` element as the initial value, preserving the server-rendered content
 - When `name` changes, any effects that depend on it automatically update
 
 #### Select Function

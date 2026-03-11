@@ -2,7 +2,7 @@
 
 > **ElementFromKey**\<`U`, `K`\> = `NonNullable`\<`U`\[`K`\] *extends* [`Memo`](Memo.md)\<infer E\> ? `E`\[`number`\] : `U`\[`K`\] *extends* `Element` ? `U`\[`K`\] : `never`\>
 
-Defined in: [src/ui.ts:116](https://github.com/zeixcom/le-truc/blob/ecfd71ac3d27d86bcfc647fabb6e10e7d9f11413/src/ui.ts#L116)
+Defined in: [src/ui.ts:116](https://github.com/zeixcom/le-truc/blob/57d2b0db1f6c756c7b3c7143d93400fec84a7617/src/ui.ts#L116)
 
 Extracts the element type stored at key `K` of a UI object `U`.
 - If `U[K]` is a `Memo<E[]>`, resolves to `E`.
