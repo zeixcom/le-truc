@@ -10,14 +10,14 @@ The benchmark exposed four scenarios where the documentation provides incomplete
 
 | Issue | Gap | Affected Page(s) |
 |---|---|---|
-| #24 | CSS and JS shown as separate concerns; no example bridging them | `styling.md`, `components.md` |
-| #25 | `setProperty()` is undocumented in prose; native element binding has no example | `data-flow.md` |
+| #24 ✅ | CSS and JS shown as separate concerns; no example bridging them | `styling.md`, `components.md` |
+| #25 ✅ | `setProperty()` is undocumented in prose; native element binding has no example | `data-flow.md` |
 | #26 | `all()` is described but no focused list-rendering walkthrough exists | `components.md`, `data-flow.md` |
 | #27 ✅ | Docs frame components as new definitions only; progressive enhancement of existing HTML is never modeled | `getting-started.md`, `components.md` |
 
 ---
 
-## Issue #24 — Bridging CSS and JavaScript
+## Issue #24 ✅ — Bridging CSS and JavaScript
 
 ### Diagnosis
 
@@ -45,11 +45,11 @@ The "Applying Effects" subsection currently shows bare usage but no associated C
 
 A new or revised example that is simple enough to show in a short inline demo and that uses **both** CSS and `toggleClass()` together. A good candidate: a toggle button with an `active` or `pressed` class that changes background color. This does not need to be a full named example component — it can be an inline demo within `styling.md`.
 
-Alternatively, an existing example like `basic-counter` or `basic-button` could be extended with a CSS snippet to serve this purpose.
+Alternatively, an existing examples like `module-scrollarea` or `module-tabgroup` could be used to serve this purpose.
 
 ---
 
-## Issue #25 — Bidirectional Binding with `setProperty()`
+## Issue #25 ✅ — Bidirectional Binding with `setProperty()`
 
 ### Diagnosis
 
@@ -61,30 +61,19 @@ The gap: **no documentation explains that `setProperty()` is how you reactively 
 
 ### What Needs to Change
 
-**`data-flow.md` — New subsection under Component Coordination: "Passing State to Native Elements"**
+**`components.md` — New subsection in "Synchronizing State with Effects": "Bidirectional Binding with Native Elements"**
 
-Add a focused subsection that:
-- Contrasts `pass()` (Le Truc components only, Slot-backed) with `setProperty()` (any element, via its DOM setter)
-- Explains the concept: setting a JS property is different from setting an HTML attribute — `input.value = '5'` vs `input.setAttribute('value', '5')` — and why `setProperty()` is needed
-- Shows a concrete bidirectional sync example with a native `<input type="range">`: reading the initial value via `read()`, updating `host.value` on `input` event, and driving the input's `value` property back with `setProperty('value')`
-- Notes which native element properties commonly need `setProperty()` vs `setAttribute()`: `value`, `checked`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, etc.
+The bidirectional pattern belongs in `components.md`, not `data-flow.md`. `data-flow.md` is about coordination *between* components; bidirectional binding with a native element is about a single component managing state in sync with its own native descendant. Insert the new subsection before "Efficient & Fine-Grained Updates".
 
-**API reference for `setProperty()`**
+The subsection should:
+- Explain the bidirectional pattern: read initial state from the DOM, update state on user events, sync state back to the element with `setProperty()`
+- Use `form-checkbox` as the teaching example — it's the minimal, real implementation: `read()` for initial state, `on('change', ...)` to capture user input, `setProperty('checked')` to drive the native checkbox back
+- Explain why `setProperty()` is needed instead of `setAttribute()`: setting `.checked = true` is not the same as `setAttribute('checked', '')` — only the JS property setter reflects current runtime state on native form elements
+- Note common properties that require `setProperty()`: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, `ariaDisabled`
 
-The current API doc (`docs-src/api/functions/setProperty.md`) is auto-generated and has no usage example. Add a prose usage example and a "When to use" note at the minimum, or expand with a short code block similar to what other effect docs provide.
+**No new example component needed** — `form-checkbox` is the right teaching vehicle.
 
-### Example Component Needed
-
-A **new simple example** demonstrating bidirectional binding between a Le Truc component and a native `<input type="range">`. This is the canonical benchmark scenario and would directly address the gap. It should be simpler than `form-spinbutton` and focus on the `setProperty()` pattern specifically.
-
-A good candidate name: `form-slider`. It needs:
-- A `value` property initialized via `read()`
-- An `on('input', ...)` handler that updates `host.value`
-- A `setProperty('value', ...)` effect that drives the range input back
-- A display element updated via `setText()`
-- Follow accessibility guidelines for role="slider"
-
-This example can then be referenced from the new data-flow.md subsection.
+**The `data-flow.md` callout** already correctly mentions `setProperty()` as the alternative for non-Le Truc elements. No change needed there beyond a link to the new `components.md` subsection.
 
 ---
 

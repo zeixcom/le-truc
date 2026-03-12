@@ -146,6 +146,68 @@ my-button {
 {% /section %}
 
 {% section %}
+## Reactive Styles
+
+CSS class variants become interactive when JavaScript toggles them in response to state. The contract is simple: **the class name in CSS must exactly match the token passed to `toggleClass()`**.
+
+The `module-scrollarea` component demonstrates this clearly. The CSS defines what the shadow looks like when overflow is present:
+
+```css
+module-scrollarea {
+  &::after {
+    opacity: 0;
+    transition: opacity var(--transition-short);
+    /* gradient shadow rendered here */
+  }
+
+  &.overflow-end::after {
+    opacity: 1; /* fades in when JS adds the class */
+  }
+}
+```
+
+The component's setup function detects overflow state and applies the class:
+
+```js
+const overflowEnd = createState(false)
+
+return {
+  host: toggleClass('overflow-end', overflowEnd),
+}
+```
+
+When `overflowEnd` becomes `true`, Le Truc adds `overflow-end` to the host element. The CSS rule activates, and the shadow fades in. When it becomes `false`, the class is removed and the shadow fades out — no inline styles, no manual DOM manipulation.
+
+The full example is a scroll container that shows fade shadows at either edge when content overflows: [Scrollarea example](./examples/module-scrollarea.html).
+
+### Attribute-driven Styles
+
+The same principle applies to attributes. Use `setAttribute()` to toggle an attribute that a CSS selector targets:
+
+```css
+module-tabgroup {
+  [aria-selected="true"] {
+    font-weight: bold;
+    border-bottom: 2px solid currentColor;
+  }
+}
+```
+
+```js
+return {
+	tabs: setAttribute('aria-selected', tab =>
+	  String(host.selected === tab.getAttribute('aria-controls'))
+	),
+}
+```
+
+Prefer attributes over classes when the value has semantic meaning — screen readers and assistive technology understand `aria-selected`, `aria-expanded`, `disabled`, and similar attributes.
+
+The full example is a tab group that uses `aria-selected` to highlight the selected tab: [Tabgroup example](./examples/module-tabgroup.html).
+
+{% /section %}
+
+{% section %}
 ## CSS-only Components
 
 Just because Le Truc is a JavaScript library doesn't mean you have to use JavaScript in every component. It's perfectly fine to use custom elements just for styling purposes.

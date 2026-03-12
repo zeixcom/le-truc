@@ -463,6 +463,14 @@ return {
 
 The order of effects is not important. Feel free to apply them in any order that suits your needs.
 
+{% callout .tip %}
+**CSS must define what the class or attribute does**
+
+`toggleClass('even', ...)` adds or removes the `even` class — but nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `setAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
+
+See [Reactive Styles](styling.html#reactive-styles) for examples of how CSS and effects work together.
+{% /callout %}
+
 ### Bundled Effects
 
 Le Truc provides many built-in effects for common DOM operations. See the [Effects section](api.html#effects) in the API reference for detailed descriptions and usage examples.
@@ -537,6 +545,51 @@ defineComponent(
 - **Use a function** to **derive a value on the fly** when it is needed only in this one place.
 
 Ad-hoc derived state is more efficient than the overhead of a memoized computed signal for simple functions like converting to a string or boolean, formatting a value or performing a calculation.
+{% /callout %}
+
+### Bidirectional Binding with Native Elements
+
+Some native elements — checkboxes, text inputs, selects — hold state in **JS properties** that are not reflected by HTML attributes at runtime. `input.checked` and `input.value` are the canonical examples: the attribute only sets the initial state, but the property tracks the live state. To keep a signal in sync with a native element, you need to both read from it and write back to it.
+
+The `form-checkbox` component shows this pattern in full:
+
+```js
+defineComponent(
+  'form-checkbox',
+  {
+    // Read initial checked state from the DOM property, not the attribute
+    checked: read(ui => ui.checkbox.checked, false),
+  },
+  ({ first }) => ({
+    checkbox: first('input[type="checkbox"]'),
+  }),
+  ({ host, checkbox }) => ({
+    checkbox: [
+      // Capture user interaction → update signal
+      on('change', () => {
+        host.checked = checkbox.checked
+      }),
+      // Sync signal → drive native element property
+      setProperty('checked'),
+    ],
+  }),
+)
+```
+
+Three pieces work together:
+
+1. **`read(ui => ui.checkbox.checked, false)`** — initializes `checked` from the DOM property at setup time, picking up any server-rendered or pre-set state.
+2. **`on('change', ...)`** — updates `host.checked` when the user interacts with the checkbox.
+3. **`setProperty('checked')`** — drives `checkbox.checked = value` whenever the signal changes, including when a parent component sets `host.checked` programmatically.
+
+This creates a full cycle: DOM → signal → DOM, with the signal as the single source of truth.
+
+{% callout .tip %}
+**`setProperty()` vs `setAttribute()`**
+
+`setAttribute('checked', '')` sets the HTML attribute, which only controls the checkbox's *default* state and has no effect on the live `.checked` property once the page has loaded. `setProperty('checked')` calls the element's JS setter directly — the only reliable way to update native form element state at runtime.
+
+Use `setProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, `ariaDisabled`.
 {% /callout %}
 
 ### Efficient & Fine-Grained Updates
