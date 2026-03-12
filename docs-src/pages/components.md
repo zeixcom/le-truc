@@ -16,9 +16,7 @@ description: 'Anatomy, lifecycle, signals, effects'
 Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built-in state management and reactive updates**.
 
 {% callout .tip title="Le Truc enhances HTML — it doesn't replace it" %}
-A Le Truc component **wraps existing server-rendered content**. The HTML inside the custom element is the starting point: it is parsed and visible to users before any JavaScript runs. The component connects, reads initial values from the DOM, and applies effects on top. Nothing is re-rendered from scratch.
-
-This is progressive enhancement: your page works without JavaScript, and Le Truc layers interactivity on when it loads. See [Progressive Enhancement](getting-started.html#progressive-enhancement) in Getting Started for how to wrap existing HTML.
+A Le Truc component **wraps existing server-rendered content**. The HTML inside the custom element is the starting point — visible before JavaScript runs. See [Progressive Enhancement](getting-started.html#progressive-enhancement) for how this works.
 {% /callout %}
 
 Le Truc creates components using the `defineComponent()` function:
@@ -59,8 +57,6 @@ Let's examine a complete component example to understand how Le Truc works. The 
   <p>Hello, <output>World</output>!</p>
 </basic-hello>
 ```
-
-Before any JavaScript runs, the user sees "Hello, World!" — a complete, meaningful page. When Le Truc connects, it reads `"World"` from the `<output>` element as the initial state value, then applies effects on top. This is the progressive enhancement pattern in action.
 
 ```js
 defineComponent(
@@ -162,31 +158,7 @@ Le Truc manages the **Web Component lifecycle** from creation to removal. Here's
 
 ### Connected to the DOM
 
-In the `connectedCallback()` reactive properties are initialized. You pass a second argument to the `defineComponent()` function to define initial values for **component states**.
-
-```js
-defineComponent(
-  'my-component',
-  {
-    count: 0, // Initial value of "count" signal
-    value: asInteger(5), // Parse "value" attribute as integer defaulting to 5
-    isEven: ui => () => !(ui.host.count % 2), // Computed signal based on "count" signal
-    name: requestContext('display-name', 'World'), // Consume "display-name" signal from closest context provider
-  },
-  () => ({
-    // Component UI
-  }),
-  ui => ({
-    // Component setup
-  })
-)
-```
-
-In this example you see all three ways to define a reactive property:
-
-- A **static initial value** creates a `State` signal with the initial value
-- An **attribute parser** creates a `State` signal may from the attribute or fallback value, updating the state whenever the attribute changes
-- An **initializer** function that creates a `State` or a `Computed` signal depending on the return type of the function. If the function returns a value, it creates a `State` signal. If the function returns a function, it creates a `Computed` signal. Initializer functions have access to the component's `ui` object, allowing them to create signals based on the component's state or descendant elements.
+In `connectedCallback()`, reactive properties are initialized and effects run. See [Managing State with Signals](#managing-state-with-signals) for the three ways to define a reactive property: static values, attribute parsers, and initializer functions.
 
 ### Disconnected from the DOM
 
@@ -329,12 +301,10 @@ defineComponent(
 
 Without a hint string (second argument), `first()` returns `undefined` if no match is found and effects for that key are silently skipped. With a hint string, `first()` throws a `MissingElementError` if the element is missing — use this when the element is truly required for the component to function.
 
-On the other hand, the `all()` function returns a `Memo<E[]>` — a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array of elements. Because it's memoized, unwrapping it multiple times is almost free. And because it's reactive, effects that read from it automatically re-run whenever elements are added, removed, or rearranged in the DOM.
-
-Under the hood, a lazy `MutationObserver` watches for structural changes and invalidates the memo when needed. Le Truc then diffs the new element list against the previous one, applies effects to newly added elements, and runs cleanup functions on removed ones.
+The `all()` function returns a `Memo<E[]>` — a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. Because it's reactive, effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM.
 
 {% callout .tip %}
-**Tip**: `all()` sets up a `MutationObserver` and re-runs effects on every structural change. Prefer `first()` when targeting a single element known to be present at connection time.
+**Tip**: `all()` observes structural changes and re-runs effects accordingly. Prefer `first()` when targeting a single element known to be present at connection time.
 {% /callout %}
 
 {% /section %}
@@ -591,13 +561,5 @@ This creates a full cycle: DOM → signal → DOM, with the signal as the single
 
 Use `setProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, `ariaDisabled`.
 {% /callout %}
-
-### Efficient & Fine-Grained Updates
-
-Unlike some frameworks that **re-render entire components**, Le Truc updates only what changes:
-
-- **No virtual DOM** – Le Truc modifies the DOM directly.
-- **Signals propagate automatically** – no need to track dependencies manually.
-- **Optimized with a scheduler** – multiple updates are batched efficiently.
 
 {% /section %}

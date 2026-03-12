@@ -13,13 +13,7 @@ description: 'Scoped styles, CSS custom properties'
 {% section %}
 ## Design Principles
 
-Le Truc is focused on **state management and reactivity**, not styling. However, to **ensure consistent, maintainable, and reusable styles**, we recommend techniques that **scope component styles properly while allowing shared design tokens** (e.g., spacing, font sizes, colors, layout grids).
-
-- **Each component brings along its own specific styles.**
-- Component styles should be **scoped or encapsulated** so they don't leak out.
-- **Allow customizations** via CSS custom properties or pre-defined classes.
-
-Parent components may apply styles to the wrapper element of known sub-components for layout purposes. But avoid styling inner elements of sub-components directly. This would tightly couple the styles of the outer and inner components.
+Le Truc handles state management and reactivity — CSS handles everything visual. The key principles: **scope styles to the component**, **expose customization via CSS custom properties**, and **avoid reaching inside sub-components**. A parent may style the wrapper element of a known sub-component for layout, but styling its inner elements creates tight coupling.
 
 {% /section %}
 

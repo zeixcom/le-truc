@@ -65,34 +65,11 @@ Le Truc augments what the platform already provides. It leverages the Web Compon
 {% /slide %}
 
 {% slide title="Minimal Size." class="blue" %}
-Because we add less abstractions, we can keep the library small (approximately 10kB gzipped).
-
-Le Truc is a lightweight library that provides a simple and efficient way to build reactive user interfaces. It is designed to be easy to use and understand, while still providing powerful features for building complex applications.
+Because we add fewer abstractions, we can keep the library small (approximately 10kB gzipped).
 
 HTML ain't broken. CSS ain't broken. JavaScript ain't broken. We just want to split it in chunks (components), detect bugs early (type safety), and have predictable updates without tight coupling (reactivity). That's what we stand for.
 {% /slide %}
 
 {% /carousel %}
-
-{% /section %}
-
-{% section %}
-
-## Why Choose Le Truc?
-
-Le Truc shines when you want:
-
-- **Server-rendered content** with client-side enhancements
-- **High performance** on all devices (no virtual DOM overhead)
-- **Component reusability** without framework lock-in
-- **Future-proof** code built on web standards
-- **Easy integration** with existing codebases
-
-**Key Benefits:**
-
-- ~10kB gzipped
-- TypeScript support with full type safety
-- Works with any backend or build setup
-- Progressive enhancement friendly
 
 {% /section %}

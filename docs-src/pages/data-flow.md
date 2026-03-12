@@ -29,30 +29,7 @@ Although `BasicButton` and `FormSpinbutton` are completely independent, they nee
 
 ### Parent Component: ModuleCatalog
 
-The **parent component (`ModuleCatalog`) knows about its children**, meaning it can **read state from and pass state to** them.
-
-First, we need to observe the quantities of all `FormSpinbutton` components. For this, we use the `all()` function which returns a `Memo<E[]>` — a lazily observed collection of all children matching the `form-spinbutton` selector:
-
-```js#module-catalog.js
-defineComponent(
-  'module-catalog',
-  {},
-  ({ all, first }) => ({
-    button: first('basic-button', 'Add a button to go go the Shopping Cart'),
-    spinbuttons: all(
-      'form-spinbutton',
-      'Add spinbutton components to calculate sum from.',
-    ),
-  }),
-  ui => {
-    // Component setup
-  },
-)
-```
-
-In contrast to a static `querySelectorAll()` call, the `Memo<E[]>` returned by `all()` is reactive and updates whenever new elements are added or removed from the DOM.
-
-Then, we need to convert the total of all product quantities to a string and pass it on to the `BasicButton` component. In Le Truc we use the `pass()` function to share state with descendant Le Truc components:
+The **parent component (`ModuleCatalog`) knows about its children**, meaning it can **read state from and pass state to** them. It uses `all()` to observe all `FormSpinbutton` quantities reactively, then `pass()` to drive the `BasicButton`'s `badge` and `disabled` state:
 
 ```js#module-catalog.js
 defineComponent(
@@ -79,10 +56,7 @@ defineComponent(
 )
 ```
 
-Allright, that's it!
-
-- Whenever one of the `value` signals of a `<form-spinbutton>` updates, the total in the badge of `<basic-button>` automatically updates.
-- No need for event listeners or manual updates!
+Whenever any `<form-spinbutton>` value changes, `total` updates and the badge reflects the new count — no event listeners or manual wiring needed.
 
 {% callout .tip title="pass() works with Le Truc components only" %}
 `pass()` replaces the backing signal of the child's reactive property directly — this only works for Le Truc components whose properties are Slot-backed. For non-Le Truc custom elements (Lit, Stencil, FAST, etc.) or plain HTML elements, use `setProperty()` instead. It goes through the element's public setter and works correctly regardless of the child's internal framework.
@@ -310,6 +284,156 @@ Here's how everything comes together:
 
 {% section %}
 
+## Managing Dynamic Lists
+
+The component coordination patterns above work with a fixed set of children. When your list grows and shrinks at runtime, you need a different approach: a **container** element where items live, a **`<template>`** for the item markup, and imperative **methods** on the host to add and remove items.
+
+### Exposing Methods
+
+Not every component property is a reactive signal. When a property represents a **command** — something you call rather than something you observe — use `asMethod()`. It wraps an initializer that runs during setup and installs a callable method directly on `host`:
+
+```js
+defineComponent(
+  'module-list',
+  {
+    add: asMethod(({ host, container, template }) => {
+      let key = 0
+      host.add = (process) => {
+        const item = template.content.cloneNode(true).firstElementChild
+        if (item instanceof HTMLElement) {
+          item.dataset.key = String(key++) // stable identity for removal
+          if (process) process(item)       // optional post-processing before insert
+          container.append(item)
+        }
+      }
+    }),
+    delete: asMethod(({ host, container }) => {
+      host.delete = (key) => {
+        container.querySelector(`[data-key="${key}"]`)?.remove()
+      }
+    }),
+  },
+  // ...
+)
+```
+
+After setup, callers can use `host.add()` and `host.delete(key)` imperatively — from a parent component, a script, or another framework.
+
+{% callout .tip %}
+**Always use `asMethod()`, never a plain function**
+
+Le Truc identifies method producers by a brand (`METHOD_BRAND`) attached by `asMethod()`. A bare `(ui) => void` function is treated as a Reader, not a method producer. Wrapping with `asMethod()` is the required contract — the same way `asParser()` is required for custom parsers.
+{% /callout %}
+
+### HTML Structure
+
+The component needs a container and a template:
+
+```html
+<module-list>
+  <ul data-container></ul>
+  <template>
+    <li>
+      <span><slot></slot></span>
+      <basic-button class="delete">
+        <button type="button">Remove</button>
+      </basic-button>
+    </li>
+  </template>
+</module-list>
+```
+
+Items already present in the container on first render are preserved. The `<template>` element is inert — its content is only cloned when `host.add()` is called.
+
+### Handling Deletion by Event Delegation
+
+Rather than attaching a listener to each delete button, use event delegation on the host: one `on('click', ...)` handler checks whether the click reached a delete button, then removes the closest keyed ancestor:
+
+```js
+host: on('click', e => {
+  const { target } = e
+  if (target instanceof HTMLElement && target.closest('basic-button.delete')) {
+    e.stopPropagation()
+    target.closest('[data-key]')?.remove()
+  }
+}),
+```
+
+This scales to any number of items and works for items added after setup — no re-binding needed.
+
+### Coordinating Child Components
+
+`module-list` also coordinates with a `form-textbox` and an add `basic-button`. When the form is submitted, it reads the textbox value, adds the item, then clears the input. The add button is disabled when the textbox is empty or the item limit is reached:
+
+```js
+ui => {
+  const { host, container, textbox } = ui
+  const max = asInteger(1000)(ui, host.getAttribute('max'))
+
+  return {
+    form: on('submit', e => {
+      e.preventDefault()
+      const content = textbox?.value
+      if (content) {
+        host.add(item => {
+          item.querySelector('slot')?.replaceWith(content) // fill template slot
+        })
+        textbox.clear() // call method on child component
+      }
+    }),
+    add: pass({
+      disabled: () =>
+        (textbox && !textbox.length) || container.children.length >= max,
+    }),
+  }
+}
+```
+
+`textbox.clear()` is itself a method property on `form-textbox` — the same `asMethod()` pattern in a child component. `pass()` drives the button's `disabled` state reactively from two conditions without the button knowing anything about either.
+
+### Full Example
+
+{% demo %}
+```html
+<module-list>
+  <ul data-container></ul>
+  <template>
+    <li>
+      <span><slot></slot></span>
+      <basic-button class="delete">
+        <button type="button" class="tertiary destructive small">Remove</button>
+      </basic-button>
+    </li>
+  </template>
+  <form>
+    <form-textbox clearable>
+      <label for="new-item-input">New item</label>
+      <div class="input">
+        <input
+          type="text"
+          id="new-item-input"
+          name="new-item"
+          autocomplete="off"
+        />
+        <button type="button" class="clear" aria-label="Clear input" hidden>✕</button>
+      </div>
+    </form-textbox>
+    <basic-button class="add">
+      <button type="submit" class="constructive">Add</button>
+    </basic-button>
+  </form>
+</module-list>
+```
+
+{% sources title="ModuleList source code" src="./sources/module-list.html" /%}
+{% sources title="FormTextbox source code" src="./sources/form-textbox.html" /%}
+{% sources title="BasicButton source code" src="./sources/basic-button.html" /%}
+{% /demo %}
+
+{% /section %}
+
+{% section %}
+
 ## Providing Context
 
 Context allows **parent components to share state** with any descendant components in the DOM tree, **without prop drilling**. This is perfect for application-wide settings like user preferences, theme data, or authentication state.
@@ -392,13 +516,6 @@ The provider component wraps your entire application or a section that needs sha
   </main>
 </context-media>
 ```
-
-**Key Benefits:**
-
-- **Centralized State**: All global state is managed in one place
-- **Type Safety**: Full TypeScript support with autocomplete
-- **Reactive Updates**: All consumers automatically update when context changes
-- **No Prop Drilling**: Deep components access context directly
 
 {% /section %}
 

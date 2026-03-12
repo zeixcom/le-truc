@@ -35,12 +35,7 @@ Simply host the file on your server and include it like this:
 <script src="/path/to/your/hosted/le-truc.js"></script>
 ```
 
-**Why self-host?**
-
-- You **control updates** and avoid breaking changes from external CDNs.
-- Works for **projects with stricter Content Security Policy rules**.
-
-Remember to keep the hosted file updated to use the latest features and bug fixes.
+Self-hosting gives you control over updates and avoids CDN dependencies — useful for stricter Content Security Policies.
 
 ### Installing via Package Managers
 
@@ -129,22 +124,6 @@ The next section shows how to define this component — and how Le Truc reads `"
 
 The `<basic-hello>` HTML above is already on the page. Now add the component definition that makes it reactive — typing into the input updates the greeting.
 
-### Markup
-
-The server-rendered HTML (from the previous section):
-
-```html#page.html
-<basic-hello>
-  <label>
-    Your name<br />
-    <input name="name" type="text" autocomplete="given-name" />
-  </label>
-  <p>Hello, <output>World</output>!</p>
-</basic-hello>
-```
-
-### Component Definition
-
 Save the following inside a `<script type="module">` tag or an external JavaScript file.
 
 ```html#page.html
@@ -178,15 +157,7 @@ Save the following inside a `<script type="module">` tag or an external JavaScri
 </script>
 ```
 
-### Understanding Your First Component
-
-This component demonstrates Le Truc's core concepts:
-
-- **Reactive Properties**: `name: asString(...)` creates a reactive property that syncs with the `name` attribute and falls back to the `<output>` content
-- **Effects**: The setup function returns effects that handle user input and update the display text
-- **Element Selection**: `first()` selects descendant element to apply effects to
-
-Learn more about these concepts in the [Components](components.html) guide.
+The [Components](components.html) guide explains each piece in depth.
 
 {% /section %}
 
