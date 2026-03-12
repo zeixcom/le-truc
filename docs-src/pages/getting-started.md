@@ -35,12 +35,7 @@ Simply host the file on your server and include it like this:
 <script src="/path/to/your/hosted/le-truc.js"></script>
 ```
 
-**Why self-host?**
-
-- You **control updates** and avoid breaking changes from external CDNs.
-- Works for **projects with stricter Content Security Policy rules**.
-
-Remember to keep the hosted file updated to use the latest features and bug fixes.
+Self-hosting gives you control over updates and avoids CDN dependencies — useful for stricter Content Security Policies.
 
 ### Installing via Package Managers
 
@@ -72,20 +67,38 @@ import { asString, defineComponent, on, setText } from '@zeix/le-truc'
 
 {% section %}
 
-## Creating Your First Component
+## Progressive Enhancement
 
-Now, let's create an interactive Web Component to verify your setup.
+Le Truc is built around **progressive enhancement**: your HTML exists first, works without JavaScript, and Le Truc layers reactivity on top when it loads.
 
-**What This Component Does**
+This is the opposite of a framework that renders HTML from JavaScript. In Le Truc, the server provides the markup — including meaningful content and initial values — and the component enhances it in place.
 
-- Displays `Hello, World!` by default.
-- Updates dynamically when you type into the input field.
+### The upgrade lifecycle
 
-### Markup
+```
+HTML is parsed → content is visible to user
+JS loads → component connects → effects run
+```
 
-Include the following in your server-rendered HTML:
+Between the first and last step, your page is fully usable. Le Truc reads the existing DOM values as initial state rather than replacing them.
 
-```html#page.html
+### Wrapping existing HTML
+
+A Le Truc component is a custom element that **wraps** whatever HTML is already on the page. The children inside it are the server-rendered content — Le Truc queries them with `first()` and `all()` and applies effects on top.
+
+Take this HTML as a starting point:
+
+```html
+<label>
+  Your name<br />
+  <input name="name" type="text" autocomplete="given-name" />
+</label>
+<p>Hello, <output>World</output>!</p>
+```
+
+This renders a greeting and an input field. It is fully usable before any JavaScript loads — the user sees "Hello, World!" immediately. To make it reactive, you wrap it in a custom element:
+
+```html
 <basic-hello>
   <label>
     Your name<br />
@@ -95,7 +108,21 @@ Include the following in your server-rendered HTML:
 </basic-hello>
 ```
 
-### Component Definition
+Le Truc cannot enhance a plain `<div>` directly — custom elements require a hyphenated name. But wrapping is low-cost: one extra element, no structural changes to the children. If you have existing HTML inside a `<div>`, either rename the element in your template or add a custom element as a parent wrapper. The children stay exactly as they are; Le Truc just has a defined upgrade point.
+
+{% callout .tip %}
+**Naming convention**: The custom element name becomes the hook for both JavaScript (`defineComponent('basic-hello', ...)`) and CSS (`basic-hello { ... }`). Keep it descriptive and specific to the component's role.
+{% /callout %}
+
+The next section shows how to define this component — and how Le Truc reads `"World"` from the `<output>` element as the initial state value when it connects.
+
+{% /section %}
+
+{% section %}
+
+## Creating Your First Component
+
+The `<basic-hello>` HTML above is already on the page. Now add the component definition that makes it reactive — typing into the input updates the greeting.
 
 Save the following inside a `<script type="module">` tag or an external JavaScript file.
 
@@ -130,15 +157,7 @@ Save the following inside a `<script type="module">` tag or an external JavaScri
 </script>
 ```
 
-### Understanding Your First Component
-
-This component demonstrates Le Truc's core concepts:
-
-- **Reactive Properties**: `name: asString(...)` creates a reactive property that syncs with the `name` attribute and falls back to the `<output>` content
-- **Effects**: The setup function returns effects that handle user input and update the display text
-- **Element Selection**: `first()` selects descendant element to apply effects to
-
-Learn more about these concepts in the [Components](components.html) guide.
+The [Components](components.html) guide explains each piece in depth.
 
 {% /section %}
 

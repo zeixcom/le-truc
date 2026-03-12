@@ -91,7 +91,7 @@ export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 	}),
 	({ host }) => {
 		const isCurrentTab = (tab: HTMLButtonElement) =>
-			host.selected === getAriaControls(tab)
+			host.selected === tab.getAttribute('aria-controls')
 
 		return {
 			tabs: [
