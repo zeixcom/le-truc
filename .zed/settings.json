@@ -1,3 +1,23 @@
 {
-  "project_name": "Le Truc"
+	"project_name": "Le Truc",
+	"languages": {
+		"TypeScript": {
+			"code_actions_on_format": {
+				"source.fixAll.biome": true,
+				"source.organizeImports.biome": true,
+			},
+		},
+		"JavaScript": {
+			"code_actions_on_format": {
+				"source.fixAll.biome": true,
+				"source.organizeImports.biome": true,
+			},
+		},
+		"TSX": {
+			"code_actions_on_format": {
+				"source.fixAll.biome": true,
+				"source.organizeImports.biome": true,
+			},
+		},
+	},
 }
