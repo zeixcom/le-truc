@@ -4,7 +4,7 @@
 
 > **createMutableSignal**\<`T`\>(`value`): `MutableSignal`\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:37
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:43
 
 Convert a value to a MutableSignal.
 
@@ -32,7 +32,7 @@ Convert a value to a MutableSignal.
 
 > **createMutableSignal**\<`T`\>(`value`): [`List`](../type-aliases/List.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:38
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:44
 
 Convert a value to a MutableSignal.
 
@@ -60,7 +60,7 @@ readonly `T`[]
 
 > **createMutableSignal**\<`T`\>(`value`): [`Store`](../type-aliases/Store.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:39
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:45
 
 Convert a value to a MutableSignal.
 
@@ -88,7 +88,7 @@ Convert a value to a MutableSignal.
 
 > **createMutableSignal**\<`T`\>(`value`): [`State`](../type-aliases/State.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:40
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:46
 
 Convert a value to a MutableSignal.
 

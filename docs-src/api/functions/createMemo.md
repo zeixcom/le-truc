@@ -4,7 +4,7 @@
 
 > **createMemo**\<`T`\>(`fn`, `options`): [`Memo`](../type-aliases/Memo.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/memo.d.ts:51
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/memo.d.ts:50
 
 Creates a derived reactive computation that caches its result.
 The computation automatically tracks dependencies and recomputes when they change.
@@ -61,7 +61,7 @@ const sum = createMemo((prev) => prev + count.get(), { value: 0, equals: Object.
 
 > **createMemo**\<`T`\>(`fn`, `options?`): [`Memo`](../type-aliases/Memo.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/memo.d.ts:54
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/memo.d.ts:53
 
 Creates a derived reactive computation that caches its result.
 The computation automatically tracks dependencies and recomputes when they change.

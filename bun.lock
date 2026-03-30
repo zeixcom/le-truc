@@ -79,7 +79,7 @@
 
     "@ungap/structured-clone": ["@ungap/structured-clone@1.3.0", "", {}, "sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g=="],
 
-    "@zeix/cause-effect": ["@zeix/cause-effect@1.0.1", "", { "peerDependencies": { "typescript": ">=5.8.0" } }, "sha512-yK+ORXSbOlxURN4iMNbL15s0cVl+PL0/1gS81RslD3m3Rt7z8blYWHPBMeHKqEKZ4BSDlxq5exfWJfP4Z/Alhw=="],
+    "@zeix/cause-effect": ["@zeix/cause-effect@1.0.2", "", { "peerDependencies": { "typescript": ">=5.8.0" } }, "sha512-gvMRt/FUsspBEwnLtgZV59mC5Ktr3A2IMyo4PR8f3qEjsB4RDwDvi3U+ZpRAGQqifx8HBecRQSVlLfbbWdQSKg=="],
 
     "argparse": ["argparse@2.0.1", "", {}, "sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q=="],
 

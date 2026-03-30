@@ -2,7 +2,9 @@
 
 > **MatchHandlers**\<`T`\> = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:3
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:9
+
+Handlers for all states of one or more signals passed to `match()`.
 
 #### Type Parameters
 
@@ -10,13 +12,17 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:3
 
 `T` *extends* readonly [`Signal`](Signal.md)\<`unknown` & `object`\>[]
 
+Tuple of `Signal` types being matched
+
 #### Properties
 
 ##### err?
 
 > `optional` **err?**: (`errors`) => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:7
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:15
+
+Called when one or more signals hold an error. Defaults to `console.error`.
 
 ###### Parameters
 
@@ -34,7 +40,9 @@ readonly `Error`[]
 
 > `optional` **nil?**: () => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:8
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:17
+
+Called when one or more signals are unset (pending).
 
 ###### Returns
 
@@ -46,7 +54,9 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:8
 
 > **ok**: (`values`) => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:4
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:11
+
+Called when all signals have a value. Receives a tuple of resolved values.
 
 ###### Parameters
 

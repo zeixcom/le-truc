@@ -727,6 +727,20 @@ function createList(value, options) {
           flush();
       }
     },
+    replace(key, value2) {
+      const signal = signals.get(key);
+      if (!signal)
+        return;
+      validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
+      if (signal.get() === value2)
+        return;
+      signal.set(value2);
+      node.flags |= FLAG_DIRTY;
+      for (let e = node.sinks;e; e = e.nextSink)
+        propagate(e.sink);
+      if (batchDepth === 0)
+        flush();
+    },
     sort(compareFn) {
       const entries = keys.map((key) => [key, signals.get(key)?.get()]).sort(isFunction(compareFn) ? (a, b) => compareFn(a[1], b[1]) : (a, b) => String(a[1]).localeCompare(String(b[1])));
       const newOrder = entries.map(([key]) => key);

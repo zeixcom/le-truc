@@ -2,7 +2,7 @@
 
 > **createSensor**\<`T`\>(`watched`, `options?`): [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/sensor.d.ts:72
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/sensor.d.ts:78
 
 Creates a sensor that tracks external input and updates a state value as long as it is active.
 Sensors get activated when they are first accessed by an effect and deactivated when they are

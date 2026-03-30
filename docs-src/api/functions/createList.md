@@ -2,7 +2,7 @@
 
 > **createList**\<`T`\>(`value`, `options?`): [`List`](../type-aliases/List.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:57
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:85
 
 Creates a reactive list with stable keys and per-item reactivity.
 
@@ -24,13 +24,11 @@ Initial array of items
 
 [`ListOptions`](../type-aliases/ListOptions.md)\<`T`\>
 
-Optional configuration for key generation and watch lifecycle
-
 #### Returns
 
 [`List`](../type-aliases/List.md)\<`T`\>
 
-A List signal
+A `List` signal with reactive per-item `State` signals
 
 #### Since
 

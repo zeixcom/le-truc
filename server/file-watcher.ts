@@ -71,12 +71,7 @@ export const watchFiles = async (
 					const existing = fileList.byKey(filePath)
 					if (existing) {
 						if (existing.get().hash !== fileInfo.hash) {
-							// byKey().set() does not propagate through the list reactive
-							// graph — the list never subscribes to individual item signals.
-							// Remove + add goes through the list own propagation path
-							// and correctly triggers downstream effects.
-							fileList.remove(filePath)
-							fileList.add(fileInfo)
+							fileList.replace(filePath, fileInfo)
 						}
 					} else {
 						fileList.add(fileInfo)

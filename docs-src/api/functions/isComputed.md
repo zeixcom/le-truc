@@ -2,7 +2,7 @@
 
 > **isComputed**\<`T`\>(`value`): `value is Memo<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:48
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:54
 
 Check if a value is a computed signal
 

@@ -2,7 +2,7 @@
 
 > **createStore**\<`T`\>(`value`, `options?`): [`Store`](../type-aliases/Store.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/store.d.ts:42
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/store.d.ts:53
 
 Creates a reactive store with deeply nested reactive properties.
 Each property becomes its own signal (State for primitives, nested Store for objects, List for arrays).

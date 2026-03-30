@@ -2,7 +2,7 @@
 
 > **isSensor**\<`T`\>(`value`): `value is Sensor<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/sensor.d.ts:80
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/sensor.d.ts:86
 
 Checks if a value is a Sensor signal.
 

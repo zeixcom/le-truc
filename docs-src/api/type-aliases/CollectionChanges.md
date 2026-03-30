@@ -2,7 +2,9 @@
 
 > **CollectionChanges**\<`T`\> = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:19
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:38
+
+Granular mutation descriptor passed to the `applyChanges` callback inside a `CollectionCallback`.
 
 #### Type Parameters
 
@@ -10,13 +12,17 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:19
 
 `T`
 
+The type of items in the collection
+
 #### Properties
 
 ##### add?
 
 > `optional` **add?**: `T`[]
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:20
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:40
+
+Items to add. Each item is assigned a new key via the configured `keyConfig`.
 
 ***
 
@@ -24,7 +30,9 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:20
 
 > `optional` **change?**: `T`[]
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:21
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:42
+
+Items whose values have changed. Matched to existing entries by key.
 
 ***
 
@@ -32,4 +40,6 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:21
 
 > `optional` **remove?**: `T`[]
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:22
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:44
+
+Items to remove. Matched to existing entries by key.

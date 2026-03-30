@@ -2,7 +2,7 @@
 
 > **createCollection**\<`T`\>(`watched`, `options?`): [`Collection`](../type-aliases/Collection.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:52
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:90
 
 Creates an externally-driven Collection with a watched lifecycle.
 Items are managed via the `applyChanges(changes)` helper passed to the watched callback.

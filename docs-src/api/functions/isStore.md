@@ -2,7 +2,7 @@
 
 > **isStore**\<`T`\>(`value`): `value is Store<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/store.d.ts:50
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/store.d.ts:61
 
 Checks if a value is a Store signal.
 

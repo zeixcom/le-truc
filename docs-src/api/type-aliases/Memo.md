@@ -29,7 +29,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/memo.d.ts:9
 
 > **get**(): `T`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/memo.d.ts:17
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/memo.d.ts:16
 
 Gets the current value of the memo.
 Recomputes if dependencies have changed since last access.
@@ -40,7 +40,3 @@ When called inside another reactive context, creates a dependency.
 `T`
 
 The computed value
-
-###### Throws
-
-UnsetSignalValueError If the memo value is still unset when read.
