@@ -63,6 +63,22 @@ Then import the needed functions in your JavaScript:
 import { asString, defineComponent, on, setText } from '@zeix/le-truc'
 ```
 
+{% callout .tip title="Enabling dev-mode warnings" %}
+When bundling from source, `DEV_MODE` defaults to `false` and all debug output is stripped. To enable enhanced warnings during development — including alerts about unbranded parsers and API misuse — define `process.env.DEV_MODE` in your bundler config:
+
+**Vite** (`vite.config.js`):
+```js
+define: { 'process.env.DEV_MODE': 'true' }
+```
+
+**Bun / Rollup** (CLI flag):
+```sh
+--define process.env.DEV_MODE=true
+```
+
+Set the value to `false` (or omit it) for production builds to ensure dead code is eliminated.
+{% /callout %}
+
 {% /section %}
 
 {% section %}

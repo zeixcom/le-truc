@@ -6,7 +6,8 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
 /* === Constants === */
 
-const DEV_MODE = process.env.DEV_MODE
+const DEV_MODE =
+	typeof process !== 'undefined' && process.env.DEV_MODE
 
 const LOG_DEBUG: LogLevel = 'debug'
 const LOG_INFO: LogLevel = 'info'

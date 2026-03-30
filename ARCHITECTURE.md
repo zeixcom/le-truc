@@ -206,7 +206,7 @@ The file contains a type-level CSS selector parser that infers the correct `HTML
 
 ## The Parser System
 
-Parsers transform HTML attribute strings into typed JavaScript values. The key design choice: **a Parser is a function with ≥2 parameters** (`(ui, value, old?) => T`), while a **Reader is any function with 1 parameter** (`(ui) => T`). This distinction is checked at runtime via `value.length >= 2` in `isParser()`.
+Parsers transform HTML attribute strings into typed JavaScript values. The key design choice: **a Parser is a function branded with `PARSER_BRAND`** (`(ui, value, old?) => T`), while a **Reader is any function with 1 parameter** (`(ui) => T`). Always create custom parsers with `asParser()` — it attaches the brand so `isParser()` can identify them reliably. Relying on `fn.length >= 2` as the parser signal is deprecated and may be removed in a future major version; in `DEV_MODE`, unbranded two-argument functions trigger a `console.warn`.
 
 Parsers serve dual duty:
 1. As property initializers — `{ config: asJSON({ theme: 'light' }) }` — called during `connectedCallback` with the attribute's initial value
