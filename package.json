@@ -1,6 +1,6 @@
 {
 	"name": "@zeix/le-truc",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Le Truc - the thing for type-safe reactive web components",
 	"keywords": [
 		"Le Truc",
@@ -65,6 +65,6 @@
 		"typedoc-plugin-markdown": "^4.11.0"
 	},
 	"peerDependencies": {
-		"typescript": "^6.0.2"
+		"typescript": ">=5.8.0"
 	}
 }

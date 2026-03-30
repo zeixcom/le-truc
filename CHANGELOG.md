@@ -1,6 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## 1.0.1
+
+### Changed
+
+- **`@zeix/cause-effect` upgraded from `^1.0.0` to `^1.0.1`**: Documentation and JSDoc corrections across `Sensor`, `Memo`, `Store`, `List`, `Collection`, and utility types. No runtime behaviour changed.
+- **TypeScript peer dependency broadened to `>=5.8.0`**: Le Truc now supports TypeScript 5.8 through 6 and beyond. The `@types/bun` dev dependency has been replaced with `bun-types`, and `"types": ["bun-types"]` has been added to `tsconfig.json` to fix module resolution under TypeScript 6.
 
 ### Fixed
 

@@ -2,7 +2,7 @@
 
 > **ElementEffects**\<`P`, `E`\> = [`Effect`](Effect.md)\<`P`, `E`\> \| [`Effect`](Effect.md)\<`P`, `E`\>[]
 
-Defined in: [src/effects.ts:37](https://github.com/zeixcom/le-truc/blob/6220ce654aeac0749cbca7a138414561096a0c1d/src/effects.ts#L37)
+Defined in: [src/effects.ts:37](https://github.com/zeixcom/le-truc/blob/8e260db69c2a07fca5b7a6e4feb1c02c605094f0/src/effects.ts#L37)
 
 One or more effects for a single UI element.
 The setup function may return a single `Effect` or an array of `Effect`s
