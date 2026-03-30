@@ -27,7 +27,7 @@ declare const isParser: <T extends {}, U extends UI>(value: unknown) => value is
 /**
  * Check if a value is a MethodProducer (branded side-effect initializer)
  *
- * @since 0.17.0
+ * @since 0.16.2
  * @param {unknown} value - Value to check
  * @returns {boolean} True if the value is a MethodProducer
  */
@@ -58,7 +58,7 @@ declare const getFallback: <T extends {}, U extends UI>(ui: U, fallback: ParserO
  * identify it reliably even when default parameters or destructuring
  * would otherwise reduce `function.length`.
  *
- * @since 0.17.0
+ * @since 0.16.2
  * @param {Parser<T, U>} fn - Custom parser function to brand
  * @returns {Parser<T, U>} The same function, branded
  */
@@ -69,7 +69,7 @@ declare const asParser: <T extends {}, U extends UI>(fn: Parser<T, U>) => Parser
  * Use this to wrap any side-effect initializer so `isMethodProducer()` can
  * identify it explicitly rather than relying on the absence of a return value.
  *
- * @since 0.17.0
+ * @since 0.16.2
  * @param {T} fn - Side-effect initializer to brand
  * @returns {T & { readonly [METHOD_BRAND]: true }} The same function, branded as a `MethodProducer`
  */

@@ -1,5 +1,5 @@
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-declare const DEV_MODE: string | undefined;
+declare const DEV_MODE: string | false | undefined;
 declare const LOG_DEBUG: LogLevel;
 declare const LOG_INFO: LogLevel;
 declare const LOG_WARN: LogLevel;

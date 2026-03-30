@@ -1617,7 +1617,7 @@ function isSlot(value) {
   return isObjectOfType(value, TYPE_SLOT);
 }
 // src/util.ts
-var DEV_MODE = true;
+var DEV_MODE = typeof process !== "undefined" && true;
 var LOG_DEBUG = "debug";
 var LOG_WARN = "warn";
 var LOG_ERROR = "error";
