@@ -34,4 +34,4 @@ const asEnum = (valid: [string, ...string[]]): Parser<string, UI> =>
 		return matchingValid ? value : valid[0]
 	})
 
-export { asString, asEnum }
+export { asEnum, asString }

@@ -170,18 +170,18 @@ const validatePropertyName = (prop: string): string | null => {
 }
 
 export {
-	type LogLevel,
-	hasMethod,
-	isElement,
-	isCustomElement,
-	isNotYetDefinedComponent,
-	log,
-	elementName,
-	typeString,
-	validatePropertyName,
 	DEV_MODE,
+	elementName,
+	hasMethod,
+	isCustomElement,
+	isElement,
+	isNotYetDefinedComponent,
 	LOG_DEBUG,
+	LOG_ERROR,
 	LOG_INFO,
 	LOG_WARN,
-	LOG_ERROR,
+	type LogLevel,
+	log,
+	typeString,
+	validatePropertyName,
 }
