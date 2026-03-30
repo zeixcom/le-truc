@@ -1,59 +1,69 @@
 ---
-name: changelog
-description: Update CHANGELOG.md with user-facing changes. Use after meaningful code changes, when asked to add release notes, or to prepare a release.
+name: changelog-keeper
+description: >
+  Maintain CHANGELOG.md for the @zeix/le-truc library. Use after meaningful code
+  changes, when asked to add release notes, or to prepare a release.
 user_invocable: true
 ---
 
-# Changelog Keeper
+<objective>
+Maintain `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com) conventions,
+adapted to this project's style: technically precise, developer-focused entries that include
+implementation detail when it explains *why* behavior changed or *how* to migrate.
+</objective>
 
-Maintain `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com) conventions.
-
-## Structure
-
+<structure>
 The changelog uses this heading hierarchy:
 
 ```markdown
 # Changelog
 
-## [Unreleased]
+## [Unreleased]        ← only present when unreleased changes exist
 
 ### Added
-### Changed
-### Deprecated
-### Removed
 ### Fixed
-### Security
 
-## 0.16.0
+## 1.0.0              ← released versions use bare version numbers, no brackets
 
-### Added
+### Changed
 ...
 ```
 
-- `## [Unreleased]` is always the first version section. New changes go here.
-- Only include categories that have entries.
-- Version 0.18.0 is the baseline. Do not document changes before it.
+- `## [Unreleased]` is only present when there are documented changes not yet released.
+  Create it at the top (below `# Changelog`) when documenting the first new change after a release.
+  It does not exist between releases.
+- Released versions use bare version numbers: `## 1.0.0`, `## 0.16.3`, etc. No brackets.
+- Only include category headings (`### Added`, `### Changed`, etc.) that have entries.
+- `## 0.15.0` is present as a baseline marker ("Changes before this version are not documented").
+</structure>
 
-## Adding entries
-
+<adding_entries>
 1. Read `CHANGELOG.md`.
-2. Determine which changes are user-facing by inspecting the diff (`git diff main..HEAD -- src/ index.ts` or as directed). Ignore generated/built files: `docs/`, `types/`, `index.js`, `index.dev.js`, `index.js.map` — these are committed for GitHub Pages and JS consumers but do not represent source changes.
-3. Classify each change into exactly one category: Added, Changed, Deprecated, Removed, Fixed, or Security.
-4. Write concise bullets describing user-visible behavior. Use backticks for public API names.
-5. Do not duplicate existing entries.
-6. Edit the file in place using the Edit tool.
+2. Inspect the diff to identify changes: `git diff main..HEAD -- src/ index.ts` or as directed.
+3. If there is no `## [Unreleased]` section, create one immediately below `# Changelog`.
+4. Classify each change into exactly one category: Added, Changed, Deprecated, Removed, Fixed, or Security.
+5. Write entries following the style guide below.
+6. Do not duplicate existing entries.
+7. Edit the file in place using the Edit tool.
+</adding_entries>
 
-## Preparing a release
-
+<preparing_a_release>
 When asked to release a version:
 
-1. Move all `[Unreleased]` entries under a new `## X.Y.Z` heading.
-2. Leave an empty `## [Unreleased]` section above it.
-3. Update `version` in `package.json` and the `@version` tag in `index.ts` to match.
+1. Rename `## [Unreleased]` to `## X.Y.Z` — do not leave an empty `[Unreleased]` section behind.
+2. Update `version` in `package.json` to match.
+3. Update the version comment in `index.ts` to match: `// Le Truc X.Y.Z`.
+</preparing_a_release>
 
-## Entry style
-
-- One behavior change per bullet.
-- Factual and concise; skip implementation-only details.
-- Include migration notes under Changed or Removed when behavior breaks compatibility.
-- Bold the API name or short summary at the start: `- **\`createMemo\` \`watched\` option**: description...`
+<entry_style>
+- **One behavior change per bullet.**
+- **Bold the API name or short summary** at the start, followed by a colon:
+  `- **\`createMemo\` \`watched\` option**: description…`
+- **Include implementation details** when they explain *why* the behavior changed, *how* the
+  fix works, or *what internal invariant* is preserved. This changelog is read by developers
+  and AI agents integrating or contributing to the library — precision is expected.
+- **Use before/after framing for Fixed entries**: "Previously, X. Now, Y."
+- **Include migration notes** under Changed or Removed when behavior breaks compatibility.
+  State clearly what consumers must change and why.
+- Use backticks for all public API names, internal types, flags, and file names.
+</entry_style>
