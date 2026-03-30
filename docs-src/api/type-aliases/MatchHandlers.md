@@ -12,9 +12,9 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:3
 
 #### Properties
 
-##### err()?
+##### err?
 
-> `optional` **err**: (`errors`) => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
+> `optional` **err?**: (`errors`) => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:7
 
@@ -30,9 +30,9 @@ readonly `Error`[]
 
 ***
 
-##### nil()?
+##### nil?
 
-> `optional` **nil**: () => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
+> `optional` **nil?**: () => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:8
 
@@ -42,7 +42,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:8
 
 ***
 
-##### ok()
+##### ok
 
 > **ok**: (`values`) => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
 

@@ -2,7 +2,7 @@
 
 > **ElementUpdater**\<`E`, `T`\> = `object`
 
-Defined in: [src/effects.ts:94](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/effects.ts#L94)
+Defined in: [src/effects.ts:94](https://github.com/zeixcom/le-truc/blob/96be5a879e7c58444a2b3e7d9c595138795a386d/src/effects.ts#L94)
 
 Descriptor passed to `updateElement` that defines how to read, update, and
 optionally delete a single DOM property or attribute.
@@ -24,11 +24,11 @@ optionally delete a single DOM property or attribute.
 
 #### Properties
 
-##### delete()?
+##### delete?
 
-> `optional` **delete**: (`element`) => `void`
+> `optional` **delete?**: (`element`) => `void`
 
-Defined in: [src/effects.ts:99](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/effects.ts#L99)
+Defined in: [src/effects.ts:99](https://github.com/zeixcom/le-truc/blob/96be5a879e7c58444a2b3e7d9c595138795a386d/src/effects.ts#L99)
 
 ###### Parameters
 
@@ -44,9 +44,9 @@ Defined in: [src/effects.ts:99](https://github.com/zeixcom/le-truc/blob/84654ba2
 
 ##### name?
 
-> `optional` **name**: `string`
+> `optional` **name?**: `string`
 
-Defined in: [src/effects.ts:96](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/effects.ts#L96)
+Defined in: [src/effects.ts:96](https://github.com/zeixcom/le-truc/blob/96be5a879e7c58444a2b3e7d9c595138795a386d/src/effects.ts#L96)
 
 ***
 
@@ -54,15 +54,15 @@ Defined in: [src/effects.ts:96](https://github.com/zeixcom/le-truc/blob/84654ba2
 
 > **op**: [`UpdateOperation`](UpdateOperation.md)
 
-Defined in: [src/effects.ts:95](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/effects.ts#L95)
+Defined in: [src/effects.ts:95](https://github.com/zeixcom/le-truc/blob/96be5a879e7c58444a2b3e7d9c595138795a386d/src/effects.ts#L95)
 
 ***
 
-##### read()
+##### read
 
 > **read**: (`element`) => `T` \| `null`
 
-Defined in: [src/effects.ts:97](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/effects.ts#L97)
+Defined in: [src/effects.ts:97](https://github.com/zeixcom/le-truc/blob/96be5a879e7c58444a2b3e7d9c595138795a386d/src/effects.ts#L97)
 
 ###### Parameters
 
@@ -76,11 +76,11 @@ Defined in: [src/effects.ts:97](https://github.com/zeixcom/le-truc/blob/84654ba2
 
 ***
 
-##### reject()?
+##### reject?
 
-> `optional` **reject**: (`error`) => `void`
+> `optional` **reject?**: (`error`) => `void`
 
-Defined in: [src/effects.ts:101](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/effects.ts#L101)
+Defined in: [src/effects.ts:101](https://github.com/zeixcom/le-truc/blob/96be5a879e7c58444a2b3e7d9c595138795a386d/src/effects.ts#L101)
 
 ###### Parameters
 
@@ -94,11 +94,11 @@ Defined in: [src/effects.ts:101](https://github.com/zeixcom/le-truc/blob/84654ba
 
 ***
 
-##### resolve()?
+##### resolve?
 
-> `optional` **resolve**: (`element`) => `void`
+> `optional` **resolve?**: (`element`) => `void`
 
-Defined in: [src/effects.ts:100](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/effects.ts#L100)
+Defined in: [src/effects.ts:100](https://github.com/zeixcom/le-truc/blob/96be5a879e7c58444a2b3e7d9c595138795a386d/src/effects.ts#L100)
 
 ###### Parameters
 
@@ -112,11 +112,11 @@ Defined in: [src/effects.ts:100](https://github.com/zeixcom/le-truc/blob/84654ba
 
 ***
 
-##### update()
+##### update
 
 > **update**: (`element`, `value`) => `void`
 
-Defined in: [src/effects.ts:98](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/effects.ts#L98)
+Defined in: [src/effects.ts:98](https://github.com/zeixcom/le-truc/blob/96be5a879e7c58444a2b3e7d9c595138795a386d/src/effects.ts#L98)
 
 ###### Parameters
 

@@ -220,7 +220,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:30
 
 ##### keyOrIndex
 
-`string` | `number`
+`string` \| `number`
 
 ###### Returns
 

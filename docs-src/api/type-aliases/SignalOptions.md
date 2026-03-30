@@ -16,9 +16,9 @@ The type of value in the signal
 
 #### Properties
 
-##### equals()?
+##### equals?
 
-> `optional` **equals**: (`a`, `b`) => `boolean`
+> `optional` **equals?**: (`a`, `b`) => `boolean`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:71
 
@@ -44,7 +44,7 @@ Defaults to reference equality (===).
 
 ##### guard?
 
-> `optional` **guard**: [`Guard`](Guard.md)\<`T`\>
+> `optional` **guard?**: [`Guard`](Guard.md)\<`T`\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:65
 

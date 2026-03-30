@@ -14,7 +14,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:19
 
 ##### add?
 
-> `optional` **add**: `T`[]
+> `optional` **add?**: `T`[]
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:20
 
@@ -22,7 +22,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:20
 
 ##### change?
 
-> `optional` **change**: `T`[]
+> `optional` **change?**: `T`[]
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:21
 
@@ -30,6 +30,6 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:21
 
 ##### remove?
 
-> `optional` **remove**: `T`[]
+> `optional` **remove?**: `T`[]
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:22

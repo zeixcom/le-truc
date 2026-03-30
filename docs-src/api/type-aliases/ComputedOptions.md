@@ -8,14 +8,14 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:73
 
 ##### value?
 
-> `optional` **value**: `T`
+> `optional` **value?**: `T`
 
 Optional initial value.
 Useful for reducer patterns so that calculations start with a value of correct type.
 
-##### watched()?
+##### watched?
 
-> `optional` **watched**: (`invalidate`) => [`Cleanup`](Cleanup.md)
+> `optional` **watched?**: (`invalidate`) => [`Cleanup`](Cleanup.md)
 
 Optional callback invoked when the signal is first watched by an effect.
 Receives an `invalidate` function that marks the signal dirty and triggers re-evaluation.

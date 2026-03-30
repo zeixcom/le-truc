@@ -1,4 +1,4 @@
-### Type Alias: Cleanup()
+### Type Alias: Cleanup
 
 > **Cleanup** = () => `void`
 

@@ -1,4 +1,4 @@
-### Type Alias: EffectCallback()
+### Type Alias: EffectCallback
 
 > **EffectCallback** = () => [`MaybeCleanup`](MaybeCleanup.md)
 
