@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **`DEV_MODE` no longer throws a `ReferenceError` when bundled from source without `--define`**: `process.env.DEV_MODE` is now guarded with `typeof process !== 'undefined'`, so bundlers that consume `index.ts` directly (via the `module` field) get `false` at runtime rather than crashing. Bundlers that do define `process.env.DEV_MODE=false` still tree-shake the dead code as before.
+
+### Added
+
+- **Five Claude Code skills for structured AI assistance**: `le-truc` (component authoring guidance with progressive disclosure), `le-truc-dev` (library internals and API development), `docs-server-dev` (docs build pipeline and Markdoc), `tech-writer` (keeping docs in sync with source), and `changelog-keeper` (maintaining CHANGELOG.md). Each skill ships with curated references and workflow prompts under `skills/<name>/`.
+
 ## 1.0.0
 
 ### Changed
