@@ -92,4 +92,4 @@ declare const requestContext: <T extends {}, P extends ComponentProps, U extends
 }>) => Reader<Memo<T>, U & {
     host: Component<P>;
 }>;
-export { type Context, type ContextCallback, type UnknownContext, type ContextType, CONTEXT_REQUEST, ContextRequestEvent, provideContexts, requestContext, };
+export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, provideContexts, requestContext, type UnknownContext, };

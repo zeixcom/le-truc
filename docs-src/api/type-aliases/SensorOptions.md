@@ -10,7 +10,7 @@ A callback function for sensors when the sensor starts being watched.
 
 ##### value?
 
-> `optional` **value**: `T`
+> `optional` **value?**: `T`
 
 Optional initial value. Avoids `UnsetSignalValueError` on first read
 before the watched callback fires.

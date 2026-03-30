@@ -2,7 +2,7 @@
 
 > **createEventsSensor**\<`T`, `P`, `U`, `K`\>(`init`, `key`, `events`): (`ui`) => [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-Defined in: [src/events.ts:67](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/events.ts#L67)
+Defined in: [src/events.ts:67](https://github.com/zeixcom/le-truc/blob/8e260db69c2a07fca5b7a6e4feb1c02c605094f0/src/events.ts#L67)
 
 Create a `Reader` that produces a `Sensor<T>` driven by DOM events on the host.
 
@@ -57,17 +57,7 @@ Map of event type to handler function
 
 Reader that creates and returns the sensor
 
-> (`ui`): [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
-
-##### Parameters
-
-###### ui
-
-`U` & `object`
-
-##### Returns
-
-[`Sensor`](../type-aliases/Sensor.md)\<`T`\>
+(`ui`) => [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
 #### Since
 

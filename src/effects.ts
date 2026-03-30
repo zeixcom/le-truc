@@ -302,8 +302,8 @@ export {
 	type ElementEffects,
 	type ElementUpdater,
 	type Reactive,
-	type UpdateOperation,
-	runEffects,
 	resolveReactive,
+	runEffects,
+	type UpdateOperation,
 	updateElement,
 }

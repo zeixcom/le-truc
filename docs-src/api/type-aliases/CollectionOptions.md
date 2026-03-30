@@ -12,9 +12,9 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:24
 
 #### Properties
 
-##### createItem()?
+##### createItem?
 
-> `optional` **createItem**: (`value`) => [`Signal`](Signal.md)\<`T`\>
+> `optional` **createItem?**: (`value`) => [`Signal`](Signal.md)\<`T`\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:27
 
@@ -32,7 +32,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:27
 
 ##### keyConfig?
 
-> `optional` **keyConfig**: `KeyConfig`\<`T`\>
+> `optional` **keyConfig?**: `KeyConfig`\<`T`\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:26
 
@@ -40,6 +40,6 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:26
 
 ##### value?
 
-> `optional` **value**: `T`[]
+> `optional` **value?**: `T`[]
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:25

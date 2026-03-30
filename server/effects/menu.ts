@@ -4,12 +4,13 @@ import { docsMarkdown } from '../file-signals'
 import { writeFileSafe } from '../io'
 import { menu } from '../templates/menu'
 
-export const menuEffect = () => {
+export const menuEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
 	const ready = new Promise<void>(res => { resolve = res })
 	const cleanup = createEffect(() => {
 		match([docsMarkdown.pageInfos], {
 			ok: async ([pageInfos]) => {
+				const firstRun = !!resolve
 				try {
 					console.log(`📄 Generated ${pageInfos.length} page infos`)
 
@@ -29,6 +30,7 @@ export const menuEffect = () => {
 					} else {
 						console.log('No root pages found, skipping menu generation')
 					}
+					if (!firstRun) onRebuild?.()
 				} finally {
 					resolve?.()
 					resolve = undefined

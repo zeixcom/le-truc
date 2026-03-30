@@ -1,4 +1,4 @@
-### Type Alias: TaskCallback()\<T\>
+### Type Alias: TaskCallback\<T\>
 
 > **TaskCallback**\<`T`\> = (`prev`, `signal`) => `Promise`\<`T`\>
 
@@ -18,9 +18,9 @@ The type of value computed
 
 ##### prev
 
-The previous computed value
+`T` \| `undefined`
 
-`T` | `undefined`
+The previous computed value
 
 ##### signal
 

@@ -57,7 +57,7 @@ export { generatePanels }
 
 /* === Exported Effect === */
 
-export const sourcesEffect = () => {
+export const sourcesEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
 	const ready = new Promise<void>(res => { resolve = res })
 	const cleanup = createEffect(() => {
@@ -69,6 +69,7 @@ export const sourcesEffect = () => {
 			],
 			{
 				ok: async ([htmlFiles, cssFiles, tsFiles]) => {
+					const firstRun = !!resolve
 					try {
 						console.log('🔄 Rebuilding source fragments...')
 
@@ -104,6 +105,7 @@ export const sourcesEffect = () => {
 						}
 
 						console.log('Source fragments successfully rebuilt')
+						if (!firstRun) onRebuild?.()
 					} catch (error) {
 						console.error('Source fragments failed to rebuild:', String(error))
 					} finally {

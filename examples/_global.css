@@ -377,6 +377,12 @@ main {
 section {
 	margin-block: var(--space-xl);
 
+	&.blog-posts {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xl);
+	}
+
 	& h3 {
 		margin-block-start: var(--space-xl);
 		margin-block-end: var(--space-l);

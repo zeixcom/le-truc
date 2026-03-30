@@ -1,4 +1,4 @@
-### Type Alias: MemoCallback()\<T\>
+### Type Alias: MemoCallback\<T\>
 
 > **MemoCallback**\<`T`\> = (`prev`) => `T`
 
@@ -18,9 +18,9 @@ The type of value computed
 
 ##### prev
 
-The previous computed value
+`T` \| `undefined`
 
-`T` | `undefined`
+The previous computed value
 
 #### Returns
 

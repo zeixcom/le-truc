@@ -2,7 +2,7 @@
 
 > **pass**\<`P`, `Q`\>(`props`): [`Effect`](../type-aliases/Effect.md)\<`P`, [`Component`](../type-aliases/Component.md)\<`Q`\>\>
 
-Defined in: [src/effects/pass.ts:60](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/effects/pass.ts#L60)
+Defined in: [src/effects/pass.ts:60](https://github.com/zeixcom/le-truc/blob/8e260db69c2a07fca5b7a6e4feb1c02c605094f0/src/effects/pass.ts#L60)
 
 Effect for passing reactive values to a descendant Le Truc component.
 
@@ -30,9 +30,9 @@ regardless of the child's internal framework.
 
 ##### props
 
-Reactive values to pass
+[`PassedProps`](../type-aliases/PassedProps.md)\<`P`, `Q`\> \| ((`target`) => [`PassedProps`](../type-aliases/PassedProps.md)\<`P`, `Q`\>)
 
-[`PassedProps`](../type-aliases/PassedProps.md)\<`P`, `Q`\> | (`target`) => [`PassedProps`](../type-aliases/PassedProps.md)\<`P`, `Q`\>
+Reactive values to pass
 
 #### Returns
 

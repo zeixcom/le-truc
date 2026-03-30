@@ -257,12 +257,12 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 }
 
 export {
-	defineComponent,
 	type Component,
 	type ComponentProp,
 	type ComponentProps,
 	type ComponentSetup,
 	type ComponentUI,
+	defineComponent,
 	type Initializers,
 	type MaybeSignal,
 	type ReservedWords,

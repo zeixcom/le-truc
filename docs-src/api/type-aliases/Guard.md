@@ -1,4 +1,4 @@
-### Type Alias: Guard()\<T\>
+### Type Alias: Guard\<T\>
 
 > **Guard**\<`T`\> = (`value`) => `value is T`
 

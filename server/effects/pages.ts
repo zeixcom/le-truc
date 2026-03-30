@@ -298,7 +298,7 @@ const applyTemplate = async (
 	}
 }
 
-export const pagesEffect = () => {
+export const pagesEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
 	const ready = new Promise<void>(res => {
 		resolve = res
@@ -306,6 +306,7 @@ export const pagesEffect = () => {
 	const cleanup = createEffect(() => {
 		match([docsMarkdown.fullyProcessed], {
 			ok: async ([processedFiles]) => {
+				const firstRun = !!resolve
 				try {
 					console.log('📚 Generating HTML pages from processed markdown...')
 
@@ -396,6 +397,7 @@ export const pagesEffect = () => {
 					console.log(
 						`📚 Successfully generated ${processedFiles.size} HTML pages`,
 					)
+					if (!firstRun) onRebuild?.()
 				} catch (error) {
 					console.error('Failed to generate HTML pages:', error)
 				} finally {

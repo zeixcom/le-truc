@@ -163,12 +163,13 @@ export {
 }
 export type { ApiCategory }
 
-export const apiEffect = () => {
+export const apiEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
 	const ready = new Promise<void>(res => { resolve = res })
 	const cleanup = createEffect(() => {
 		match([libraryScripts.sources], {
 			ok: async ([sources]) => {
+				const firstRun = !!resolve
 				try {
 					// Skip TypeDoc run if library sources haven't changed
 					const currentHash = computeSourcesHash(sources)
@@ -217,6 +218,8 @@ export const apiEffect = () => {
 							'⚠️ README.md not found, skipping API index generation',
 						)
 					}
+
+					if (!firstRun) onRebuild?.()
 				} catch (error) {
 					console.error('Failed to rebuild API documentation:', error)
 				} finally {

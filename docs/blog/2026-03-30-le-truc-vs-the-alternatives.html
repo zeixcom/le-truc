@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Le Truc vs the Alternatives – Le Truc Blog</title>
+		<meta name="description" content="SPA frameworks, Hypermedia frameworks, and Web Component libraries each solve a real problem. Here is what separates them — and where Le Truc fits in." />
+		<meta name="author" content="Esther Brunner" />
+		<meta name="article:published_time" content="2026-03-30" />
+		<meta name="article:modified_time" content="" />
+		<link
+			rel="preload"
+			href="../assets/main.css?v=6569630008a392c4"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="../assets/main.js?v=0a603ac7062946bb"
+		/>
+		<link
+			rel="stylesheet"
+			href="../assets/main.css?v=6569630008a392c4"
+		/>
+		<script
+			type="module"
+			src="../assets/main.js?v=0a603ac7062946bb"
+		></script>
+	</head>
+	<body class="blog">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">
+					<a href="../blog.html">Le Truc Blog</a>
+					<small>1.0.1</small>
+				</h1>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<main id="main" class="content-grid">
+				<section-hero>
+					<h1>⚖️ Le Truc vs the Alternatives</h1>
+					<div class="hero-layout">
+						<div class="lead">
+							<card-blogmeta>
+								<span>
+									<img src="../assets/img/avatar/esther-brunner.jpg" alt="Avatar of Esther Brunner" />
+									<span>Esther Brunner</span>
+								</span>
+								<time datetime="2026-03-30">
+									2026-03-30
+								</time>
+								<span>9 min read</span>
+							</card-blogmeta>
+							<p>SPA frameworks, Hypermedia frameworks, and Web Component libraries each solve a real problem. Here is what separates them — and where Le Truc fits in.</p>
+						</div>
+					</div>
+				</section-hero>
+				<section class="" id="undefined"><p>The reason, we think, is that most comparisons start from the wrong place. They compare features, bundle sizes, benchmark numbers — the measurable things. What they rarely compare is <em>what problem each tool is designed to solve</em> and what that problem costs you if it isn't actually yours.</p><p>This post is our attempt to do that more honestly. We will cover the main families of tools, describe what they do well, and explain where Le Truc sits in that landscape. The goal is not to position Le Truc as universally superior — it is not, and a tool that claims to be right for everything is usually wrong about most things. The goal is to help you figure out whether it is right for you.</p><h2 id="spa-frameworks-when-the-client-owns-the-ui"><a name="spa-frameworks-when-the-client-owns-the-ui" class="anchor" href="#spa-frameworks-when-the-client-owns-the-ui"><span class="title">SPA frameworks: when the client owns the UI</span><span class="permalink">#</span></a></h2><p>React, Vue, Angular, and Svelte share a core architectural decision: the framework takes ownership of rendering. You describe what the UI should look like as a function of state, and the framework figures out how to make the DOM match. Virtual DOM diffing, compiled templates, fine-grained reactivity — these are different implementation strategies toward the same goal.</p><p>This model is a genuine solution to a genuine problem. When the UI is highly dynamic — dashboards that update in real time, drag-and-drop interfaces, complex forms with live validation across dozens of interdependent fields — managing imperative DOM mutations by hand becomes intractable. Declarative rendering gives you a mental model that scales. You stop thinking about &quot;change this element&quot; and start thinking about &quot;this is what the UI looks like in this state.&quot; For the right kind of application, this is an enormous improvement.</p><p>But ownership has a price. Because the framework renders your HTML, the browser cannot show meaningful content until the JavaScript bundle has downloaded, parsed, and executed — at least on the initial load. The web platform's own pipeline, which turns HTML bytes into visible pixels, is bypassed. Server-side rendering (SSR) was the answer, and it works. React Server Components, Vue's Nuxt, SvelteKit all make SSR a first-class concern. But SSR in an SPA framework is not a return to simplicity. It is an additional layer — a server render to produce initial HTML, followed by client-side hydration that re-takes control. The framework needs to be able to re-render from scratch, so it must receive the same data as JSON (or equivalent) that it used to render the HTML, and it must reconcile the server-rendered markup with its own internal state tree. This is a real engineering cost. It compounds when your team operates multiple backends: the SSR runtime is a JavaScript layer running on the server, and integrating it with a PHP, Java, or Python backend means maintaining a translation point between two separate stacks.</p><p>None of this makes SPA frameworks wrong. For a greenfield product where the team controls the full stack, the UI is application-heavy, and the investment in the framework pays off over a long product lifespan, they remain the most ergonomic option. The question is whether that profile matches your project.</p><h2 id="lit-and-the-component-library-story"><a name="lit-and-the-component-library-story" class="anchor" href="#lit-and-the-component-library-story"><span class="title">Lit and the component library story</span><span class="permalink">#</span></a></h2><p>Lit occupies a specific and valuable niche. It is designed for <em>building component libraries</em> — reusable, distributable, framework-agnostic UI primitives. A button, a dialog, a data table, packaged once and consumed by any frontend, regardless of whether that frontend uses React, Vue, or plain HTML.</p><p>Shadow DOM is central to this. It creates a hard boundary around a component's internals: styles do not leak in, internal structure is not reachable from outside. For a component library, that is a feature. It means the library author controls the styling contract explicitly, and consumers cannot accidentally break internals by targeting an element three levels deep.</p><p>But Shadow DOM is the same reason Lit is a difficult choice outside the component library context. Lit does support server-side rendering via <code>@lit-labs/ssr</code> and Declarative Shadow DOM — so the component shell can be rendered as HTML. But Lit still owns the template. A PHP or Python backend cannot output arbitrary HTML inside the shadow root and have Lit progressively enhance just the interactive parts. Content from a server-rendered template can only enter a Lit component via <code>&lt;slot&gt;</code> into the light DOM, which means the component renders its own structure client-side regardless. If you are building a PHP-rendered article page and want Lit to enhance a section of it, the friction accumulates quickly.</p><p>For building a cross-framework design system that will be distributed as a package: Lit is probably the right tool.</p><h2 id="htmx-and-datastar-the-hypermedia-comeback"><a name="htmx-and-datastar-the-hypermedia-comeback" class="anchor" href="#htmx-and-datastar-the-hypermedia-comeback"><span class="title">HTMX and Datastar: the Hypermedia comeback</span><span class="permalink">#</span></a></h2><p>HTMX and Datastar take a perspective that felt almost counterintuitive when they appeared: instead of moving rendering to the client, keep it on the server and extend HTML with the ability to trigger network requests and update page fragments in response. Click a button, and instead of JavaScript manipulating the DOM, the browser makes a request and the server returns a new HTML fragment that replaces part of the page.</p><p>This is a compelling model for a wide class of applications. Any interface where state is primarily server-side — admin dashboards, CMS interfaces, data tables with server-side filtering and sorting — maps naturally to this approach. The backend already knows the state; it just needs to render the updated HTML. The client stays thin. The JavaScript footprint is minimal. There is no client state management to reason about.</p><p>HTMX, in particular, has shown that the pattern generalizes further than expected. A surprising amount of web UI that appears to need client-side rendering actually does not — it just needs efficient partial page updates. And compared to full SPA renders, partial page replacement triggered by a network request can be very fast if the server is fast.</p><p>The friction appears when interaction needs to be instant and the state is already on the client. Datastar addresses this with a built-in signals system; HTMX can be extended to manage local state. Both can work — but doing so feels like stepping outside the primary mental model. The core pattern is server-rendered fragments triggered by user actions. Adding client-side state without a dedicated reactive system means managing that state ad hoc, without the same structural support the rest of the tool provides.</p><p>The question is not whether these tools can handle client state — they can — but whether client state is incidental to your application or central to it. When it is incidental, hypermedia is often the right fit. When it is central, the workarounds accumulate.</p><h2 id="the-gap"><a name="the-gap" class="anchor" href="#the-gap"><span class="title">The gap</span><span class="permalink">#</span></a></h2><p>We have now described two ends of a spectrum. At one end: SPA frameworks, where the client takes full ownership of rendering and state. At the other end: Hypermedia frameworks, where the server takes full ownership and the client merely requests new fragments.</p><p>In the middle is a large class of applications that are not cleanly served by either. They are server-rendered — the initial HTML comes from PHP, Python, Ruby, Java, whatever backend the team already uses. They are progressively enhanced — the page is meaningful before JavaScript loads. And they have genuine client-side state — values that change in response to user interaction, where computing the new value does not require a server and waiting for one introduces unnecessary friction.</p><p>This is where Le Truc lives — though not only here.</p><p>The default mental model is: the server renders everything. JavaScript enhances only what it needs to. When the user interacts, Le Truc updates only the DOM nodes that depend on the changed value — and it knows exactly which ones because the reactive dependency graph was set up when the component connected. No virtual DOM, no diffing, no network request unless the interaction actually requires one. State is explicit, effects are declarative, changes propagate without imperative wiring. The double-data problem — needing both HTML and JSON to represent the same content — does not arise. The HTML is the source of truth.</p><p>But Le Truc does not enforce that default. Client-side rendering, Shadow DOM, and HTML partial loading are all supported — the same patterns that define SPA frameworks, Lit, and HTMX respectively. What Le Truc changes is when you reach for them: each is a tool for cases where it is genuinely the right fit, not a starting assumption. The common case stays as simple as possible.</p><h2 id="when-to-choose-what"><a name="when-to-choose-what" class="anchor" href="#when-to-choose-what"><span class="title">When to choose what</span><span class="permalink">#</span></a></h2><p><strong>Choose a SPA framework</strong> if your team controls the full stack, the UI is primarily application-like (interactions dominate over content), and you expect the investment in the framework to pay off over years. React, Vue, and SvelteKit are all good at this. The SSR complexity is real, but if you are staying within the framework's server runtime, the tooling handles most of it.</p><p><strong>Choose Lit</strong> if you are building a component library that must work across multiple different frontend stacks. The Shadow DOM isolation is an asset. Lit SSR works well when the whole stack runs on Node — it is a harder fit when the server is PHP, Python, or another non-JS runtime.</p><p><strong>Choose HTMX or Datastar</strong> if you have a server-rendered application where most of the state lives on the server and interactions primarily result in server state changing. Admin interfaces, CMS workflows, and data-heavy pages with server-side pagination or filtering are natural fits. The network round trip is fine if the server has what it needs to respond quickly.</p><p><strong>Consider Le Truc</strong> if your project has all three of the following:</p><ul><li>The HTML is server-rendered, in whatever backend language your team already uses.</li><li>You want meaningful content visible before JavaScript loads — either for performance, SEO, resilience, or all three.</li><li>Some interactions need to be instant, responding to local client state without a network round trip.</li></ul><p>If those describe your context, Le Truc's fine-grained DOM updates driven by a signal graph remove a significant amount of accidental complexity. The goal is to keep the common case simple while remaining capable enough for cases that require more.</p></section>
+			</main>
+			<!-- <div class="blog-nav">
+				<div class="content-grid">
+					<div class="content">
+						<nav class="blog-nav-links" aria-label="Blog navigation">
+							<a href="../blog/2026-03-09-introducing-le-truc.html" class="blog-nav-link prev">
+								<span class="blog-nav-label">← Previous</span>
+								<span class="blog-nav-title">Introducing Le Truc</span>
+							</a>
+							<a href="../blog.html" class="blog-nav-link">
+								📋 All Posts
+							</a>
+							<a href="" class="blog-nav-link next">
+								<span class="blog-nav-label">Next →</span>
+								<span class="blog-nav-title"></span>
+							</a>
+						</nav>
+					</div>
+				</div>
+			</div> -->
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2026 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>
