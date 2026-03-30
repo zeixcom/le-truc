@@ -97,4 +97,4 @@ declare class InvalidCustomElementError extends TypeError {
      */
     constructor(target: HTMLElement, where: string);
 }
-export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPropertyNameError, InvalidEffectsError, InvalidReactivesError, InvalidUIKeyError, MissingElementError, };
+export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidEffectsError, InvalidPropertyNameError, InvalidReactivesError, InvalidUIKeyError, MissingElementError, };

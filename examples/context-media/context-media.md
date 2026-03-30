@@ -1,6 +1,6 @@
 ### Context Media
 
-A context provider that exposes live media query state to descendant components via the W3C Context Protocol. Demonstrates using initializer functions that return a `createState()` signal (rather than a static value or parser) to wire `MediaQueryList` change events into reactive properties, reading `host` attributes inside a property initializer to configure breakpoints before any effects run, and using `provideContexts()` as the sole effect to broadcast all four properties (`MEDIA_MOTION`, `MEDIA_THEME`, `MEDIA_VIEWPORT`, `MEDIA_ORIENTATION`) as typed `Context` tokens that consumers can request with `requestContext()`.
+A context provider that exposes live media query state to descendant components via the W3C Context Protocol. On its own it produces no visible output — it must wrap one or more consumer components (such as `card-mediaqueries`) that call `requestContext()` to receive the provided values. Demonstrates using initializer functions that return a `createState()` signal (rather than a static value or parser) to wire `MediaQueryList` change events into reactive properties, reading `host` attributes inside a property initializer to configure breakpoints before any effects run, and using `provideContexts()` as the sole effect to broadcast all four properties (`MEDIA_MOTION`, `MEDIA_THEME`, `MEDIA_VIEWPORT`, `MEDIA_ORIENTATION`) as typed `Context` tokens that consumers can request with `requestContext()`.
 
 #### Preview
 

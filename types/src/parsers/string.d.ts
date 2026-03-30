@@ -19,4 +19,4 @@ declare const asString: <U extends UI>(fallback?: Fallback<string, U>) => Parser
  * @returns {Parser<string, UI>} Parser that returns a valid enum value
  */
 declare const asEnum: (valid: [string, ...string[]]) => Parser<string, UI>;
-export { asString, asEnum };
+export { asEnum, asString };
