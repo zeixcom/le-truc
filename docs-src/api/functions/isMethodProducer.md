@@ -2,7 +2,7 @@
 
 > **isMethodProducer**(`value`): `value is MethodProducer`
 
-Defined in: [src/parsers.ts:74](https://github.com/zeixcom/le-truc/blob/96be5a879e7c58444a2b3e7d9c595138795a386d/src/parsers.ts#L74)
+Defined in: [src/parsers.ts:74](https://github.com/zeixcom/le-truc/blob/6220ce654aeac0749cbca7a138414561096a0c1d/src/parsers.ts#L74)
 
 Check if a value is a MethodProducer (branded side-effect initializer)
 

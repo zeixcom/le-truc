@@ -18,7 +18,7 @@ import {
 	serviceWorker,
 } from '../templates/service-worker'
 
-export const serviceWorkerEffect = () => {
+export const serviceWorkerEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
 	const ready = new Promise<void>(res => { resolve = res })
 	const cleanup = createEffect(() => {
@@ -32,6 +32,7 @@ export const serviceWorkerEffect = () => {
 			],
 			{
 				ok: async () => {
+					const firstRun = !!resolve
 					try {
 						console.log('🔧 Generating service worker...')
 
@@ -53,6 +54,7 @@ export const serviceWorkerEffect = () => {
 							serviceWorker(config),
 						)
 						console.log('🔧 Service worker generated successfully')
+						if (!firstRun) onRebuild?.()
 					} catch (error) {
 						console.error('Failed to generate service worker:', error)
 					} finally {

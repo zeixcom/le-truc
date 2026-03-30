@@ -2,12 +2,13 @@ import { createEffect, match } from '@zeix/cause-effect'
 import { ASSETS_DIR, CSS_FILE } from '../config'
 import { componentStyles, docsStyles } from '../file-signals'
 
-export const cssEffect = () => {
+export const cssEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
 	const ready = new Promise<void>(res => { resolve = res })
 	const cleanup = createEffect(() => {
 		match([componentStyles.sources, docsStyles.sources], {
 			ok: async () => {
+				const firstRun = !!resolve
 				try {
 					console.log('🎨 Rebuilding CSS assets...')
 					const proc = Bun.spawn(
@@ -24,6 +25,7 @@ export const cssEffect = () => {
 						console.error(`CSS rebuild failed with exit code ${exitCode}`)
 					} else {
 						console.log('CSS successfully rebuilt')
+						if (!firstRun) onRebuild?.()
 					}
 				} catch (error) {
 					console.error('CSS failed to rebuild:', String(error))

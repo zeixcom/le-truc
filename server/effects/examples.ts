@@ -57,12 +57,13 @@ export { processExample }
 
 /* === Exported Effect === */
 
-export const examplesEffect = () => {
+export const examplesEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
 	const ready = new Promise<void>(res => { resolve = res })
 	const cleanup = createEffect(() => {
 		match([componentMarkdown.sources, componentMarkup.sources], {
 			ok: async ([mdFiles, htmlFiles]) => {
+				const firstRun = !!resolve
 				try {
 					console.log('🔄 Rebuilding example documentation...')
 
@@ -122,6 +123,7 @@ export const examplesEffect = () => {
 					}
 
 					console.log('📝 Examples processing completed')
+					if (!firstRun) onRebuild?.()
 				} catch (error) {
 					console.error('Failed to process examples:', error)
 				} finally {

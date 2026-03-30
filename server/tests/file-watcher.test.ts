@@ -11,15 +11,19 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { createEffect } from '@zeix/cause-effect'
-import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createEffect } from '@zeix/cause-effect'
 import { watchFiles } from '../file-watcher'
 
 /* === Helpers === */
 
-async function writeTempFile(dir: string, name: string, content = 'content'): Promise<string> {
+async function writeTempFile(
+	dir: string,
+	name: string,
+	content = 'content',
+): Promise<string> {
 	const path = join(dir, name)
 	await writeFile(path, content)
 	return path
@@ -132,7 +136,7 @@ describe('watchFiles — debounced batch updates', () => {
 		expect(observed).toBe(N)
 	})
 
-	test.skip('list reflects updated content after a file changes', async () => {
+	test('list reflects updated content after a file changes', async () => {
 		// Pre-populate so we exercise the "update existing" branch
 		await writeTempFile(dir, 'doc.md', 'v1')
 		const list = await watchFiles(dir, '*.md')

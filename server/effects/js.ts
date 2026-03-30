@@ -2,7 +2,7 @@ import { createEffect, match } from '@zeix/cause-effect'
 import { ASSETS_DIR, TS_FILE } from '../config'
 import { componentScripts, docsScripts, libraryScripts } from '../file-signals'
 
-export const jsEffect = () => {
+export const jsEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
 	const ready = new Promise<void>(res => { resolve = res })
 	const cleanup = createEffect(() => {
@@ -10,6 +10,7 @@ export const jsEffect = () => {
 			[docsScripts.sources, libraryScripts.sources, componentScripts.sources],
 			{
 				ok: async () => {
+					const firstRun = !!resolve
 					try {
 						console.log('🔧 Rebuilding JS assets...')
 						const proc = Bun.spawn(
@@ -27,6 +28,7 @@ export const jsEffect = () => {
 							console.error(`JS rebuild failed with exit code ${exitCode}`)
 						} else {
 							console.log('JS successfully rebuilt')
+							if (!firstRun) onRebuild?.()
 						}
 					} catch (error) {
 						console.error('JS failed to rebuild:', String(error))
