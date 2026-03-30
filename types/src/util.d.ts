@@ -62,4 +62,4 @@ declare const log: <T>(value: T, msg: string, level?: LogLevel) => T;
  * @returns {string | null} - Error message or null if valid
  */
 declare const validatePropertyName: (prop: string) => string | null;
-export { type LogLevel, hasMethod, isElement, isCustomElement, isNotYetDefinedComponent, log, elementName, typeString, validatePropertyName, DEV_MODE, LOG_DEBUG, LOG_INFO, LOG_WARN, LOG_ERROR, };
+export { DEV_MODE, elementName, hasMethod, isCustomElement, isElement, isNotYetDefinedComponent, LOG_DEBUG, LOG_ERROR, LOG_INFO, LOG_WARN, type LogLevel, log, typeString, validatePropertyName, };

@@ -92,4 +92,4 @@ declare const asMethod: <T extends (...args: any[]) => void>(fn: T) => T & {
  * @returns {Reader<T, U>} A typed reader that always returns `T`
  */
 declare const read: <T extends {}, U extends UI>(reader: LooseReader<T, U>, fallback: ParserOrFallback<T, U>) => Reader<T, U>;
-export { type Parser, type LooseReader, type Reader, type Fallback, type ParserOrFallback, type MethodProducer, PARSER_BRAND, METHOD_BRAND, isParser, isMethodProducer, isReader, getFallback, asParser, asMethod, read, };
+export { asMethod, asParser, type Fallback, getFallback, isMethodProducer, isParser, isReader, type LooseReader, METHOD_BRAND, type MethodProducer, PARSER_BRAND, type Parser, type ParserOrFallback, type Reader, read, };

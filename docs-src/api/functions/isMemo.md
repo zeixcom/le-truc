@@ -2,7 +2,7 @@
 
 > **isMemo**\<`T`\>(`value`): `value is Memo<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/memo.d.ts:62
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/memo.d.ts:61
 
 Checks if a value is a Memo signal.
 

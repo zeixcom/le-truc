@@ -13,18 +13,20 @@ export const getMockOutputPath = (filePath: string): string => {
 
 /* === Exported Effect === */
 
-export const mocksEffect = () => {
+export const mocksEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
 	const ready = new Promise<void>(res => { resolve = res })
 	const cleanup = createEffect(() => {
 		match([componentMocks.sources], {
 			ok: async ([mockFiles]) => {
+				const firstRun = !!resolve
 				try {
 					console.log('🔄 Copying mock files...')
 					for (const file of mockFiles) {
 						await writeFileSafe(getMockOutputPath(file.path), file.content)
 					}
 					console.log(`✅ Copied ${mockFiles.length} mock file(s) to docs/test/`)
+					if (!firstRun) onRebuild?.()
 				} finally {
 					resolve?.()
 					resolve = undefined

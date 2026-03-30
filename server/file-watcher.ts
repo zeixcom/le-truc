@@ -1,9 +1,9 @@
+import { existsSync, watch } from 'node:fs'
 import { batch, createList, type List } from '@zeix/cause-effect'
 import { Glob } from 'bun'
+import { join } from 'path'
 import type { FileInfo } from './file-signals'
 import { createFileInfo, getFilePath, isPlaywrightRunning } from './io'
-import { existsSync, watch } from 'node:fs'
-import { join } from 'path'
 
 /* === Exported Functions === */
 
@@ -70,7 +70,9 @@ export const watchFiles = async (
 				} else {
 					const existing = fileList.byKey(filePath)
 					if (existing) {
-						if (existing.get().hash !== fileInfo.hash) existing.set(fileInfo)
+						if (existing.get().hash !== fileInfo.hash) {
+							fileList.replace(filePath, fileInfo)
+						}
 					} else {
 						fileList.add(fileInfo)
 					}

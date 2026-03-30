@@ -2,7 +2,7 @@
 
 > **isSignal**\<`T`\>(`value`): `value is Signal<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:56
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:62
 
 Check whether a value is a Signal
 

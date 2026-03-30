@@ -2,7 +2,7 @@
 
 > **provideContexts**\<`P`\>(`contexts`): (`host`) => [`Cleanup`](../type-aliases/Cleanup.md)
 
-Defined in: [src/context.ts:111](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/context.ts#L111)
+Defined in: [src/context.ts:111](https://github.com/zeixcom/le-truc/blob/3386ff28c36c911ef6de374d52dbcc7da589393b/src/context.ts#L111)
 
 Make reactive properties of this component available to descendant consumers via the context protocol.
 
@@ -29,17 +29,7 @@ Reactive property names to expose as context
 
 Effect that installs the context-request listener and returns a cleanup function
 
-> (`host`): [`Cleanup`](../type-aliases/Cleanup.md)
-
-##### Parameters
-
-###### host
-
-[`Component`](../type-aliases/Component.md)\<`P`\>
-
-##### Returns
-
-[`Cleanup`](../type-aliases/Cleanup.md)
+(`host`) => [`Cleanup`](../type-aliases/Cleanup.md)
 
 #### Since
 

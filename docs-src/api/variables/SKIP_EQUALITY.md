@@ -1,4 +1,4 @@
-### Variable: SKIP\_EQUALITY()
+### Variable: SKIP\_EQUALITY
 
 > `const` **SKIP\_EQUALITY**: (`_a?`, `_b?`) => `boolean`
 

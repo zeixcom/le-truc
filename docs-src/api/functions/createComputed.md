@@ -4,7 +4,7 @@
 
 > **createComputed**\<`T`\>(`callback`, `options?`): [`Task`](../type-aliases/Task.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:19
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:25
 
 Create a derived signal from existing signals
 
@@ -40,7 +40,7 @@ Optional configuration
 
 > **createComputed**\<`T`\>(`callback`, `options?`): [`Memo`](../type-aliases/Memo.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:20
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:26
 
 Create a derived signal from existing signals
 

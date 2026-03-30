@@ -1,8 +1,8 @@
-### Type Alias: ContextCallback()\<V\>
+### Type Alias: ContextCallback\<V\>
 
 > **ContextCallback**\<`V`\> = (`value`, `unsubscribe?`) => `void`
 
-Defined in: [src/context.ts:41](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/context.ts#L41)
+Defined in: [src/context.ts:41](https://github.com/zeixcom/le-truc/blob/3386ff28c36c911ef6de374d52dbcc7da589393b/src/context.ts#L41)
 
 A callback which is provided by a context requester and is called with the value satisfying the request.
 This callback can be called multiple times by context providers as the requested value is changed.

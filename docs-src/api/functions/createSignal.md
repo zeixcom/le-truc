@@ -4,7 +4,7 @@
 
 > **createSignal**\<`T`\>(`value`): [`Signal`](../type-aliases/Signal.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:26
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:32
 
 Convert a value to a Signal.
 
@@ -32,7 +32,7 @@ Convert a value to a Signal.
 
 > **createSignal**\<`T`\>(`value`): [`List`](../type-aliases/List.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:27
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:33
 
 Convert a value to a Signal.
 
@@ -60,7 +60,7 @@ readonly `T`[]
 
 > **createSignal**\<`T`\>(`value`): [`Store`](../type-aliases/Store.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:28
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:34
 
 Convert a value to a Signal.
 
@@ -88,7 +88,7 @@ Convert a value to a Signal.
 
 > **createSignal**\<`T`\>(`value`): [`Task`](../type-aliases/Task.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:29
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:35
 
 Convert a value to a Signal.
 
@@ -116,7 +116,7 @@ Convert a value to a Signal.
 
 > **createSignal**\<`T`\>(`value`): [`Memo`](../type-aliases/Memo.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:30
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:36
 
 Convert a value to a Signal.
 
@@ -144,7 +144,7 @@ Convert a value to a Signal.
 
 > **createSignal**\<`T`\>(`value`): [`State`](../type-aliases/State.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:31
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:37
 
 Convert a value to a Signal.
 

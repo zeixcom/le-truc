@@ -56,4 +56,4 @@ declare function createElementsMemo<E extends Element>(parent: ParentNode, selec
  * @returns {[ElementQueries, (callback: () => void) => void]} Query helpers and a dependency resolver
  */
 declare const getHelpers: (host: HTMLElement) => [ElementQueries, (run: () => void) => void];
-export { type AllElements, type ElementFromKey, type ElementFromSelector, type ElementsFromSelectorArray, type ElementFromSingleSelector, type ElementQueries, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, type FirstElement, type KnownTag, createElementsMemo, getHelpers, type SplitByComma, type TrimWhitespace, type UI, };
+export { type AllElements, createElementsMemo, type ElementFromKey, type ElementFromSelector, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, type FirstElement, getHelpers, type KnownTag, type SplitByComma, type TrimWhitespace, type UI, };

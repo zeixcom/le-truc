@@ -86,12 +86,13 @@ const processApiFile = async (file: FileInfo): Promise<void> => {
 // Exported for testing
 export { stripBreadcrumbs }
 
-export const apiPagesEffect = () => {
+export const apiPagesEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
 	const ready = new Promise<void>(res => { resolve = res })
 	const cleanup = createEffect(() => {
 		match([apiMarkdown.sources], {
 			ok: async ([apiFiles]) => {
+				const firstRun = !!resolve
 				try {
 					console.log('📖 Generating API page fragments...')
 
@@ -107,6 +108,7 @@ export const apiPagesEffect = () => {
 
 					await Promise.all(processPromises)
 					console.log(`📖 Generated ${count} API page fragments`)
+					if (!firstRun) onRebuild?.()
 				} catch (error) {
 					console.error('Failed to generate API pages:', error)
 				} finally {

@@ -2,7 +2,7 @@
 
 > **isCollection**\<`T`\>(`value`): `value is Collection<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:60
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:98
 
 Checks if a value is a Collection signal.
 

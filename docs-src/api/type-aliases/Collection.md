@@ -2,7 +2,10 @@
 
 > **Collection**\<`T`\> = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:5
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:19
+
+A read-only reactive keyed collection with per-item reactivity.
+Created by `createCollection` (externally driven) or via `.deriveCollection()` on a `List` or `Collection`.
 
 #### Type Parameters
 
@@ -10,13 +13,15 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:5
 
 `T` *extends* `object`
 
+The type of items in the collection
+
 #### Properties
 
 ##### \[isConcatSpreadable\]
 
 > `readonly` **\[isConcatSpreadable\]**: `true`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:7
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:21
 
 ***
 
@@ -24,7 +29,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:7
 
 > `readonly` **\[toStringTag\]**: `"Collection"`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:6
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:20
 
 ***
 
@@ -32,7 +37,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:6
 
 > `readonly` **length**: `number`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:17
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:31
 
 #### Methods
 
@@ -40,7 +45,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:17
 
 > **\[iterator\]**(): `IterableIterator`\<[`Signal`](Signal.md)\<`T`\>\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:8
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:22
 
 ###### Returns
 
@@ -52,7 +57,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:8
 
 > **at**(`index`): [`Signal`](Signal.md)\<`T`\> \| `undefined`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:11
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:25
 
 ###### Parameters
 
@@ -70,7 +75,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:11
 
 > **byKey**(`key`): [`Signal`](Signal.md)\<`T`\> \| `undefined`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:12
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:26
 
 ###### Parameters
 
@@ -90,7 +95,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:12
 
 > **deriveCollection**\<`R`\>(`callback`): `Collection`\<`R`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:15
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:29
 
 ##### Type Parameters
 
@@ -112,7 +117,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:15
 
 > **deriveCollection**\<`R`\>(`callback`): `Collection`\<`R`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:16
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:30
 
 ##### Type Parameters
 
@@ -136,7 +141,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:16
 
 > **get**(): `T`[]
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:10
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:24
 
 ###### Returns
 
@@ -148,7 +153,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:10
 
 > **indexOfKey**(`key`): `number`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:14
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:28
 
 ###### Parameters
 
@@ -166,7 +171,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:14
 
 > **keyAt**(`index`): `string` \| `undefined`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:13
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:27
 
 ###### Parameters
 
@@ -184,7 +189,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:13
 
 > **keys**(): `IterableIterator`\<`string`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:9
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:23
 
 ###### Returns
 

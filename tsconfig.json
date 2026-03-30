@@ -13,6 +13,12 @@
 		"allowImportingTsExtensions": true,
 		"verbatimModuleSyntax": true,
 		"erasableSyntaxOnly": true,
+		"isolatedModules": true,
+		"resolveJsonModule": true,
+		"types": ["bun-types"],
+
+		// No emit — use tsconfig.build.json for declarations
+		"noEmit": true,
 
 		// Best practices
 		"strict": true,
@@ -22,14 +28,16 @@
 		"useUnknownInCatchVariables": true,
 		"noUncheckedSideEffectImports": true,
 		"noFallthroughCasesInSwitch": true,
+		"forceConsistentCasingInFileNames": true,
 
 		// Some stricter flags (disabled by default)
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
 		"noPropertyAccessFromIndexSignature": false,
 
-		// No emit — use tsconfig.build.json for declarations
-		"noEmit": true,
+		/* Performance */
+		"incremental": true,
+		"tsBuildInfoFile": "./.tsbuildinfo",
 	},
 	"include": [
 		"./index.ts",

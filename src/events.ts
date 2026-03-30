@@ -137,7 +137,7 @@ const createEventsSensor =
 
 export {
 	createEventsSensor,
-	type SensorEventHandler,
 	type EventHandlers,
 	type EventType,
+	type SensorEventHandler,
 }

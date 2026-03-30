@@ -2,7 +2,7 @@
 
 > **isMutableSignal**(`value`): `value is MutableSignal<{}>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:64
+Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:70
 
 Check whether a value is a State, Store, or List
 

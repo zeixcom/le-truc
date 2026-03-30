@@ -1,6 +1,6 @@
 ### Class: ContextRequestEvent\<T\>
 
-Defined in: [src/context.ts:78](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/context.ts#L78)
+Defined in: [src/context.ts:78](https://github.com/zeixcom/le-truc/blob/3386ff28c36c911ef6de374d52dbcc7da589393b/src/context.ts#L78)
 
 Class for context-request events
 
@@ -31,7 +31,7 @@ function to the callback which requesters can invoke to indicate they no longer 
 
 > **new ContextRequestEvent**\<`T`\>(`context`, `callback`, `subscribe?`): `ContextRequestEvent`\<`T`\>
 
-Defined in: [src/context.ts:83](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/context.ts#L83)
+Defined in: [src/context.ts:83](https://github.com/zeixcom/le-truc/blob/3386ff28c36c911ef6de374d52dbcc7da589393b/src/context.ts#L83)
 
 ###### Parameters
 
@@ -61,7 +61,7 @@ Defined in: [src/context.ts:83](https://github.com/zeixcom/le-truc/blob/84654ba2
 
 > `readonly` **AT\_TARGET**: `2`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11462
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14273
 
 ###### Inherited from
 
@@ -73,7 +73,7 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11462
 
 > `readonly` **bubbles**: `boolean`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11353
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14164
 
 The **`bubbles`** read-only property of the Event interface indicates whether the event bubbles up through the DOM tree or not.
 
@@ -89,7 +89,7 @@ The **`bubbles`** read-only property of the Event interface indicates whether th
 
 > `readonly` **BUBBLING\_PHASE**: `3`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11463
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14274
 
 ###### Inherited from
 
@@ -101,7 +101,7 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11463
 
 > `readonly` **callback**: [`ContextCallback`](../type-aliases/ContextCallback.md)\<[`ContextType`](../type-aliases/ContextType.md)\<`T`\>\>
 
-Defined in: [src/context.ts:80](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/context.ts#L80)
+Defined in: [src/context.ts:80](https://github.com/zeixcom/le-truc/blob/3386ff28c36c911ef6de374d52dbcc7da589393b/src/context.ts#L80)
 
 callback function for value getter and unsubscribe function
 
@@ -111,7 +111,7 @@ callback function for value getter and unsubscribe function
 
 > `readonly` **cancelable**: `boolean`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11366
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14177
 
 The **`cancelable`** read-only property of the Event interface indicates whether the event can be canceled, and therefore prevented as if the event never happened.
 
@@ -127,9 +127,9 @@ The **`cancelable`** read-only property of the Event interface indicates whether
 
 > **cancelBubble**: `boolean`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11360
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14171
 
-The **`cancelBubble`** property of the Event interface is deprecated.
+The **`cancelBubble`** property of the Event interface is deprecated. Use Event.stopPropagation() instead. Setting its value to true before returning from an event handler prevents propagation of the event. In later implementations, setting this to false does nothing. See Browser compatibility for details.
 
 ###### Deprecated
 
@@ -145,7 +145,7 @@ The **`cancelBubble`** property of the Event interface is deprecated.
 
 > `readonly` **CAPTURING\_PHASE**: `1`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11461
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14272
 
 ###### Inherited from
 
@@ -157,9 +157,9 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11461
 
 > `readonly` **composed**: `boolean`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11372
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14183
 
-The read-only **`composed`** property of the or not the event will propagate across the shadow DOM boundary into the standard DOM.
+The read-only **`composed`** property of the Event interface returns a boolean value which indicates whether or not the event will propagate across the shadow DOM boundary into the standard DOM.
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/composed)
 
@@ -173,7 +173,7 @@ The read-only **`composed`** property of the or not the event will propagate acr
 
 > `readonly` **context**: `T`
 
-Defined in: [src/context.ts:79](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/context.ts#L79)
+Defined in: [src/context.ts:79](https://github.com/zeixcom/le-truc/blob/3386ff28c36c911ef6de374d52dbcc7da589393b/src/context.ts#L79)
 
 context key
 
@@ -183,7 +183,7 @@ context key
 
 > `readonly` **currentTarget**: `EventTarget` \| `null`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11378
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14189
 
 The **`currentTarget`** read-only property of the Event interface identifies the element to which the event handler has been attached.
 
@@ -199,7 +199,7 @@ The **`currentTarget`** read-only property of the Event interface identifies the
 
 > `readonly` **defaultPrevented**: `boolean`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11384
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14195
 
 The **`defaultPrevented`** read-only property of the Event interface returns a boolean value indicating whether or not the call to Event.preventDefault() canceled the event.
 
@@ -215,9 +215,9 @@ The **`defaultPrevented`** read-only property of the Event interface returns a b
 
 > `readonly` **eventPhase**: `number`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11390
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14201
 
-The **`eventPhase`** read-only property of the being evaluated.
+The **`eventPhase`** read-only property of the Event interface indicates which phase of the event flow is currently being evaluated.
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/eventPhase)
 
@@ -231,9 +231,9 @@ The **`eventPhase`** read-only property of the being evaluated.
 
 > `readonly` **isTrusted**: `boolean`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11396
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14207
 
-The **`isTrusted`** read-only property of the when the event was generated by the user agent (including via user actions and programmatic methods such as HTMLElement.focus()), and `false` when the event was dispatched via The only exception is the `click` event, which initializes the `isTrusted` property to `false` in user agents.
+The **`isTrusted`** read-only property of the Event interface is a boolean value that is true when the event was generated by the user agent (including via user actions and programmatic methods such as HTMLElement.focus()), and false when the event was dispatched via EventTarget.dispatchEvent(). The only exception is the click event, which initializes the isTrusted property to false in user agents.
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/isTrusted)
 
@@ -247,7 +247,7 @@ The **`isTrusted`** read-only property of the when the event was generated by th
 
 > `readonly` **NONE**: `0`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11460
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14271
 
 ###### Inherited from
 
@@ -259,7 +259,7 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11460
 
 > **returnValue**: `boolean`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11403
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14214
 
 The Event property **`returnValue`** indicates whether the default action for this event has been prevented or not.
 
@@ -277,9 +277,9 @@ The Event property **`returnValue`** indicates whether the default action for th
 
 > `readonly` **srcElement**: `EventTarget` \| `null`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11410
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14221
 
-The deprecated **`Event.srcElement`** is an alias for the Event.target property.
+The deprecated **`Event.srcElement`** is an alias for the Event.target property. Use Event.target instead.
 
 ###### Deprecated
 
@@ -295,7 +295,7 @@ The deprecated **`Event.srcElement`** is an alias for the Event.target property.
 
 > `readonly` **subscribe**: `boolean`
 
-Defined in: [src/context.ts:81](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/context.ts#L81)
+Defined in: [src/context.ts:81](https://github.com/zeixcom/le-truc/blob/3386ff28c36c911ef6de374d52dbcc7da589393b/src/context.ts#L81)
 
 whether to subscribe to context changes
 
@@ -305,9 +305,9 @@ whether to subscribe to context changes
 
 > `readonly` **target**: `EventTarget` \| `null`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11416
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14227
 
-The read-only **`target`** property of the dispatched.
+The read-only **`target`** property of the Event interface is a reference to the object onto which the event was dispatched. It is different from Event.currentTarget when the event handler is called during the bubbling or capturing phase of the event.
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/target)
 
@@ -321,7 +321,7 @@ The read-only **`target`** property of the dispatched.
 
 > `readonly` **timeStamp**: `number`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11422
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14233
 
 The **`timeStamp`** read-only property of the Event interface returns the time (in milliseconds) at which the event was created.
 
@@ -337,9 +337,9 @@ The **`timeStamp`** read-only property of the Event interface returns the time (
 
 > `readonly` **type**: `string`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11428
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14239
 
-The **`type`** read-only property of the Event interface returns a string containing the event's type.
+The **`type`** read-only property of the Event interface returns a string containing the event's type. It is set when the event is constructed and is the name commonly used to refer to the specific event, such as click, load, or error.
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/type)
 
@@ -353,7 +353,7 @@ The **`type`** read-only property of the Event interface returns a string contai
 
 > `readonly` `static` **AT\_TARGET**: `2`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11471
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14282
 
 ###### Inherited from
 
@@ -365,7 +365,7 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11471
 
 > `readonly` `static` **BUBBLING\_PHASE**: `3`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11472
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14283
 
 ###### Inherited from
 
@@ -377,7 +377,7 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11472
 
 > `readonly` `static` **CAPTURING\_PHASE**: `1`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11470
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14281
 
 ###### Inherited from
 
@@ -389,7 +389,7 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11470
 
 > `readonly` `static` **NONE**: `0`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11469
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14280
 
 ###### Inherited from
 
@@ -403,9 +403,9 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11469
 
 > **composedPath**(): `EventTarget`[]
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11434
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14245
 
-The **`composedPath()`** method of the Event interface returns the event's path which is an array of the objects on which listeners will be invoked.
+The **`composedPath()`** method of the Event interface returns the event's path which is an array of the objects on which listeners will be invoked. This does not include nodes in shadow trees if the shadow root was created with its ShadowRoot.mode closed.
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/composedPath)
 
@@ -439,7 +439,7 @@ Returns an array containing the current EventTarget as the only entry or empty i
 
 > **initEvent**(`type`, `bubbles?`, `cancelable?`): `void`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11441
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14252
 
 The **`Event.initEvent()`** method is used to initialize the value of an event created using Document.createEvent().
 
@@ -477,9 +477,9 @@ The **`Event.initEvent()`** method is used to initialize the value of an event c
 
 > **preventDefault**(): `void`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11447
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14258
 
-The **`preventDefault()`** method of the Event interface tells the user agent that if the event does not get explicitly handled, its default action should not be taken as it normally would be.
+The **`preventDefault()`** method of the Event interface tells the user agent that the event is being explicitly handled, so its default action, such as page scrolling, link navigation, or pasting text, should not be taken.
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/preventDefault)
 
@@ -515,9 +515,9 @@ Sets the `defaultPrevented` property to `true` if `cancelable` is `true`.
 
 > **stopImmediatePropagation**(): `void`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11453
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14264
 
-The **`stopImmediatePropagation()`** method of the If several listeners are attached to the same element for the same event type, they are called in the order in which they were added.
+The **`stopImmediatePropagation()`** method of the Event interface prevents other listeners of the same event from being called.
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/stopImmediatePropagation)
 
@@ -553,9 +553,9 @@ Stops the invocation of event listeners after the current one completes.
 
 > **stopPropagation**(): `void`
 
-Defined in: node\_modules/typescript/lib/lib.dom.d.ts:11459
+Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14270
 
-The **`stopPropagation()`** method of the Event interface prevents further propagation of the current event in the capturing and bubbling phases.
+The **`stopPropagation()`** method of the Event interface prevents further propagation of the current event in the capturing and bubbling phases. It does not, however, prevent any default behaviors from occurring; for instance, clicks on links are still processed. If you want to stop those behaviors, see the preventDefault() method. It also does not prevent propagation to other event-handlers of the current element. If you want to stop those, see stopImmediatePropagation().
 
 [MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/stopPropagation)
 

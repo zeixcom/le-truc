@@ -2,7 +2,7 @@
 
 > **isEqual**\<`T`\>(`a`, `b`, `visited?`): `boolean`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:45
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:72
 
 Checks if two values are equal with cycle detection
 

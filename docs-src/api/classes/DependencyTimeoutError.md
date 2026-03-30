@@ -1,6 +1,6 @@
 ### Class: DependencyTimeoutError
 
-Defined in: [src/errors.ts:104](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/errors.ts#L104)
+Defined in: [src/errors.ts:104](https://github.com/zeixcom/le-truc/blob/3386ff28c36c911ef6de374d52dbcc7da589393b/src/errors.ts#L104)
 
 Error when a component's dependencies are not met within a specified timeout
 
@@ -18,7 +18,7 @@ Error when a component's dependencies are not met within a specified timeout
 
 > **new DependencyTimeoutError**(`host`, `missing`): `DependencyTimeoutError`
 
-Defined in: [src/errors.ts:109](https://github.com/zeixcom/le-truc/blob/84654ba213d2f93af20025001d10957b6f1486c9/src/errors.ts#L109)
+Defined in: [src/errors.ts:109](https://github.com/zeixcom/le-truc/blob/3386ff28c36c911ef6de374d52dbcc7da589393b/src/errors.ts#L109)
 
 ###### Parameters
 
@@ -46,9 +46,9 @@ List of missing dependencies
 
 ##### cause?
 
-> `optional` **cause**: `unknown`
+> `optional` **cause?**: `unknown`
 
-Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:26
+Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:24
 
 The cause of the error.
 
@@ -62,7 +62,7 @@ The cause of the error.
 
 > **message**: `string`
 
-Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
+Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1075
 
 ###### Inherited from
 
@@ -74,7 +74,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1077
 
 > **name**: `string`
 
-Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1076
+Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1074
 
 ###### Inherited from
 
@@ -84,9 +84,9 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1076
 
 ##### stack?
 
-> `optional` **stack**: `string`
+> `optional` **stack?**: `string`
 
-Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1078
+Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1076
 
 ###### Inherited from
 
@@ -220,7 +220,7 @@ Create .stack property on a target object
 
 > `static` **isError**(`error`): `error is Error`
 
-Defined in: node\_modules/typescript/lib/lib.esnext.error.d.ts:23
+Defined in: node\_modules/typescript/lib/lib.esnext.error.d.ts:21
 
 Indicates whether the argument provided is a built-in Error instance or not.
 

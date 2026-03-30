@@ -36,17 +36,29 @@ export async function build(
 		// API docs should be generated first, then CSS/JS, then pages processing
 		console.log('🚀 Initializing effects...')
 
-		const api = apiEffect()
-		const apiPages = apiPagesEffect()
-		const css = cssEffect()
-		const js = jsEffect()
-		const sw = serviceWorkerEffect()
-		const examples = examplesEffect()
-		const mocks = mocksEffect()
-		const sources = sourcesEffect()
-		const pages = pagesEffect()
-		const menuEff = menuEffect()
-		const sitemap = sitemapEffect()
+		// Debounced reload: coalesces rapid back-to-back rebuilds into one HMR message
+		let reloadTimer: ReturnType<typeof setTimeout> | null = null
+		const scheduleReload = watch && broadcast
+			? () => {
+					if (reloadTimer) clearTimeout(reloadTimer)
+					reloadTimer = setTimeout(() => {
+						reloadTimer = null
+						broadcast('reload')
+					}, 50)
+				}
+			: undefined
+
+		const api = apiEffect(scheduleReload)
+		const apiPages = apiPagesEffect(scheduleReload)
+		const css = cssEffect(scheduleReload)
+		const js = jsEffect(scheduleReload)
+		const sw = serviceWorkerEffect(scheduleReload)
+		const examples = examplesEffect(scheduleReload)
+		const mocks = mocksEffect(scheduleReload)
+		const sources = sourcesEffect(scheduleReload)
+		const pages = pagesEffect(scheduleReload)
+		const menuEff = menuEffect(scheduleReload)
+		const sitemap = sitemapEffect(scheduleReload)
 
 		// Wait for all effects to complete their first run
 		await Promise.all([

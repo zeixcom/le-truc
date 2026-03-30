@@ -157,12 +157,12 @@ const requestContext =
 	}
 
 export {
+	CONTEXT_REQUEST,
 	type Context,
 	type ContextCallback,
-	type UnknownContext,
-	type ContextType,
-	CONTEXT_REQUEST,
 	ContextRequestEvent,
+	type ContextType,
 	provideContexts,
 	requestContext,
+	type UnknownContext,
 }

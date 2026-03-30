@@ -2,7 +2,7 @@
 
 > **unown**\<`T`\>(`fn`): `T`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:230
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:232
 
 Runs a callback without any active owner.
 Any scopes or effects created inside the callback will not be registered as
@@ -22,9 +22,13 @@ reactive graph.
 
 () => `T`
 
+The function to execute without an active owner
+
 #### Returns
 
 `T`
+
+The return value of `fn`
 
 #### Since
 
