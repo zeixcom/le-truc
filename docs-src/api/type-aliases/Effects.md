@@ -2,7 +2,7 @@
 
 > **Effects**\<`P`, `U`\> = `{ [K in keyof U]?: ElementEffects<P, ElementFromKey<U, K>> }`
 
-Defined in: [src/effects.ts:46](https://github.com/zeixcom/le-truc/blob/3386ff28c36c911ef6de374d52dbcc7da589393b/src/effects.ts#L46)
+Defined in: [src/effects.ts:46](https://github.com/zeixcom/le-truc/blob/f4d929d4f01267c5770e41b28447be2bc5184518/src/effects.ts#L46)
 
 The return type of the `setup` function passed to `defineComponent`.
 Keys correspond to keys of the UI object (queried elements and `host`);

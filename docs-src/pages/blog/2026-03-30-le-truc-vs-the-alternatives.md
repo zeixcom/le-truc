@@ -9,13 +9,11 @@ tags: architecture, comparison
 ---
 
 {% section %}
-The reason, we think, is that most comparisons start from the wrong place. They compare features, bundle sizes, benchmark numbers — the measurable things. What they rarely compare is *what problem each tool is designed to solve* and what that problem costs you if it isn't actually yours.
-
-This post is our attempt to do that more honestly. We will cover the main families of tools, describe what they do well, and explain where Le Truc sits in that landscape. The goal is not to position Le Truc as universally superior — it is not, and a tool that claims to be right for everything is usually wrong about most things. The goal is to help you figure out whether it is right for you.
+Each family of web development tools is **designed to solve a specific problem**. Choosing the wrong one means carrying costs that don't belong to you. This post covers the main families, describes what each does well, and explains where Le Truc sits in the wider ecosystem — not to position it as universally superior, but to help you figure out whether it is right for you.
 
 ## SPA frameworks: when the client owns the UI
 
-React, Vue, Angular, and Svelte share a core architectural decision: the framework takes ownership of rendering. You describe what the UI should look like as a function of state, and the framework figures out how to make the DOM match. Virtual DOM diffing, compiled templates, fine-grained reactivity — these are different implementation strategies toward the same goal.
+React, Vue, Angular, and Svelte share a core architectural decision: the framework takes ownership of rendering. You **describe what the UI should look like** as a function of state, and the framework figures out how to make the DOM match. Virtual DOM diffing, compiled templates, fine-grained reactivity — these are different implementation strategies toward the same goal.
 
 This model is a genuine solution to a genuine problem. When the UI is highly dynamic — dashboards that update in real time, drag-and-drop interfaces, complex forms with live validation across dozens of interdependent fields — managing imperative DOM mutations by hand becomes intractable. Declarative rendering gives you a mental model that scales. You stop thinking about "change this element" and start thinking about "this is what the UI looks like in this state." For the right kind of application, this is an enormous improvement.
 
@@ -29,13 +27,13 @@ Lit occupies a specific and valuable niche. It is designed for *building compone
 
 Shadow DOM is central to this. It creates a hard boundary around a component's internals: styles do not leak in, internal structure is not reachable from outside. For a component library, that is a feature. It means the library author controls the styling contract explicitly, and consumers cannot accidentally break internals by targeting an element three levels deep.
 
-But Shadow DOM is the same reason Lit is a difficult choice outside the component library context. Lit does support server-side rendering via `@lit-labs/ssr` and Declarative Shadow DOM — so the component shell can be rendered as HTML. But Lit still owns the template. A PHP or Python backend cannot output arbitrary HTML inside the shadow root and have Lit progressively enhance just the interactive parts. Content from a server-rendered template can only enter a Lit component via `<slot>` into the light DOM, which means the component renders its own structure client-side regardless. If you are building a PHP-rendered article page and want Lit to enhance a section of it, the friction accumulates quickly.
+But Shadow DOM is the same reason Lit is a difficult choice outside the component library context. The hard boundary that protects a library component from its consumers becomes a barrier between components that belong to the same site — shared state, styles, and events all require explicit workarounds. And while server-side rendering is possible, the component still renders its own structure client-side regardless, giving away the very reason you reached for SSR in the first place.
 
 For building a cross-framework design system that will be distributed as a package: Lit is probably the right tool.
 
 ## HTMX and Datastar: the Hypermedia comeback
 
-HTMX and Datastar take a perspective that felt almost counterintuitive when they appeared: instead of moving rendering to the client, keep it on the server and extend HTML with the ability to trigger network requests and update page fragments in response. Click a button, and instead of JavaScript manipulating the DOM, the browser makes a request and the server returns a new HTML fragment that replaces part of the page.
+HTMX and Datastar take a perspective that felt almost counterintuitive when they appeared: instead of moving rendering to the client, keep it on the server and extend HTML with the ability to **trigger network requests and update page fragments** in response. Click a button, and instead of JavaScript manipulating the DOM, the browser makes a request and the server returns a new HTML fragment that replaces part of the page.
 
 This is a compelling model for a wide class of applications. Any interface where state is primarily server-side — admin dashboards, CMS interfaces, data tables with server-side filtering and sorting — maps naturally to this approach. The backend already knows the state; it just needs to render the updated HTML. The client stays thin. The JavaScript footprint is minimal. There is no client state management to reason about.
 
@@ -49,7 +47,7 @@ The question is not whether these tools can handle client state — they can —
 
 We have now described two ends of a spectrum. At one end: SPA frameworks, where the client takes full ownership of rendering and state. At the other end: Hypermedia frameworks, where the server takes full ownership and the client merely requests new fragments.
 
-In the middle is a large class of applications that are not cleanly served by either. They are server-rendered — the initial HTML comes from PHP, Python, Ruby, Java, whatever backend the team already uses. They are progressively enhanced — the page is meaningful before JavaScript loads. And they have genuine client-side state — values that change in response to user interaction, where computing the new value does not require a server and waiting for one introduces unnecessary friction.
+In the middle is a large class of applications that are not cleanly served by either. They are server-rendered — the initial HTML comes from PHP, Python, Ruby, Java, whatever backend the team already uses. They are **progressively enhanced** — the page is meaningful before JavaScript loads. And they have genuine client-side state — values that change in response to user interaction, where computing the new value does not require a server and waiting for one introduces unnecessary friction.
 
 This is where Le Truc lives — though not only here.
 
@@ -57,13 +55,15 @@ The default mental model is: the server renders everything. JavaScript enhances 
 
 But Le Truc does not enforce that default. Client-side rendering, Shadow DOM, and HTML partial loading are all supported — the same patterns that define SPA frameworks, Lit, and HTMX respectively. What Le Truc changes is when you reach for them: each is a tool for cases where it is genuinely the right fit, not a starting assumption. The common case stays as simple as possible.
 
-## When to choose what
+## What each got right
 
-**Choose a SPA framework** if your team controls the full stack, the UI is primarily application-like (interactions dominate over content), and you expect the investment in the framework to pay off over years. React, Vue, and SvelteKit are all good at this. The SSR complexity is real, but if you are staying within the framework's server runtime, the tooling handles most of it.
+Le Truc draws directly from each of these families.
 
-**Choose Lit** if you are building a component library that must work across multiple different frontend stacks. The Shadow DOM isolation is an asset. Lit SSR works well when the whole stack runs on Node — it is a harder fit when the server is PHP, Python, or another non-JS runtime.
+From SPA frameworks — and SolidJS in particular — the insight that components, reactivity, and type safety are essential for an architecture that scales. SolidJS's fine-grained reactive model and async-first design are the clearest influence on how Le Truc handles state and effects.
 
-**Choose HTMX or Datastar** if you have a server-rendered application where most of the state lives on the server and interactions primarily result in server state changing. Admin interfaces, CMS workflows, and data-heavy pages with server-side pagination or filtering are natural fits. The network round trip is fine if the server has what it needs to respond quickly.
+From Lit, the insight that Web Components are the platform's native component model — a standard, framework-agnostic primitive that interoperates across stacks without a translation layer. Real reusability follows from that.
+
+From HTMX and Datastar, the insight that the server is still the right place to bring templates and data together. HTML rendered on the server is a correct starting point, not a legacy constraint. Partial HTML responses — serving only what changed — are an elegant way to keep that model while avoiding full-page reloads.
 
 **Consider Le Truc** if your project has all three of the following:
 

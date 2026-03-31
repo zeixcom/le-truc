@@ -2,7 +2,7 @@
 
 > **EventHandlers**\<`T`, `U`, `E`\> = `{ [K in keyof HTMLElementEventMap]?: SensorEventHandler<T, EventType<K>, U, E> }`
 
-Defined in: [src/events.ts:42](https://github.com/zeixcom/le-truc/blob/3386ff28c36c911ef6de374d52dbcc7da589393b/src/events.ts#L42)
+Defined in: [src/events.ts:42](https://github.com/zeixcom/le-truc/blob/f4d929d4f01267c5770e41b28447be2bc5184518/src/events.ts#L42)
 
 Map of event type names to `SensorEventHandler` functions, passed as the
 third argument to `createEventsSensor`. Each handler derives the new sensor

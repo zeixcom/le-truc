@@ -69,7 +69,10 @@ import { defineComponent, asInteger, on, setText } from '@zeix/le-truc'
 defineComponent(
   'basic-counter',
   { count: asInteger(0) },
-  ({ first }) => ({ button: first('button'), output: first('output') }),
+  ({ first }) => ({
+    button: first('button'),
+    output: first('output'),
+  }),
   ({ host }) => ({
     button: on('click', () => { host.count++ }),
     output: setText('count'),

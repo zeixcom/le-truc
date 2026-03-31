@@ -5,7 +5,7 @@
     "": {
       "name": "le-truc",
       "dependencies": {
-        "@zeix/cause-effect": "^1.0.1",
+        "@zeix/cause-effect": "^1.0.2",
       },
       "devDependencies": {
         "@biomejs/biome": "^2.4.9",
@@ -18,7 +18,7 @@
         "typedoc-plugin-markdown": "^4.11.0",
       },
       "peerDependencies": {
-        "typescript": ">=5.8.0",
+        "typescript": "^6.0.2",
       },
     },
   },

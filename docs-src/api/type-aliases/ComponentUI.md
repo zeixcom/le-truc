@@ -2,7 +2,7 @@
 
 > **ComponentUI**\<`P`, `U`\> = `U` & `object`
 
-Defined in: [src/component.ts:55](https://github.com/zeixcom/le-truc/blob/3386ff28c36c911ef6de374d52dbcc7da589393b/src/component.ts#L55)
+Defined in: [src/component.ts:55](https://github.com/zeixcom/le-truc/blob/f4d929d4f01267c5770e41b28447be2bc5184518/src/component.ts#L55)
 
 The UI object passed to the `setup` function: the result of the `select`
 function merged with a `host` key pointing to the component element itself.
