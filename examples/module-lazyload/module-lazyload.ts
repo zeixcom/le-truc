@@ -8,7 +8,11 @@ import {
 	show,
 	toggleClass,
 } from '../..'
-import { fetchWithCache, isRecursiveURL, isValidURL } from '../_common/fetch'
+import {
+	fetchWithCache,
+	isRecursiveURL,
+	isValidURL,
+} from '../_common/fetchWithCache'
 
 export type ModuleLazyloadProps = {
 	src: string

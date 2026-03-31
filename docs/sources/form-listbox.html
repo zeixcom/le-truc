@@ -1,5 +1,5 @@
 <module-tabgroup>
-		<div role="tablist">
+		<div role="tablist" aria-label="Tabs">
 		<button
 		type="button"
 		role="tab"
@@ -320,10 +320,15 @@
 <span class="line"><span style="color:#F8F8F2">	show,</span></span>
 <span class="line"><span style="color:#F8F8F2">	toggleClass,</span></span>
 <span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { escapeHTML, html } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/escapeHTML'</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { fetchWithCache, isRecursiveURL, isValidURL } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/fetch'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { manageFocus } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/focus'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { highlightMatch } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/highlight'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	fetchWithCache,</span></span>
+<span class="line"><span style="color:#F8F8F2">	isRecursiveURL,</span></span>
+<span class="line"><span style="color:#F8F8F2">	isValidURL,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/fetchWithCache'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { highlightMatch } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/highlightMatch'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { manageFocus } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/manageFocus'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">/**</span></span>
 <span class="line"><span style="color:#88846F"> * Form-aware Listbox Component</span></span>
@@ -401,35 +406,34 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> renderOptions</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">items</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormListboxOption</span><span style="color:#F8F8F2">[]) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
 <span class="line"><span style="color:#F8F8F2">			items</span></span>
 <span class="line"><span style="color:#F8F8F2">				.</span><span style="color:#A6E22E">map</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">					item</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#E6DB74"> `</span></span>
-<span class="line"><span style="color:#E6DB74">					&#x3C;button type="button" role="option" tabindex="-1" value="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">item.value</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"></span></span>
-<span class="line"><span style="color:#F92672">						${</span><span style="color:#F8F8F2">item.label</span><span style="color:#F92672">}</span></span>
-<span class="line"><span style="color:#E6DB74">					&#x3C;/button>`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">					item</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
+<span class="line"><span style="color:#A6E22E">						html</span><span style="color:#E6DB74">`&#x3C;button</span></span>
+<span class="line"><span style="color:#E6DB74">							type="button"</span></span>
+<span class="line"><span style="color:#E6DB74">							role="option"</span></span>
+<span class="line"><span style="color:#E6DB74">							tabindex="-1"</span></span>
+<span class="line"><span style="color:#E6DB74">							value="</span><span style="color:#F92672">${</span><span style="color:#A6E22E">escapeHTML</span><span style="color:#F8F8F2">(item.value)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"</span></span>
+<span class="line"><span style="color:#E6DB74">						></span></span>
+<span class="line"><span style="color:#F92672">							${</span><span style="color:#A6E22E">escapeHTML</span><span style="color:#F8F8F2">(item.label)</span><span style="color:#F92672">}</span></span>
+<span class="line"><span style="color:#E6DB74">						&#x3C;/button>`</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">				)</span></span>
 <span class="line"><span style="color:#F8F8F2">				.</span><span style="color:#A6E22E">join</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> renderGroups</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">items</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormListboxGroups</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> id </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.id</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			let</span><span style="color:#F8F8F2"> html </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			let</span><span style="color:#F8F8F2"> markup </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
 <span class="line"><span style="color:#F92672">			for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> [key, value] </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> Object.</span><span style="color:#A6E22E">entries</span><span style="color:#F8F8F2">(items)) {</span></span>
-<span class="line"><span style="color:#F8F8F2">				html </span><span style="color:#F92672">+=</span><span style="color:#E6DB74"> `</span></span>
-<span class="line"><span style="color:#E6DB74">				&#x3C;div role="group" aria-labelledby="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">id</span><span style="color:#F92672">}</span><span style="color:#E6DB74">-</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">key</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"></span></span>
-<span class="line"><span style="color:#E6DB74">					&#x3C;div role="presentation" id="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">id</span><span style="color:#F92672">}</span><span style="color:#E6DB74">-</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">key</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"></span><span style="color:#F92672">${</span><span style="color:#F8F8F2">value.label</span><span style="color:#F92672">}</span><span style="color:#E6DB74">&#x3C;/div></span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> groupId </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">id</span><span style="color:#F92672">}</span><span style="color:#E6DB74">-</span><span style="color:#F92672">${</span><span style="color:#A6E22E">escapeHTML</span><span style="color:#F8F8F2">(key)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span></span>
+<span class="line"><span style="color:#F8F8F2">				markup </span><span style="color:#F92672">+=</span><span style="color:#A6E22E"> html</span><span style="color:#E6DB74">`&#x3C;div role="group" aria-labelledby="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">groupId</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"></span></span>
+<span class="line"><span style="color:#E6DB74">					&#x3C;div role="presentation" id="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">groupId</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"></span></span>
+<span class="line"><span style="color:#F92672">						${</span><span style="color:#A6E22E">escapeHTML</span><span style="color:#F8F8F2">(value.label)</span><span style="color:#F92672">}</span></span>
+<span class="line"><span style="color:#E6DB74">					&#x3C;/div></span></span>
 <span class="line"><span style="color:#F92672">					${</span><span style="color:#A6E22E">renderOptions</span><span style="color:#F8F8F2">(value.items)</span><span style="color:#F92672">}</span></span>
 <span class="line"><span style="color:#E6DB74">				&#x3C;/div>`</span></span>
 <span class="line"><span style="color:#F8F8F2">			}</span></span>
-<span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> html</span></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> markup</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> maybeRender</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span></span>
-<span class="line"><span style="color:#F8F8F2">			host.src</span></span>
-<span class="line"><span style="color:#F92672">				?</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">						show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> html.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().ok),</span></span>
-<span class="line"><span style="color:#A6E22E">						dangerouslySetInnerHTML</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> html.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().value),</span></span>
-<span class="line"><span style="color:#F8F8F2">					]</span></span>
-<span class="line"><span style="color:#F92672">				:</span><span style="color:#F8F8F2"> []</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> html </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createTask</span><span style="color:#F8F8F2">&#x3C;{</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> content </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createTask</span><span style="color:#F8F8F2">&#x3C;{</span></span>
 <span class="line"><span style="color:#F8F8F2">			ok</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
 <span class="line"><span style="color:#F8F8F2">			value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
 <span class="line"><span style="color:#F8F8F2">			error</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
@@ -465,9 +469,17 @@
 <span class="line"><span style="color:#F8F8F2">			{ value: { ok: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">, value: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, error: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, pending: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> } },</span></span>
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> maybeRender</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">			host.src</span></span>
+<span class="line"><span style="color:#F92672">				?</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">						show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> content.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().ok),</span></span>
+<span class="line"><span style="color:#A6E22E">						dangerouslySetInnerHTML</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> content.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().value),</span></span>
+<span class="line"><span style="color:#F8F8F2">					]</span></span>
+<span class="line"><span style="color:#F92672">				:</span><span style="color:#F8F8F2"> []</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> lowerFilter </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createMemo</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.filter.</span><span style="color:#A6E22E">toLowerCase</span><span style="color:#F8F8F2">())</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> hasError</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.src </span><span style="color:#F92672">?</span><span style="color:#F92672"> !!</span><span style="color:#F8F8F2">html.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().error </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> hasError</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.src </span><span style="color:#F92672">?</span><span style="color:#F92672"> !!</span><span style="color:#F8F8F2">content.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().error </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">			host: </span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">),</span></span>
@@ -482,13 +494,13 @@
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
 <span class="line"><span style="color:#F8F8F2">			],</span></span>
 <span class="line"><span style="color:#F8F8F2">			callout: [</span></span>
-<span class="line"><span style="color:#A6E22E">				show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.src </span><span style="color:#F92672">?</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">html.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().ok </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#A6E22E">				show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.src </span><span style="color:#F92672">?</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">content.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().ok </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">)),</span></span>
 <span class="line"><span style="color:#A6E22E">				toggleClass</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'danger'</span><span style="color:#F8F8F2">, hasError),</span></span>
 <span class="line"><span style="color:#F8F8F2">			],</span></span>
-<span class="line"><span style="color:#F8F8F2">			loading: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.src </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> html.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().pending </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#F8F8F2">			loading: </span><span style="color:#A6E22E">show</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.src </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> content.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().pending </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">)),</span></span>
 <span class="line"><span style="color:#F8F8F2">			error: [</span></span>
 <span class="line"><span style="color:#A6E22E">				show</span><span style="color:#F8F8F2">(hasError),</span></span>
-<span class="line"><span style="color:#A6E22E">				setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.src </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> html.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().error </span><span style="color:#F92672">:</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#A6E22E">				setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.src </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> content.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().error </span><span style="color:#F92672">:</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">)),</span></span>
 <span class="line"><span style="color:#F8F8F2">			],</span></span>
 <span class="line"><span style="color:#F8F8F2">			listbox: [</span></span>
 <span class="line"><span style="color:#F92672">				...</span><span style="color:#A6E22E">manageFocus</span><span style="color:#F8F8F2">(</span></span>

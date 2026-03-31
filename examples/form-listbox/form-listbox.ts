@@ -16,10 +16,15 @@ import {
 	show,
 	toggleClass,
 } from '../..'
+import { escapeHTML, html } from '../_common/escapeHTML'
 
-import { fetchWithCache, isRecursiveURL, isValidURL } from '../_common/fetch'
-import { manageFocus } from '../_common/focus'
-import { highlightMatch } from '../_common/highlight'
+import {
+	fetchWithCache,
+	isRecursiveURL,
+	isValidURL,
+} from '../_common/fetchWithCache'
+import { highlightMatch } from '../_common/highlightMatch'
+import { manageFocus } from '../_common/manageFocus'
 
 /**
  * Form-aware Listbox Component
@@ -97,35 +102,34 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 		const renderOptions = (items: FormListboxOption[]) =>
 			items
 				.map(
-					item => `
-					<button type="button" role="option" tabindex="-1" value="${item.value}">
-						${item.label}
-					</button>`,
+					item =>
+						html`<button
+							type="button"
+							role="option"
+							tabindex="-1"
+							value="${escapeHTML(item.value)}"
+						>
+							${escapeHTML(item.label)}
+						</button>`,
 				)
 				.join('')
 
 		const renderGroups = (items: FormListboxGroups) => {
 			const id = host.id
-			let html = ''
+			let markup = ''
 			for (const [key, value] of Object.entries(items)) {
-				html += `
-				<div role="group" aria-labelledby="${id}-${key}">
-					<div role="presentation" id="${id}-${key}">${value.label}</div>
+				const groupId = `${id}-${escapeHTML(key)}`
+				markup += html`<div role="group" aria-labelledby="${groupId}">
+					<div role="presentation" id="${groupId}">
+						${escapeHTML(value.label)}
+					</div>
 					${renderOptions(value.items)}
 				</div>`
 			}
-			return html
+			return markup
 		}
 
-		const maybeRender = () =>
-			host.src
-				? [
-						show(() => html.get().ok),
-						dangerouslySetInnerHTML(() => html.get().value),
-					]
-				: []
-
-		const html = createTask<{
+		const content = createTask<{
 			ok: boolean
 			value: string
 			error: string
@@ -161,9 +165,17 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 			{ value: { ok: false, value: '', error: '', pending: true } },
 		)
 
+		const maybeRender = () =>
+			host.src
+				? [
+						show(() => content.get().ok),
+						dangerouslySetInnerHTML(() => content.get().value),
+					]
+				: []
+
 		const lowerFilter = createMemo(() => host.filter.toLowerCase())
 
-		const hasError = () => (host.src ? !!html.get().error : false)
+		const hasError = () => (host.src ? !!content.get().error : false)
 
 		return {
 			host: setAttribute('value'),
@@ -178,13 +190,13 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 				}),
 			],
 			callout: [
-				show(() => (host.src ? !html.get().ok : false)),
+				show(() => (host.src ? !content.get().ok : false)),
 				toggleClass('danger', hasError),
 			],
-			loading: show(() => (host.src ? html.get().pending : false)),
+			loading: show(() => (host.src ? content.get().pending : false)),
 			error: [
 				show(hasError),
-				setText(() => (host.src ? html.get().error : '')),
+				setText(() => (host.src ? content.get().error : '')),
 			],
 			listbox: [
 				...manageFocus(

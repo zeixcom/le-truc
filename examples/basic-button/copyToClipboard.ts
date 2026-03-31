@@ -27,10 +27,14 @@ export const copyToClipboard =
 			}
 			button.disabled = true
 			button.label = messages[status] ?? label
-			setTimeout(
+			const timeoutId = setTimeout(
 				() => {
-					button.disabled = false
-					button.label = label
+					if (button.isConnected) {
+						button.disabled = false
+						button.label = label
+					} else {
+						clearTimeout(timeoutId)
+					}
 				},
 				status === COPY_SUCCESS ? 1000 : 3000,
 			)

@@ -1,12 +1,5 @@
-import {
-	asInteger,
-	asParser,
-	type Component,
-	defineComponent,
-	setText,
-	show,
-	type UI,
-} from '../..'
+import { type Component, defineComponent, setText, show } from '../..'
+import { asClampedInteger } from '../_common/asClampedInteger'
 
 export type BasicPluralizeProps = {
 	count: number
@@ -35,20 +28,10 @@ declare global {
 
 const FALLBACK_LOCALE = 'en'
 
-/**
- * Parse a string as a positive integer (>= 0), falling back to 0 for negative values
- */
-const asPositiveInteger =
-	() =>
-	asParser(<U extends UI>(ui: U, value: string | null | undefined) => {
-		const parsed = asInteger()(ui, value)
-		return parsed < 0 ? 0 : parsed
-	})
-
 export default defineComponent<BasicPluralizeProps, BasicPluralizeUI>(
 	'basic-pluralize',
 	{
-		count: asPositiveInteger(),
+		count: asClampedInteger(),
 	},
 	({ first }) => ({
 		count: first('.count'),

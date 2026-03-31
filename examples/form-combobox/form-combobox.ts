@@ -13,7 +13,7 @@ import {
 	setText,
 	show,
 } from '../..'
-import { clearEffects, clearMethod } from '../_common/clear'
+import { clearEffects, clearMethod } from '../_common/clearMethod'
 import type { FormListboxProps } from '../form-listbox/form-listbox'
 
 export type FormComboboxProps = {

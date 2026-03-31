@@ -1,5 +1,5 @@
 <module-tabgroup>
-		<div role="tablist">
+		<div role="tablist" aria-label="Tabs">
 		<button
 		type="button"
 		role="tab"
@@ -352,10 +352,24 @@
 				<span class="language">ts</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { batch, createState, defineComponent, on, toggleClass } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	batch,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> ComponentProps,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createState,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F8F8F2">	on,</span></span>
+<span class="line"><span style="color:#F8F8F2">	toggleClass,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> MIN_INTERSECTION_RATIO </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> MAX_INTERSECTION_RATIO </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0.99</span><span style="color:#88846F"> // ignore rounding errors of fraction pixels</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'module-scrollarea'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ComponentProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> observeOverflow </span><span style="color:#F92672">=</span></span>
 <span class="line"><span style="color:#F8F8F2">	(</span></span>
@@ -368,8 +382,8 @@
 <span class="line"><span style="color:#F8F8F2">			([</span><span style="color:#FD971F;font-style:italic">entry</span><span style="color:#F8F8F2">]) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">entry) </span><span style="color:#F92672">return</span></span>
 <span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span></span>
-<span class="line"><span style="color:#F8F8F2">					entry.intersectionRatio </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> MIN_INTERSECTION_RATIO </span><span style="color:#F92672">&#x26;&#x26;</span></span>
-<span class="line"><span style="color:#F8F8F2">					entry.intersectionRatio </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> MAX_INTERSECTION_RATIO</span></span>
+<span class="line"><span style="color:#F8F8F2">					entry.intersectionRatio </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> MIN_INTERSECTION_RATIO</span></span>
+<span class="line"><span style="color:#F92672">					&#x26;&#x26;</span><span style="color:#F8F8F2"> entry.intersectionRatio </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> MAX_INTERSECTION_RATIO</span></span>
 <span class="line"><span style="color:#F8F8F2">				)</span></span>
 <span class="line"><span style="color:#A6E22E">					overflowCallback</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F92672">				else</span><span style="color:#A6E22E"> batch</span><span style="color:#F8F8F2">(noOverflowCallback)</span></span>

@@ -2,7 +2,7 @@
 
 > **read**\<`T`, `U`\>(`reader`, `fallback`): [`Reader`](../type-aliases/Reader.md)\<`T`, `U`\>
 
-Defined in: [src/parsers.ts:148](https://github.com/zeixcom/le-truc/blob/f4d929d4f01267c5770e41b28447be2bc5184518/src/parsers.ts#L148)
+Defined in: [src/parsers.ts:148](https://github.com/zeixcom/le-truc/blob/f1a3efe48ad5bc44f3a6d0e565f5dfe468144c70/src/parsers.ts#L148)
 
 Compose a loose reader with a parser or fallback to produce a typed `Reader<T>`.
 

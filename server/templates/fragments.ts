@@ -83,7 +83,7 @@ export function tabPanel({ name, panel }: TabPanelProps): string {
  * Generate tab list (buttons only)
  */
 export function tabList(name: string, panels: PanelType[]): string {
-	return html` <div role="tablist">
+	return html` <div role="tablist" aria-label="Tabs">
 		${panels.map(panel => tabButton({ name, panel }))}
 	</div>`
 }

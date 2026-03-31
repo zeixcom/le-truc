@@ -1,3 +1,4 @@
+/* Exception to scoping rule: class on body for scroll lock */
 body.scroll-lock {
 	position: fixed;
 	overflow-y: hidden;

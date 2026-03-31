@@ -27,9 +27,7 @@ export default defineComponent<BasicHelloProps, BasicHelloUI>(
 	({ host, input }) => {
 		const fallback = host.name
 		return {
-			input: on('input', () => {
-				host.name = input.value || fallback
-			}),
+			input: on('input', () => ({ name: input.value || fallback })),
 			output: setText('name'),
 		}
 	},

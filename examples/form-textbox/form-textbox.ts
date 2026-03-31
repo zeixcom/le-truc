@@ -9,7 +9,7 @@ import {
 	setProperty,
 	setText,
 } from '../..'
-import { clearEffects, clearMethod } from '../_common/clear'
+import { clearEffects, clearMethod } from '../_common/clearMethod'
 
 export type FormTextboxProps = {
 	value: string
@@ -50,7 +50,7 @@ export default defineComponent<FormTextboxProps, FormTextboxUI>(
 			textbox,
 		}: ComponentUI<FormTextboxProps, FormTextboxUI>) => {
 			if (description) {
-				if (textbox.maxLength && description.dataset.remaining) {
+				if (textbox.maxLength > 0 && description.dataset.remaining) {
 					return () =>
 						description.dataset.remaining!.replace(
 							'${n}',

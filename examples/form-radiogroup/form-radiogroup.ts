@@ -6,7 +6,7 @@ import {
 	on,
 	read,
 } from '../..'
-import { manageFocus } from '../_common/focus'
+import { manageFocus } from '../_common/manageFocus'
 
 export type FormRadiogroupProps = {
 	value: string

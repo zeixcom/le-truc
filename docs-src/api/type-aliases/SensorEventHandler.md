@@ -2,7 +2,7 @@
 
 > **SensorEventHandler**\<`T`, `Evt`, `U`, `E`\> = (`context`) => `T` \| `void` \| `Promise`\<`void`\>
 
-Defined in: [src/events.ts:25](https://github.com/zeixcom/le-truc/blob/f4d929d4f01267c5770e41b28447be2bc5184518/src/events.ts#L25)
+Defined in: [src/events.ts:25](https://github.com/zeixcom/le-truc/blob/f1a3efe48ad5bc44f3a6d0e565f5dfe468144c70/src/events.ts#L25)
 
 Handler for a single event type inside `createEventsSensor`.
 
