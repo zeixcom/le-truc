@@ -38,12 +38,10 @@ export default defineComponent<FormCheckboxProps, FormCheckboxUI>(
 		checkbox: first('input[type="checkbox"]', 'Add a native checkbox.'),
 		label: first('.label'),
 	}),
-	({ host, checkbox }) => ({
+	({ checkbox }) => ({
 		host: toggleAttribute('checked'),
 		checkbox: [
-			on('change', () => {
-				host.checked = checkbox.checked
-			}),
+			on('change', () => ({ checked: checkbox.checked })),
 			setProperty('checked'),
 		],
 		label: setText('label'),

@@ -117,7 +117,10 @@
 	--color-text: var(--color-neutral-90);
 	--color-text-soft: var(--color-neutral-80);
 	--color-text-inverted: var(--color-white);
+
 	--color-shadow: rgb(0 0 0 / 0.1);
+	--color-overlay-hover: rgb(0 0 0 / 0.05);
+	--color-overlay-active: rgb(0 0 0 / 0.1);
 
 	--font-family-sans: 'Helvetica Neue', Arial, Roboto, sans-serif;
 	--font-family-mono: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
@@ -194,6 +197,8 @@
 		--color-text-soft: var(--color-neutral-20);
 		--color-text-inverted: var(--color-black); /* #2a1c42; */
 		--color-shadow: rgb(0 0 0 / 0.4);
+		--color-overlay-hover: rgb(255 255 255 / 0.05);
+		--color-overlay-active: rgb(255 255 255 / 0.1);
 	}
 }
 

@@ -1,5 +1,5 @@
 import { type Component, defineComponent, read, setText } from '../..'
-import { asDate } from '../_common/date'
+import { asDate } from '../_common/asDate'
 
 export type CardBlogmetaProps = {
 	date: string

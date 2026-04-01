@@ -15,6 +15,12 @@ type ModuleCatalogUI = {
 	spinbuttons: Memo<Component<FormSpinbuttonProps>[]>
 }
 
+declare global {
+	interface HTMLElementTagNameMap {
+		'module-catalog': Component<ModuleCatalogProps>
+	}
+}
+
 export default defineComponent<ModuleCatalogProps, ModuleCatalogUI>(
 	'module-catalog',
 	{},

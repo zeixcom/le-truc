@@ -1,5 +1,5 @@
 <module-tabgroup>
-		<div role="tablist">
+		<div role="tablist" aria-label="Tabs">
 		<button
 		type="button"
 		role="tab"
@@ -133,7 +133,8 @@
 				<span class="language">css</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">body</span><span style="color:#A6E22E">.scroll-lock</span><span style="color:#F8F8F2"> {</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#88846F">/* Exception to scoping rule: class on body for scroll lock */</span></span>
+<span class="line"><span style="color:#F92672">body</span><span style="color:#A6E22E">.scroll-lock</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">fixed</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	overflow-y</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">hidden</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
@@ -321,9 +322,8 @@
 <span class="line"><span style="color:#F8F8F2">						dialog.</span><span style="color:#A6E22E">close</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">					}</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			openButton: </span><span style="color:#A6E22E">on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">				host.open </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
-<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			openButton: </span><span style="color:#A6E22E">on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({ open: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> })),</span></span>
+<span class="line"><span style="color:#F8F8F2">			closeButton: </span><span style="color:#A6E22E">on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({ open: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2"> })),</span></span>
 <span class="line"><span style="color:#F8F8F2">			dialog: [</span></span>
 <span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (target </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> dialog) host.open </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
@@ -332,9 +332,6 @@
 <span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'Escape'</span><span style="color:#F8F8F2">) host.open </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
 <span class="line"><span style="color:#F8F8F2">			],</span></span>
-<span class="line"><span style="color:#F8F8F2">			closeButton: </span><span style="color:#A6E22E">on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">				host.open </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
-<span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>

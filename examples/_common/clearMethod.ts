@@ -13,30 +13,32 @@ import {
  *
  * @param {HTMLInputElement | HTMLTextAreaElement} selector - The native input or textarea element
  */
-export const clearMethod = asMethod(<
-	P extends {
-		clear: () => void
-		value: string | number
-		readonly length: number
+export const clearMethod = asMethod(
+	<
+		P extends {
+			clear: () => void
+			value: string | number
+			readonly length: number
+		},
+		U extends {
+			host: Component<P>
+			textbox: HTMLInputElement | HTMLTextAreaElement
+		},
+	>({
+		host,
+		textbox,
+	}: ComponentUI<P, U>) => {
+		host.clear = () => {
+			host.value = ''
+			textbox.value = ''
+			textbox.setCustomValidity('')
+			textbox.checkValidity()
+			textbox.dispatchEvent(new Event('input', { bubbles: true }))
+			textbox.dispatchEvent(new Event('change', { bubbles: true }))
+			textbox.focus()
+		}
 	},
-	U extends {
-		host: Component<P>
-		textbox: HTMLInputElement | HTMLTextAreaElement
-	},
->({
-	host,
-	textbox,
-}: ComponentUI<P, U>) => {
-	host.clear = () => {
-		host.value = ''
-		textbox.value = ''
-		textbox.setCustomValidity('')
-		textbox.checkValidity()
-		textbox.dispatchEvent(new Event('input', { bubbles: true }))
-		textbox.dispatchEvent(new Event('change', { bubbles: true }))
-		textbox.focus()
-	}
-})
+)
 
 /**
  * Standard effects for clearing input components on button elements

@@ -1,7 +1,21 @@
-import { batch, createState, defineComponent, on, toggleClass } from '../..'
+import {
+	batch,
+	type Component,
+	type ComponentProps,
+	createState,
+	defineComponent,
+	on,
+	toggleClass,
+} from '../..'
 
 const MIN_INTERSECTION_RATIO = 0
 const MAX_INTERSECTION_RATIO = 0.99 // ignore rounding errors of fraction pixels
+
+declare global {
+	interface HTMLElementTagNameMap {
+		'module-scrollarea': Component<ComponentProps>
+	}
+}
 
 const observeOverflow =
 	(
@@ -14,8 +28,8 @@ const observeOverflow =
 			([entry]) => {
 				if (!entry) return
 				if (
-					entry.intersectionRatio > MIN_INTERSECTION_RATIO &&
-					entry.intersectionRatio < MAX_INTERSECTION_RATIO
+					entry.intersectionRatio > MIN_INTERSECTION_RATIO
+					&& entry.intersectionRatio < MAX_INTERSECTION_RATIO
 				)
 					overflowCallback()
 				else batch(noOverflowCallback)

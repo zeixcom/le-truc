@@ -1,5 +1,5 @@
 <module-tabgroup>
-		<div role="tablist">
+		<div role="tablist" aria-label="Tabs">
 		<button
 		type="button"
 		role="tab"
@@ -67,7 +67,7 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">nav</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Carousel Navigation"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"prev"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Previous"</span><span style="color:#F8F8F2">>❮&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"next"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Next"</span><span style="color:#F8F8F2">>❯&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tablist"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tablist"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Carousel Slides"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span></span>
 <span class="line"><span style="color:#A6E22E">				role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tab"</span></span>
 <span class="line"><span style="color:#A6E22E">				aria-selected</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"true"</span></span>
@@ -219,11 +219,14 @@
 <span class="line"><span style="color:#F8F8F2">			&#x26;:</span><span style="color:#66D9EF">active</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">			&#x26;:focus {</span></span>
 <span class="line"><span style="color:#F8F8F2">				opacity: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-solid);</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">				background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">rgb</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#AE81FF"> 0</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2"> / </span><span style="color:#AE81FF">0.05</span><span style="color:#F8F8F2">);</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;</span><span style="color:#A6E22E">:hover</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-overlay-hover);</span></span>
 <span class="line"><span style="color:#F8F8F2">			}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F8F8F2">			&#x26;</span><span style="color:#A6E22E">:active</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">				background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">rgb</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#AE81FF"> 0</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2"> / </span><span style="color:#AE81FF">0.1</span><span style="color:#F8F8F2">);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-overlay-active);</span></span>
 <span class="line"><span style="color:#F8F8F2">			}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F8F8F2">			&#x26;</span><span style="color:#A6E22E">.prev</span><span style="color:#F8F8F2"> {</span></span>
