@@ -39,6 +39,7 @@ What do you need to do?
 1. **Update after a code change** — `src/`, `index.ts`, or examples have changed and documents need to reflect it
 2. **Review consistency** — check that all documents reflect the current source
 3. **Update a specific document** — you know exactly which one
+4. **Write a blog post** — draft a new post for `docs-src/pages/blog/`
 
 **Wait for response before proceeding.**
 </intake>
@@ -49,6 +50,7 @@ What do you need to do?
 | 1, "code changed", "after change", "just merged", "new feature", "bug fix" | workflows/update-after-change.md |
 | 2, "review", "consistency", "check", "audit", "verify" | workflows/consistency-review.md |
 | 3, "specific", or names a document | See document routing below |
+| 4, "write a blog post", "new blog post", "blog" | workflows/write-blog-post.md |
 
 **Document-specific routing (option 3):**
 
@@ -67,6 +69,7 @@ What do you need to do?
 - "update CLAUDE.md" / "add non-obvious behavior" → workflows/update-agent-docs.md
 - "update JSDoc" / "inline docs" → workflows/update-jsdoc.md
 - "review all docs" / "check consistency" → workflows/consistency-review.md
+- "write a blog post" / "new blog post" / "draft a post" → workflows/write-blog-post.md
 
 **After identifying the workflow, read it and follow it exactly.**
 </routing>
@@ -93,4 +96,5 @@ All in `workflows/`:
 | update-agent-docs.md | Update `CLAUDE.md` |
 | update-jsdoc.md | Update JSDoc comments in `src/` |
 | consistency-review.md | Review all documents for consistency with current source |
+| write-blog-post.md | Draft a new blog post in `docs-src/pages/blog/` |
 </workflows_index>

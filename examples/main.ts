@@ -1,7 +1,7 @@
-import './basic-hello/basic-hello.ts'
 import './basic-button/basic-button.ts'
 import './basic-counter/basic-counter.ts'
-import './security-test/security-test.ts'
+import './basic-gauge/basic-gauge.ts'
+import './basic-hello/basic-hello.ts'
 import './basic-number/basic-number.ts'
 import './basic-pluralize/basic-pluralize.ts'
 import './card-blogmeta/card-blogmeta.ts'
@@ -24,6 +24,7 @@ import './module-pagination/module-pagination.ts'
 import './module-scrollarea/module-scrollarea.ts'
 import './module-tabgroup/module-tabgroup.ts'
 import './module-todo/module-todo.ts'
+import './security-test/security-test.ts'
 
 // Structural-only custom elements
 customElements.define('card-blogpost', class extends HTMLElement {})

@@ -131,6 +131,33 @@ and what to check in a consistency review.
 - No links point to removed symbols
 </pages_api_md>
 
+<pages_blog>
+**Path:** `docs-src/pages/blog/YYYY-MM-DD-slug.md`
+**Audience:** Developers browsing the blog — curious about the project's history, design thinking, or how it compares to alternatives
+**Register:** Plain, direct, conversational — see references/tone-guide.md `<blog>` section
+**Scope:** Release announcements, design decisions, comparisons with other tools, lessons learned
+
+**Frontmatter fields:**
+- `title` — short, direct; no punctuation at the end
+- `description` — one sentence; plain English summary of what the post covers
+- `emoji` — single emoji that fits the topic
+- `layout: blog` — always this value
+- `date` — ISO format `YYYY-MM-DD`
+- `author` — full name
+- `tags` — comma-separated lowercase keywords
+
+**Update triggers:**
+- A new post is being written
+- An existing post needs factual corrections (e.g., an API described has since changed)
+
+**Do NOT update for:** style preferences of individual readers, minor phrasing nits in published posts.
+
+**Consistency checks:**
+- Technical claims (API names, behavior descriptions, bundle size) are accurate for the version at the time of writing
+- No jargon or corporate buzzwords (see tone-guide.md `<blog>`)
+- Frontmatter is complete and valid
+</pages_blog>
+
 <README_md>
 **Path:** `README.md`
 **Audience:** Developers discovering or evaluating the library on GitHub or npm
