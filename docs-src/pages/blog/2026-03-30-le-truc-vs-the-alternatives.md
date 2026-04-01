@@ -23,7 +23,7 @@ None of this means SPA frameworks are wrong. If you are building something new w
 
 ## Lit and the component library story
 
-Lit fills a specific gap: it is built for *building component libraries* — reusable UI pieces that work in any frontend, whether that is React, Vue, or plain HTML. A button, a dialog, a data table — packaged once, used anywhere.
+Lit fills a specific gap: it is built for **building component libraries** — reusable UI pieces that work in any frontend, whether that is React, Vue, or plain HTML. A button, a dialog, a data table — packaged once, used anywhere.
 
 Shadow DOM is central to how it does this. It draws a hard boundary around a component's internals: outside styles cannot reach in, and outside code cannot poke at the internal structure. For a component library, that is exactly what you want. The author controls the component's appearance, and users cannot accidentally break it by targeting elements too deep inside.
 
@@ -41,7 +41,7 @@ HTMX in particular has shown that this model covers more ground than you might e
 
 The limits show up when you need something to respond instantly to local state — something the user just typed, a toggle they just clicked. Datastar has a signals system for this; HTMX can be extended. But either way it feels like going against the grain. These tools are built around server-rendered fragments triggered by user actions. Adding client-side state management on top means doing it without the structural support the rest of the tool provides.
 
-It is not that these tools *cannot* handle client state — they can. The question is whether client state is a small part of your app or a big one. When it is small, hypermedia is often the right fit. When it is central, the workarounds pile up.
+It is not that these tools cannot handle client state — they can. The question is whether client state is a small part of your app or a big one. When it is small, hypermedia is often the right fit. When it is central, the workarounds pile up.
 
 ## The gap
 
