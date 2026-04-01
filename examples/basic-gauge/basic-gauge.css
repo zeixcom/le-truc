@@ -1,0 +1,49 @@
+basic-gauge {
+	--basic-gauge-color: var(--color-primary);
+	--basic-gauge-thickness: var(--space-xs);
+	--basic-gauge-degree: 120deg;
+	--basic-gauge-size: 8rem;
+
+	width: var(--basic-gauge-size);
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	aspect-ratio: 1;
+	background-image:
+		radial-gradient(
+			closest-side,
+			var(--color-background) 0%,
+			var(--color-background) calc(100% - var(--basic-gauge-thickness)),
+			transparent calc(100% - var(--basic-gauge-thickness))
+		),
+		conic-gradient(
+			from -120deg,
+			var(--basic-gauge-color) 0deg var(--basic-gauge-degree),
+			transparent var(--basic-gauge-degree) 240deg
+		),
+		conic-gradient(
+			from -120deg,
+			var(--color-secondary) 0deg 240deg,
+			transparent 240deg
+		);
+	border-radius: 50%;
+
+	& p {
+		display: inline-block;
+		color: var(--color-text-soft);
+		font-size: var(--font-size-s);
+		margin: 0;
+	}
+
+	& basic-number {
+		display: inline-block;
+		font-size: var(--font-size-xl);
+	}
+
+	.label {
+		display: inline-block;
+		font-size: var(--font-size-s);
+		color: var(--color-text-soft);
+	}
+}

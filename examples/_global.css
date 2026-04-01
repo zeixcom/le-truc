@@ -157,15 +157,15 @@
 	}
 }
 
-@media screen and (min-width: 75em) and (max-width: 125em) {
+@media screen and (min-width: 75em) {
 	:root {
-		--font-size-xs: clamp(0.8125rem, 0.0694vw + 0.7604rem, 0.8438rem);
-		--font-size-s: clamp(1rem, 0.2778vw + 0.7917rem, 1.125rem);
-		--font-size-m: clamp(1.25rem, 0.5556vw + 0.8333rem, 1.5rem);
-		--font-size-l: clamp(1.5625rem, 0.9722vw + 0.8333rem, 2rem);
-		--font-size-xl: clamp(2rem, 1.8056vw + 0.6458rem, 2.8125rem);
-		--font-size-xxl: clamp(2.5rem, 2.7778vw + 0.4167rem, 3.75rem);
-		--font-size-xxxl: clamp(3.125rem, 4.1667vw, 5rem);
+		--font-size-xs: 0.8125rem;
+		--font-size-s: 1rem;
+		--font-size-m: 1.25rem;
+		--font-size-l: 1.5625rem;
+		--font-size-xl: 2rem;
+		--font-size-xxl: 2.5rem;
+		--font-size-xxxl: 3.125rem;
 	}
 }
 

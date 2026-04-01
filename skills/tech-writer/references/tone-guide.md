@@ -81,6 +81,26 @@ These rules apply to every document without exception:
 - "Note that…", "Keep in mind…", "Be aware that…" — state it directly
 </CLAUDE_MD>
 
+<blog>
+**Primary audience:** Developers who have found their way to the blog — curious about the project's history, design decisions, or how it compares to alternatives. They are technically capable but not necessarily Le Truc users yet.
+
+**Register:** Plain, direct, conversational. Write the way a knowledgeable colleague explains something over coffee — not a sales deck, not a whitepaper. First person plural ("we") is fine for posts about the team's experience. Present tense for general claims; past tense for things that happened.
+
+**Core rules:**
+
+- **No business jargon.** Do not write: "greenfield", "ergonomic", "paradigm shift", "first-class concern", "translation point", "profile matches", "incidental to", "optimise for", "separation of concerns". Say the plain thing instead.
+- **No corporate phrasing.** Avoid: "occupies a niche", "the insight was", "the question is whether", "the friction appears", "the gap", "what each got right". These sound like a strategy document, not a person talking.
+- **No motivational framing.** Cut throat-clearing like "This post covers…", "The goal is to…", "This is an enormous improvement." Say the thing. Let the reader decide if it is an improvement.
+- **Short sentences over long ones.** If a sentence has more than two clauses, split it. If a paragraph is longer than five sentences, look for what to cut.
+- **Technical terms are fine where needed.** "Reactive", "signal graph", "Shadow DOM", "hydration", "SSR", "prop drilling" — these have precise meanings that matter. Do not replace them with vague paraphrases.
+- **Contractions are fine.** "It is" can be "it's". "Do not" can be "don't". Match the natural rhythm of spoken explanation.
+
+**What to cut:**
+- Sentences that restate what the previous sentence already said
+- Transitions that exist only to move between paragraphs ("We have now described…", "That brings us to…")
+- Any sentence the reader could have written themselves after reading the previous one
+</blog>
+
 <jsdoc>
 **Primary audience:** Developers reading function signatures in an IDE or in the TypeDoc-generated API pages.
 

@@ -17,6 +17,7 @@ layout: 'page'
 - Basic
   - [Button](./examples/basic-button.html)
   - [Counter](./examples/basic-counter.html) selected
+  - [Gauge](./examples/basic-gauge.html)
   - [Hello](./examples/basic-hello.html)
   - [Number](./examples/basic-number.html)
   - [Pluralize](./examples/basic-pluralize.html)

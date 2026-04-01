@@ -2,7 +2,7 @@
 
 > **asEnum**(`valid`): [`Parser`](../type-aliases/Parser.md)\<`string`, [`UI`](../type-aliases/UI.md)\>
 
-Defined in: [src/parsers/string.ts:29](https://github.com/zeixcom/le-truc/blob/f1a3efe48ad5bc44f3a6d0e565f5dfe468144c70/src/parsers/string.ts#L29)
+Defined in: [src/parsers/string.ts:29](https://github.com/zeixcom/le-truc/blob/aeeac355aad9805eb8ee281d5c2dacf08589e2c9/src/parsers/string.ts#L29)
 
 Parser that constrains an attribute value to one of a fixed set of allowed strings.
 

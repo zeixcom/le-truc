@@ -1,0 +1,291 @@
+<module-tabgroup>
+		<div role="tablist" aria-label="Tabs">
+		<button
+		type="button"
+		role="tab"
+		id="trigger_basic-gauge_html"
+		aria-controls="panel_basic-gauge_html"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		HTML
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_basic-gauge_css"
+		aria-controls="panel_basic-gauge_css"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		CSS
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_basic-gauge_ts"
+		aria-controls="panel_basic-gauge_ts"
+		aria-selected="true"
+		tabindex="0"
+	>
+		TypeScript
+	</button>
+	</div> <div
+		role="tabpanel"
+		id="panel_basic-gauge_html"
+		aria-labelledby="trigger_basic-gauge_html"
+		 hidden
+	>
+		<module-codeblock
+			language="html"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">basic-gauge.html</span>
+				<span class="language">html</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-gauge</span></span>
+<span class="line"><span style="color:#A6E22E">	thresholds</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'[</span></span>
+<span class="line"><span style="color:#E6DB74">		{"min":0.8,"label":"Good job!","color":"var(--color-green-70)"},</span></span>
+<span class="line"><span style="color:#E6DB74">		{"min":0.5,"label":"Decent","color":"var(--color-orange-70)"},</span></span>
+<span class="line"><span style="color:#E6DB74">		{"min":0,"label":"Try again!","color":"var(--color-pink-70)"}</span></span>
+<span class="line"><span style="color:#E6DB74">	]'</span></span>
+<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"basic-gauge-label-1"</span><span style="color:#F8F8F2">>Speed:&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">meter</span></span>
+<span class="line"><span style="color:#A6E22E">		class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"visually-hidden"</span></span>
+<span class="line"><span style="color:#A6E22E">		value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0.84"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"basic-gauge-label-1"</span></span>
+<span class="line"><span style="color:#F8F8F2">	>&#x3C;/</span><span style="color:#F92672">meter</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">		value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0.84"</span></span>
+<span class="line"><span style="color:#A6E22E">		options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"percent","maximumFractionDigits":1}'</span></span>
+<span class="line"><span style="color:#F8F8F2">		>84%&#x3C;/</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#F8F8F2">	></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">small</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">>Good job!&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-gauge</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-gauge</span></span>
+<span class="line"><span style="color:#A6E22E">	thresholds</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'[</span></span>
+<span class="line"><span style="color:#E6DB74">		{"min":0.8,"label":"Good job!","color":"var(--color-green-70)"},</span></span>
+<span class="line"><span style="color:#E6DB74">		{"min":0.5,"label":"Decent","color":"var(--color-orange-70)"},</span></span>
+<span class="line"><span style="color:#E6DB74">		{"min":0,"label":"Try again!","color":"var(--color-pink-70)"}</span></span>
+<span class="line"><span style="color:#E6DB74">	]'</span></span>
+<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"basic-gauge-label-2"</span><span style="color:#F8F8F2">>Speed:&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">meter</span></span>
+<span class="line"><span style="color:#A6E22E">		class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"visually-hidden"</span></span>
+<span class="line"><span style="color:#A6E22E">		value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0.65"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"basic-gauge-label-2"</span></span>
+<span class="line"><span style="color:#F8F8F2">	>&#x3C;/</span><span style="color:#F92672">meter</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">		value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0.65"</span></span>
+<span class="line"><span style="color:#A6E22E">		options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"percent","maximumFractionDigits":1}'</span></span>
+<span class="line"><span style="color:#F8F8F2">		>65%&#x3C;/</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#F8F8F2">	></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">small</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">>Decent&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-gauge</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">basic-gauge</span></span>
+<span class="line"><span style="color:#A6E22E">	thresholds</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'[</span></span>
+<span class="line"><span style="color:#E6DB74">		{"min":0.8,"label":"Good job!","color":"var(--color-green-70)"},</span></span>
+<span class="line"><span style="color:#E6DB74">		{"min":0.5,"label":"Decent","color":"var(--color-orange-70)"},</span></span>
+<span class="line"><span style="color:#E6DB74">		{"min":0,"label":"Try again!","color":"var(--color-pink-70)"}</span></span>
+<span class="line"><span style="color:#E6DB74">	]'</span></span>
+<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"basic-gauge-label-3"</span><span style="color:#F8F8F2">>Speed:&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">meter</span></span>
+<span class="line"><span style="color:#A6E22E">		class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"visually-hidden"</span></span>
+<span class="line"><span style="color:#A6E22E">		value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0.20566788"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"basic-gauge-label-3"</span></span>
+<span class="line"><span style="color:#F8F8F2">	>&#x3C;/</span><span style="color:#F92672">meter</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">		value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0.20566788"</span></span>
+<span class="line"><span style="color:#A6E22E">		options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"percent","maximumFractionDigits":1}'</span></span>
+<span class="line"><span style="color:#F8F8F2">		>20.57%&#x3C;/</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#F8F8F2">	></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">small</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">>Try again!&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">basic-gauge</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span></code></pre>
+			</module-scrollarea>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_basic-gauge_css"
+		aria-labelledby="trigger_basic-gauge_css"
+		 hidden
+	>
+		<module-codeblock
+			language="css"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">basic-gauge.css</span>
+				<span class="language">css</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">basic-gauge</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	--basic-gauge-color: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-primary);</span></span>
+<span class="line"><span style="color:#F8F8F2">	--basic-gauge-thickness: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs);</span></span>
+<span class="line"><span style="color:#F8F8F2">	--basic-gauge-degree: </span><span style="color:#AE81FF">120</span><span style="color:#F92672">deg</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">	--basic-gauge-size: </span><span style="color:#AE81FF">8</span><span style="color:#F92672">rem</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	width</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--basic-gauge-size);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">flex</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	flex-direction</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">column</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	justify-content</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">center</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	align-items</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">center</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	aspect-ratio</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	background-image</span><span style="color:#F8F8F2">:</span></span>
+<span class="line"><span style="color:#66D9EF">		radial-gradient</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#66D9EF">			closest-side</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#66D9EF">			var</span><span style="color:#F8F8F2">(--color-background) </span><span style="color:#AE81FF">0</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#66D9EF">			var</span><span style="color:#F8F8F2">(--color-background) </span><span style="color:#66D9EF">calc</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">100</span><span style="color:#F92672">%</span><span style="color:#F92672"> -</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--basic-gauge-thickness)),</span></span>
+<span class="line"><span style="color:#66D9EF">			transparent</span><span style="color:#66D9EF"> calc</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">100</span><span style="color:#F92672">%</span><span style="color:#F92672"> -</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--basic-gauge-thickness))</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#66D9EF">		conic-gradient</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F92672">			from</span><span style="color:#AE81FF"> -120</span><span style="color:#F92672">deg</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#66D9EF">			var</span><span style="color:#F8F8F2">(--basic-gauge-color) </span><span style="color:#AE81FF">0</span><span style="color:#F92672">deg</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--basic-gauge-degree),</span></span>
+<span class="line"><span style="color:#66D9EF">			transparent</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--basic-gauge-degree) </span><span style="color:#AE81FF">240</span><span style="color:#F92672">deg</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#66D9EF">		conic-gradient</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F92672">			from</span><span style="color:#AE81FF"> -120</span><span style="color:#F92672">deg</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#66D9EF">			var</span><span style="color:#F8F8F2">(--color-secondary) </span><span style="color:#AE81FF">0</span><span style="color:#F92672">deg</span><span style="color:#AE81FF"> 240</span><span style="color:#F92672">deg</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#66D9EF">			transparent</span><span style="color:#AE81FF"> 240</span><span style="color:#F92672">deg</span></span>
+<span class="line"><span style="color:#F8F8F2">		);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	border-radius</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">50</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	&#x26; p {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">inline-block</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text-soft);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		margin</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	&#x26; </span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">inline-block</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-xl);</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">	.label</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">inline-block</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text-soft);</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span></code></pre>
+			</module-scrollarea>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_basic-gauge_ts"
+		aria-labelledby="trigger_basic-gauge_ts"
+		
+	>
+		<module-codeblock
+			language="ts"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">basic-gauge.ts</span>
+				<span class="language">ts</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	asJSON,</span></span>
+<span class="line"><span style="color:#F8F8F2">	asNumber,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createMemo,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F8F8F2">	pass,</span></span>
+<span class="line"><span style="color:#F8F8F2">	setProperty,</span></span>
+<span class="line"><span style="color:#F8F8F2">	setStyle,</span></span>
+<span class="line"><span style="color:#F8F8F2">	setText,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F92672"> type</span><span style="color:#F8F8F2"> { BasicNumberProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../basic-number/basic-number'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#F8F8F2">	thresholds</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeThreshold</span><span style="color:#F8F8F2">[]</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeThreshold</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	min</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#F8F8F2">	label</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">	color</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	meter</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLMeterElement</span></span>
+<span class="line"><span style="color:#F8F8F2">	value</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicNumberProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	label</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'basic-gauge'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeUI</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#E6DB74">	'basic-gauge'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	{</span></span>
+<span class="line"><span style="color:#F8F8F2">		value: </span><span style="color:#A6E22E">asNumber</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.meter.value),</span></span>
+<span class="line"><span style="color:#F8F8F2">		thresholds: </span><span style="color:#A6E22E">asJSON</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeThreshold</span><span style="color:#F8F8F2">[], </span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeUI</span><span style="color:#F8F8F2">>([]),</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">		meter: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'meter'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a &#x3C;meter> element to display the level'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		value: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'basic-number'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add a &#x3C;basic-number> element to display the value'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#F8F8F2">		label: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.label'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add an element to display the qualification label'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">meter</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> max </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> meter.max</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> qualification </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createMemo</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">			() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">				host.thresholds.</span><span style="color:#A6E22E">find</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">threshold</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> host.value </span><span style="color:#F92672">>=</span><span style="color:#F8F8F2"> threshold.min) </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					label: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					color: </span><span style="color:#E6DB74">'var(--color-primary)'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			host: [</span></span>
+<span class="line"><span style="color:#A6E22E">				setStyle</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">					'--basic-gauge-degree'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">240</span><span style="color:#F92672"> *</span><span style="color:#F8F8F2"> host.value) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> max</span><span style="color:#F92672">}</span><span style="color:#E6DB74">deg`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">				),</span></span>
+<span class="line"><span style="color:#A6E22E">				setStyle</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'--basic-gauge-color'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> qualification.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().color),</span></span>
+<span class="line"><span style="color:#F8F8F2">			],</span></span>
+<span class="line"><span style="color:#F8F8F2">			meter: </span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">			value: </span><span style="color:#A6E22E">pass</span><span style="color:#F8F8F2">({ </span><span style="color:#A6E22E">value</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.value }),</span></span>
+<span class="line"><span style="color:#F8F8F2">			label: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> qualification.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().label),</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre>
+			</module-scrollarea>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+	</module-tabgroup>
