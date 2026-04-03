@@ -99,7 +99,53 @@ type MaybeSignal<T extends {}> =
 	| MemoCallback<T>
 	| TaskCallback<T>
 
+/**
+ * The return value of the factory function in the 2-param form of `defineComponent`.
+ *
+ * - `ui` — queried DOM elements, keyed by name; used by `runEffects` and passed to `props` initializers.
+ * - `props` — optional reactive property initializers (same as the second argument in the 4-param form).
+ * - `effects` — optional effects keyed by UI element name (same as the return value of `setup` in the 4-param form).
+ *
+ * Components defined via the factory form opt out of `observedAttributes` entirely.
+ * Reactive state flows through the signal-backed property interface only.
+ */
+type ComponentFactoryResult<P extends ComponentProps, U extends UI> = {
+	ui: U
+	props?: Initializers<P, U>
+	effects?: Effects<P, ComponentUI<P, U>>
+}
+
+/**
+ * Factory function used in the 2-param form of `defineComponent`.
+ *
+ * Receives `{ first, all }` query helpers and the host `Component<P>` at connect time.
+ * Returns the UI element map, optional reactive property initializers, and optional effects.
+ * All three share the same closure scope, so UI elements can be referenced directly without
+ * passing a `ui` object between functions.
+ */
+type ComponentFactory<P extends ComponentProps, U extends UI> = (
+	queries: ElementQueries & { host: Component<P> },
+) => ComponentFactoryResult<P, U>
+
 /* === Exported Functions === */
+
+/**
+ * Define and register a reactive custom element using the 2-param factory form.
+ *
+ * The factory receives `{ first, all, host }` at connect time and returns `{ ui, props?, effects? }`.
+ * UI elements, props initializers, and effects share a single closure scope — no `ui` object is
+ * passed between functions. Components defined this way do not use `observedAttributes`; reactive
+ * state is managed entirely through the signal-backed property interface.
+ *
+ * @since 1.1
+ * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
+ * @param {ComponentFactory<P, U>} factory - Factory function that queries elements and returns ui, props, and effects
+ * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
+ */
+function defineComponent<P extends ComponentProps, U extends UI = {}>(
+	name: string,
+	factory: ComponentFactory<P, U>,
+): Component<P>
 
 /**
  * Define and register a reactive custom element.
@@ -117,15 +163,34 @@ type MaybeSignal<T extends {}> =
  */
 function defineComponent<P extends ComponentProps, U extends UI = {}>(
 	name: string,
-	props: Initializers<P, U> = {} as Initializers<P, U>,
+	props?: Initializers<P, U>,
+	select?: (elementQueries: ElementQueries) => U,
+	setup?: (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>>,
+): Component<P>
+
+function defineComponent<P extends ComponentProps, U extends UI = {}>(
+	name: string,
+	propsOrFactory:
+		| Initializers<P, U>
+		| ComponentFactory<P, U> = {} as Initializers<P, U>,
 	select: (elementQueries: ElementQueries) => U = () => ({}) as U,
 	setup: (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>> = () => ({}),
 ): Component<P> {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
-	for (const prop of Object.keys(props)) {
-		const error = validatePropertyName(prop)
-		if (error) throw new InvalidPropertyNameError(name, prop, error)
+
+	const factory = isFunction(propsOrFactory)
+		? (propsOrFactory as ComponentFactory<P, U>)
+		: null
+	const props = factory
+		? ({} as Initializers<P, U>)
+		: (propsOrFactory as Initializers<P, U>)
+
+	if (!factory) {
+		for (const prop of Object.keys(props)) {
+			const error = validatePropertyName(prop)
+			if (error) throw new InvalidPropertyNameError(name, prop, error)
+		}
 	}
 
 	class Truc extends HTMLElement {
@@ -133,53 +198,47 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 		#ui: ComponentUI<P, U> | undefined
 		#cleanup: MaybeCleanup
 
-		static observedAttributes =
-			Object.entries(props)
-				?.filter(([, initializer]) => isParser(initializer))
-				.map(([prop]) => prop) ?? []
+		static observedAttributes = factory
+			? []
+			: (Object.entries(props)
+					?.filter(([, initializer]) => isParser(initializer))
+					.map(([prop]) => prop) ?? [])
 
 		/**
 		 * Native callback when the custom element is first connected to the document
 		 */
 		connectedCallback() {
-			// Initialize UI
 			const [elementQueries, resolveDependencies] = getHelpers(this)
-			const ui = {
-				...select(elementQueries),
-				host: this as unknown as Component<P>,
-			}
-			this.#ui = ui
-			Object.freeze(this.#ui)
+			const host = this as unknown as Component<P>
 
-			// Initialize signals — dispatch order: Parser → MethodProducer → Reader → static/Signal
-			const createSignal = <K extends keyof P & string>(
-				key: K,
-				initializer: Initializers<P, U>[K],
-			) => {
-				if (isParser<P[K], ComponentUI<P, U>>(initializer)) {
-					const result = initializer(ui, this.getAttribute(key))
-					if (result != null) this.#setAccessor(key, result)
-				} else if (isMethodProducer(initializer)) {
-					initializer(ui)
-				} else if (isFunction<MaybeSignal<P[K]>>(initializer)) {
-					const result = (
-						initializer as Reader<MaybeSignal<P[K]>, ComponentUI<P, U>>
-					)(ui)
-					if (result != null) this.#setAccessor(key, result)
-				} else {
-					const value = initializer as MaybeSignal<P[K]>
-					if (value != null) this.#setAccessor(key, value)
-				}
+			if (factory) {
+				// 2-param factory form: no observedAttributes, ui built from factory return
+				const result = factory({ ...elementQueries, host })
+				const ui = {
+					...result.ui,
+					host,
+				} as ComponentUI<P, U>
+				this.#ui = ui
+				Object.freeze(this.#ui)
+				this.#initSignals(ui, result.props ?? ({} as Initializers<P, U>))
+				const instanceEffects =
+					result.effects ?? ({} as Effects<P, ComponentUI<P, U>>)
+				resolveDependencies(() => {
+					this.#cleanup = unown(() => runEffects(ui, instanceEffects))
+				})
+			} else {
+				// 4-param form: observedAttributes derived from props parsers
+				const ui = {
+					...select(elementQueries),
+					host,
+				} as ComponentUI<P, U>
+				this.#ui = ui
+				Object.freeze(this.#ui)
+				this.#initSignals(ui, props)
+				resolveDependencies(() => {
+					this.#cleanup = unown(() => runEffects(ui, setup(ui)))
+				})
 			}
-			for (const [prop, initializer] of Object.entries(props)) {
-				if (initializer == null || prop in this) continue
-				createSignal(prop, initializer)
-			}
-
-			// Resolve dependencies and run setup function
-			resolveDependencies(() => {
-				this.#cleanup = unown(() => runEffects(ui, setup(ui)))
-			})
 		}
 
 		/**
@@ -216,6 +275,42 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 			const parsed = parser(this.#ui, newValue, oldValue)
 			if (name in this) (this as unknown as P)[name] = parsed
 			else this.#setAccessor(name, parsed)
+		}
+
+		/**
+		 * Initialize signals for each property in the given initializers map.
+		 * Dispatch order: Parser → MethodProducer → Reader → static/Signal
+		 *
+		 * @param {ComponentUI<P, U>} ui - Frozen UI object (including host)
+		 * @param {Initializers<P, U>} instanceProps - Property initializers to process
+		 */
+		#initSignals(
+			ui: ComponentUI<P, U>,
+			instanceProps: Initializers<P, U>,
+		): void {
+			const createSignal = <K extends keyof P & string>(
+				key: K,
+				initializer: Initializers<P, U>[K],
+			) => {
+				if (isParser<P[K], ComponentUI<P, U>>(initializer)) {
+					const result = initializer(ui, this.getAttribute(key))
+					if (result != null) this.#setAccessor(key, result)
+				} else if (isMethodProducer(initializer)) {
+					initializer(ui)
+				} else if (isFunction<MaybeSignal<P[K]>>(initializer)) {
+					const result = (
+						initializer as Reader<MaybeSignal<P[K]>, ComponentUI<P, U>>
+					)(ui)
+					if (result != null) this.#setAccessor(key, result)
+				} else {
+					const value = initializer as MaybeSignal<P[K]>
+					if (value != null) this.#setAccessor(key, value)
+				}
+			}
+			for (const [prop, initializer] of Object.entries(instanceProps)) {
+				if (initializer == null || prop in this) continue
+				createSignal(prop as keyof P & string, initializer)
+			}
 		}
 
 		/**
@@ -258,6 +353,8 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 
 export {
 	type Component,
+	type ComponentFactory,
+	type ComponentFactoryResult,
 	type ComponentProp,
 	type ComponentProps,
 	type ComponentSetup,

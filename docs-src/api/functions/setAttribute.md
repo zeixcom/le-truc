@@ -2,7 +2,7 @@
 
 > **setAttribute**\<`P`, `E`\>(`name`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/attribute.ts:47](https://github.com/zeixcom/le-truc/blob/be10586073df9ae2ebe5b85bd4fcca8a69e532d4/src/effects/attribute.ts#L47)
+Defined in: [src/effects/attribute.ts:47](https://github.com/zeixcom/le-truc/blob/50ea304679826d6ff5a855caa1afab75729635cb/src/effects/attribute.ts#L47)
 
 Effect for setting an attribute on an element.
 Sets the specified attribute with security validation for unsafe values.

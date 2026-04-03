@@ -50,6 +50,46 @@ type Initializers<P extends ComponentProps, U extends UI> = {
  */
 type MaybeSignal<T extends {}> = T | Signal<T> | MemoCallback<T> | TaskCallback<T>;
 /**
+ * The return value of the factory function in the 2-param form of `defineComponent`.
+ *
+ * - `ui` — queried DOM elements, keyed by name; used by `runEffects` and passed to `props` initializers.
+ * - `props` — optional reactive property initializers (same as the second argument in the 4-param form).
+ * - `effects` — optional effects keyed by UI element name (same as the return value of `setup` in the 4-param form).
+ *
+ * Components defined via the factory form opt out of `observedAttributes` entirely.
+ * Reactive state flows through the signal-backed property interface only.
+ */
+type ComponentFactoryResult<P extends ComponentProps, U extends UI> = {
+    ui: U;
+    props?: Initializers<P, U>;
+    effects?: Effects<P, ComponentUI<P, U>>;
+};
+/**
+ * Factory function used in the 2-param form of `defineComponent`.
+ *
+ * Receives `{ first, all }` query helpers and the host `Component<P>` at connect time.
+ * Returns the UI element map, optional reactive property initializers, and optional effects.
+ * All three share the same closure scope, so UI elements can be referenced directly without
+ * passing a `ui` object between functions.
+ */
+type ComponentFactory<P extends ComponentProps, U extends UI> = (queries: ElementQueries & {
+    host: Component<P>;
+}) => ComponentFactoryResult<P, U>;
+/**
+ * Define and register a reactive custom element using the 2-param factory form.
+ *
+ * The factory receives `{ first, all, host }` at connect time and returns `{ ui, props?, effects? }`.
+ * UI elements, props initializers, and effects share a single closure scope — no `ui` object is
+ * passed between functions. Components defined this way do not use `observedAttributes`; reactive
+ * state is managed entirely through the signal-backed property interface.
+ *
+ * @since 1.1
+ * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
+ * @param {ComponentFactory<P, U>} factory - Factory function that queries elements and returns ui, props, and effects
+ * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
+ */
+declare function defineComponent<P extends ComponentProps, U extends UI = {}>(name: string, factory: ComponentFactory<P, U>): Component<P>;
+/**
  * Define and register a reactive custom element.
  *
  * Calls `customElements.define()` and returns the registered class.
@@ -64,4 +104,4 @@ type MaybeSignal<T extends {}> = T | Signal<T> | MemoCallback<T> | TaskCallback<
  * @throws {InvalidPropertyNameError} If a property name conflicts with reserved words or inherited HTMLElement properties
  */
 declare function defineComponent<P extends ComponentProps, U extends UI = {}>(name: string, props?: Initializers<P, U>, select?: (elementQueries: ElementQueries) => U, setup?: (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>>): Component<P>;
-export { type Component, type ComponentProp, type ComponentProps, type ComponentSetup, type ComponentUI, defineComponent, type Initializers, type MaybeSignal, type ReservedWords, };
+export { type Component, type ComponentFactory, type ComponentFactoryResult, type ComponentProp, type ComponentProps, type ComponentSetup, type ComponentUI, defineComponent, type Initializers, type MaybeSignal, type ReservedWords, };

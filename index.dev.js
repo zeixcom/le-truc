@@ -1968,28 +1968,70 @@ var getHelpers = (host) => {
 };
 
 // src/component.ts
-function defineComponent(name, props = {}, select = () => ({}), setup = () => ({})) {
+function defineComponent(name, propsOrFactory = {}, select = () => ({}), setup = () => ({})) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
-  for (const prop of Object.keys(props)) {
-    const error = validatePropertyName(prop);
-    if (error)
-      throw new InvalidPropertyNameError(name, prop, error);
+  const factory = isFunction(propsOrFactory) ? propsOrFactory : null;
+  const props = factory ? {} : propsOrFactory;
+  if (!factory) {
+    for (const prop of Object.keys(props)) {
+      const error = validatePropertyName(prop);
+      if (error)
+        throw new InvalidPropertyNameError(name, prop, error);
+    }
   }
 
   class Truc extends HTMLElement {
     debug;
     #ui;
     #cleanup;
-    static observedAttributes = Object.entries(props)?.filter(([, initializer]) => isParser(initializer)).map(([prop]) => prop) ?? [];
+    static observedAttributes = factory ? [] : Object.entries(props)?.filter(([, initializer]) => isParser(initializer)).map(([prop]) => prop) ?? [];
     connectedCallback() {
       const [elementQueries, resolveDependencies] = getHelpers(this);
-      const ui = {
-        ...select(elementQueries),
-        host: this
-      };
-      this.#ui = ui;
-      Object.freeze(this.#ui);
+      const host = this;
+      if (factory) {
+        const result = factory({ ...elementQueries, host });
+        const ui = {
+          ...result.ui,
+          host
+        };
+        this.#ui = ui;
+        Object.freeze(this.#ui);
+        this.#initSignals(ui, result.props ?? {});
+        const instanceEffects = result.effects ?? {};
+        resolveDependencies(() => {
+          this.#cleanup = unown(() => runEffects(ui, instanceEffects));
+        });
+      } else {
+        const ui = {
+          ...select(elementQueries),
+          host
+        };
+        this.#ui = ui;
+        Object.freeze(this.#ui);
+        this.#initSignals(ui, props);
+        resolveDependencies(() => {
+          this.#cleanup = unown(() => runEffects(ui, setup(ui)));
+        });
+      }
+    }
+    disconnectedCallback() {
+      if (isFunction(this.#cleanup))
+        this.#cleanup();
+    }
+    attributeChangedCallback(name2, oldValue, newValue) {
+      if (!this.#ui || newValue === oldValue || isComputed(getSignals(this)[name2]))
+        return;
+      const parser = props[name2];
+      if (!isParser(parser))
+        return;
+      const parsed = parser(this.#ui, newValue, oldValue);
+      if (name2 in this)
+        this[name2] = parsed;
+      else
+        this.#setAccessor(name2, parsed);
+    }
+    #initSignals(ui, instanceProps) {
       const createSignal2 = (key, initializer) => {
         if (isParser(initializer)) {
           const result = initializer(ui, this.getAttribute(key));
@@ -2007,30 +2049,11 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
             this.#setAccessor(key, value);
         }
       };
-      for (const [prop, initializer] of Object.entries(props)) {
+      for (const [prop, initializer] of Object.entries(instanceProps)) {
         if (initializer == null || prop in this)
           continue;
         createSignal2(prop, initializer);
       }
-      resolveDependencies(() => {
-        this.#cleanup = unown(() => runEffects(ui, setup(ui)));
-      });
-    }
-    disconnectedCallback() {
-      if (isFunction(this.#cleanup))
-        this.#cleanup();
-    }
-    attributeChangedCallback(name2, oldValue, newValue) {
-      if (!this.#ui || newValue === oldValue || isComputed(getSignals(this)[name2]))
-        return;
-      const parser = props[name2];
-      if (!isParser(parser))
-        return;
-      const parsed = parser(this.#ui, newValue, oldValue);
-      if (name2 in this)
-        this[name2] = parsed;
-      else
-        this.#setAccessor(name2, parsed);
     }
     #setAccessor(key, value) {
       const signal = isSignal(value) ? value : isFunction(value) ? createComputed(value) : createState(value);

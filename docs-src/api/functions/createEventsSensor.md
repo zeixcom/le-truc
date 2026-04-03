@@ -2,7 +2,7 @@
 
 > **createEventsSensor**\<`T`, `P`, `U`, `K`\>(`init`, `key`, `events`): (`ui`) => [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-Defined in: [src/events.ts:67](https://github.com/zeixcom/le-truc/blob/be10586073df9ae2ebe5b85bd4fcca8a69e532d4/src/events.ts#L67)
+Defined in: [src/events.ts:67](https://github.com/zeixcom/le-truc/blob/50ea304679826d6ff5a855caa1afab75729635cb/src/events.ts#L67)
 
 Create a `Reader` that produces a `Sensor<T>` driven by DOM events on the host.
 

@@ -27,23 +27,25 @@ declare global {
 
 export default defineComponent<FormCheckboxProps, FormCheckboxUI>(
 	'form-checkbox',
-	{
-		checked: read(ui => ui.checkbox.checked, false),
-		label: asString(
-			({ host, label }) =>
-				label?.textContent ?? host.querySelector('label')?.textContent ?? '',
-		),
+	({ first, host }) => {
+		const checkbox = first('input[type="checkbox"]', 'Add a native checkbox.')
+		const label = first('.label')
+		return {
+			ui: { checkbox, label },
+			props: {
+				checked: read(() => checkbox.checked, false),
+				label: asString(
+					() => label?.textContent ?? host.querySelector('label')?.textContent ?? '',
+				),
+			},
+			effects: {
+				host: toggleAttribute('checked'),
+				checkbox: [
+					on('change', () => ({ checked: checkbox.checked })),
+					setProperty('checked'),
+				],
+				label: setText('label'),
+			},
+		}
 	},
-	({ first }) => ({
-		checkbox: first('input[type="checkbox"]', 'Add a native checkbox.'),
-		label: first('.label'),
-	}),
-	({ checkbox }) => ({
-		host: toggleAttribute('checked'),
-		checkbox: [
-			on('change', () => ({ checked: checkbox.checked })),
-			setProperty('checked'),
-		],
-		label: setText('label'),
-	}),
 )
