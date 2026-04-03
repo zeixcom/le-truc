@@ -1,0 +1,104 @@
+import {
+	type Component,
+	type ComponentUI,
+	createEventsSensor,
+	defineComponent,
+	on,
+	read,
+	setAttribute,
+	setProperty,
+	setText,
+} from '../../..'
+import { clearEffects, clearMethod } from '../../_common/clearMethod'
+
+export type FormTextboxProps = {
+	value: string
+	readonly length: number
+	error: string
+	description: string
+	readonly clear: () => void
+}
+
+type FormTextboxUI = {
+	textbox: HTMLInputElement | HTMLTextAreaElement
+	clear?: HTMLButtonElement | undefined
+	error?: HTMLElement | undefined
+	description?: HTMLElement | undefined
+}
+
+declare global {
+	interface HTMLElementTagNameMap {
+		'form-textbox': Component<FormTextboxProps>
+	}
+}
+
+export default defineComponent<FormTextboxProps, FormTextboxUI>(
+	'form-textbox',
+	{
+		value: read(ui => ui.textbox.value, ''),
+		length: createEventsSensor(
+			read(ui => ui.textbox.value.length, 0),
+			'textbox',
+			{
+				input: ({ target }) => target.value.length,
+			},
+		),
+		error: '',
+		description: ({
+			host,
+			description,
+			textbox,
+		}: ComponentUI<FormTextboxProps, FormTextboxUI>) => {
+			if (description) {
+				if (textbox.maxLength > 0 && description.dataset.remaining) {
+					return () =>
+						description.dataset.remaining!.replace(
+							'${n}',
+							String(textbox.maxLength - host.length),
+						)
+				}
+				return description.textContent?.trim() ?? ''
+			} else {
+				return ''
+			}
+		},
+		clear: clearMethod,
+	},
+	({ first }) => ({
+		textbox: first(
+			'input, textarea',
+			'Add a native input or textarea as descendant element.',
+		),
+		clear: first('button.clear'),
+		error: first('.error'),
+		description: first('.description'),
+	}),
+	ui => {
+		const { host, textbox, error, description } = ui
+		const errorId = error?.id
+		const descriptionId = description?.id
+
+		return {
+			textbox: [
+				on('change', () => {
+					textbox.checkValidity()
+					return {
+						value: textbox.value,
+						error: textbox.validationMessage,
+					}
+				}),
+				setProperty('value'),
+				setProperty('ariaInvalid', () => String(!!host.error)),
+				setAttribute('aria-errormessage', () =>
+					host.error && errorId ? errorId : null,
+				),
+				setAttribute('aria-describedby', () =>
+					description && descriptionId ? descriptionId : null,
+				),
+			],
+			clear: clearEffects(ui),
+			error: setText('error'),
+			description: setText('description'),
+		}
+	},
+)
