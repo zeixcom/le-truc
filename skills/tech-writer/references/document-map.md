@@ -45,7 +45,7 @@ and what to check in a consistency review.
 **Path:** `docs-src/pages/components.md`
 **Audience:** Developers learning to build Le Truc components
 **Register:** Tutorial — walks through real code with explanation; assumes JavaScript competence
-**Scope:** `defineComponent` anatomy (four arguments), reactive properties (parsers, readers, static), select function (`first`, `all`), setup function (effects), `asMethod()` for imperative methods, `all()` for dynamic collections
+**Scope:** `defineComponent` — both the 2-param factory form (preferred, since 1.1) and the 4-param form; reactive properties (parsers, readers, static); factory vs. 4-param trade-offs (attribute reactivity); `first`, `all`; effects; `asMethod()` for imperative methods; `all()` for dynamic collections
 
 **Update triggers:**
 - `defineComponent` signature changes
@@ -213,7 +213,7 @@ and what to check in a consistency review.
 **Consistency checks:**
 - Every entry is still accurate for the current implementation
 - No entry describes behavior that has since changed or been removed
-- Parser branding, MethodProducer branding, `pass()` scope, `all()` laziness, `setAttribute` security, `undefined` restore, dependency timeout, and debug mode are all documented
+- Parser branding, MethodProducer branding, `pass()` scope, `all()` laziness, `setAttribute` security, `undefined` restore, dependency timeout, debug mode, and factory-form `observedAttributes` behavior are all documented
 </CLAUDE_md>
 
 <jsdoc_in_src>

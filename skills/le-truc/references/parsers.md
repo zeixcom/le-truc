@@ -7,9 +7,11 @@ All parsers are imported from `@zeix/le-truc`.
 
 | Initializer kind | Reacts to attribute changes? | Use when |
 |---|---|---|
-| **Parser** (`asParser`-wrapped, ≥2 args) | Yes — added to `observedAttributes` | Prop is driven by an HTML attribute |
+| **Parser** (`asParser`-wrapped, ≥2 args) | 4-param: yes (added to `observedAttributes`); factory: no (called once at connect) | Prop configured by HTML authors via attributes |
 | **Reader** (1-arg function, no `asParser`) | No — called once at connect time | Prop is initialised from current DOM state |
 | **Static value** | No | Prop starts with a fixed default |
+
+> **Attribute semantics:** Attributes are for server-side configuration by HTML authors. Properties are for reactive client-side state and programmatic changes. Both forms support parsers for the initial attribute read at connect time. Only the 4-param form re-runs parsers when attributes change on a live document.
 
 ## Parsers
 
@@ -112,7 +114,8 @@ const asColor = asParser((ui, value) => {
 
 | Scenario | Use |
 |---|---|
-| Attribute controls the prop; HTML author sets it | `asBoolean()`, `asString()`, `asEnum()`, `asInteger()`, `asNumber()`, `asJSON()` |
+| HTML author configures via attribute; attribute changes must be reactive (4-param) | `asBoolean()`, `asString()`, `asEnum()`, `asInteger()`, `asNumber()`, `asJSON()` |
+| HTML author configures via attribute; no live reactivity needed (factory) | Same parsers — called once at connect |
 | Prop initial value lives in existing DOM content | `read(reader, fallback)` |
 | Prop has a fixed starting value, not attribute-driven | Static value: `false`, `0`, `''`, `[]` |
 | Prop is a reactive value from a signal | Pass the signal directly |

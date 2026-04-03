@@ -3,6 +3,17 @@ Non-obvious behaviors in the le-truc source. These are the things most likely to
 Distilled from CLAUDE.md — that file is authoritative; this file is a quick reference.
 </overview>
 
+## Factory form opts out of observedAttributes entirely
+
+The 2-param factory form sets `static observedAttributes = []` unconditionally. The factory result's `props` map is evaluated per-instance at connect time — after `customElements.define()` has already run — so it is structurally impossible to derive `observedAttributes` from it. This is a deliberate trade-off, not an oversight.
+
+Consequences:
+- Parsers in the factory `props` map are called **once at connect time** — HTML authors can configure the component via attributes in server-rendered markup, but `attributeChangedCallback` never fires afterward.
+- The distinction is semantic: attributes are for server-side configuration; properties are for reactive client-side state. Both forms support the initial attribute read.
+- If attribute changes on a live document must drive reactive updates, use the 4-param form.
+
+The `ComponentFactory` and `ComponentFactoryResult` types (both exported from `src/component.ts`) are the TypeScript surface for this pattern.
+
 ## Parser branding is required for reliable detection
 
 `isParser()` checks for `PARSER_BRAND` first. Unbranded functions fall back to `fn.length >= 2`, which is **unreliable**:

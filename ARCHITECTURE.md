@@ -68,7 +68,10 @@ The single external dependency is `@zeix/cause-effect`, which provides the react
 
 ## The Component Lifecycle
 
-`defineComponent(name, props, select, setup)` is the main entry point. It creates a class `Truc extends HTMLElement`, registers it via `customElements.define()`, and returns the class.
+`defineComponent` has two overloads. Both create a class `Truc extends HTMLElement`, register it via `customElements.define()`, and return the class.
+
+- **2-param factory form** `(name, factory)`: the factory receives `{ first, all, host }` at connect time and returns `{ ui, props?, effects? }`. All three share a single closure. `static observedAttributes = []` — parsers in `props` are called once at connect time but `attributeChangedCallback` never fires.
+- **4-param form** `(name, props, select, setup)`: `props` is evaluated at class-definition time; parsers in `props` auto-populate `static observedAttributes`.
 
 ### connectedCallback — initialization
 
@@ -79,21 +82,28 @@ connectedCallback()
   │     Determines query root (shadowRoot ?? this).
   │     Tracks custom element dependencies found during queries.
   │
-  ├─ 2. ui = { ...select({ first, all }), host: this }
-  │     User-provided select function queries DOM elements.
-  │     Object is frozen — immutable after creation.
+  ├─ 2a. [factory form]
+  │       result = factory({ first, all, host })
+  │       ui = { ...result.ui, host }  (frozen)
+  │       #initSignals(ui, result.props ?? {})
   │
-  ├─ 3. Initialize signals for each property:
-  │     ├─ Parser (≥2 args)?  →  parser(ui, this.getAttribute(key))
-  │     ├─ Function (1 arg)?  →  reader(ui)  or  methodProducer(ui)
-  │     └─ Otherwise          →  use value directly (static or Signal)
-  │     Each result is passed to #setAccessor(key, value).
+  ├─ 2b. [4-param form]
+  │       ui = { ...select({ first, all }), host }  (frozen)
+  │       #initSignals(ui, props)
   │
-  └─ 4. resolveDependencies(() => {
-           this.#cleanup = runEffects(ui, setup(ui))
+  │  #initSignals dispatches per initializer:
+  │     ├─ Parser (PARSER_BRAND)?   →  parser(ui, this.getAttribute(key))
+  │     ├─ MethodProducer (METHOD_BRAND)?  →  methodProducer(ui)
+  │     ├─ Function (1 arg)?        →  reader(ui)
+  │     └─ Otherwise                →  use value directly (static or Signal)
+  │     Each non-null result is passed to #setAccessor(key, value).
+  │
+  └─ 3. resolveDependencies(() => {
+           [factory form] this.#cleanup = runEffects(ui, result.effects ?? {})
+           [4-param form] this.#cleanup = runEffects(ui, setup(ui))
          })
          Waits for child custom elements to be defined (200ms timeout),
-         then runs the setup function and activates effects.
+         then activates effects.
 ```
 
 ### #setAccessor — signal creation
@@ -110,7 +120,7 @@ The Slot enables signal swapping: if `#setAccessor` is called again for an exist
 
 ### attributeChangedCallback — attribute sync
 
-Only fires for properties whose initializer `isParser` (function with ≥2 parameters). These are collected into `static observedAttributes` at class creation time.
+Factory-form components have `static observedAttributes = []` — this callback never fires for them. For 4-param components, only fires for properties whose initializer `isParser` (branded with `PARSER_BRAND`); these are collected into `static observedAttributes` at class creation time.
 
 When an attribute changes: parse the new value through the parser, then assign it to the component property (which triggers `signal.set()`). Computed (read-only) signals are skipped.
 
@@ -208,9 +218,11 @@ The file contains a type-level CSS selector parser that infers the correct `HTML
 
 Parsers transform HTML attribute strings into typed JavaScript values. The key design choice: **a Parser is a function branded with `PARSER_BRAND`** (`(ui, value, old?) => T`), while a **Reader is any function with 1 parameter** (`(ui) => T`). Always create custom parsers with `asParser()` — it attaches the brand so `isParser()` can identify them reliably. Relying on `fn.length >= 2` as the parser signal is deprecated and may be removed in a future major version; in `DEV_MODE`, unbranded two-argument functions trigger a `console.warn`.
 
-Parsers serve dual duty:
-1. As property initializers — `{ config: asJSON({ theme: 'light' }) }` — called during `connectedCallback` with the attribute's initial value
-2. As attribute watchers — automatically added to `observedAttributes` and called in `attributeChangedCallback`
+Parsers serve dual duty in the 4-param form:
+1. As property initializers — called during `connectedCallback` with the attribute's initial value
+2. As attribute watchers — automatically added to `observedAttributes` and re-called in `attributeChangedCallback` on every attribute change
+
+In the factory form, parsers serve only role 1: called once at connect time with the current attribute value; `observedAttributes = []` so `attributeChangedCallback` never fires.
 
 The `read(reader, fallback)` function composes a `LooseReader` (which may return `string | null | undefined`) with a parser/fallback into a clean `Reader<T>`. This is useful for reading DOM state and parsing it: `read(ui => ui.input.value, asInteger())`.
 

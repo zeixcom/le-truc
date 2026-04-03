@@ -1,5 +1,5 @@
 <required_reading>
-1. references/component-model.md — `defineComponent` args, reactivity flow, signal types
+1. references/component-model.md — both forms of `defineComponent`, reactivity flow, signal types
 2. references/markup.md — HTML structure and progressive-enhancement patterns
 3. references/styling.md — CSS scoping, custom properties, variant classes
 4. references/documentation.md — what to document and how
@@ -15,23 +15,29 @@ Before writing any code, produce a brief plan and show it to the user. Include:
 
 - **Component name(s)**: tag name(s) in lowercase with a hyphen
 - **Responsibility**: one sentence per component
-- **Props**: each reactive property, its type, and how it is initialised (parser, reader, or static value)
-- **UI map** (`select`): named queries into the host subtree
-- **Effects** (`setup`): which effect handles which prop on which element
+- **Form**: factory (2-param, preferred) unless props must react to HTML attribute changes
+- **Props**: each reactive property, its type, and how it is initialised (reader or static value for factory form; parser, reader, or static for 4-param)
+- **UI elements**: named queries into the host subtree (via `first` / `all`)
+- **Effects**: which effect handles which prop on which element
 - **Coordination**: how components communicate if more than one is involved (see references/coordination.md)
 
 **Wait for the user to confirm or continue without objection before writing code.**
 
 ## Step 2: Write the TypeScript file (`.ts`)
 
-Follow references/component-model.md exactly. Pattern:
+Follow references/component-model.md exactly.
+
+### Factory form (preferred)
+
+Use the 2-param factory form unless the component requires HTML attribute observation.
 
 ```typescript
 import {
-  asBoolean,          // only import what you use
   type Component,
   defineComponent,
   on,
+  read,
+  setProperty,
   setText,
 } from '@zeix/le-truc'
 
@@ -41,7 +47,7 @@ export type MyComponentProps = {
   label: string
 }
 
-// 2. UI type — all named queries returned by the select function
+// 2. UI type — all named elements returned by the factory
 type MyComponentUI = {
   button: HTMLButtonElement
   label: HTMLSpanElement
@@ -54,20 +60,71 @@ declare global {
   }
 }
 
-// 4. Component definition
+// 4. Component definition — factory form
 export default defineComponent<MyComponentProps, MyComponentUI>(
   'my-component',
-  // props: how each property is initialised
+  ({ first, host }) => {
+    const button = first('button', 'Add a native <button> descendant.')
+    const label = first('span.label')
+    return {
+      ui: { button, label },
+      props: {
+        disabled: read(() => button.disabled, false),
+        label: read(() => label.textContent ?? '', ''),
+      },
+      effects: {
+        button: setProperty('disabled'),
+        label: setText('label'),
+      },
+    }
+  },
+)
+```
+
+### 4-param form (attribute-driven props only)
+
+Use the 4-param form when HTML authors control props via attributes (e.g., `<my-component disabled label="Click">`).
+
+```typescript
+import {
+  asBoolean,
+  asString,
+  type Component,
+  defineComponent,
+  on,
+  setProperty,
+  setText,
+} from '@zeix/le-truc'
+
+export type MyComponentProps = {
+  disabled: boolean
+  label: string
+}
+
+type MyComponentUI = {
+  button: HTMLButtonElement
+  label: HTMLSpanElement
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'my-component': Component<MyComponentProps>
+  }
+}
+
+export default defineComponent<MyComponentProps, MyComponentUI>(
+  'my-component',
+  // props: parsers auto-populate observedAttributes
   {
     disabled: asBoolean(),
     label: asString(ui => ui.label.textContent ?? ''),
   },
-  // select: named DOM queries; first() for single elements, all() for collections
+  // select: named DOM queries
   ({ first }) => ({
     button: first('button', 'Add a native <button> descendant.'),
     label: first('span.label'),
   }),
-  // setup: effects keyed by UI element name; host is always available
+  // setup: effects keyed by UI element name
   ({ host }) => ({
     button: setProperty('disabled'),
     label: setText('label'),
@@ -75,7 +132,7 @@ export default defineComponent<MyComponentProps, MyComponentUI>(
 )
 ```
 
-Rules:
+Rules (both forms):
 - Only import what you use.
 - Mark props `readonly` only if they are sensor-driven (not settable from outside).
 - Always provide the `required` string to `first()` for elements the component cannot work without.
@@ -93,9 +150,9 @@ Follow references/markup.md. Provide multiple representative examples:
 
 <hr />
 
-<!-- Disabled state (attribute drives the prop via parser) -->
-<my-component disabled>
-  <button type="button"><span class="label">Disabled</span></button>
+<!-- Disabled state -->
+<my-component>
+  <button type="button" disabled><span class="label">Disabled</span></button>
 </my-component>
 
 <hr />
@@ -103,6 +160,13 @@ Follow references/markup.md. Provide multiple representative examples:
 <!-- Variant (if the component supports modifier classes) -->
 <my-component class="primary">
   <button type="button"><span class="label">Primary action</span></button>
+</my-component>
+```
+
+For 4-param components with attribute-driven props, use attributes in the HTML:
+```html
+<my-component disabled label="Disabled">
+  <button type="button"><span class="label">Disabled</span></button>
 </my-component>
 ```
 
@@ -166,7 +230,9 @@ One paragraph describing what the component does and which patterns it demonstra
 
 | Name | Description |
 |---|---|
-| `disabled` | Boolean attribute; presence sets `disabled` to `true` |
+| `disabled` | Boolean attribute; presence sets `disabled` to `true` (read at connect time) |
+
+Document all attributes that HTML authors can set in markup. For factory-form components, note that attribute values are read once at connect time and are not reactive after that.
 
 #### CSS Classes
 
@@ -195,6 +261,6 @@ If tests don't exist yet, follow references/testing.md to advise on what to test
 - TypeScript: no type errors; all imports resolve; `Props` and `UI` types are explicit; `defineComponent` generics match
 - HTML: valid markup; works before JS runs; covers all meaningful states and variants
 - CSS: all rules scoped to host; custom properties used for all design tokens; no hardcoded colors or spacing
-- Docs: all required tables present in standard Markdown; accurate types and defaults
+- Docs: all required tables present in standard Markdown; accurate types and defaults; Attributes section present if the component uses parsers
 - Project test suite passes (if applicable)
 </success_criteria>

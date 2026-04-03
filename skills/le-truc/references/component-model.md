@@ -1,50 +1,105 @@
 <overview>
-The Le Truc component model: `defineComponent`, the reactivity flow, and the signal types re-exported from `@zeix/cause-effect`.
+The Le Truc component model: both forms of `defineComponent`, the reactivity flow, and the signal types re-exported from `@zeix/cause-effect`.
 </overview>
 
-## `defineComponent(name, props, select, setup)`
+## `defineComponent` — two forms
 
-The single entry point for creating a reactive custom element.
+### 2-param factory form (preferred, since 1.1)
+
+```typescript
+defineComponent<Props, UI>(name, factory)
+```
 
 | Argument | Type | Purpose |
 |---|---|---|
 | `name` | `string` | Tag name — lowercase, must contain a hyphen |
-| `props` | `Record<string, Initializer>` | Reactive property definitions (see below) |
+| `factory` | `({ first, all, host }) => { ui, props?, effects? }` | Called at connect time; returns UI element map, optional prop initializers, and optional effects |
+
+The factory receives `{ first, all, host }` at connect time. All three return values share the same closure, so UI elements can be referenced directly — no `ui` object passed between functions.
+
+```typescript
+defineComponent<MyProps, MyUI>('my-component', ({ first, host }) => {
+  const button = first('button', 'Add a native <button>.')
+  const label = first('span.label')
+  return {
+    ui: { button, label },
+    props: {
+      disabled: read(() => button.disabled, false),
+      label: read(() => label.textContent ?? '', ''),
+    },
+    effects: {
+      button: setProperty('disabled'),
+      label: setText('label'),
+    },
+  }
+})
+```
+
+**Key constraint:** Components defined with the factory form have `observedAttributes = []`. Parsers in the `props` map are still called at connect time, so HTML authors can configure the component via attributes in server-rendered markup — but subsequent attribute changes on a live document do not trigger re-parsing. After connect, reactive state flows through the property interface only.
+
+### 4-param form (use when attribute changes must be reactive)
+
+```typescript
+defineComponent<Props, UI>(name, props, select, setup)
+```
+
+| Argument | Type | Purpose |
+|---|---|---|
+| `name` | `string` | Tag name — lowercase, must contain a hyphen |
+| `props` | `Record<string, Initializer>` | Reactive property definitions; parsers here auto-populate `observedAttributes` |
 | `select` | `({ first, all }) => UI` | Queries the host's subtree; returns named DOM element references |
 | `setup` | `(ui) => Effects` | Returns reactive effects keyed by UI element name |
 
 The `ui` object passed to `setup` contains everything from `select` plus `host` (the element itself).
 
-### Props initializers
+Use the 4-param form when attribute changes on a live document must reactively update component state (e.g., a server streaming new attribute values, or JS calling `setAttribute` to drive the component). Any prop whose initializer is a `Parser` is automatically added to `observedAttributes`.
 
-| Initializer kind | How to recognize | When to use |
-|---|---|---|
-| Parser | Two-argument function; always wrap with `asParser()` | Attribute-driven prop: attribute string → typed value; auto-added to `observedAttributes` |
-| Reader | One-argument function (not wrapped with `asParser()`) | DOM-derived initial value read once at connect time |
-| MethodProducer | Function wrapped with `asMethod()` | Side-effect initializer that installs a method on `host` |
-| Signal | Already a `Signal<T>` | Re-use an existing signal from a parent or context |
-| Static value | Anything else | Fixed initial value for the prop |
+HTML authors can still configure factory-form components via attributes in server-rendered markup — the parser reads the attribute once at connect time.
 
-### Effects return map
+### Choosing between the two forms
 
-`setup` returns a plain object. Keys are UI element names (from `select`) plus `host`. Values are one Effect or an array of Effects for that element.
+| Scenario | Form |
+|---|---|
+| New component (default choice) | 2-param factory (preferred) |
+| HTML authors configure the component via attributes in markup | Either — factory reads attributes once at connect time |
+| Attribute changes on a live document must drive reactive updates | 4-param |
+
+## Props initializers (both forms)
+
+| Initializer kind | How to recognize | 4-param | 2-param factory |
+|---|---|---|---|
+| Parser | Wrapped with `asParser()`; takes `(ui, attrValue)` | Called at connect + re-runs on every attribute change | Called once at connect time only |
+| Reader | One-argument function (not `asParser`-wrapped) | Called once at connect time | Called once at connect time |
+| MethodProducer | Wrapped with `asMethod()` | Installs a method on `host` | Installs a method on `host` |
+| Signal | Already a `Signal<T>` | Re-use an existing signal | Re-use an existing signal |
+| Static value | Anything else | Fixed initial value | Fixed initial value |
+
+## Effects return map
+
+`setup` (4-param) or `effects` (factory return) is a plain object. Keys are UI element names plus `host`. Values are one Effect or an array of Effects.
 
 ```typescript
-({ host }) => ({
-  button: setProperty('disabled'),       // one effect
-  label: [setText('label'), toggleClass('active', 'isActive')],  // multiple effects
-  host: on('keydown', handler),          // effect on the host element itself
-})
+{
+  button: setProperty('disabled'),                           // one effect
+  label: [setText('label'), toggleClass('active', 'flag')], // multiple effects
+  host: on('keydown', handler),                             // effect on the host
+}
 ```
 
 ## Reactivity flow
 
 ```
+(4-param only)
 attribute change
       ↓
    parser(ui, attrValue)
       ↓
    host.prop = parsed value        ← Signal<T> backed by a Slot
+
+(both forms)
+event handler or external set
+      ↓
+   host.prop = new value           ← Signal<T> backed by a Slot
       ↓
    effect reads host.prop          ← registers dependency automatically
       ↓

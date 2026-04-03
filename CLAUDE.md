@@ -4,6 +4,8 @@
 
 ## Surprising Behaviors
 
+- **The factory form has `observedAttributes = []` — parsers are called once, not reactively**: `defineComponent(name, factory)` sets `static observedAttributes = []` unconditionally. The factory `props` map is evaluated per-instance inside `connectedCallback`, after `customElements.define()` has run — too late for the browser's static attribute registration. Parsers in the factory `props` are called once at connect time with the current attribute value (for server-side HTML author configuration), but `attributeChangedCallback` never fires. Use the 4-param form when attribute changes on a live document must drive reactive updates.
+
 - **Parser branding is required for reliable detection**: `isParser()` checks for `PARSER_BRAND` first. Unbranded functions fall back to `fn.length >= 2`, which is unreliable (default params, rest params, and destructuring all affect `.length`). Always use `asParser()` to create custom parsers; in DEV_MODE, using an unbranded function triggers a `console.warn`.
 
 - **`pass()` is Le Truc–only and replaces signals, not values**: `pass(props)` calls `slot.replace(signal)` on the child's internal Slot map — it only works for Le Truc components whose properties are Slot-backed. For any other custom element or plain HTML element, use `setProperty()` instead. The original signal is captured and restored when the parent disconnects, so the child regains its own independent state after detachment.

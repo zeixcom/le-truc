@@ -14,21 +14,44 @@ For deep signal-level questions, use the `cause-effect` skill — `@zeix/cause-e
 </scope>
 
 <essential_principles>
-**`defineComponent(name, props, select, setup)`** — every component is defined with these four arguments. No other entry point exists.
+**Two forms of `defineComponent`** — prefer the 2-param factory form for new components:
+
+```typescript
+// Preferred (since 1.1): 2-param factory form
+defineComponent('my-component', ({ first, host }) => {
+  const button = first('button', 'Add a native <button>.')
+  return {
+    ui: { button },
+    props: { disabled: read(() => button.disabled, false) },
+    effects: { button: setProperty('disabled') },
+  }
+})
+
+// 4-param form: use only when attribute observation is required
+defineComponent('my-component', { disabled: asBoolean() }, ({ first }) => ({
+  button: first('button', 'Add a native <button>.'),
+}), ({ button }) => ({
+  button: setProperty('disabled'),
+}))
+```
+
+The factory form returns `{ ui, props?, effects? }` from a single closure — no `ui` object passed between functions. Parsers in the factory form are called once at connect time (for server-side HTML author configuration); they do not re-run on subsequent attribute changes. Use the 4-param form when attribute changes on a live document must drive reactive updates.
 
 **`host` is the only external interface.** Components read and write state through `host.propName`. No querying outside the host's subtree, no direct property access on child components.
 
 **Reactivity flows in one direction:**
 ```
-attribute change → parser → host.prop (signal)
-                                 ↓
-                           effect reads prop
-                                 ↓
-                          DOM update on target
-                                 ↓
-                    event handler → { prop: value }
-                                 ↓
-                         signal updated → effect re-runs
+(4-param only) attribute change → parser → host.prop (signal)
+                                                    ↓
+event / property set ──────────────────→ host.prop (signal)
+                                                    ↓
+                                          effect reads prop
+                                                    ↓
+                                         DOM update on target
+                                                    ↓
+                                  event handler → { prop: value }
+                                                    ↓
+                                       signal updated → effect re-runs
 ```
 
 **`@zeix/cause-effect` is re-exported.** Signal types (`State`, `Memo`, `Sensor`, `Slot`, etc.) and utilities (`batch`, `match`, `untrack`) are available directly from `@zeix/le-truc`. No separate install or import needed.
