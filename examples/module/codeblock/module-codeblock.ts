@@ -26,20 +26,23 @@ declare global {
 
 export default defineComponent<ModuleCodeblockProps, ModuleCodeblockUI>(
 	'module-codeblock',
-	{ collapsed: asBoolean() },
-	({ first }) => ({
-		code: first('code', 'Needed as source container to copy from.'),
-		overlay: first('button.overlay'),
-		copy: first('basic-button.copy'),
-	}),
-	({ code, copy }) => ({
-		host: toggleAttribute('collapsed'),
-		overlay: on('click', () => ({ collapsed: false })),
-		copy: copyToClipboard(code, {
-			success: copy?.getAttribute('copy-success') || 'Copied!',
-			error:
-				copy?.getAttribute('copy-error')
-				|| 'Error trying to copy to clipboard!',
-		}),
-	}),
+	({ first }) => {
+		const code = first('code', 'Needed as source container to copy from.')
+		const overlay = first('button.overlay')
+		const copy = first('basic-button.copy')
+		return {
+			ui: { code, overlay, copy },
+			props: { collapsed: asBoolean() },
+			effects: {
+				host: toggleAttribute('collapsed'),
+				overlay: on('click', () => ({ collapsed: false })),
+				copy: copyToClipboard(code, {
+					success: copy?.getAttribute('copy-success') || 'Copied!',
+					error:
+						copy?.getAttribute('copy-error')
+						|| 'Error trying to copy to clipboard!',
+				}),
+			},
+		}
+	},
 )

@@ -27,32 +27,35 @@ const getIndex = (radios: HTMLInputElement[]) =>
 
 export default defineComponent<FormRadiogroupProps, FormRadiogroupUI>(
 	'form-radiogroup',
-	{
-		value: read(({ radios }) => {
-			const radiosArray = radios.get()
-			return radiosArray[getIndex(radiosArray)]?.value
-		}, ''),
-	},
-	({ all }) => ({
-		radios: all(
+	({ all, host }) => {
+		const radios = all(
 			'input[type="radio"]',
 			'Add at least two native radio buttons.',
-		),
-	}),
-	({ host, radios }) => ({
-		host: manageFocus(() => radios.get(), getIndex),
-		radios: [
-			on('change', e => {
-				host.value = (e.target as HTMLInputElement).value
-			}),
-			(_host, target) =>
-				createEffect(() => {
-					const isChecked = target.value === host.value
-					target.checked = isChecked
-					target.tabIndex = isChecked ? 0 : -1
-					const label = target.closest('label')
-					if (label) label.classList.toggle('selected', isChecked)
-				}),
-		],
-	}),
+		)
+		return {
+			ui: { radios },
+			props: {
+				value: read(() => {
+					const arr = radios.get()
+					return arr[getIndex(arr)]?.value
+				}, ''),
+			},
+			effects: {
+				host: manageFocus(() => radios.get(), getIndex),
+				radios: [
+					on('change', e => {
+						host.value = (e.target as HTMLInputElement).value
+					}),
+					(_host, target) =>
+						createEffect(() => {
+							const isChecked = target.value === host.value
+							target.checked = isChecked
+							target.tabIndex = isChecked ? 0 : -1
+							const label = target.closest('label')
+							if (label) label.classList.toggle('selected', isChecked)
+						}),
+				],
+			},
+		}
+	},
 )

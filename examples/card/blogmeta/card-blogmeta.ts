@@ -17,16 +17,19 @@ declare global {
 
 export default defineComponent<CardBlogmetaProps, CardBlogmetaUI>(
 	'card-blogmeta',
-	{
-		date: read(({ time }) => time.dateTime, asDate('unknown date')),
-	},
-	({ first }) => ({
-		time: first(
+	({ first }) => {
+		const time = first(
 			'time',
 			'Add a <time> element to display the publication date.',
-		),
-	}),
-	() => ({
-		time: setText('date'),
-	}),
+		)
+		return {
+			ui: { time },
+			props: {
+				date: read(() => time.dateTime, asDate('unknown date')),
+			},
+			effects: {
+				time: setText('date'),
+			},
+		}
+	},
 )

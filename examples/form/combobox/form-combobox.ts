@@ -13,7 +13,7 @@ import {
 	setText,
 	show,
 } from '../../..'
-import { clearEffects, clearMethod } from '../../_common/clearMethod'
+import { clearMethod } from '../../_common/clearMethod'
 import type { FormListboxProps } from '../listbox/form-listbox'
 
 export type FormComboboxProps = {
@@ -40,28 +40,13 @@ declare global {
 
 export default defineComponent<FormComboboxProps, FormComboboxUI>(
 	'form-combobox',
-	{
-		value: read(ui => ui.textbox.value, ''),
-		length: createEventsSensor(
-			read(ui => ui.textbox.value.length, 0),
-			'textbox',
-			{
-				input: ({ target }) => target.value.length,
-			},
-		),
-		error: '',
-		description: read(ui => ui.description?.textContent, ''),
-		clear: clearMethod,
-	},
-	({ first }) => ({
-		textbox: first('input', 'Needed to enter value.'),
-		listbox: first('form-listbox', 'Needed to display options.'),
-		clear: first('button.clear'),
-		error: first('form-combobox > .error'),
-		description: first('.description'),
-	}),
-	ui => {
-		const { host, error, description, listbox, textbox } = ui
+	({ first, host }) => {
+		const textbox = first('input', 'Needed to enter value.')
+		const listbox = first('form-listbox', 'Needed to display options.')
+		const clear = first('button.clear')
+		const error = first('form-combobox > .error')
+		const description = first('.description')
+
 		const errorId = error?.id
 		const descriptionId = description?.id
 
@@ -71,62 +56,83 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 		)
 
 		return {
-			host: [
-				setAttribute('value'),
-				on('keyup', ({ key }) => {
-					if (key === 'Escape') {
-						showPopup.set(false)
-						textbox.focus()
-					}
-					if (key === 'Delete') host.clear()
-				}),
-			],
-			textbox: [
-				setProperty('ariaInvalid', () => String(!!host.error)),
-				setAttribute('aria-errormessage', () =>
-					host.error && errorId ? errorId : null,
+			ui: { textbox, listbox, clear, error, description },
+			props: {
+				value: read(() => textbox.value, ''),
+				length: createEventsSensor(
+					read(() => textbox.value.length, 0),
+					'textbox',
+					{
+						input: ({ target }) => target.value.length,
+					},
 				),
-				setAttribute('aria-describedby', () =>
-					host.description && descriptionId ? descriptionId : null,
-				),
-				setProperty('ariaExpanded', () => String(isExpanded.get())),
-				on('input', () => {
-					textbox.checkValidity()
-					batch(() => {
-						host.value = textbox.value
-						host.error = textbox.validationMessage ?? ''
-						showPopup.set(true)
-					})
-				}),
-				on('keydown', e => {
-					const { key, altKey } = e
-					if (key === 'ArrowDown') {
-						if (altKey) showPopup.set(true)
-						if (isExpanded.get()) listbox.options[0]?.focus()
-					}
-				}),
-			],
-			listbox: [
-				show(isExpanded),
-				pass({
-					filter: () => host.value,
-				}),
-				on('change', ({ target }) => {
-					if (target instanceof HTMLInputElement) {
-						textbox.value = target.value
-						textbox.checkValidity()
-						batch(() => {
-							host.value = target.value
-							host.error = textbox.validationMessage ?? ''
+				error: '',
+				description: read(() => description?.textContent, ''),
+				clear: clearMethod,
+			},
+			effects: {
+				host: [
+					setAttribute('value'),
+					on('keyup', ({ key }) => {
+						if (key === 'Escape') {
 							showPopup.set(false)
 							textbox.focus()
+						}
+						if (key === 'Delete') host.clear()
+					}),
+				],
+				textbox: [
+					setProperty('ariaInvalid', () => String(!!host.error)),
+					setAttribute('aria-errormessage', () =>
+						host.error && errorId ? errorId : null,
+					),
+					setAttribute('aria-describedby', () =>
+						host.description && descriptionId ? descriptionId : null,
+					),
+					setProperty('ariaExpanded', () => String(isExpanded.get())),
+					on('input', () => {
+						textbox.checkValidity()
+						batch(() => {
+							host.value = textbox.value
+							host.error = textbox.validationMessage ?? ''
+							showPopup.set(true)
 						})
-					}
-				}),
-			],
-			clear: [...clearEffects(ui)],
-			error: setText('error'),
-			description: setText('description'),
+					}),
+					on('keydown', e => {
+						const { key, altKey } = e
+						if (key === 'ArrowDown') {
+							if (altKey) showPopup.set(true)
+							if (isExpanded.get()) listbox.options[0]?.focus()
+						}
+					}),
+				],
+				listbox: [
+					show(isExpanded),
+					pass({
+						filter: () => host.value,
+					}),
+					on('change', ({ target }) => {
+						if (target instanceof HTMLInputElement) {
+							textbox.value = target.value
+							textbox.checkValidity()
+							batch(() => {
+								host.value = target.value
+								host.error = textbox.validationMessage ?? ''
+								showPopup.set(false)
+								textbox.focus()
+							})
+						}
+					}),
+				],
+				clear: [
+					show(() => !!host.length),
+					on('click', () => {
+						host.clear()
+					}),
+				],
+				error: setText('error'),
+				description: setText('description'),
+			},
 		}
 	},
 )

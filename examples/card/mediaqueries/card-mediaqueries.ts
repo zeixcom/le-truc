@@ -27,22 +27,25 @@ declare global {
 
 export default defineComponent<CardMediaqueriesProps, CardMediaqueriesUI>(
 	'card-mediaqueries',
-	{
-		motion: requestContext(MEDIA_MOTION, 'unknown'),
-		theme: requestContext(MEDIA_THEME, 'unknown'),
-		viewport: requestContext(MEDIA_VIEWPORT, 'unknown'),
-		orientation: requestContext(MEDIA_ORIENTATION, 'unknown'),
+	({ first }) => {
+		const motion = first('.motion')
+		const theme = first('.theme')
+		const viewport = first('.viewport')
+		const orientation = first('.orientation')
+		return {
+			ui: { motion, theme, viewport, orientation },
+			props: {
+				motion: requestContext(MEDIA_MOTION, 'unknown'),
+				theme: requestContext(MEDIA_THEME, 'unknown'),
+				viewport: requestContext(MEDIA_VIEWPORT, 'unknown'),
+				orientation: requestContext(MEDIA_ORIENTATION, 'unknown'),
+			},
+			effects: {
+				motion: setText('motion'),
+				theme: setText('theme'),
+				viewport: setText('viewport'),
+				orientation: setText('orientation'),
+			},
+		}
 	},
-	({ first }) => ({
-		motion: first('.motion'),
-		theme: first('.theme'),
-		viewport: first('.viewport'),
-		orientation: first('.orientation'),
-	}),
-	() => ({
-		motion: setText('motion'),
-		theme: setText('theme'),
-		viewport: setText('viewport'),
-		orientation: setText('orientation'),
-	}),
 )

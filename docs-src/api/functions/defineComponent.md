@@ -4,7 +4,7 @@
 
 > **defineComponent**\<`P`, `U`\>(`name`, `factory`): [`Component`](../type-aliases/Component.md)\<`P`\>
 
-Defined in: [src/component.ts:145](https://github.com/zeixcom/le-truc/blob/4623838db83f9ada1ce0c2179fd724f26d6376e6/src/component.ts#L145)
+Defined in: [src/component.ts:145](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/component.ts#L145)
 
 Define and register a reactive custom element using the 2-param factory form.
 
@@ -53,7 +53,7 @@ If the component name is not a valid custom element name
 
 > **defineComponent**\<`P`, `U`\>(`name`, `props?`, `select?`, `setup?`): [`Component`](../type-aliases/Component.md)\<`P`\>
 
-Defined in: [src/component.ts:164](https://github.com/zeixcom/le-truc/blob/4623838db83f9ada1ce0c2179fd724f26d6376e6/src/component.ts#L164)
+Defined in: [src/component.ts:164](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/component.ts#L164)
 
 Define and register a reactive custom element.
 

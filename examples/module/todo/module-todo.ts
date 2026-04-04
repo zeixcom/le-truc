@@ -30,63 +30,62 @@ declare global {
 
 export default defineComponent<{}, ModuleTodoUI>(
 	'module-todo',
-	{},
-	({ first }) => ({
-		form: first('form', 'Add a form element to enter a new todo item.'),
-		textbox: first(
+	({ first }) => {
+		const form = first('form', 'Add a form element to enter a new todo item.')
+		const textbox = first(
 			'form-textbox',
 			'Add <form-textbox> component to enter a new todo item.',
-		),
-		submit: first(
+		)
+		const submit = first(
 			'basic-button.submit',
 			'Add <basic-button.submit> component to submit the form.',
-		),
-		list: first(
+		)
+		const list = first(
 			'module-list',
 			'Add <module-list> component to display a list of todo items.',
-		),
-		count: first(
+		)
+		const count = first(
 			'basic-pluralize',
 			'Add <basic-pluralize> component to display the number of todo items.',
-		),
-		filter: first(
+		)
+		const filter = first(
 			'form-radiogroup',
 			'Add <form-radiogroup> component to filter todo items.',
-		),
-		clearCompleted: first(
+		)
+		const clearCompleted = first(
 			'basic-button.clear-completed',
 			'Add <basic-button.clear-completed> component to clear completed todo items.',
-		),
-	}),
-	({ textbox, list, filter }) => {
+		)
 		const active = createElementsMemo(list, 'form-checkbox:not([checked])')
 		const completed = createElementsMemo(list, 'form-checkbox[checked]')
-
 		return {
-			form: on('submit', e => {
-				e.preventDefault()
-				const value = textbox.value.trim()
-				if (!value) return
-				list.add(item => {
-					item.querySelector('slot')?.replaceWith(value)
-				})
-				textbox.clear()
-			}),
-			submit: pass({ disabled: () => !textbox.length }),
-			list: setAttribute('filter', () => filter?.value || 'all'),
-			count: pass({ count: () => active.get().length }),
-			clearCompleted: [
-				pass({
-					disabled: () => !completed.get().length,
-					badge: () =>
-						completed.get().length ? String(completed.get().length) : '',
+			ui: { form, textbox, submit, list, count, filter, clearCompleted },
+			effects: {
+				form: on('submit', e => {
+					e.preventDefault()
+					const value = textbox.value.trim()
+					if (!value) return
+					list.add(item => {
+						item.querySelector('slot')?.replaceWith(value)
+					})
+					textbox.clear()
 				}),
-				on('click', () => {
-					const items = completed.get()
-					for (let i = items.length - 1; i >= 0; i--)
-						items[i]!.closest('li')?.remove()
-				}),
-			],
+				submit: pass({ disabled: () => !textbox.length }),
+				list: setAttribute('filter', () => filter?.value || 'all'),
+				count: pass({ count: () => active.get().length }),
+				clearCompleted: [
+					pass({
+						disabled: () => !completed.get().length,
+						badge: () =>
+							completed.get().length ? String(completed.get().length) : '',
+					}),
+					on('click', () => {
+						const items = completed.get()
+						for (let i = items.length - 1; i >= 0; i--)
+							items[i]!.closest('li')?.remove()
+					}),
+				],
+			},
 		}
 	},
 )

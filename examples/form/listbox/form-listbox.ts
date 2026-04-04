@@ -73,31 +73,18 @@ declare global {
 
 export default defineComponent<FormListboxProps, FormListboxUI>(
 	'form-listbox',
-	{
-		value: read(
-			({ listbox }: FormListboxUI) =>
-				listbox.querySelector<HTMLButtonElement>(
-					'button[role="option"][aria-selected="true"]',
-				)?.value,
-			'',
-		),
-		options: ({ listbox }: FormListboxUI) =>
-			createElementsMemo(listbox, 'button[role="option"]:not([hidden])'),
-		filter: '',
-		src: asString(),
-	},
-	({ first, all }) => ({
-		input: first('input[type="hidden"]', 'Needed to store the selected value.'),
-		filter: first('input.filter'),
-		clear: first('button.clear'),
-		callout: first('card-callout'),
-		loading: first('.loading'),
-		error: first('.error'),
-		listbox: first('[role="listbox"]', 'Needed to display list of options.'),
-		options: all('button[role="option"]'),
-	}),
-	ui => {
-		const { host, input } = ui
+	({ first, all, host }) => {
+		const input = first(
+			'input[type="hidden"]',
+			'Needed to store the selected value.',
+		)
+		const filter = first('input.filter')
+		const clear = first('button.clear')
+		const callout = first('card-callout')
+		const loading = first('.loading')
+		const error = first('.error')
+		const listbox = first('[role="listbox"]', 'Needed to display list of options.')
+		const options = all('button[role="option"]')
 
 		const renderOptions = (items: FormListboxOption[]) =>
 			items
@@ -137,14 +124,14 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 		}>(
 			async (_prev, abort) => {
 				const url = host.src
-				const error = !url
+				const err = !url
 					? 'No URL provided'
 					: !isValidURL(url)
 						? 'Invalid URL'
 						: isRecursiveURL(url, host)
 							? 'Recursive URL detected'
 							: ''
-				if (error) return { ok: false, value: '', error, pending: false }
+				if (err) return { ok: false, value: '', error: err, pending: false }
 
 				try {
 					const { content } = await fetchWithCache(url, abort, response =>
@@ -178,65 +165,81 @@ export default defineComponent<FormListboxProps, FormListboxUI>(
 		const hasError = () => (host.src ? !!content.get().error : false)
 
 		return {
-			host: setAttribute('value'),
-			input: setProperty('value'),
-			filter: on('input', () => {
-				host.filter = ui.filter?.value ?? ''
-			}),
-			clear: [
-				show(() => !!lowerFilter.get()),
-				on('click', () => {
-					host.filter = ''
-				}),
-			],
-			callout: [
-				show(() => (host.src ? !content.get().ok : false)),
-				toggleClass('danger', hasError),
-			],
-			loading: show(() => (host.src ? content.get().pending : false)),
-			error: [
-				show(hasError),
-				setText(() => (host.src ? content.get().error : '')),
-			],
-			listbox: [
-				...manageFocus(
+			ui: { input, filter, clear, callout, loading, error, listbox, options },
+			props: {
+				value: read(
 					() =>
-						Array.from(
-							ui.listbox.querySelectorAll<HTMLButtonElement>(
-								'button[role="option"]:not([hidden])',
-							),
-						),
-					options =>
-						options.findIndex(option => option.ariaSelected === 'true'),
+						listbox.querySelector<HTMLButtonElement>(
+							'button[role="option"][aria-selected="true"]',
+						)?.value,
+					'',
 				),
-				on('click', ({ target }) => {
-					const option = (target as HTMLElement).closest(
-						'[role="option"]',
-					) as HTMLButtonElement
-					if (option && option.value !== host.value) {
-						host.value = option.value
-						input.dispatchEvent(new Event('change', { bubbles: true }))
-					}
+				options: () =>
+					createElementsMemo(listbox, 'button[role="option"]:not([hidden])'),
+				filter: '',
+				src: asString(),
+			},
+			effects: {
+				host: setAttribute('value'),
+				input: setProperty('value'),
+				filter: on('input', () => {
+					host.filter = filter?.value ?? ''
 				}),
-				...maybeRender(),
-			],
-			options: [
-				(_host, target) => {
-					const textContent = target.textContent
-					const lowerText = textContent?.trim().toLowerCase()
-					return createEffect(() => {
-						const filterText = lowerFilter.get()
-						target.hidden = !lowerText.includes(filterText)
-						target.innerHTML = highlightMatch(textContent, filterText)
-					})
-				},
-				(_host, target) =>
-					createEffect(() => {
-						const isSelected = host.value === target.value
-						target.tabIndex = isSelected ? 0 : -1
-						target.ariaSelected = String(isSelected)
+				clear: [
+					show(() => !!lowerFilter.get()),
+					on('click', () => {
+						host.filter = ''
 					}),
-			],
+				],
+				callout: [
+					show(() => (host.src ? !content.get().ok : false)),
+					toggleClass('danger', hasError),
+				],
+				loading: show(() => (host.src ? content.get().pending : false)),
+				error: [
+					show(hasError),
+					setText(() => (host.src ? content.get().error : '')),
+				],
+				listbox: [
+					...manageFocus(
+						() =>
+							Array.from(
+								listbox.querySelectorAll<HTMLButtonElement>(
+									'button[role="option"]:not([hidden])',
+								),
+							),
+						opts =>
+							opts.findIndex(option => option.ariaSelected === 'true'),
+					),
+					on('click', ({ target }) => {
+						const option = (target as HTMLElement).closest(
+							'[role="option"]',
+						) as HTMLButtonElement
+						if (option && option.value !== host.value) {
+							host.value = option.value
+							input.dispatchEvent(new Event('change', { bubbles: true }))
+						}
+					}),
+					...maybeRender(),
+				],
+				options: [
+					(_host, target) => {
+						const textContent = target.textContent
+						const lowerText = textContent?.trim().toLowerCase()
+						return createEffect(() => {
+							const filterText = lowerFilter.get()
+							target.hidden = !lowerText.includes(filterText)
+							target.innerHTML = highlightMatch(textContent, filterText)
+						})
+					},
+					(_host, target) =>
+						createEffect(() => {
+							const isSelected = host.value === target.value
+							target.tabIndex = isSelected ? 0 : -1
+							target.ariaSelected = String(isSelected)
+						}),
+				],
+			},
 		}
 	},
 )

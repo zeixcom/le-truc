@@ -223,14 +223,14 @@ test.describe('module-lazyload component', () => {
 	})
 
 	test.describe('Dynamic Behavior', () => {
-		test('updates content when src attribute changes', async ({ page }) => {
+		test('updates content when src property changes', async ({ page }) => {
 			const loader = page.locator('#dynamic-src-test')
 			const content = loader.locator('.content')
 			const error = loader.locator('.error')
 
-			// Set src attribute to start loading
+			// Set src property to start loading
 			await loader.evaluate(node => {
-				node.setAttribute('src', '/test/module-lazyload/mocks/simple-text.html')
+				;(node as any).src = '/test/module-lazyload/mocks/simple-text.html'
 			})
 
 			// Should load content successfully
@@ -240,7 +240,7 @@ test.describe('module-lazyload component', () => {
 
 			// Change to different content
 			await loader.evaluate(node => {
-				node.setAttribute('src', '/test/module-lazyload/mocks/with-styles.html')
+				;(node as any).src = '/test/module-lazyload/mocks/with-styles.html'
 			})
 
 			// Should load new content
@@ -255,8 +255,7 @@ test.describe('module-lazyload component', () => {
 
 			// Set src property programmatically
 			await loader.evaluate(node => {
-				// Also set attribute to ensure reactivity
-				node.setAttribute('src', '/test/module-lazyload/mocks/simple-text.html')
+				;(node as any).src = '/test/module-lazyload/mocks/simple-text.html'
 			})
 
 			// Should load content
@@ -275,7 +274,7 @@ test.describe('module-lazyload component', () => {
 
 			// Set valid src first
 			await loader.evaluate(node => {
-				node.setAttribute('src', '/test/module-lazyload/mocks/simple-text.html')
+				;(node as any).src = '/test/module-lazyload/mocks/simple-text.html'
 			})
 
 			// Wait for content to load
@@ -283,7 +282,7 @@ test.describe('module-lazyload component', () => {
 
 			// Change to invalid src
 			await loader.evaluate(node => {
-				node.setAttribute('src', 'invalid-url')
+				;(node as any).src = 'invalid-url'
 			})
 
 			// Should show error and hide content
@@ -641,7 +640,7 @@ test.describe('module-lazyload component', () => {
 			// Perform sequential src changes with proper waiting
 			// First change - wait for completion
 			await loader.evaluate(node => {
-				node.setAttribute('src', '/test/module-lazyload/mocks/simple-text.html')
+				;(node as any).src = '/test/module-lazyload/mocks/simple-text.html'
 			})
 
 			// Wait for first request to complete
@@ -650,7 +649,7 @@ test.describe('module-lazyload component', () => {
 
 			// Second change - should replace first content
 			await loader.evaluate(node => {
-				node.setAttribute('src', '/test/module-lazyload/mocks/with-styles.html')
+				;(node as any).src = '/test/module-lazyload/mocks/with-styles.html'
 			})
 
 			// Wait for second request to complete
@@ -658,7 +657,7 @@ test.describe('module-lazyload component', () => {
 
 			// Final change back to simple content
 			await loader.evaluate(node => {
-				node.setAttribute('src', '/test/module-lazyload/mocks/simple-text.html')
+				;(node as any).src = '/test/module-lazyload/mocks/simple-text.html'
 			})
 
 			// Verify final state

@@ -32,25 +32,20 @@ declare global {
 
 export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 	'form-spinbutton',
-	{
-		value: read(ui => ui.input.value, asInteger()),
-		max: read(ui => ui.input.max, asInteger(10)),
-	},
-	({ all, first }) => ({
-		controls: all('button, input:not([disabled])'),
-		increment: first(
+	({ all, first, host }) => {
+		const controls = all('button, input:not([disabled])')
+		const increment = first(
 			'button.increment',
 			'Add a native button to increment the value',
-		),
-		decrement: first(
+		)
+		const decrement = first(
 			'button.decrement',
 			'Add a native button to decrement the value',
-		),
-		input: first('input.value', 'Add a native input to display the value'),
-		zero: first('.zero'),
-		other: first('.other'),
-	}),
-	({ host, increment, zero }) => {
+		)
+		const input = first('input.value', 'Add a native input to display the value')
+		const zero = first('.zero')
+		const other = first('.other')
+
 		const nonZero = createMemo(() => host.value !== 0)
 		const incrementLabel = increment.ariaLabel || 'Increment'
 		const ariaLabel = createMemo(() =>
@@ -58,54 +53,61 @@ export default defineComponent<FormSpinbuttonProps, FormSpinbuttonUI>(
 		)
 
 		return {
-			controls: [
-				on('change', e => {
-					const target = e.currentTarget as HTMLInputElement
-					if (!(target instanceof HTMLInputElement)) return
+			ui: { controls, increment, decrement, input, zero, other },
+			props: {
+				value: read(() => input.value, asInteger()),
+				max: read(() => input.max, asInteger(10)),
+			},
+			effects: {
+				controls: [
+					on('change', e => {
+						const target = e.currentTarget as HTMLInputElement
+						if (!(target instanceof HTMLInputElement)) return
 
-					const next = Number(target.value)
-					if (!Number.isInteger(next)) {
-						target.value = String(host.value)
-						target.checkValidity()
-						return
-					}
-					const clamped = Math.min(host.max, Math.max(0, next))
-					if (next !== clamped) {
-						target.value = String(clamped)
-						target.checkValidity()
-					}
-					host.value = clamped
-				}),
-				on('click', e => {
-					const el = e.currentTarget as Element
-					if (el.classList.contains('decrement')) {
-						host.value = Math.max(0, host.value - 1)
-					} else if (el.classList.contains('increment')) {
-						host.value = Math.min(host.max, host.value + 1)
-					}
-				}),
-				on('keydown', e => {
-					const { key } = e as KeyboardEvent
-					if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
-						e.stopPropagation()
-						e.preventDefault()
-						const delta = key === 'ArrowDown' || key === '-' ? -1 : 1
-						host.value = Math.min(host.max, Math.max(0, host.value + delta))
-					}
-				}),
-			],
-			input: [
-				show(nonZero),
-				setProperty('value', () => String(host.value)),
-				setProperty('max', () => String(host.max)),
-			],
-			decrement: show(nonZero),
-			increment: [
-				setProperty('disabled', () => host.value >= host.max),
-				setProperty('ariaLabel', ariaLabel),
-			],
-			zero: show(() => !nonZero.get()),
-			other: show(nonZero),
+						const next = Number(target.value)
+						if (!Number.isInteger(next)) {
+							target.value = String(host.value)
+							target.checkValidity()
+							return
+						}
+						const clamped = Math.min(host.max, Math.max(0, next))
+						if (next !== clamped) {
+							target.value = String(clamped)
+							target.checkValidity()
+						}
+						host.value = clamped
+					}),
+					on('click', e => {
+						const el = e.currentTarget as Element
+						if (el.classList.contains('decrement')) {
+							host.value = Math.max(0, host.value - 1)
+						} else if (el.classList.contains('increment')) {
+							host.value = Math.min(host.max, host.value + 1)
+						}
+					}),
+					on('keydown', e => {
+						const { key } = e as KeyboardEvent
+						if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
+							e.stopPropagation()
+							e.preventDefault()
+							const delta = key === 'ArrowDown' || key === '-' ? -1 : 1
+							host.value = Math.min(host.max, Math.max(0, host.value + delta))
+						}
+					}),
+				],
+				input: [
+					show(nonZero),
+					setProperty('value', () => String(host.value)),
+					setProperty('max', () => String(host.max)),
+				],
+				decrement: show(nonZero),
+				increment: [
+					setProperty('disabled', () => host.value >= host.max),
+					setProperty('ariaLabel', ariaLabel),
+				],
+				zero: show(() => !nonZero.get()),
+				other: show(nonZero),
+			},
 		}
 	},
 )

@@ -38,67 +38,69 @@ const getSelected = (
 
 export default defineComponent<ModuleTabgroupProps, ModuleTabgroupUI>(
 	'module-tabgroup',
-	{
-		selected: createEventsSensor(
-			read(
-				ui => getSelected(ui.tabs.get(), tab => tab.ariaSelected === 'true'),
-				'',
-			),
-			'tabs',
-			{
-				click: ({ target }) => getAriaControls(target),
-				keyup: ({ event, ui, target }) => {
-					const key = event.key
-					if (
-						[
-							'ArrowLeft',
-							'ArrowRight',
-							'ArrowUp',
-							'ArrowDown',
-							'Home',
-							'End',
-						].includes(key)
-					) {
-						event.preventDefault()
-						event.stopPropagation()
-						const tabs = ui.tabs.get()
-						const next =
-							key === 'Home'
-								? getAriaControls(tabs[0]!)
-								: key === 'End'
-									? getAriaControls(tabs[tabs.length - 1]!)
-									: getSelected(
-											tabs,
-											tab => tab === target,
-											key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1,
-										)
-						tabs.filter(tab => getAriaControls(tab) === next)[0]!.focus()
-						return next
-					}
-				},
-			},
-		),
-	},
-	({ all }) => ({
-		tabs: all(
+	({ all, host }) => {
+		const tabs = all(
 			'button[role="tab"]',
 			'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
-		),
-		panels: all(
+		)
+		const panels = all(
 			'[role="tabpanel"]',
 			'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
-		),
-	}),
-	({ host }) => {
+		)
+
 		const isCurrentTab = (tab: HTMLButtonElement) =>
 			host.selected === tab.getAttribute('aria-controls')
 
 		return {
-			tabs: [
-				setProperty('ariaSelected', target => String(isCurrentTab(target))),
-				setProperty('tabIndex', target => (isCurrentTab(target) ? 0 : -1)),
-			],
-			panels: show(target => host.selected === target.id),
+			ui: { tabs, panels },
+			props: {
+				selected: createEventsSensor(
+					read(
+						() => getSelected(tabs.get(), tab => tab.ariaSelected === 'true'),
+						'',
+					),
+					'tabs',
+					{
+						click: ({ target }) => getAriaControls(target),
+						keyup: ({ event, target }) => {
+							const key = event.key
+							if (
+								[
+									'ArrowLeft',
+									'ArrowRight',
+									'ArrowUp',
+									'ArrowDown',
+									'Home',
+									'End',
+								].includes(key)
+							) {
+								event.preventDefault()
+								event.stopPropagation()
+								const tabsList = tabs.get()
+								const next =
+									key === 'Home'
+										? getAriaControls(tabsList[0]!)
+										: key === 'End'
+											? getAriaControls(tabsList[tabsList.length - 1]!)
+											: getSelected(
+													tabsList,
+													tab => tab === target,
+													key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1,
+												)
+								tabsList.filter(tab => getAriaControls(tab) === next)[0]!.focus()
+								return next
+							}
+						},
+					},
+				),
+			},
+			effects: {
+				tabs: [
+					setProperty('ariaSelected', target => String(isCurrentTab(target))),
+					setProperty('tabIndex', target => (isCurrentTab(target) ? 0 : -1)),
+				],
+				panels: show(target => host.selected === target.id),
+			},
 		}
 	},
 )

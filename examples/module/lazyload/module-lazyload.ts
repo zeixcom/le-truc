@@ -31,20 +31,15 @@ declare global {
 
 export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 	'module-lazyload',
-	{
-		src: asString(),
-	},
-	({ first }) => ({
-		callout: first(
+	({ first, host }) => {
+		const callout = first(
 			'card-callout',
 			'Needed to display loading state and error messages.',
-		),
-		loading: first('.loading', 'Needed to display loading state.'),
-		error: first('.error', 'Needed to display error messages.'),
-		content: first('.content', 'Needed to display content.'),
-	}),
-	ui => {
-		const { host } = ui
+		)
+		const loading = first('.loading', 'Needed to display loading state.')
+		const error = first('.error', 'Needed to display error messages.')
+		const content = first('.content', 'Needed to display content.')
+
 		const result = createTask<{
 			ok: boolean
 			value: string
@@ -53,23 +48,23 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 		}>(
 			async (_prev, abort) => {
 				const url = host.src
-				const error = !url
+				const err = !url
 					? 'No URL provided'
 					: !isValidURL(url)
 						? 'Invalid URL'
 						: isRecursiveURL(url, host)
 							? 'Recursive URL detected'
 							: ''
-				if (error) return { ok: false, value: '', error, pending: false }
+				if (err) return { ok: false, value: '', error: err, pending: false }
 
 				try {
 					const { content } = await fetchWithCache(url, abort)
 					return { ok: true, value: content, error: '', pending: false }
-				} catch (error) {
+				} catch (err) {
 					return {
 						ok: false,
 						value: '',
-						error: `Failed to fetch content for "${url}": ${String(error)}`,
+						error: `Failed to fetch content for "${url}": ${String(err)}`,
 						pending: false,
 					}
 				}
@@ -79,15 +74,19 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 		const hasError = () => !!result.get().error
 
 		return {
-			callout: [show(() => !result.get().ok), toggleClass('danger', hasError)],
-			loading: show(() => !!result.get().pending),
-			error: [show(hasError), setText(() => result.get().error ?? '')],
-			content: [
-				show(() => result.get().ok),
-				dangerouslySetInnerHTML(() => result.get().value ?? '', {
-					allowScripts: host.hasAttribute('allow-scripts'),
-				}),
-			],
+			ui: { callout, loading, error, content },
+			props: { src: asString() },
+			effects: {
+				callout: [show(() => !result.get().ok), toggleClass('danger', hasError)],
+				loading: show(() => !!result.get().pending),
+				error: [show(hasError), setText(() => result.get().error ?? '')],
+				content: [
+					show(() => result.get().ok),
+					dangerouslySetInnerHTML(() => result.get().value ?? '', {
+						allowScripts: host.hasAttribute('allow-scripts'),
+					}),
+				],
+			},
 		}
 	},
 )

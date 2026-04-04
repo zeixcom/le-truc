@@ -77,12 +77,10 @@ const valueToHash = (value: string, listbox: HTMLElement): string => {
 
 export default defineComponent<{}, ModuleListnavUI>(
 	'module-listnav',
-	{},
-	({ first }) => ({
-		listbox: first('form-listbox', 'Required to select a partial to load'),
-		lazyload: first('module-lazyload', 'Required to load a partial into'),
-	}),
-	({ listbox }) => {
+	({ first }) => {
+		const listbox = first('form-listbox', 'Required to select a partial to load')
+		const lazyload = first('module-lazyload', 'Required to load a partial into')
+
 		const hasOption = (value: string): boolean =>
 			!!listbox.querySelector(
 				`button[role="option"][value="${CSS.escape(value)}"]`,
@@ -111,29 +109,32 @@ export default defineComponent<{}, ModuleListnavUI>(
 		}
 
 		return {
-			lazyload: pass({ src: () => listbox.value }),
+			ui: { listbox, lazyload },
+			effects: {
+				lazyload: pass({ src: () => listbox.value }),
 
-			// Sync location.hash ↔ listbox selection
-			host: () => {
-				// Update hash when selection changes
-				const cleanup = createEffect(() => {
-					const value = listbox.value
-					if (!value) return
+				// Sync location.hash ↔ listbox selection
+				host: () => {
+					// Update hash when selection changes
+					const cleanup = createEffect(() => {
+						const value = listbox.value
+						if (!value) return
 
-					const hash = valueToHash(value, listbox)
-					if (hash && location.hash !== `#${hash}`) {
-						updatingHash = true
-						history.replaceState(null, '', `#${hash}`)
-						updatingHash = false
+						const hash = valueToHash(value, listbox)
+						if (hash && location.hash !== `#${hash}`) {
+							updatingHash = true
+							history.replaceState(null, '', `#${hash}`)
+							updatingHash = false
+						}
+					})
+
+					window.addEventListener('hashchange', onHashChange)
+
+					return () => {
+						cleanup()
+						window.removeEventListener('hashchange', onHashChange)
 					}
-				})
-
-				window.addEventListener('hashchange', onHashChange)
-
-				return () => {
-					cleanup()
-					window.removeEventListener('hashchange', onHashChange)
-				}
+				},
 			},
 		}
 	},

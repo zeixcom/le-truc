@@ -47,8 +47,6 @@ const observeOverflow =
 
 export default defineComponent(
 	'module-scrollarea',
-	undefined,
-	undefined,
 	({ host }) => {
 		const child = host.firstElementChild
 		if (!child) return {}
@@ -73,24 +71,26 @@ export default defineComponent(
 					}
 
 		return {
-			host: [
-				toggleClass('overflow', hasOverflow),
-				toggleClass('overflow-start', overflowStart),
-				toggleClass('overflow-end', overflowEnd),
-				observeOverflow(
-					child,
-					() => {
-						overflowEnd.set(true)
-					},
-					() => {
-						overflowStart.set(false)
-						overflowEnd.set(false)
-					},
-				),
-				on('scroll', () => {
-					if (hasOverflow()) batch(scrollCallback)
-				}),
-			],
+			effects: {
+				host: [
+					toggleClass('overflow', hasOverflow),
+					toggleClass('overflow-start', overflowStart),
+					toggleClass('overflow-end', overflowEnd),
+					observeOverflow(
+						child,
+						() => {
+							overflowEnd.set(true)
+						},
+						() => {
+							overflowStart.set(false)
+							overflowEnd.set(false)
+						},
+					),
+					on('scroll', () => {
+						if (hasOverflow()) batch(scrollCallback)
+					}),
+				],
+			},
 		}
 	},
 )

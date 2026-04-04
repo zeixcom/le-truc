@@ -23,23 +23,23 @@ declare global {
 
 export default defineComponent<ModuleCatalogProps, ModuleCatalogUI>(
 	'module-catalog',
-	{},
-	({ all, first }) => ({
-		button: first('basic-button', 'Add a button to go to the Shopping Cart'),
-		spinbuttons: all(
+	({ all, first }) => {
+		const button = first('basic-button', 'Add a button to go to the Shopping Cart')
+		const spinbuttons = all(
 			'form-spinbutton',
 			'Add spinbutton components to calculate sum from.',
-		),
-	}),
-	({ spinbuttons }) => {
+		)
 		const total = createMemo(() =>
 			spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
 		)
 		return {
-			button: pass<ModuleCatalogProps, BasicButtonProps>({
-				disabled: () => !total.get(),
-				badge: () => (total.get() > 0 ? String(total.get()) : ''),
-			}),
+			ui: { button, spinbuttons },
+			effects: {
+				button: pass<ModuleCatalogProps, BasicButtonProps>({
+					disabled: () => !total.get(),
+					badge: () => (total.get() > 0 ? String(total.get()) : ''),
+				}),
+			},
 		}
 	},
 )

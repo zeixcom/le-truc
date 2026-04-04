@@ -1,6 +1,5 @@
 import {
 	type Component,
-	type ComponentUI,
 	createEventsSensor,
 	defineComponent,
 	on,
@@ -8,8 +7,9 @@ import {
 	setAttribute,
 	setProperty,
 	setText,
+	show,
 } from '../../..'
-import { clearEffects, clearMethod } from '../../_common/clearMethod'
+import { clearMethod } from '../../_common/clearMethod'
 
 export type FormTextboxProps = {
 	value: string
@@ -34,71 +34,73 @@ declare global {
 
 export default defineComponent<FormTextboxProps, FormTextboxUI>(
 	'form-textbox',
-	{
-		value: read(ui => ui.textbox.value, ''),
-		length: createEventsSensor(
-			read(ui => ui.textbox.value.length, 0),
-			'textbox',
-			{
-				input: ({ target }) => target.value.length,
-			},
-		),
-		error: '',
-		description: ({
-			host,
-			description,
-			textbox,
-		}: ComponentUI<FormTextboxProps, FormTextboxUI>) => {
-			if (description) {
-				if (textbox.maxLength > 0 && description.dataset.remaining) {
-					return () =>
-						description.dataset.remaining!.replace(
-							'${n}',
-							String(textbox.maxLength - host.length),
-						)
-				}
-				return description.textContent?.trim() ?? ''
-			} else {
-				return ''
-			}
-		},
-		clear: clearMethod,
-	},
-	({ first }) => ({
-		textbox: first(
+	({ first, host }) => {
+		const textbox = first(
 			'input, textarea',
 			'Add a native input or textarea as descendant element.',
-		),
-		clear: first('button.clear'),
-		error: first('.error'),
-		description: first('.description'),
-	}),
-	ui => {
-		const { host, textbox, error, description } = ui
+		)
+		const clear = first('button.clear')
+		const error = first('.error')
+		const description = first('.description')
+
 		const errorId = error?.id
 		const descriptionId = description?.id
 
 		return {
-			textbox: [
-				on('change', () => {
-					textbox.checkValidity()
-					return {
-						value: textbox.value,
-						error: textbox.validationMessage,
+			ui: { textbox, clear, error, description },
+			props: {
+				value: read(() => textbox.value, ''),
+				length: createEventsSensor(
+					read(() => textbox.value.length, 0),
+					'textbox',
+					{
+						input: ({ target }) => target.value.length,
+					},
+				),
+				error: '',
+				description: () => {
+					if (description) {
+						if (textbox.maxLength > 0 && description.dataset.remaining) {
+							return () =>
+								description.dataset.remaining!.replace(
+									'${n}',
+									String(textbox.maxLength - host.length),
+								)
+						}
+						return description.textContent?.trim() ?? ''
+					} else {
+						return ''
 					}
-				}),
-				setProperty('value'),
-				setProperty('ariaInvalid', () => String(!!host.error)),
-				setAttribute('aria-errormessage', () =>
-					host.error && errorId ? errorId : null,
-				),
-				setAttribute('aria-describedby', () =>
-					description && descriptionId ? descriptionId : null,
-				),
-			],
-			clear: clearEffects(ui),
-			error: setText('error'),
-			description: setText('description'),
+				},
+				clear: clearMethod,
+			},
+			effects: {
+				textbox: [
+					on('change', () => {
+						textbox.checkValidity()
+						return {
+							value: textbox.value,
+							error: textbox.validationMessage,
+						}
+					}),
+					setProperty('value'),
+					setProperty('ariaInvalid', () => String(!!host.error)),
+					setAttribute('aria-errormessage', () =>
+						host.error && errorId ? errorId : null,
+					),
+					setAttribute('aria-describedby', () =>
+						description && descriptionId ? descriptionId : null,
+					),
+				],
+				clear: [
+					show(() => !!host.length),
+					on('click', () => {
+						host.clear()
+					}),
+				],
+				error: setText('error'),
+				description: setText('description'),
+			},
 		}
 	},
 )
