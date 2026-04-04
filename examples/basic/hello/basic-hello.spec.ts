@@ -54,9 +54,9 @@ test.describe('basic-hello component', () => {
 
 		await expect(output).toHaveText('Bob')
 
-		// Change via attribute
+		// Change via property
 		await programmaticElement.evaluate(node => {
-			node.setAttribute('name', 'Charlie')
+			;(node as any).name = 'Charlie'
 		})
 
 		await expect(output).toHaveText('Charlie')
@@ -109,45 +109,37 @@ test.describe('basic-hello component', () => {
 	})
 })
 
-// ===== PARSER BRANDING (asParser) — OBSERVABLE BEHAVIOR =====
-// asParser() brands a function with PARSER_BRAND so isParser() reliably
-// identifies it. The key observable effect: branded parsers are added to
-// `observedAttributes`, which means `attributeChangedCallback` fires when
-// the corresponding attribute changes and the reactive value updates.
-//
-// basic-hello uses asString() (internally branded with asParser()) as its
-// parser for the `name` attribute. These tests confirm the end-to-end effect.
+// ===== FACTORY FORM — PROPERTY INTERFACE =====
+// The 2-param factory form sets observedAttributes = [] unconditionally.
+// Reactive state flows through the signal-backed property interface only.
+// These tests confirm property-based reactivity works correctly.
 
-test.describe('parser branding: asParser() observable effects', () => {
+test.describe('factory form: property interface', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('http://localhost:3000/test/basic-hello')
 		await page.waitForSelector('basic-hello')
 	})
 
-	test('asParser()-branded parser causes attribute to be observed', async ({
-		page,
-	}) => {
-		// asString() is branded with asParser(). If the brand is detected,
-		// 'name' is included in observedAttributes and the attribute change
-		// will trigger attributeChangedCallback → reactive update → DOM update.
+	test('setting name property updates the output', async ({ page }) => {
 		const element = page.locator('basic-hello').first()
 		const output = element.locator('output')
 
 		await expect(output).toHaveText('World')
 
-		await element.evaluate(el => el.setAttribute('name', 'Parser Test'))
-		await expect(output).toHaveText('Parser Test')
+		await element.evaluate(el => {
+			;(el as any).name = 'Property Test'
+		})
+		await expect(output).toHaveText('Property Test')
 	})
 
-	test('attribute is included in observedAttributes', async ({ page }) => {
-		// Confirm that 'name' appears in observedAttributes — the evidence that
-		// isParser() returned true for asString(), triggering observation.
+	test('observedAttributes is empty in the factory form', async ({ page }) => {
+		// The 2-param factory form opts out of observedAttributes entirely.
 		const observed = await page.evaluate(() => {
 			return Array.from(
 				(customElements.get('basic-hello') as any)?.observedAttributes ?? [],
 			)
 		})
-		expect(observed).toContain('name')
+		expect(observed).toHaveLength(0)
 	})
 })
 

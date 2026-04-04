@@ -108,17 +108,15 @@ function getNumberFormatter(
 	}
 }
 
-export default defineComponent<BasicNumberProps>(
-	'basic-number',
-	{ value: asNumber() },
-	undefined,
-	({ host }) => {
-		const formatter = getNumberFormatter(
-			host.closest('[lang]')?.getAttribute('lang') || FALLBACK_LOCALE,
-			host.getAttribute('options'),
-		)
-		return {
+export default defineComponent<BasicNumberProps>('basic-number', ({ host }) => {
+	const formatter = getNumberFormatter(
+		host.closest('[lang]')?.getAttribute('lang') || FALLBACK_LOCALE,
+		host.getAttribute('options'),
+	)
+	return {
+		props: { value: asNumber() },
+		effects: {
 			host: setText(() => formatter.format(host.value)),
-		}
-	},
-)
+		},
+	}
+})

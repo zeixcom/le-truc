@@ -37,19 +37,16 @@ declare global {
 
 export default defineComponent<BasicGaugeProps, BasicGaugeUI>(
 	'basic-gauge',
-	{
-		value: asNumber(ui => ui.meter.value),
-		thresholds: asJSON<BasicGaugeThreshold[], BasicGaugeUI>([]),
-	},
-	({ first }) => ({
-		meter: first('meter', 'Add a <meter> element to display the level'),
-		value: first(
+	({ first, host }) => {
+		const meter = first('meter', 'Add a <meter> element to display the level')
+		const value = first(
 			'basic-number',
 			'Add a <basic-number> element to display the value',
-		),
-		label: first('.label', 'Add an element to display the qualification label'),
-	}),
-	({ host, meter }) => {
+		)
+		const label = first(
+			'.label',
+			'Add an element to display the qualification label',
+		)
 		const max = meter.max
 		const qualification = createMemo(
 			() =>
@@ -59,16 +56,23 @@ export default defineComponent<BasicGaugeProps, BasicGaugeUI>(
 				},
 		)
 		return {
-			host: [
-				setStyle(
-					'--basic-gauge-degree',
-					() => `${(240 * host.value) / max}deg`,
-				),
-				setStyle('--basic-gauge-color', () => qualification.get().color),
-			],
-			meter: setProperty('value'),
-			value: pass({ value: () => host.value }),
-			label: setText(() => qualification.get().label),
+			ui: { meter, value, label },
+			props: {
+				value: asNumber(() => meter.value),
+				thresholds: asJSON<BasicGaugeThreshold[], BasicGaugeUI>([]),
+			},
+			effects: {
+				host: [
+					setStyle(
+						'--basic-gauge-degree',
+						() => `${(240 * host.value) / max}deg`,
+					),
+					setStyle('--basic-gauge-color', () => qualification.get().color),
+				],
+				meter: setProperty('value'),
+				value: pass({ value: () => host.value }),
+				label: setText(() => qualification.get().label),
+			},
 		}
 	},
 )

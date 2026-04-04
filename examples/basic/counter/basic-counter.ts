@@ -24,20 +24,23 @@ declare global {
 
 export default defineComponent<BasicCounterProps, BasicCounterUI>(
 	'basic-counter',
-	{
-		count: read(ui => ui.count.textContent, asInteger()),
-	},
-	({ first }) => ({
-		increment: first(
+	({ first, host }) => {
+		const increment = first(
 			'button',
 			'Add a native button element to increment the count.',
-		),
-		count: first('span', 'Add a span to display the count.'),
-	}),
-	({ host }) => ({
-		increment: on('click', () => {
-			host.count++
-		}),
-		count: setText('count'),
-	}),
+		)
+		const count = first('span', 'Add a span to display the count.')
+		return {
+			ui: { increment, count },
+			props: {
+				count: read(() => count.textContent, asInteger()),
+			},
+			effects: {
+				increment: on('click', () => {
+					host.count++
+				}),
+				count: setText('count'),
+			},
+		}
+	},
 )

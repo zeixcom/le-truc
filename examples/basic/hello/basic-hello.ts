@@ -23,18 +23,19 @@ declare global {
 
 export default defineComponent<BasicHelloProps, BasicHelloUI>(
 	'basic-hello',
-	{
-		name: asString(ui => ui.output.textContent),
-	},
-	({ first }) => ({
-		input: first('input', 'Needed to enter the name.'),
-		output: first('output', 'Needed to display the name.'),
-	}),
-	({ host, input }) => {
-		const fallback = host.name
+	({ first, host }) => {
+		const input = first('input', 'Needed to enter the name.')
+		const output = first('output', 'Needed to display the name.')
+		const fallback = output.textContent || ''
 		return {
-			input: on('input', () => ({ name: input.value || fallback })),
-			output: setText('name'),
+			ui: { input, output },
+			props: {
+				name: asString(() => output.textContent),
+			},
+			effects: {
+				input: on('input', () => ({ name: input.value || fallback })),
+				output: setText('name'),
+			},
 		}
 	},
 )

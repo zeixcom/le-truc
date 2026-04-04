@@ -110,7 +110,7 @@ type MaybeSignal<T extends {}> =
  * Reactive state flows through the signal-backed property interface only.
  */
 type ComponentFactoryResult<P extends ComponentProps, U extends UI> = {
-	ui: U
+	ui?: U
 	props?: Initializers<P, U>
 	effects?: Effects<P, ComponentUI<P, U>>
 }

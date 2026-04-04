@@ -30,21 +30,17 @@ const FALLBACK_LOCALE = 'en'
 
 export default defineComponent<BasicPluralizeProps, BasicPluralizeUI>(
 	'basic-pluralize',
-	{
-		count: asClampedInteger(),
-	},
-	({ first }) => ({
-		count: first('.count'),
-		none: first('.none'),
-		some: first('.some'),
-		zero: first('.zero'),
-		one: first('.one'),
-		two: first('.two'),
-		few: first('.few'),
-		many: first('.many'),
-		other: first('.other'),
-	}),
-	({ host }) => {
+	({ first, host }) => {
+		const count = first('.count')
+		const none = first('.none')
+		const some = first('.some')
+		const zero = first('.zero')
+		const one = first('.one')
+		const two = first('.two')
+		const few = first('.few')
+		const many = first('.many')
+		const other = first('.other')
+
 		const pluralizer = new Intl.PluralRules(
 			host.closest('[lang]')?.getAttribute('lang') || FALLBACK_LOCALE,
 			host.hasAttribute('ordinal') ? { type: 'ordinal' } : undefined,
@@ -65,6 +61,11 @@ export default defineComponent<BasicPluralizeProps, BasicPluralizeUI>(
 		const categories = pluralizer.resolvedOptions().pluralCategories
 		for (const category of categories)
 			effects[category] = show(() => pluralizer.select(host.count) === category)
-		return effects
+
+		return {
+			ui: { count, none, some, zero, one, two, few, many, other },
+			props: { count: asClampedInteger() },
+			effects,
+		}
 	},
 )
