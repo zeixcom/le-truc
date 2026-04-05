@@ -76,6 +76,11 @@ export {
 	type ComponentSetup,
 	type ComponentUI,
 	defineComponent,
+	type EffectDescriptor,
+	type FactoryContext,
+	type FactoryProvideContextsHelper,
+	type FactoryRequestContextHelper,
+	type FactoryResult,
 	type Initializers,
 	type MaybeSignal,
 	type ReservedWords,
@@ -123,7 +128,9 @@ export {
 export {
 	createEventsSensor,
 	type EventHandlers,
+	type EventHandlersV2,
 	type SensorEventHandler,
+	type SensorEventHandlerV2,
 } from './src/events'
 export {
 	asMethod,

@@ -1,22 +1,8 @@
-import {
-	asString,
-	type Component,
-	defineComponent,
-	on,
-	read,
-	setProperty,
-	setText,
-	toggleAttribute,
-} from '../../..'
+import { asString, type Component, defineComponent } from '../../..'
 
 export type FormCheckboxProps = {
 	checked: boolean
 	label: string
-}
-
-type FormCheckboxUI = {
-	checkbox: HTMLInputElement
-	label?: HTMLElement | undefined
 }
 
 declare global {
@@ -25,27 +11,27 @@ declare global {
 	}
 }
 
-export default defineComponent<FormCheckboxProps, FormCheckboxUI>(
+export default defineComponent<FormCheckboxProps>(
 	'form-checkbox',
-	({ first, host }) => {
+	({ expose, first, host, on, run }) => {
 		const checkbox = first('input[type="checkbox"]', 'Add a native checkbox.')
 		const label = first('.label')
-		return {
-			ui: { checkbox, label },
-			props: {
-				checked: read(() => checkbox.checked, false),
-				label: asString(
-					() => label?.textContent ?? host.querySelector('label')?.textContent ?? '',
-				),
-			},
-			effects: {
-				host: toggleAttribute('checked'),
-				checkbox: [
-					on('change', () => ({ checked: checkbox.checked })),
-					setProperty('checked'),
-				],
-				label: setText('label'),
-			},
-		}
+
+		expose({
+			checked: checkbox.checked,
+			label: asString(label?.textContent ?? first('label')?.textContent ?? ''),
+		})
+
+		return [
+			on(checkbox, 'change', () => ({ checked: checkbox.checked })),
+			run('checked', checked => {
+				checkbox.checked = checked
+				host.toggleAttribute('checked', checked)
+			}),
+			label
+				&& run('label', text => {
+					label.textContent = text
+				}),
+		]
 	},
 )

@@ -1,5 +1,6 @@
 import {
 	createComputed,
+	createScope,
 	createSlot,
 	createState,
 	isComputed,
@@ -8,15 +9,26 @@ import {
 	isSignal,
 	isSlot,
 	type MaybeCleanup,
+	type Memo,
 	type MemoCallback,
 	type Signal,
 	type State,
 	type TaskCallback,
 	unown,
 } from '@zeix/cause-effect'
-
+import type { Context } from './context'
 import { type Effects, runEffects } from './effects'
+import type { PassedProps } from './effects/pass'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
+import {
+	makeEach,
+	makeOn,
+	makePass,
+	makeProvideContexts,
+	makeRequestContext,
+	makeRun,
+	type RunHandlers,
+} from './factory'
 import { getSignals } from './internal'
 import { isMethodProducer, isParser, type Parser, type Reader } from './parsers'
 import { type ElementQueries, getHelpers, type UI } from './ui'
@@ -116,21 +128,214 @@ type ComponentFactoryResult<P extends ComponentProps, U extends UI> = {
 }
 
 /**
- * Factory function used in the 2-param form of `defineComponent`.
+ * Factory function used in the v1.0 2-param form of `defineComponent`.
  *
- * Receives `{ first, all }` query helpers and the host `Component<P>` at connect time.
+ * Receives the full `FactoryContext<P>` at connect time (same context as the v1.1 form).
  * Returns the UI element map, optional reactive property initializers, and optional effects.
  * All three share the same closure scope, so UI elements can be referenced directly without
  * passing a `ui` object between functions.
+ *
+ * Note: components using this form only destructure `{ first, all, host }` and ignore the
+ * v1.1 helpers (`expose`, `run`, `each`, `on`, `pass`).
  */
 type ComponentFactory<P extends ComponentProps, U extends UI> = (
-	queries: ElementQueries & { host: Component<P> },
+	context: FactoryContext<P>,
 ) => ComponentFactoryResult<P, U>
+
+/**
+ * A deferred effect: a thunk that, when called inside a reactive scope, creates
+ * a reactive effect and returns an optional cleanup function.
+ *
+ * Effect descriptors are returned by `run()`, `on()`, `each()`, `pass()`, and
+ * `provideContexts()`. They are activated after dependency resolution, not
+ * immediately when the factory function runs.
+ */
+type EffectDescriptor = () => MaybeCleanup
+
+/**
+ * The return value of the v1.1 factory function.
+ *
+ * A flat array of effect descriptors (and optional falsy guards for conditional
+ * effects). Falsy values (`false`, `undefined`) are filtered out before activation,
+ * enabling the `element && run(...)` conditional pattern.
+ */
+type FactoryResult = Array<EffectDescriptor | false | undefined>
+
+/**
+ * Handler types for the `run()` helper in the factory context.
+ *
+ * `ok` receives the resolved value directly (not a tuple).
+ * `err` receives a single Error for convenience.
+ * `nil` is called when the source signal is unset/pending.
+ */
+type FactoryRunHandlers<T> = RunHandlers<T>
+
+/**
+ * The `run` helper type in `FactoryContext`.
+ *
+ * Drives a reactive effect from a signal source (property name, Signal, or array).
+ * Only the declared sources trigger re-runs — incidental reads inside the handler
+ * are not tracked. Returns an `EffectDescriptor`.
+ */
+type FactoryRunHelper<P extends ComponentProps> = {
+	<K extends keyof P & string>(
+		source: K,
+		handler: (value: P[K]) => MaybeCleanup | void,
+	): EffectDescriptor
+	<K extends keyof P & string>(
+		source: K,
+		handlers: FactoryRunHandlers<P[K]>,
+	): EffectDescriptor
+	<T extends {}>(
+		source: Signal<T>,
+		handler: (value: T) => MaybeCleanup | void,
+	): EffectDescriptor
+	<T extends {}>(
+		source: Signal<T>,
+		handlers: FactoryRunHandlers<T>,
+	): EffectDescriptor
+	(
+		source: Array<string | Signal<any>>,
+		handler: (values: any[]) => MaybeCleanup | void,
+	): EffectDescriptor
+}
+
+/**
+ * The `each` helper type in `FactoryContext`.
+ *
+ * Creates per-element reactive effects from a `Memo<Element[]>`.
+ * The callback returns a `FactoryResult` (array) or a single `EffectDescriptor`.
+ */
+type FactoryEachHelper = {
+	<E extends Element>(
+		memo: Memo<E[]>,
+		callback: (element: E) => FactoryResult,
+	): EffectDescriptor
+	<E extends Element>(
+		memo: Memo<E[]>,
+		callback: (element: E) => EffectDescriptor,
+	): EffectDescriptor
+}
+
+/**
+ * The `on` helper type in `FactoryContext`.
+ *
+ * Attaches an event listener. The handler always receives `(event, element)`.
+ * For Memo targets, uses event delegation (or per-element fallback for non-bubbling events).
+ */
+type FactoryOnHelper<P extends ComponentProps> = {
+	<E extends Element, T extends keyof HTMLElementEventMap>(
+		target: E,
+		type: T,
+		handler: (
+			event: HTMLElementEventMap[T],
+			element: E,
+		) => { [K in keyof P]?: P[K] } | void,
+		options?: AddEventListenerOptions,
+	): EffectDescriptor
+	<E extends Element>(
+		target: E,
+		type: string,
+		handler: (event: Event, element: E) => { [K in keyof P]?: P[K] } | void,
+		options?: AddEventListenerOptions,
+	): EffectDescriptor
+	<E extends Element, T extends keyof HTMLElementEventMap>(
+		target: Memo<E[]>,
+		type: T,
+		handler: (
+			event: HTMLElementEventMap[T],
+			element: E,
+		) => { [K in keyof P]?: P[K] } | void,
+		options?: AddEventListenerOptions,
+	): EffectDescriptor
+	<E extends Element>(
+		target: Memo<E[]>,
+		type: string,
+		handler: (event: Event, element: E) => { [K in keyof P]?: P[K] } | void,
+		options?: AddEventListenerOptions,
+	): EffectDescriptor
+}
+
+/**
+ * The `pass` helper type in `FactoryContext`.
+ *
+ * Passes reactive values to a descendant Le Truc component's Slot-backed signals.
+ * Supports single-element and Memo targets (per-element lifecycle for Memo).
+ */
+type FactoryPassHelper<P extends ComponentProps> = {
+	<Q extends ComponentProps>(
+		target: Component<Q>,
+		props: PassedProps<P, Q>,
+	): EffectDescriptor
+	<Q extends ComponentProps>(
+		target: Memo<Component<Q>[]>,
+		props: PassedProps<P, Q>,
+	): EffectDescriptor
+}
+
+/**
+ * The `provideContexts` helper type in `FactoryContext`.
+ *
+ * Attaches a `context-request` listener to the host, providing the listed
+ * property values as context to descendant consumers. Returns an `EffectDescriptor`.
+ */
+type FactoryProvideContextsHelper<P extends ComponentProps> = (
+	contexts: Array<keyof P>,
+) => EffectDescriptor
+
+/**
+ * The `requestContext` helper type in `FactoryContext`.
+ *
+ * Dispatches a `context-request` event from the host and returns a `Memo<T>`
+ * that tracks the provider's value. Falls back to `fallback` if no provider responds.
+ * For use inside `expose()` as a property initializer.
+ */
+type FactoryRequestContextHelper = <T extends {}>(
+	context: Context<string, () => T>,
+	fallback: T,
+) => Memo<T>
+
+/**
+ * The context object passed to the v1.1 factory function.
+ *
+ * Components destructure only what they need.
+ */
+type FactoryContext<P extends ComponentProps> = ElementQueries & {
+	host: Component<P>
+	expose: (props: Initializers<P, {}>) => void
+	run: FactoryRunHelper<P>
+	each: FactoryEachHelper
+	on: FactoryOnHelper<P>
+	pass: FactoryPassHelper<P>
+	provideContexts: FactoryProvideContextsHelper<P>
+	requestContext: FactoryRequestContextHelper
+}
 
 /* === Exported Functions === */
 
 /**
- * Define and register a reactive custom element using the 2-param factory form.
+ * Define and register a reactive custom element using the v1.1 factory form.
+ *
+ * The factory receives a `FactoryContext` at connect time: query helpers (`first`, `all`),
+ * the `host` element, and `expose()` for declaring reactive properties. It returns a flat
+ * array of effect descriptors created by helpers like `run()`, `on()`, `each()`, `pass()`,
+ * and `provideContexts()`.
+ *
+ * Effects activate after dependency resolution — child custom elements are guaranteed to
+ * be defined before any descriptor runs.
+ *
+ * @since 1.1
+ * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
+ * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
+ * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
+ */
+function defineComponent<P extends ComponentProps>(
+	name: string,
+	factory: (context: FactoryContext<P>) => FactoryResult,
+): Component<P>
+
+/**
+ * Define and register a reactive custom element using the v1.0 2-param factory form.
  *
  * The factory receives `{ first, all, host }` at connect time and returns `{ ui, props?, effects? }`.
  * UI elements, props initializers, and effects share a single closure scope — no `ui` object is
@@ -172,7 +377,11 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 	name: string,
 	propsOrFactory:
 		| Initializers<P, U>
-		| ComponentFactory<P, U> = {} as Initializers<P, U>,
+		| ComponentFactory<P, U>
+		| ((context: FactoryContext<P>) => FactoryResult) = {} as Initializers<
+		P,
+		U
+	>,
 	select: (elementQueries: ElementQueries) => U = () => ({}) as U,
 	setup: (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>> = () => ({}),
 ): Component<P> {
@@ -212,20 +421,67 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 			const host = this as unknown as Component<P>
 
 			if (factory) {
-				// 2-param factory form: no observedAttributes, ui built from factory return
-				const result = factory({ ...elementQueries, host })
-				const ui = {
-					...result.ui,
+				// Create expose() helper for the v1.1 factory form.
+				// Called inside the factory body to declare reactive properties.
+				const expose = (instanceProps: Initializers<P, {}>) => {
+					const minimalUi = Object.freeze({ host }) as ComponentUI<P, U>
+					this.#ui = minimalUi
+					this.#initSignals(
+						minimalUi,
+						instanceProps as unknown as Initializers<P, U>,
+					)
+				}
+
+				const context: FactoryContext<P> = {
+					...elementQueries,
 					host,
-				} as ComponentUI<P, U>
-				this.#ui = ui
-				Object.freeze(this.#ui)
-				this.#initSignals(ui, result.props ?? ({} as Initializers<P, U>))
-				const instanceEffects =
-					result.effects ?? ({} as Effects<P, ComponentUI<P, U>>)
-				resolveDependencies(() => {
-					this.#cleanup = unown(() => runEffects(ui, instanceEffects))
-				})
+					expose,
+					run: makeRun(host),
+					each: makeEach(),
+					on: makeOn(host),
+					pass: makePass(host),
+					provideContexts: makeProvideContexts(host),
+					requestContext: makeRequestContext(host),
+				}
+
+				const result = (
+					factory as (
+						ctx: FactoryContext<P>,
+					) => ComponentFactoryResult<P, U> | FactoryResult
+				)(context)
+
+				if (Array.isArray(result)) {
+					// v1.1 factory form: result is a flat array of effect descriptors.
+					// expose() was called inside the factory body; signals are already initialized.
+					if (!this.#ui) {
+						this.#ui = Object.freeze({ host }) as ComponentUI<P, U>
+					}
+					resolveDependencies(() => {
+						this.#cleanup = createScope(() => {
+							for (const descriptor of result as FactoryResult) {
+								if (descriptor) descriptor()
+							}
+						})
+					})
+				} else {
+					// v1.0 factory form: result is { ui?, props?, effects? }.
+					const factoryResult = result as ComponentFactoryResult<P, U>
+					const ui = {
+						...factoryResult.ui,
+						host,
+					} as ComponentUI<P, U>
+					this.#ui = ui
+					Object.freeze(this.#ui)
+					this.#initSignals(
+						ui,
+						factoryResult.props ?? ({} as Initializers<P, U>),
+					)
+					const instanceEffects =
+						factoryResult.effects ?? ({} as Effects<P, ComponentUI<P, U>>)
+					resolveDependencies(() => {
+						this.#cleanup = unown(() => runEffects(ui, instanceEffects))
+					})
+				}
 			} else {
 				// 4-param form: observedAttributes derived from props parsers
 				const ui = {
@@ -360,6 +616,16 @@ export {
 	type ComponentSetup,
 	type ComponentUI,
 	defineComponent,
+	type EffectDescriptor,
+	type FactoryContext,
+	type FactoryEachHelper,
+	type FactoryOnHelper,
+	type FactoryPassHelper,
+	type FactoryProvideContextsHelper,
+	type FactoryRequestContextHelper,
+	type FactoryResult,
+	type FactoryRunHandlers,
+	type FactoryRunHelper,
 	type Initializers,
 	type MaybeSignal,
 	type ReservedWords,

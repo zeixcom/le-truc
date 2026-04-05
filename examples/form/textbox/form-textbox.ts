@@ -50,13 +50,9 @@ export default defineComponent<FormTextboxProps, FormTextboxUI>(
 			ui: { textbox, clear, error, description },
 			props: {
 				value: read(() => textbox.value, ''),
-				length: createEventsSensor(
-					read(() => textbox.value.length, 0),
-					'textbox',
-					{
-						input: ({ target }) => target.value.length,
-					},
-				),
+				length: createEventsSensor(textbox, textbox.value.length, {
+					input: ({ target }) => target.value.length,
+				}),
 				error: '',
 				description: () => {
 					if (description) {

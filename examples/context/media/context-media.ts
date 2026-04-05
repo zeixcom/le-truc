@@ -128,7 +128,7 @@ export default defineComponent<ContextMediaProps>(
 				},
 			},
 			effects: {
-				host: provideContexts([
+				host: provideContexts<ContextMediaProps>([
 					MEDIA_MOTION,
 					MEDIA_THEME,
 					MEDIA_VIEWPORT,

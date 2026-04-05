@@ -255,3 +255,446 @@ Implements the [W3C Community Protocol for Context](https://github.com/webcompon
 `setAttribute()` includes security validation:
 - Blocks `on*` event handler attributes (prevents XSS via attribute injection)
 - Validates URLs against an allowlist of safe protocols (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`) — blocks `javascript:`, `data:`, etc.
+
+---
+
+## Key Decisions
+
+| Decision | Choice | Alternatives Considered | Rationale |
+|----------|--------|------------------------|-----------|
+| Two overloads for `defineComponent` | 2-param factory + 4-param form | Single form, builder pattern | Factory form is simpler for most cases; 4-param form needed when `observedAttributes` must be reactive |
+| Slot-based signal swapping | `createSlot` wrapping mutable signals | Direct property assignment, Proxy-based | Enables `pass()` zero-overhead binding; consistent signal identity across the component lifecycle |
+| Branded parsers and methods | Symbol-based branding (`PARSER_BRAND`, `METHOD_BRAND`) | Structural typing, class instances | `fn.length` is unreliable with default params/rest/destructuring; symbols are unforgeable |
+| Lazy `MutationObserver` for `all()` | Observer activates on first read via `watched` option | Always-on observer, polling | Avoids overhead for collections not read in effects; auto-disconnects when unwatched |
+| Effect keyed by UI element | `effects: { elementName: Effect[] }` | Flat effect list, per-property effects | Enables automatic Memo wrapping for collections; clear target binding without repetition |
+
+## v1.1 Specification — New 2-Param Factory Form
+
+See `VERSION_1.1_GOALS.md` for the goals. This section is the refined architectural specification for the new API.
+
+### Design Summary
+
+The new 2-param factory form replaces the structured return object (`{ ui, props, effects }`) with imperative setup (`expose()`) and a flat array of effect descriptors. The factory receives a context object with helpers for querying, declaring properties, and setting up effects.
+
+```
+v1.0 factory flow:
+  factory({ first, all, host })
+    → return { ui, props, effects }
+    → engine: initSignals(props) → resolveDeps → createScope(runEffects(effects))
+
+v1.1 factory flow:
+  factory({ all, each, expose, first, host, on, pass, provideContexts, run })
+    → query elements with first/all
+    → expose({ ... })              ← engine calls #initSignals immediately
+    → return [ run(...), on(...) ] ← effect descriptors; engine activates after deps resolve
+```
+
+### The Factory Context
+
+The factory receives a single destructurable context object:
+
+```ts
+type FactoryContext<P extends ComponentProps> = {
+    // Queries (unchanged from v1.0)
+    first: FirstElement
+    all: AllElements
+    host: Component<P>
+
+    // Property declaration
+    expose: (props: Initializers<P>) => void
+
+    // Effect helpers — return effect descriptors
+    run:              /* see §run */
+    each:             /* see §each */
+    on:               /* see §on */
+    pass:             /* see §pass */
+    provideContexts:  /* see §provideContexts */
+}
+```
+
+Components destructure only what they need. A minimal component might use `{ expose, first, host, run }`. A complex component with collections, events, and inter-component binding might use all of them.
+
+### Naming Convention
+
+Helpers pair by cardinality:
+
+| Query | Effect |
+|-------|--------|
+| `first(selector)` → `Element` | `run(signal, callback)` → effect on host property |
+| `all(selector)` → `Memo<Element[]>` | `each(memo, callback)` → per-element effects |
+
+### `expose(props)`
+
+Declares the component's reactive public API. Called once during factory execution. Internally calls `#initSignals()` — the same dispatch logic as v1.0:
+
+- **Parser** (branded with `PARSER_BRAND`) → called with `(ui, getAttribute(key))`, creates signal from result
+- **MethodProducer** (branded with `METHOD_BRAND`) → called for side effect (installs method on host)
+- **Reader** (1-arg function) → called with `(ui)`, result used as signal initializer
+- **Static value or Signal** → used directly as signal initializer
+
+**Parser compatibility**: Parsers keep their `(ui, value) => T` signature unchanged. The `Fallback<T, U>` type is already `T | Reader<T, U>`, so passing plain values as fallbacks works today:
+
+```ts
+// v1.0 — reader-function fallback (reads DOM lazily via ui):
+label: asString(() => label?.textContent ?? host.querySelector('label')?.textContent ?? '')
+
+// v1.1 — plain value fallback (reads DOM eagerly via closure):
+label: asString(label?.textContent ?? first('label')?.textContent ?? '')
+```
+
+Both are valid `Fallback<string, U>`. The reader form becomes unnecessary since the factory closure already has direct element access. The parser still receives `getAttribute(key)` from `#initSignals` — if the HTML attribute is set, it wins; if absent, the fallback is used. No parser API changes needed.
+
+**Methods**: `expose()` handles methods via `asMethod()`, keeping all public API declaration in one place. The dispatch through `#initSignals` continues to work: method producers are called for their side effect and ignored for signal creation.
+
+```ts
+expose({
+    checked: checkbox.checked,                    // static → createState
+    label: asString(label?.textContent ?? ''),     // parser → reads attribute, falls back
+    clear: clearMethod,                            // asMethod → installs host.clear
+    length: createEventsSensor(textbox, 0, { ... }), // sensor → see §createEventsSensor
+    theme: requestContext('theme', 'light'),        // context → see §requestContext
+})
+```
+
+### `run(source, handler)` — Property Effect
+
+Wraps `createEffect` + `match` to create a reactive effect driven by one or more signals.
+
+```ts
+// Single signal — string name resolves to host[name]:
+run('checked', checked => {
+    checkbox.checked = checked
+    host.toggleAttribute('checked', checked)
+})
+
+// Single signal — direct Signal/Memo reference:
+run(lowerFilter, filter => {
+    searchInput.value = filter
+})
+
+// Multiple signals — array form, callback receives tuple:
+run(['value', 'filter'], ([value, filter]) => {
+    // re-runs when either host.value or host.filter changes
+})
+
+// MatchHandlers form — ok/nil/err paths:
+run('src', {
+    ok: src => { renderContent(src) },
+    nil: () => { resetToEmpty() },
+    err: error => { showError(error) },
+})
+```
+
+**Semantics**: `run` uses `match` internally. The effect re-runs **only when the declared source signals change** — other signals read inside the handler do NOT trigger re-runs. This is a deliberate choice: effects declare their dependencies explicitly, making data flow traceable.
+
+**Return value**: An effect descriptor (see §Lifecycle below). Falsy values (`false`, `undefined`) are valid and filtered out, enabling conditional effects:
+
+```ts
+return [
+    label && run('label', text => { label.textContent = text }),
+]
+```
+
+### `each(memo, callback)` — Collection Effect
+
+Per-element reactive effects on a `Memo<Element[]>` from `all()`. Provides automatic lifecycle management: when elements enter the collection, their effects are created; when they leave, their effects are disposed.
+
+```ts
+each(options, option => [
+    run('value', value => {
+        option.ariaSelected = String(host.value === option.value)
+        option.tabIndex = host.value === option.value ? 0 : -1
+    }),
+    run(lowerFilter, filter => {
+        const text = option.textContent?.trim() ?? ''
+        option.hidden = !text.toLowerCase().includes(filter)
+        option.innerHTML = highlightMatch(text, filter)
+    }),
+])
+```
+
+The callback receives a single element and returns an array of effect descriptors (same shape as the factory's top-level return). This makes the pattern recursive — `each` inside `each` is valid for nested collections.
+
+**Implementation**: When activated, `each` creates a `createEffect` that reads `memo.get()` (tracking the Memo). For each element, it calls the callback and activates the returned descriptors in a per-element scope owned by the wrapping `createEffect`. When the Memo changes, the wrapping effect re-runs: old per-element scopes are disposed, new ones created.
+
+### `on(target, type, handler, options?)` — Event Binding
+
+Attaches an event listener. The target is explicit. The handler always receives `(event, target)` — a unified signature regardless of whether the target is an Element or Memo. This gives properly typed `target` without the `event.target` casting that DOM APIs typically require.
+
+```ts
+// Single element — target is the element itself:
+on(checkbox, 'change', (event, el) => ({ checked: el.checked }))
+
+// Memo target — event delegation; target is the matched element:
+on(dots, 'click', (event, dot) => {
+    host.index = parseInt(dot.dataset.index || '0')
+})
+```
+
+**Element target**: Attaches a listener directly to the element. Handler receives `(event, element)` where `element` is the target passed to `on()`. Handler may return `{ prop: value }` to batch-update host properties (same as v1.0).
+
+**Memo target — event delegation**: Attaches a single listener on the component's query root (`host.shadowRoot ?? host`). When an event fires, checks `element.contains(event.target)` for each element in `memo.get()` to find the matched element. The handler receives `(event, matchedElement)`.
+
+**Non-bubbling events on Memo targets**: Delegation only works for events that bubble. If `on()` receives a Memo target with a non-bubbling event type, behavior differs by build mode:
+
+- **DEV_MODE**: Logs a warning pointing the user toward the `each()` + per-element `on()` pattern, then falls back to per-element listeners.
+- **Production**: Silently falls back to per-element listeners.
+
+The fallback uses the same per-element lifecycle management as `each()` internally (listeners added/removed as elements join/leave the Memo). This ensures production code never breaks, while development builds educate authors toward the explicit `each()` pattern — which is preferred because it makes the per-element cost visible and gives the author control over what else happens per-element.
+
+**Exhaustive non-bubbling event list**: `focus`, `blur`, `scroll`, `resize`, `load`, `unload`, `error`, `toggle`, `mouseenter`, `mouseleave`, `pointerenter`, `pointerleave`, `abort`, `canplay`, `canplaythrough`, `durationchange`, `emptied`, `ended`, `loadeddata`, `loadedmetadata`, `loadstart`, `pause`, `play`, `playing`, `progress`, `ratechange`, `seeked`, `seeking`, `stalled`, `suspend`, `timeupdate`, `volumechange`, `waiting`.
+
+```ts
+// DEV_MODE warning: 'focus' does not bubble — prefer each() for per-element listeners
+// Falls back to per-element listeners in both modes
+on(inputs, 'focus', (event, el) => { /* works, but warns in dev */ })
+
+// Preferred explicit pattern:
+each(inputs, input => [
+    on(input, 'focus', (event, el) => { /* ... */ }),
+])
+```
+
+**`on` inside `each`**: When `on` appears inside an `each` callback, the target is a single element (the iteration variable), so it binds a per-element listener — no delegation. This is the correct pattern for non-bubbling events and for cases where per-element lifecycle management is needed (listener added when element enters the Memo, removed when it leaves).
+```
+
+### `pass(target, props)` — Inter-Component Binding
+
+Passes reactive values to a descendant Le Truc component by swapping its Slot-backed signals. Same mechanism as v1.0, but with explicit target.
+
+```ts
+// Single element:
+pass(listbox, { filter: () => host.value })
+
+// Memo target — auto-iterates like each():
+pass(spinbuttons, { value: 'quantity' })
+```
+
+**Memo target**: Iterates current elements in the Memo, swaps signals for each, and manages per-element lifecycle (restore original signals when elements leave the collection). Internally uses the same per-element scoping as `each()`.
+
+**Provided as factory helper** (not imported), so it can capture `host` from the factory context. This eliminates the import.
+
+### `provideContexts(contexts)` — Context Provider
+
+Provided as a factory helper, always bound to `host`. Attaches a `context-request` listener.
+
+```ts
+return [
+    provideContexts([MEDIA_MOTION, MEDIA_THEME, MEDIA_VIEWPORT]),
+]
+```
+
+No target parameter needed — context provision only makes sense on the host element. The helper captures `host` from the factory context.
+
+### `requestContext(context, fallback)` — Context Consumer
+
+Used inside `expose()` as a property initializer. Dispatches a `ContextRequestEvent` from the host.
+
+```ts
+expose({
+    theme: requestContext('theme', 'light'),
+})
+```
+
+The signature changes slightly: `requestContext` is provided as a factory helper that captures `host`, so the user no longer needs to pass it. Internally dispatches the event from `host` and returns a `Memo<T>`.
+
+### `createEventsSensor(target, init, events)` — Event-Driven Sensor
+
+Refactored to accept a target element directly instead of a UI key string.
+
+```ts
+expose({
+    length: createEventsSensor(textbox, textbox.value.length, {
+        input: ({ target }) => target.value.length,
+    }),
+})
+```
+
+The `target` parameter replaces the string `key` lookup. The `init` parameter is a plain value (not `read(reader, fallback)` — `read` is eliminated). Internally, `createEventsSensor` still returns a `Sensor<T>` that `#initSignals` handles.
+
+**Handler context**: The `ui` field in handler context objects becomes unnecessary (elements are in the closure). The handler receives `{ event, target, prev }` — dropping `ui`.
+
+### Component Lifecycle (v1.1)
+
+```
+connectedCallback()
+  │
+  ├─ 1. getHelpers(this)  →  [{ first, all }, resolveDependencies]
+  │
+  ├─ 2. Create factory context with helpers bound to this instance
+  │     (expose, run, each, on, pass, provideContexts, requestContext)
+  │
+  ├─ 3. Run factory:
+  │       descriptors = factory(context)
+  │       ├── first(), all() execute → queries run, dependencies collected
+  │       ├── expose() executes → #initSignals() creates signals immediately
+  │       └── run(), on(), etc. execute → return effect descriptors (thunks)
+  │
+  └─ 4. resolveDependencies(() => {
+           this.#cleanup = createScope(() => {
+               for (const descriptor of descriptors.filter(Boolean))
+                   descriptor()  // activate effect, registers in scope
+           })
+         })
+```
+
+**Critical timing detail**: `run()`, `on()`, `pass()`, `each()`, and `provideContexts()` return **effect descriptors** — functions that, when called inside a scope, create the actual effect. They do NOT create effects immediately when called in the factory body. This preserves the v1.0 timing guarantee: effects activate only after dependency resolution (child custom elements are defined).
+
+From the user's perspective this is transparent — they call `run(...)`, get back an opaque value, put it in the return array. The engine handles activation timing. The same pattern already exists in v1.0: `on('click', handler)` returns a curried `(host, target) => Cleanup`, not a live effect.
+
+**Why this matters**: `pass()` needs the target component's signals to exist. Those signals are created in the target's `connectedCallback`, which requires `customElements.define()` to have run. `resolveDependencies` waits for that. If effects activated immediately, `pass` would find an empty signal map and silently fail.
+
+### Safety Utilities
+
+With built-in effects (`setAttribute`, `toggleAttribute`, etc.) no longer wrapping DOM operations, their safety features need to be available as importable utilities:
+
+- **`safeSetAttribute(element, name, value)`** — validates URL protocols, blocks `on*` handlers
+- **`escapeHTML(text)`** — already exists in examples; promote to library export
+- **`setTextPreservingComments(element, text)`** — replaces non-comment child nodes (what `setText` does internally)
+
+These are opt-in imports, not factory helpers. Authors who use native DOM methods directly accept responsibility for validation.
+
+### Worked Example: `form-combobox` in v1.1
+
+The combobox is one of the most complex components (6 UI targets, 12 effects, event sensors, `pass`, `show`, memos). Here's how it translates:
+
+```ts
+export default defineComponent<FormComboboxProps, FormComboboxUI>(
+    'form-combobox',
+    ({ all, expose, first, host, on, pass, run }) => {
+        const textbox = first('input', 'Needed to enter value.')
+        const listbox = first('form-listbox', 'Needed to display options.')
+        const clear = first('button.clear')
+        const error = first('form-combobox > .error')
+        const description = first('.description')
+
+        const errorId = error?.id
+        const descriptionId = description?.id
+
+        const showPopup = createState(false)
+        const isExpanded = createMemo(
+            () => showPopup.get() && listbox.options.length > 0,
+        )
+
+        expose({
+            value: '',
+            length: createEventsSensor(textbox, textbox.value.length, {
+                input: ({ target }) => target.value.length,
+            }),
+            error: '',
+            description: description?.textContent ?? '',
+            clear: clearMethod,
+        })
+
+        return [
+            // Host effects
+            run('value', value => {
+                host.setAttribute('value', value)
+            }),
+            on(host, 'keyup', ({ key }) => {
+                if (key === 'Escape') {
+                    showPopup.set(false)
+                    textbox.focus()
+                }
+                if (key === 'Delete') host.clear()
+            }),
+
+            // Textbox effects
+            run(['error', 'description'], ([err, desc]) => {
+                textbox.ariaInvalid = String(!!err)
+                textbox.setAttribute('aria-errormessage',
+                    err && errorId ? errorId : '')
+                textbox.setAttribute('aria-describedby',
+                    desc && descriptionId ? descriptionId : '')
+            }),
+            run(isExpanded, expanded => {
+                textbox.ariaExpanded = String(expanded)
+            }),
+            on(textbox, 'input', (_event, el) => {
+                el.checkValidity()
+                batch(() => {
+                    host.value = el.value
+                    host.error = el.validationMessage ?? ''
+                    showPopup.set(true)
+                })
+            }),
+            on(textbox, 'keydown', (event) => {
+                const { key, altKey } = event
+                if (key === 'ArrowDown') {
+                    if (altKey) showPopup.set(true)
+                    if (isExpanded.get()) listbox.options[0]?.focus()
+                }
+            }),
+
+            // Listbox effects
+            run(isExpanded, expanded => { listbox.hidden = !expanded }),
+            pass(listbox, { filter: () => host.value }),
+            on(listbox, 'change', (event) => {
+                const input = event.target
+                if (input instanceof HTMLInputElement) {
+                    textbox.value = input.value
+                    textbox.checkValidity()
+                    batch(() => {
+                        host.value = input.value
+                        host.error = textbox.validationMessage ?? ''
+                        showPopup.set(false)
+                        textbox.focus()
+                    })
+                }
+            }),
+
+            // Clear button
+            clear && run('length', length => { clear.hidden = !length }),
+            clear && on(clear, 'click', () => { host.clear() }),
+
+            // Text displays
+            error && run('error', text => { error.textContent = text }),
+            description && run('description', text => {
+                description.textContent = text
+            }),
+        ]
+    },
+)
+```
+
+**What changed**: 13 imports → 4 (`asString`, `batch`, `createMemo`, `createState`; the rest come from the factory context). No `ui` returned. No `effects` keyed by element name. Effects are grouped logically (by concern) rather than structurally (by target element). Optional elements use `&&` guards in the flat array.
+
+### Key Decisions
+
+| Decision | Choice | Alternatives Considered | Rationale |
+|----------|--------|------------------------|-----------|
+| Naming: `run`/`each` | Parallel `first`/`all` for cardinality | `fx`/`forEach`, `watch`/`map`, `effect`/`iterate` | Reads as English ("run this when checked changes", "for each option do..."); consistent pairing with query helpers |
+| `run` uses `match` internally | Explicit dependency declaration | Plain `createEffect` (track all reads) | Makes data flow traceable; prevents accidental re-runs from incidental reads inside the handler |
+| Effect descriptors (thunks) | Deferred activation after dependency resolution | Immediate activation, `pass`-specific deferral | Preserves v1.0 timing guarantee; keeps `pass` simple; no dual-behavior helpers |
+| `on` unified handler signature | Always `(event, target)` | `(event)` for Element, `(event, matched)` for Memo | Consistent; properly typed `target` avoids `event.target` casting |
+| `on` with Memo uses delegation | Single listener on query root; DEV_MODE warn + fallback for non-bubbling | Always per-element, always throw | Better perf for large collections; graceful degradation in production; dev builds educate toward `each()` |
+| `on` inside `each` binds per-element | Direct listener on iteration element | Always delegate regardless of context | Enables non-bubbling events; automatic add/remove lifecycle when elements join/leave the Memo |
+| `pass` with Memo auto-iterates | Built-in per-element lifecycle | Require `each(memo, el => pass(el, ...))` | Common enough to warrant first-class support; avoids boilerplate |
+| `each` callback returns array | Same shape as factory return | Void callback with self-registering helpers | Consistent at every level; composable; no dual-behavior for `run`/`on` inside vs. outside `each` |
+| `expose` handles methods | `asMethod()` stays, used inside `expose()` | Direct assignment on host, drop `asMethod` | Keeps all public API declaration in one place; `#initSignals` dispatch logic unchanged |
+| Parsers unchanged | `Fallback<T, U>` already accepts plain values | Separate value-transformer API | No breaking change; reader-function fallbacks still valid for 4-param form |
+| Safety as importable utilities | `safeSetAttribute`, `escapeHTML`, etc. | Built into `run`/factory helpers | Opt-in is appropriate; most DOM updates don't need validation |
+
+### Implementation Plan
+
+1. **Phase 1: Engine** — Modify `connectedCallback` to support the new factory return shape (flat array of effect descriptors). Implement `expose()` calling `#initSignals`. Keep v1.0 `{ ui, props, effects }` return working alongside — detect which form by checking `Array.isArray(result)` vs `isRecord(result)`.
+
+2. **Phase 2: Core helpers** — Implement `run()` (wrapping `match`), `each()` (collection lifecycle), new `on(target, type, handler)` with Memo delegation overload, new `pass(target, props)` with Memo overload. Wire them into the factory context.
+
+3. **Phase 3: Context & sensors** — Refactor `provideContexts` and `requestContext` as factory-context-bound helpers. Refactor `createEventsSensor` to accept target element directly, drop `ui` from handler context.
+
+4. **Phase 4: Safety utilities** — Extract `safeSetAttribute`, promote `escapeHTML`, implement `setTextPreservingComments`. Export from library.
+
+5. **Phase 5: Migration** — Convert example components to the new form. Use the test suite (~1150 tests, 3 browsers) as correctness backstop. Prioritize: simple components first (basic-*), then form components, then complex modules.
+
+6. **Phase 6: Deprecation** — Mark `read()`, built-in effects (`setText`, `setAttribute`, etc.), and the `{ ui, props, effects }` return shape as `@deprecated` with JSDoc pointing to v1.1 equivalents. Mark 4-param `defineComponent` overload as `@deprecated`. Update type declarations in `types/`. Update `CLAUDE.md` surprising behaviors. Removal deferred to v2.0.
+
+### Resolved Decisions
+
+- **4-param form**: Supported in v1.1 but marked `@deprecated`. Built-in effects (`setText`, etc.) remain available for its `setup` function. Removal decision deferred to v2.0.
+- **`each` single-descriptor shortcut**: `each(slides, slide => run('index', ...))` (without brackets) accepted as overload.
+- **Non-bubbling events**: Exhaustive list maintained. DEV_MODE warns and falls back to per-element; production silently falls back. No throws.
+
+### Remaining Open Questions
+
+1. **`run` with MatchHandlers and arrays**: The exact TypeScript overload signatures need design. `run(source, callback)` vs `run(source, { ok, nil, err })` vs `run([s1, s2], ([v1, v2]) => ...)` — three overloads with tuple typing for the array form. Consider whether this complexity belongs in Le Truc or should be upstreamed to Cause & Effect first (as mentioned in VERSION_1.1_GOALS.md). To be resolved during Phase 2 implementation.
