@@ -1,29 +1,17 @@
 import {
+	asMethod,
 	type Component,
 	createEventsSensor,
+	createMemo,
 	defineComponent,
-	on,
-	read,
-	setAttribute,
-	setProperty,
-	setText,
-	show,
 } from '../../..'
-import { clearMethod } from '../../_common/clearMethod'
 
 export type FormTextboxProps = {
 	value: string
 	readonly length: number
 	error: string
 	description: string
-	readonly clear: () => void
-}
-
-type FormTextboxUI = {
-	textbox: HTMLInputElement | HTMLTextAreaElement
-	clear?: HTMLButtonElement | undefined
-	error?: HTMLElement | undefined
-	description?: HTMLElement | undefined
+	clear: () => void
 }
 
 declare global {
@@ -32,71 +20,90 @@ declare global {
 	}
 }
 
-export default defineComponent<FormTextboxProps, FormTextboxUI>(
+export default defineComponent<FormTextboxProps>(
 	'form-textbox',
-	({ first, host }) => {
+	({ expose, first, host, on, run }) => {
 		const textbox = first(
 			'input, textarea',
 			'Add a native input or textarea as descendant element.',
-		)
-		const clear = first('button.clear')
-		const error = first('.error')
+		) as HTMLInputElement | HTMLTextAreaElement
+		const clearBtn = first('button.clear')
+		const errorEl = first('.error')
 		const description = first('.description')
 
-		const errorId = error?.id
+		const errorId = errorEl?.id
 		const descriptionId = description?.id
 
-		return {
-			ui: { textbox, clear, error, description },
-			props: {
-				value: read(() => textbox.value, ''),
-				length: createEventsSensor(textbox, textbox.value.length, {
-					input: ({ target }) => target.value.length,
+		// Reactive description: tracks remaining character count if template is present
+		const descriptionMemo =
+			description && textbox.maxLength > 0 && description.dataset.remaining
+				? createMemo(() =>
+						description.dataset.remaining!.replace(
+							'${n}',
+							String(textbox.maxLength - host.length),
+						),
+					)
+				: null
+
+		expose({
+			value: textbox.value,
+			length: createEventsSensor(textbox, textbox.value.length, {
+				input: ({ target }) => target.value.length,
+			}),
+			error: '',
+			description: descriptionMemo ?? description?.textContent?.trim() ?? '',
+			clear: asMethod(() => {
+				host.clear = () => {
+					host.value = ''
+					textbox.value = ''
+					textbox.setCustomValidity('')
+					textbox.checkValidity()
+					textbox.dispatchEvent(new Event('input', { bubbles: true }))
+					textbox.dispatchEvent(new Event('change', { bubbles: true }))
+					textbox.focus()
+				}
+			}),
+		})
+
+		// Set aria-describedby once (static relationship)
+		if (description && descriptionId)
+			textbox.setAttribute('aria-describedby', descriptionId)
+
+		return [
+			on(textbox, 'change', () => {
+				textbox.checkValidity()
+				return {
+					value: textbox.value,
+					error: textbox.validationMessage,
+				}
+			}),
+			run('value', value => {
+				textbox.value = value
+			}),
+			run('error', error => {
+				textbox.ariaInvalid = String(!!error)
+				if (error && errorId) {
+					textbox.setAttribute('aria-errormessage', errorId)
+				} else {
+					textbox.removeAttribute('aria-errormessage')
+				}
+			}),
+			clearBtn
+				&& run('length', length => {
+					clearBtn.hidden = !length
 				}),
-				error: '',
-				description: () => {
-					if (description) {
-						if (textbox.maxLength > 0 && description.dataset.remaining) {
-							return () =>
-								description.dataset.remaining!.replace(
-									'${n}',
-									String(textbox.maxLength - host.length),
-								)
-						}
-						return description.textContent?.trim() ?? ''
-					} else {
-						return ''
-					}
-				},
-				clear: clearMethod,
-			},
-			effects: {
-				textbox: [
-					on('change', () => {
-						textbox.checkValidity()
-						return {
-							value: textbox.value,
-							error: textbox.validationMessage,
-						}
-					}),
-					setProperty('value'),
-					setProperty('ariaInvalid', () => String(!!host.error)),
-					setAttribute('aria-errormessage', () =>
-						host.error && errorId ? errorId : null,
-					),
-					setAttribute('aria-describedby', () =>
-						description && descriptionId ? descriptionId : null,
-					),
-				],
-				clear: [
-					show(() => !!host.length),
-					on('click', () => {
-						host.clear()
-					}),
-				],
-				error: setText('error'),
-				description: setText('description'),
-			},
-		}
+			clearBtn
+				&& on(clearBtn, 'click', () => {
+					host.clear()
+				}),
+			errorEl
+				&& run('error', text => {
+					errorEl.textContent = text
+				}),
+			description
+				&& run('description', text => {
+					description.textContent = text
+				}),
+		]
 	},
 )

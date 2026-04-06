@@ -71,6 +71,8 @@ export {
 
 export {
 	type Component,
+	type ComponentFactory,
+	type ComponentFactoryResult,
 	type ComponentProp,
 	type ComponentProps,
 	type ComponentSetup,
@@ -78,9 +80,14 @@ export {
 	defineComponent,
 	type EffectDescriptor,
 	type FactoryContext,
+	type FactoryEachHelper,
+	type FactoryOnHelper,
+	type FactoryPassHelper,
 	type FactoryProvideContextsHelper,
 	type FactoryRequestContextHelper,
 	type FactoryResult,
+	type FactoryRunHandlers,
+	type FactoryRunHelper,
 	type Initializers,
 	type MaybeSignal,
 	type ReservedWords,
@@ -149,6 +156,11 @@ export { asBoolean } from './src/parsers/boolean'
 export { asJSON } from './src/parsers/json'
 export { asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'
+export {
+	escapeHTML,
+	safeSetAttribute,
+	setTextPreservingComments,
+} from './src/safety'
 export { schedule } from './src/scheduler'
 export {
 	type AllElements,

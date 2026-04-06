@@ -1,37 +1,6 @@
 import type { ComponentProps } from '../component'
 import { type Effect, type Reactive, updateElement } from '../effects'
-
-/* === Internal Functions === */
-
-const isSafeURL = (value: string): boolean => {
-	if (/^(mailto|tel):/i.test(value)) return true
-	if (value.includes('://')) {
-		try {
-			const url = new URL(value, window.location.origin)
-			return ['http:', 'https:', 'ftp:'].includes(url.protocol)
-		} catch {
-			return false
-		}
-	}
-	return true
-}
-
-const safeSetAttribute = (
-	element: Element,
-	attr: string,
-	value: string,
-): void => {
-	if (/^on/i.test(attr))
-		throw new Error(
-			`setAttribute: blocked unsafe attribute name '${attr}' on ${element.localName} — event handler attributes are not allowed`,
-		)
-	value = String(value).trim()
-	if (!isSafeURL(value))
-		throw new Error(
-			`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`,
-		)
-	element.setAttribute(attr, value)
-}
+import { safeSetAttribute } from '../safety'
 
 /* === Exported Functions === */
 
@@ -39,6 +8,8 @@ const safeSetAttribute = (
  * Effect for setting an attribute on an element.
  * Sets the specified attribute with security validation for unsafe values.
  *
+ * @deprecated Use `run('prop', value => { el.setAttribute(name, value) })` in the v1.1 factory form instead.
+ * `safeSetAttribute(el, name, value)` is available for security-validated attribute writes.
  * @since 0.8.0
  * @param {string} name - Name of the attribute to set
  * @param {Reactive<string, P, E>} reactive - Reactive value bound to the attribute value (defaults to attribute name)
@@ -64,6 +35,7 @@ const setAttribute = <P extends ComponentProps, E extends Element>(
  * Effect for toggling a boolean attribute on an element.
  * When the reactive value is true, the attribute is present; when false, it's absent.
  *
+ * @deprecated Use `run('prop', value => { el.toggleAttribute(name, value) })` in the v1.1 factory form instead.
  * @since 0.8.0
  * @param {string} name - Name of the attribute to toggle
  * @param {Reactive<boolean, P, E>} reactive - Reactive value bound to the attribute presence (defaults to attribute name)

@@ -86,6 +86,8 @@ declare const asMethod: <T extends (...args: any[]) => void>(fn: T) => T & {
  * - If the reader returns a `string` and `fallback` is a Parser, the string is parsed.
  * - Otherwise, the reader's return value is used directly, falling back to `getFallback`.
  *
+ * @deprecated Use a closure capturing the queried DOM element directly inside the v1.1 factory,
+ * e.g. `value: asInteger()({} as any, input.value)` or a Reader `() => parseInt(input.value, 10)`.
  * @since 0.15.0
  * @param {LooseReader<T, U>} reader - Reads a raw value from the UI object (`T | string | null | undefined`)
  * @param {ParserOrFallback<T, U>} fallback - Parser used when the reader returns a string, or static/reader fallback

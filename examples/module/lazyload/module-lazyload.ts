@@ -1,12 +1,10 @@
 import {
 	asString,
 	type Component,
+	createEffect,
 	createTask,
 	dangerouslySetInnerHTML,
 	defineComponent,
-	setText,
-	show,
-	toggleClass,
 } from '../../..'
 import {
 	fetchWithCache,
@@ -18,26 +16,21 @@ export type ModuleLazyloadProps = {
 	src: string
 }
 
-type ModuleLazyloadUI = Record<
-	'callout' | 'loading' | 'error' | 'content',
-	HTMLElement
->
-
 declare global {
 	interface HTMLElementTagNameMap {
 		'module-lazyload': Component<ModuleLazyloadProps>
 	}
 }
 
-export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
+export default defineComponent<ModuleLazyloadProps>(
 	'module-lazyload',
-	({ first, host }) => {
+	({ expose, first, host, run }) => {
 		const callout = first(
 			'card-callout',
 			'Needed to display loading state and error messages.',
 		)
 		const loading = first('.loading', 'Needed to display loading state.')
-		const error = first('.error', 'Needed to display error messages.')
+		const errorEl = first('.error', 'Needed to display error messages.')
 		const content = first('.content', 'Needed to display content.')
 
 		const result = createTask<{
@@ -58,8 +51,8 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 				if (err) return { ok: false, value: '', error: err, pending: false }
 
 				try {
-					const { content } = await fetchWithCache(url, abort)
-					return { ok: true, value: content, error: '', pending: false }
+					const { content: fetched } = await fetchWithCache(url, abort)
+					return { ok: true, value: fetched, error: '', pending: false }
 				} catch (err) {
 					return {
 						ok: false,
@@ -71,22 +64,27 @@ export default defineComponent<ModuleLazyloadProps, ModuleLazyloadUI>(
 			},
 			{ value: { ok: false, value: '', error: '', pending: true } },
 		)
-		const hasError = () => !!result.get().error
 
-		return {
-			ui: { callout, loading, error, content },
-			props: { src: asString() },
-			effects: {
-				callout: [show(() => !result.get().ok), toggleClass('danger', hasError)],
-				loading: show(() => !!result.get().pending),
-				error: [show(hasError), setText(() => result.get().error ?? '')],
-				content: [
-					show(() => result.get().ok),
-					dangerouslySetInnerHTML(() => result.get().value ?? '', {
-						allowScripts: host.hasAttribute('allow-scripts'),
-					}),
-				],
-			},
-		}
+		expose({
+			src: asString(),
+		})
+
+		return [
+			() =>
+				createEffect(() => {
+					const res = result.get()
+					const isError = !!res.error
+					callout.hidden = res.ok
+					callout.classList.toggle('danger', isError)
+					loading.hidden = !res.pending
+					errorEl.hidden = !isError
+					errorEl.textContent = res.error ?? ''
+					content.hidden = !res.ok
+				}),
+			() =>
+				dangerouslySetInnerHTML(() => result.get().value ?? '', {
+					allowScripts: host.hasAttribute('allow-scripts'),
+				})(host as any, content),
+		]
 	},
 )

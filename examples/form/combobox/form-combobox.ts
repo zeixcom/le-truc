@@ -1,19 +1,12 @@
 import {
+	asMethod,
 	batch,
 	type Component,
 	createEventsSensor,
 	createMemo,
 	createState,
 	defineComponent,
-	on,
-	pass,
-	read,
-	setAttribute,
-	setProperty,
-	setText,
-	show,
 } from '../../..'
-import { clearMethod } from '../../_common/clearMethod'
 import type { FormListboxProps } from '../listbox/form-listbox'
 
 export type FormComboboxProps = {
@@ -24,30 +17,25 @@ export type FormComboboxProps = {
 	readonly clear: () => void
 }
 
-type FormComboboxUI = {
-	textbox: HTMLInputElement
-	listbox: Component<FormListboxProps>
-	clear?: HTMLButtonElement | undefined
-	error?: HTMLElement | undefined
-	description?: HTMLElement | undefined
-}
-
 declare global {
 	interface HTMLElementTagNameMap {
 		'form-combobox': Component<FormComboboxProps>
 	}
 }
 
-export default defineComponent<FormComboboxProps, FormComboboxUI>(
+export default defineComponent<FormComboboxProps>(
 	'form-combobox',
-	({ first, host }) => {
-		const textbox = first('input', 'Needed to enter value.')
-		const listbox = first('form-listbox', 'Needed to display options.')
-		const clear = first('button.clear')
-		const error = first('form-combobox > .error')
+	({ expose, first, host, on, pass, run }) => {
+		const textbox = first('input', 'Needed to enter value.') as HTMLInputElement
+		const listbox = first<Component<FormListboxProps>>(
+			'form-listbox',
+			'Needed to display options.',
+		)
+		const clearBtn = first('button.clear')
+		const errorEl = first('form-combobox > .error')
 		const description = first('.description')
 
-		const errorId = error?.id
+		const errorId = errorEl?.id
 		const descriptionId = description?.id
 
 		const showPopup = createState(false)
@@ -55,80 +43,102 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 			() => showPopup.get() && listbox.options.length > 0,
 		)
 
-		return {
-			ui: { textbox, listbox, clear, error, description },
-			props: {
-				value: read(() => textbox.value, ''),
-				length: createEventsSensor(textbox, textbox.value.length, {
-					input: ({ target }) => target.value.length,
-				}),
-				error: '',
-				description: read(() => description?.textContent, ''),
-				clear: clearMethod,
-			},
-			effects: {
-				host: [
-					setAttribute('value'),
-					on('keyup', ({ key }) => {
-						if (key === 'Escape') {
-							showPopup.set(false)
-							textbox.focus()
-						}
-						if (key === 'Delete') host.clear()
-					}),
-				],
-				textbox: [
-					setProperty('ariaInvalid', () => String(!!host.error)),
-					setAttribute('aria-errormessage', () =>
-						host.error && errorId ? errorId : null,
-					),
-					setAttribute('aria-describedby', () =>
-						host.description && descriptionId ? descriptionId : null,
-					),
-					setProperty('ariaExpanded', () => String(isExpanded.get())),
-					on('input', () => {
-						textbox.checkValidity()
-						batch(() => {
-							host.value = textbox.value
-							host.error = textbox.validationMessage ?? ''
-							showPopup.set(true)
-						})
-					}),
-					on('keydown', e => {
-						const { key, altKey } = e
-						if (key === 'ArrowDown') {
-							if (altKey) showPopup.set(true)
-							if (isExpanded.get()) listbox.options[0]?.focus()
-						}
-					}),
-				],
-				listbox: [
-					show(isExpanded),
-					pass({
-						filter: () => host.value,
-					}),
-					on('change', ({ target }) => {
-						if (target instanceof HTMLInputElement) {
-							textbox.value = target.value
-							textbox.checkValidity()
-							batch(() => {
-								host.value = target.value
-								host.error = textbox.validationMessage ?? ''
-								showPopup.set(false)
-								textbox.focus()
-							})
-						}
-					}),
-				],
-				clear: [
-					show(() => !!host.length),
-					on('click', () => {
-						host.clear()
-					}),
-				],
-				error: setText('error'),
-				description: setText('description'),
-			},
+		expose({
+			value: textbox.value,
+			length: createEventsSensor(textbox, textbox.value.length, {
+				input: ({ target }) => target.value.length,
+			}),
+			error: '',
+			description: description?.textContent?.trim() ?? '',
+			clear: asMethod(() => {
+				;(host as any).clear = () => {
+					host.value = ''
+					textbox.value = ''
+					textbox.setCustomValidity('')
+					textbox.checkValidity()
+					textbox.dispatchEvent(new Event('input', { bubbles: true }))
+					textbox.dispatchEvent(new Event('change', { bubbles: true }))
+					textbox.focus()
+				}
+			}),
+		})
+
+		// Set static aria attributes
+		if (description && descriptionId) {
+			textbox.setAttribute('aria-describedby', descriptionId)
 		}
+
+		return [
+			run('value', value => {
+				host.setAttribute('value', value)
+			}),
+			on(host, 'keyup', ({ key }: KeyboardEvent) => {
+				if (key === 'Escape') {
+					showPopup.set(false)
+					textbox.focus()
+				}
+				if (key === 'Delete') host.clear()
+			}),
+			run('error', error => {
+				textbox.ariaInvalid = String(!!error)
+				if (error && errorId) {
+					textbox.setAttribute('aria-errormessage', errorId)
+				} else {
+					textbox.removeAttribute('aria-errormessage')
+				}
+			}),
+			run(isExpanded, expanded => {
+				textbox.ariaExpanded = String(expanded)
+			}),
+			on(textbox, 'input', () => {
+				textbox.checkValidity()
+				batch(() => {
+					host.value = textbox.value
+					host.error = textbox.validationMessage ?? ''
+					showPopup.set(true)
+				})
+			}),
+			on(textbox, 'keydown', (e: KeyboardEvent) => {
+				const { key, altKey } = e
+				if (key === 'ArrowDown') {
+					if (altKey) showPopup.set(true)
+					if (isExpanded.get()) listbox.options[0]?.focus()
+				}
+			}),
+			run(isExpanded, expanded => {
+				listbox.hidden = !expanded
+			}),
+			pass(listbox, {
+				filter: () => host.value,
+			}),
+			on(listbox, 'change', ({ target }: Event) => {
+				if (target instanceof HTMLInputElement) {
+					textbox.value = target.value
+					textbox.checkValidity()
+					batch(() => {
+						host.value = target.value
+						host.error = textbox.validationMessage ?? ''
+						showPopup.set(false)
+						textbox.focus()
+					})
+				}
+			}),
+			clearBtn
+				&& run('length', length => {
+					clearBtn.hidden = !length
+				}),
+			clearBtn
+				&& on(clearBtn, 'click', () => {
+					host.clear()
+				}),
+			errorEl
+				&& run('error', text => {
+					errorEl.textContent = text
+				}),
+			description
+				&& run('description', text => {
+					description.textContent = text
+				}),
+		]
 	},
 )

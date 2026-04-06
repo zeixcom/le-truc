@@ -2,7 +2,7 @@ import { createSensor, isMemo, type Sensor } from '@zeix/cause-effect'
 import type { Component, ComponentProps } from './component'
 import { getFallback, type ParserOrFallback } from './parsers'
 import { PASSIVE_EVENTS, schedule } from './scheduler'
-import type { ElementFromKey, UI } from './ui'
+import type { UI } from './ui'
 
 /* === Types === */
 

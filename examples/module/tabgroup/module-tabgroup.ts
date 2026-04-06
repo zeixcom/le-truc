@@ -1,4 +1,9 @@
-import { type Component, defineComponent } from '../../..'
+import {
+	type Component,
+	createMemo,
+	createState,
+	defineComponent,
+} from '../../..'
 
 export type ModuleTabgroupProps = {
 	readonly selected: string
@@ -38,12 +43,19 @@ export default defineComponent<ModuleTabgroupProps>(
 		const isCurrentTab = (tab: HTMLButtonElement) =>
 			host.selected === tab.getAttribute('aria-controls')
 
+		// Private mutable state; expose as read-only via Memo so external code can't set it
+		const selectedState = createState(
+			getSelected(tabs.get(), tab => tab.ariaSelected === 'true'),
+		)
+
 		expose({
-			selected: getSelected(tabs.get(), tab => tab.ariaSelected === 'true'),
+			selected: createMemo(selectedState.get),
 		})
 
 		return [
-			on(tabs, 'click', (e, target) => ({ selected: getAriaControls(target) })),
+			on(tabs, 'click', (e, target) => {
+				selectedState.set(getAriaControls(target))
+			}),
 			on(tabs, 'keyup', (e, target) => {
 				const key = e.key
 				if (
@@ -70,7 +82,7 @@ export default defineComponent<ModuleTabgroupProps>(
 										key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1,
 									)
 					tabsList.filter(tab => getAriaControls(tab) === next)[0]!.focus()
-					return { selected: next }
+					selectedState.set(next)
 				}
 			}),
 			run('selected', () => {

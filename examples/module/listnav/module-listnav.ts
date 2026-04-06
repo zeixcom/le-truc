@@ -1,17 +1,4 @@
-import {
-	batch,
-	type Component,
-	createEffect,
-	defineComponent,
-	pass,
-} from '../../..'
-import type { FormListboxProps } from '../../form/listbox/form-listbox'
-import type { ModuleLazyloadProps } from '../lazyload/module-lazyload'
-
-type ModuleListnavUI = {
-	listbox: Component<FormListboxProps>
-	lazyload: Component<ModuleLazyloadProps>
-}
+import { batch, createEffect, defineComponent } from '../../..'
 
 /**
  * Extract the base path (first path segment) from an option value.
@@ -75,67 +62,61 @@ const valueToHash = (value: string, listbox: HTMLElement): string => {
 	return hash
 }
 
-export default defineComponent<{}, ModuleListnavUI>(
-	'module-listnav',
-	({ first }) => {
-		const listbox = first('form-listbox', 'Required to select a partial to load')
-		const lazyload = first('module-lazyload', 'Required to load a partial into')
+export default defineComponent('module-listnav', ({ first, pass }) => {
+	const listbox = first('form-listbox', 'Required to select a partial to load')
+	const lazyload = first('module-lazyload', 'Required to load a partial into')
 
-		const hasOption = (value: string): boolean =>
-			!!listbox.querySelector(
-				`button[role="option"][value="${CSS.escape(value)}"]`,
-			)
+	const hasOption = (value: string): boolean =>
+		!!listbox.querySelector(
+			`button[role="option"][value="${CSS.escape(value)}"]`,
+		)
 
-		// Set initial selection from hash
-		if (location.hash) {
-			const value = hashToValue(location.hash, listbox)
-			if (value && hasOption(value)) listbox.value = value
+	// Set initial selection from hash
+	if (location.hash) {
+		const value = hashToValue(location.hash, listbox)
+		if (value && hasOption(value)) listbox.value = value
+	}
+
+	// Track whether we're updating the hash ourselves to avoid loops
+	let updatingHash = false
+
+	// Update selection when hash changes (browser back/forward)
+	const onHashChange = () => {
+		if (updatingHash) return
+
+		const value = hashToValue(location.hash, listbox)
+		if (value && value !== listbox.value && hasOption(value)) {
+			batch(() => {
+				listbox.filter = ''
+				listbox.value = value
+			})
 		}
+	}
 
-		// Track whether we're updating the hash ourselves to avoid loops
-		let updatingHash = false
+	return [
+		pass(lazyload, { src: () => listbox.value }),
 
-		// Update selection when hash changes (browser back/forward)
-		const onHashChange = () => {
-			if (updatingHash) return
+		// Sync location.hash ↔ listbox selection
+		() => {
+			// Update hash when selection changes
+			const cleanup = createEffect(() => {
+				const value = listbox.value
+				if (!value) return
 
-			const value = hashToValue(location.hash, listbox)
-			if (value && value !== listbox.value && hasOption(value)) {
-				batch(() => {
-					listbox.filter = ''
-					listbox.value = value
-				})
+				const hash = valueToHash(value, listbox)
+				if (hash && location.hash !== `#${hash}`) {
+					updatingHash = true
+					history.replaceState(null, '', `#${hash}`)
+					updatingHash = false
+				}
+			})
+
+			window.addEventListener('hashchange', onHashChange)
+
+			return () => {
+				cleanup()
+				window.removeEventListener('hashchange', onHashChange)
 			}
-		}
-
-		return {
-			ui: { listbox, lazyload },
-			effects: {
-				lazyload: pass({ src: () => listbox.value }),
-
-				// Sync location.hash ↔ listbox selection
-				host: () => {
-					// Update hash when selection changes
-					const cleanup = createEffect(() => {
-						const value = listbox.value
-						if (!value) return
-
-						const hash = valueToHash(value, listbox)
-						if (hash && location.hash !== `#${hash}`) {
-							updatingHash = true
-							history.replaceState(null, '', `#${hash}`)
-							updatingHash = false
-						}
-					})
-
-					window.addEventListener('hashchange', onHashChange)
-
-					return () => {
-						cleanup()
-						window.removeEventListener('hashchange', onHashChange)
-					}
-				},
-			},
-		}
-	},
-)
+		},
+	]
+})

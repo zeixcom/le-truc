@@ -63,6 +63,8 @@ type Component<P extends ComponentProps> = HTMLElement & P
 /**
  * The UI object passed to the `setup` function: the result of the `select`
  * function merged with a `host` key pointing to the component element itself.
+ *
+ * @deprecated Used only by the v1.0 4-param form of `defineComponent`. Use the v1.1 factory form with `FactoryContext` instead.
  */
 type ComponentUI<P extends ComponentProps, U extends UI> = U & {
 	host: Component<P>
@@ -71,6 +73,8 @@ type ComponentUI<P extends ComponentProps, U extends UI> = U & {
 /**
  * The type of the `setup` function passed to `defineComponent`.
  * Receives the frozen UI object (including `host`) and returns an `Effects` record.
+ *
+ * @deprecated Used only by the v1.0 4-param form of `defineComponent`. Use the v1.1 factory form with `FactoryContext` instead.
  */
 type ComponentSetup<P extends ComponentProps, U extends UI> = (
 	ui: ComponentUI<P, U>,
@@ -112,7 +116,7 @@ type MaybeSignal<T extends {}> =
 	| TaskCallback<T>
 
 /**
- * The return value of the factory function in the 2-param form of `defineComponent`.
+ * The return value of the factory function in the v1.0 2-param form of `defineComponent`.
  *
  * - `ui` — queried DOM elements, keyed by name; used by `runEffects` and passed to `props` initializers.
  * - `props` — optional reactive property initializers (same as the second argument in the 4-param form).
@@ -120,6 +124,8 @@ type MaybeSignal<T extends {}> =
  *
  * Components defined via the factory form opt out of `observedAttributes` entirely.
  * Reactive state flows through the signal-backed property interface only.
+ *
+ * @deprecated Use the v1.1 factory form: call `expose()` for props and return a `FactoryResult` array of effect descriptors instead.
  */
 type ComponentFactoryResult<P extends ComponentProps, U extends UI> = {
 	ui?: U
@@ -137,6 +143,8 @@ type ComponentFactoryResult<P extends ComponentProps, U extends UI> = {
  *
  * Note: components using this form only destructure `{ first, all, host }` and ignore the
  * v1.1 helpers (`expose`, `run`, `each`, `on`, `pass`).
+ *
+ * @deprecated Use the v1.1 factory form: call `expose()` for props and return a `FactoryResult` array of effect descriptors instead.
  */
 type ComponentFactory<P extends ComponentProps, U extends UI> = (
 	context: FactoryContext<P>,
@@ -335,29 +343,13 @@ function defineComponent<P extends ComponentProps>(
 ): Component<P>
 
 /**
- * Define and register a reactive custom element using the v1.0 2-param factory form.
- *
- * The factory receives `{ first, all, host }` at connect time and returns `{ ui, props?, effects? }`.
- * UI elements, props initializers, and effects share a single closure scope — no `ui` object is
- * passed between functions. Components defined this way do not use `observedAttributes`; reactive
- * state is managed entirely through the signal-backed property interface.
- *
- * @since 1.1
- * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
- * @param {ComponentFactory<P, U>} factory - Factory function that queries elements and returns ui, props, and effects
- * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
- */
-function defineComponent<P extends ComponentProps, U extends UI = {}>(
-	name: string,
-	factory: ComponentFactory<P, U>,
-): Component<P>
-
-/**
- * Define and register a reactive custom element.
+ * Define and register a reactive custom element using the v1.0 4-param form.
  *
  * Calls `customElements.define()` and returns the registered class.
  * Reactive properties are initialised in `connectedCallback` and torn down in `disconnectedCallback`.
  *
+ * @deprecated Use the v1.1 factory form `defineComponent(name, factory)` with `expose()` and effect descriptors instead.
+ * The 4-param form remains fully supported for components that require attribute-reactive `observedAttributes`.
  * @since 0.15.0
  * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
  * @param {Initializers<P, U>} props - Initializers for reactive properties: static values, signals, parsers, or readers
@@ -377,7 +369,6 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 	name: string,
 	propsOrFactory:
 		| Initializers<P, U>
-		| ComponentFactory<P, U>
 		| ((context: FactoryContext<P>) => FactoryResult) = {} as Initializers<
 		P,
 		U

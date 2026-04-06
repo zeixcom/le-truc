@@ -2415,7 +2415,7 @@ function defineComponent(name, propsOrFactory = {}, select = () => ({}), setup =
   customElements.define(name, Truc);
   return customElements.get(name);
 }
-// src/effects/attribute.ts
+// src/safety.ts
 var isSafeURL = (value) => {
   if (/^(mailto|tel):/i.test(value))
     return true;
@@ -2437,6 +2437,13 @@ var safeSetAttribute = (element, attr, value) => {
     throw new Error(`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`);
   element.setAttribute(attr, value);
 };
+var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+var setTextPreservingComments = (element, text) => {
+  Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => node.remove());
+  element.append(document.createTextNode(text));
+};
+
+// src/effects/attribute.ts
 var setAttribute = (name, reactive = name) => updateElement(reactive, {
   op: "a",
   name,
@@ -2741,11 +2748,13 @@ export {
   toggleClass,
   toggleAttribute,
   show,
+  setTextPreservingComments,
   setText,
   setStyle,
   setProperty,
   setAttribute,
   schedule,
+  safeSetAttribute,
   requestContext,
   read,
   provideContexts,
@@ -2770,6 +2779,7 @@ export {
   isComputed,
   isCollection,
   isAsyncFunction,
+  escapeHTML,
   defineComponent,
   dangerouslySetInnerHTML,
   createTask,

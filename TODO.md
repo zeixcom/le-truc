@@ -62,37 +62,37 @@ Reference: `ARCHITECTURE.md` §v1.1 Specification
 
 ### 3A: `provideContexts(contexts)` — bound to host
 
-- [ ] **3A.1** Refactor `provideContexts` to accept just `contexts` array, capture `host` from factory context
-- [ ] **3A.2** Returns `EffectDescriptor` for the return array
-- [ ] **3A.3** Add `provideContexts` to `FactoryContext`
-- [ ] **3A.4** Keep current `(contexts) => (host) => Cleanup` signature working for 4-param form
-- [ ] **3A.5** Write test: context-media provider using new form
+- [x] **3A.1** Refactor `provideContexts` to accept just `contexts` array, capture `host` from factory context
+- [x] **3A.2** Returns `EffectDescriptor` for the return array
+- [x] **3A.3** Add `provideContexts` to `FactoryContext`
+- [x] **3A.4** Keep current `(contexts) => (host) => Cleanup` signature working for 4-param form
+- [x] **3A.5** Write test: context-media provider using new form
 
 ### 3B: `requestContext(context, fallback)` — bound to host
 
-- [ ] **3B.1** Refactor `requestContext` to capture `host` from factory context, dispatch `ContextRequestEvent` from `host`
-- [ ] **3B.2** Returns `Memo<T>` for use inside `expose()`
-- [ ] **3B.3** Add `requestContext` to `FactoryContext`
-- [ ] **3B.4** Keep current `(context, fallback) => Reader` signature working for 4-param form
-- [ ] **3B.5** Write test: card-mediaqueries consumer using new form
+- [x] **3B.1** Refactor `requestContext` to capture `host` from factory context, dispatch `ContextRequestEvent` from `host`
+- [x] **3B.2** Returns `Memo<T>` for use inside `expose()`
+- [x] **3B.3** Add `requestContext` to `FactoryContext`
+- [x] **3B.4** Keep current `(context, fallback) => Reader` signature working for 4-param form
+- [x] **3B.5** Write test: card-mediaqueries consumer using new form
 
 ### 3C: `createEventsSensor(target, init, events)` — element-based
 
-- [ ] **3C.1** Refactor `createEventsSensor` to accept target element directly instead of UI key string
-- [ ] **3C.2** `init` parameter accepts plain value (no `read()` wrapper needed)
-- [ ] **3C.3** Drop `ui` from handler context — handler receives `{ event, target, prev }`
-- [ ] **3C.4** Keep current signature working for 4-param form (or adapt 4-param callers)
-- [ ] **3C.5** Write test: sensor with element target, verify event-driven updates
+- [x] **3C.1** Refactor `createEventsSensor` to accept target element directly instead of UI key string
+- [x] **3C.2** `init` parameter accepts plain value (no `read()` wrapper needed)
+- [x] **3C.3** Drop `ui` from handler context — handler receives `{ event, target, prev }`
+- [x] **3C.4** Keep current signature working for 4-param form (or adapt 4-param callers)
+- [x] **3C.5** Write test: sensor with element target, verify event-driven updates
 
 ## Phase 4: Safety Utilities
 
 > No dependencies on other phases. Can be done anytime.
 
-- [ ] **4.1** Extract `safeSetAttribute(element, name, value)` from `src/effects/attribute.ts` — URL protocol validation, `on*` blocking
-- [ ] **4.2** Promote `escapeHTML` from `examples/_common/escapeHTML.ts` to `src/util.ts` (or new `src/safety.ts`)
-- [ ] **4.3** Implement `setTextPreservingComments(element, text)` — extract logic from `src/effects/text.ts`
-- [ ] **4.4** Export all three from `index.ts`
-- [ ] **4.5** Update `types/` declarations
+- [x] **4.1** Extract `safeSetAttribute(element, name, value)` from `src/effects/attribute.ts` — URL protocol validation, `on*` blocking
+- [x] **4.2** Promote `escapeHTML` from `examples/_common/escapeHTML.ts` to `src/util.ts` (or new `src/safety.ts`)
+- [x] **4.3** Implement `setTextPreservingComments(element, text)` — extract logic from `src/effects/text.ts`
+- [x] **4.4** Export all three from `index.ts`
+- [x] **4.5** Update `types/` declarations
 
 ## Phase 5: Migration — Convert Examples
 
@@ -100,58 +100,58 @@ Reference: `ARCHITECTURE.md` §v1.1 Specification
 
 ### 5A: Simple components (no collections, no pass, no context)
 
-- [ ] **5A.1** `basic-hello` — simplest; good smoke test
-- [ ] **5A.2** `basic-counter`
-- [ ] **5A.3** `basic-button`
-- [ ] **5A.4** `basic-number`
-- [ ] **5A.5** `basic-pluralize`
-- [ ] **5A.6** `card-blogmeta`
-- [ ] **5A.7** `module-codeblock`
-- [ ] **5A.8** `module-dialog`
-- [ ] **5A.9** Run tests after each migration to verify
+- [x] **5A.1** `basic-hello` — simplest; good smoke test
+- [x] **5A.2** `basic-counter`
+- [x] **5A.3** `basic-button`
+- [x] **5A.4** `basic-number`
+- [x] **5A.5** `basic-pluralize`
+- [x] **5A.6** `card-blogmeta`
+- [x] **5A.7** `module-codeblock`
+- [x] **5A.8** `module-dialog`
+- [x] **5A.9** Run tests after each migration to verify
 
 ### 5B: Components with `pass`, sensors, or context
 
-- [ ] **5B.1** `form-checkbox` — draft already exists, make it work
-- [ ] **5B.2** `form-textbox` — uses `clearMethod`, `createEventsSensor`
-- [ ] **5B.3** `basic-gauge` — uses `pass`
-- [ ] **5B.4** `form-spinbutton` — uses `createMemo`, multiple `on` targets
-- [ ] **5B.5** `context-media` — uses `provideContexts`
-- [ ] **5B.6** `card-mediaqueries` — uses `requestContext`
-- [ ] **5B.7** Run tests after each migration
+- [x] **5B.1** `form-checkbox` — draft already exists, make it work
+- [x] **5B.2** `form-textbox` — uses `clearMethod`, `createEventsSensor`
+- [x] **5B.3** `basic-gauge` — uses `pass`
+- [x] **5B.4** `form-spinbutton` — uses `createMemo`, multiple `on` targets
+- [x] **5B.5** `context-media` — uses `provideContexts`
+- [x] **5B.6** `card-mediaqueries` — uses `requestContext`
+- [x] **5B.7** Run tests after each migration
 
 ### 5C: Components with `all()` collections
 
-- [ ] **5C.1** `form-radiogroup` — `all('input[type="radio"]')`, `manageFocus`
-- [ ] **5C.2** `module-tabgroup` — multiple `all()`, `createEventsSensor` on collection
-- [ ] **5C.3** `module-carousel` — multiple `all()`, IntersectionObserver, complex interaction
-- [ ] **5C.4** `module-pagination` — simple `all()` usage
-- [ ] **5C.5** `module-scrollarea` — IntersectionObserver-based overflow detection
-- [ ] **5C.6** Run tests after each migration
+- [x] **5C.1** `form-radiogroup` — `all('input[type="radio"]')`, `manageFocus`
+- [x] **5C.2** `module-tabgroup` — multiple `all()`, `createEventsSensor` on collection
+- [x] **5C.3** `module-carousel` — multiple `all()`, IntersectionObserver, complex interaction
+- [x] **5C.4** `module-pagination` — simple `all()` usage
+- [x] **5C.5** `module-scrollarea` — IntersectionObserver-based overflow detection
+- [x] **5C.6** Run tests after each migration
 
 ### 5D: Complex modules (collections + pass + async)
 
-- [ ] **5D.1** `form-combobox` — 6 targets, pass, sensor, show, memos (see worked example in ARCHITECTURE.md)
-- [ ] **5D.2** `form-listbox` — `all()` with per-element effects, `createTask`, `dangerouslySetInnerHTML`
-- [ ] **5D.3** `module-list` — `asMethod`, `pass`, template cloning
-- [ ] **5D.4** `module-catalog` — `all()` of Le Truc components, `pass` to collection
-- [ ] **5D.5** `module-todo` — `createElementsMemo`, multiple `pass` targets
-- [ ] **5D.6** `module-lazyload` — `createTask`, `dangerouslySetInnerHTML`
-- [ ] **5D.7** `module-listnav` — hash synchronization, `pass`
-- [ ] **5D.8** `security-test` — verify safety utilities work correctly
-- [ ] **5D.9** Run full test suite across all 3 browsers
+- [x] **5D.1** `form-combobox` — 6 targets, pass, sensor, show, memos (see worked example in ARCHITECTURE.md)
+- [x] **5D.2** `form-listbox` — `all()` with per-element effects, `createTask`, `dangerouslySetInnerHTML`
+- [x] **5D.3** `module-list` — `asMethod`, `pass`, template cloning
+- [x] **5D.4** `module-catalog` — `all()` of Le Truc components, `pass` to collection
+- [x] **5D.5** `module-todo` — `createElementsMemo`, multiple `pass` targets
+- [x] **5D.6** `module-lazyload` — `createTask`, `dangerouslySetInnerHTML`
+- [x] **5D.7** `module-listnav` — hash synchronization, `pass`
+- [x] **5D.8** `security-test` — verify safety utilities work correctly
+- [x] **5D.9** Run full test suite across all 3 browsers
 
 ## Phase 6: Deprecation
 
 > Depends on Phase 5 completion (all examples migrated, all tests passing).
 
-- [ ] **6.1** Mark 4-param `defineComponent` overload as `@deprecated` in JSDoc
-- [ ] **6.2** Mark `{ ui, props, effects }` return shape types as `@deprecated`
-- [ ] **6.3** Mark `read()` as `@deprecated` — point to direct value access in factory closure
-- [ ] **6.4** Mark built-in effects as `@deprecated`: `setText`, `setAttribute`, `toggleAttribute`, `setProperty`, `show`, `toggleClass`, `setStyle`, `dangerouslySetInnerHTML` — point to `run()` with imperative DOM updates
-- [ ] **6.5** Mark v1.0 `on(type, handler)` (without target) as `@deprecated` — point to new `on(target, type, handler)`
-- [ ] **6.6** Mark v1.0 `pass(props)` (without target) as `@deprecated` — point to new `pass(target, props)`
-- [ ] **6.7** Update `types/` declarations to include `@deprecated` tags and new exports
-- [ ] **6.8** Update `index.ts` — add new exports (safety utilities, new types)
-- [ ] **6.9** Update `CLAUDE.md` — revise surprising behaviors for v1.1
-- [ ] **6.10** Update `ARCHITECTURE.md` — mark v1.0 sections as historical, promote v1.1 as current
+- [x] **6.1** Mark 4-param `defineComponent` overload as `@deprecated` in JSDoc
+- [x] **6.2** Mark `{ ui, props, effects }` return shape types as `@deprecated`
+- [x] **6.3** Mark `read()` as `@deprecated` — point to direct value access in factory closure
+- [x] **6.4** Mark built-in effects as `@deprecated`: `setText`, `setAttribute`, `toggleAttribute`, `setProperty`, `show`, `toggleClass`, `setStyle`, `dangerouslySetInnerHTML` — point to `run()` with imperative DOM updates
+- [x] **6.5** Mark v1.0 `on(type, handler)` (without target) as `@deprecated` — point to new `on(target, type, handler)`
+- [x] **6.6** Mark v1.0 `pass(props)` (without target) as `@deprecated` — point to new `pass(target, props)`
+- [x] **6.7** Update `types/` declarations to include `@deprecated` tags and new exports
+- [x] **6.8** Update `index.ts` — add new exports (safety utilities, new types)
+- [x] **6.9** Update `CLAUDE.md` — revise surprising behaviors for v1.1
+- [x] **6.10** Update `ARCHITECTURE.md` — mark v1.0 sections as historical, promote v1.1 as current

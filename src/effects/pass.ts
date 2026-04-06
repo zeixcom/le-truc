@@ -50,6 +50,8 @@ type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
  * instead — it goes through the element's public setter and is always correct
  * regardless of the child's internal framework.
  *
+ * @deprecated Use the `pass(target, props)` helper from `FactoryContext` in the v1.1 factory form instead.
+ * The factory helper returns an `EffectDescriptor` and takes the target element as its first argument.
  * @since 0.15.0
  * @param {PassedProps<P, Q>} props - Reactive values to pass
  * @returns {Effect<P, Component<Q>>} Effect function that passes reactive values to the descendant component

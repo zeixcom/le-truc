@@ -1,24 +1,9 @@
-import { type Component, defineComponent, setText, show } from '../../..'
+import { type Component, defineComponent } from '../../..'
 import { asClampedInteger } from '../../_common/asClampedInteger'
 
 export type BasicPluralizeProps = {
 	count: number
 }
-
-type BasicPluralizeUI = Partial<
-	Record<
-		| 'count'
-		| 'none'
-		| 'some'
-		| 'zero'
-		| 'one'
-		| 'two'
-		| 'few'
-		| 'many'
-		| 'other',
-		HTMLElement | undefined
-	>
->
 
 declare global {
 	interface HTMLElementTagNameMap {
@@ -28,9 +13,9 @@ declare global {
 
 const FALLBACK_LOCALE = 'en'
 
-export default defineComponent<BasicPluralizeProps, BasicPluralizeUI>(
+export default defineComponent<BasicPluralizeProps>(
 	'basic-pluralize',
-	({ first, host }) => {
+	({ expose, first, host, run }) => {
 		const count = first('.count')
 		const none = first('.none')
 		const some = first('.some')
@@ -46,26 +31,45 @@ export default defineComponent<BasicPluralizeProps, BasicPluralizeUI>(
 			host.hasAttribute('ordinal') ? { type: 'ordinal' } : undefined,
 		)
 
-		// Basic effects
-		const effects: {
-			count: ReturnType<typeof setText>
-			none: ReturnType<typeof show>
-			some: ReturnType<typeof show>
-		} & Partial<Record<Intl.LDMLPluralRule, ReturnType<typeof show>>> = {
-			count: setText(() => String(host.count)),
-			none: show(() => host.count === 0),
-			some: show(() => host.count > 0),
+		expose({
+			count: asClampedInteger(),
+		})
+
+		const categoryElements: Partial<
+			Record<Intl.LDMLPluralRule, HTMLElement | undefined>
+		> = {
+			zero,
+			one,
+			two,
+			few,
+			many,
+			other,
 		}
 
-		// Subset of plural categories for applicable pluralizer: ['zero', 'one', 'two', 'few', 'many', 'other']
 		const categories = pluralizer.resolvedOptions().pluralCategories
-		for (const category of categories)
-			effects[category] = show(() => pluralizer.select(host.count) === category)
 
-		return {
-			ui: { count, none, some, zero, one, two, few, many, other },
-			props: { count: asClampedInteger() },
-			effects,
-		}
+		return [
+			count
+				&& run('count', value => {
+					count.textContent = String(value)
+				}),
+			none
+				&& run('count', value => {
+					none.hidden = value !== 0
+				}),
+			some
+				&& run('count', value => {
+					some.hidden = value === 0
+				}),
+			...categories.map(category => {
+				const el = categoryElements[category]
+				return (
+					el
+					&& run('count', value => {
+						el.hidden = pluralizer.select(value) !== category
+					})
+				)
+			}),
+		]
 	},
 )

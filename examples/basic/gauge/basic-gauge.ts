@@ -4,13 +4,7 @@ import {
 	type Component,
 	createMemo,
 	defineComponent,
-	pass,
-	setProperty,
-	setStyle,
-	setText,
 } from '../../..'
-
-import type { BasicNumberProps } from '../number/basic-number'
 
 export type BasicGaugeProps = {
 	value: number
@@ -23,23 +17,17 @@ export type BasicGaugeThreshold = {
 	color: string
 }
 
-type BasicGaugeUI = {
-	meter: HTMLMeterElement
-	value: Component<BasicNumberProps>
-	label: HTMLElement
-}
-
 declare global {
 	interface HTMLElementTagNameMap {
 		'basic-gauge': Component<BasicGaugeProps>
 	}
 }
 
-export default defineComponent<BasicGaugeProps, BasicGaugeUI>(
+export default defineComponent<BasicGaugeProps>(
 	'basic-gauge',
-	({ first, host }) => {
+	({ expose, first, host, pass, run }) => {
 		const meter = first('meter', 'Add a <meter> element to display the level')
-		const value = first(
+		const valueEl = first(
 			'basic-number',
 			'Add a <basic-number> element to display the value',
 		)
@@ -48,6 +36,7 @@ export default defineComponent<BasicGaugeProps, BasicGaugeUI>(
 			'Add an element to display the qualification label',
 		)
 		const max = meter.max
+
 		const qualification = createMemo(
 			() =>
 				host.thresholds.find(threshold => host.value >= threshold.min) || {
@@ -55,24 +44,27 @@ export default defineComponent<BasicGaugeProps, BasicGaugeUI>(
 					color: 'var(--color-primary)',
 				},
 		)
-		return {
-			ui: { meter, value, label },
-			props: {
-				value: asNumber(() => meter.value),
-				thresholds: asJSON<BasicGaugeThreshold[], BasicGaugeUI>([]),
-			},
-			effects: {
-				host: [
-					setStyle(
-						'--basic-gauge-degree',
-						() => `${(240 * host.value) / max}deg`,
-					),
-					setStyle('--basic-gauge-color', () => qualification.get().color),
-				],
-				meter: setProperty('value'),
-				value: pass({ value: () => host.value }),
-				label: setText(() => qualification.get().label),
-			},
-		}
+
+		expose({
+			value: asNumber(() => meter.value),
+			thresholds: asJSON<BasicGaugeThreshold[], {}>([]),
+		})
+
+		return [
+			run(['value', 'thresholds'], () => {
+				host.style.setProperty(
+					'--basic-gauge-degree',
+					`${(240 * host.value) / max}deg`,
+				)
+				host.style.setProperty('--basic-gauge-color', qualification.get().color)
+			}),
+			run('value', value => {
+				meter.value = value
+			}),
+			pass(valueEl, { value: () => host.value }),
+			run(qualification, q => {
+				label.textContent = q.label
+			}),
+		]
 	},
 )

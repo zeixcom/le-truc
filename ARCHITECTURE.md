@@ -70,8 +70,9 @@ The single external dependency is `@zeix/cause-effect`, which provides the react
 
 `defineComponent` has two overloads. Both create a class `Truc extends HTMLElement`, register it via `customElements.define()`, and return the class.
 
-- **2-param factory form** `(name, factory)`: the factory receives `{ first, all, host }` at connect time and returns `{ ui, props?, effects? }`. All three share a single closure. `static observedAttributes = []` — parsers in `props` are called once at connect time but `attributeChangedCallback` never fires.
-- **4-param form** `(name, props, select, setup)`: `props` is evaluated at class-definition time; parsers in `props` auto-populate `static observedAttributes`.
+- **2-param factory form v1.1** `(name, factory)` *(current)*: the factory receives a `FactoryContext` with `{ all, each, expose, first, host, on, pass, provideContexts, requestContext, run }`. It calls `expose({ ... })` for reactive props and returns a flat `FactoryResult` array of effect descriptors. `static observedAttributes = []` — parsers in `expose()` are called once at connect time but `attributeChangedCallback` never fires. See the v1.1 Specification section below for full details.
+- **2-param factory form v1.0** `(name, factory)` *(@deprecated)*: the factory receives `{ first, all, host }` at connect time and returns `{ ui, props?, effects? }`. All three share a single closure. `static observedAttributes = []` — parsers in `props` are called once at connect time but `attributeChangedCallback` never fires.
+- **4-param form** `(name, props, select, setup)` *(@deprecated)*: `props` is evaluated at class-definition time; parsers in `props` auto-populate `static observedAttributes`. Still the right choice when attribute changes on a live document must drive reactive updates.
 
 ### connectedCallback — initialization
 
@@ -82,12 +83,17 @@ connectedCallback()
   │     Determines query root (shadowRoot ?? this).
   │     Tracks custom element dependencies found during queries.
   │
-  ├─ 2a. [factory form]
+  ├─ 2a. [v1.1 factory form]
+  │       context = { first, all, host, expose, run, each, on, pass, ... }
+  │       descriptors = factory(context)       ← expose() called inside; signals created
+  │       (if expose() not called, ui = { host } is set automatically)
+  │
+  ├─ 2b. [v1.0 factory form — @deprecated]
   │       result = factory({ first, all, host })
   │       ui = { ...result.ui, host }  (frozen)
   │       #initSignals(ui, result.props ?? {})
   │
-  ├─ 2b. [4-param form]
+  ├─ 2c. [4-param form — @deprecated]
   │       ui = { ...select({ first, all }), host }  (frozen)
   │       #initSignals(ui, props)
   │
@@ -99,7 +105,8 @@ connectedCallback()
   │     Each non-null result is passed to #setAccessor(key, value).
   │
   └─ 3. resolveDependencies(() => {
-           [factory form] this.#cleanup = runEffects(ui, result.effects ?? {})
+           [v1.1 factory] this.#cleanup = createScope(() => descriptors.filter(Boolean).forEach(d => d()))
+           [v1.0 factory] this.#cleanup = runEffects(ui, result.effects ?? {})
            [4-param form] this.#cleanup = runEffects(ui, setup(ui))
          })
          Waits for child custom elements to be defined (200ms timeout),
@@ -178,11 +185,17 @@ All default their `reactive` parameter to the effect name (e.g., `setAttribute('
 
 ### on() — event listener effect
 
-`on(type, handler, options?)` is different from `updateElement`-based effects. It calls `createScope()` for proper disposal and directly attaches an event listener to the target element. The handler receives the event and may return a partial property update object like `{ count: host.count + 1 }`. If it does, the updates are applied to the host in a `batch()`. For passive events (scroll, resize, touch, wheel), execution is deferred via `schedule()`.
+**v1.1 (current)**: `on(target, type, handler, options?)` from `FactoryContext` — takes an explicit target element or `Memo<Element[]>`, returns an `EffectDescriptor`. The handler receives `(event, element)`. For `Memo` targets, uses event delegation. Returns a partial property update object `{ prop: value }` to batch-update host. See the v1.1 Specification section for full details.
+
+**v1.0 (@deprecated)**: `on(type, handler, options?)` in `src/effects/event.ts` — target-less form used in the `effects` record. Calls `createScope()` for proper disposal and attaches a listener to the target element (passed implicitly by `runEffects`).
 
 ### pass() — inter-component binding
 
-`pass(props)` is a Le Truc–to–Le Truc optimization. It calls `createScope()` for proper cleanup and directly swaps the backing signal of a descendant component's Slot, creating a zero-overhead live binding: it uses `getSignals(target)` to access the child's internal signal map, captures `slot.current()` before replacing, then calls `slot.replace(signal)`. The cleanup restores the original signal with `slot.replace(original)` when the parent disconnects.
+**v1.1 (current)**: `pass(target, props)` from `FactoryContext` — takes an explicit target element or `Memo<Component<Q>[]>`, returns an `EffectDescriptor`.
+
+**v1.0 (@deprecated)**: `pass(props)` in `src/effects/pass.ts` — target-less form used in the `effects` record.
+
+Both forms implement the same signal-swapping mechanism: calls `createScope()` for proper cleanup and directly swaps the backing signal of a descendant component's Slot, creating a zero-overhead live binding. It uses `getSignals(target)` to access the child's internal signal map, captures `slot.current()` before replacing, then calls `slot.replace(signal)`. The cleanup restores the original signal with `slot.replace(original)` when the parent disconnects.
 
 This is more efficient than `setProperty()` for Le Truc targets: it eliminates the intermediate `createEffect` and property-assignment overhead on every reactive update. The parent and child share the exact same underlying signal node.
 
@@ -228,7 +241,17 @@ The `read(reader, fallback)` function composes a `LooseReader` (which may return
 
 ## Event-Driven Sensors
 
-`createEventsSensor(init, key, events)` returns a Reader that creates a `Sensor<T>` — a signal driven by DOM events. It uses event delegation: all listeners are attached to the host, and when an event fires, the sensor finds the matching target element via `Node.contains()`.
+`createEventsSensor(element, init, events)` creates a `Sensor<T>` — a signal driven by DOM events. Used inside `expose()` to declare a sensor-backed reactive property. The element is the first argument (explicit, not a UI key string).
+
+```ts
+expose({
+    length: createEventsSensor(textbox, textbox.value.length, {
+        input: ({ target }) => (target as HTMLInputElement).value.length,
+    }),
+})
+```
+
+Internally, the sensor attaches listeners to the element and emits a new value whenever a matched event fires. The sensor is created via `createSensor(set => ...)` from `@zeix/cause-effect`, which manages the lifecycle (activate when read, deactivate when unwatched).
 
 This is more declarative than `on()`: instead of imperatively updating host properties, the sensor produces a single reactive value from multiple event types. Use case: combining `input`, `change`, `focus`, `blur` into a single state value.
 
@@ -240,11 +263,29 @@ Implements the [W3C Community Protocol for Context](https://github.com/webcompon
 
 ### Provider side
 
-`provideContexts(['theme', 'user'])` is an `Effect` — use it in the setup function as `host: provideContexts([...])`. It installs a `context-request` event listener via `createScope`; when a matching request arrives, it stops propagation and provides a getter `() => host[context]` to the callback. The listener is removed on `disconnectedCallback` via the effect cleanup.
+**v1.1 (current)**: `provideContexts([...])` is a `FactoryContext` helper that returns an `EffectDescriptor`. Include it in the factory's return array:
+
+```ts
+return [provideContexts([MEDIA_MOTION, MEDIA_THEME, MEDIA_VIEWPORT])]
+```
+
+**v1.0 (@deprecated)**: `provideContexts([...])` was an `Effect` used in the `effects` record as `host: provideContexts([...])`.
+
+Both forms install a `context-request` event listener via `createScope`; when a matching request arrives, it stops propagation and provides a getter `() => host[context]` to the callback. The listener is removed on `disconnectedCallback` via the effect cleanup.
 
 ### Consumer side
 
-`requestContext('theme', 'light')` returns a `Reader<Memo<T>>` used as a property initializer. During `connectedCallback`, it dispatches a `ContextRequestEvent` that bubbles up the DOM. If an ancestor provider intercepts it, the consumer receives a getter and wraps it in a `createMemo()`, creating a live reactive binding. If no provider responds, it falls back to the provided default value.
+**v1.1 (current)**: `requestContext(context, fallback)` is a `FactoryContext` helper that returns a `Memo<T>` directly — use it inside `expose()`:
+
+```ts
+expose({
+    theme: requestContext(MEDIA_THEME, 'unknown'),
+})
+```
+
+**v1.0 (@deprecated)**: `requestContext` returned a `Reader<Memo<T>>` used as a property initializer in the `props` map.
+
+Both forms dispatch a `ContextRequestEvent` that bubbles up the DOM during `connectedCallback`. If an ancestor provider intercepts it, the consumer receives a getter and wraps it in a `createMemo()`, creating a live reactive binding. If no provider responds, it falls back to the provided default value.
 
 ## The Scheduler
 
@@ -262,7 +303,7 @@ Implements the [W3C Community Protocol for Context](https://github.com/webcompon
 
 | Decision | Choice | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
-| Two overloads for `defineComponent` | 2-param factory + 4-param form | Single form, builder pattern | Factory form is simpler for most cases; 4-param form needed when `observedAttributes` must be reactive |
+| Two overloads for `defineComponent` | v1.1 factory (current) + 4-param (deprecated) | Single form, builder pattern | v1.1 factory is the primary form; 4-param form retained for components that require reactive `observedAttributes` |
 | Slot-based signal swapping | `createSlot` wrapping mutable signals | Direct property assignment, Proxy-based | Enables `pass()` zero-overhead binding; consistent signal identity across the component lifecycle |
 | Branded parsers and methods | Symbol-based branding (`PARSER_BRAND`, `METHOD_BRAND`) | Structural typing, class instances | `fn.length` is unreliable with default params/rest/destructuring; symbols are unforgeable |
 | Lazy `MutationObserver` for `all()` | Observer activates on first read via `watched` option | Always-on observer, polling | Avoids overhead for collections not read in effects; auto-disconnects when unwatched |

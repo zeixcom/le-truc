@@ -2,10 +2,7 @@ import { type Component, type Context, defineComponent } from '../../..'
 
 /* === Context key === */
 
-export const TEST_COUNT_CONTEXT = 'test-count' as Context<
-	'test-count',
-	() => number
->
+export const TEST_COUNT_CONTEXT = 'count' as Context<'count', () => number>
 
 /* === Provider === */
 

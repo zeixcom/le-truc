@@ -1,12 +1,8 @@
-import { type Component, defineComponent, read, setText } from '../../..'
+import { type Component, defineComponent } from '../../..'
 import { asDate } from '../../_common/asDate'
 
 export type CardBlogmetaProps = {
 	date: string
-}
-
-type CardBlogmetaUI = {
-	time: HTMLTimeElement
 }
 
 declare global {
@@ -15,21 +11,30 @@ declare global {
 	}
 }
 
-export default defineComponent<CardBlogmetaProps, CardBlogmetaUI>(
+export default defineComponent<CardBlogmetaProps>(
 	'card-blogmeta',
-	({ first }) => {
+	({ expose, first, run }) => {
 		const time = first(
 			'time',
 			'Add a <time> element to display the publication date.',
 		)
-		return {
-			ui: { time },
-			props: {
-				date: read(() => time.dateTime, asDate('unknown date')),
-			},
-			effects: {
-				time: setText('date'),
-			},
-		}
+
+		const formattedFallback = time.dateTime
+			? new Date(time.dateTime).toLocaleDateString(undefined, {
+					year: 'numeric',
+					month: 'long',
+					day: 'numeric',
+				})
+			: 'unknown date'
+
+		expose({
+			date: asDate(formattedFallback),
+		})
+
+		return [
+			run('date', text => {
+				time.textContent = text
+			}),
+		]
 	},
 )

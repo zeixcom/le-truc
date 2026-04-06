@@ -1,4 +1,4 @@
-import { asNumber, type Component, defineComponent, setText } from '../../..'
+import { asNumber, type Component, defineComponent } from '../../..'
 
 export type BasicNumberProps = {
 	value: number
@@ -108,15 +108,19 @@ function getNumberFormatter(
 	}
 }
 
-export default defineComponent<BasicNumberProps>('basic-number', ({ host }) => {
+export default defineComponent<BasicNumberProps>('basic-number', ({ expose, host, run }) => {
 	const formatter = getNumberFormatter(
 		host.closest('[lang]')?.getAttribute('lang') || FALLBACK_LOCALE,
 		host.getAttribute('options'),
 	)
-	return {
-		props: { value: asNumber() },
-		effects: {
-			host: setText(() => formatter.format(host.value)),
-		},
-	}
+
+	expose({
+		value: asNumber(),
+	})
+
+	return [
+		run('value', value => {
+			host.textContent = formatter.format(value)
+		}),
+	]
 })
