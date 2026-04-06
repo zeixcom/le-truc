@@ -1,10 +1,5 @@
 import './basic/button/basic-button.ts'
 import './basic/counter/basic-counter.ts'
-import './test/each/basic-each.ts'
-import './test/expose/basic-expose.ts'
-import './test/on/basic-on.ts'
-import './test/pass/basic-pass.ts'
-import './test/run/basic-run.ts'
 import './basic/gauge/basic-gauge.ts'
 import './basic/hello/basic-hello.ts'
 import './basic/number/basic-number.ts'
@@ -32,6 +27,11 @@ import './module/todo/module-todo.ts'
 import './test/context/test-context.ts'
 import './test/security/test-security.ts'
 import './test/sensor/test-sensor.ts'
+import './test/each/test-each.ts'
+import './test/expose/test-expose.ts'
+import './test/on/test-on.ts'
+import './test/pass/test-pass.ts'
+import './test/watch/test-watch.ts'
 
 // Structural-only custom elements
 customElements.define('card-blogpost', class extends HTMLElement {})

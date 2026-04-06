@@ -1,4 +1,4 @@
-import { asNumber, type Component, defineComponent } from '../../..'
+import { asNumber, defineComponent } from '../../..'
 
 export type BasicNumberProps = {
 	value: number
@@ -6,7 +6,7 @@ export type BasicNumberProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-number': Component<BasicNumberProps>
+		'basic-number': HTMLElement & BasicNumberProps
 	}
 }
 
@@ -108,19 +108,22 @@ function getNumberFormatter(
 	}
 }
 
-export default defineComponent<BasicNumberProps>('basic-number', ({ expose, host, run }) => {
-	const formatter = getNumberFormatter(
-		host.closest('[lang]')?.getAttribute('lang') || FALLBACK_LOCALE,
-		host.getAttribute('options'),
-	)
+export default defineComponent<BasicNumberProps>(
+	'basic-number',
+	({ expose, host, watch }) => {
+		const formatter = getNumberFormatter(
+			host.closest('[lang]')?.getAttribute('lang') || FALLBACK_LOCALE,
+			host.getAttribute('options'),
+		)
 
-	expose({
-		value: asNumber(),
-	})
+		expose({
+			value: asNumber(),
+		})
 
-	return [
-		run('value', value => {
-			host.textContent = formatter.format(value)
-		}),
-	]
-})
+		return [
+			watch('value', value => {
+				host.textContent = formatter.format(value)
+			}),
+		]
+	},
+)

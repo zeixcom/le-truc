@@ -2,7 +2,7 @@
 
 > **ElementsFromSelectorArray**\<`Selectors`\> = `{ [K in keyof Selectors]: Selectors[K] extends string ? ElementFromSingleSelector<Selectors[K]> : never }`\[`number`\]
 
-Defined in: [src/ui.ts:77](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/ui.ts#L77)
+Defined in: [src/ui.ts:77](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/ui.ts#L77)
 
 #### Type Parameters
 

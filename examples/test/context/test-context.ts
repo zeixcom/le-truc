@@ -1,4 +1,4 @@
-import { type Component, type Context, defineComponent } from '../../..'
+import { type Context, defineComponent } from '../../..'
 
 /* === Context key === */
 
@@ -12,8 +12,8 @@ export type TestContextProviderProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'test-context-provider': Component<TestContextProviderProps>
-		'test-context-consumer': Component<TestContextConsumerProps>
+		'test-context-provider': HTMLElement & TestContextProviderProps
+		'test-context-consumer': HTMLElement & TestContextConsumerProps
 	}
 }
 
@@ -40,7 +40,7 @@ export type TestContextConsumerProps = {
  */
 export const TestContextConsumer = defineComponent<TestContextConsumerProps>(
 	'test-context-consumer',
-	({ expose, first, run, requestContext }) => {
+	({ expose, first, watch, requestContext }) => {
 		const output = first('#output', 'Add element with id="output".')
 
 		expose({
@@ -48,7 +48,7 @@ export const TestContextConsumer = defineComponent<TestContextConsumerProps>(
 		})
 
 		return [
-			run('count', n => {
+			watch('count', n => {
 				output.textContent = String(n)
 			}),
 		]

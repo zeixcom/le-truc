@@ -1,4 +1,4 @@
-import { type Component, type ComponentProps, type Effect, on } from '../../..'
+import { type ComponentProps, type Effect, on } from '../../..'
 
 import type { BasicButtonProps } from './basic-button'
 
@@ -11,7 +11,7 @@ export const copyToClipboard =
 	(
 		container: HTMLElement,
 		messages: { [COPY_ERROR]?: string; [COPY_SUCCESS]?: string },
-	): Effect<ComponentProps, Component<BasicButtonProps>> =>
+	): Effect<ComponentProps, HTMLElement & BasicButtonProps> =>
 	(_, button) =>
 		on('click', async () => {
 			const label = button.label

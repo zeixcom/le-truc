@@ -1,4 +1,4 @@
-import { asString, type Component, defineComponent } from '../../..'
+import { asString, bindText, defineComponent } from '../../..'
 
 export type BasicHelloProps = {
 	name: string
@@ -6,13 +6,13 @@ export type BasicHelloProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-hello': Component<BasicHelloProps>
+		'basic-hello': HTMLElement & BasicHelloProps
 	}
 }
 
 export default defineComponent<BasicHelloProps>(
 	'basic-hello',
-	({ expose, first, on, run }) => {
+	({ expose, first, on, watch }) => {
 		const input = first('input', 'Needed to enter the name.')
 		const output = first('output', 'Needed to display the name.')
 		const fallback = output.textContent || ''
@@ -23,9 +23,7 @@ export default defineComponent<BasicHelloProps>(
 
 		return [
 			on(input, 'input', () => ({ name: input.value || fallback })),
-			run('name', text => {
-				output.textContent = text
-			}),
+			watch('name', bindText(output)),
 		]
 	},
 )

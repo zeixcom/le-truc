@@ -11,12 +11,31 @@ import {
 	type Signal,
 	valueString,
 } from '@zeix/cause-effect'
-import type { Component, ComponentProps } from './component'
+import type { ComponentProps } from './component'
 import { InvalidEffectsError } from './errors'
 import type { ElementFromKey, UI } from './ui'
 import { DEV_MODE, elementName, LOG_ERROR, LOG_WARN, log } from './util'
 
 /* === Types === */
+
+/**
+ * A deferred effect: a thunk that, when called inside a reactive scope, creates
+ * a reactive effect and returns an optional cleanup function.
+ *
+ * Effect descriptors are returned by `run()`, `on()`, `each()`, `pass()`, and
+ * `provideContexts()`. They are activated after dependency resolution, not
+ * immediately when the factory function runs.
+ */
+type EffectDescriptor = () => MaybeCleanup
+
+/**
+ * The return value of the v1.1 factory function.
+ *
+ * A flat array of effect descriptors (and optional falsy guards for conditional
+ * effects). Falsy values (`false`, `undefined`) are filtered out before activation,
+ * enabling the `element && run(...)` conditional pattern.
+ */
+type FactoryResult = Array<EffectDescriptor | false | undefined>
 
 /**
  * A single effect function bound to a host component and a target element.
@@ -25,7 +44,7 @@ import { DEV_MODE, elementName, LOG_ERROR, LOG_WARN, log } from './util'
  * component disconnects or when the target element is removed.
  */
 type Effect<P extends ComponentProps, E extends Element> = (
-	host: Component<P>,
+	host: HTMLElement & P,
 	target: E,
 ) => MaybeCleanup
 
@@ -45,7 +64,7 @@ type ElementEffects<P extends ComponentProps, E extends Element> =
  */
 type Effects<
 	P extends ComponentProps,
-	U extends UI & { host: Component<P> },
+	U extends UI & { host: HTMLElement & P },
 > = {
 	[K in keyof U]?: ElementEffects<P, ElementFromKey<U, K>>
 }
@@ -137,7 +156,7 @@ const getUpdateDescription = (
  */
 const runEffects = <
 	P extends ComponentProps,
-	U extends UI & { host: Component<P> },
+	U extends UI & { host: HTMLElement & P },
 >(
 	ui: U,
 	effects: Effects<P, U>,
@@ -185,7 +204,7 @@ const resolveReactive = <
 	E extends Element,
 >(
 	reactive: Reactive<T, P, E>,
-	host: Component<P>,
+	host: HTMLElement & P,
 	target: E,
 	context?: string,
 ): T | undefined => {
@@ -296,11 +315,55 @@ const updateElement =
 		})
 	}
 
+/**
+ * Create per-element reactive effects from a `Memo<Element[]>`.
+ *
+ * When elements enter the collection, their effects are created in a per-element
+ * scope; when they leave, their effects are disposed with that scope.
+ *
+ * The callback receives a single element and returns a `FactoryResult` (array of
+ * `EffectDescriptor`s) or a single `EffectDescriptor` (single-descriptor shortcut).
+ *
+ * @since 1.1
+ */
+function each<E extends Element>(
+	memo: Memo<E[]>,
+	callback: (element: E) => FactoryResult,
+): EffectDescriptor
+function each<E extends Element>(
+	memo: Memo<E[]>,
+	callback: (element: E) => EffectDescriptor,
+): EffectDescriptor
+function each<E extends Element>(
+	memo: Memo<E[]>,
+	callback: (element: E) => FactoryResult | EffectDescriptor,
+): EffectDescriptor {
+	return () => {
+		createEffect(() => {
+			for (const element of memo.get()) {
+				createScope(() => {
+					const result = callback(element)
+					if (Array.isArray(result)) {
+						for (const descriptor of result) {
+							if (descriptor) descriptor()
+						}
+					} else if (typeof result === 'function') {
+						result()
+					}
+				})
+			}
+		})
+	}
+}
+
 export {
 	type Effect,
+	type EffectDescriptor,
 	type Effects,
 	type ElementEffects,
 	type ElementUpdater,
+	each,
+	type FactoryResult,
 	type Reactive,
 	resolveReactive,
 	runEffects,

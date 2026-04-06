@@ -1,4 +1,4 @@
-import { asString, type Component, defineComponent } from '../../..'
+import { asString, bindText, defineComponent } from '../../..'
 
 export type FormCheckboxProps = {
 	checked: boolean
@@ -7,31 +7,30 @@ export type FormCheckboxProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-checkbox': Component<FormCheckboxProps>
+		'form-checkbox': HTMLElement & FormCheckboxProps
 	}
 }
 
 export default defineComponent<FormCheckboxProps>(
 	'form-checkbox',
-	({ expose, first, host, on, run }) => {
+	({ expose, first, host, on, watch }) => {
 		const checkbox = first('input[type="checkbox"]', 'Add a native checkbox.')
-		const label = first('.label')
+		const labelEl = first('.label')
 
 		expose({
 			checked: checkbox.checked,
-			label: asString(label?.textContent ?? first('label')?.textContent ?? ''),
+			label: asString(
+				labelEl?.textContent ?? first('label')?.textContent ?? '',
+			),
 		})
 
 		return [
 			on(checkbox, 'change', () => ({ checked: checkbox.checked })),
-			run('checked', checked => {
+			watch('checked', checked => {
 				checkbox.checked = checked
 				host.toggleAttribute('checked', checked)
 			}),
-			label
-				&& run('label', text => {
-					label.textContent = text
-				}),
+			labelEl && watch('label', bindText(labelEl)),
 		]
 	},
 )

@@ -1,4 +1,4 @@
-import { type Component, defineComponent } from '../../..'
+import { bindText, defineComponent } from '../../..'
 import { asClampedInteger } from '../../_common/asClampedInteger'
 
 export type BasicPluralizeProps = {
@@ -7,7 +7,7 @@ export type BasicPluralizeProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-pluralize': Component<BasicPluralizeProps>
+		'basic-pluralize': HTMLElement & BasicPluralizeProps
 	}
 }
 
@@ -15,7 +15,7 @@ const FALLBACK_LOCALE = 'en'
 
 export default defineComponent<BasicPluralizeProps>(
 	'basic-pluralize',
-	({ expose, first, host, run }) => {
+	({ expose, first, host, watch }) => {
 		const count = first('.count')
 		const none = first('.none')
 		const some = first('.some')
@@ -49,23 +49,20 @@ export default defineComponent<BasicPluralizeProps>(
 		const categories = pluralizer.resolvedOptions().pluralCategories
 
 		return [
-			count
-				&& run('count', value => {
-					count.textContent = String(value)
-				}),
+			count && watch('count', bindText(count)),
 			none
-				&& run('count', value => {
+				&& watch('count', value => {
 					none.hidden = value !== 0
 				}),
 			some
-				&& run('count', value => {
+				&& watch('count', value => {
 					some.hidden = value === 0
 				}),
 			...categories.map(category => {
 				const el = categoryElements[category]
 				return (
 					el
-					&& run('count', value => {
+					&& watch('count', value => {
 						el.hidden = pluralizer.select(value) !== category
 					})
 				)

@@ -1,157 +1,70 @@
-# TODO — v1.1 Refactoring
+# TODO — v1.1 Polish & Stabilization
 
-Reference: `ARCHITECTURE.md` §v1.1 Specification
+Reference: `API_DX_REVIEW.md`, `ARCHITECTURE.md` §v1.1 Specification
+
+All phases from the v1.1 refactoring are complete. The tasks below cover the remaining polish work needed before the v1.1 API is considered stable.
 
 ---
 
-## Phase 1: Engine — New Factory Return Shape
+## Phase 10: Method Exposure Ergonomics
 
-> Unlocks all subsequent phases. Must be done first and pass existing tests.
+> The API_DX_REVIEW identifies method exposure as "slightly under-designed". `asMethod()` works but the pattern should feel first-class.
 
-- [ ] **1.1** Define `EffectDescriptor` type: `() => MaybeCleanup`
-- [ ] **1.2** Define `FactoryResult<P>` type: `Array<EffectDescriptor | false | undefined>`
-- [ ] **1.3** Define `FactoryContext<P>` type with `host`, `first`, `all`, `expose` (other helpers added in Phase 2/3)
-- [ ] **1.4** Add new `ComponentFactory` overload in `component.ts` that accepts `FactoryContext<P>` and returns `FactoryResult<P>`
-- [ ] **1.5** Implement `expose()` in `connectedCallback` — calls `#initSignals` immediately when invoked during factory execution
-- [ ] **1.6** Modify `connectedCallback` to detect new vs old factory form (`Array.isArray(result)` vs `isRecord(result)`) and handle both
-- [ ] **1.7** Wire up effect descriptor activation: after `resolveDependencies`, create `createScope`, iterate filtered array, call each descriptor
-- [ ] **1.8** Verify all existing tests pass (v1.0 form unchanged)
-- [ ] **1.9** Write test: minimal component using `expose()` + empty return array
+- [ ] **10.1** Audit current method patterns across examples: identify all `asMethod(()  => { host.x = ... })` usages and note any pain points or inconsistencies.
+- [ ] **10.2** Define one canonical pattern for exposing methods in v1.1 and document it in `ARCHITECTURE.md` §expose(props).
+- [ ] **10.3** If `asMethod` ergonomics can be improved (e.g. simpler signature, better type inference), prototype the change in `src/parsers.ts` and verify with `bunx tsc --noEmit`.
+- [ ] **10.4** Update `docs-src/api/functions/asMethod.md` with a clear v1.1-focused example.
+- [ ] **10.5** If any example components use awkward method patterns, update them to the canonical form.
 
-## Phase 2: Core Helpers
+---
 
-> Can be done in parallel per helper once Phase 1 is complete. Each helper is independent.
+## Phase 11: Type Cleanup — Rename `EventHandlers`/`SensorEventHandler` v1/v2 naming
 
-### 2A: `run(source, handler)` — Property Effect
+> The `src/events.ts` exports `EventHandlers`, `SensorEventHandler` (v1.0 form) alongside `EventHandlersV2`, `SensorEventHandlerV2` (v1.1 form). The V2 suffix is an internal migration marker, not a good public name. Resolve before stabilization.
 
-- [ ] **2A.1** Implement `run` wrapping `match` — single signal name (string → `host[name]`), single Signal/Memo, array form
-- [ ] **2A.2** Implement `MatchHandlers` overload (`{ ok, nil, err }`)
-- [ ] **2A.3** Ensure `run` returns an `EffectDescriptor` (thunk), not a live effect
-- [ ] **2A.4** Add `run` to `FactoryContext`
-- [ ] **2A.5** Write tests: single prop, direct signal, array form, MatchHandlers form, conditional `false &&` filtering
+- [ ] **11.1** Decide on final public names: e.g. deprecate `EventHandlers`/`SensorEventHandler` (v1.0) and rename `EventHandlersV2`/`SensorEventHandlerV2` to simply `EventHandlers`/`SensorEventHandler`, or keep both with clearer documentation.
+- [ ] **11.2** If renaming: update `src/events.ts`, add `@deprecated` JSDoc to old types, update `index.ts` exports.
+- [ ] **11.3** Run `bun run build`; run `bunx tsc --noEmit`.
 
-### 2B: `each(memo, callback)` — Collection Effect
+---
 
-- [ ] **2B.1** Implement `each` — wrapping `createEffect` that reads `memo.get()`, per-element scope, activates callback-returned descriptors
-- [ ] **2B.2** Implement single-descriptor shortcut (callback returns one descriptor without array wrapper)
-- [ ] **2B.3** Ensure per-element lifecycle: effects disposed when element leaves Memo, created when element enters
-- [ ] **2B.4** Add `each` to `FactoryContext`
-- [ ] **2B.5** Write tests: add/remove elements, nested `run` inside `each`, nested `on` inside `each`, single-descriptor shortcut
+## Phase 12: Public API Audit — Unexported internals and over-exported utilities
 
-### 2C: `on(target, type, handler, options?)` — Event Binding
+> A review of `index.ts` shows some exports that may not belong on the public surface, and some types that could be clarified or consolidated.
 
-- [ ] **2C.1** Implement Element target overload — `(event, target)` unified handler signature, returns `EffectDescriptor`
-- [ ] **2C.2** Implement Memo target overload — event delegation on query root, `element.contains(event.target)` matching
-- [ ] **2C.3** Define `NON_BUBBLING_EVENTS` set: `focus`, `blur`, `scroll`, `resize`, `load`, `unload`, `error`, `toggle`, `mouseenter`, `mouseleave`, `pointerenter`, `pointerleave`, `abort`, `canplay`, `canplaythrough`, `durationchange`, `emptied`, `ended`, `loadeddata`, `loadedmetadata`, `loadstart`, `pause`, `play`, `playing`, `progress`, `ratechange`, `seeked`, `seeking`, `stalled`, `suspend`, `timeupdate`, `volumechange`, `waiting`
-- [ ] **2C.4** Implement non-bubbling guard: DEV_MODE warns + falls back to per-element listeners; production silently falls back
-- [ ] **2C.5** Preserve `{ prop: value }` return → `batch()` host update behavior
-- [ ] **2C.6** Preserve passive event scheduling (`schedule()` for scroll, resize, touch, wheel)
-- [ ] **2C.7** Add `on` to `FactoryContext`
-- [ ] **2C.8** Write tests: element target, Memo delegation, non-bubbling fallback, `on` inside `each` (per-element), handler return batch update
+- [ ] **12.1** Audit `index.ts`: check whether `resolveReactive`, `runEffects`, `updateElement`, `Effects`, `ElementEffects`, `ElementUpdater`, `Reactive`, `UpdateOperation` should remain public — these are v1.0 effect-building primitives. Consider marking them `@deprecated` or moving to a separate `legacy` re-export path.
+- [ ] **12.2** Audit whether `ComponentFactory`, `ComponentFactoryResult`, `ComponentSetup`, `ComponentUI` still need to be public in v1.1, or if they should be `@deprecated` in the type surface.
+- [ ] **12.3** Check that all `FactoryContext` helper types (`FactoryWatchHelper`, `FactoryEachHelper`, `FactoryOnHelper`, `FactoryPassHelper`, `FactoryProvideContextsHelper`, `FactoryRequestContextHelper`) are exported and documented — component authors may need them for type-annotated helper functions.
+- [ ] **12.4** Update `index.ts` version comment from `// Le Truc 1.0.1` to reflect the current version.
+- [ ] **12.5** Run `bun run build`; run `bunx tsc --noEmit`.
 
-### 2D: `pass(target, props)` — Inter-Component Binding
+---
 
-- [ ] **2D.1** Implement Element target overload — captures `host` from factory context, returns `EffectDescriptor`
-- [ ] **2D.2** Implement Memo target overload — per-element lifecycle (swap on enter, restore on leave)
-- [ ] **2D.3** Add `pass` to `FactoryContext`
-- [ ] **2D.4** Write tests: single element, Memo target, signal restoration on disconnect, Memo element add/remove
+## Phase 13: Canonical Examples and Docs
 
-## Phase 3: Context & Sensors
+> The API_DX_REVIEW recommends one minimal, authoritative example per helper. These serve as the primary onboarding material.
 
-> Depends on Phase 1 (expose). Can be done in parallel with Phase 2.
+- [ ] **13.1** Write or update `docs-src/api/functions/defineComponent.md` — feature the v1.1 factory form as the canonical example; relegate v1.0/4-param to a "legacy" section.
+- [ ] **13.2** Write a canonical `watch` example in `docs-src/api/functions/` (after rename from `run`).
+- [ ] **13.3** Write a canonical `each` example in `docs-src/api/functions/`.
+- [ ] **13.4** Write a canonical `pass` example in `docs-src/api/functions/`.
+- [ ] **13.5** Write a canonical context provider/consumer example in `docs-src/api/functions/provideContexts.md` and `requestContext.md`.
+- [ ] **13.6** Write a canonical `expose` (or `exposeAPI`) example in `docs-src/api/functions/` — covering values, sensors, methods, and context-backed properties.
+- [ ] **13.7** Audit `docs-src/pages/getting-started.md` and `docs-src/pages/data-flow.md` — update any code examples that use the old v1.0 or 4-param form.
+- [ ] **13.8** Mark any remaining v1.0 example components in `examples/` as legacy (comment or README note) so they do not weaken the v1.1 narrative.
 
-### 3A: `provideContexts(contexts)` — bound to host
+---
 
-- [x] **3A.1** Refactor `provideContexts` to accept just `contexts` array, capture `host` from factory context
-- [x] **3A.2** Returns `EffectDescriptor` for the return array
-- [x] **3A.3** Add `provideContexts` to `FactoryContext`
-- [x] **3A.4** Keep current `(contexts) => (host) => Cleanup` signature working for 4-param form
-- [x] **3A.5** Write test: context-media provider using new form
+## Phase 14: Migration Guide
 
-### 3B: `requestContext(context, fallback)` — bound to host
+> The API_DX_REVIEW recommends a concise guide showing how v1.0 components map to v1.1.
 
-- [x] **3B.1** Refactor `requestContext` to capture `host` from factory context, dispatch `ContextRequestEvent` from `host`
-- [x] **3B.2** Returns `Memo<T>` for use inside `expose()`
-- [x] **3B.3** Add `requestContext` to `FactoryContext`
-- [x] **3B.4** Keep current `(context, fallback) => Reader` signature working for 4-param form
-- [x] **3B.5** Write test: card-mediaqueries consumer using new form
-
-### 3C: `createEventsSensor(target, init, events)` — element-based
-
-- [x] **3C.1** Refactor `createEventsSensor` to accept target element directly instead of UI key string
-- [x] **3C.2** `init` parameter accepts plain value (no `read()` wrapper needed)
-- [x] **3C.3** Drop `ui` from handler context — handler receives `{ event, target, prev }`
-- [x] **3C.4** Keep current signature working for 4-param form (or adapt 4-param callers)
-- [x] **3C.5** Write test: sensor with element target, verify event-driven updates
-
-## Phase 4: Safety Utilities
-
-> No dependencies on other phases. Can be done anytime.
-
-- [x] **4.1** Extract `safeSetAttribute(element, name, value)` from `src/effects/attribute.ts` — URL protocol validation, `on*` blocking
-- [x] **4.2** Promote `escapeHTML` from `examples/_common/escapeHTML.ts` to `src/util.ts` (or new `src/safety.ts`)
-- [x] **4.3** Implement `setTextPreservingComments(element, text)` — extract logic from `src/effects/text.ts`
-- [x] **4.4** Export all three from `index.ts`
-- [x] **4.5** Update `types/` declarations
-
-## Phase 5: Migration — Convert Examples
-
-> Depends on Phases 1–3. Components within each group can be migrated in parallel.
-
-### 5A: Simple components (no collections, no pass, no context)
-
-- [x] **5A.1** `basic-hello` — simplest; good smoke test
-- [x] **5A.2** `basic-counter`
-- [x] **5A.3** `basic-button`
-- [x] **5A.4** `basic-number`
-- [x] **5A.5** `basic-pluralize`
-- [x] **5A.6** `card-blogmeta`
-- [x] **5A.7** `module-codeblock`
-- [x] **5A.8** `module-dialog`
-- [x] **5A.9** Run tests after each migration to verify
-
-### 5B: Components with `pass`, sensors, or context
-
-- [x] **5B.1** `form-checkbox` — draft already exists, make it work
-- [x] **5B.2** `form-textbox` — uses `clearMethod`, `createEventsSensor`
-- [x] **5B.3** `basic-gauge` — uses `pass`
-- [x] **5B.4** `form-spinbutton` — uses `createMemo`, multiple `on` targets
-- [x] **5B.5** `context-media` — uses `provideContexts`
-- [x] **5B.6** `card-mediaqueries` — uses `requestContext`
-- [x] **5B.7** Run tests after each migration
-
-### 5C: Components with `all()` collections
-
-- [x] **5C.1** `form-radiogroup` — `all('input[type="radio"]')`, `manageFocus`
-- [x] **5C.2** `module-tabgroup` — multiple `all()`, `createEventsSensor` on collection
-- [x] **5C.3** `module-carousel` — multiple `all()`, IntersectionObserver, complex interaction
-- [x] **5C.4** `module-pagination` — simple `all()` usage
-- [x] **5C.5** `module-scrollarea` — IntersectionObserver-based overflow detection
-- [x] **5C.6** Run tests after each migration
-
-### 5D: Complex modules (collections + pass + async)
-
-- [x] **5D.1** `form-combobox` — 6 targets, pass, sensor, show, memos (see worked example in ARCHITECTURE.md)
-- [x] **5D.2** `form-listbox` — `all()` with per-element effects, `createTask`, `dangerouslySetInnerHTML`
-- [x] **5D.3** `module-list` — `asMethod`, `pass`, template cloning
-- [x] **5D.4** `module-catalog` — `all()` of Le Truc components, `pass` to collection
-- [x] **5D.5** `module-todo` — `createElementsMemo`, multiple `pass` targets
-- [x] **5D.6** `module-lazyload` — `createTask`, `dangerouslySetInnerHTML`
-- [x] **5D.7** `module-listnav` — hash synchronization, `pass`
-- [x] **5D.8** `security-test` — verify safety utilities work correctly
-- [x] **5D.9** Run full test suite across all 3 browsers
-
-## Phase 6: Deprecation
-
-> Depends on Phase 5 completion (all examples migrated, all tests passing).
-
-- [x] **6.1** Mark 4-param `defineComponent` overload as `@deprecated` in JSDoc
-- [x] **6.2** Mark `{ ui, props, effects }` return shape types as `@deprecated`
-- [x] **6.3** Mark `read()` as `@deprecated` — point to direct value access in factory closure
-- [x] **6.4** Mark built-in effects as `@deprecated`: `setText`, `setAttribute`, `toggleAttribute`, `setProperty`, `show`, `toggleClass`, `setStyle`, `dangerouslySetInnerHTML` — point to `run()` with imperative DOM updates
-- [x] **6.5** Mark v1.0 `on(type, handler)` (without target) as `@deprecated` — point to new `on(target, type, handler)`
-- [x] **6.6** Mark v1.0 `pass(props)` (without target) as `@deprecated` — point to new `pass(target, props)`
-- [x] **6.7** Update `types/` declarations to include `@deprecated` tags and new exports
-- [x] **6.8** Update `index.ts` — add new exports (safety utilities, new types)
-- [x] **6.9** Update `CLAUDE.md` — revise surprising behaviors for v1.1
-- [x] **6.10** Update `ARCHITECTURE.md` — mark v1.0 sections as historical, promote v1.1 as current
+- [ ] **14.1** Write `docs-src/pages/migration.md` covering:
+  - how prop declarations move from the 4-param `props` map into `expose()`
+  - how the UI `select` function collapses into direct `first()`/`all()` calls in the factory closure
+  - how the `effects` record maps to the returned `FactoryResult` array
+  - how `run('prop', handler)` (now `watch`) replaces effect-map entries
+  - how `on(type, handler)` (target-less) maps to `on(element, type, handler)`
+  - how `pass(props)` (target-less) maps to `pass(element, props)`
+  - why `observedAttributes` is empty in the factory form, and when to keep the 4-param form
+- [ ] **14.2** Add a link to the migration guide from `docs-src/pages/getting-started.md`.

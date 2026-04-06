@@ -1,4 +1,4 @@
-import { type Component, defineComponent } from '../../..'
+import { bindText, defineComponent } from '../../..'
 import {
 	MEDIA_MOTION,
 	MEDIA_ORIENTATION,
@@ -12,13 +12,13 @@ export type CardMediaqueriesProps = Record<CardMediaqueriesPropKeys, string>
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'card-mediaqueries': Component<CardMediaqueriesProps>
+		'card-mediaqueries': HTMLElement & CardMediaqueriesProps
 	}
 }
 
 export default defineComponent<CardMediaqueriesProps>(
 	'card-mediaqueries',
-	({ expose, first, requestContext, run }) => {
+	({ expose, first, requestContext, watch }) => {
 		const motionEl = first('.motion')
 		const themeEl = first('.theme')
 		const viewportEl = first('.viewport')
@@ -32,10 +32,10 @@ export default defineComponent<CardMediaqueriesProps>(
 		})
 
 		return [
-			motionEl && run('motion', text => { motionEl.textContent = text }),
-			themeEl && run('theme', text => { themeEl.textContent = text }),
-			viewportEl && run('viewport', text => { viewportEl.textContent = text }),
-			orientationEl && run('orientation', text => { orientationEl.textContent = text }),
+			motionEl && watch('motion', bindText(motionEl)),
+			themeEl && watch('theme', bindText(themeEl)),
+			viewportEl && watch('viewport', bindText(viewportEl)),
+			orientationEl && watch('orientation', bindText(orientationEl)),
 		]
 	},
 )

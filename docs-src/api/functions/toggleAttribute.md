@@ -1,8 +1,8 @@
-### Function: toggleAttribute()
+### ~~Function: toggleAttribute()~~
 
 > **toggleAttribute**\<`P`, `E`\>(`name`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/attribute.ts:72](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/effects/attribute.ts#L72)
+Defined in: [src/effects/attribute.ts:44](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/effects/attribute.ts#L44)
 
 Effect for toggling a boolean attribute on an element.
 When the reactive value is true, the attribute is present; when false, it's absent.
@@ -36,6 +36,10 @@ Reactive value bound to the attribute presence (defaults to attribute name)
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
 Effect function that toggles the attribute on the element
+
+#### Deprecated
+
+Use `run('prop', value => { el.toggleAttribute(name, value) })` in the v1.1 factory form instead.
 
 #### Since
 

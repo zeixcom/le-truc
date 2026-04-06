@@ -1,13 +1,30 @@
-import { type Cleanup, type MaybeCleanup, type Signal } from '@zeix/cause-effect';
-import type { Component, ComponentProps } from './component';
+import { type Cleanup, type MaybeCleanup, type Memo, type Signal } from '@zeix/cause-effect';
+import type { ComponentProps } from './component';
 import type { ElementFromKey, UI } from './ui';
+/**
+ * A deferred effect: a thunk that, when called inside a reactive scope, creates
+ * a reactive effect and returns an optional cleanup function.
+ *
+ * Effect descriptors are returned by `run()`, `on()`, `each()`, `pass()`, and
+ * `provideContexts()`. They are activated after dependency resolution, not
+ * immediately when the factory function runs.
+ */
+type EffectDescriptor = () => MaybeCleanup;
+/**
+ * The return value of the v1.1 factory function.
+ *
+ * A flat array of effect descriptors (and optional falsy guards for conditional
+ * effects). Falsy values (`false`, `undefined`) are filtered out before activation,
+ * enabling the `element && run(...)` conditional pattern.
+ */
+type FactoryResult = Array<EffectDescriptor | false | undefined>;
 /**
  * A single effect function bound to a host component and a target element.
  * Returned by built-in effect factories (`setText`, `setAttribute`, `on`, etc.)
  * and by `updateElement`. May return a cleanup function that runs when the
  * component disconnects or when the target element is removed.
  */
-type Effect<P extends ComponentProps, E extends Element> = (host: Component<P>, target: E) => MaybeCleanup;
+type Effect<P extends ComponentProps, E extends Element> = (host: HTMLElement & P, target: E) => MaybeCleanup;
 /**
  * One or more effects for a single UI element.
  * The setup function may return a single `Effect` or an array of `Effect`s
@@ -20,7 +37,7 @@ type ElementEffects<P extends ComponentProps, E extends Element> = Effect<P, E> 
  * values are one or more effects to run for that element.
  */
 type Effects<P extends ComponentProps, U extends UI & {
-    host: Component<P>;
+    host: HTMLElement & P;
 }> = {
     [K in keyof U]?: ElementEffects<P, ElementFromKey<U, K>>;
 };
@@ -83,7 +100,7 @@ type ElementUpdater<E extends Element, T> = {
  * @throws {InvalidEffectsError} If the effects argument is not a plain object
  */
 declare const runEffects: <P extends ComponentProps, U extends UI & {
-    host: Component<P>;
+    host: HTMLElement & P;
 }>(ui: U, effects: Effects<P, U>) => Cleanup;
 /**
  * Resolve a `Reactive<T>` to a concrete value inside a reactive tracking context.
@@ -101,7 +118,7 @@ declare const runEffects: <P extends ComponentProps, U extends UI & {
  * @param {string} [context] - Description used in error log messages
  * @returns {T | undefined} Resolved value, or `undefined` if resolution failed
  */
-declare const resolveReactive: <T extends {}, P extends ComponentProps, E extends Element>(reactive: Reactive<T, P, E>, host: Component<P>, target: E, context?: string) => T | undefined;
+declare const resolveReactive: <T extends {}, P extends ComponentProps, E extends Element>(reactive: Reactive<T, P, E>, host: HTMLElement & P, target: E, context?: string) => T | undefined;
 /**
  * Shared abstraction used by all built-in DOM effects.
  *
@@ -117,4 +134,17 @@ declare const resolveReactive: <T extends {}, P extends ComponentProps, E extend
  * @returns {Effect<P, E>} Effect that manages the reactive DOM update and returns a cleanup function
  */
 declare const updateElement: <T extends {}, P extends ComponentProps, E extends Element>(reactive: Reactive<T, P, E>, updater: ElementUpdater<E, T>) => Effect<P, E>;
-export { type Effect, type Effects, type ElementEffects, type ElementUpdater, type Reactive, resolveReactive, runEffects, type UpdateOperation, updateElement, };
+/**
+ * Create per-element reactive effects from a `Memo<Element[]>`.
+ *
+ * When elements enter the collection, their effects are created in a per-element
+ * scope; when they leave, their effects are disposed with that scope.
+ *
+ * The callback receives a single element and returns a `FactoryResult` (array of
+ * `EffectDescriptor`s) or a single `EffectDescriptor` (single-descriptor shortcut).
+ *
+ * @since 1.1
+ */
+declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult): EffectDescriptor;
+declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => EffectDescriptor): EffectDescriptor;
+export { type Effect, type EffectDescriptor, type Effects, type ElementEffects, type ElementUpdater, each, type FactoryResult, type Reactive, resolveReactive, runEffects, type UpdateOperation, updateElement, };

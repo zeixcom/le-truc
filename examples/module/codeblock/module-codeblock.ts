@@ -1,4 +1,4 @@
-import { asBoolean, type Component, defineComponent } from '../../..'
+import { asBoolean, bindAttribute, defineComponent } from '../../..'
 import { copyToClipboard } from '../../basic/button/copyToClipboard'
 
 export type ModuleCodeblockProps = {
@@ -7,13 +7,13 @@ export type ModuleCodeblockProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'module-codeblock': Component<ModuleCodeblockProps>
+		'module-codeblock': HTMLElement & ModuleCodeblockProps
 	}
 }
 
 export default defineComponent<ModuleCodeblockProps>(
 	'module-codeblock',
-	({ expose, first, host, on, run }) => {
+	({ expose, first, host, on, watch }) => {
 		const code = first('code', 'Needed as source container to copy from.')
 		const overlay = first('button.overlay')
 		const copy = first('basic-button.copy')
@@ -23,9 +23,7 @@ export default defineComponent<ModuleCodeblockProps>(
 		})
 
 		return [
-			run('collapsed', collapsed => {
-				host.toggleAttribute('collapsed', collapsed)
-			}),
+			watch('collapsed', bindAttribute(host, 'collapsed')),
 			overlay && on(overlay, 'click', () => ({ collapsed: false })),
 			copy
 				&& (() =>

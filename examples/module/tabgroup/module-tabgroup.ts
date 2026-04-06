@@ -1,9 +1,4 @@
-import {
-	type Component,
-	createMemo,
-	createState,
-	defineComponent,
-} from '../../..'
+import { createMemo, createState, defineComponent } from '../../..'
 
 export type ModuleTabgroupProps = {
 	readonly selected: string
@@ -11,7 +6,7 @@ export type ModuleTabgroupProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'module-tabgroup': Component<ModuleTabgroupProps>
+		'module-tabgroup': HTMLElement & ModuleTabgroupProps
 	}
 }
 
@@ -30,7 +25,7 @@ const getSelected = (
 
 export default defineComponent<ModuleTabgroupProps>(
 	'module-tabgroup',
-	({ all, expose, host, on, run }) => {
+	({ all, expose, host, on, watch }) => {
 		const tabs = all(
 			'button[role="tab"]',
 			'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
@@ -85,7 +80,7 @@ export default defineComponent<ModuleTabgroupProps>(
 					selectedState.set(next)
 				}
 			}),
-			run('selected', () => {
+			watch('selected', () => {
 				for (const tab of tabs.get()) {
 					tab.ariaSelected = String(isCurrentTab(tab))
 					tab.tabIndex = isCurrentTab(tab) ? 0 : -1

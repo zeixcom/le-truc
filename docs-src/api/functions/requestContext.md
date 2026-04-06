@@ -2,7 +2,7 @@
 
 > **requestContext**\<`T`, `P`, `U`\>(`context`, `fallback`): [`Reader`](../type-aliases/Reader.md)\<[`Memo`](../type-aliases/Memo.md)\<`T`\>, `U` & `object`\>
 
-Defined in: [src/context.ts:145](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/context.ts#L145)
+Defined in: [src/context.ts:145](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/context.ts#L145)
 
 Request a context value from an ancestor provider, returning a reactive `Memo<T>`.
 

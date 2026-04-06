@@ -1,4 +1,4 @@
-import { batch, createState, defineComponent } from '../../..'
+import { batch, bindClass, createState, defineComponent } from '../../..'
 
 const MIN_INTERSECTION_RATIO = 0
 const MAX_INTERSECTION_RATIO = 0.99 // ignore rounding errors of fraction pixels
@@ -37,7 +37,7 @@ const observeOverflow =
 		}
 	}
 
-export default defineComponent('module-scrollarea', ({ host, on, run }) => {
+export default defineComponent('module-scrollarea', ({ host, on, watch }) => {
 	const child = host.firstElementChild
 	if (!child) return []
 
@@ -59,15 +59,11 @@ export default defineComponent('module-scrollarea', ({ host, on, run }) => {
 				}
 
 	return [
-		run([overflowStart, overflowEnd], ([os, oe]) => {
+		watch([overflowStart, overflowEnd], ([os, oe]) => {
 			host.classList.toggle('overflow', os || oe)
 		}),
-		run(overflowStart, os => {
-			host.classList.toggle('overflow-start', os)
-		}),
-		run(overflowEnd, oe => {
-			host.classList.toggle('overflow-end', oe)
-		}),
+		watch(overflowStart, bindClass(host, 'overflow-start')),
+		watch(overflowEnd, bindClass(host, 'overflow-end')),
 		() =>
 			observeOverflow(
 				child,

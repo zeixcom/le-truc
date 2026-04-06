@@ -1822,6 +1822,25 @@ var updateElement = (reactive, updater) => (host, target) => {
     }
   });
 };
+function each(memo, callback) {
+  return () => {
+    createEffect(() => {
+      for (const element of memo.get()) {
+        createScope(() => {
+          const result = callback(element);
+          if (Array.isArray(result)) {
+            for (const descriptor of result) {
+              if (descriptor)
+                descriptor();
+            }
+          } else if (typeof result === "function") {
+            result();
+          }
+        });
+      }
+    });
+  };
+}
 
 // src/parsers.ts
 var PARSER_BRAND = Symbol("parser");
@@ -2035,8 +2054,8 @@ var attachListener = (host, target, type, handler, options) => {
   target.addEventListener(type, listener, options);
   return () => target.removeEventListener(type, listener);
 };
-var makeRun = (host) => {
-  function run(source, handlerOrHandlers) {
+var makeWatch = (host) => {
+  function watch(source, handlerOrHandlers) {
     return () => {
       const isArraySource = Array.isArray(source);
       const sources = isArraySource ? source : [source];
@@ -2058,29 +2077,7 @@ var makeRun = (host) => {
       return createEffect(() => match(signals, matchHandlers));
     };
   }
-  return run;
-};
-var makeEach = () => {
-  function each(memo, callback) {
-    return () => {
-      createEffect(() => {
-        for (const element of memo.get()) {
-          createScope(() => {
-            const result = callback(element);
-            if (Array.isArray(result)) {
-              for (const descriptor of result) {
-                if (descriptor)
-                  descriptor();
-              }
-            } else if (typeof result === "function") {
-              result();
-            }
-          });
-        }
-      });
-    };
-  }
-  return each;
+  return watch;
 };
 var makeOn = (host) => {
   function on(target, type, handler, options = {}) {
@@ -2305,8 +2302,7 @@ function defineComponent(name, propsOrFactory = {}, select = () => ({}), setup =
           ...elementQueries,
           host,
           expose,
-          run: makeRun(host),
-          each: makeEach(),
+          watch: makeWatch(host),
           on: makeOn(host),
           pass: makePass(host),
           provideContexts: makeProvideContexts(host),
@@ -2324,19 +2320,6 @@ function defineComponent(name, propsOrFactory = {}, select = () => ({}), setup =
                   descriptor();
               }
             });
-          });
-        } else {
-          const factoryResult = result;
-          const ui = {
-            ...factoryResult.ui,
-            host
-          };
-          this.#ui = ui;
-          Object.freeze(this.#ui);
-          this.#initSignals(ui, factoryResult.props ?? {});
-          const instanceEffects = factoryResult.effects ?? {};
-          resolveDependencies(() => {
-            this.#cleanup = unown(() => runEffects(ui, instanceEffects));
           });
         }
       } else {
@@ -2740,6 +2723,41 @@ var asEnum = (valid) => asParser((_, value) => {
   const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
   return matchingValid ? value : valid[0];
 });
+// src/helpers.ts
+var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
+  element.textContent = String(value);
+};
+var bindProperty = (element, key) => (value) => {
+  element[key] = value;
+};
+var bindClass = (element, token) => (value) => {
+  element.classList.toggle(token, value);
+};
+var bindVisible = (element) => (value) => {
+  element.hidden = !value;
+};
+var bindAttribute = (element, name, allowUnsafe = false) => ({
+  ok: (value) => {
+    if (typeof value === "boolean") {
+      element.toggleAttribute(name, value);
+    } else if (allowUnsafe) {
+      element.setAttribute(name, value);
+    } else {
+      safeSetAttribute(element, name, value);
+    }
+  },
+  nil: () => {
+    element.removeAttribute(name);
+  }
+});
+var bindStyle = (element, prop) => ({
+  ok: (value) => {
+    element.style.setProperty(prop, value);
+  },
+  nil: () => {
+    element.style.removeProperty(prop);
+  }
+});
 export {
   valueString,
   updateElement,
@@ -2780,6 +2798,7 @@ export {
   isCollection,
   isAsyncFunction,
   escapeHTML,
+  each,
   defineComponent,
   dangerouslySetInnerHTML,
   createTask,
@@ -2797,6 +2816,12 @@ export {
   createEffect,
   createComputed,
   createCollection,
+  bindVisible,
+  bindText,
+  bindStyle,
+  bindProperty,
+  bindClass,
+  bindAttribute,
   batch,
   asString,
   asParser,

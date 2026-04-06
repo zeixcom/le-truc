@@ -1,8 +1,8 @@
-### Function: on()
+### ~~Function: on()~~
 
 > **on**\<`T`, `P`, `E`\>(`type`, `handler`, `options?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/event.ts:55](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/effects/event.ts#L55)
+Defined in: [src/effects/event.ts:50](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/effects/event.ts#L50)
 
 Effect for attaching an event listener to a UI element.
 
@@ -56,17 +56,11 @@ Listener options; `passive` is set automatically for high-frequency events
 
 Effect that attaches the listener and returns a cleanup function
 
+#### Deprecated
+
+Use the `on(target, type, handler)` helper from `FactoryContext` in the v1.1 factory form instead.
+The factory helper returns an `EffectDescriptor` and receives `(event, element)` in its handler.
+
 #### Since
 
 0.14.0
-
-#### Examples
-
-```ts
-on('click', () => { analytics.track('button-clicked') })
-```
-
-```ts
-// Equivalent to: on('click', () => { host.count += 1 })
-on('click', () => ({ count: host.count + 1 }))
-```

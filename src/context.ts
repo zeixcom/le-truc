@@ -6,7 +6,7 @@ import {
 	type Memo,
 } from '@zeix/cause-effect'
 
-import type { Component, ComponentProps } from './component'
+import type { ComponentProps } from './component'
 import { type Fallback, getFallback, type Reader } from './parsers'
 import type { UI } from './ui'
 
@@ -110,8 +110,8 @@ class ContextRequestEvent<T extends UnknownContext> extends Event {
 const provideContexts =
 	<P extends ComponentProps>(
 		contexts: Array<keyof P>,
-	): ((host: Component<P>) => Cleanup) =>
-	(host: Component<P>) =>
+	): ((host: HTMLElement & P) => Cleanup) =>
+	(host: HTMLElement & P) =>
 		createScope(() => {
 			const listener = (e: ContextRequestEvent<UnknownContext>) => {
 				const { context, callback } = e
@@ -138,15 +138,15 @@ const provideContexts =
  *
  * @since 0.15.0
  * @param {Context<string, () => T>} context - Context key to request
- * @param {Fallback<T, U & { host: Component<P> }>} fallback - Static value or reader function used when no provider is found
- * @returns {Reader<Memo<T>, U & { host: Component<P> }>} Reader that dispatches the request and wraps the result in a Memo
+ * @param {Fallback<T, U & { host: HTMLElement & P }>} fallback - Static value or reader function used when no provider is found
+ * @returns {Reader<Memo<T>, U & { host: HTMLElement & P }>} Reader that dispatches the request and wraps the result in a Memo
  */
 const requestContext =
 	<T extends {}, P extends ComponentProps, U extends UI>(
 		context: Context<string, () => T>,
-		fallback: Fallback<T, U & { host: Component<P> }>,
-	): Reader<Memo<T>, U & { host: Component<P> }> =>
-	(ui: U & { host: Component<P> }) => {
+		fallback: Fallback<T, U & { host: HTMLElement & P }>,
+	): Reader<Memo<T>, U & { host: HTMLElement & P }> =>
+	(ui: U & { host: HTMLElement & P }) => {
 		let consumed = () => getFallback(ui, fallback)
 		ui.host.dispatchEvent(
 			new ContextRequestEvent(context, (getter: () => T) => {

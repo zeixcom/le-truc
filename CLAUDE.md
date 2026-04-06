@@ -4,20 +4,20 @@
 
 ## v1.1 Factory Form (current)
 
-The v1.1 factory form is the primary way to define components. The factory receives a `FactoryContext` with helpers `{ all, each, expose, first, host, on, pass, provideContexts, requestContext, run }`, calls `expose({ ... })` for reactive props, and returns a flat `FactoryResult` array of effect descriptors:
+The v1.1 factory form is the primary way to define components. The factory receives a `FactoryContext` with helpers `{ all, each, expose, first, host, on, pass, provideContexts, requestContext, watch }`, calls `expose({ ... })` for reactive props, and returns a flat `FactoryResult` array of effect descriptors:
 
 ```ts
-defineComponent<MyProps>('my-element', ({ expose, first, host, on, run }) => {
+defineComponent<MyProps>('my-element', ({ expose, first, host, on, watch }) => {
   const input = first('input') as HTMLInputElement
   expose({ value: input.value })
   return [
     on(input, 'input', () => ({ value: input.value })),
-    run('value', v => { input.value = v }),
+    watch('value', v => { input.value = v }),
   ]
 })
 ```
 
-The v1.0 2-param form (`{ ui, props, effects }` return) and 4-param form (`defineComponent(name, props, select, setup)`) are **deprecated** but remain fully supported.
+The v1.0 4-param form (`defineComponent(name, props, select, setup)`) is **deprecated** but remain fully supported.
 
 ## Surprising Behaviors
 
@@ -44,3 +44,11 @@ The v1.0 2-param form (`{ ui, props, effects }` return) and 4-param form (`defin
 - **`createEventsSensor` v1.1 signature**: The v1.1 form is `createEventsSensor(element, init, events)` — the element is the first argument. Used inside `expose()`: `length: createEventsSensor(textbox, textbox.value.length, { input: ({ target }) => target.value.length })`.
 
 - **Debug mode**: Set `host.debug = true` on a component instance for verbose per-instance logging. For project-wide enhanced errors and logging, build with `process.env.DEV_MODE=true`.
+
+- **`bindVisible` is the inverse of `el.hidden`**: `bindVisible(el)` sets `el.hidden = !value`, matching v1.0 `show()`. A value of `true` makes the element visible.
+
+- **`bindAttribute` returns `WatchHandlers`, not a function**: Use as `watch('prop', bindAttribute(el, 'name'))` — `watch` accepts both forms.
+
+- **`bindAttribute` boolean dispatch**: When the reactive value is boolean, `toggleAttribute` is called — the attribute is added (without value) when `true` and removed when `false`. Do not pass boolean for attributes that require a string value.
+
+- **`bindStyle` nil path removes the inline style**: When the reactive is nil, `el.style.removeProperty(prop)` is called, restoring whatever value the CSS cascade provides. Setting the reactive back to a string re-applies the inline style.

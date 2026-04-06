@@ -1,5 +1,5 @@
 import { createSensor, isMemo, type Sensor } from '@zeix/cause-effect'
-import type { Component, ComponentProps } from './component'
+import type { ComponentProps } from './component'
 import { getFallback, type ParserOrFallback } from './parsers'
 import { PASSIVE_EVENTS, schedule } from './scheduler'
 import type { UI } from './ui'
@@ -104,7 +104,7 @@ function createEventsSensor<T extends {}, E extends Element>(
  * @param {ParserOrFallback<T, U>} init - Initial value, static fallback, or reader function
  * @param {K} key - Key of the UI object whose element(s) to listen on
  * @param {EventHandlers<T, U, any>} events - Map of event type to handler function
- * @returns {(ui: U & { host: Component<P> }) => Sensor<T>} Reader that creates and returns the sensor
+ * @returns {(ui: U & { host: HTMLElement & P }) => Sensor<T>} Reader that creates and returns the sensor
  */
 function createEventsSensor<
 	T extends {},
@@ -115,7 +115,7 @@ function createEventsSensor<
 	init: ParserOrFallback<T, U>,
 	key: K,
 	events: EventHandlers<T, U, any>,
-): (ui: U & { host: Component<P> }) => Sensor<T>
+): (ui: U & { host: HTMLElement & P }) => Sensor<T>
 
 function createEventsSensor<T extends {}>(
 	targetOrInit: Element | ParserOrFallback<T, any>,
@@ -178,7 +178,7 @@ function createEventsSensor<T extends {}>(
 	const init = targetOrInit as ParserOrFallback<T, any>
 	const key = initOrKey as string
 
-	return (ui: any & { host: Component<any> }) => {
+	return (ui: any & { host: HTMLElement }) => {
 		const { host } = ui
 		let value: T = getFallback(ui, init)
 		const memo = isMemo<any[]>(ui[key]) ? ui[key] : null

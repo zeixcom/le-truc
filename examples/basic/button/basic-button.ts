@@ -1,4 +1,10 @@
-import { asBoolean, asString, type Component, defineComponent } from '../../..'
+import {
+	asBoolean,
+	asString,
+	bindProperty,
+	bindText,
+	defineComponent,
+} from '../../..'
 
 export type BasicButtonProps = {
 	disabled: boolean
@@ -8,13 +14,13 @@ export type BasicButtonProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-button': Component<BasicButtonProps>
+		'basic-button': HTMLElement & BasicButtonProps
 	}
 }
 
 export default defineComponent<BasicButtonProps>(
 	'basic-button',
-	({ expose, first, run }) => {
+	({ expose, first, watch }) => {
 		const button = first('button', 'Add a native button as descendant.')
 		const label = first('span.label')
 		const badge = first('span.badge')
@@ -26,15 +32,9 @@ export default defineComponent<BasicButtonProps>(
 		})
 
 		return [
-			run('disabled', value => {
-				button.disabled = value
-			}),
-			label && run('label', text => {
-				label.textContent = text
-			}),
-			badge && run('badge', text => {
-				badge.textContent = text
-			}),
+			watch('disabled', bindProperty(button, 'disabled')),
+			label && watch('label', bindText(label)),
+			badge && watch('badge', bindText(badge)),
 		]
 	},
 )

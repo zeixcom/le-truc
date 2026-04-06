@@ -1,13 +1,18 @@
-### Type Alias: Component\<P\>
+### ~~Type Alias: Component\<P\>~~
 
 > **Component**\<`P`\> = `HTMLElement` & `P`
 
-Defined in: [src/component.ts:49](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/component.ts#L49)
+Defined in: [src/component.ts:70](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/component.ts#L70)
 
-An `HTMLElement` extended with a component's reactive properties as signal-backed accessors.
+An `HTMLElement` extended with a component's reactive properties as
+signal-backed accessors.
 
 #### Type Parameters
 
 ##### P
 
 `P` *extends* [`ComponentProps`](ComponentProps.md)
+
+#### Deprecated
+
+Use `HTMLElement & P` instead.

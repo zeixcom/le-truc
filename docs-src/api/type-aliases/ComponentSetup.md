@@ -1,8 +1,8 @@
-### Type Alias: ComponentSetup\<P, U\>
+### ~~Type Alias: ComponentSetup\<P, U\>~~
 
 > **ComponentSetup**\<`P`, `U`\> = (`ui`) => [`Effects`](Effects.md)\<`P`, [`ComponentUI`](ComponentUI.md)\<`P`, `U`\>\>
 
-Defined in: [src/component.ts:63](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/component.ts#L63)
+Defined in: [src/component.ts:88](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/component.ts#L88)
 
 The type of the `setup` function passed to `defineComponent`.
 Receives the frozen UI object (including `host`) and returns an `Effects` record.
@@ -26,3 +26,7 @@ Receives the frozen UI object (including `host`) and returns an `Effects` record
 #### Returns
 
 [`Effects`](Effects.md)\<`P`, [`ComponentUI`](ComponentUI.md)\<`P`, `U`\>\>
+
+#### Deprecated
+
+Used only by the v1.0 4-param form of `defineComponent`. Use the v1.1 factory form with `FactoryContext` instead.

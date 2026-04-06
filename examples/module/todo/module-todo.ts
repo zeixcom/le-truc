@@ -1,17 +1,12 @@
-import {
-	type Component,
-	createEffect,
-	createElementsMemo,
-	defineComponent,
-} from '../../..'
+import { createEffect, createElementsMemo, defineComponent } from '../../..'
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'module-todo': Component<{}>
+		'module-todo': HTMLElement
 	}
 }
 
-export default defineComponent<{}>('module-todo', ({ first, on, pass }) => {
+export default defineComponent('module-todo', ({ first, on, pass }) => {
 	const form = first('form', 'Add a form element to enter a new todo item.')
 	const textbox = first(
 		'form-textbox',

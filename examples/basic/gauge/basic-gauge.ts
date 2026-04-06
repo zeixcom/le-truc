@@ -1,7 +1,7 @@
 import {
 	asJSON,
 	asNumber,
-	type Component,
+	bindProperty,
 	createMemo,
 	defineComponent,
 } from '../../..'
@@ -19,13 +19,13 @@ export type BasicGaugeThreshold = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-gauge': Component<BasicGaugeProps>
+		'basic-gauge': HTMLElement & BasicGaugeProps
 	}
 }
 
 export default defineComponent<BasicGaugeProps>(
 	'basic-gauge',
-	({ expose, first, host, pass, run }) => {
+	({ expose, first, host, pass, watch }) => {
 		const meter = first('meter', 'Add a <meter> element to display the level')
 		const valueEl = first(
 			'basic-number',
@@ -51,18 +51,16 @@ export default defineComponent<BasicGaugeProps>(
 		})
 
 		return [
-			run(['value', 'thresholds'], () => {
+			watch(['value', 'thresholds'], () => {
 				host.style.setProperty(
 					'--basic-gauge-degree',
 					`${(240 * host.value) / max}deg`,
 				)
 				host.style.setProperty('--basic-gauge-color', qualification.get().color)
 			}),
-			run('value', value => {
-				meter.value = value
-			}),
+			watch('value', bindProperty(meter, 'value')),
 			pass(valueEl, { value: () => host.value }),
-			run(qualification, q => {
+			watch(qualification, q => {
 				label.textContent = q.label
 			}),
 		]

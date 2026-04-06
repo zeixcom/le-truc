@@ -1,8 +1,8 @@
-### Function: show()
+### ~~Function: show()~~
 
 > **show**\<`P`, `E`\>(`reactive`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/property.ts:40](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/effects/property.ts#L40)
+Defined in: [src/effects/property.ts:42](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/effects/property.ts#L42)
 
 Effect for controlling element visibility by setting the 'hidden' property.
 When the reactive value is true, the element is shown; when false, it's hidden.
@@ -30,6 +30,10 @@ Reactive value bound to the visibility state
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
 Effect function that controls element visibility
+
+#### Deprecated
+
+Use `run('prop', value => { el.hidden = !value })` in the v1.1 factory form instead.
 
 #### Since
 

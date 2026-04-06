@@ -4,9 +4,9 @@ import { expect, test } from '@playwright/test'
 
 test.describe('v1.1 factory form: expose() + empty return array', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/basic-expose')
-		// basic-expose has no visible content — wait for DOM attachment
-		await page.waitForSelector('basic-expose', { state: 'attached' })
+		await page.goto('http://localhost:3000/test/test-expose')
+		// test-expose has no visible content — wait for DOM attachment
+		await page.waitForSelector('test-expose', { state: 'attached' })
 	})
 
 	test('expose() creates reactive properties accessible on host', async ({
@@ -37,7 +37,7 @@ test.describe('v1.1 factory form: expose() + empty return array', () => {
 	test('observedAttributes is empty in v1.1 factory form', async ({ page }) => {
 		const observed = await page.evaluate(() =>
 			Array.from(
-				(customElements.get('basic-expose') as any)?.observedAttributes ?? [],
+				(customElements.get('test-expose') as any)?.observedAttributes ?? [],
 			),
 		)
 		expect(observed).toHaveLength(0)

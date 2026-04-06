@@ -1,4 +1,4 @@
-import { asInteger, type Component, defineComponent } from '../../..'
+import { asInteger, bindText, defineComponent } from '../../..'
 
 export type BasicCounterProps = {
 	count: number
@@ -6,13 +6,13 @@ export type BasicCounterProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-counter': Component<BasicCounterProps>
+		'basic-counter': HTMLElement & BasicCounterProps
 	}
 }
 
 export default defineComponent<BasicCounterProps>(
 	'basic-counter',
-	({ expose, first, host, on, run }) => {
+	({ expose, first, host, on, watch }) => {
 		const increment = first(
 			'button',
 			'Add a native button element to increment the count.',
@@ -27,9 +27,7 @@ export default defineComponent<BasicCounterProps>(
 			on(increment, 'click', () => {
 				host.count++
 			}),
-			run('count', value => {
-				count.textContent = String(value)
-			}),
+			watch('count', bindText(count)),
 		]
 	},
 )

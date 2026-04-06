@@ -2,7 +2,7 @@
 
 > **EventHandler**\<`P`, `Evt`\> = (`event`) => `{ [K in keyof P]?: P[K] }` \| `void` \| `Promise`\<`void`\>
 
-Defined in: [src/effects/event.ts:22](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/effects/event.ts#L22)
+Defined in: [src/effects/event.ts:22](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/effects/event.ts#L22)
 
 Event handler for use with `on()`.
 

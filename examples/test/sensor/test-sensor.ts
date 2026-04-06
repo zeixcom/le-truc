@@ -1,4 +1,4 @@
-import { type Component, createEventsSensor, defineComponent } from '../../..'
+import { createEventsSensor, defineComponent } from '../../..'
 
 export type TestSensorProps = {
 	length: number
@@ -7,7 +7,7 @@ export type TestSensorProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'test-sensor': Component<TestSensorProps>
+		'test-sensor': HTMLElement & TestSensorProps
 	}
 }
 
@@ -20,7 +20,7 @@ declare global {
  */
 export default defineComponent<TestSensorProps>(
 	'test-sensor',
-	({ expose, first, run }) => {
+	({ expose, first, watch }) => {
 		const input = first('input', 'Add an <input> element.')
 		const output = first('#output', 'Add element with id="output".')
 
@@ -33,7 +33,7 @@ export default defineComponent<TestSensorProps>(
 		})
 
 		return [
-			run('length', n => {
+			watch('length', n => {
 				output.textContent = String(n)
 			}),
 		]

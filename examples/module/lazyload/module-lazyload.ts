@@ -1,6 +1,5 @@
 import {
 	asString,
-	type Component,
 	createEffect,
 	createTask,
 	dangerouslySetInnerHTML,
@@ -18,13 +17,13 @@ export type ModuleLazyloadProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'module-lazyload': Component<ModuleLazyloadProps>
+		'module-lazyload': HTMLElement & ModuleLazyloadProps
 	}
 }
 
 export default defineComponent<ModuleLazyloadProps>(
 	'module-lazyload',
-	({ expose, first, host, run }) => {
+	({ expose, first, host, watch }) => {
 		const callout = first(
 			'card-callout',
 			'Needed to display loading state and error messages.',

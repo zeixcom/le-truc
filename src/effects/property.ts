@@ -7,7 +7,7 @@ import { type Effect, type Reactive, updateElement } from '../effects'
  * Effect for setting a property on an element.
  * Sets the specified property directly on the element object.
  *
- * @deprecated Use `run('prop', value => { el.property = value })` in the v1.1 factory form instead.
+ * @deprecated Use `watch('prop', value => { el.property = value })` in the v1.1 factory form instead.
  * @since 0.8.0
  * @param {K} key - Name of the property to set
  * @param {Reactive<E[K], P, E>} reactive - Reactive value bound to the property value (defaults to property name)

@@ -71,23 +71,17 @@ export {
 
 export {
 	type Component,
-	type ComponentFactory,
-	type ComponentFactoryResult,
 	type ComponentProp,
 	type ComponentProps,
 	type ComponentSetup,
 	type ComponentUI,
 	defineComponent,
-	type EffectDescriptor,
 	type FactoryContext,
-	type FactoryEachHelper,
 	type FactoryOnHelper,
 	type FactoryPassHelper,
 	type FactoryProvideContextsHelper,
 	type FactoryRequestContextHelper,
-	type FactoryResult,
-	type FactoryRunHandlers,
-	type FactoryRunHelper,
+	type FactoryWatchHelper,
 	type Initializers,
 	type MaybeSignal,
 	type ReservedWords,
@@ -104,9 +98,12 @@ export {
 } from './src/context'
 export {
 	type Effect,
+	type EffectDescriptor,
 	type Effects,
 	type ElementEffects,
 	type ElementUpdater,
+	each,
+	type FactoryResult,
 	type Reactive,
 	type UpdateOperation,
 	updateElement,
@@ -161,6 +158,14 @@ export {
 	safeSetAttribute,
 	setTextPreservingComments,
 } from './src/safety'
+export {
+	bindAttribute,
+	bindClass,
+	bindProperty,
+	bindStyle,
+	bindText,
+	bindVisible,
+} from './src/helpers'
 export { schedule } from './src/scheduler'
 export {
 	type AllElements,

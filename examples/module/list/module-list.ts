@@ -1,7 +1,6 @@
 import {
 	asInteger,
 	asMethod,
-	type Component,
 	defineComponent,
 	MissingElementError,
 } from '../../..'
@@ -13,7 +12,7 @@ export type ModuleListProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'module-list': Component<ModuleListProps>
+		'module-list': HTMLElement & ModuleListProps
 	}
 }
 

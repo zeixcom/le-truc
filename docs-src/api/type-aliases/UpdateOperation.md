@@ -2,7 +2,7 @@
 
 > **UpdateOperation** = `"a"` \| `"c"` \| `"d"` \| `"h"` \| `"m"` \| `"p"` \| `"s"` \| `"t"`
 
-Defined in: [src/effects.ts:83](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/effects.ts#L83)
+Defined in: [src/effects.ts:102](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/effects.ts#L102)
 
 Operation code used internally by `updateElement` for debug logging.
 

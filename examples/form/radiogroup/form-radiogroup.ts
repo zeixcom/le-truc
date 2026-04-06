@@ -1,4 +1,4 @@
-import { type Component, defineComponent } from '../../..'
+import { defineComponent, each } from '../../..'
 
 export type FormRadiogroupProps = {
 	value: string
@@ -6,7 +6,7 @@ export type FormRadiogroupProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-radiogroup': Component<FormRadiogroupProps>
+		'form-radiogroup': HTMLElement & FormRadiogroupProps
 	}
 }
 
@@ -24,7 +24,7 @@ const getIndex = (radios: HTMLInputElement[]) =>
 
 export default defineComponent<FormRadiogroupProps>(
 	'form-radiogroup',
-	({ all, each, expose, host, on, run }) => {
+	({ all, expose, host, on, watch }) => {
 		const radios = all<HTMLInputElement>(
 			'input[type="radio"]',
 			'Add at least two native radio buttons.',
@@ -41,11 +41,11 @@ export default defineComponent<FormRadiogroupProps>(
 		let focusIndex = getIndex(radios.get())
 
 		return [
-			on(radios, 'change', (e, el) => {
-				host.value = (el as HTMLInputElement).value
+			on(radios, 'change', (_e, el) => {
+				host.value = el.value
 			}),
 			each(radios, radio =>
-				run('value', value => {
+				watch('value', value => {
 					const isChecked = radio.value === value
 					radio.checked = isChecked
 					radio.tabIndex = isChecked ? 0 : -1
@@ -56,9 +56,7 @@ export default defineComponent<FormRadiogroupProps>(
 			on(host, 'click', ({ target }) => {
 				if (!(target instanceof HTMLElement)) return
 				if (target.hasAttribute('value'))
-					focusIndex = radios
-						.get()
-						.findIndex(item => item === target)
+					focusIndex = radios.get().findIndex(item => item === target)
 			}),
 			on(host, 'keydown', e => {
 				const { key } = e as KeyboardEvent

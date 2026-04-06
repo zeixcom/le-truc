@@ -8,7 +8,7 @@ import {
 	isSlot,
 	type Signal,
 } from '@zeix/cause-effect'
-import type { Component, ComponentProps } from '../component'
+import type { ComponentProps } from '../component'
 import type { Effect, Reactive } from '../effects'
 import { InvalidCustomElementError, InvalidReactivesError } from '../errors'
 import { getSignals } from '../internal'
@@ -32,7 +32,7 @@ type PassedProp<T, P extends ComponentProps, E extends HTMLElement> = Reactive<
  * Passed as the argument to `pass()`. Keys must be property names of the target component `Q`.
  */
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
-	[K in keyof Q & string]?: PassedProp<Q[K], P, Component<Q>>
+	[K in keyof Q & string]?: PassedProp<Q[K], P, HTMLElement & Q>
 }
 
 /* === Exported Function === */
@@ -54,14 +54,14 @@ type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
  * The factory helper returns an `EffectDescriptor` and takes the target element as its first argument.
  * @since 0.15.0
  * @param {PassedProps<P, Q>} props - Reactive values to pass
- * @returns {Effect<P, Component<Q>>} Effect function that passes reactive values to the descendant component
+ * @returns {Effect<P, HTMLElement & Q>} Effect function that passes reactive values to the descendant component
  * @throws {InvalidCustomElementError} When the target element is not a valid custom element
  * @throws {InvalidReactivesError} When the provided reactives is not a record of signals, reactive property names or functions
  */
 const pass =
 	<P extends ComponentProps, Q extends ComponentProps>(
-		props: PassedProps<P, Q> | ((target: Component<Q>) => PassedProps<P, Q>),
-	): Effect<P, Component<Q>> =>
+		props: PassedProps<P, Q> | ((target: HTMLElement & Q) => PassedProps<P, Q>),
+	): Effect<P, HTMLElement & Q> =>
 	(host, target): Cleanup =>
 		createScope(() => {
 			if (!isCustomElement(target))

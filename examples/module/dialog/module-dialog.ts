@@ -1,4 +1,4 @@
-import { type Component, defineComponent } from '../../..'
+import { defineComponent } from '../../..'
 
 export type ModuleDialogProps = {
 	open: boolean
@@ -6,7 +6,7 @@ export type ModuleDialogProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'module-dialog': Component<ModuleDialogProps>
+		'module-dialog': HTMLElement & ModuleDialogProps
 	}
 }
 
@@ -14,7 +14,7 @@ const SCROLL_LOCK_CLASS = 'scroll-lock'
 
 export default defineComponent<ModuleDialogProps>(
 	'module-dialog',
-	({ expose, first, host, on, run }) => {
+	({ expose, first, host, on, watch }) => {
 		const openButton = first(
 			'button[aria-haspopup="dialog"]',
 			'Add a button to open the dialog.',
@@ -32,7 +32,7 @@ export default defineComponent<ModuleDialogProps>(
 		})
 
 		return [
-			run('open', open => {
+			watch('open', open => {
 				if (open) {
 					scrollTop = document.documentElement.scrollTop
 					activeElement = document.activeElement as HTMLElement | null

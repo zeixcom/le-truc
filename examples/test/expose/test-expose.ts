@@ -1,13 +1,13 @@
-import { type Component, defineComponent } from '../../..'
+import { defineComponent } from '../../..'
 
-export type BasicExposeProps = {
+export type TestExposeProps = {
 	greeting: string
 	count: number
 }
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-expose': Component<BasicExposeProps>
+		'basic-expose': HTMLElement & TestExposeProps
 	}
 }
 
@@ -16,7 +16,7 @@ declare global {
  * Uses expose() only — no effects. Verifies that signals are created
  * and accessible via host properties when the return array is empty.
  */
-export default defineComponent<BasicExposeProps>(
+export default defineComponent<TestExposeProps>(
 	'basic-expose',
 	({ expose }) => {
 		expose({

@@ -1,8 +1,8 @@
-### Function: dangerouslySetInnerHTML()
+### ~~Function: dangerouslySetInnerHTML()~~
 
 > **dangerouslySetInnerHTML**\<`P`, `E`\>(`reactive`, `options?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/html.ts:23](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/effects/html.ts#L23)
+Defined in: [src/effects/html.ts:26](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/effects/html.ts#L26)
 
 Effect for setting the inner HTML of an element with optional Shadow DOM support.
 Provides security options for script execution and shadow root creation.
@@ -36,6 +36,12 @@ Configuration options: shadowRootMode, allowScripts
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
 Effect function that sets the inner HTML of the element
+
+#### Deprecated
+
+Use `watch()` with imperative DOM updates in the v1.1 factory form instead.
+For innerHTML with scheduling, call the effect directly as a thunk:
+`() => dangerouslySetInnerHTML(reactive, opts)(host as any, element)`.
 
 #### Since
 

@@ -1,12 +1,12 @@
-import { type Component, createElementsMemo, defineComponent } from '../../..'
+import { defineComponent, each } from '../../..'
 
-export type BasicEachProps = {
+export type TestEachProps = {
 	selected: number
 }
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-each': Component<BasicEachProps>
+		'test-each': HTMLElement & TestEachProps
 	}
 }
 
@@ -15,10 +15,10 @@ declare global {
  * Exercises: nested run inside each, nested on inside each,
  * per-element lifecycle (add/remove), single-descriptor shortcut.
  */
-export default defineComponent<BasicEachProps>(
-	'basic-each',
-	({ expose, first, all, each, on, run }) => {
-		const list = first('ul', 'Add a <ul> element.')
+export default defineComponent<TestEachProps>(
+	'test-each',
+	({ expose, first, all, on, watch }) => {
+		first('ul', 'Add a <ul> element.')
 		const items = all('li')
 
 		expose({ selected: -1 })
@@ -29,7 +29,7 @@ export default defineComponent<BasicEachProps>(
 				const index = Number(item.dataset.index ?? -1)
 				return [
 					// nested run: highlight selected item
-					run('selected', sel => {
+					watch('selected', sel => {
 						item.classList.toggle('active', sel === index)
 					}),
 					// nested on: clicking item updates selected prop

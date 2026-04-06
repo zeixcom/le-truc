@@ -1,4 +1,4 @@
-import { type Component, defineComponent } from '../../..'
+import { bindText, defineComponent } from '../../..'
 import { asDate } from '../../_common/asDate'
 
 export type CardBlogmetaProps = {
@@ -7,13 +7,13 @@ export type CardBlogmetaProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'card-blogmeta': Component<CardBlogmetaProps>
+		'card-blogmeta': HTMLElement & CardBlogmetaProps
 	}
 }
 
 export default defineComponent<CardBlogmetaProps>(
 	'card-blogmeta',
-	({ expose, first, run }) => {
+	({ expose, first, watch }) => {
 		const time = first(
 			'time',
 			'Add a <time> element to display the publication date.',
@@ -31,10 +31,6 @@ export default defineComponent<CardBlogmetaProps>(
 			date: asDate(formattedFallback),
 		})
 
-		return [
-			run('date', text => {
-				time.textContent = text
-			}),
-		]
+		return [watch('date', bindText(time))]
 	},
 )

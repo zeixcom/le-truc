@@ -1,12 +1,12 @@
 import {
 	asString,
-	type Component,
 	createEffect,
 	createElementsMemo,
 	createMemo,
 	createTask,
 	dangerouslySetInnerHTML,
 	defineComponent,
+	each,
 } from '../../..'
 import { escapeHTML, html } from '../../_common/escapeHTML'
 
@@ -47,7 +47,7 @@ export type FormListboxProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-listbox': Component<FormListboxProps>
+		'form-listbox': HTMLElement & FormListboxProps
 	}
 }
 
@@ -62,7 +62,7 @@ const HANDLED_KEYS = [...DECREMENT_KEYS, ...INCREMENT_KEYS, FIRST_KEY, LAST_KEY]
 
 export default defineComponent<FormListboxProps>(
 	'form-listbox',
-	({ all, each, expose, first, host, on, run }) => {
+	({ all, expose, first, host, on, watch }) => {
 		const input = first(
 			'input[type="hidden"]',
 			'Needed to store the selected value.',
@@ -72,7 +72,10 @@ export default defineComponent<FormListboxProps>(
 		const callout = first('card-callout')
 		const loading = first('.loading')
 		const errorEl = first('.error')
-		const listbox = first('[role="listbox"]', 'Needed to display list of options.')
+		const listbox = first(
+			'[role="listbox"]',
+			'Needed to display list of options.',
+		)
 		const options = all<HTMLButtonElement>('button[role="option"]')
 
 		const renderOptions = (items: FormListboxOption[]) =>
@@ -123,8 +126,10 @@ export default defineComponent<FormListboxProps>(
 				if (err) return { ok: false, value: '', error: err, pending: false }
 
 				try {
-					const { content: fetched } = await fetchWithCache(url, abort, response =>
-						response.json(),
+					const { content: fetched } = await fetchWithCache(
+						url,
+						abort,
+						response => response.json(),
 					)
 					return {
 						ok: true,
@@ -158,44 +163,49 @@ export default defineComponent<FormListboxProps>(
 
 		expose({
 			value: () =>
-				listbox
-					.querySelector<HTMLButtonElement>(
-						'button[role="option"][aria-selected="true"]',
-					)
-					?.value ?? '',
-			options: () => createElementsMemo(listbox, 'button[role="option"]:not([hidden])'),
+				listbox.querySelector<HTMLButtonElement>(
+					'button[role="option"][aria-selected="true"]',
+				)?.value ?? '',
+			options: () =>
+				createElementsMemo(listbox, 'button[role="option"]:not([hidden])'),
 			filter: '',
 			src: asString(),
 		})
 
 		return [
-			run('value', value => {
+			watch('value', value => {
 				host.setAttribute('value', value)
 				input.value = value
 			}),
-			filterEl && on(filterEl, 'input', () => {
-				host.filter = filterEl.value ?? ''
-			}),
-			clearBtn && run(lowerFilter, f => {
-				clearBtn.hidden = !f
-			}),
-			clearBtn && on(clearBtn, 'click', () => {
-				host.filter = ''
-			}),
-			callout && (() =>
-				createEffect(() => {
-					callout.hidden = host.src ? content.get().ok : true
-					callout.classList.toggle('danger', hasError())
-				})),
-			loading && (() =>
-				createEffect(() => {
-					loading.hidden = !(host.src ? content.get().pending : false)
-				})),
-			errorEl && (() =>
-				createEffect(() => {
-					errorEl.hidden = !hasError()
-					errorEl.textContent = host.src ? content.get().error : ''
-				})),
+			filterEl
+				&& on(filterEl, 'input', () => {
+					host.filter = filterEl.value ?? ''
+				}),
+			clearBtn
+				&& watch(lowerFilter, f => {
+					clearBtn.hidden = !f
+				}),
+			clearBtn
+				&& on(clearBtn, 'click', () => {
+					host.filter = ''
+				}),
+			callout
+				&& (() =>
+					createEffect(() => {
+						callout.hidden = host.src ? content.get().ok : true
+						callout.classList.toggle('danger', hasError())
+					})),
+			loading
+				&& (() =>
+					createEffect(() => {
+						loading.hidden = !(host.src ? content.get().pending : false)
+					})),
+			errorEl
+				&& (() =>
+					createEffect(() => {
+						errorEl.hidden = !hasError()
+						errorEl.textContent = host.src ? content.get().error : ''
+					})),
 			// Render remote content into listbox
 			host.src
 				? () =>
@@ -205,7 +215,10 @@ export default defineComponent<FormListboxProps>(
 				: undefined,
 			host.src
 				? () =>
-						dangerouslySetInnerHTML(() => content.get().value)(host as any, listbox)
+						dangerouslySetInnerHTML(() => content.get().value)(
+							host as any,
+							listbox,
+						)
 				: undefined,
 			// Focus management on listbox
 			on(listbox, 'click', ({ target }) => {
@@ -249,7 +262,7 @@ export default defineComponent<FormListboxProps>(
 						option.innerHTML = highlightMatch(textContent, filterText)
 					})
 				},
-				run('value', () => {
+				watch('value', () => {
 					const isSelected = host.value === option.value
 					option.tabIndex = isSelected ? 0 : -1
 					option.ariaSelected = String(isSelected)

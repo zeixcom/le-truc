@@ -1,23 +1,23 @@
-import { createState, type Component, defineComponent } from '../../..'
+import { createState, defineComponent } from '../../..'
 
-export type BasicRunProps = {
+export type TestWatchProps = {
 	count: number
 	label: string
 }
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-run': Component<BasicRunProps>
+		'test-watch': HTMLElement & TestWatchProps
 	}
 }
 
 /**
- * Test component for the v1.1 factory `run()` helper.
+ * Test component for the v1.1 factory `watch()` helper.
  * Exercises: single prop, array form, direct Signal, MatchHandlers, conditional false.
  */
-export default defineComponent<BasicRunProps>(
-	'basic-run',
-	({ expose, first, run }) => {
+export default defineComponent<TestWatchProps>(
+	'test-watch',
+	({ expose, first, watch }) => {
 		const output = first('#output', 'Add element with id="output".')
 		const combined = first('#combined', 'Add element with id="combined".')
 		const direct = first('#direct', 'Add element with id="direct".')
@@ -33,30 +33,30 @@ export default defineComponent<BasicRunProps>(
 
 		return [
 			// Single prop string source
-			run('count', n => {
+			watch('count', n => {
 				output.textContent = String(n)
 			}),
 
 			// Array form — two prop names
-			run(['count', 'label'], ([n, l]) => {
+			watch(['count', 'label'], ([n, l]) => {
 				combined.textContent = `${n}:${l}`
 			}),
 
 			// Direct Signal source (not a prop name)
-			run(externalSignal, v => {
+			watch(externalSignal, v => {
 				direct.textContent = String(v)
 				direct.dataset.signal = String(v)
 			}),
 
 			// MatchHandlers form — ok callback
-			run('count', {
+			watch('count', {
 				ok: n => {
 					handlers.textContent = `ok:${n}`
 				},
 			}),
 
 			// Conditional false — must be filtered out and never activate
-			false && run('label', () => {}),
+			false && watch('label', () => {}),
 		]
 	},
 )

@@ -1,8 +1,8 @@
-### Function: pass()
+### ~~Function: pass()~~
 
-> **pass**\<`P`, `Q`\>(`props`): [`Effect`](../type-aliases/Effect.md)\<`P`, [`Component`](../type-aliases/Component.md)\<`Q`\>\>
+> **pass**\<`P`, `Q`\>(`props`): [`Effect`](../type-aliases/Effect.md)\<`P`, `HTMLElement` & `Q`\>
 
-Defined in: [src/effects/pass.ts:60](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/effects/pass.ts#L60)
+Defined in: [src/effects/pass.ts:62](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/effects/pass.ts#L62)
 
 Effect for passing reactive values to a descendant Le Truc component.
 
@@ -36,9 +36,14 @@ Reactive values to pass
 
 #### Returns
 
-[`Effect`](../type-aliases/Effect.md)\<`P`, [`Component`](../type-aliases/Component.md)\<`Q`\>\>
+[`Effect`](../type-aliases/Effect.md)\<`P`, `HTMLElement` & `Q`\>
 
 Effect function that passes reactive values to the descendant component
+
+#### Deprecated
+
+Use the `pass(target, props)` helper from `FactoryContext` in the v1.1 factory form instead.
+The factory helper returns an `EffectDescriptor` and takes the target element as its first argument.
 
 #### Since
 

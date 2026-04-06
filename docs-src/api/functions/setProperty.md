@@ -1,8 +1,8 @@
-### Function: setProperty()
+### ~~Function: setProperty()~~
 
 > **setProperty**\<`P`, `E`, `K`\>(`key`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/property.ts:15](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/effects/property.ts#L15)
+Defined in: [src/effects/property.ts:16](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/effects/property.ts#L16)
 
 Effect for setting a property on an element.
 Sets the specified property directly on the element object.
@@ -40,6 +40,10 @@ Reactive value bound to the property value (defaults to property name)
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
 Effect function that sets the property on the element
+
+#### Deprecated
+
+Use `watch('prop', value => { el.property = value })` in the v1.1 factory form instead.
 
 #### Since
 

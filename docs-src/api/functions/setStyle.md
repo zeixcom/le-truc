@@ -1,8 +1,8 @@
-### Function: setStyle()
+### ~~Function: setStyle()~~
 
 > **setStyle**\<`P`, `E`\>(`prop`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/style.ts:17](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/effects/style.ts#L17)
+Defined in: [src/effects/style.ts:18](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/effects/style.ts#L18)
 
 Effect for setting a CSS custom property or inline style on an element.
 
@@ -38,6 +38,10 @@ Reactive value for the style value (defaults to property name)
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
 Effect that sets or removes the style property on the element
+
+#### Deprecated
+
+Use `watch('prop', value => { el.style.setProperty(prop, value) })` in the v1.1 factory form instead.
 
 #### Since
 

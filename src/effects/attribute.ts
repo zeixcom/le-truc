@@ -8,7 +8,7 @@ import { safeSetAttribute } from '../safety'
  * Effect for setting an attribute on an element.
  * Sets the specified attribute with security validation for unsafe values.
  *
- * @deprecated Use `run('prop', value => { el.setAttribute(name, value) })` in the v1.1 factory form instead.
+ * @deprecated Use `watch('prop', value => { el.setAttribute(name, value) })` in the v1.1 factory form instead.
  * `safeSetAttribute(el, name, value)` is available for security-validated attribute writes.
  * @since 0.8.0
  * @param {string} name - Name of the attribute to set

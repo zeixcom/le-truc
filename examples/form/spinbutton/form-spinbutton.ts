@@ -1,4 +1,4 @@
-import { type Component, createMemo, defineComponent } from '../../..'
+import { createMemo, defineComponent } from '../../..'
 
 export type FormSpinbuttonProps = {
 	value: number
@@ -7,13 +7,13 @@ export type FormSpinbuttonProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-spinbutton': Component<FormSpinbuttonProps>
+		'form-spinbutton': HTMLElement & FormSpinbuttonProps
 	}
 }
 
 export default defineComponent<FormSpinbuttonProps>(
 	'form-spinbutton',
-	({ all, expose, first, host, on, run }) => {
+	({ all, expose, first, host, on, watch }) => {
 		const controls = all('button, input:not([disabled])')
 		const increment = first(
 			'button.increment',
@@ -74,28 +74,28 @@ export default defineComponent<FormSpinbuttonProps>(
 					host.value = Math.min(host.max, Math.max(0, host.value + delta))
 				}
 			}),
-			run(nonZero, nz => {
+			watch(nonZero, nz => {
 				input.hidden = !nz
 				decrement.hidden = !nz
 			}),
-			run('value', v => {
+			watch('value', v => {
 				input.value = String(v)
 			}),
-			run('max', m => {
+			watch('max', m => {
 				input.max = String(m)
 			}),
-			run(['value', 'max'], () => {
+			watch(['value', 'max'], () => {
 				increment.disabled = host.value >= host.max
 			}),
-			run(ariaLabel, label => {
+			watch(ariaLabel, label => {
 				increment.ariaLabel = label || null
 			}),
 			zero
-				&& run(nonZero, nz => {
+				&& watch(nonZero, nz => {
 					zero.hidden = nz
 				}),
 			other
-				&& run(nonZero, nz => {
+				&& watch(nonZero, nz => {
 					other.hidden = !nz
 				}),
 		]

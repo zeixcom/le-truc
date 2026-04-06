@@ -13,18 +13,14 @@ import {
 	type Signal,
 	untrack,
 } from '@zeix/cause-effect'
-import type {
-	Component,
-	ComponentProps,
-	EffectDescriptor,
-	FactoryResult,
-} from './component'
+import type { ComponentProps } from './component'
 import {
 	CONTEXT_REQUEST,
 	type Context,
 	ContextRequestEvent,
 	type UnknownContext,
 } from './context'
+import type { EffectDescriptor } from './effects'
 import type { PassedProps } from './effects/pass'
 import { pass as effectPass } from './effects/pass'
 import { getSignals } from './internal'
@@ -34,11 +30,11 @@ import { DEV_MODE, elementName, LOG_WARN } from './util'
 /* === Types === */
 
 /**
- * User-facing handler object for `run()` with match branches.
- * `ok` receives the resolved value directly (not a tuple) for single-source `run()`.
+ * User-facing handler object for `watch()` with match branches.
+ * `ok` receives the resolved value directly (not a tuple) for single-source `watch()`.
  * `err` receives a single Error (not an array) for convenience.
  */
-type RunHandlers<T> = {
+type WatchHandlers<T> = {
 	ok: (value: T) => MaybeCleanup | void
 	err?: (error: Error) => MaybeCleanup | void
 	nil?: () => MaybeCleanup | void
@@ -90,14 +86,14 @@ const NON_BUBBLING_EVENTS = new Set([
 /* === Internal Helpers === */
 
 /**
- * Resolve a `run` source (string property name or Signal) to a Signal usable by `match`.
+ * Resolve a `watch` source (string property name or Signal) to a Signal usable by `match`.
  *
  * - String: look up the signal in the component's signal map; fall back to a computed
  *   that reads `host[name]` (covers properties added via `Object.defineProperty`).
  * - Signal/Memo: use directly.
  */
 const resolveSignal = <P extends ComponentProps>(
-	host: Component<P>,
+	host: HTMLElement & P,
 	source: (keyof P & string) | Signal<any>,
 ): Signal<any> => {
 	if (typeof source === 'string') {
@@ -113,7 +109,7 @@ const resolveSignal = <P extends ComponentProps>(
  * Handles passive scheduling and the `{ prop: value }` return → `batch()` host update.
  */
 const attachListener = <P extends ComponentProps, E extends Element>(
-	host: Component<P>,
+	host: HTMLElement & P,
 	target: E,
 	type: string,
 	handler: (event: Event, element: E) => { [K in keyof P]?: P[K] } | void,
@@ -139,41 +135,43 @@ const attachListener = <P extends ComponentProps, E extends Element>(
 /* === Factory Creators === */
 
 /**
- * Create a `run` helper bound to a specific component host.
+ * Create a `watch` helper bound to a specific component host.
  *
- * `run` wraps `match` to create a reactive effect driven by explicitly declared
+ * `watch` wraps `match` to create a reactive effect driven by explicitly declared
  * signal sources. Only the declared source signals trigger re-runs — other reads
  * inside the handler are not tracked. Returns an `EffectDescriptor`.
  *
  * @param host - The component host element
  */
-const makeRun = <P extends ComponentProps>(host: Component<P>) => {
-	function run<K extends keyof P & string>(
+const makeWatch = <P extends ComponentProps>(host: HTMLElement & P) => {
+	function watch<K extends keyof P & string>(
 		source: K,
 		handler: (value: P[K]) => MaybeCleanup | void,
 	): EffectDescriptor
-	function run<K extends keyof P & string>(
+	function watch<K extends keyof P & string>(
 		source: K,
-		handlers: RunHandlers<P[K]>,
+		handlers: WatchHandlers<P[K]>,
 	): EffectDescriptor
-	function run<T extends {}>(
+	function watch<T extends {}>(
 		source: Signal<T>,
 		handler: (value: T) => MaybeCleanup | void,
 	): EffectDescriptor
-	function run<T extends {}>(
+	function watch<T extends {}>(
 		source: Signal<T>,
-		handlers: RunHandlers<T>,
+		handlers: WatchHandlers<T>,
 	): EffectDescriptor
-	function run(
+	function watch(
 		source: Array<(keyof P & string) | Signal<any>>,
 		handler: (values: any[]) => MaybeCleanup | void,
 	): EffectDescriptor
-	function run(
+	function watch(
 		source:
 			| (keyof P & string)
 			| Signal<any>
 			| Array<(keyof P & string) | Signal<any>>,
-		handlerOrHandlers: ((value: any) => MaybeCleanup | void) | RunHandlers<any>,
+		handlerOrHandlers:
+			| ((value: any) => MaybeCleanup | void)
+			| WatchHandlers<any>,
 	): EffectDescriptor {
 		return () => {
 			const isArraySource = Array.isArray(source)
@@ -191,7 +189,7 @@ const makeRun = <P extends ComponentProps>(host: Component<P>) => {
 					}),
 				)
 			}
-			const handlers = handlerOrHandlers as RunHandlers<any>
+			const handlers = handlerOrHandlers as WatchHandlers<any>
 			const matchHandlers: any = {
 				ok: (values: readonly any[]) =>
 					untrack(() => handlers.ok(isArraySource ? values : values[0])),
@@ -203,50 +201,7 @@ const makeRun = <P extends ComponentProps>(host: Component<P>) => {
 			return createEffect(() => match(signals as any, matchHandlers))
 		}
 	}
-	return run
-}
-
-/**
- * Create an `each` helper.
- *
- * `each` creates per-element reactive effects from a `Memo<Element[]>`. When
- * elements enter the collection, their effects are created in a per-element scope;
- * when they leave, their effects are disposed with that scope.
- *
- * The callback receives a single element and returns a `FactoryResult` (array of
- * `EffectDescriptor`s) or a single `EffectDescriptor` (single-descriptor shortcut).
- */
-const makeEach = () => {
-	function each<E extends Element>(
-		memo: Memo<E[]>,
-		callback: (element: E) => FactoryResult,
-	): EffectDescriptor
-	function each<E extends Element>(
-		memo: Memo<E[]>,
-		callback: (element: E) => EffectDescriptor,
-	): EffectDescriptor
-	function each<E extends Element>(
-		memo: Memo<E[]>,
-		callback: (element: E) => FactoryResult | EffectDescriptor,
-	): EffectDescriptor {
-		return () => {
-			createEffect(() => {
-				for (const element of memo.get()) {
-					createScope(() => {
-						const result = callback(element)
-						if (Array.isArray(result)) {
-							for (const descriptor of result) {
-								if (descriptor) descriptor()
-							}
-						} else if (typeof result === 'function') {
-							;(result as EffectDescriptor)()
-						}
-					})
-				}
-			})
-		}
-	}
-	return each
+	return watch
 }
 
 /**
@@ -262,7 +217,7 @@ const makeEach = () => {
  *
  * @param host - The component host element
  */
-const makeOn = <P extends ComponentProps>(host: Component<P>) => {
+const makeOn = <P extends ComponentProps>(host: HTMLElement & P) => {
 	type OnHandler<E extends Element, Evt extends Event> = (
 		event: Evt,
 		element: E,
@@ -364,21 +319,21 @@ const makeOn = <P extends ComponentProps>(host: Component<P>) => {
  *
  * @param host - The component host element
  */
-const makePass = <P extends ComponentProps>(host: Component<P>) => {
+const makePass = <P extends ComponentProps>(host: HTMLElement & P) => {
 	function pass<Q extends ComponentProps>(
-		target: Component<Q>,
+		target: HTMLElement & Q,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
 	function pass<Q extends ComponentProps>(
-		target: Memo<Component<Q>[]>,
+		target: Memo<(HTMLElement & Q)[]>,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
 	function pass<Q extends ComponentProps>(
-		target: Component<Q> | Memo<Component<Q>[]>,
+		target: (HTMLElement & Q) | Memo<(HTMLElement & Q)[]>,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor {
 		return () => {
-			if (isMemo<Component<Q>[]>(target)) {
+			if (isMemo<(HTMLElement & Q)[]>(target)) {
 				// Memo target: per-element lifecycle via createEffect
 				createEffect(() => {
 					for (const el of target.get()) {
@@ -406,7 +361,7 @@ const makePass = <P extends ComponentProps>(host: Component<P>) => {
  * @param host - The component host element
  */
 const makeProvideContexts =
-	<P extends ComponentProps>(host: Component<P>) =>
+	<P extends ComponentProps>(host: HTMLElement & P) =>
 	(contexts: Array<keyof P>): EffectDescriptor =>
 	() =>
 		createScope(() => {
@@ -418,7 +373,7 @@ const makeProvideContexts =
 					isFunction(callback)
 				) {
 					e.stopImmediatePropagation()
-					callback(() => host[context as keyof Component<P>])
+					callback(() => host[context as keyof P])
 				}
 			}
 			host.addEventListener(CONTEXT_REQUEST, listener)
@@ -435,7 +390,7 @@ const makeProvideContexts =
  * @param host - The component host element
  */
 const makeRequestContext =
-	<P extends ComponentProps>(host: Component<P>) =>
+	<P extends ComponentProps>(host: HTMLElement & P) =>
 	<T extends {}>(context: Context<string, () => T>, fallback: T): Memo<T> => {
 		let consumed: () => T = () => fallback
 		host.dispatchEvent(
@@ -447,12 +402,11 @@ const makeRequestContext =
 	}
 
 export {
-	makeEach,
 	makeOn,
 	makePass,
 	makeProvideContexts,
 	makeRequestContext,
-	makeRun,
+	makeWatch,
 	NON_BUBBLING_EVENTS,
-	type RunHandlers,
+	type WatchHandlers,
 }

@@ -1,12 +1,12 @@
-import { type Component, defineComponent } from '../../..'
+import { defineComponent } from '../../..'
 
-export type BasicPassProps = {
+export type TestPassProps = {
 	count: number
 }
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-pass': Component<BasicPassProps>
+		'test-pass': HTMLElement & TestPassProps
 	}
 }
 
@@ -18,17 +18,20 @@ declare global {
  * `value` prop. The `#output` span reflects the parent's count directly
  * for test assertions independent of child rendering.
  */
-export default defineComponent<BasicPassProps>(
-	'basic-pass',
-	({ expose, first, all, run, pass }) => {
-		const single = first('basic-number#single', 'Add basic-number with id="single".')
+export default defineComponent<TestPassProps>(
+	'test-pass',
+	({ expose, first, all, watch, pass }) => {
+		const single = first(
+			'basic-number#single',
+			'Add basic-number with id="single".',
+		)
 		const group = all('basic-number.group')
 		const output = first('#output', 'Add element with id="output".')
 
 		expose({ count: 0 })
 
 		return [
-			run('count', n => {
+			watch('count', n => {
 				output.textContent = String(n)
 			}),
 			pass(single, { value: 'count' }),

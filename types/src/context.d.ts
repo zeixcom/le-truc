@@ -1,5 +1,5 @@
 import { type Cleanup, type Memo } from '@zeix/cause-effect';
-import type { Component, ComponentProps } from './component';
+import type { ComponentProps } from './component';
 import { type Fallback, type Reader } from './parsers';
 import type { UI } from './ui';
 /** @see https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md */
@@ -73,7 +73,7 @@ declare class ContextRequestEvent<T extends UnknownContext> extends Event {
  * @param {Array<keyof P>} contexts - Reactive property names to expose as context
  * @returns {Effect} Effect that installs the context-request listener and returns a cleanup function
  */
-declare const provideContexts: <P extends ComponentProps>(contexts: Array<keyof P>) => ((host: Component<P>) => Cleanup);
+declare const provideContexts: <P extends ComponentProps>(contexts: Array<keyof P>) => ((host: HTMLElement & P) => Cleanup);
 /**
  * Request a context value from an ancestor provider, returning a reactive `Memo<T>`.
  *
@@ -84,12 +84,12 @@ declare const provideContexts: <P extends ComponentProps>(contexts: Array<keyof 
  *
  * @since 0.15.0
  * @param {Context<string, () => T>} context - Context key to request
- * @param {Fallback<T, U & { host: Component<P> }>} fallback - Static value or reader function used when no provider is found
- * @returns {Reader<Memo<T>, U & { host: Component<P> }>} Reader that dispatches the request and wraps the result in a Memo
+ * @param {Fallback<T, U & { host: HTMLElement & P }>} fallback - Static value or reader function used when no provider is found
+ * @returns {Reader<Memo<T>, U & { host: HTMLElement & P }>} Reader that dispatches the request and wraps the result in a Memo
  */
 declare const requestContext: <T extends {}, P extends ComponentProps, U extends UI>(context: Context<string, () => T>, fallback: Fallback<T, U & {
-    host: Component<P>;
+    host: HTMLElement & P;
 }>) => Reader<Memo<T>, U & {
-    host: Component<P>;
+    host: HTMLElement & P;
 }>;
 export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, provideContexts, requestContext, type UnknownContext, };

@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
 
-test.describe('basic-pass: pass() helper', () => {
+test.describe('test-pass: pass() helper', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/basic-pass')
-		await page.waitForSelector('basic-pass')
+		await page.goto('http://localhost:3000/test/test-pass')
+		await page.waitForSelector('test-pass')
 	})
 
 	test('single element — initial count=0 drives child value', async ({
@@ -17,7 +17,7 @@ test.describe('basic-pass: pass() helper', () => {
 		page,
 	}) => {
 		await page.evaluate(() => {
-			const el = document.querySelector('basic-pass') as any
+			const el = document.querySelector('test-pass') as any
 			el.count = 42
 		})
 
@@ -28,7 +28,7 @@ test.describe('basic-pass: pass() helper', () => {
 		page,
 	}) => {
 		await page.evaluate(() => {
-			const el = document.querySelector('basic-pass') as any
+			const el = document.querySelector('test-pass') as any
 			el.count = 7
 		})
 
@@ -41,13 +41,13 @@ test.describe('basic-pass: pass() helper', () => {
 	}) => {
 		// Set count first so it's ready when new child connects
 		await page.evaluate(() => {
-			const el = document.querySelector('basic-pass') as any
+			const el = document.querySelector('test-pass') as any
 			el.count = 99
 		})
 
 		// Add a new group child — each() re-runs and pass activates for it
 		await page.evaluate(() => {
-			const parent = document.querySelector('basic-pass')!
+			const parent = document.querySelector('test-pass')!
 			const child = document.createElement('basic-number') as any
 			child.id = 'group3'
 			child.className = 'group'
@@ -64,7 +64,7 @@ test.describe('basic-pass: pass() helper', () => {
 	}) => {
 		// Set parent count to a different value from the child's initial value
 		await page.evaluate(() => {
-			const el = document.querySelector('basic-pass') as any
+			const el = document.querySelector('test-pass') as any
 			el.count = 55
 		})
 
@@ -75,7 +75,7 @@ test.describe('basic-pass: pass() helper', () => {
 		// slot is restored to group1's own state signal (value=100)
 		await page.evaluate(() => {
 			const child = document.querySelector('basic-number#group1')!
-			document.body.appendChild(child) // move outside basic-pass
+			document.body.appendChild(child) // move outside test-pass
 		})
 
 		// group1 is now outside the parent; its connectedCallback re-fires with

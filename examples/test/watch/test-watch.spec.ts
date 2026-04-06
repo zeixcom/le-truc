@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
 
-test.describe('basic-run: run() helper', () => {
+test.describe('test-watch: watch() helper', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/basic-run')
-		await page.waitForSelector('basic-run')
+		await page.goto('http://localhost:3000/test/test-watch')
+		await page.waitForSelector('test-watch')
 	})
 
 	test('single prop — runs handler with initial value', async ({ page }) => {
@@ -14,7 +14,7 @@ test.describe('basic-run: run() helper', () => {
 	test('single prop — re-runs when prop changes', async ({ page }) => {
 		const output = page.locator('#output')
 		await page.evaluate(() => {
-			const el = document.querySelector('basic-run') as any
+			const el = document.querySelector('test-watch') as any
 			el.count = 42
 		})
 		await expect(output).toHaveText('42')
@@ -31,13 +31,13 @@ test.describe('basic-run: run() helper', () => {
 		const combined = page.locator('#combined')
 
 		await page.evaluate(() => {
-			const el = document.querySelector('basic-run') as any
+			const el = document.querySelector('test-watch') as any
 			el.count = 7
 		})
 		await expect(combined).toHaveText('7:hello')
 
 		await page.evaluate(() => {
-			const el = document.querySelector('basic-run') as any
+			const el = document.querySelector('test-watch') as any
 			el.label = 'world'
 		})
 		await expect(combined).toHaveText('7:world')
@@ -62,7 +62,7 @@ test.describe('basic-run: run() helper', () => {
 	}) => {
 		const handlers = page.locator('#handlers')
 		await page.evaluate(() => {
-			const el = document.querySelector('basic-run') as any
+			const el = document.querySelector('test-watch') as any
 			el.count = 99
 		})
 		await expect(handlers).toHaveText('ok:99')
@@ -73,6 +73,6 @@ test.describe('basic-run: run() helper', () => {
 	}) => {
 		// We can only verify indirectly: the component mounts without error
 		// and the false guard doesn't cause any crash or unexpected side-effect.
-		await expect(page.locator('basic-run')).toBeAttached()
+		await expect(page.locator('test-watch')).toBeAttached()
 	})
 })

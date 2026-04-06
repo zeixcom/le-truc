@@ -1,8 +1,8 @@
-### Function: setAttribute()
+### ~~Function: setAttribute()~~
 
 > **setAttribute**\<`P`, `E`\>(`name`, `reactive?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
-Defined in: [src/effects/attribute.ts:47](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/effects/attribute.ts#L47)
+Defined in: [src/effects/attribute.ts:18](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/effects/attribute.ts#L18)
 
 Effect for setting an attribute on an element.
 Sets the specified attribute with security validation for unsafe values.
@@ -36,6 +36,11 @@ Reactive value bound to the attribute value (defaults to attribute name)
 [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
 
 Effect function that sets the attribute on the element
+
+#### Deprecated
+
+Use `watch('prop', value => { el.setAttribute(name, value) })` in the v1.1 factory form instead.
+`safeSetAttribute(el, name, value)` is available for security-validated attribute writes.
 
 #### Since
 

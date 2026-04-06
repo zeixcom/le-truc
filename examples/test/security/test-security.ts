@@ -21,7 +21,7 @@ defineComponent<EvilProps, LinkUI>(
 	{ src: asString() },
 	({ first }) => ({ link: first('a', 'Add an anchor element.') }),
 	() => ({
-		link: setAttribute<EvilProps, HTMLAnchorElement>('onclick', 'src'),
+		link: setAttribute('onclick', 'src'),
 	}),
 )
 
@@ -31,6 +31,6 @@ defineComponent<HrefProps, LinkUI>(
 	{ href: asString() },
 	({ first }) => ({ link: first('a', 'Add an anchor element.') }),
 	() => ({
-		link: setAttribute<HrefProps, HTMLAnchorElement>('href', 'href'),
+		link: setAttribute('href', 'href'),
 	}),
 )

@@ -1,5 +1,5 @@
 import { type Sensor } from '@zeix/cause-effect';
-import type { Component, ComponentProps } from './component';
+import type { ComponentProps } from './component';
 import { type ParserOrFallback } from './parsers';
 import type { UI } from './ui';
 type EventType<K extends string> = K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K] : Event;
@@ -81,9 +81,9 @@ declare function createEventsSensor<T extends {}, E extends Element>(target: E, 
  * @param {ParserOrFallback<T, U>} init - Initial value, static fallback, or reader function
  * @param {K} key - Key of the UI object whose element(s) to listen on
  * @param {EventHandlers<T, U, any>} events - Map of event type to handler function
- * @returns {(ui: U & { host: Component<P> }) => Sensor<T>} Reader that creates and returns the sensor
+ * @returns {(ui: U & { host: HTMLElement & P }) => Sensor<T>} Reader that creates and returns the sensor
  */
 declare function createEventsSensor<T extends {}, P extends ComponentProps, U extends UI, K extends keyof U>(init: ParserOrFallback<T, U>, key: K, events: EventHandlers<T, U, any>): (ui: U & {
-    host: Component<P>;
+    host: HTMLElement & P;
 }) => Sensor<T>;
 export { createEventsSensor, type EventHandlers, type EventHandlersV2, type EventType, type SensorEventHandler, type SensorEventHandlerV2, };

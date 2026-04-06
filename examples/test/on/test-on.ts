@@ -1,13 +1,13 @@
-import { type Component, defineComponent } from '../../..'
+import { defineComponent } from '../../..'
 
-export type BasicOnProps = {
+export type TestOnProps = {
 	count: number
 	focused: boolean
 }
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-on': Component<BasicOnProps>
+		'test-on': HTMLElement & TestOnProps
 	}
 }
 
@@ -16,9 +16,9 @@ declare global {
  * Exercises: Element target, Memo delegation, non-bubbling event per-element fallback,
  * and handler return value → batch host update.
  */
-export default defineComponent<BasicOnProps>(
-	'basic-on',
-	({ expose, first, all, on, run }) => {
+export default defineComponent<TestOnProps>(
+	'test-on',
+	({ expose, first, all, on, watch }) => {
 		const btn = first('button', 'Add a <button> element.')
 		const inputs = all('input')
 		const output = first('#output', 'Add element with id="output".')
@@ -31,7 +31,7 @@ export default defineComponent<BasicOnProps>(
 			on(btn, 'click', () => ({ count: 1 })),
 
 			// run to reflect count in DOM
-			run('count', n => {
+			watch('count', n => {
 				output.textContent = String(n)
 			}),
 
@@ -44,7 +44,7 @@ export default defineComponent<BasicOnProps>(
 			on(inputs, 'focus', () => ({ focused: true })),
 
 			// run to reflect focused in DOM
-			run('focused', f => {
+			watch('focused', f => {
 				focusLog.textContent = f ? 'focused' : 'blurred'
 			}),
 		]

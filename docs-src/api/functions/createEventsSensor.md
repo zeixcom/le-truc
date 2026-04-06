@@ -1,10 +1,64 @@
 ### Function: createEventsSensor()
 
+#### Call Signature
+
+> **createEventsSensor**\<`T`, `E`\>(`target`, `init`, `events`): [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
+
+Defined in: [src/events.ts:85](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/events.ts#L85)
+
+Create a `Sensor<T>` driven by DOM events on a target element (v1.1 form).
+
+Use this inside `expose()` as a property initializer when a single reactive
+value should be derived from events on a specific element. The listener is
+attached directly to `target`; the handler receives `{ event, target, prev }`.
+
+##### Type Parameters
+
+###### T
+
+`T` *extends* `object`
+
+###### E
+
+`E` *extends* `Element`
+
+##### Parameters
+
+###### target
+
+`E`
+
+The element to listen on
+
+###### init
+
+`T`
+
+Initial value of the sensor
+
+###### events
+
+[`EventHandlersV2`](../type-aliases/EventHandlersV2.md)\<`T`, `E`\>
+
+Map of event type to handler function
+
+##### Returns
+
+[`Sensor`](../type-aliases/Sensor.md)\<`T`\>
+
+Sensor that updates when matching events fire on target
+
+##### Since
+
+1.1
+
+#### Call Signature
+
 > **createEventsSensor**\<`T`, `P`, `U`, `K`\>(`init`, `key`, `events`): (`ui`) => [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-Defined in: [src/events.ts:67](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/events.ts#L67)
+Defined in: [src/events.ts:109](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/events.ts#L109)
 
-Create a `Reader` that produces a `Sensor<T>` driven by DOM events on the host.
+Create a `Reader` that produces a `Sensor<T>` driven by DOM events (v1.0 form).
 
 Use this as a reactive property initializer when a single state value should be
 derived from multiple event types (e.g. combining `click` and `keyup` into a
@@ -15,50 +69,50 @@ Each handler receives `{ event, ui, target, prev }` and returns the new value,
 or `void`/`Promise<void>` to leave the value unchanged. Passive events are
 deferred via `schedule()`.
 
-#### Type Parameters
+##### Type Parameters
 
-##### T
+###### T
 
 `T` *extends* `object`
 
-##### P
+###### P
 
 `P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
 
-##### U
+###### U
 
 `U` *extends* [`UI`](../type-aliases/UI.md)
 
-##### K
+###### K
 
 `K` *extends* `string` \| `number` \| `symbol`
 
-#### Parameters
+##### Parameters
 
-##### init
+###### init
 
 [`ParserOrFallback`](../type-aliases/ParserOrFallback.md)\<`T`, `U`\>
 
 Initial value, static fallback, or reader function
 
-##### key
+###### key
 
 `K`
 
 Key of the UI object whose element(s) to listen on
 
-##### events
+###### events
 
-[`EventHandlers`](../type-aliases/EventHandlers.md)\<`T`, `U`, [`ElementFromKey`](../type-aliases/ElementFromKey.md)\<`U`, `K`\>\>
+[`EventHandlers`](../type-aliases/EventHandlers.md)\<`T`, `U`, `any`\>
 
 Map of event type to handler function
 
-#### Returns
+##### Returns
 
 Reader that creates and returns the sensor
 
 (`ui`) => [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-#### Since
+##### Since
 
 0.16.0

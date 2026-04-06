@@ -1,6 +1,6 @@
 import {
 	asMethod,
-	type Component,
+	bindText,
 	createEventsSensor,
 	createMemo,
 	defineComponent,
@@ -16,29 +16,29 @@ export type FormTextboxProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-textbox': Component<FormTextboxProps>
+		'form-textbox': HTMLElement & FormTextboxProps
 	}
 }
 
 export default defineComponent<FormTextboxProps>(
 	'form-textbox',
-	({ expose, first, host, on, run }) => {
+	({ expose, first, host, on, watch }) => {
 		const textbox = first(
 			'input, textarea',
 			'Add a native input or textarea as descendant element.',
-		) as HTMLInputElement | HTMLTextAreaElement
+		)
 		const clearBtn = first('button.clear')
 		const errorEl = first('.error')
-		const description = first('.description')
+		const descriptionEl = first('.description')
 
 		const errorId = errorEl?.id
-		const descriptionId = description?.id
+		const descriptionId = descriptionEl?.id
 
 		// Reactive description: tracks remaining character count if template is present
 		const descriptionMemo =
-			description && textbox.maxLength > 0 && description.dataset.remaining
+			descriptionEl && textbox.maxLength > 0 && descriptionEl.dataset.remaining
 				? createMemo(() =>
-						description.dataset.remaining!.replace(
+						descriptionEl.dataset.remaining!.replace(
 							'${n}',
 							String(textbox.maxLength - host.length),
 						),
@@ -51,7 +51,7 @@ export default defineComponent<FormTextboxProps>(
 				input: ({ target }) => target.value.length,
 			}),
 			error: '',
-			description: descriptionMemo ?? description?.textContent?.trim() ?? '',
+			description: descriptionMemo ?? descriptionEl?.textContent?.trim() ?? '',
 			clear: asMethod(() => {
 				host.clear = () => {
 					host.value = ''
@@ -66,7 +66,7 @@ export default defineComponent<FormTextboxProps>(
 		})
 
 		// Set aria-describedby once (static relationship)
-		if (description && descriptionId)
+		if (descriptionEl && descriptionId)
 			textbox.setAttribute('aria-describedby', descriptionId)
 
 		return [
@@ -77,10 +77,10 @@ export default defineComponent<FormTextboxProps>(
 					error: textbox.validationMessage,
 				}
 			}),
-			run('value', value => {
+			watch('value', value => {
 				textbox.value = value
 			}),
-			run('error', error => {
+			watch('error', error => {
 				textbox.ariaInvalid = String(!!error)
 				if (error && errorId) {
 					textbox.setAttribute('aria-errormessage', errorId)
@@ -89,21 +89,15 @@ export default defineComponent<FormTextboxProps>(
 				}
 			}),
 			clearBtn
-				&& run('length', length => {
+				&& watch('length', length => {
 					clearBtn.hidden = !length
 				}),
 			clearBtn
 				&& on(clearBtn, 'click', () => {
 					host.clear()
 				}),
-			errorEl
-				&& run('error', text => {
-					errorEl.textContent = text
-				}),
-			description
-				&& run('description', text => {
-					description.textContent = text
-				}),
+			errorEl && watch('error', bindText(errorEl)),
+			descriptionEl && watch('description', bindText(descriptionEl)),
 		]
 	},
 )

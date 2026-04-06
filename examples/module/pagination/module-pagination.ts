@@ -1,4 +1,4 @@
-import { type Component, defineComponent } from '../../..'
+import { bindText, defineComponent } from '../../..'
 import { asClampedInteger } from '../../_common/asClampedInteger'
 
 export type ModulePaginationProps = {
@@ -8,13 +8,13 @@ export type ModulePaginationProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'module-pagination': Component<ModulePaginationProps>
+		'module-pagination': HTMLElement & ModulePaginationProps
 	}
 }
 
 export default defineComponent<ModulePaginationProps>(
 	'module-pagination',
-	({ expose, first, host, on, run }) => {
+	({ expose, first, host, on, watch }) => {
 		const input = first(
 			'input',
 			'Add an <input[type="number"]> to enter the page number to go to.',
@@ -39,7 +39,7 @@ export default defineComponent<ModulePaginationProps>(
 		})
 
 		return [
-			run(['value', 'max'], () => {
+			watch(['value', 'max'], () => {
 				host.hidden = host.max <= 1
 				host.setAttribute('value', String(host.value))
 				host.setAttribute('max', String(host.max))
@@ -65,15 +65,13 @@ export default defineComponent<ModulePaginationProps>(
 				input.valueAsNumber = clamped
 				host.value = clamped
 			}),
-			run(['value', 'max'], () => {
-				input.value = String(host.value)
-				input.max = String(host.max)
-			}),
 			on(prev, 'click', () => {
 				host.value--
 				if (host.value <= 1) next.focus()
 			}),
-			run(['value', 'max'], () => {
+			watch(['value', 'max'], () => {
+				input.value = String(host.value)
+				input.max = String(host.max)
 				prev.disabled = host.value <= 1
 				next.disabled = host.value >= host.max
 			}),
@@ -81,14 +79,8 @@ export default defineComponent<ModulePaginationProps>(
 				host.value++
 				if (host.value >= host.max) prev.focus()
 			}),
-			valueEl
-				&& run('value', v => {
-					valueEl.textContent = String(v)
-				}),
-			maxEl
-				&& run('max', m => {
-					maxEl.textContent = String(m)
-				}),
+			valueEl && watch('value', bindText(valueEl)),
+			maxEl && watch('max', bindText(maxEl)),
 		]
 	},
 )

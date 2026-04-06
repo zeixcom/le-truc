@@ -2,7 +2,7 @@
 
 > **Effect**\<`P`, `E`\> = (`host`, `target`) => [`MaybeCleanup`](MaybeCleanup.md)
 
-Defined in: [src/effects.ts:27](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/effects.ts#L27)
+Defined in: [src/effects.ts:46](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/effects.ts#L46)
 
 A single effect function bound to a host component and a target element.
 Returned by built-in effect factories (`setText`, `setAttribute`, `on`, etc.)
@@ -23,7 +23,7 @@ component disconnects or when the target element is removed.
 
 ##### host
 
-[`Component`](Component.md)\<`P`\>
+`HTMLElement` & `P`
 
 ##### target
 

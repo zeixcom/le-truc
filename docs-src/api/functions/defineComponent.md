@@ -2,26 +2,25 @@
 
 #### Call Signature
 
-> **defineComponent**\<`P`, `U`\>(`name`, `factory`): [`Component`](../type-aliases/Component.md)\<`P`\>
+> **defineComponent**\<`P`\>(`name`, `factory`): `HTMLElement` & `P`
 
-Defined in: [src/component.ts:145](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/component.ts#L145)
+Defined in: [src/component.ts:268](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/component.ts#L268)
 
-Define and register a reactive custom element using the 2-param factory form.
+Define and register a reactive custom element using the v1.1 factory form.
 
-The factory receives `{ first, all, host }` at connect time and returns `{ ui, props?, effects? }`.
-UI elements, props initializers, and effects share a single closure scope — no `ui` object is
-passed between functions. Components defined this way do not use `observedAttributes`; reactive
-state is managed entirely through the signal-backed property interface.
+The factory receives a `FactoryContext` at connect time: query helpers (`first`, `all`),
+the `host` element, and `expose()` for declaring reactive properties. It returns a flat
+array of effect descriptors created by helpers like `watch()`, `on()`, `each()`, `pass()`,
+and `provideContexts()`.
+
+Effects activate after dependency resolution — child custom elements are guaranteed to
+be defined before any descriptor runs.
 
 ##### Type Parameters
 
 ###### P
 
 `P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
-
-###### U
-
-`U` *extends* [`UI`](../type-aliases/UI.md) = \{ \}
 
 ##### Parameters
 
@@ -33,13 +32,13 @@ Custom element name (must contain a hyphen and start with a lowercase letter)
 
 ###### factory
 
-`ComponentFactory`\<`P`, `U`\>
+(`context`) => [`FactoryResult`](../type-aliases/FactoryResult.md)
 
-Factory function that queries elements and returns ui, props, and effects
+Factory function that queries elements, calls expose(), and returns effect descriptors
 
 ##### Returns
 
-[`Component`](../type-aliases/Component.md)\<`P`\>
+`HTMLElement` & `P`
 
 ##### Since
 
@@ -51,11 +50,11 @@ If the component name is not a valid custom element name
 
 #### Call Signature
 
-> **defineComponent**\<`P`, `U`\>(`name`, `props?`, `select?`, `setup?`): [`Component`](../type-aliases/Component.md)\<`P`\>
+> **defineComponent**\<`P`, `U`\>(`name`, `props?`, `select?`, `setup?`): `HTMLElement` & `P`
 
-Defined in: [src/component.ts:164](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/component.ts#L164)
+Defined in: [src/component.ts:289](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/component.ts#L289)
 
-Define and register a reactive custom element.
+Define and register a reactive custom element using the v1.0 4-param form.
 
 Calls `customElements.define()` and returns the registered class.
 Reactive properties are initialised in `connectedCallback` and torn down in `disconnectedCallback`.
@@ -98,7 +97,12 @@ Receives the frozen UI object (plus `host`) and returns effects keyed by UI elem
 
 ##### Returns
 
-[`Component`](../type-aliases/Component.md)\<`P`\>
+`HTMLElement` & `P`
+
+##### Deprecated
+
+Use the v1.1 factory form `defineComponent(name, factory)` with `expose()` and effect descriptors instead.
+The 4-param form remains fully supported for components that require attribute-reactive `observedAttributes`.
 
 ##### Since
 

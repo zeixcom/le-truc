@@ -1,9 +1,4 @@
-import {
-	asInteger,
-	type Component,
-	createEffect,
-	defineComponent,
-} from '../../..'
+import { asInteger, createEffect, defineComponent, each } from '../../..'
 
 export type ModuleCarouselProps = {
 	index: number
@@ -11,7 +6,7 @@ export type ModuleCarouselProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'module-carousel': Component<ModuleCarouselProps>
+		'module-carousel': HTMLElement & ModuleCarouselProps
 	}
 }
 
@@ -20,10 +15,10 @@ const clamp = (index: number, total: number) =>
 
 export default defineComponent<ModuleCarouselProps>(
 	'module-carousel',
-	({ all, each, expose, first, host, on, run }) => {
-		const dots = all<HTMLButtonElement>('button[role="tab"]')
-		const slides = all<HTMLElement>('[role="tabpanel"]')
-		const buttons = all<HTMLElement>('nav button')
+	({ all, expose, first, host, on, watch }) => {
+		const dots = all('button[role="tab"]')
+		const slides = all('[role="tabpanel"]')
+		const buttons = all('nav button')
 		const prev = first('button.prev', 'Add a previous button')
 		const next = first('button.next', 'Add a next button')
 
@@ -84,7 +79,7 @@ export default defineComponent<ModuleCarouselProps>(
 				}),
 
 			// Prev button: hide on first slide; move focus to next when hidden
-			run('index', () => {
+			watch('index', () => {
 				prev.hidden = host.index === 0
 			}),
 			on(prev, 'click', () => {
@@ -94,7 +89,7 @@ export default defineComponent<ModuleCarouselProps>(
 			}),
 
 			// Next button: hide on last slide; move focus to prev when hidden
-			run('index', () => {
+			watch('index', () => {
 				next.hidden = host.index === slides.get().length - 1
 			}),
 			on(next, 'click', () => {
@@ -108,7 +103,7 @@ export default defineComponent<ModuleCarouselProps>(
 				host.index = parseInt(target.dataset.index || '0')
 			}),
 			each(dots, dot =>
-				run('index', () => {
+				watch('index', () => {
 					dot.ariaSelected = String(dot.dataset.index === String(host.index))
 					dot.tabIndex = dot.dataset.index === String(host.index) ? 0 : -1
 				}),
@@ -142,7 +137,7 @@ export default defineComponent<ModuleCarouselProps>(
 
 			// Active slide indicator
 			each(slides, slide =>
-				run('index', () => {
+				watch('index', () => {
 					slide.ariaCurrent = String(slide.id === slides.get()[host.index]!.id)
 				}),
 			),

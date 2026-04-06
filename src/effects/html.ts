@@ -15,7 +15,7 @@ type DangerouslySetInnerHTMLOptions = {
  * Effect for setting the inner HTML of an element with optional Shadow DOM support.
  * Provides security options for script execution and shadow root creation.
  *
- * @deprecated Use `run()` with imperative DOM updates in the v1.1 factory form instead.
+ * @deprecated Use `watch()` with imperative DOM updates in the v1.1 factory form instead.
  * For innerHTML with scheduling, call the effect directly as a thunk:
  * `() => dangerouslySetInnerHTML(reactive, opts)(host as any, element)`.
  * @since 0.11.0

@@ -1,42 +1,38 @@
 import {
 	asMethod,
 	batch,
-	type Component,
+	bindText,
 	createEventsSensor,
 	createMemo,
 	createState,
 	defineComponent,
 } from '../../..'
-import type { FormListboxProps } from '../listbox/form-listbox'
 
 export type FormComboboxProps = {
 	value: string
 	readonly length: number
 	error: string
 	description: string
-	readonly clear: () => void
+	clear: () => void
 }
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-combobox': Component<FormComboboxProps>
+		'form-combobox': HTMLElement & FormComboboxProps
 	}
 }
 
 export default defineComponent<FormComboboxProps>(
 	'form-combobox',
-	({ expose, first, host, on, pass, run }) => {
-		const textbox = first('input', 'Needed to enter value.') as HTMLInputElement
-		const listbox = first<Component<FormListboxProps>>(
-			'form-listbox',
-			'Needed to display options.',
-		)
+	({ expose, first, host, on, pass, watch }) => {
+		const textbox = first('input', 'Needed to enter value.')
+		const listbox = first('form-listbox', 'Needed to display options.')
 		const clearBtn = first('button.clear')
 		const errorEl = first('form-combobox > .error')
-		const description = first('.description')
+		const descriptionEl = first('.description')
 
 		const errorId = errorEl?.id
-		const descriptionId = description?.id
+		const descriptionId = descriptionEl?.id
 
 		const showPopup = createState(false)
 		const isExpanded = createMemo(
@@ -49,9 +45,9 @@ export default defineComponent<FormComboboxProps>(
 				input: ({ target }) => target.value.length,
 			}),
 			error: '',
-			description: description?.textContent?.trim() ?? '',
+			description: descriptionEl?.textContent?.trim() ?? '',
 			clear: asMethod(() => {
-				;(host as any).clear = () => {
+				host.clear = () => {
 					host.value = ''
 					textbox.value = ''
 					textbox.setCustomValidity('')
@@ -64,12 +60,12 @@ export default defineComponent<FormComboboxProps>(
 		})
 
 		// Set static aria attributes
-		if (description && descriptionId) {
+		if (descriptionEl && descriptionId) {
 			textbox.setAttribute('aria-describedby', descriptionId)
 		}
 
 		return [
-			run('value', value => {
+			watch('value', value => {
 				host.setAttribute('value', value)
 			}),
 			on(host, 'keyup', ({ key }: KeyboardEvent) => {
@@ -79,7 +75,7 @@ export default defineComponent<FormComboboxProps>(
 				}
 				if (key === 'Delete') host.clear()
 			}),
-			run('error', error => {
+			watch('error', error => {
 				textbox.ariaInvalid = String(!!error)
 				if (error && errorId) {
 					textbox.setAttribute('aria-errormessage', errorId)
@@ -87,7 +83,7 @@ export default defineComponent<FormComboboxProps>(
 					textbox.removeAttribute('aria-errormessage')
 				}
 			}),
-			run(isExpanded, expanded => {
+			watch(isExpanded, expanded => {
 				textbox.ariaExpanded = String(expanded)
 			}),
 			on(textbox, 'input', () => {
@@ -105,7 +101,7 @@ export default defineComponent<FormComboboxProps>(
 					if (isExpanded.get()) listbox.options[0]?.focus()
 				}
 			}),
-			run(isExpanded, expanded => {
+			watch(isExpanded, expanded => {
 				listbox.hidden = !expanded
 			}),
 			pass(listbox, {
@@ -124,21 +120,15 @@ export default defineComponent<FormComboboxProps>(
 				}
 			}),
 			clearBtn
-				&& run('length', length => {
+				&& watch('length', length => {
 					clearBtn.hidden = !length
 				}),
 			clearBtn
 				&& on(clearBtn, 'click', () => {
 					host.clear()
 				}),
-			errorEl
-				&& run('error', text => {
-					errorEl.textContent = text
-				}),
-			description
-				&& run('description', text => {
-					description.textContent = text
-				}),
+			errorEl && watch('error', bindText(errorEl)),
+			descriptionEl && watch('description', bindText(descriptionEl)),
 		]
 	},
 )

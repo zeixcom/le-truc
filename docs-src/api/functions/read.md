@@ -1,8 +1,8 @@
-### Function: read()
+### ~~Function: read()~~
 
 > **read**\<`T`, `U`\>(`reader`, `fallback`): [`Reader`](../type-aliases/Reader.md)\<`T`, `U`\>
 
-Defined in: [src/parsers.ts:148](https://github.com/zeixcom/le-truc/blob/8116637b61338698dc385b85f1753152b3bdc512/src/parsers.ts#L148)
+Defined in: [src/parsers.ts:150](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/parsers.ts#L150)
 
 Compose a loose reader with a parser or fallback to produce a typed `Reader<T>`.
 
@@ -42,6 +42,11 @@ Parser used when the reader returns a string, or static/reader fallback
 [`Reader`](../type-aliases/Reader.md)\<`T`, `U`\>
 
 A typed reader that always returns `T`
+
+#### Deprecated
+
+Use a closure capturing the queried DOM element directly inside the v1.1 factory,
+e.g. `value: asInteger()({} as any, input.value)` or a Reader `() => parseInt(input.value, 10)`.
 
 #### Since
 
