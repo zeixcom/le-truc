@@ -1,123 +1,170 @@
 <overview>
-The Le Truc component model: both forms of `defineComponent`, the reactivity flow, and the signal types re-exported from `@zeix/cause-effect`.
+The Le Truc component model: the factory form of `defineComponent`, the reactivity flow, and the signal types re-exported from `@zeix/cause-effect`.
 </overview>
 
-## `defineComponent` — two forms
-
-### 2-param factory form (preferred, since 1.1)
+## `defineComponent` — factory form (v2.0)
 
 ```typescript
-defineComponent<Props, UI>(name, factory)
+defineComponent<P extends ComponentProps>(name, factory)
 ```
 
 | Argument | Type | Purpose |
 |---|---|---|
 | `name` | `string` | Tag name — lowercase, must contain a hyphen |
-| `factory` | `({ first, all, host }) => { ui, props?, effects? }` | Called at connect time; returns UI element map, optional prop initializers, and optional effects |
+| `factory` | `(context: FactoryContext<P>) => FactoryResult` | Called at connect time; queries elements, calls `expose()`, returns effect descriptors |
 
-The factory receives `{ first, all, host }` at connect time. All three return values share the same closure, so UI elements can be referenced directly — no `ui` object passed between functions.
+The factory receives a `FactoryContext<P>` with these helpers:
+
+| Helper | Purpose |
+|---|---|
+| `first(selector, required?)` | Query a single descendant; throws `MissingElementError` if `required` string is given and no match |
+| `all(selector)` | Return a `Memo<E[]>` backed by a lazy `MutationObserver` |
+| `host` | The component host element, typed as `HTMLElement & P` |
+| `expose(props)` | Declare reactive properties — call once, imperatively, inside the factory body |
+| `watch(source, handler)` | Create a reactive effect descriptor driven by a prop name, signal, or thunk |
+| `on(target, type, handler, options?)` | Create an event listener descriptor |
+| `pass(target, props)` | Create a slot-swap descriptor for a Le Truc child component |
+| `provideContexts(contexts)` | Create a context-provider descriptor |
+| `requestContext(context, fallback)` | Return a `Memo<T>` for use inside `expose()` |
 
 ```typescript
-defineComponent<MyProps, MyUI>('my-component', ({ first, host }) => {
-  const button = first('button', 'Add a native <button>.')
+defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) => {
+  // 1. Query descendants
+  const button = first('button', 'Add a native <button> descendant.')
   const label = first('span.label')
-  return {
-    ui: { button, label },
-    props: {
-      disabled: read(() => button.disabled, false),
-      label: read(() => label.textContent ?? '', ''),
-    },
-    effects: {
-      button: setProperty('disabled'),
-      label: setText('label'),
-    },
-  }
+
+  // 2. Declare reactive props
+  expose({
+    disabled: asBoolean(),
+    label: asString(label?.textContent ?? button.textContent ?? ''),
+  })
+
+  // 3. Return flat array of effect descriptors
+  return [
+    on(button, 'click', () => { /* ... */ }),
+    watch('disabled', bindProperty(button, 'disabled')),
+    label && watch('label', bindText(label)),  // falsy guard for optional element
+  ]
 })
 ```
 
-**Key constraint:** Components defined with the factory form have `observedAttributes = []`. Parsers in the `props` map are still called at connect time, so HTML authors can configure the component via attributes in server-rendered markup — but subsequent attribute changes on a live document do not trigger re-parsing. After connect, reactive state flows through the property interface only.
+**Key constraints:**
+- `expose()` must be called before any signal access that reads `host.propName`
+- Components always have `static observedAttributes = []`. Parsers in `expose()` are called **once at connect time** — HTML authors configure via attributes in server-rendered markup, but attribute changes after connect are not re-parsed. Reactive state flows through the property interface only.
+- The factory result type is `Array<EffectDescriptor | false | undefined>`. Falsy values are filtered before activation — enabling the `element && watch(...)` conditional pattern.
 
-### 4-param form (use when attribute changes must be reactive)
+## Props initializers in `expose()`
+
+| Initializer kind | How to recognize | Behavior |
+|---|---|---|
+| Parser | Branded with `asParser()` | Called with `host.getAttribute(key)` at connect time; result becomes the initial signal value |
+| `MethodProducer` | Branded with `asMethod()` | The function IS the method — installed as `host[key] = fn` |
+| `Signal` | Any `Signal<T>` | Used directly as the backing signal |
+| Static value | Anything else (`string`, `number`, `boolean`, `[]`, …) | Wrapped in `createState()` |
+| `MemoCallback<T>` | `() => T` (unbranded thunk) | Wrapped in `createComputed()` — reactive derived value |
+
+Note: There is no `Reader` type in v2.0. Read initial DOM values directly before calling `expose()`:
 
 ```typescript
-defineComponent<Props, UI>(name, props, select, setup)
+expose({
+  count: asInteger(parseInt(countEl.textContent || '0') || 0),
+  value: textbox.value,
+  label: asString(labelEl?.textContent ?? ''),
+})
 ```
 
-| Argument | Type | Purpose |
-|---|---|---|
-| `name` | `string` | Tag name — lowercase, must contain a hyphen |
-| `props` | `Record<string, Initializer>` | Reactive property definitions; parsers here auto-populate `observedAttributes` |
-| `select` | `({ first, all }) => UI` | Queries the host's subtree; returns named DOM element references |
-| `setup` | `(ui) => Effects` | Returns reactive effects keyed by UI element name |
+## `watch(source, handler | handlers)` — reactive effects
 
-The `ui` object passed to `setup` contains everything from `select` plus `host` (the element itself).
-
-Use the 4-param form when attribute changes on a live document must reactively update component state (e.g., a server streaming new attribute values, or JS calling `setAttribute` to drive the component). Any prop whose initializer is a `Parser` is automatically added to `observedAttributes`.
-
-HTML authors can still configure factory-form components via attributes in server-rendered markup — the parser reads the attribute once at connect time.
-
-### Choosing between the two forms
-
-| Scenario | Form |
-|---|---|
-| New component (default choice) | 2-param factory (preferred) |
-| HTML authors configure the component via attributes in markup | Either — factory reads attributes once at connect time |
-| Attribute changes on a live document must drive reactive updates | 4-param |
-
-## Props initializers (both forms)
-
-| Initializer kind | How to recognize | 4-param | 2-param factory |
-|---|---|---|---|
-| Parser | Wrapped with `asParser()`; takes `(ui, attrValue)` | Called at connect + re-runs on every attribute change | Called once at connect time only |
-| Reader | One-argument function (not `asParser`-wrapped) | Called once at connect time | Called once at connect time |
-| MethodProducer | Wrapped with `asMethod()` | Installs a method on `host` | Installs a method on `host` |
-| Signal | Already a `Signal<T>` | Re-use an existing signal | Re-use an existing signal |
-| Static value | Anything else | Fixed initial value | Fixed initial value |
-
-## Effects return map
-
-`setup` (4-param) or `effects` (factory return) is a plain object. Keys are UI element names plus `host`. Values are one Effect or an array of Effects.
+`watch` returns an `EffectDescriptor`. It drives a reactive effect from an explicitly declared source — only the source triggers re-runs, not incidental reads inside the handler.
 
 ```typescript
-{
-  button: setProperty('disabled'),                           // one effect
-  label: [setText('label'), toggleClass('active', 'flag')], // multiple effects
-  host: on('keydown', handler),                             // effect on the host
+// String prop name — reads host.disabled
+watch('disabled', bindProperty(button, 'disabled'))
+
+// String prop name — custom handler
+watch('value', value => {
+  textbox.value = value
+})
+
+// Signal source
+watch(myMemo, bindText(el))
+
+// Thunk source — all signals read inside are tracked (pure phase)
+watch(() => host.count * 2, bindText(el))
+
+// WatchHandlers for nil/err branches
+watch('href', bindAttribute(link, 'href'))  // bindAttribute returns WatchHandlers<string | boolean>
+
+// Multiple sources (array) — handler receives array of values
+watch(['a', 'b'], ([a, b]) => { /* ... */ })
+```
+
+`WatchHandlers<T>` is accepted as the second argument in place of a plain function:
+```typescript
+type WatchHandlers<T> = {
+  ok: (value: T) => MaybeCleanup
+  err?: (error: Error) => MaybeCleanup
+  nil?: () => MaybeCleanup
 }
 ```
+
+`bindAttribute`, `bindStyle`, and `dangerouslySetInnerHTML` return `WatchHandlers` — use them directly as the second argument to `watch`.
+
+## `on(target, type, handler, options?)` — event listeners
+
+`on` returns an `EffectDescriptor`. The handler receives `(event, element)`.
+
+```typescript
+// Single element
+on(button, 'click', (event, el) => {
+  return { count: host.count + 1 }  // updates host in a batch()
+})
+
+// Return void for side-effects only
+on(input, 'input', () => {
+  analytics.track('input')
+})
+
+// Memo target — event delegation for bubbling events
+on(allItems, 'click', (event, item) => {
+  return { selectedId: item.dataset.id }
+})
+```
+
+Returning `{ prop: value }` applies all entries to `host` in a `batch()`. Returning `void` is a no-op.
 
 ## Reactivity flow
 
 ```
-(4-param only)
-attribute change
+attribute at connect time
       ↓
-   parser(ui, attrValue)
+   parser(attrValue)              ← called via expose() at connect time only
       ↓
-   host.prop = parsed value        ← Signal<T> backed by a Slot
+   host.prop = parsed value       ← Signal<T> backed by a Slot
 
-(both forms)
 event handler or external set
       ↓
-   host.prop = new value           ← Signal<T> backed by a Slot
+   host.prop = new value          ← Signal<T> backed by a Slot
       ↓
-   effect reads host.prop          ← registers dependency automatically
+   watch(source, handler)         ← re-runs when source changes
+      ↓
+   handler(value)                 ← calls bind*(el) or custom logic
       ↓
    DOM update on target element
       ↓
-   event handler fires
+   on(el, type, handler) fires
       ↓
-   { prop: value } returned        ← or host.prop = value directly
+   { prop: value } returned       ← or host.prop = value directly
       ↓
-   signal.set(value) → effect re-runs
+   signal.set(value) → watch re-runs
 ```
 
-Key timing: effects run after all child custom elements in the subtree are defined (or after a 200ms timeout).
+Key timing: effects activate after all child custom elements in the subtree are defined (or after a 200ms timeout).
 
 ## `undefined` vs `null` from effects
 
 - `undefined` — restore the original DOM value captured at setup time (not blank/null)
-- `null` — delete the DOM value (remove the attribute, remove the style property)
+- `null` — not a valid signal generic (`T extends {}`) — use fallback values or wrapper types
 
 ## Re-exported signal types
 

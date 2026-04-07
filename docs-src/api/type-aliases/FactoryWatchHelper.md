@@ -1,14 +1,18 @@
 ### Type Alias: FactoryWatchHelper\<P\>
 
-> **FactoryWatchHelper**\<`P`\> = \{\<`K`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`K`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); (`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \}
+> **FactoryWatchHelper**\<`P`\> = \{\<`K`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`K`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); (`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \}
 
-Defined in: [src/effects.ts:81](https://github.com/zeixcom/le-truc/blob/6e56893b2946c17dd4fe36c76f1a09d8d1d02488/src/effects.ts#L81)
+Defined in: [src/effects.ts:88](https://github.com/zeixcom/le-truc/blob/26a8f71243082cdb967941bc1640290db2bf1985/src/effects.ts#L88)
 
 The `watch` helper type in `FactoryContext`.
 
-Drives a reactive effect from a signal source (property name, Signal, or array).
-Only the declared sources trigger re-runs — incidental reads inside the handler
-are not tracked. Returns an `EffectDescriptor`.
+Drives a reactive effect from a signal source (property name, Signal, thunk,
+or array). Only the declared sources trigger re-runs — incidental reads inside
+the handler are not tracked. Returns an `EffectDescriptor`.
+
+Thunk form `() => T` is wrapped in `createComputed`, so all signals read inside
+it are tracked in the pure phase — useful for deriving or transforming values
+before the side-effectful handler runs.
 
 #### Type Parameters
 
@@ -114,13 +118,61 @@ are not tracked. Returns an `EffectDescriptor`.
 
 #### Call Signature
 
+> \<`T`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md)
+
+##### Type Parameters
+
+###### T
+
+`T` *extends* `object`
+
+##### Parameters
+
+###### source
+
+() => `T` \| `Promise`\<`T`\> \| `null` \| `undefined`
+
+###### handler
+
+(`value`) => [`MaybeCleanup`](MaybeCleanup.md)
+
+##### Returns
+
+[`EffectDescriptor`](EffectDescriptor.md)
+
+#### Call Signature
+
+> \<`T`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md)
+
+##### Type Parameters
+
+###### T
+
+`T` *extends* `object`
+
+##### Parameters
+
+###### source
+
+() => `T` \| `Promise`\<`T`\> \| `null` \| `undefined`
+
+###### handlers
+
+[`WatchHandlers`](WatchHandlers.md)\<`T`\>
+
+##### Returns
+
+[`EffectDescriptor`](EffectDescriptor.md)
+
+#### Call Signature
+
 > (`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md)
 
 ##### Parameters
 
 ###### source
 
-(`string` \| [`Signal`](Signal.md)\<`any`\>)[]
+[`Reactive`](Reactive.md)\<\{ \}, `P`\>[]
 
 ###### handler
 

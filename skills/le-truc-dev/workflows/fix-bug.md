@@ -9,7 +9,7 @@ Read references/cause-effect-integration.md if the issue could be in signal prop
 
 Read references/non-obvious.md. Many apparent bugs are actually correct behavior that is surprising:
 
-- Parser detection falls back to `fn.length >= 2` — default params or destructuring will produce false positives/negatives
+- `isParser()` checks only for `PARSER_BRAND` — unbranded functions are NOT treated as parsers
 - `pass()` is Le Truc-only; using it on non-Le-Truc elements silently does nothing
 - `undefined` from a reader restores the original DOM value — it does not clear/null it
 - `all()` MutationObserver is lazy — only active when the Memo has a reactive reader
@@ -30,14 +30,14 @@ Use references/source-map.md to find the file. Read it fully before changing any
 
 ## Step 4: Trace through the code
 
-For effect bugs — trace through `updateElement` in `src/effects.ts`:
-- Is `fallback` captured correctly at setup time?
-- Is `resolveReactive` resolving the right value?
-- Is `undefined` vs `null` handling correct?
+For effect bugs — trace through `makeWatch` / `makeOn` / `makePass` in `src/effects.ts` and `src/events.ts`:
+- Is the `EffectDescriptor` included in the factory return array?
+- Is the source signal correctly resolved by `toSignal()`?
+- Is the `bind*` handler receiving the right element?
 
 For parser bugs — trace through `isParser` in `src/parsers.ts`:
 - Is the parser branded with `PARSER_BRAND`?
-- Is `fn.length >= 2` reliable for this parser?
+- Did `asParser()` get called to wrap the custom parser?
 
 For signal propagation bugs — read references/cause-effect-integration.md, then consider escalating to the `cause-effect-dev` skill if the issue is in the reactive graph itself.
 
@@ -47,7 +47,7 @@ For timing bugs:
 
 ## Step 5: Fix
 
-Write the smallest fix. Avoid changing unrelated behavior. If the fix touches `updateElement` or signal lifecycle, check that the cause-effect ownership model is preserved (every `createEffect` inside a `createScope`).
+Write the smallest fix. Avoid changing unrelated behavior. If the fix touches `watch`/`makeWatch` or signal lifecycle, check that the cause-effect ownership model is preserved (every `createEffect` inside a `createScope`).
 
 ## Step 6: Verify
 

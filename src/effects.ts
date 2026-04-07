@@ -5,12 +5,12 @@ import {
 	isFunction,
 	isMemo,
 	isRecord,
-	isSignal,
 	isSlot,
 	type MaybeCleanup,
 	type Memo,
 	match,
 	type Signal,
+	type Task,
 	untrack,
 } from '@zeix/cause-effect'
 import type { ComponentProps } from './component'
@@ -45,43 +45,50 @@ type FactoryResult = Array<EffectDescriptor | false | undefined>
  * `err` receives a single Error (not an array) for convenience.
  */
 type WatchHandlers<T> = {
-	ok: (value: T) => MaybeCleanup | void
-	err?: (error: Error) => MaybeCleanup | void
-	nil?: () => MaybeCleanup | void
+	ok: (value: T) => MaybeCleanup
+	err?: (error: Error) => MaybeCleanup
+	nil?: () => MaybeCleanup
 }
 
 /**
- * A single reactive value to pass to a descendant Le Truc component property.
+ * A reactive value that drives a DOM update or a slot injection.
  *
  * Three forms are accepted:
- * - `keyof P` — a string property name on the host
- * - `Signal<T>` — any signal
- * - `(host: HTMLElement & P) => T` — a reader function receiving the host
+ * - `keyof P` — a string property name on the host; reads `host[name]` and
+ *   registers it as a signal dependency automatically.
+ * - `Signal<T>` — any signal; `.get()` is called inside the reactive effect.
+ * - `() => T | Promise<T> | null | undefined` — a thunk wrapped in `createComputed`;
+ *   all signals read inside are tracked in the pure phase. Returning `null` or
+ *   `undefined` drives the `nil` path; an async thunk becomes a `Task` signal.
  */
-type PassedProp<T, P extends ComponentProps> =
+type Reactive<T, P extends ComponentProps> =
 	| keyof P
 	| Signal<T & {}>
-	| ((host: HTMLElement & P) => T)
+	| (() => T | Promise<T> | null | undefined)
 
 /**
  * A map of child component property names to the reactive values to inject into them.
  * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
  */
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
-	[K in keyof Q & string]?: PassedProp<Q[K], P>
+	[K in keyof Q & string]?: Reactive<Q[K], P>
 }
 
 /**
  * The `watch` helper type in `FactoryContext`.
  *
- * Drives a reactive effect from a signal source (property name, Signal, or array).
- * Only the declared sources trigger re-runs — incidental reads inside the handler
- * are not tracked. Returns an `EffectDescriptor`.
+ * Drives a reactive effect from a signal source (property name, Signal, thunk,
+ * or array). Only the declared sources trigger re-runs — incidental reads inside
+ * the handler are not tracked. Returns an `EffectDescriptor`.
+ *
+ * Thunk form `() => T` is wrapped in `createComputed`, so all signals read inside
+ * it are tracked in the pure phase — useful for deriving or transforming values
+ * before the side-effectful handler runs.
  */
 type FactoryWatchHelper<P extends ComponentProps> = {
 	<K extends keyof P & string>(
 		source: K,
-		handler: (value: P[K]) => MaybeCleanup | void,
+		handler: (value: P[K]) => MaybeCleanup,
 	): EffectDescriptor
 	<K extends keyof P & string>(
 		source: K,
@@ -89,15 +96,23 @@ type FactoryWatchHelper<P extends ComponentProps> = {
 	): EffectDescriptor
 	<T extends {}>(
 		source: Signal<T>,
-		handler: (value: T) => MaybeCleanup | void,
+		handler: (value: T) => MaybeCleanup,
 	): EffectDescriptor
 	<T extends {}>(
 		source: Signal<T>,
 		handlers: WatchHandlers<T>,
 	): EffectDescriptor
+	<T extends {}>(
+		source: () => T | Promise<T> | null | undefined,
+		handler: (value: T) => MaybeCleanup,
+	): EffectDescriptor
+	<T extends {}>(
+		source: () => T | Promise<T> | null | undefined,
+		handlers: WatchHandlers<T>,
+	): EffectDescriptor
 	(
-		source: Array<string | Signal<any>>,
-		handler: (values: any[]) => MaybeCleanup | void,
+		source: Array<Reactive<NonNullable<unknown>, P>>,
+		handler: (values: any[]) => MaybeCleanup,
 	): EffectDescriptor
 }
 
@@ -121,50 +136,29 @@ type FactoryPassHelper<P extends ComponentProps> = {
 /* === Internal Helpers === */
 
 /**
- * Resolve a `watch` source (string property name or Signal) to a Signal usable by `match`.
+ * Resolve a `Reactive` value to a Signal usable by `match`.
  *
  * - String: look up the signal in the component's signal map; fall back to a computed
  *   that reads `host[name]` (covers properties added via `Object.defineProperty`).
+ * - Thunk `() => T | Promise<T> | null | undefined`: wrapped in `createComputed`
+ *   so all signals read inside are tracked in the pure phase. Async thunks become
+ *   Task signals.
  * - Signal/Memo: use directly.
  *
  * @since 2.0
  */
-const resolveSignal = <P extends ComponentProps>(
+const toSignal = <T extends {}, P extends ComponentProps>(
 	host: HTMLElement & P,
-	source: (keyof P & string) | Signal<any>,
-): Signal<any> => {
+	source: Reactive<T, P>,
+): Signal<T> => {
+	if (isFunction(source))
+		return createComputed(source as () => T | Promise<T>) as Memo<T> | Task<T>
 	if (typeof source === 'string') {
 		const sig = getSignals(host)[source]
 		if (sig) return sig
 		return createComputed(() => (host as any)[source])
 	}
-	return source as Signal<any>
-}
-
-/**
- * Resolve a reactive pass value to a Signal.
- * Handles property name strings, Signal instances, and reader functions.
- *
- * @since 2.0
- */
-const toSignal = <P extends ComponentProps>(
-	host: HTMLElement & P,
-	value: unknown,
-): Signal<any> | undefined => {
-	if (isSignal(value)) return value
-	if (typeof value === 'string' && value in host) {
-		const sig = getSignals(host)[value]
-		if (sig) return sig
-		return createComputed(() => host[value as keyof typeof host])
-	}
-	if (isFunction(value))
-		return createComputed(
-			(value as (host: HTMLElement & P) => NonNullable<unknown>).bind(
-				null,
-				host,
-			),
-		)
-	return undefined
+	return source as Signal<T>
 }
 
 /* === Exported Functions === */
@@ -182,7 +176,7 @@ const toSignal = <P extends ComponentProps>(
 const makeWatch = <P extends ComponentProps>(host: HTMLElement & P) => {
 	function watch<K extends keyof P & string>(
 		source: K,
-		handler: (value: P[K]) => MaybeCleanup | void,
+		handler: (value: P[K]) => MaybeCleanup,
 	): EffectDescriptor
 	function watch<K extends keyof P & string>(
 		source: K,
@@ -190,37 +184,42 @@ const makeWatch = <P extends ComponentProps>(host: HTMLElement & P) => {
 	): EffectDescriptor
 	function watch<T extends {}>(
 		source: Signal<T>,
-		handler: (value: T) => MaybeCleanup | void,
+		handler: (value: T) => MaybeCleanup,
 	): EffectDescriptor
 	function watch<T extends {}>(
 		source: Signal<T>,
 		handlers: WatchHandlers<T>,
 	): EffectDescriptor
+	function watch<T extends {}>(
+		source: () => T | Promise<T> | null | undefined,
+		handler: (value: T) => MaybeCleanup,
+	): EffectDescriptor
+	function watch<T extends {}>(
+		source: () => T | Promise<T> | null | undefined,
+		handlers: WatchHandlers<T>,
+	): EffectDescriptor
 	function watch(
-		source: Array<(keyof P & string) | Signal<any>>,
-		handler: (values: any[]) => MaybeCleanup | void,
+		source: Array<Reactive<NonNullable<unknown>, P>>,
+		handler: (values: any[]) => MaybeCleanup,
 	): EffectDescriptor
 	function watch(
 		source:
-			| (keyof P & string)
-			| Signal<any>
-			| Array<(keyof P & string) | Signal<any>>,
-		handlerOrHandlers:
-			| ((value: any) => MaybeCleanup | void)
-			| WatchHandlers<any>,
+			| Reactive<NonNullable<unknown>, P>
+			| Array<Reactive<NonNullable<unknown>, P>>,
+		handlerOrHandlers: ((value: any) => MaybeCleanup) | WatchHandlers<any>,
 	): EffectDescriptor {
 		return () => {
 			const isArraySource = Array.isArray(source)
 			const sources = isArraySource
 				? source
-				: [source as (keyof P & string) | Signal<any>]
-			const signals = sources.map(s => resolveSignal(host, s))
+				: [source as Reactive<NonNullable<unknown>, P>]
+			const signals = sources.map(s => toSignal(host, s))
 
 			if (typeof handlerOrHandlers === 'function') {
 				const handler = handlerOrHandlers
 				return createEffect(() =>
-					match(signals as any, {
-						ok: (values: readonly any[]) =>
+					match(signals, {
+						ok: values =>
 							untrack(() => handler(isArraySource ? values : values[0])),
 					}),
 				)
@@ -234,7 +233,7 @@ const makeWatch = <P extends ComponentProps>(host: HTMLElement & P) => {
 				matchHandlers.err = (errs: readonly Error[]) =>
 					untrack(() => handlers.err!(errs[0]!))
 			if (handlers.nil) matchHandlers.nil = () => untrack(() => handlers.nil!())
-			return createEffect(() => match(signals as any, matchHandlers))
+			return createEffect(() => match(signals, matchHandlers))
 		}
 	}
 	return watch
@@ -386,7 +385,7 @@ export {
 	type FactoryWatchHelper,
 	makePass,
 	makeWatch,
-	type PassedProp,
 	type PassedProps,
+	type Reactive,
 	type WatchHandlers,
 }

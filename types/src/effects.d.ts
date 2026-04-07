@@ -23,39 +23,48 @@ type FactoryResult = Array<EffectDescriptor | false | undefined>;
  * `err` receives a single Error (not an array) for convenience.
  */
 type WatchHandlers<T> = {
-    ok: (value: T) => MaybeCleanup | void;
-    err?: (error: Error) => MaybeCleanup | void;
-    nil?: () => MaybeCleanup | void;
+    ok: (value: T) => MaybeCleanup;
+    err?: (error: Error) => MaybeCleanup;
+    nil?: () => MaybeCleanup;
 };
 /**
- * A single reactive value to pass to a descendant Le Truc component property.
+ * A reactive value that drives a DOM update or a slot injection.
  *
  * Three forms are accepted:
- * - `keyof P` — a string property name on the host
- * - `Signal<T>` — any signal
- * - `(host: HTMLElement & P) => T` — a reader function receiving the host
+ * - `keyof P` — a string property name on the host; reads `host[name]` and
+ *   registers it as a signal dependency automatically.
+ * - `Signal<T>` — any signal; `.get()` is called inside the reactive effect.
+ * - `() => T | Promise<T> | null | undefined` — a thunk wrapped in `createComputed`;
+ *   all signals read inside are tracked in the pure phase. Returning `null` or
+ *   `undefined` drives the `nil` path; an async thunk becomes a `Task` signal.
  */
-type PassedProp<T, P extends ComponentProps> = keyof P | Signal<T & {}> | ((host: HTMLElement & P) => T);
+type Reactive<T, P extends ComponentProps> = keyof P | Signal<T & {}> | (() => T | Promise<T> | null | undefined);
 /**
  * A map of child component property names to the reactive values to inject into them.
  * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
  */
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
-    [K in keyof Q & string]?: PassedProp<Q[K], P>;
+    [K in keyof Q & string]?: Reactive<Q[K], P>;
 };
 /**
  * The `watch` helper type in `FactoryContext`.
  *
- * Drives a reactive effect from a signal source (property name, Signal, or array).
- * Only the declared sources trigger re-runs — incidental reads inside the handler
- * are not tracked. Returns an `EffectDescriptor`.
+ * Drives a reactive effect from a signal source (property name, Signal, thunk,
+ * or array). Only the declared sources trigger re-runs — incidental reads inside
+ * the handler are not tracked. Returns an `EffectDescriptor`.
+ *
+ * Thunk form `() => T` is wrapped in `createComputed`, so all signals read inside
+ * it are tracked in the pure phase — useful for deriving or transforming values
+ * before the side-effectful handler runs.
  */
 type FactoryWatchHelper<P extends ComponentProps> = {
-    <K extends keyof P & string>(source: K, handler: (value: P[K]) => MaybeCleanup | void): EffectDescriptor;
+    <K extends keyof P & string>(source: K, handler: (value: P[K]) => MaybeCleanup): EffectDescriptor;
     <K extends keyof P & string>(source: K, handlers: WatchHandlers<P[K]>): EffectDescriptor;
-    <T extends {}>(source: Signal<T>, handler: (value: T) => MaybeCleanup | void): EffectDescriptor;
+    <T extends {}>(source: Signal<T>, handler: (value: T) => MaybeCleanup): EffectDescriptor;
     <T extends {}>(source: Signal<T>, handlers: WatchHandlers<T>): EffectDescriptor;
-    (source: Array<string | Signal<any>>, handler: (values: any[]) => MaybeCleanup | void): EffectDescriptor;
+    <T extends {}>(source: () => T | Promise<T> | null | undefined, handler: (value: T) => MaybeCleanup): EffectDescriptor;
+    <T extends {}>(source: () => T | Promise<T> | null | undefined, handlers: WatchHandlers<T>): EffectDescriptor;
+    (source: Array<Reactive<NonNullable<unknown>, P>>, handler: (values: any[]) => MaybeCleanup): EffectDescriptor;
 };
 /**
  * The `pass` helper type in `FactoryContext`.
@@ -82,7 +91,9 @@ declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => {
     <K extends keyof P & string>(source: K, handlers: WatchHandlers<P[K]>): EffectDescriptor;
     <T extends {}>(source: Signal<T>, handler: (value: T) => MaybeCleanup | void): EffectDescriptor;
     <T extends {}>(source: Signal<T>, handlers: WatchHandlers<T>): EffectDescriptor;
-    (source: Array<(keyof P & string) | Signal<any>>, handler: (values: any[]) => MaybeCleanup | void): EffectDescriptor;
+    <T extends {}>(source: () => T | Promise<T> | null | undefined, handler: (value: T) => MaybeCleanup | void): EffectDescriptor;
+    <T extends {}>(source: () => T | Promise<T> | null | undefined, handlers: WatchHandlers<T>): EffectDescriptor;
+    (source: Array<Reactive<NonNullable<unknown>, P>>, handler: (values: any[]) => MaybeCleanup | void): EffectDescriptor;
 };
 /**
  * Create a `pass` helper bound to a specific component host.
@@ -114,4 +125,4 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => {
  */
 declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult): EffectDescriptor;
 declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => EffectDescriptor): EffectDescriptor;
-export { type EffectDescriptor, each, type FactoryPassHelper, type FactoryResult, type FactoryWatchHelper, makePass, makeWatch, type PassedProp, type PassedProps, type WatchHandlers, };
+export { type EffectDescriptor, each, type FactoryPassHelper, type FactoryResult, type FactoryWatchHelper, makePass, makeWatch, type PassedProps, type Reactive, type WatchHandlers, };

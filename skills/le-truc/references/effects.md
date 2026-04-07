@@ -1,176 +1,210 @@
 <overview>
-Which Le Truc effect to use for each DOM update pattern.
-All effects are imported from `@zeix/le-truc`.
+How to drive DOM updates in Le Truc v2.0.
+All helpers are imported from `@zeix/le-truc`. Effects are driven by `watch()` in the factory return array.
 </overview>
 
-## Choosing an effect
+## Pattern
 
-| Goal | Effect |
-|---|---|
-| Set text content of an element | `setText` |
-| Set a DOM property (`.value`, `.checked`, `.disabled`, …) | `setProperty` |
-| Show or hide an element | `show` |
-| Set an HTML attribute (with security validation) | `setAttribute` |
-| Toggle a boolean attribute (present/absent) | `toggleAttribute` |
-| Add or remove a CSS class | `toggleClass` |
-| Set an inline style property | `setStyle` |
-| Attach an event listener | `on` |
-| Bind a Le Truc child component's prop to a parent signal | `pass` |
-| Set innerHTML (use sparingly) | `dangerouslySetInnerHTML` |
-
-## Effect reference
-
-### `setText(reactive?)`
-
-Replaces the non-comment child nodes of an element with a text node.
+Every DOM update follows the same pattern:
 
 ```typescript
-// defaults to reading host.label
-label: setText('label')
-
-// explicit reactive: a signal
-label: setText(mySignal)
-
-// explicit reactive: a reader function
-label: setText(el => el.dataset.value ?? 'fallback')
+watch(source, handler)
 ```
 
-### `setProperty(key, reactive?)`
+- `source` — a prop name string, a `Signal`, or a thunk `() => T`
+- `handler` — either `(value: T) => void` (plain function) or `WatchHandlers<T>` (object with `ok`, `nil?`, `err?` branches)
 
-Sets a DOM property directly (bypasses attribute reflection). Use for `.disabled`, `.checked`, `.value`, `.hidden`, and any other IDL attribute.
+The `bind*` helpers create typed handler functions or `WatchHandlers` objects. Pass them directly to `watch`.
+
+## Choosing a helper
+
+| Goal | Helper | Handler type |
+|---|---|---|
+| Set text content | `bindText(el, preserveComments?)` | `(value: string \| number) => void` |
+| Set a DOM property | `bindProperty(el, key)` | `(value: E[K]) => void` |
+| Show or hide an element | `bindVisible(el, transform?)` | `(value: T) => void` |
+| Toggle a CSS class | `bindClass(el, token, transform?)` | `(value: T) => void` |
+| Set/remove an attribute | `bindAttribute(el, name, allowUnsafe?)` | `WatchHandlers<string \| boolean>` |
+| Set an inline style | `bindStyle(el, prop)` | `WatchHandlers<string>` |
+| Set innerHTML | `dangerouslySetInnerHTML(el, options?)` | `WatchHandlers<string>` |
+| Attach an event listener | `on(target, type, handler, options?)` | returns `EffectDescriptor` |
+| Bind a Le Truc child's prop | `pass(target, props)` | returns `EffectDescriptor` |
+| Per-element effects on a Memo | `each(memo, callback)` | returns `EffectDescriptor` |
+
+## Helper reference
+
+### `bindText(element, preserveComments?)`
+
+Returns `(value: string | number) => void`. Sets `element.textContent`. Numbers are coerced to strings.
 
 ```typescript
-// reads host.disabled
-button: setProperty('disabled')
+watch('label', bindText(span))
 
-// different property name from prop name
-input: setProperty('value', 'inputText')
+// Preserve HTML comment nodes
+watch('label', bindText(el, true))
 ```
 
-### `show(reactive?)`
+### `bindProperty(element, key)`
 
-Shorthand for `setProperty('hidden', ...)` with inverted logic. When the reactive value is truthy the element is visible (`hidden = false`).
+Returns `(value: E[K]) => void`. Sets a DOM property directly — use for `.disabled`, `.checked`, `.value`, `.hidden`, and any other IDL attribute.
 
 ```typescript
-// shows the spinner when host.loading is true
-spinner: show('loading')
+watch('disabled', bindProperty(button, 'disabled'))
+watch('value', bindProperty(input, 'value'))
 ```
 
-### `setAttribute(name, reactive?)`
+### `bindVisible(element, transform?)`
 
-Sets an attribute with security validation. Blocks `on*` event-handler attributes. Validates URL values against a safe-protocol allowlist (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`).
+Returns `(value: T) => void`. Sets `element.hidden = !value`. `true` makes the element visible.
 
 ```typescript
-// reads host.href
-link: setAttribute('href')
+// Show spinner when host.loading is truthy
+watch('loading', bindVisible(spinner))
 
-// different prop name
-link: setAttribute('href', 'url')
+// Custom boolean transform
+watch('count', bindVisible(clearBtn, v => v > 0))
 ```
 
-### `toggleAttribute(name, reactive?)`
+### `bindClass(element, token, transform?)`
 
-Adds the attribute when truthy, removes it when falsy. Default reactive is the attribute name.
+Returns `(value: T) => void`. Adds `token` when truthy, removes it when falsy.
 
 ```typescript
-// adds/removes the `disabled` attribute based on host.disabled
-button: toggleAttribute('disabled')
+watch('active', bindClass(item, 'active'))
 
-// adds/removes `aria-expanded` based on host.open
-trigger: toggleAttribute('aria-expanded', 'open')
+// Custom transform
+watch('state', bindClass(el, 'is-open', v => v === 'open'))
 ```
 
-### `toggleClass(token, reactive?)`
+### `bindAttribute(element, name, allowUnsafe?)`
 
-Adds `token` to the element's class list when truthy, removes it when falsy. Default reactive is the token name.
+Returns `WatchHandlers<string | boolean>`. Pass directly to `watch`.
+
+- `ok(string)` → `safeSetAttribute(el, name, value)` (security validated)
+- `ok(boolean)` → `el.toggleAttribute(name, value)` — adds (no value) when `true`, removes when `false`
+- `nil` → `el.removeAttribute(name)`
 
 ```typescript
-// adds/removes class "active" based on host.active
-item: toggleClass('active')
+watch('href', bindAttribute(link, 'href'))
+watch('expanded', bindAttribute(trigger, 'aria-expanded'))
 
-// adds/removes class "is-open" based on host.open
-panel: toggleClass('is-open', 'open')
+// Skip security validation for pre-validated values
+watch('src', bindAttribute(img, 'src', true))
 ```
 
-### `setStyle(property, reactive?)`
+### `bindStyle(element, prop)`
 
-Sets an inline CSS property. Pass `null` to remove the property. Default reactive is the property name.
+Returns `WatchHandlers<string>`. Pass directly to `watch`.
+
+- `ok(string)` → `el.style.setProperty(prop, value)`
+- `nil` → `el.style.removeProperty(prop)` — restores the CSS cascade value
 
 ```typescript
-// sets style.opacity based on host.opacity
-overlay: setStyle('opacity')
-
-// custom property
-card: setStyle('--highlight-color', 'accentColor')
+watch('opacity', bindStyle(overlay, 'opacity'))
+watch('accentColor', bindStyle(card, '--highlight-color'))
 ```
 
-### `on(type, handler, options?)`
+### `dangerouslySetInnerHTML(element, options?)`
 
-Attaches an event listener to the target element. The handler receives the DOM event.
+Returns `WatchHandlers<string>`. Pass directly to `watch`. Only use on trusted or sanitized content.
+
+```typescript
+watch('highlightedHtml', dangerouslySetInnerHTML(codeBlock))
+```
+
+Options: `{ shadowRootMode?: ShadowRootMode, allowScripts?: boolean }`.
+
+### `on(target, type, handler, options?)`
+
+Returns an `EffectDescriptor`. The handler receives `(event, element)`.
 
 Two handler return modes:
 
 ```typescript
-// Side-effect only — always valid
-button: on('click', (e) => {
-  analytics.track('clicked')
+// Property update — applied in a single batch()
+on(button, 'click', () => ({ count: host.count + 1 }))
+
+// Side-effect only
+on(input, 'input', () => {
+  analytics.track('typed')
 })
 
-// Property update shortcut — applied in a single batch()
-button: on('click', () => ({ count: host.count + 1 }))
-
-// Passive events (scroll, resize, touch, wheel) are deferred via rAF automatically
-container: on('scroll', (e) => { /* handle */ })
+// Memo target — event delegation (bubbling events only)
+on(allItems, 'click', (event, item) => ({
+  selectedId: item.dataset.id,
+}))
 ```
 
-The return-object shortcut is equivalent to:
+`passive` is set automatically for high-frequency events (scroll, resize, touch, wheel). For non-bubbling events with a Memo target, per-element listeners are set up as a fallback — prefer `each()` + `on()` instead.
+
+### `pass(target, props)`
+
+Le Truc-to-Le Truc only. Replaces the backing Slot signal of a descendant component's prop with a signal from the parent.
+
 ```typescript
-on('click', () => { batch(() => { host.count = host.count + 1 }) })
+const child = first('child-component') as HTMLElement & ChildProps
+pass(child, { disabled: 'disabled' })   // string prop name
+pass(child, { value: mySignal })         // Signal
+pass(child, { label: () => host.label }) // thunk
 ```
 
-Options passed to `addEventListener`. `passive` is set automatically for high-frequency events.
+**Use `bindProperty()` inside `watch()` for non-Le Truc elements** (Lit, Stencil, plain custom elements).
 
-### `pass(props)`
+### `each(memo, callback)`
 
-Le Truc-to-Le Truc only. Replaces the backing signal of a descendant component's prop with a signal from the parent. Zero overhead — no intermediate effect or property assignment.
+For per-element effects on a `Memo<E[]>` from `all()`. Elements enter/leave the collection with their own reactive scope.
 
 ```typescript
-// in parent setup
-({ host }) => ({
-  'child-component': pass({ disabled: host_signal }),
+const items = all('[role="option"]')
+return [
+  each(items, item => [
+    on(item, 'focus', () => ({ focusedId: item.id })),
+    watch('selectedId', bindClass(item, 'selected', id => id === item.id)),
+  ]),
+]
+```
+
+## Custom handler functions
+
+Any `(value: T) => void` function works as a `watch` handler:
+
+```typescript
+watch('error', error => {
+  textbox.ariaInvalid = String(!!error)
+  if (error) textbox.setAttribute('aria-errormessage', errorId)
+  else textbox.removeAttribute('aria-errormessage')
 })
 ```
 
-**Use `setProperty()` instead for non-Le-Truc elements** (Lit, Stencil, plain custom elements).
-
-### `dangerouslySetInnerHTML(reactive, options?)`
-
-Sets `innerHTML`. Never use on untrusted or user-generated content.
+Return a cleanup function if the handler sets up listeners or timers:
 
 ```typescript
-codeBlock: dangerouslySetInnerHTML('highlightedHtml')
+watch('active', active => {
+  if (active) {
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }
+})
 ```
-
-## Reactive parameter forms
-
-Every `updateElement`-based effect accepts a `reactive` parameter in three forms:
-
-| Form | Example | Behavior |
-|---|---|---|
-| `keyof Props` string | `'label'` | Reads `host.label`; registers signal dependency |
-| Signal | `myMemo` | Calls `signal.get()`; registers dependency |
-| Reader function | `el => el.dataset.val` | Calls function with target element; not tracked unless it reads a signal |
-
-The second argument may be omitted when the prop name matches the attribute/property/class name being updated.
 
 ## Multiple effects on one element
 
-Return an array:
+Return multiple entries in the array:
 
 ```typescript
-input: [
-  setProperty('value'),
-  toggleAttribute('disabled'),
-  toggleClass('error', 'hasError'),
+return [
+  watch('value', bindProperty(input, 'value')),
+  watch('disabled', bindProperty(input, 'disabled')),
+  watch('error', bindClass(input, 'error', Boolean)),
+]
+```
+
+## Conditional effects for optional descendants
+
+```typescript
+const badge = first('span.badge')  // may return null
+
+return [
+  badge && watch('count', bindText(badge)),  // skipped if badge is null
 ]
 ```

@@ -14,44 +14,36 @@ For deep signal-level questions, use the `cause-effect` skill — `@zeix/cause-e
 </scope>
 
 <essential_principles>
-**Two forms of `defineComponent`** — prefer the 2-param factory form for new components:
+**One form of `defineComponent`** — the factory form:
 
 ```typescript
-// Preferred (since 1.1): 2-param factory form
-defineComponent('my-component', ({ first, host }) => {
+defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) => {
   const button = first('button', 'Add a native <button>.')
-  return {
-    ui: { button },
-    props: { disabled: read(() => button.disabled, false) },
-    effects: { button: setProperty('disabled') },
-  }
+  expose({ disabled: asBoolean() })
+  return [
+    on(button, 'click', () => { /* ... */ }),
+    watch('disabled', bindProperty(button, 'disabled')),
+  ]
 })
-
-// 4-param form: use only when attribute observation is required
-defineComponent('my-component', { disabled: asBoolean() }, ({ first }) => ({
-  button: first('button', 'Add a native <button>.'),
-}), ({ button }) => ({
-  button: setProperty('disabled'),
-}))
 ```
 
-The factory form returns `{ ui, props?, effects? }` from a single closure — no `ui` object passed between functions. Parsers in the factory form are called once at connect time (for server-side HTML author configuration); they do not re-run on subsequent attribute changes. Use the 4-param form when attribute changes on a live document must drive reactive updates.
+The factory receives a `FactoryContext` at connect time. Call `expose({ ... })` to declare reactive props. Return a flat array of effect descriptors created by `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()`. Falsy guards (`element && watch(...)`) are filtered out — use this for optional descendants.
 
 **`host` is the only external interface.** Components read and write state through `host.propName`. No querying outside the host's subtree, no direct property access on child components.
 
 **Reactivity flows in one direction:**
 ```
-(4-param only) attribute change → parser → host.prop (signal)
-                                                    ↓
-event / property set ──────────────────→ host.prop (signal)
-                                                    ↓
-                                          effect reads prop
-                                                    ↓
-                                         DOM update on target
-                                                    ↓
-                                  event handler → { prop: value }
-                                                    ↓
-                                       signal updated → effect re-runs
+attribute at connect time → parser → host.prop (signal)
+                                              ↓
+event / property set ──────────→ host.prop (signal)
+                                              ↓
+                              watch(source, handler) re-runs
+                                              ↓
+                                    DOM update via bind*
+                                              ↓
+                          on(el, type, handler) → { prop: value }
+                                              ↓
+                               signal updated → watch re-runs
 ```
 
 **`@zeix/cause-effect` is re-exported.** Signal types (`State`, `Memo`, `Sensor`, `Slot`, etc.) and utilities (`batch`, `match`, `untrack`) are available directly from `@zeix/le-truc`. No separate install or import needed.
@@ -88,8 +80,8 @@ All in `references/`:
 | File | Contents |
 |---|---|
 | component-model.md | `defineComponent` args, reactivity flow, re-exported signal API |
-| effects.md | Which effect to use when: `setText`, `setAttribute`, `on`, `pass`, etc. |
-| parsers.md | Which parser to use when: `asString`, `asBoolean`, `asInteger`, `read`, etc. |
+| effects.md | Which bind* helper / effect to use when: `bindText`, `bindProperty`, `watch`, `on`, `pass`, `each`, etc. |
+| parsers.md | Which initializer to use in `expose()`: `asString`, `asBoolean`, `asInteger`, `asMethod`, `createEventsSensor`, etc. |
 | coordination.md | `pass()`, `provideContexts`/`requestContext`, `on()` on host, `all()` |
 | markup.md | HTML structure: progressive enhancement, semantic nesting, variant examples |
 | styling.md | CSS: host scoping, nesting, custom properties, variant modifier classes |

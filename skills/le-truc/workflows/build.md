@@ -15,10 +15,9 @@ Before writing any code, produce a brief plan and show it to the user. Include:
 
 - **Component name(s)**: tag name(s) in lowercase with a hyphen
 - **Responsibility**: one sentence per component
-- **Form**: factory (2-param, preferred) unless props must react to HTML attribute changes
-- **Props**: each reactive property, its type, and how it is initialised (reader or static value for factory form; parser, reader, or static for 4-param)
-- **UI elements**: named queries into the host subtree (via `first` / `all`)
-- **Effects**: which effect handles which prop on which element
+- **Props**: each reactive property, its type, and how it is initialised (parser, static value, signal, or sensor)
+- **Elements**: which elements are queried via `first` / `all`, and which are optional
+- **Effects**: which `watch()` / `on()` / `pass()` drives which DOM update on which element
 - **Coordination**: how components communicate if more than one is involved (see references/coordination.md)
 
 **Wait for the user to confirm or continue without objection before writing code.**
@@ -27,18 +26,13 @@ Before writing any code, produce a brief plan and show it to the user. Include:
 
 Follow references/component-model.md exactly.
 
-### Factory form (preferred)
-
-Use the 2-param factory form unless the component requires HTML attribute observation.
-
 ```typescript
 import {
-  type Component,
+  asBoolean,
+  asString,
+  bindProperty,
+  bindText,
   defineComponent,
-  on,
-  read,
-  setProperty,
-  setText,
 } from '@zeix/le-truc'
 
 // 1. Props type — all reactive property names and their TypeScript types
@@ -47,96 +41,42 @@ export type MyComponentProps = {
   label: string
 }
 
-// 2. UI type — all named elements returned by the factory
-type MyComponentUI = {
-  button: HTMLButtonElement
-  label: HTMLSpanElement
-}
-
-// 3. Global element registry (enables typed access via querySelector)
+// 2. Global element registry (enables typed access via querySelector)
 declare global {
   interface HTMLElementTagNameMap {
-    'my-component': Component<MyComponentProps>
+    'my-component': HTMLElement & MyComponentProps
   }
 }
 
-// 4. Component definition — factory form
-export default defineComponent<MyComponentProps, MyComponentUI>(
+// 3. Component definition
+export default defineComponent<MyComponentProps>(
   'my-component',
-  ({ first, host }) => {
+  ({ expose, first, watch }) => {
+    // Query descendants
     const button = first('button', 'Add a native <button> descendant.')
     const label = first('span.label')
-    return {
-      ui: { button, label },
-      props: {
-        disabled: read(() => button.disabled, false),
-        label: read(() => label.textContent ?? '', ''),
-      },
-      effects: {
-        button: setProperty('disabled'),
-        label: setText('label'),
-      },
-    }
+
+    // Declare reactive props
+    expose({
+      disabled: asBoolean(),
+      label: asString(label?.textContent ?? button.textContent ?? ''),
+    })
+
+    // Return flat array of effect descriptors
+    return [
+      watch('disabled', bindProperty(button, 'disabled')),
+      label && watch('label', bindText(label)),
+    ]
   },
 )
 ```
 
-### 4-param form (attribute-driven props only)
-
-Use the 4-param form when HTML authors control props via attributes (e.g., `<my-component disabled label="Click">`).
-
-```typescript
-import {
-  asBoolean,
-  asString,
-  type Component,
-  defineComponent,
-  on,
-  setProperty,
-  setText,
-} from '@zeix/le-truc'
-
-export type MyComponentProps = {
-  disabled: boolean
-  label: string
-}
-
-type MyComponentUI = {
-  button: HTMLButtonElement
-  label: HTMLSpanElement
-}
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'my-component': Component<MyComponentProps>
-  }
-}
-
-export default defineComponent<MyComponentProps, MyComponentUI>(
-  'my-component',
-  // props: parsers auto-populate observedAttributes
-  {
-    disabled: asBoolean(),
-    label: asString(ui => ui.label.textContent ?? ''),
-  },
-  // select: named DOM queries
-  ({ first }) => ({
-    button: first('button', 'Add a native <button> descendant.'),
-    label: first('span.label'),
-  }),
-  // setup: effects keyed by UI element name
-  ({ host }) => ({
-    button: setProperty('disabled'),
-    label: setText('label'),
-  }),
-)
-```
-
-Rules (both forms):
+Rules:
 - Only import what you use.
-- Mark props `readonly` only if they are sensor-driven (not settable from outside).
 - Always provide the `required` string to `first()` for elements the component cannot work without.
-- Custom effects must return a cleanup function.
+- Use `element && watch(...)` for optional descendants — falsy values are filtered from the array.
+- Custom `watch` handlers that set up listeners or timers must return a cleanup function.
+- Mark props `readonly` only if they are sensor-driven (not settable from outside).
 
 ## Step 3: Write the HTML file (`.html`)
 
@@ -163,10 +103,10 @@ Follow references/markup.md. Provide multiple representative examples:
 </my-component>
 ```
 
-For 4-param components with attribute-driven props, use attributes in the HTML:
+Parsers in `expose()` read attributes at connect time, so HTML authors can configure the component via attributes in server-rendered markup:
 ```html
 <my-component disabled label="Disabled">
-  <button type="button"><span class="label">Disabled</span></button>
+  <button type="button" disabled><span class="label">Disabled</span></button>
 </my-component>
 ```
 
@@ -258,7 +198,7 @@ If tests don't exist yet, follow references/testing.md to advise on what to test
 </process>
 
 <success_criteria>
-- TypeScript: no type errors; all imports resolve; `Props` and `UI` types are explicit; `defineComponent` generics match
+- TypeScript: no type errors; all imports resolve; `Props` type is explicit; `defineComponent` generic matches
 - HTML: valid markup; works before JS runs; covers all meaningful states and variants
 - CSS: all rules scoped to host; custom properties used for all design tokens; no hardcoded colors or spacing
 - Docs: all required tables present in standard Markdown; accurate types and defaults; Attributes section present if the component uses parsers

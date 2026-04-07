@@ -94,8 +94,8 @@ export {
 	type FactoryPassHelper,
 	type FactoryResult,
 	type FactoryWatchHelper,
-	type PassedProp,
 	type PassedProps,
+	type Reactive,
 	type WatchHandlers,
 } from './src/effects'
 export {

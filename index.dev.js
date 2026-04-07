@@ -1751,7 +1751,9 @@ var getSignals = (el) => {
 };
 
 // src/effects.ts
-var resolveSignal = (host, source) => {
+var toSignal = (host, source) => {
+  if (isFunction(source))
+    return createComputed(source);
   if (typeof source === "string") {
     const sig = getSignals(host)[source];
     if (sig)
@@ -1760,25 +1762,12 @@ var resolveSignal = (host, source) => {
   }
   return source;
 };
-var toSignal = (host, value) => {
-  if (isSignal(value))
-    return value;
-  if (typeof value === "string" && value in host) {
-    const sig = getSignals(host)[value];
-    if (sig)
-      return sig;
-    return createComputed(() => host[value]);
-  }
-  if (isFunction(value))
-    return createComputed(value.bind(null, host));
-  return;
-};
 var makeWatch = (host) => {
   function watch(source, handlerOrHandlers) {
     return () => {
       const isArraySource = Array.isArray(source);
       const sources = isArraySource ? source : [source];
-      const signals = sources.map((s) => resolveSignal(host, s));
+      const signals = sources.map((s) => toSignal(host, s));
       if (typeof handlerOrHandlers === "function") {
         const handler = handlerOrHandlers;
         return createEffect(() => match(signals, {

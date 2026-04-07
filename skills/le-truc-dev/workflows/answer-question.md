@@ -11,17 +11,18 @@ Use this table to find the authoritative source for the question:
 
 | If the question is about… | Read… |
 |---|---|
-| Component lifecycle (connectedCallback, attributeChangedCallback, disconnectedCallback) | `ARCHITECTURE.md` → "The Component Lifecycle" |
-| Effect internals (updateElement, runEffects, reactive parameter) | `ARCHITECTURE.md` → "The Effect System"; `src/effects.ts` |
-| Parser/Reader/MethodProducer type system | `ARCHITECTURE.md` → "The Parser System"; `src/parsers.ts` |
+| Component lifecycle (connectedCallback, #initSignals, disconnectedCallback) | `ARCHITECTURE.md` → "The Component Lifecycle"; `src/component.ts` |
+| Effect internals (watch, on, pass, each, EffectDescriptor) | `ARCHITECTURE.md` → "The Effect System"; `src/effects.ts`, `src/events.ts` |
+| DOM helper internals (bind*, dangerouslySetInnerHTML) | `ARCHITECTURE.md` → "The Effect System"; `src/helpers.ts` |
+| Parser/MethodProducer type system | `ARCHITECTURE.md` → "The Parser System"; `src/parsers.ts` |
 | UI query system (first, all, dependency resolution, selector type inference) | `ARCHITECTURE.md` → "The UI Query System"; `src/ui.ts` |
 | Context protocol internals | `ARCHITECTURE.md` → "The Context Protocol"; `src/context.ts` |
-| `pass()` internals | `ARCHITECTURE.md` → "pass() — inter-component binding"; `src/effects/pass.ts` |
-| Security (setAttribute validation) | `ARCHITECTURE.md` → "Security"; `src/effects/attribute.ts` |
+| `pass()` internals | `ARCHITECTURE.md` → "pass() — inter-component binding"; `src/effects.ts` (`makePass`) |
+| Security (safeSetAttribute validation) | `ARCHITECTURE.md` → "Security"; `src/safety.ts` |
 | Which signal type le-truc uses internally and why | `references/cause-effect-integration.md` |
 | What belongs in le-truc vs. cause-effect | `references/library-boundaries.md` |
 | Non-obvious behaviors | `CLAUDE.md`; `references/non-obvious.md` |
-| Public API surface (what's exported) | `src/index.ts`; `types/` |
+| Public API surface (what's exported) | `types/index.d.ts`; `types/` |
 
 ## Step 2: Read, then answer
 

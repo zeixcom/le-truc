@@ -37,19 +37,19 @@ The `equals` option uses element-identity comparison (`a.length === b.length && 
 
 ## Sensor — event-driven readonly props
 
-`createEventsSensor(init, key, events)` in `src/events.ts` wraps a cause-effect `Sensor<T>` for event delegation. The sensor activates when first read and deactivates when it has no more readers. Used for form state props (e.g., `checked` on a checkbox).
+`createEventsSensor(element, init, events)` in `src/events.ts` wraps a cause-effect `Sensor<T>` for event-driven state. The sensor activates when first read and deactivates when it has no more readers. Used inside `expose()` for props driven by DOM events (e.g., input length, checkbox checked state).
 
 ## createScope — effect lifetime
 
-`runEffects` wraps all component effects in a `createScope()`. This scope is created in `connectedCallback` and disposed in `disconnectedCallback` via the cleanup function returned by `runEffects`.
+`connectedCallback` wraps all component effects in a `createScope()`. This scope is created in `connectedCallback` and disposed in `disconnectedCallback` via the stored cleanup function.
 
-Individual effects (`on()`, `pass()`) also use `createScope()` for their own cleanup, nested within the component scope. This ensures event listeners and signal subscriptions are correctly torn down when the component disconnects.
+`pass()` and `on()` also use `createScope()` for their own cleanup, nested within the component scope. This ensures event listeners and signal subscriptions are correctly torn down when the component disconnects.
 
 ## createEffect — reactive DOM updates
 
-`updateElement` (the shared abstraction for most built-in effects) calls `createEffect()` to create a reactive computation that re-runs when its signal dependencies change. The `createEffect` is nested inside the `createScope` created by `runEffects`.
+`watch()` (via `makeWatch`) wraps `match()` inside `createEffect()`. The `createEffect` is nested inside the `createScope` created in `connectedCallback`. This is why `watch` returns an `EffectDescriptor` — the effect is deferred until after dependency resolution.
 
-For `all()` targets, `runEffects` wraps the per-element effect loop in an outer `createEffect` that tracks the Memo. When the Memo invalidates (element set changes), the outer effect re-runs, creating new inner effects for new elements.
+For `all()` targets, `each()` wraps the per-element effect loop in an outer `createEffect` that tracks the Memo. When the Memo invalidates (element set changes), the outer effect re-runs, creating new inner scopes for new elements and disposing scopes for removed ones.
 
 ## batch — event handler updates
 

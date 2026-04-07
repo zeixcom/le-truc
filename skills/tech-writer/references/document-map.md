@@ -45,7 +45,7 @@ and what to check in a consistency review.
 **Path:** `docs-src/pages/components.md`
 **Audience:** Developers learning to build Le Truc components
 **Register:** Tutorial — walks through real code with explanation; assumes JavaScript competence
-**Scope:** `defineComponent` — both the 2-param factory form (preferred, since 1.1) and the 4-param form; reactive properties (parsers, readers, static); factory vs. 4-param trade-offs (attribute reactivity); `first`, `all`; effects; `asMethod()` for imperative methods; `all()` for dynamic collections
+**Scope:** `defineComponent` factory form — `FactoryContext` helpers (`first`, `all`, `host`, `expose`, `watch`, `on`, `pass`); prop initializers (parsers, static values, signals, sensors); `bind*` helpers (`bindText`, `bindProperty`, `bindClass`, `bindVisible`, `bindAttribute`, `bindStyle`); `asMethod()` for imperative methods; `all()` + `each()` for dynamic collections
 
 **Update triggers:**
 - `defineComponent` signature changes
@@ -180,23 +180,23 @@ and what to check in a consistency review.
 **Path:** `ARCHITECTURE.md`
 **Audience:** Contributors to the library; AI agents reasoning about internals
 **Register:** Technical, precise, internal-facing — implementation details expected and correct
-**Scope:** File map, dependency graph, component lifecycle (`connectedCallback`, `#setAccessor`, `attributeChangedCallback`, `disconnectedCallback`), effect system (`runEffects`, `updateElement`), UI query system (`first`, `all`, dependency resolution, selector type inference), parser system, event-driven sensors, context protocol, scheduler, security
+**Scope:** File map, dependency graph, component lifecycle (`connectedCallback`, `#setAccessor`, `#initSignals`, `disconnectedCallback`), effect system (`watch`/`makeWatch`, `on`/`makeOn`, `pass`/`makePass`, `each`, `EffectDescriptor`), `bind*` helpers, UI query system (`first`, `all`, dependency resolution, selector type inference), parser system, event-driven sensors, context protocol, scheduler, security
 
 **Update triggers:**
 - A source file is added to or removed from `src/`
 - The component lifecycle changes (initialization order, signal creation, dependency resolution)
-- `updateElement` or `runEffects` internals change
+- `makeWatch`, `makeOn`, `makePass`, or `each` internals change
 - `first()` / `all()` / dependency resolution behavior changes
 - Parser detection (`isParser`, `isMethodProducer`) changes
 - Context protocol implementation changes
 - Security validation rules change
 
 **Consistency checks:**
-- File map matches actual files in `src/` and `src/effects/` and `src/parsers/`
+- File map matches actual files in `src/` and `src/parsers/`
 - Lifecycle section matches `src/component.ts`
-- Effect system built-in effects table matches effects exported in `index.ts`
-- `pass()` description matches `src/effects/pass.ts`
-- Parser/Reader distinction matches `src/parsers.ts`
+- Effect system description matches `src/effects.ts`, `src/events.ts`, and `src/helpers.ts`
+- `pass()` description matches `src/effects.ts` (`makePass`)
+- Parser/MethodProducer distinction matches `src/parsers.ts`
 </ARCHITECTURE_md>
 
 <CLAUDE_md>
@@ -217,7 +217,7 @@ and what to check in a consistency review.
 </CLAUDE_md>
 
 <jsdoc_in_src>
-**Path:** `src/*.ts`, `src/effects/*.ts`, `src/parsers/*.ts`
+**Path:** `src/*.ts`, `src/parsers/*.ts`
 **Audience:** IDE users (hover documentation); TypeDoc input for `docs-src/api/`
 **Register:** Brief, typed, precise — one-line summaries; `@param`/`@returns` only
 **Scope:** Public API functions and their parameters, return values, and non-obvious constraints. Internal helpers do not require JSDoc.
