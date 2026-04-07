@@ -106,7 +106,7 @@ const bindVisible =
  * @param {Element} element - Target element
  * @param {string} name - Attribute name
  * @param {boolean} [allowUnsafe=false] - Skip security validation for string values
- * @returns {RunHandlers<string | boolean>} Watch handlers for the attribute
+ * @returns {WatchHandlers<string | boolean>} Watch handlers for the attribute
  */
 const bindAttribute = (
 	element: Element,
@@ -136,7 +136,7 @@ const bindAttribute = (
  * @since 2.0
  * @param {HTMLElement | SVGElement | MathMLElement} element - Target element
  * @param {string} prop - CSS property name (e.g. `'color'`, `'--my-var'`)
- * @returns {RunHandlers<string>} Watch handlers for the style property
+ * @returns {WatchHandlers<string>} Watch handlers for the style property
  */
 const bindStyle = (
 	element: HTMLElement | SVGElement | MathMLElement,

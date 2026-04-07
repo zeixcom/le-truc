@@ -1,10 +1,11 @@
 /* === Internal Functions === */
 
 const isSafeURL = (value: string): boolean => {
+	if (/^(javascript|data|vbscript):/i.test(value)) return false
 	if (/^(mailto|tel):/i.test(value)) return true
 	if (value.includes('://')) {
 		try {
-			const url = new URL(value, window.location.origin)
+			const url = new URL(value)
 			return ['http:', 'https:', 'ftp:'].includes(url.protocol)
 		} catch {
 			return false

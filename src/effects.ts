@@ -152,13 +152,19 @@ const toSignal = <P extends ComponentProps>(
 	value: unknown,
 ): Signal<any> | undefined => {
 	if (isSignal(value)) return value
-	const fn =
-		typeof value === 'string' && value in host
-			? () => host[value as keyof typeof host]
-			: isFunction(value)
-				? (value as (host: HTMLElement & P) => unknown)
-				: undefined
-	return fn ? createComputed(fn as () => NonNullable<unknown>) : undefined
+	if (typeof value === 'string' && value in host) {
+		const sig = getSignals(host)[value]
+		if (sig) return sig
+		return createComputed(() => host[value as keyof typeof host])
+	}
+	if (isFunction(value))
+		return createComputed(
+			(value as (host: HTMLElement & P) => NonNullable<unknown>).bind(
+				null,
+				host,
+			),
+		)
+	return undefined
 }
 
 /* === Exported Functions === */

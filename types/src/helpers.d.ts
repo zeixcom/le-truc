@@ -63,7 +63,7 @@ declare const bindVisible: <T = boolean>(element: HTMLElement, transform?: (valu
  * @param {Element} element - Target element
  * @param {string} name - Attribute name
  * @param {boolean} [allowUnsafe=false] - Skip security validation for string values
- * @returns {RunHandlers<string | boolean>} Watch handlers for the attribute
+ * @returns {WatchHandlers<string | boolean>} Watch handlers for the attribute
  */
 declare const bindAttribute: (element: Element, name: string, allowUnsafe?: boolean) => WatchHandlers<string | boolean>;
 /**
@@ -75,7 +75,7 @@ declare const bindAttribute: (element: Element, name: string, allowUnsafe?: bool
  * @since 2.0
  * @param {HTMLElement | SVGElement | MathMLElement} element - Target element
  * @param {string} prop - CSS property name (e.g. `'color'`, `'--my-var'`)
- * @returns {RunHandlers<string>} Watch handlers for the style property
+ * @returns {WatchHandlers<string>} Watch handlers for the style property
  */
 declare const bindStyle: (element: HTMLElement | SVGElement | MathMLElement, prop: string) => WatchHandlers<string>;
 type DangerouslySetInnerHTMLOptions = {

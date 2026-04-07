@@ -188,7 +188,6 @@ function createEventsSensor<T extends {}, E extends Element>(
 				const listener = (e: Event) => {
 					const eventTarget = e.target as Node
 					if (!eventTarget || !target.contains(eventTarget)) return
-					e.stopPropagation()
 
 					const task = () => {
 						try {
@@ -301,8 +300,9 @@ const makeOn = <P extends ComponentProps>(host: HTMLElement & P) => {
 				// Event delegation: one listener on the query root
 				const root = host.shadowRoot ?? (host as unknown as Element)
 				const listener = (e: Event) => {
+					const path = e.composedPath()
 					for (const el of target.get()) {
-						if (el === e.target || el.contains(e.target as Node)) {
+						if (path.includes(el)) {
 							const task = () => {
 								const result = handler(e, el)
 								if (!isRecord(result)) return

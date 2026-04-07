@@ -25,7 +25,7 @@ const asEnum = (valid: [string, ...string[]]): Parser<string> =>
 		if (value == null) return valid[0]
 		const lowerValue = value.toLowerCase()
 		const matchingValid = valid.find(v => v.toLowerCase() === lowerValue)
-		return matchingValid ? value : valid[0]
+		return matchingValid ?? valid[0]
 	})
 
 export { asEnum, asString }

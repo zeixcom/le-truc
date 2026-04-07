@@ -120,8 +120,11 @@ const DEPENDENCY_TIMEOUT = 200
  */
 const extractAttributes = (selector: string): string[] => {
 	const attributes = new Set<string>()
-	if (selector.includes('.')) attributes.add('class')
-	if (selector.includes('#')) attributes.add('id')
+	// Strip attribute selector content before checking for class/id shorthand,
+	// so that #/. inside [attr^="#anchor"] don't produce false positives.
+	const withoutAttrValues = selector.replace(/\[[^\]]*\]/g, '')
+	if (withoutAttrValues.includes('.')) attributes.add('class')
+	if (withoutAttrValues.includes('#')) attributes.add('id')
 	if (selector.includes('[')) {
 		const parts = selector.split('[')
 		for (let i = 1; i < parts.length; i++) {

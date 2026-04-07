@@ -62,7 +62,12 @@ const asClampedInteger = (
 	max: number = Number.MAX_SAFE_INTEGER,
 ): Parser<number> =>
 	asParser((value: string | null | undefined) => {
-		const parsed = asInteger(min)(value)
+		if (value == null) return Math.max(min, Math.min(min, max))
+		const trimmed = value.trim()
+		const raw = trimmed.toLowerCase().startsWith('0x')
+			? parseNumber(v => parseInt(v, 16), trimmed)
+			: parseNumber(parseFloat, value)
+		const parsed = raw != null ? Math.trunc(raw) : min
 		return Math.max(min, Math.min(parsed, max))
 	})
 

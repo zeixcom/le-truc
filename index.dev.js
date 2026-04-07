@@ -1763,8 +1763,15 @@ var resolveSignal = (host, source) => {
 var toSignal = (host, value) => {
   if (isSignal(value))
     return value;
-  const fn = typeof value === "string" && value in host ? () => host[value] : isFunction(value) ? value : undefined;
-  return fn ? createComputed(fn) : undefined;
+  if (typeof value === "string" && value in host) {
+    const sig = getSignals(host)[value];
+    if (sig)
+      return sig;
+    return createComputed(() => host[value]);
+  }
+  if (isFunction(value))
+    return createComputed(value.bind(null, host));
+  return;
 };
 var makeWatch = (host) => {
   function watch(source, handlerOrHandlers) {
@@ -1882,9 +1889,8 @@ var runTasks = () => {
     tasks.get(element)?.();
 };
 var requestTick = () => {
-  if (requestId)
-    cancelAnimationFrame(requestId);
-  requestId = requestAnimationFrame(runTasks);
+  if (!requestId)
+    requestId = requestAnimationFrame(runTasks);
 };
 var schedule = (element, task) => {
   tasks.set(element, task);
@@ -1958,7 +1964,6 @@ function createEventsSensor(target, init, events) {
         const eventTarget = e.target;
         if (!eventTarget || !target.contains(eventTarget))
           return;
-        e.stopPropagation();
         const task = () => {
           try {
             const next = handler({
@@ -2015,8 +2020,9 @@ var makeOn = (host) => {
         }
         const root = host.shadowRoot ?? host;
         const listener = (e) => {
+          const path = e.composedPath();
           for (const el of target.get()) {
-            if (el === e.target || el.contains(e.target)) {
+            if (path.includes(el)) {
               const task = () => {
                 const result = handler(e, el);
                 if (!isRecord(result))
@@ -2060,9 +2066,10 @@ var asMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 var DEPENDENCY_TIMEOUT = 200;
 var extractAttributes = (selector) => {
   const attributes = new Set;
-  if (selector.includes("."))
+  const withoutAttrValues = selector.replace(/\[[^\]]*\]/g, "");
+  if (withoutAttrValues.includes("."))
     attributes.add("class");
-  if (selector.includes("#"))
+  if (withoutAttrValues.includes("#"))
     attributes.add("id");
   if (selector.includes("[")) {
     const parts = selector.split("[");
@@ -2247,11 +2254,13 @@ function defineComponent(name, factory) {
 }
 // src/safety.ts
 var isSafeURL = (value) => {
+  if (/^(javascript|data|vbscript):/i.test(value))
+    return false;
   if (/^(mailto|tel):/i.test(value))
     return true;
   if (value.includes("://")) {
     try {
-      const url = new URL(value, window.location.origin);
+      const url = new URL(value);
       return ["http:", "https:", "ftp:"].includes(url.protocol);
     } catch {
       return false;
@@ -2359,11 +2368,18 @@ var dangerouslySetInnerHTML = (element, options = {}) => ({
 // src/parsers/boolean.ts
 var asBoolean = () => asParser((value) => value != null && value !== "false");
 // src/parsers/date.ts
-var asDate = (fallback = "") => asParser((value) => value ? new Date(value).toLocaleDateString(undefined, {
-  year: "numeric",
-  month: "long",
-  day: "numeric"
-}) : fallback);
+var asDate = (fallback = "") => asParser((value) => {
+  if (!value)
+    return fallback;
+  const date = new Date(value);
+  if (isNaN(date.getTime()))
+    return fallback;
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+});
 // src/parsers/json.ts
 var asJSON = (fallback) => asParser((value) => {
   if ((value ?? fallback) == null)
@@ -2371,7 +2387,7 @@ var asJSON = (fallback) => asParser((value) => {
   if (value == null)
     return fallback;
   if (value === "")
-    throw new TypeError("Empty string is not valid JSON");
+    throw new SyntaxError("Empty string is not valid JSON");
   let result;
   try {
     result = JSON.parse(value);
@@ -2400,7 +2416,11 @@ var asInteger = (fallback = 0) => asParser((value) => {
 });
 var asNumber = (fallback = 0) => asParser((value) => parseNumber(parseFloat, value) ?? fallback);
 var asClampedInteger = (min = 0, max = Number.MAX_SAFE_INTEGER) => asParser((value) => {
-  const parsed = asInteger(min)(value);
+  if (value == null)
+    return Math.max(min, Math.min(min, max));
+  const trimmed = value.trim();
+  const raw = trimmed.toLowerCase().startsWith("0x") ? parseNumber((v) => parseInt(v, 16), trimmed) : parseNumber(parseFloat, value);
+  const parsed = raw != null ? Math.trunc(raw) : min;
   return Math.max(min, Math.min(parsed, max));
 });
 // src/parsers/string.ts
@@ -2410,7 +2430,7 @@ var asEnum = (valid) => asParser((value) => {
     return valid[0];
   const lowerValue = value.toLowerCase();
   const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
-  return matchingValid ? value : valid[0];
+  return matchingValid ?? valid[0];
 });
 export {
   valueString,

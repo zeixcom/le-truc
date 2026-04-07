@@ -24,8 +24,7 @@ const runTasks = () => {
 }
 
 const requestTick = () => {
-	if (requestId) cancelAnimationFrame(requestId)
-	requestId = requestAnimationFrame(runTasks)
+	if (!requestId) requestId = requestAnimationFrame(runTasks)
 }
 
 /* === Exported Function === */

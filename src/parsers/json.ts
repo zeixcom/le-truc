@@ -16,7 +16,7 @@ const asJSON = <T extends {}>(fallback: T): Parser<T> =>
 				'asJSON: Value and fallback are both null or undefined',
 			)
 		if (value == null) return fallback
-		if (value === '') throw new TypeError('Empty string is not valid JSON')
+		if (value === '') throw new SyntaxError('Empty string is not valid JSON')
 		let result: T | undefined
 		try {
 			result = JSON.parse(value)

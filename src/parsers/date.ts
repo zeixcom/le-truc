@@ -8,14 +8,15 @@ import { asParser, type Parser } from '../parsers'
  * @returns {Parser<string>} Parser function
  */
 const asDate = (fallback: string = ''): Parser<string> =>
-	asParser((value: string | null | undefined) =>
-		value
-			? new Date(value).toLocaleDateString(undefined, {
-					year: 'numeric',
-					month: 'long',
-					day: 'numeric',
-				})
-			: fallback,
-	)
+	asParser((value: string | null | undefined) => {
+		if (!value) return fallback
+		const date = new Date(value)
+		if (isNaN(date.getTime())) return fallback
+		return date.toLocaleDateString(undefined, {
+			year: 'numeric',
+			month: 'long',
+			day: 'numeric',
+		})
+	})
 
 export { asDate }
