@@ -64,7 +64,6 @@
 - [Parser](type-aliases/Parser.md)
 - [PassedProp](type-aliases/PassedProp.md)
 - [PassedProps](type-aliases/PassedProps.md)
-- [Reader](type-aliases/Reader.md)
 - [ReservedWords](type-aliases/ReservedWords.md)
 - [Sensor](type-aliases/Sensor.md)
 - [SensorEventHandler](type-aliases/SensorEventHandler.md)
@@ -80,6 +79,7 @@
 - [TaskCallback](type-aliases/TaskCallback.md)
 - [TrimWhitespace](type-aliases/TrimWhitespace.md)
 - [UnknownContext](type-aliases/UnknownContext.md)
+- [WatchHandlers](type-aliases/WatchHandlers.md)
 
 #### Variables
 
@@ -135,7 +135,6 @@
 - [isMutableSignal](functions/isMutableSignal.md)
 - [isObjectOfType](functions/isObjectOfType.md)
 - [isParser](functions/isParser.md)
-- [isReader](functions/isReader.md)
 - [isRecord](functions/isRecord.md)
 - [isSensor](functions/isSensor.md)
 - [isSignal](functions/isSignal.md)

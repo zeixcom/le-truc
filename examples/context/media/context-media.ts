@@ -1,4 +1,4 @@
-import { type Context, createState, defineComponent } from '../../..'
+import { type Context, createSensor, defineComponent } from '../../..'
 
 export type ContextMediaMotion = 'no-preference' | 'reduce'
 export type ContextMediaTheme = 'light' | 'dark'
@@ -42,41 +42,50 @@ export const MEDIA_ORIENTATION = 'media-orientation' as Context<
 export default defineComponent<ContextMediaProps>(
 	'context-media',
 	({ expose, host, provideContexts }) => {
+		const getBreakpoint = (attr: string, fallback: string) => {
+			const value = host.getAttribute(attr)
+			const trimmed = value?.trim()
+			if (!trimmed) return fallback
+			const unit = trimmed.match(/em$/) ? 'em' : 'px'
+			const v = parseFloat(trimmed)
+			return Number.isFinite(v) ? v + unit : fallback
+		}
+
 		expose({
 			// Context for motion preference
-			[MEDIA_MOTION]: () => {
-				const mql = matchMedia('(prefers-reduced-motion: reduce)')
-				const motion = createState<ContextMediaMotion>(
-					mql.matches ? 'reduce' : 'no-preference',
-				)
-				mql.addEventListener('change', e => {
-					motion.set(e.matches ? 'reduce' : 'no-preference')
-				})
-				return motion
-			},
+			[MEDIA_MOTION]: createSensor<ContextMediaMotion>(
+				set => {
+					const mql = matchMedia('(prefers-reduced-motion: reduce)')
+					const listener = (e: MediaQueryListEvent) =>
+						set(e.matches ? 'reduce' : 'no-preference')
+					mql.addEventListener('change', listener)
+					return () => mql.removeEventListener('change', listener)
+				},
+				{
+					value: matchMedia('(prefers-reduced-motion: reduce)').matches
+						? 'reduce'
+						: 'no-preference',
+				},
+			),
 
 			// Context for preferred color scheme
-			[MEDIA_THEME]: () => {
-				const mql = matchMedia('(prefers-color-scheme: dark)')
-				const theme = createState<ContextMediaTheme>(
-					mql.matches ? 'dark' : 'light',
-				)
-				mql.addEventListener('change', e => {
-					theme.set(e.matches ? 'dark' : 'light')
-				})
-				return theme
-			},
+			[MEDIA_THEME]: createSensor<ContextMediaTheme>(
+				set => {
+					const mql = matchMedia('(prefers-color-scheme: dark)')
+					const listener = (e: MediaQueryListEvent) =>
+						set(e.matches ? 'dark' : 'light')
+					mql.addEventListener('change', listener)
+					return () => mql.removeEventListener('change', listener)
+				},
+				{
+					value: matchMedia('(prefers-color-scheme: dark)').matches
+						? 'dark'
+						: 'light',
+				},
+			),
 
 			// Context for screen viewport size
-			[MEDIA_VIEWPORT]: () => {
-				const getBreakpoint = (attr: string, fallback: string) => {
-					const value = host.getAttribute(attr)
-					const trimmed = value?.trim()
-					if (!trimmed) return fallback
-					const unit = trimmed.match(/em$/) ? 'em' : 'px'
-					const v = parseFloat(trimmed)
-					return Number.isFinite(v) ? v + unit : fallback
-				}
+			[MEDIA_VIEWPORT]: (() => {
 				const mqlSM = matchMedia(`(min-width: ${getBreakpoint('sm', '32em')})`)
 				const mqlMD = matchMedia(`(min-width: ${getBreakpoint('md', '48em')})`)
 				const mqlLG = matchMedia(`(min-width: ${getBreakpoint('lg', '72em')})`)
@@ -88,25 +97,39 @@ export default defineComponent<ContextMediaProps>(
 					if (mqlSM.matches) return 'sm'
 					return 'xs'
 				}
-				const viewport = createState<ContextMediaViewport>(getViewport())
-				mqlSM.addEventListener('change', () => viewport.set(getViewport()))
-				mqlMD.addEventListener('change', () => viewport.set(getViewport()))
-				mqlLG.addEventListener('change', () => viewport.set(getViewport()))
-				mqlXL.addEventListener('change', () => viewport.set(getViewport()))
-				return viewport
-			},
+				return createSensor<ContextMediaViewport>(
+					set => {
+						const listener = () => set(getViewport())
+						mqlSM.addEventListener('change', listener)
+						mqlMD.addEventListener('change', listener)
+						mqlLG.addEventListener('change', listener)
+						mqlXL.addEventListener('change', listener)
+						return () => {
+							mqlSM.removeEventListener('change', listener)
+							mqlMD.removeEventListener('change', listener)
+							mqlLG.removeEventListener('change', listener)
+							mqlXL.removeEventListener('change', listener)
+						}
+					},
+					{ value: getViewport() },
+				)
+			})(),
 
 			// Context for screen orientation
-			[MEDIA_ORIENTATION]: () => {
-				const mql = matchMedia('(orientation: landscape)')
-				const orientation = createState<ContextMediaOrientation>(
-					mql.matches ? 'landscape' : 'portrait',
-				)
-				mql.addEventListener('change', e => {
-					orientation.set(e.matches ? 'landscape' : 'portrait')
-				})
-				return orientation
-			},
+			[MEDIA_ORIENTATION]: createSensor<ContextMediaOrientation>(
+				set => {
+					const mql = matchMedia('(orientation: landscape)')
+					const listener = (e: MediaQueryListEvent) =>
+						set(e.matches ? 'landscape' : 'portrait')
+					mql.addEventListener('change', listener)
+					return () => mql.removeEventListener('change', listener)
+				},
+				{
+					value: matchMedia('(orientation: landscape)').matches
+						? 'landscape'
+						: 'portrait',
+				},
+			),
 		})
 
 		return [

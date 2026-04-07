@@ -96,6 +96,7 @@ export {
 	type FactoryWatchHelper,
 	type PassedProp,
 	type PassedProps,
+	type WatchHandlers,
 } from './src/effects'
 export {
 	DependencyTimeoutError,

@@ -2,7 +2,7 @@
 
 > **FactoryWatchHelper**\<`P`\> = \{\<`K`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`K`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); (`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \}
 
-Defined in: [src/component.ts:107](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/component.ts#L107)
+Defined in: [src/effects.ts:81](https://github.com/zeixcom/le-truc/blob/6e56893b2946c17dd4fe36c76f1a09d8d1d02488/src/effects.ts#L81)
 
 The `watch` helper type in `FactoryContext`.
 
@@ -58,7 +58,7 @@ are not tracked. Returns an `EffectDescriptor`.
 
 ###### handlers
 
-`WatchHandlers`\<`P`\[`K`\]\>
+[`WatchHandlers`](WatchHandlers.md)\<`P`\[`K`\]\>
 
 ##### Returns
 
@@ -106,7 +106,7 @@ are not tracked. Returns an `EffectDescriptor`.
 
 ###### handlers
 
-`WatchHandlers`\<`T`\>
+[`WatchHandlers`](WatchHandlers.md)\<`T`\>
 
 ##### Returns
 

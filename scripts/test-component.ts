@@ -40,8 +40,18 @@ Additional Playwright options can be passed after --:
 }
 
 function getComponentPath(componentName: string) {
+	// Derive category and sub-name from component name (e.g. "module-todo" → category="module", sub="todo")
+	const dashIndex = componentName.indexOf('-')
+	const category = dashIndex >= 0 ? componentName.slice(0, dashIndex) : null
+	const sub = dashIndex >= 0 ? componentName.slice(dashIndex + 1) : null
+
 	// Try different possible paths for the component
+	// Files are named {componentName}.spec.ts inside examples/{category}/{sub}/
 	const possiblePaths = [
+		...(category && sub ? [
+			`examples/${category}/${sub}/${componentName}.spec.ts`,
+			`examples/${category}/${sub}`,
+		] : []),
 		`examples/${componentName}/${componentName}.spec.ts`,
 		`examples/${componentName}`,
 		`examples/${componentName}.spec.ts`,
@@ -68,14 +78,26 @@ function listAvailableComponents() {
 
 		const items = readdirSync(examplesDir)
 
-		const components = items
-			.filter(item => {
-				const itemPath = join(examplesDir, item)
-				const isDir = statSync(itemPath).isDirectory()
-				const hasSpecFile = existsSync(join(itemPath, `${item}.spec.ts`))
-				return isDir && hasSpecFile
-			})
-			.sort()
+		const components: string[] = []
+		for (const item of items) {
+			const itemPath = join(examplesDir, item)
+			if (!statSync(itemPath).isDirectory()) continue
+			// Direct component (flat layout, component name = directory name)
+			if (existsSync(join(itemPath, `${item}.spec.ts`))) {
+				components.push(item)
+				continue
+			}
+			// Category directory — scan one level deeper
+			// Files are named {category}-{sub}.spec.ts (e.g. module-todo.spec.ts in module/todo/)
+			for (const sub of readdirSync(itemPath)) {
+				const subPath = join(itemPath, sub)
+				const componentName = `${item}-${sub}`
+				if (statSync(subPath).isDirectory() && existsSync(join(subPath, `${componentName}.spec.ts`))) {
+					components.push(componentName)
+				}
+			}
+		}
+		components.sort()
 
 		if (components.length === 0) {
 			console.log('  No components with test files found')
@@ -148,10 +170,17 @@ function main() {
 
 	if (!testPath) {
 		console.error(`❌ Component "${componentName}" not found`)
-		console.error('\nLooked for:')
-		console.error(`  • examples/${componentName}/${componentName}.spec.ts`)
-		console.error(`  • examples/${componentName}/`)
-		console.error(`  • examples/${componentName}.spec.ts`)
+		const dashIdx = componentName.indexOf('-')
+	const errCategory = dashIdx >= 0 ? componentName.slice(0, dashIdx) : null
+	const errSub = dashIdx >= 0 ? componentName.slice(dashIdx + 1) : null
+	console.error('\nLooked for:')
+	if (errCategory && errSub) {
+		console.error(`  • examples/${errCategory}/${errSub}/${componentName}.spec.ts`)
+		console.error(`  • examples/${errCategory}/${errSub}/`)
+	}
+	console.error(`  • examples/${componentName}/${componentName}.spec.ts`)
+	console.error(`  • examples/${componentName}/`)
+	console.error(`  • examples/${componentName}.spec.ts`)
 
 		listAvailableComponents()
 		process.exit(1)

@@ -2,14 +2,14 @@
 
 > **defineComponent**\<`P`\>(`name`, `factory`): `HTMLElement` & `P`
 
-Defined in: [src/component.ts:241](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/component.ts#L241)
+Defined in: [src/component.ts:129](https://github.com/zeixcom/le-truc/blob/6e56893b2946c17dd4fe36c76f1a09d8d1d02488/src/component.ts#L129)
 
 Define and register a reactive custom element using the v1.1 factory form.
 
 The factory receives a `FactoryContext` at connect time: query helpers (`first`, `all`),
 the `host` element, and `expose()` for declaring reactive properties. It returns a flat
-array of effect descriptors created by helpers like `watch()`, `on()`, `each()`, `pass()`,
-and `provideContexts()`.
+array of effect descriptors created by helpers like `watch()`, `on()`, `pass()`,
+`provideContexts()`, and `requestContext()`.
 
 Effects activate after dependency resolution — child custom elements are guaranteed to
 be defined before any descriptor runs.
@@ -40,7 +40,7 @@ Factory function that queries elements, calls expose(), and returns effect descr
 
 #### Since
 
-1.1
+2.0
 
 #### Throws
 

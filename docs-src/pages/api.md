@@ -62,7 +62,6 @@ layout: 'page'
   - [isMutableSignal](./api/functions/isMutableSignal.html)
   - [isObjectOfType](./api/functions/isObjectOfType.html)
   - [isParser](./api/functions/isParser.html)
-  - [isReader](./api/functions/isReader.html)
   - [isRecord](./api/functions/isRecord.html)
   - [isSensor](./api/functions/isSensor.html)
   - [isSignal](./api/functions/isSignal.html)
@@ -141,7 +140,6 @@ layout: 'page'
   - [Parser](./api/type-aliases/Parser.html)
   - [PassedProp](./api/type-aliases/PassedProp.html)
   - [PassedProps](./api/type-aliases/PassedProps.html)
-  - [Reader](./api/type-aliases/Reader.html)
   - [ReservedWords](./api/type-aliases/ReservedWords.html)
   - [Sensor](./api/type-aliases/Sensor.html)
   - [SensorEventHandler](./api/type-aliases/SensorEventHandler.html)
@@ -157,6 +155,7 @@ layout: 'page'
   - [TaskCallback](./api/type-aliases/TaskCallback.html)
   - [TrimWhitespace](./api/type-aliases/TrimWhitespace.html)
   - [UnknownContext](./api/type-aliases/UnknownContext.html)
+  - [WatchHandlers](./api/type-aliases/WatchHandlers.html)
 {% /listnav %}
 
 {% /section %}

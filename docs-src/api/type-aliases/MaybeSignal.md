@@ -2,7 +2,7 @@
 
 > **MaybeSignal**\<`T`\> = `T` \| [`Signal`](Signal.md)\<`T`\> \| [`MemoCallback`](MemoCallback.md)\<`T`\> \| [`TaskCallback`](TaskCallback.md)\<`T`\>
 
-Defined in: [src/component.ts:94](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/component.ts#L94)
+Defined in: [src/component.ts:90](https://github.com/zeixcom/le-truc/blob/6e56893b2946c17dd4fe36c76f1a09d8d1d02488/src/component.ts#L90)
 
 Any value that `#setAccessor` can turn into a signal:
 - `T` — wrapped in `createState()`
