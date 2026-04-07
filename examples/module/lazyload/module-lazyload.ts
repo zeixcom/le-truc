@@ -1,6 +1,7 @@
 import {
 	asString,
 	createEffect,
+	createMemo,
 	createTask,
 	dangerouslySetInnerHTML,
 	defineComponent,
@@ -64,6 +65,8 @@ export default defineComponent<ModuleLazyloadProps>(
 			{ value: { ok: false, value: '', error: '', pending: true } },
 		)
 
+		const htmlContent = createMemo(() => result.get().value ?? '')
+
 		expose({
 			src: asString(),
 		})
@@ -80,10 +83,9 @@ export default defineComponent<ModuleLazyloadProps>(
 					errorEl.textContent = res.error ?? ''
 					content.hidden = !res.ok
 				}),
-			() =>
-				dangerouslySetInnerHTML(() => result.get().value ?? '', {
-					allowScripts: host.hasAttribute('allow-scripts'),
-				})(host as any, content),
+			watch(htmlContent, dangerouslySetInnerHTML(content, {
+				allowScripts: host.hasAttribute('allow-scripts'),
+			})),
 		]
 	},
 )

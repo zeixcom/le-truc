@@ -1632,9 +1632,7 @@ function isSlot(value) {
 }
 // src/util.ts
 var DEV_MODE = typeof process !== "undefined" && true;
-var LOG_DEBUG = "debug";
 var LOG_WARN = "warn";
-var LOG_ERROR = "error";
 var RESERVED_WORDS = new Set([
   "constructor",
   "prototype"
@@ -1661,11 +1659,6 @@ var classString = (classList) => classList?.length ? `.${Array.from(classList).j
 var isCustomElement = (element) => element.localName.includes("-");
 var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
 var elementName = (el) => el ? `<${el.localName}${idString(el.id)}${classString(el.classList)}>` : "<unknown>";
-var log = (value, msg, level = LOG_DEBUG) => {
-  if (DEV_MODE || [LOG_ERROR, LOG_WARN].includes(level))
-    console[level](msg, value);
-  return value;
-};
 var validatePropertyName = (prop) => {
   if (RESERVED_WORDS.has(prop))
     return `Property name "${prop}" is a reserved word`;
@@ -1734,19 +1727,6 @@ class InvalidCustomElementError extends TypeError {
 }
 
 // src/effects.ts
-var getUpdateDescription = (op, name = "") => {
-  const ops = {
-    a: "attribute ",
-    c: "class ",
-    d: "dataset ",
-    h: "inner HTML",
-    m: "method call ",
-    p: "property ",
-    s: "style property ",
-    t: "text content"
-  };
-  return ops[op] + name;
-};
 var runEffects = (ui, effects) => {
   if (!isRecord(effects))
     throw new InvalidEffectsError(ui.host);
@@ -1765,59 +1745,6 @@ var runEffects = (ui, effects) => {
       } else if (ui[k]) {
         for (const fn of fns)
           fn(ui.host, ui[k]);
-      }
-    }
-  });
-};
-var resolveReactive = (reactive, host, target, context) => {
-  try {
-    if (typeof reactive === "string") {
-      if (DEV_MODE && !(reactive in host)) {
-        log(reactive, `resolveReactive: property '${reactive}' does not exist on ${elementName(host)}`, LOG_WARN);
-      }
-      return host[reactive];
-    }
-    return isSignal(reactive) ? reactive.get() : isFunction(reactive) ? reactive(target) : undefined;
-  } catch (error) {
-    if (context) {
-      log(error, `Failed to resolve value of ${valueString(reactive)}${context ? ` for ${context}` : ""} in ${elementName(target)}${host !== target ? ` in ${elementName(host)}` : ""}`, LOG_ERROR);
-    }
-    return;
-  }
-};
-var updateElement = (reactive, updater) => (host, target) => {
-  const { op, name = "", read, update } = updater;
-  const operationDesc = getUpdateDescription(op, name);
-  const ok = (verb) => () => {
-    if (DEV_MODE && host.debug) {
-      log(target, `${verb} ${operationDesc} of ${elementName(target)} in ${elementName(host)}`);
-    }
-    updater.resolve?.(target);
-  };
-  const err = (verb) => (error) => {
-    log(error, `Failed to ${verb} ${operationDesc} of ${elementName(target)} in ${elementName(host)}`, LOG_ERROR);
-    updater.reject?.(error);
-  };
-  const fallback = read(target);
-  return createEffect(() => {
-    const value = resolveReactive(reactive, host, target, operationDesc);
-    const resolvedValue = value === undefined ? fallback : value === null ? updater.delete ? null : fallback : value;
-    if (updater.delete && resolvedValue === null) {
-      try {
-        updater.delete(target);
-        ok("delete")();
-      } catch (error) {
-        err("delete")(error);
-      }
-    } else if (resolvedValue != null) {
-      const current = read(target);
-      if (Object.is(resolvedValue, current))
-        return;
-      try {
-        update(target, resolvedValue);
-        ok("update")();
-      } catch (error) {
-        err("update")(error);
       }
     }
   });
@@ -1842,32 +1769,6 @@ function each(memo, callback) {
   };
 }
 
-// src/parsers.ts
-var PARSER_BRAND = Symbol("parser");
-var METHOD_BRAND = Symbol("method");
-var isParser = (value) => {
-  if (!isFunction(value))
-    return false;
-  if (PARSER_BRAND in value)
-    return true;
-  if (value.length >= 2) {
-    if (DEV_MODE) {
-      console.warn(`isParser: unbranded two-argument function detected. Wrap custom parsers with asParser() to avoid misclassification when using default parameters or destructuring.`, value);
-    }
-    return true;
-  }
-  return false;
-};
-var isMethodProducer = (value) => isFunction(value) && (METHOD_BRAND in value);
-var isReader = (value) => isFunction(value);
-var getFallback = (ui, fallback) => isReader(fallback) ? fallback(ui) : fallback;
-var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
-var asMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
-var read = (reader, fallback) => (ui) => {
-  const value = reader(ui);
-  return typeof value === "string" && isParser(fallback) ? fallback(ui, value) : value ?? getFallback(ui, fallback);
-};
-
 // src/context.ts
 var CONTEXT_REQUEST = "context-request";
 
@@ -1885,24 +1786,6 @@ class ContextRequestEvent extends Event {
     this.subscribe = subscribe;
   }
 }
-var provideContexts = (contexts) => (host) => createScope(() => {
-  const listener = (e) => {
-    const { context, callback } = e;
-    if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
-      e.stopImmediatePropagation();
-      callback(() => host[context]);
-    }
-  };
-  host.addEventListener(CONTEXT_REQUEST, listener);
-  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
-});
-var requestContext = (context, fallback) => (ui) => {
-  let consumed = () => getFallback(ui, fallback);
-  ui.host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
-    consumed = getter;
-  }));
-  return createMemo(consumed);
-};
 
 // src/internal.ts
 var componentSignals = new WeakMap;
@@ -1914,50 +1797,6 @@ var getSignals = (el) => {
   }
   return signals;
 };
-
-// src/effects/pass.ts
-var pass = (props) => (host, target) => createScope(() => {
-  if (!isCustomElement(target))
-    throw new InvalidCustomElementError(target, `pass from ${elementName(host)}`);
-  const reactives = isFunction(props) ? props(target) : props;
-  if (!isRecord(reactives))
-    throw new InvalidReactivesError(host, target, reactives);
-  const toSignal = (value) => {
-    if (isSignal(value))
-      return value;
-    const fn = typeof value === "string" && value in host ? () => host[value] : isFunction(value) ? value : undefined;
-    return fn ? createComputed(fn) : undefined;
-  };
-  const signals = getSignals(target);
-  const targetName = elementName(target);
-  const cleanups = [];
-  for (const [prop, reactive] of Object.entries(reactives)) {
-    if (reactive == null)
-      continue;
-    if (!(prop in target)) {
-      if (DEV_MODE)
-        console[LOG_WARN](`pass(): property '${prop}' does not exist on ${targetName}`);
-      continue;
-    }
-    const signal = toSignal(reactive);
-    if (!signal)
-      continue;
-    const slot = signals[prop];
-    if (isSlot(slot)) {
-      const original = slot.current();
-      slot.replace(signal);
-      cleanups.push(() => slot.replace(original));
-      continue;
-    }
-    if (DEV_MODE)
-      console[LOG_WARN](`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`);
-  }
-  if (cleanups.length)
-    return () => {
-      for (const c of cleanups)
-        c();
-    };
-});
 
 // src/scheduler.ts
 var PASSIVE_EVENTS = new Set([
@@ -2054,6 +1893,12 @@ var attachListener = (host, target, type, handler, options) => {
   target.addEventListener(type, listener, options);
   return () => target.removeEventListener(type, listener);
 };
+var toSignal = (host, value) => {
+  if (isSignal(value))
+    return value;
+  const fn = typeof value === "string" && value in host ? () => host[value] : isFunction(value) ? value : undefined;
+  return fn ? createComputed(fn) : undefined;
+};
 var makeWatch = (host) => {
   function watch(source, handlerOrHandlers) {
     return () => {
@@ -2129,20 +1974,55 @@ var makeOn = (host) => {
   return on;
 };
 var makePass = (host) => {
-  function pass2(target, props) {
+  const swapSlots = (target, props) => createScope(() => {
+    if (!isCustomElement(target))
+      throw new InvalidCustomElementError(target, `pass from ${elementName(host)}`);
+    if (!isRecord(props))
+      throw new InvalidReactivesError(host, target, props);
+    const signals = getSignals(target);
+    const targetName = elementName(target);
+    const cleanups = [];
+    for (const [prop, reactive] of Object.entries(props)) {
+      if (reactive == null)
+        continue;
+      if (!(prop in target)) {
+        if (DEV_MODE)
+          console[LOG_WARN](`pass(): property '${prop}' does not exist on ${targetName}`);
+        continue;
+      }
+      const signal = toSignal(host, reactive);
+      if (!signal)
+        continue;
+      const slot = signals[prop];
+      if (isSlot(slot)) {
+        const original = slot.current();
+        slot.replace(signal);
+        cleanups.push(() => slot.replace(original));
+        continue;
+      }
+      if (DEV_MODE)
+        console[LOG_WARN](`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`);
+    }
+    if (cleanups.length)
+      return () => {
+        for (const c of cleanups)
+          c();
+      };
+  });
+  function pass(target, props) {
     return () => {
       if (isMemo(target)) {
         createEffect(() => {
           for (const el of target.get()) {
-            pass(props)(host, el);
+            createScope(() => swapSlots(el, props));
           }
         });
       } else {
-        pass(props)(host, target);
+        swapSlots(target, props);
       }
     };
   }
-  return pass2;
+  return pass;
 };
 var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
   const listener = (e) => {
@@ -2161,6 +2041,32 @@ var makeRequestContext = (host) => (context, fallback) => {
     consumed = getter;
   }));
   return createMemo(consumed);
+};
+
+// src/parsers.ts
+var PARSER_BRAND = Symbol("parser");
+var METHOD_BRAND = Symbol("method");
+var isParser = (value) => {
+  if (!isFunction(value))
+    return false;
+  if (PARSER_BRAND in value)
+    return true;
+  if (value.length >= 2) {
+    if (DEV_MODE) {
+      console.warn(`isParser: unbranded two-argument function detected. Wrap custom parsers with asParser() to avoid misclassification when using default parameters or destructuring.`, value);
+    }
+    return true;
+  }
+  return false;
+};
+var isMethodProducer = (value) => isFunction(value) && (METHOD_BRAND in value);
+var isReader = (value) => isFunction(value);
+var getFallback = (ui, fallback) => isReader(fallback) ? fallback(ui) : fallback;
+var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
+var asMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
+var read = (reader, fallback) => (ui) => {
+  const value = reader(ui);
+  return typeof value === "string" && isParser(fallback) ? fallback(ui, value) : value ?? getFallback(ui, fallback);
 };
 
 // src/ui.ts
@@ -2398,172 +2304,6 @@ function defineComponent(name, propsOrFactory = {}, select = () => ({}), setup =
   customElements.define(name, Truc);
   return customElements.get(name);
 }
-// src/safety.ts
-var isSafeURL = (value) => {
-  if (/^(mailto|tel):/i.test(value))
-    return true;
-  if (value.includes("://")) {
-    try {
-      const url = new URL(value, window.location.origin);
-      return ["http:", "https:", "ftp:"].includes(url.protocol);
-    } catch {
-      return false;
-    }
-  }
-  return true;
-};
-var safeSetAttribute = (element, attr, value) => {
-  if (/^on/i.test(attr))
-    throw new Error(`setAttribute: blocked unsafe attribute name '${attr}' on ${element.localName} — event handler attributes are not allowed`);
-  value = String(value).trim();
-  if (!isSafeURL(value))
-    throw new Error(`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`);
-  element.setAttribute(attr, value);
-};
-var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-var setTextPreservingComments = (element, text) => {
-  Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => node.remove());
-  element.append(document.createTextNode(text));
-};
-
-// src/effects/attribute.ts
-var setAttribute = (name, reactive = name) => updateElement(reactive, {
-  op: "a",
-  name,
-  read: (el) => el.getAttribute(name),
-  update: (el, value) => {
-    safeSetAttribute(el, name, value);
-  },
-  delete: (el) => {
-    el.removeAttribute(name);
-  }
-});
-var toggleAttribute = (name, reactive = name) => updateElement(reactive, {
-  op: "a",
-  name,
-  read: (el) => el.hasAttribute(name),
-  update: (el, value) => {
-    el.toggleAttribute(name, value);
-  }
-});
-// src/effects/class.ts
-var toggleClass = (token, reactive = token) => updateElement(reactive, {
-  op: "c",
-  name: token,
-  read: (el) => el.classList.contains(token),
-  update: (el, value) => {
-    el.classList.toggle(token, value);
-  }
-});
-// src/effects/event.ts
-var on = (type, handler, options = {}) => (host, target) => createScope(() => {
-  if (!("passive" in options))
-    options = { ...options, passive: PASSIVE_EVENTS.has(type) };
-  const listener = (e) => {
-    const task = () => {
-      const result = handler(e);
-      if (!isRecord(result))
-        return;
-      batch(() => {
-        for (const [key, value] of Object.entries(result)) {
-          try {
-            host[key] = value;
-          } catch (error) {
-            log(error, `Reactive property "${key}" on ${elementName(host)} from event ${type} on ${elementName(target)} could not be set, because it is read-only.`, LOG_ERROR);
-          }
-        }
-      });
-    };
-    if (options.passive)
-      schedule(target, task);
-    else
-      task();
-  };
-  target.addEventListener(type, listener, options);
-  return () => target.removeEventListener(type, listener);
-});
-// src/effects/html.ts
-var dangerouslySetInnerHTML = (reactive, options = {}) => updateElement(reactive, {
-  op: "h",
-  read: (el) => (el.shadowRoot || !options.shadowRootMode ? el : null)?.innerHTML ?? "",
-  update: (el, html) => {
-    const { shadowRootMode, allowScripts } = options;
-    if (!html) {
-      if (el.shadowRoot)
-        el.shadowRoot.innerHTML = "<slot></slot>";
-      return "";
-    }
-    if (shadowRootMode && !el.shadowRoot)
-      el.attachShadow({ mode: shadowRootMode });
-    const target = el.shadowRoot || el;
-    schedule(el, () => {
-      target.innerHTML = html;
-      if (allowScripts) {
-        const SCRIPT_ATTRS = [
-          "type",
-          "src",
-          "async",
-          "defer",
-          "nomodule",
-          "crossorigin",
-          "integrity",
-          "referrerpolicy",
-          "fetchpriority"
-        ];
-        target.querySelectorAll("script").forEach((script) => {
-          const newScript = document.createElement("script");
-          for (const attr of SCRIPT_ATTRS) {
-            if (script.hasAttribute(attr))
-              newScript.setAttribute(attr, script.getAttribute(attr));
-          }
-          if (!script.hasAttribute("src"))
-            newScript.appendChild(document.createTextNode(script.textContent ?? ""));
-          target.appendChild(newScript);
-          script.remove();
-        });
-      }
-    });
-    return allowScripts ? " with scripts" : "";
-  }
-});
-// src/effects/property.ts
-var setProperty = (key, reactive = key) => updateElement(reactive, {
-  op: "p",
-  name: key,
-  read: (el) => (key in el) ? el[key] ?? null : null,
-  update: (el, value) => {
-    el[key] = value;
-  }
-});
-var show = (reactive) => updateElement(reactive, {
-  op: "p",
-  name: "hidden",
-  read: (el) => !el.hidden,
-  update: (el, value) => {
-    el.hidden = !value;
-  }
-});
-// src/effects/style.ts
-var setStyle = (prop, reactive = prop) => updateElement(reactive, {
-  op: "s",
-  name: prop,
-  read: (el) => el.style.getPropertyValue(prop),
-  update: (el, value) => {
-    el.style.setProperty(prop, value);
-  },
-  delete: (el) => {
-    el.style.removeProperty(prop);
-  }
-});
-// src/effects/text.ts
-var setText = (reactive) => updateElement(reactive, {
-  op: "t",
-  read: (el) => el.textContent,
-  update: (el, value) => {
-    Array.from(el.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => node.remove());
-    el.append(document.createTextNode(value));
-  }
-});
 // src/events.ts
 function createEventsSensor(targetOrInit, initOrKey, events) {
   if (targetOrInit instanceof Element) {
@@ -2735,6 +2475,33 @@ var asEnum = (valid) => asParser((_, value) => {
   const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
   return matchingValid ? value : valid[0];
 });
+// src/safety.ts
+var isSafeURL = (value) => {
+  if (/^(mailto|tel):/i.test(value))
+    return true;
+  if (value.includes("://")) {
+    try {
+      const url = new URL(value, window.location.origin);
+      return ["http:", "https:", "ftp:"].includes(url.protocol);
+    } catch {
+      return false;
+    }
+  }
+  return true;
+};
+var safeSetAttribute = (element, attr, value) => {
+  if (/^on/i.test(attr))
+    throw new Error(`setAttribute: blocked unsafe attribute name '${attr}' on ${element.localName} — event handler attributes are not allowed`);
+  value = String(value).trim();
+  if (!isSafeURL(value))
+    throw new Error(`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`);
+  element.setAttribute(attr, value);
+};
+var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+var setTextPreservingComments = (element, text) => {
+  Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => node.remove());
+  element.append(document.createTextNode(text));
+};
 // src/helpers.ts
 var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
   element.textContent = String(value);
@@ -2770,26 +2537,62 @@ var bindStyle = (element, prop) => ({
     element.style.removeProperty(prop);
   }
 });
+var SCRIPT_ATTRS = [
+  "type",
+  "src",
+  "async",
+  "defer",
+  "nomodule",
+  "crossorigin",
+  "integrity",
+  "referrerpolicy",
+  "fetchpriority"
+];
+var dangerouslySetInnerHTML = (element, options = {}) => ({
+  ok: (html) => {
+    const { shadowRootMode, allowScripts } = options;
+    if (!html) {
+      if (element.shadowRoot)
+        element.shadowRoot.innerHTML = "<slot></slot>";
+      else
+        element.innerHTML = "";
+      return;
+    }
+    if (shadowRootMode && !element.shadowRoot)
+      element.attachShadow({ mode: shadowRootMode });
+    const target = element.shadowRoot || element;
+    schedule(element, () => {
+      target.innerHTML = html;
+      if (allowScripts) {
+        target.querySelectorAll("script").forEach((script) => {
+          const newScript = document.createElement("script");
+          for (const attr of SCRIPT_ATTRS) {
+            if (script.hasAttribute(attr))
+              newScript.setAttribute(attr, script.getAttribute(attr));
+          }
+          if (!script.hasAttribute("src"))
+            newScript.appendChild(document.createTextNode(script.textContent ?? ""));
+          target.appendChild(newScript);
+          script.remove();
+        });
+      }
+    });
+  },
+  nil: () => {
+    if (element.shadowRoot)
+      element.shadowRoot.innerHTML = "<slot></slot>";
+    else
+      element.innerHTML = "";
+  }
+});
 export {
   valueString,
-  updateElement,
   untrack,
   unown,
-  toggleClass,
-  toggleAttribute,
-  show,
   setTextPreservingComments,
-  setText,
-  setStyle,
-  setProperty,
-  setAttribute,
   schedule,
   safeSetAttribute,
-  requestContext,
   read,
-  provideContexts,
-  pass,
-  on,
   match,
   isTask,
   isStore,

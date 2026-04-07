@@ -1,7 +1,7 @@
 import { type MaybeCleanup, type Memo, type MemoCallback, type Signal, type TaskCallback } from '@zeix/cause-effect';
 import type { Context } from './context';
 import { type EffectDescriptor, type Effects, type FactoryResult } from './effects';
-import type { PassedProps } from './effects/pass';
+import type { PassedProps } from './factory';
 import { type WatchHandlers } from './factory';
 import { METHOD_BRAND, type Parser, type Reader } from './parsers';
 import { type ElementQueries, type UI } from './ui';

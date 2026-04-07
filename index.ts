@@ -92,33 +92,14 @@ export {
 	type ContextCallback,
 	ContextRequestEvent,
 	type ContextType,
-	provideContexts,
-	requestContext,
 	type UnknownContext,
 } from './src/context'
 export {
-	type Effect,
 	type EffectDescriptor,
-	type Effects,
-	type ElementEffects,
-	type ElementUpdater,
 	each,
 	type FactoryResult,
-	type Reactive,
-	type UpdateOperation,
-	updateElement,
 } from './src/effects'
-export { setAttribute, toggleAttribute } from './src/effects/attribute'
-export { toggleClass } from './src/effects/class'
-export { type EventHandler, type EventType, on } from './src/effects/event'
-export {
-	type DangerouslySetInnerHTMLOptions,
-	dangerouslySetInnerHTML,
-} from './src/effects/html'
-export { type PassedProp, type PassedProps, pass } from './src/effects/pass'
-export { setProperty, show } from './src/effects/property'
-export { setStyle } from './src/effects/style'
-export { setText } from './src/effects/text'
+export { type PassedProp, type PassedProps } from './src/factory'
 export {
 	DependencyTimeoutError,
 	InvalidComponentNameError,
@@ -162,6 +143,8 @@ export {
 export {
 	bindAttribute,
 	bindClass,
+	dangerouslySetInnerHTML,
+	type DangerouslySetInnerHTMLOptions,
 	bindProperty,
 	bindStyle,
 	bindText,

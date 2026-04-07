@@ -2,7 +2,6 @@ import { type MaybeCleanup, type Memo, type Signal } from '@zeix/cause-effect';
 import type { ComponentProps } from './component';
 import { type Context } from './context';
 import type { EffectDescriptor } from './effects';
-import type { PassedProps } from './effects/pass';
 /**
  * User-facing handler object for `watch()` with match branches.
  * `ok` receives the resolved value directly (not a tuple) for single-source `watch()`.
@@ -12,6 +11,22 @@ type WatchHandlers<T> = {
     ok: (value: T) => MaybeCleanup | void;
     err?: (error: Error) => MaybeCleanup | void;
     nil?: () => MaybeCleanup | void;
+};
+/**
+ * A single reactive value to pass to a descendant Le Truc component property.
+ *
+ * Three forms are accepted:
+ * - `keyof P` — a string property name on the host
+ * - `Signal<T>` — any signal
+ * - `(host: HTMLElement & P) => T` — a reader function receiving the host
+ */
+type PassedProp<T, P extends ComponentProps> = keyof P | Signal<T & {}> | ((host: HTMLElement & P) => T);
+/**
+ * A map of child component property names to the reactive values to inject into them.
+ * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
+ */
+type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
+    [K in keyof Q & string]?: PassedProp<Q[K], P>;
 };
 /**
  * Events that do not bubble. When used as the `type` argument to `on()` with a Memo target,
@@ -90,4 +105,4 @@ declare const makeProvideContexts: <P extends ComponentProps>(host: HTMLElement 
  * @param host - The component host element
  */
 declare const makeRequestContext: <P extends ComponentProps>(host: HTMLElement & P) => <T extends {}>(context: Context<string, () => T>, fallback: T) => Memo<T>;
-export { makeOn, makePass, makeProvideContexts, makeRequestContext, makeWatch, NON_BUBBLING_EVENTS, type WatchHandlers, };
+export { makeOn, makePass, makeProvideContexts, makeRequestContext, makeWatch, NON_BUBBLING_EVENTS, type PassedProp, type PassedProps, type WatchHandlers, };

@@ -516,9 +516,9 @@ test.describe('setAttribute security (safeSetAttribute)', () => {
 		})
 
 		await page.evaluate(() => {
-			// Programmatically update the href attribute to an unsafe value
+			// Programmatically update the href property to an unsafe value
 			const el = document.querySelector('#sec-href') as any
-			if (el) el.setAttribute('href', 'vbscript://run-something')
+			if (el) el.href = 'vbscript://run-something'
 		})
 		await page.waitForTimeout(200)
 
@@ -544,7 +544,7 @@ test.describe('setAttribute security (safeSetAttribute)', () => {
 
 		await page.evaluate(() => {
 			const el = document.querySelector('#sec-href') as any
-			if (el) el.setAttribute('href', 'custom://bad-protocol')
+			if (el) el.href = 'custom://bad-protocol'
 		})
 		await page.waitForTimeout(200)
 
@@ -562,7 +562,7 @@ test.describe('setAttribute security (safeSetAttribute)', () => {
 
 		await page.evaluate(() => {
 			const el = document.querySelector('#sec-href') as any
-			if (el) el.setAttribute('href', 'https://example.com/safe')
+			if (el) el.href = 'https://example.com/safe'
 		})
 		await page.waitForTimeout(100)
 
@@ -584,7 +584,7 @@ test.describe('setAttribute security (safeSetAttribute)', () => {
 
 		await page.evaluate(() => {
 			const el = document.querySelector('#sec-href') as any
-			if (el) el.setAttribute('href', 'mailto:test@example.com')
+			if (el) el.href = 'mailto:test@example.com'
 		})
 		await page.waitForTimeout(100)
 

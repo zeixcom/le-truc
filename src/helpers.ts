@@ -1,5 +1,6 @@
 import type { WatchHandlers } from './factory'
 import { safeSetAttribute, setTextPreservingComments } from './safety'
+import { schedule } from './scheduler'
 
 /* === Exported Functions === */
 
@@ -149,6 +150,85 @@ const bindStyle = (
 	},
 })
 
+/* === Constants === */
+
+const SCRIPT_ATTRS = [
+	'type',
+	'src',
+	'async',
+	'defer',
+	'nomodule',
+	'crossorigin',
+	'integrity',
+	'referrerpolicy',
+	'fetchpriority',
+]
+
+/* === Exported Types === */
+
+type DangerouslySetInnerHTMLOptions = {
+	shadowRootMode?: ShadowRootMode
+	allowScripts?: boolean
+}
+
+/* === More Exported Functions === */
+
+/**
+ * Returns `WatchHandlers<string>` that sets the inner HTML of an element,
+ * with optional Shadow DOM and script re-execution support.
+ *
+ * - `ok(html)` → schedules `element.innerHTML = html` (or `shadowRoot.innerHTML`);
+ *   if `allowScripts` is true, re-executes `<script>` elements after injection.
+ * - `nil` → sets `innerHTML = ''` (or restores `<slot></slot>` in shadow root).
+ *
+ * **Security note:** Setting innerHTML bypasses XSS protections. Only use with
+ * trusted or sanitized content. Pass `allowScripts: true` only when the content
+ * source is trusted upstream.
+ *
+ * @since 2.0
+ * @param {Element} element - Target element
+ * @param {DangerouslySetInnerHTMLOptions} [options] - Shadow DOM mode and script execution options
+ * @returns {WatchHandlers<string>} Watch handlers that set the element's inner HTML
+ */
+const dangerouslySetInnerHTML = (
+	element: Element,
+	options: DangerouslySetInnerHTMLOptions = {},
+): WatchHandlers<string> => ({
+	ok: (html: string) => {
+		const { shadowRootMode, allowScripts } = options
+		if (!html) {
+			if (element.shadowRoot) element.shadowRoot.innerHTML = '<slot></slot>'
+			else element.innerHTML = ''
+			return
+		}
+		if (shadowRootMode && !element.shadowRoot)
+			element.attachShadow({ mode: shadowRootMode })
+		const target = element.shadowRoot || element
+		schedule(element, () => {
+			target.innerHTML = html
+			if (allowScripts) {
+				target.querySelectorAll('script').forEach(script => {
+					const newScript = document.createElement('script')
+					for (const attr of SCRIPT_ATTRS) {
+						if (script.hasAttribute(attr))
+							newScript.setAttribute(attr, script.getAttribute(attr)!)
+					}
+					if (!script.hasAttribute('src'))
+						newScript.appendChild(
+							document.createTextNode(script.textContent ?? ''),
+						)
+					target.appendChild(newScript)
+					script.remove()
+				})
+			}
+		})
+	},
+	nil: () => {
+		if (element.shadowRoot) element.shadowRoot.innerHTML = '<slot></slot>'
+		else element.innerHTML = ''
+	},
+})
+
 export {
 	bindAttribute,
 	bindClass,
@@ -156,4 +236,6 @@ export {
 	bindStyle,
 	bindText,
 	bindVisible,
+	type DangerouslySetInnerHTMLOptions,
+	dangerouslySetInnerHTML,
 }

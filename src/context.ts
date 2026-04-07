@@ -1,15 +1,3 @@
-import {
-	type Cleanup,
-	createMemo,
-	createScope,
-	isFunction,
-	type Memo,
-} from '@zeix/cause-effect'
-
-import type { ComponentProps } from './component'
-import { type Fallback, getFallback, type Reader } from './parsers'
-import type { UI } from './ui'
-
 /** @see https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md */
 
 /* === Types === */
@@ -95,74 +83,11 @@ class ContextRequestEvent<T extends UnknownContext> extends Event {
 	}
 }
 
-/**
- * Make reactive properties of this component available to descendant consumers via the context protocol.
- *
- * Use in the setup function as `host: provideContexts([...])` — it is an `Effect`, not a property
- * initializer. It attaches a `context-request` listener to the host via `createScope`; when a
- * matching request arrives, it provides a getter `() => host[context]` to the requester.
- * The listener is removed on `disconnectedCallback` via the effect cleanup.
- *
- * @since 0.13.3
- * @param {Array<keyof P>} contexts - Reactive property names to expose as context
- * @returns {Effect} Effect that installs the context-request listener and returns a cleanup function
- */
-const provideContexts =
-	<P extends ComponentProps>(
-		contexts: Array<keyof P>,
-	): ((host: HTMLElement & P) => Cleanup) =>
-	(host: HTMLElement & P) =>
-		createScope(() => {
-			const listener = (e: ContextRequestEvent<UnknownContext>) => {
-				const { context, callback } = e
-				if (
-					typeof context === 'string' &&
-					contexts.includes(context as unknown as Extract<keyof P, string>) &&
-					isFunction(callback)
-				) {
-					e.stopImmediatePropagation()
-					callback(() => host[context])
-				}
-			}
-			host.addEventListener(CONTEXT_REQUEST, listener)
-			return () => host.removeEventListener(CONTEXT_REQUEST, listener)
-		})
-
-/**
- * Request a context value from an ancestor provider, returning a reactive `Memo<T>`.
- *
- * Use as a property initializer in `defineComponent`. During `connectedCallback`, dispatches
- * a `context-request` event that bubbles up the DOM. If an ancestor provider intercepts it,
- * the returned Memo reflects the provider's current value reactively. If no provider responds,
- * the Memo falls back to `fallback`.
- *
- * @since 0.15.0
- * @param {Context<string, () => T>} context - Context key to request
- * @param {Fallback<T, U & { host: HTMLElement & P }>} fallback - Static value or reader function used when no provider is found
- * @returns {Reader<Memo<T>, U & { host: HTMLElement & P }>} Reader that dispatches the request and wraps the result in a Memo
- */
-const requestContext =
-	<T extends {}, P extends ComponentProps, U extends UI>(
-		context: Context<string, () => T>,
-		fallback: Fallback<T, U & { host: HTMLElement & P }>,
-	): Reader<Memo<T>, U & { host: HTMLElement & P }> =>
-	(ui: U & { host: HTMLElement & P }) => {
-		let consumed = () => getFallback(ui, fallback)
-		ui.host.dispatchEvent(
-			new ContextRequestEvent(context, (getter: () => T) => {
-				consumed = getter
-			}),
-		)
-		return createMemo(consumed)
-	}
-
 export {
 	CONTEXT_REQUEST,
 	type Context,
 	type ContextCallback,
 	ContextRequestEvent,
 	type ContextType,
-	provideContexts,
-	requestContext,
 	type UnknownContext,
 }

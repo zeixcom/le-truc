@@ -4,20 +4,6 @@ Reference: `API_DX_REVIEW.md`, `ARCHITECTURE.md` §v1.1 Specification
 
 All phases from the v1.1 refactoring are complete. The tasks below cover the remaining polish work needed before the v1.1 API is considered stable.
 
----
-
-## Phase 10: Method Exposure Ergonomics
-
-> The API_DX_REVIEW identifies method exposure as "slightly under-designed". `asMethod()` works but the pattern should feel first-class.
-
-- [ ] **10.1** Audit current method patterns across examples: identify all `asMethod(()  => { host.x = ... })` usages and note any pain points or inconsistencies.
-- [ ] **10.2** Define one canonical pattern for exposing methods in v1.1 and document it in `ARCHITECTURE.md` §expose(props).
-- [ ] **10.3** If `asMethod` ergonomics can be improved (e.g. simpler signature, better type inference), prototype the change in `src/parsers.ts` and verify with `bunx tsc --noEmit`.
-- [ ] **10.4** Update `docs-src/api/functions/asMethod.md` with a clear v1.1-focused example.
-- [ ] **10.5** If any example components use awkward method patterns, update them to the canonical form.
-
----
-
 ## Phase 11: Type Cleanup — Rename `EventHandlers`/`SensorEventHandler` v1/v2 naming
 
 > The `src/events.ts` exports `EventHandlers`, `SensorEventHandler` (v1.0 form) alongside `EventHandlersV2`, `SensorEventHandlerV2` (v1.1 form). The V2 suffix is an internal migration marker, not a good public name. Resolve before stabilization.

@@ -7,6 +7,8 @@ import {
 	isFunction,
 	isMemo,
 	isRecord,
+	isSignal,
+	isSlot,
 	type MaybeCleanup,
 	type Memo,
 	match,
@@ -21,11 +23,10 @@ import {
 	type UnknownContext,
 } from './context'
 import type { EffectDescriptor } from './effects'
-import type { PassedProps } from './effects/pass'
-import { pass as effectPass } from './effects/pass'
+import { InvalidCustomElementError, InvalidReactivesError } from './errors'
 import { getSignals } from './internal'
 import { PASSIVE_EVENTS, schedule } from './scheduler'
-import { DEV_MODE, elementName, LOG_WARN } from './util'
+import { DEV_MODE, elementName, isCustomElement, LOG_WARN } from './util'
 
 /* === Types === */
 
@@ -38,6 +39,27 @@ type WatchHandlers<T> = {
 	ok: (value: T) => MaybeCleanup | void
 	err?: (error: Error) => MaybeCleanup | void
 	nil?: () => MaybeCleanup | void
+}
+
+/**
+ * A single reactive value to pass to a descendant Le Truc component property.
+ *
+ * Three forms are accepted:
+ * - `keyof P` — a string property name on the host
+ * - `Signal<T>` — any signal
+ * - `(host: HTMLElement & P) => T` — a reader function receiving the host
+ */
+type PassedProp<T, P extends ComponentProps> =
+	| keyof P
+	| Signal<T & {}>
+	| ((host: HTMLElement & P) => T)
+
+/**
+ * A map of child component property names to the reactive values to inject into them.
+ * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
+ */
+type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
+	[K in keyof Q & string]?: PassedProp<Q[K], P>
 }
 
 /* === Constants === */
@@ -130,6 +152,24 @@ const attachListener = <P extends ComponentProps, E extends Element>(
 	}
 	target.addEventListener(type, listener, options)
 	return () => target.removeEventListener(type, listener)
+}
+
+/**
+ * Resolve a reactive pass value to a Signal.
+ * Handles property name strings, Signal instances, and reader functions.
+ */
+const toSignal = <P extends ComponentProps>(
+	host: HTMLElement & P,
+	value: unknown,
+): Signal<any> | undefined => {
+	if (isSignal(value)) return value
+	const fn =
+		typeof value === 'string' && value in host
+			? () => host[value as keyof typeof host]
+			: isFunction(value)
+				? (value as (host: HTMLElement & P) => unknown)
+				: undefined
+	return fn ? createComputed(fn as () => NonNullable<unknown>) : undefined
 }
 
 /* === Factory Creators === */
@@ -320,6 +360,60 @@ const makeOn = <P extends ComponentProps>(host: HTMLElement & P) => {
  * @param host - The component host element
  */
 const makePass = <P extends ComponentProps>(host: HTMLElement & P) => {
+	/**
+	 * Perform the slot-swap for a single target element.
+	 * Returns a cleanup that restores all original slot signals.
+	 */
+	const swapSlots = <Q extends ComponentProps>(
+		target: HTMLElement & Q,
+		props: PassedProps<P, Q>,
+	): (() => void) | undefined =>
+		createScope(() => {
+			if (!isCustomElement(target))
+				throw new InvalidCustomElementError(
+					target,
+					`pass from ${elementName(host)}`,
+				)
+			if (!isRecord(props)) throw new InvalidReactivesError(host, target, props)
+
+			const signals = getSignals(target)
+			const targetName = elementName(target)
+			const cleanups: (() => void)[] = []
+
+			for (const [prop, reactive] of Object.entries(props)) {
+				if (reactive == null) continue
+				if (!(prop in target)) {
+					if (DEV_MODE)
+						console[LOG_WARN](
+							`pass(): property '${prop}' does not exist on ${targetName}`,
+						)
+					continue
+				}
+
+				const signal = toSignal(host, reactive)
+				if (!signal) continue
+
+				// Slot-backed (Le Truc component) — replace and restore on cleanup
+				const slot = signals[prop]
+				if (isSlot(slot)) {
+					const original = slot.current()
+					slot.replace(signal)
+					cleanups.push(() => slot.replace(original))
+					continue
+				}
+
+				if (DEV_MODE)
+					console[LOG_WARN](
+						`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`,
+					)
+			}
+
+			if (cleanups.length)
+				return () => {
+					for (const c of cleanups) c()
+				}
+		})
+
 	function pass<Q extends ComponentProps>(
 		target: HTMLElement & Q,
 		props: PassedProps<P, Q>,
@@ -337,14 +431,12 @@ const makePass = <P extends ComponentProps>(host: HTMLElement & P) => {
 				// Memo target: per-element lifecycle via createEffect
 				createEffect(() => {
 					for (const el of target.get()) {
-						// effectPass(props)(host, el) calls createScope internally —
-						// that scope is owned by this createEffect and is disposed on re-run
-						effectPass(props)(host as any, el)
+						createScope(() => swapSlots(el, props))
 					}
 				})
 			} else {
-				// Single element: delegate to the v1.0 pass effect directly
-				effectPass(props)(host as any, target)
+				// Single element: swap slots directly in current scope
+				swapSlots(target, props)
 			}
 		}
 	}
@@ -408,5 +500,7 @@ export {
 	makeRequestContext,
 	makeWatch,
 	NON_BUBBLING_EVENTS,
+	type PassedProp,
+	type PassedProps,
 	type WatchHandlers,
 }

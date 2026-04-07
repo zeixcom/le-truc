@@ -212,11 +212,7 @@ export default defineComponent<FormListboxProps>(
 						})
 				: undefined,
 			host.src
-				? () =>
-						dangerouslySetInnerHTML(() => content.get().value)(
-							host as any,
-							listbox,
-						)
+				? watch(createMemo(() => content.get().value), dangerouslySetInnerHTML(listbox))
 				: undefined,
 			// Focus management on listbox
 			on(listbox, 'click', ({ target }) => {

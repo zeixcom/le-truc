@@ -1,4 +1,5 @@
 import { asBoolean, bindAttribute, defineComponent } from '../../..'
+import type { BasicButtonProps } from '../../basic/button/basic-button'
 import { copyToClipboard } from '../../basic/button/copyToClipboard'
 
 export type ModuleCodeblockProps = {
@@ -26,13 +27,16 @@ export default defineComponent<ModuleCodeblockProps>(
 			watch('collapsed', bindAttribute(host, 'collapsed')),
 			overlay && on(overlay, 'click', () => ({ collapsed: false })),
 			copy
-				&& (() =>
-					copyToClipboard(code, {
+				&& copyToClipboard(
+					code,
+					copy as HTMLElement & BasicButtonProps,
+					{
 						success: copy.getAttribute('copy-success') || 'Copied!',
 						error:
 							copy.getAttribute('copy-error')
 							|| 'Error trying to copy to clipboard!',
-					})(host as any, copy)),
+					},
+				),
 		]
 	},
 )

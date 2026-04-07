@@ -23,8 +23,8 @@ import {
 	type FactoryResult,
 	runEffects,
 } from './effects'
-import type { PassedProps } from './effects/pass'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
+import type { PassedProps } from './factory'
 import {
 	makeOn,
 	makePass,

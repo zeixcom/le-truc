@@ -78,4 +78,26 @@ declare const bindAttribute: (element: Element, name: string, allowUnsafe?: bool
  * @returns {RunHandlers<string>} Watch handlers for the style property
  */
 declare const bindStyle: (element: HTMLElement | SVGElement | MathMLElement, prop: string) => WatchHandlers<string>;
-export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, };
+type DangerouslySetInnerHTMLOptions = {
+    shadowRootMode?: ShadowRootMode;
+    allowScripts?: boolean;
+};
+/**
+ * Returns `WatchHandlers<string>` that sets the inner HTML of an element,
+ * with optional Shadow DOM and script re-execution support.
+ *
+ * - `ok(html)` → schedules `element.innerHTML = html` (or `shadowRoot.innerHTML`);
+ *   if `allowScripts` is true, re-executes `<script>` elements after injection.
+ * - `nil` → sets `innerHTML = ''` (or restores `<slot></slot>` in shadow root).
+ *
+ * **Security note:** Setting innerHTML bypasses XSS protections. Only use with
+ * trusted or sanitized content. Pass `allowScripts: true` only when the content
+ * source is trusted upstream.
+ *
+ * @since 2.0
+ * @param {Element} element - Target element
+ * @param {DangerouslySetInnerHTMLOptions} [options] - Shadow DOM mode and script execution options
+ * @returns {WatchHandlers<string>} Watch handlers that set the element's inner HTML
+ */
+declare const dangerouslySetInnerHTML: (element: Element, options?: DangerouslySetInnerHTMLOptions) => WatchHandlers<string>;
+export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, type DangerouslySetInnerHTMLOptions, dangerouslySetInnerHTML, };
