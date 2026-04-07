@@ -1,28 +1,22 @@
 ### Function: asNumber()
 
-> **asNumber**\<`U`\>(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`number`, `U`\>
+> **asNumber**(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`number`\>
 
-Defined in: [src/parsers/number.ts:51](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/parsers/number.ts#L51)
+Defined in: [src/parsers/number.ts:46](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/parsers/number.ts#L46)
 
 Parse a string as a number with a fallback
-
-#### Type Parameters
-
-##### U
-
-`U` *extends* [`UI`](../type-aliases/UI.md)
 
 #### Parameters
 
 ##### fallback?
 
-[`Fallback`](../type-aliases/Fallback.md)\<`number`, `U`\> = `0`
+`number` = `0`
 
-Fallback value or reader function
+Fallback value
 
 #### Returns
 
-[`Parser`](../type-aliases/Parser.md)\<`number`, `U`\>
+[`Parser`](../type-aliases/Parser.md)\<`number`\>
 
 Parser function
 

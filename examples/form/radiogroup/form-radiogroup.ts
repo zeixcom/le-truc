@@ -25,20 +25,17 @@ const getIndex = (radios: HTMLInputElement[]) =>
 export default defineComponent<FormRadiogroupProps>(
 	'form-radiogroup',
 	({ all, expose, host, on, watch }) => {
-		const radios = all<HTMLInputElement>(
+		const radios = all(
 			'input[type="radio"]',
 			'Add at least two native radio buttons.',
 		)
 
-		expose({
-			value: () => {
-				const arr = radios.get()
-				return arr[getIndex(arr)]?.value ?? ''
-			},
-		})
-
 		// Roving tabindex focus management (inlined from manageFocus)
 		let focusIndex = getIndex(radios.get())
+
+		expose({
+			value: radios.get()[focusIndex]?.value ?? '',
+		})
 
 		return [
 			on(radios, 'change', (_e, el) => {

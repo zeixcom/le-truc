@@ -7,33 +7,23 @@ Le Truc is a reactive custom elements library. This document describes how the p
 ```
 src/
   component.ts        The heart: defineComponent() and the Truc class
-  effects.ts          Effect orchestration: runEffects, updateElement
+  effects.ts          Effect primitives: EffectDescriptor, FactoryResult, each()
   ui.ts               DOM queries (first/all), dependency resolution, selector type inference
-  parsers.ts          Parser/Reader type system and composition
+  parsers.ts          Parser/Reader type system and branding utilities
   events.ts           Event-driven sensor factory (createEventsSensor)
   context.ts          Context protocol (provide/request) for dependency injection
+  helpers.ts          bind* convenience WatchHandlers for use with watch()
   scheduler.ts        rAF-based task deduplication
   errors.ts           Domain-specific error classes
-  internal.ts         Internal signal map (getSignals) — shared by component.ts and pass.ts
+  internal.ts         Internal signal map (getSignals) — shared by component.ts and factory.ts
   util.ts             Logging, element introspection, property validation
-
-  effects/
-    attribute.ts      setAttribute, toggleAttribute
-    class.ts          toggleClass
-    event.ts          on() — event listener effect
-    html.ts           dangerouslySetInnerHTML
-    pass.ts           pass() — inter-component reactive property binding
-    property.ts       setProperty, show
-    style.ts          setStyle
-    text.ts           setText
-
-  helpers.ts          bind* convenience handlers for use with watch()
 
   parsers/
     boolean.ts        asBoolean
     json.ts           asJSON
-    number.ts         asInteger, asNumber
+    number.ts         asInteger, asNumber, asClampedInteger
     string.ts         asString, asEnum
+    date.ts           asDate
 ```
 
 ## Dependency Graph
@@ -44,36 +34,33 @@ Arrows mean "imports from". The graph flows bottom-up from leaf utilities to `co
 util.ts ─────────────────────────────────────────────┐
 errors.ts ──────── util.ts                           │
 scheduler.ts ──── (leaf, no internal imports)        │
-parsers.ts ─────── ui.ts (types only)                │
-parsers/* ──────── parsers.ts, ui.ts (types)         │
+parsers.ts ─────── (leaf, no internal imports)       │
+parsers/* ──────── parsers.ts                        │
                                                      │
 internal.ts ────── (leaf, signal storage)            │
 ui.ts ──────────── errors.ts, util.ts                │
+effects.ts ─────── (leaf: cause-effect only)         │
                                                      │
-effects.ts ─────── component.ts (types), errors.ts,  │
-                   ui.ts, util.ts                    │
+events.ts ──────── scheduler.ts                      │
                                                      │
-effects/* ──────── component.ts (types), effects.ts  │
-                   + scheduler.ts, util.ts, etc.     │
+context.ts ─────── (leaf: protocol types only)       │
                                                      │
-events.ts ──────── component.ts (types), parsers.ts, │
-                   scheduler.ts, ui.ts               │
+factory.ts ─────── component.ts (types), context.ts, │
+                   effects.ts, errors.ts, internal.ts,│
+                   scheduler.ts, util.ts             │
                                                      │
-context.ts ─────── component.ts (types), parsers.ts, │
-                   ui.ts                             │
-                                                     │
-component.ts ───── effects.ts, errors.ts, parsers.ts,│
-                   ui.ts, util.ts                    │
+component.ts ───── effects.ts, errors.ts, factory.ts,│
+                   internal.ts, parsers.ts, ui.ts,   │
+                   util.ts                           │
 ```
 
 The single external dependency is `@zeix/cause-effect`, which provides the reactive primitives used by Le Truc: `createState`, `createComputed`, `createEffect`, `createMemo`, `createScope`, `createSensor`, `createSlot`, `createTask`, `createStore`, `createList`, `createCollection`, `Signal`, `Memo`, `Sensor`, `Slot`, `batch`, `match`, `unown`, `untrack`, and various type guards and utility functions. See `index.ts` for the full re-export surface.
 
 ## The Component Lifecycle
 
-`defineComponent` has two overloads. Both create a class `Truc extends HTMLElement`, register it via `customElements.define()`, and return the class.
+`defineComponent` creates a class `Truc extends HTMLElement`, registers it via `customElements.define()`, and returns the class.
 
-- **2-param factory form v1.1** `(name, factory)` *(current)*: the factory receives a `FactoryContext` with `{ all, each, expose, first, host, on, pass, provideContexts, requestContext, watch }`. It calls `expose({ ... })` for reactive props and returns a flat `FactoryResult` array of effect descriptors. `static observedAttributes = []` — parsers in `expose()` are called once at connect time but `attributeChangedCallback` never fires. See the v1.1 Specification section below for full details.
-- **4-param form** `(name, props, select, setup)` *(@deprecated)*: `props` is evaluated at class-definition time; parsers in `props` auto-populate `static observedAttributes`. Still the right choice when attribute changes on a live document must drive reactive updates.
+The **factory form** `(name, factory)`: the factory receives a `FactoryContext` with `{ all, expose, first, host, on, pass, provideContexts, requestContext, watch }`. It calls `expose({ ... })` for reactive props and returns a flat `FactoryResult` array of effect descriptors. `static observedAttributes = []` — parsers in `expose()` are called once at connect time with the current attribute value.
 
 ### connectedCallback — initialization
 
@@ -84,25 +71,18 @@ connectedCallback()
   │     Determines query root (shadowRoot ?? this).
   │     Tracks custom element dependencies found during queries.
   │
-  ├─ 2a. [v1.1 factory form]
-  │       context = { first, all, host, expose, watch, each, on, pass, ... }
-  │       descriptors = factory(context)       ← expose() called inside; signals created
-  │       (if expose() not called, ui = { host } is set automatically)
+  ├─ 2. context = { first, all, host, expose, watch, on, pass, ... }
+  │     descriptors = factory(context)   ← expose() called inside; signals created
   │
-  ├─ 2b. [4-param form — @deprecated]
-  │       ui = { ...select({ first, all }), host }  (frozen)
-  │       #initSignals(ui, props)
-  │
-  │  #initSignals dispatches per initializer:
-  │     ├─ Parser (PARSER_BRAND)?   →  parser(ui, this.getAttribute(key))
-  │     ├─ MethodProducer (METHOD_BRAND)?  →  methodProducer(ui)
-  │     ├─ Function (1 arg)?        →  reader(ui)
-  │     └─ Otherwise                →  use value directly (static or Signal)
-  │     Each non-null result is passed to #setAccessor(key, value).
+  │     #initSignals dispatches per initializer:
+  │       ├─ Parser (PARSER_BRAND)?      →  parser(this.getAttribute(key))
+  │       ├─ MethodProducer (METHOD_BRAND)?  →  assign directly to host
+  │       ├─ Function (Reader)?          →  reader(host)
+  │       └─ Otherwise                  →  use value directly (static or Signal)
+  │       Each non-null result is passed to #setAccessor(key, value).
   │
   └─ 3. resolveDependencies(() => {
-           [v1.1 factory] this.#cleanup = createScope(() => descriptors.filter(Boolean).forEach(d => d()))
-           [4-param form] this.#cleanup = runEffects(ui, setup(ui))
+           this.#cleanup = createScope(() => descriptors.filter(Boolean).forEach(d => d()))
          })
          Waits for child custom elements to be defined (200ms timeout),
          then activates effects.
@@ -118,13 +98,7 @@ Takes a key and a value and creates the appropriate signal:
 
 For mutable signals, the value is wrapped in a `createSlot(signal)` — a Slot from `@zeix/cause-effect` that acts as an indirection layer. The Slot's `get`/`set` are used as the property descriptor on the component instance, which is what makes `host.count` reactive. Reading calls `signal.get()` inside effects, registering the dependency automatically.
 
-The Slot enables signal swapping: if `#setAccessor` is called again for an existing key (e.g., via `attributeChangedCallback`), it calls `slot.replace(newSignal)` instead of redefining the property. This is also the mechanism used by `pass()` to inject parent signals into a child component.
-
-### attributeChangedCallback — attribute sync
-
-Factory-form components have `static observedAttributes = []` — this callback never fires for them. For 4-param components, only fires for properties whose initializer `isParser` (branded with `PARSER_BRAND`); these are collected into `static observedAttributes` at class creation time.
-
-When an attribute changes: parse the new value through the parser, then assign it to the component property (which triggers `signal.set()`). Computed (read-only) signals are skipped.
+The Slot enables signal swapping: `pass()` calls `slot.replace(newSignal)` to inject a parent signal into a child component without redefining the property descriptor.
 
 ### disconnectedCallback — cleanup
 
@@ -132,69 +106,33 @@ Calls the cleanup function returned by `runEffects()`, which tears down all effe
 
 ## The Effect System
 
-### How `runEffects` works
+Effects in Le Truc are **effect descriptors** — thunks `() => MaybeCleanup`. The factory function returns a flat array of them (`FactoryResult`). After dependency resolution, each descriptor is activated inside a `createScope()`.
 
-`runEffects(ui, effects)` is the top-level orchestrator (internal, not publicly exported). It creates a `createScope()` that owns all child effects for the component. For each key in the effects record:
+### bind* helpers — DOM update handlers
 
-- **`Memo` (from `all()`)**: Wraps a `createEffect()` around the loop. Reading `memo.get()` tracks the collection as a dependency, so when elements are added/removed the effect re-runs. The ownership graph automatically disposes inner per-element effects on re-run.
-- **Single `Element` (from `first()`)**: Runs the effect functions directly inside the scope (no wrapping effect needed since the target is static).
+`src/helpers.ts` provides `WatchHandlers<T>` objects and plain handler functions for use with `watch()`:
 
-### updateElement — the shared abstraction
-
-Every built-in effect (`setAttribute`, `toggleClass`, `setText`, `setProperty`, `setStyle`, `toggleAttribute`, `dangerouslySetInnerHTML`, `show`) follows the same pattern via `updateElement(reactive, updater)`:
-
-```
-updateElement(reactive, { op, name, read, update, delete? })
-  │
-  ├─ Captures fallback = read(target)     ← current DOM value
-  │
-  └─ createEffect(() => {
-       value = resolveReactive(reactive)   ← auto-tracks signal deps
-       if value === undefined → use fallback (error in reader, or prop missing)
-       if value === null      → delete(target) if available, else use fallback
-       if value !== current   → update(target, value)
-     })
-```
-
-The `Reactive<T>` type is a union of three forms:
-- `keyof P` — a string property name on the host (reads `host[name]`)
-- `Signal<T>` — a signal (calls `.get()`)
-- `(target: E) => T` — a reader function
-
-`resolveReactive()` handles all three and returns the concrete value. Because it calls `.get()` inside a `createEffect`, signal dependencies are automatically tracked.
-
-### Built-in effects at a glance
-
-| Effect | Op | What it does |
+| Helper | Returns | What it does |
 |---|---|---|
-| `setAttribute(name, reactive?)` | `a` | Sets an attribute with URL safety validation |
-| `toggleAttribute(name, reactive?)` | `a` | Boolean attribute: present when truthy |
-| `toggleClass(token, reactive?)` | `c` | Adds/removes a CSS class |
-| `setText(reactive)` | `t` | Replaces non-comment child nodes with a text node |
-| `setProperty(key, reactive?)` | `p` | Sets a DOM property directly |
-| `show(reactive)` | `p` | Controls `el.hidden` |
-| `setStyle(prop, reactive?)` | `s` | Sets/removes an inline style |
-| `dangerouslySetInnerHTML(reactive, opts?)` | `h` | Sets innerHTML, optionally in a shadow root |
+| `bindAttribute(el, name)` | `WatchHandlers<string \| boolean>` | Sets/removes an attribute; boolean uses `toggleAttribute` |
+| `bindClass(el, token)` | `(value: boolean) => void` | Adds/removes a CSS class |
+| `bindText(el)` | `(value: string) => void` | Sets text content |
+| `bindProperty(el, key)` | `(value: T) => void` | Sets a DOM property directly |
+| `bindStyle(el, prop)` | `WatchHandlers<string>` | Sets/removes an inline style |
+| `bindVisible(el)` | `(value: boolean) => void` | Controls `el.hidden = !value` |
+| `dangerouslySetInnerHTML(el, opts?)` | `WatchHandlers<string>` | Sets innerHTML, optionally in a shadow root |
 
-All default their `reactive` parameter to the effect name (e.g., `setAttribute('href')` reads `host.href`).
+### on() — event binding
 
-### on() — event listener effect
-
-**v1.1 (current)**: `on(target, type, handler, options?)` from `FactoryContext` — takes an explicit target element or `Memo<Element[]>`, returns an `EffectDescriptor`. The handler receives `(event, element)`. For `Memo` targets, uses event delegation. Returns a partial property update object `{ prop: value }` to batch-update host. See the v1.1 Specification section for full details.
-
-**v1.0 (@deprecated)**: `on(type, handler, options?)` in `src/effects/event.ts` — target-less form used in the `effects` record. Calls `createScope()` for proper disposal and attaches a listener to the target element (passed implicitly by `runEffects`).
+`on(target, type, handler, options?)` from `FactoryContext` — takes an explicit element or `Memo<Element[]>`, returns an `EffectDescriptor`. The handler receives `(event, element)`. For `Memo` targets, uses event delegation. Returns a partial property update `{ prop: value }` to batch-update host.
 
 ### pass() — inter-component binding
 
-**v1.1 (current)**: `pass(target, props)` from `FactoryContext` — takes an explicit target element or `Memo<Component<Q>[]>`, returns an `EffectDescriptor`.
-
-**v1.0 (@deprecated)**: `pass(props)` in `src/effects/pass.ts` — target-less form used in the `effects` record.
-
-Both forms implement the same signal-swapping mechanism: calls `createScope()` for proper cleanup and directly swaps the backing signal of a descendant component's Slot, creating a zero-overhead live binding. It uses `getSignals(target)` to access the child's internal signal map, captures `slot.current()` before replacing, then calls `slot.replace(signal)`. The cleanup restores the original signal with `slot.replace(original)` when the parent disconnects.
+`pass(target, props)` from `FactoryContext` — takes an explicit element or `Memo<Component<Q>[]>`, returns an `EffectDescriptor`. Directly swaps the backing signal of a descendant Le Truc component's Slot, creating a zero-overhead live binding. Uses `getSignals(target)` to access the child's internal signal map, captures `slot.current()` before replacing, then calls `slot.replace(signal)`. Cleanup restores the original signal when the parent disconnects.
 
 This is more efficient than `setProperty()` for Le Truc targets: it eliminates the intermediate `createEffect` and property-assignment overhead on every reactive update. The parent and child share the exact same underlying signal node.
 
-**Scope is Le Truc components only.** For non-Le Truc custom elements (Lit, Stencil, FAST, etc.), use `setProperty()` instead. Installing a reactive getter via `Object.defineProperty` bypasses those frameworks' own change-detection cycles — the foreign component's render/update is never triggered when the signal changes, because it only fires when a value is *set* through the framework's setter, not when the property is *read*. `setProperty()` goes through the public setter and is always correct for any element.
+**Scope is Le Truc components only.** For non-Le Truc custom elements (Lit, Stencil, FAST, etc.), use `setProperty()` instead.
 
 ## The UI Query System
 
@@ -224,15 +162,11 @@ The file contains a type-level CSS selector parser that infers the correct `HTML
 
 ## The Parser System
 
-Parsers transform HTML attribute strings into typed JavaScript values. The key design choice: **a Parser is a function branded with `PARSER_BRAND`** (`(ui, value, old?) => T`), while a **Reader is any function with 1 parameter** (`(ui) => T`). Always create custom parsers with `asParser()` — it attaches the brand so `isParser()` can identify them reliably. Relying on `fn.length >= 2` as the parser signal is deprecated and may be removed in a future major version; in `DEV_MODE`, unbranded two-argument functions trigger a `console.warn`.
+Parsers transform HTML attribute strings into typed JavaScript values. `Parser<T>` = `(value: string | null | undefined) => T`. Always create custom parsers with `asParser()` — it attaches the `PARSER_BRAND` symbol so `isParser()` can identify them reliably.
 
-Parsers serve dual duty in the 4-param form:
-1. As property initializers — called during `connectedCallback` with the attribute's initial value
-2. As attribute watchers — automatically added to `observedAttributes` and re-called in `attributeChangedCallback` on every attribute change
+`Reader<T, H>` = `(host: H) => T`. Readers receive the host element directly. If the reader returns a function (`MemoCallback`) or `TaskCallback`, `#setAccessor` wraps it in a computed/task signal; otherwise a mutable state signal is created.
 
-In the factory form, parsers serve only role 1: called once at connect time with the current attribute value; `observedAttributes = []` so `attributeChangedCallback` never fires.
-
-The `read(reader, fallback)` function composes a `LooseReader` (which may return `string | null | undefined`) with a parser/fallback into a clean `Reader<T>`. This is useful for reading DOM state and parsing it: `read(ui => ui.input.value, asInteger())`.
+Parsers are called once at connect time with `this.getAttribute(key)`. `static observedAttributes = []` — attributes don't drive reactive updates after connect.
 
 ## Event-Driven Sensors
 
@@ -258,19 +192,17 @@ Implements the [W3C Community Protocol for Context](https://github.com/webcompon
 
 ### Provider side
 
-**v1.1 (current)**: `provideContexts([...])` is a `FactoryContext` helper that returns an `EffectDescriptor`. Include it in the factory's return array:
+`provideContexts([...])` is a `FactoryContext` helper that returns an `EffectDescriptor`. Include it in the factory's return array:
 
 ```ts
 return [provideContexts([MEDIA_MOTION, MEDIA_THEME, MEDIA_VIEWPORT])]
 ```
 
-**v1.0 (@deprecated)**: `provideContexts([...])` was an `Effect` used in the `effects` record as `host: provideContexts([...])`.
-
-Both forms install a `context-request` event listener via `createScope`; when a matching request arrives, it stops propagation and provides a getter `() => host[context]` to the callback. The listener is removed on `disconnectedCallback` via the effect cleanup.
+Installs a `context-request` event listener via `createScope`; when a matching request arrives, it stops propagation and provides a getter `() => host[context]` to the callback. The listener is removed on `disconnectedCallback` via the effect cleanup.
 
 ### Consumer side
 
-**v1.1 (current)**: `requestContext(context, fallback)` is a `FactoryContext` helper that returns a `Memo<T>` directly — use it inside `expose()`:
+`requestContext(context, fallback)` is a `FactoryContext` helper that returns a `Memo<T>` directly — use it inside `expose()`:
 
 ```ts
 expose({
@@ -278,9 +210,7 @@ expose({
 })
 ```
 
-**v1.0 (@deprecated)**: `requestContext` returned a `Reader<Memo<T>>` used as a property initializer in the `props` map.
-
-Both forms dispatch a `ContextRequestEvent` that bubbles up the DOM during `connectedCallback`. If an ancestor provider intercepts it, the consumer receives a getter and wraps it in a `createMemo()`, creating a live reactive binding. If no provider responds, it falls back to the provided default value.
+Dispatches a `ContextRequestEvent` that bubbles up the DOM during `connectedCallback`. If an ancestor provider intercepts it, the consumer receives a getter and wraps it in a `createMemo()`, creating a live reactive binding. If no provider responds, it falls back to the provided default value.
 
 ## The Scheduler
 
@@ -298,35 +228,27 @@ Both forms dispatch a `ContextRequestEvent` that bubbles up the DOM during `conn
 
 | Decision | Choice | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
-| Two overloads for `defineComponent` | v1.1 factory (current) + 4-param (deprecated) | Single form, builder pattern | v1.1 factory is the primary form; 4-param form retained for components that require reactive `observedAttributes` |
+| Single `defineComponent` form | Factory form `(name, factory)` | 4-param form, builder pattern | Factory closure gives direct element access, eliminating the UI object indirection layer; attributes drive state only at connect time |
+| Attributes drive state at connect time only | `static observedAttributes = []`, parsers called once | Always-reactive attributes, observed attrs | v2.0 BC: components get initial state from attributes, then manage state via reactive props and event handlers |
+| `Parser<T>` takes value only | `(value: string \| null \| undefined) => T` | `(ui, value) => T` | Simpler, no UI object needed; fallbacks are static values captured in closure |
+| `Reader<T, H>` receives host | `(host: HTMLElement & P) => T` | `(ui) => T` with UI object | Factory closure already has access to queried elements; host is the relevant context for property initialization |
 | Slot-based signal swapping | `createSlot` wrapping mutable signals | Direct property assignment, Proxy-based | Enables `pass()` zero-overhead binding; consistent signal identity across the component lifecycle |
 | Branded parsers and methods | Symbol-based branding (`PARSER_BRAND`, `METHOD_BRAND`) | Structural typing, class instances | `fn.length` is unreliable with default params/rest/destructuring; symbols are unforgeable |
 | Lazy `MutationObserver` for `all()` | Observer activates on first read via `watched` option | Always-on observer, polling | Avoids overhead for collections not read in effects; auto-disconnects when unwatched |
-| Effect keyed by UI element | `effects: { elementName: Effect[] }` | Flat effect list, per-property effects | Enables automatic Memo wrapping for collections; clear target binding without repetition |
-| Bind helper naming | `bind*` prefix | `sync*`, `update*` | `sync` implies bidirectionality; `update` conflicts with internal `updateElement` and sounds imperative; `bind` clearly conveys one-directional declarative DOM binding |
+| Bind helper naming | `bind*` prefix | `sync*`, `update*` | `sync` implies bidirectionality; `bind` clearly conveys one-directional declarative DOM binding |
 | Bind helpers return plain function or WatchHandlers | `bindText`/`bindProperty`/`bindClass`/`bindVisible` → `(value) => void`; `bindAttribute`/`bindStyle` → `WatchHandlers<T>` | All return plain functions, all return WatchHandlers | `bindAttribute`/`bindStyle` have a meaningful nil path (remove attr/style) and `bindAttribute` has a boolean toggle branch; the others don't benefit from WatchHandlers |
 | `bindAttribute` boolean dispatch | `toggleAttribute(name, value)` | Stringify boolean, throw on boolean | Maps naturally to the native boolean-attribute API; avoids invalid string values like `'true'`/`'false'` for presence-only attributes |
-| `bindVisible` direction | `el.hidden = !value` (value=true → element visible) | `el.hidden = value` (named `bindHidden`) | Preserves v1.0 `show()` direction; `bindVisible(el)` reads as English — "bind visibility to value" |
+| `bindVisible` direction | `el.hidden = !value` (value=true → element visible) | `el.hidden = value` (named `bindHidden`) | `bindVisible(el)` reads as English — "bind visibility to value" |
 
-## v1.1 Specification — New 2-Param Factory Form
+## The Factory Form — Specification
 
-See `VERSION_1.1_GOALS.md` for the goals. This section is the refined architectural specification for the new API.
-
-### Design Summary
-
-The new 2-param factory form replaces the structured return object (`{ ui, props, effects }`) with imperative setup (`expose()`) and a flat array of effect descriptors. The factory receives a context object with helpers for querying, declaring properties, and setting up effects.
+Components use a single factory form. The factory receives a context with helpers for querying, declaring properties, and setting up effects:
 
 ```
-v1.0 factory flow:
-  factory({ first, all, host })
-    → return { ui, props, effects }
-    → engine: initSignals(props) → resolveDeps → createScope(runEffects(effects))
-
-v1.1 factory flow:
-  factory({ all, expose, first, host, on, pass, provideContexts, watch })
-    → query elements with first/all
-    → expose({ ... })              ← engine calls #initSignals immediately
-    → return [ watch(...), on(...) ] ← effect descriptors; engine activates after deps resolve
+factory({ all, expose, first, host, on, pass, provideContexts, requestContext, watch })
+  → query elements with first/all
+  → expose({ ... })               ← engine calls #initSignals immediately
+  → return [ watch(...), on(...) ] ← effect descriptors; engine activates after deps resolve
 ```
 
 ### The Factory Context
@@ -366,26 +288,20 @@ Helpers pair by cardinality:
 
 ### `expose(props)`
 
-Declares the component's reactive public API. Called once during factory execution. Internally calls `#initSignals()` — the same dispatch logic as v1.0:
+Declares the component's reactive public API. Called once during factory execution. Internally calls `#initSignals()`:
 
-- **Parser** (branded with `PARSER_BRAND`) → called with `(ui, getAttribute(key))`, creates signal from result
+- **Parser** (branded with `PARSER_BRAND`) → called with `getAttribute(key)`, creates signal from result
 - **MethodProducer** (branded with `METHOD_BRAND`) → assigned directly as the property value; the function IS the method. Per-instance state lives in factory scope.
-- **Reader** (1-arg function) → called with `(ui)`, result used as signal initializer
+- **Reader** `(host) => T` → called with the host element; result used as signal initializer
 - **Static value or Signal** → used directly as signal initializer
 
-**Parser compatibility**: Parsers keep their `(ui, value) => T` signature unchanged. The `Fallback<T, U>` type is already `T | Reader<T, U>`, so passing plain values as fallbacks works today:
+The parser receives `getAttribute(key)` from `#initSignals` — if the HTML attribute is set it wins; if absent the static fallback is used. Capture DOM state eagerly in the factory closure:
 
 ```ts
-// v1.0 — reader-function fallback (reads DOM lazily via ui):
-label: asString(() => label?.textContent ?? host.querySelector('label')?.textContent ?? '')
-
-// v1.1 — plain value fallback (reads DOM eagerly via closure):
 label: asString(label?.textContent ?? first('label')?.textContent ?? '')
 ```
 
-Both are valid `Fallback<string, U>`. The reader form becomes unnecessary since the factory closure already has direct element access. The parser still receives `getAttribute(key)` from `#initSignals` — if the HTML attribute is set, it wins; if absent, the fallback is used. No parser API changes needed.
-
-**Methods**: `expose()` handles methods via `asMethod()`, keeping all public API declaration in one place. The dispatch through `#initSignals` continues to work: method producers are called for their side effect and ignored for signal creation.
+**Methods**: `expose()` handles methods via `asMethod()`, keeping all public API declaration in one place.
 
 ```ts
 expose({

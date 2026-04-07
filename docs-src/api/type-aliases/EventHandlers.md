@@ -1,22 +1,17 @@
-### Type Alias: EventHandlers\<T, U, E\>
+### Type Alias: EventHandlers\<T, E\>
 
-> **EventHandlers**\<`T`, `U`, `E`\> = `{ [K in keyof HTMLElementEventMap]?: SensorEventHandler<T, EventType<K>, U, E> }`
+> **EventHandlers**\<`T`, `E`\> = `{ [K in keyof HTMLElementEventMap]?: SensorEventHandler<T, EventType<K>, E> }`
 
-Defined in: [src/events.ts:42](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/events.ts#L42)
+Defined in: [src/events.ts:31](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/events.ts#L31)
 
-Map of event type names to `SensorEventHandler` functions, passed as the
-third argument to `createEventsSensor` (v1.0 form). Each handler derives the
-new sensor value from the event, or returns `void` to leave it unchanged.
+Map of event type names to `SensorEventHandler` functions.
+Each handler derives the new sensor value from the event, or returns `void` to leave it unchanged.
 
 #### Type Parameters
 
 ##### T
 
 `T` *extends* `object`
-
-##### U
-
-`U` *extends* [`UI`](UI.md)
 
 ##### E
 

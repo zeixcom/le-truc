@@ -1,4 +1,4 @@
-// Le Truc 1.0.1
+// Le Truc 2.0.0
 
 // From Cause & Effect
 export {
@@ -70,18 +70,10 @@ export {
 } from '@zeix/cause-effect'
 
 export {
-	type Component,
 	type ComponentProp,
 	type ComponentProps,
-	type ComponentSetup,
-	type ComponentUI,
 	defineComponent,
 	type FactoryContext,
-	type FactoryOnHelper,
-	type FactoryPassHelper,
-	type FactoryProvideContextsHelper,
-	type FactoryRequestContextHelper,
-	type FactoryWatchHelper,
 	type Initializers,
 	type MaybeSignal,
 	type ReservedWords,
@@ -92,69 +84,66 @@ export {
 	type ContextCallback,
 	ContextRequestEvent,
 	type ContextType,
+	type FactoryProvideContextsHelper,
+	type FactoryRequestContextHelper,
 	type UnknownContext,
 } from './src/context'
 export {
 	type EffectDescriptor,
 	each,
+	type FactoryPassHelper,
 	type FactoryResult,
+	type FactoryWatchHelper,
+	type PassedProp,
+	type PassedProps,
 } from './src/effects'
-export { type PassedProp, type PassedProps } from './src/factory'
 export {
 	DependencyTimeoutError,
 	InvalidComponentNameError,
 	InvalidCustomElementError,
-	InvalidEffectsError,
 	InvalidPropertyNameError,
 	InvalidReactivesError,
-	InvalidUIKeyError,
 	MissingElementError,
 } from './src/errors'
 export {
 	createEventsSensor,
 	type EventHandlers,
-	type EventHandlersV2,
+	type EventType,
+	type FactoryOnHelper,
 	type SensorEventHandler,
-	type SensorEventHandlerV2,
 } from './src/events'
+export {
+	bindAttribute,
+	bindClass,
+	bindProperty,
+	bindStyle,
+	bindText,
+	bindVisible,
+	type DangerouslySetInnerHTMLOptions,
+	dangerouslySetInnerHTML,
+} from './src/helpers'
 export {
 	asMethod,
 	asParser,
-	type Fallback,
 	isMethodProducer,
 	isParser,
-	type LooseReader,
 	type MethodProducer,
 	type Parser,
-	type ParserOrFallback,
-	type Reader,
-	read,
 } from './src/parsers'
 export { asBoolean } from './src/parsers/boolean'
+export { asDate } from './src/parsers/date'
 export { asJSON } from './src/parsers/json'
 export { asClampedInteger, asInteger, asNumber } from './src/parsers/number'
-export { asDate } from './src/parsers/date'
 export { asEnum, asString } from './src/parsers/string'
 export {
 	escapeHTML,
 	safeSetAttribute,
 	setTextPreservingComments,
 } from './src/safety'
-export {
-	bindAttribute,
-	bindClass,
-	dangerouslySetInnerHTML,
-	type DangerouslySetInnerHTMLOptions,
-	bindProperty,
-	bindStyle,
-	bindText,
-	bindVisible,
-} from './src/helpers'
 export { schedule } from './src/scheduler'
 export {
 	type AllElements,
 	createElementsMemo,
-	type ElementFromKey,
 	type ElementFromSelector,
 	type ElementFromSingleSelector,
 	type ElementQueries,
@@ -166,5 +155,4 @@ export {
 	type KnownTag,
 	type SplitByComma,
 	type TrimWhitespace,
-	type UI,
 } from './src/ui'

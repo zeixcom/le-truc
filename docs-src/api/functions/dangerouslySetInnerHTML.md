@@ -1,48 +1,40 @@
-### ~~Function: dangerouslySetInnerHTML()~~
+### Function: dangerouslySetInnerHTML()
 
-> **dangerouslySetInnerHTML**\<`P`, `E`\>(`reactive`, `options?`): [`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
+> **dangerouslySetInnerHTML**(`element`, `options?`): `WatchHandlers`\<`string`\>
 
-Defined in: [src/effects/html.ts:26](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/effects/html.ts#L26)
+Defined in: [src/helpers.ts:193](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/helpers.ts#L193)
 
-Effect for setting the inner HTML of an element with optional Shadow DOM support.
-Provides security options for script execution and shadow root creation.
+Returns `WatchHandlers<string>` that sets the inner HTML of an element,
+with optional Shadow DOM and script re-execution support.
 
-#### Type Parameters
+- `ok(html)` → schedules `element.innerHTML = html` (or `shadowRoot.innerHTML`);
+  if `allowScripts` is true, re-executes `<script>` elements after injection.
+- `nil` → sets `innerHTML = ''` (or restores `<slot></slot>` in shadow root).
 
-##### P
-
-`P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
-
-##### E
-
-`E` *extends* `Element`
+**Security note:** Setting innerHTML bypasses XSS protections. Only use with
+trusted or sanitized content. Pass `allowScripts: true` only when the content
+source is trusted upstream.
 
 #### Parameters
 
-##### reactive
+##### element
 
-[`Reactive`](../type-aliases/Reactive.md)\<`string`, `P`, `E`\>
+`Element`
 
-Reactive value bound to the inner HTML content
+Target element
 
 ##### options?
 
 [`DangerouslySetInnerHTMLOptions`](../type-aliases/DangerouslySetInnerHTMLOptions.md) = `{}`
 
-Configuration options: shadowRootMode, allowScripts
+Shadow DOM mode and script execution options
 
 #### Returns
 
-[`Effect`](../type-aliases/Effect.md)\<`P`, `E`\>
+`WatchHandlers`\<`string`\>
 
-Effect function that sets the inner HTML of the element
-
-#### Deprecated
-
-Use `watch()` with imperative DOM updates in the v1.1 factory form instead.
-For innerHTML with scheduling, call the effect directly as a thunk:
-`() => dangerouslySetInnerHTML(reactive, opts)(host as any, element)`.
+Watch handlers that set the element's inner HTML
 
 #### Since
 
-0.11.0
+2.0

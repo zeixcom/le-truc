@@ -46,8 +46,8 @@ export default defineComponent<BasicGaugeProps>(
 		)
 
 		expose({
-			value: asNumber(() => meter.value),
-			thresholds: asJSON<BasicGaugeThreshold[], {}>([]),
+			value: asNumber(meter.value),
+			thresholds: asJSON<BasicGaugeThreshold[]>([]),
 		})
 
 		return [

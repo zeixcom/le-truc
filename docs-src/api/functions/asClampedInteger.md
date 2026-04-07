@@ -1,37 +1,31 @@
 ### Function: asClampedInteger()
 
-> **asClampedInteger**\<`U`\>(`minFallback?`, `maxFallback?`): [`Parser`](../type-aliases/Parser.md)\<`number`, `U`\>
+> **asClampedInteger**(`min?`, `max?`): [`Parser`](../type-aliases/Parser.md)\<`number`\>
 
-Defined in: [src/parsers/number.ts:67](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/parsers/number.ts#L67)
+Defined in: [src/parsers/number.ts:60](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/parsers/number.ts#L60)
 
 Parse a string as a clamped integer (>= min, <= max) with fallbacks
 
-#### Type Parameters
-
-##### U
-
-`U` *extends* [`UI`](../type-aliases/UI.md)
-
 #### Parameters
 
-##### minFallback?
+##### min?
 
-[`Fallback`](../type-aliases/Fallback.md)\<`number`, `U`\> = `0`
+`number` = `0`
 
-Minimum value or reader function
+Minimum value
 
-##### maxFallback?
+##### max?
 
-[`Fallback`](../type-aliases/Fallback.md)\<`number`, `U`\> = `Number.MAX_SAFE_INTEGER`
+`number` = `Number.MAX_SAFE_INTEGER`
 
-Maximum value or reader function
+Maximum value
 
 #### Returns
 
-[`Parser`](../type-aliases/Parser.md)\<`number`, `U`\>
+[`Parser`](../type-aliases/Parser.md)\<`number`\>
 
 Parser function
 
 #### Since
 
-1.1
+2.0

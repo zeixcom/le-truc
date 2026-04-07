@@ -1,8 +1,8 @@
-### Type Alias: Reader\<T, U\>
+### Type Alias: Reader\<T, H\>
 
-> **Reader**\<`T`, `U`\> = (`ui`) => `T`
+> **Reader**\<`T`, `H`\> = (`host`) => `T`
 
-Defined in: [src/parsers.ts:16](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/parsers.ts#L16)
+Defined in: [src/parsers.ts:7](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/parsers.ts#L7)
 
 #### Type Parameters
 
@@ -10,15 +10,15 @@ Defined in: [src/parsers.ts:16](https://github.com/zeixcom/le-truc/blob/bfd2f81a
 
 `T` *extends* `object`
 
-##### U
+##### H
 
-`U` *extends* [`UI`](UI.md)
+`H` *extends* `HTMLElement` = `HTMLElement`
 
 #### Parameters
 
-##### ui
+##### host
 
-`U`
+`H`
 
 #### Returns
 

@@ -1,30 +1,24 @@
 ### Function: asString()
 
-> **asString**\<`U`\>(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`string`, `U`\>
+> **asString**(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`string`\>
 
-Defined in: [src/parsers/string.ts:11](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/parsers/string.ts#L11)
+Defined in: [src/parsers/string.ts:10](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/parsers/string.ts#L10)
 
 Parser that returns the attribute value as a string, or a fallback when absent.
-
-#### Type Parameters
-
-##### U
-
-`U` *extends* [`UI`](../type-aliases/UI.md)
 
 #### Parameters
 
 ##### fallback?
 
-[`Fallback`](../type-aliases/Fallback.md)\<`string`, `U`\> = `''`
+`string` = `''`
 
-Static fallback string or reader function
+Static fallback string
 
 #### Returns
 
-[`Parser`](../type-aliases/Parser.md)\<`string`, `U`\>
+[`Parser`](../type-aliases/Parser.md)\<`string`\>
 
-Parser that returns the attribute string or the resolved fallback
+Parser that returns the attribute string or the fallback
 
 #### Since
 

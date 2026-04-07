@@ -2,9 +2,9 @@
 
 > This file lists things an LLM should know about Le Truc that may be surprising, non-obvious, or easy to get wrong. It is not a general introduction — see `ARCHITECTURE.md` for structure and `package.json` for project metadata.
 
-## v1.1 Factory Form (current)
+## Factory Form
 
-The v1.1 factory form is the primary way to define components. The factory receives a `FactoryContext` with helpers `{ all, each, expose, first, host, on, pass, provideContexts, requestContext, watch }`, calls `expose({ ... })` for reactive props, and returns a flat `FactoryResult` array of effect descriptors:
+The factory form is the only way to define components. The factory receives a `FactoryContext` with helpers `{ all, expose, first, host, on, pass, provideContexts, requestContext, watch }`, calls `expose({ ... })` for reactive props, and returns a flat `FactoryResult` array of effect descriptors:
 
 ```ts
 defineComponent<MyProps>('my-element', ({ expose, first, host, on, watch }) => {
@@ -17,17 +17,19 @@ defineComponent<MyProps>('my-element', ({ expose, first, host, on, watch }) => {
 })
 ```
 
-The v1.0 4-param form (`defineComponent(name, props, select, setup)`) is **deprecated** but remain fully supported.
-
 ## Surprising Behaviors
 
-- **The factory form has `observedAttributes = []` — parsers are called once, not reactively**: Both the v1.1 factory form and the v1.0 factory form set `static observedAttributes = []` unconditionally. Parsers passed to `expose()` are called once at connect time with the current attribute value (for server-side HTML author configuration), but `attributeChangedCallback` never fires. Use the 4-param form when attribute changes on a live document must drive reactive updates.
+- **`observedAttributes = []` — parsers are called once, not reactively**: Components always have `static observedAttributes = []`. Parsers passed to `expose()` are called once at connect time with the current attribute value (for server-side HTML author configuration), but `attributeChangedCallback` never fires. Attribute values drive state only at connect time. To react to attribute changes after connection, use event handlers or `watch()`.
 
-- **Parser branding is required for reliable detection**: `isParser()` checks for `PARSER_BRAND` first. Unbranded functions fall back to `fn.length >= 2`, which is unreliable (default params, rest params, and destructuring all affect `.length`). Always use `asParser()` to create custom parsers; in DEV_MODE, using an unbranded function triggers a `console.warn`.
+- **Parser branding is required for reliable detection**: `isParser()` checks only for `PARSER_BRAND`. Always use `asParser()` to create custom parsers — unbranded functions are NOT treated as parsers regardless of their argument count.
+
+- **`Parser<T>` takes the attribute value only**: Signature is `(value: string | null | undefined) => T`. Fallbacks are static values captured in the factory closure — not reader functions.
+
+- **`Reader<T, H>` receives the host element**: Signature is `(host: HTMLElement & P) => T`. The factory closure already has access to queried elements, so readers primarily exist for computed initial values derived from host properties.
 
 - **`pass()` is Le Truc–only and replaces signals, not values**: The factory `pass(target, props)` calls `slot.replace(signal)` on the child's internal Slot map — it only works for Le Truc components whose properties are Slot-backed. For any other custom element or plain HTML element, use `setProperty()` instead. The original signal is captured and restored when the parent disconnects, so the child regains its own independent state after detachment.
 
-- **`MethodProducer` is branded, not structurally distinguished**: `isMethodProducer()` checks for `METHOD_BRAND`. Always wrap method producer initializers with `asMethod()` — e.g. `clear`, `add`, `delete` in v1.1 components. Unbranded `() => void` functions are treated as Readers, not method producers. `provideContexts([...])` in the factory context returns an `EffectDescriptor` — include it in the return array as `return [provideContexts([MEDIA_MOTION, ...])]`.
+- **`MethodProducer` is branded, not structurally distinguished**: `isMethodProducer()` checks for `METHOD_BRAND`. Always wrap method producer initializers with `asMethod()` — e.g. `clear`, `add`, `delete`. Unbranded `() => void` functions are treated as Readers, not method producers. `provideContexts([...])` in the factory context returns an `EffectDescriptor` — include it in the return array as `return [provideContexts([MEDIA_MOTION, ...])]`.
 
 - **`all()` MutationObserver is lazy**: The observer only activates when the `Memo` is read inside a reactive effect. The observer watches attribute changes implied by the CSS selector (classes, IDs, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the memo's `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
 
@@ -37,15 +39,15 @@ The v1.0 4-param form (`defineComponent(name, props, select, setup)`) is **depre
 
 - **`on()` factory handler return value updates host**: If the factory `on(target, type, handler)` handler returns `{ prop: value }`, those updates are applied to the host in a `batch()`. Returning nothing (or `undefined`) is a no-op.
 
-- **Context protocol is the Web Components Community Protocol**: `provideContexts` / `requestContext` implement the [webcomponents-cg context spec](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md), not a custom protocol. In v1.1: `provideContexts([...])` returns an `EffectDescriptor` used in the return array; `requestContext(context, fallback)` returns a `Memo<T>` used directly in `expose()`.
+- **Context protocol is the Web Components Community Protocol**: `provideContexts` / `requestContext` implement the [webcomponents-cg context spec](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md), not a custom protocol. `provideContexts([...])` returns an `EffectDescriptor` used in the return array; `requestContext(context, fallback)` returns a `Memo<T>` used directly in `expose()`.
 
 - **`undefined` from a reader restores original DOM value**: When a reactive resolves to `undefined` (e.g. after an error in a reader, or a missing property), the effect restores the DOM value captured at setup time — not a blank/null state. The `RESET` symbol no longer exists.
 
-- **`createEventsSensor` v1.1 signature**: The v1.1 form is `createEventsSensor(element, init, events)` — the element is the first argument. Used inside `expose()`: `length: createEventsSensor(textbox, textbox.value.length, { input: ({ target }) => target.value.length })`.
+- **`createEventsSensor` signature**: `createEventsSensor(element, init, events)` — the element is the first argument, `init` is a static initial value. Used inside `expose()`: `length: createEventsSensor(textbox, textbox.value.length, { input: ({ target }) => target.value.length })`.
 
 - **Debug mode**: Set `host.debug = true` on a component instance for verbose per-instance logging. For project-wide enhanced errors and logging, build with `process.env.DEV_MODE=true`.
 
-- **`bindVisible` is the inverse of `el.hidden`**: `bindVisible(el)` sets `el.hidden = !value`, matching v1.0 `show()`. A value of `true` makes the element visible.
+- **`bindVisible` is the inverse of `el.hidden`**: `bindVisible(el)` sets `el.hidden = !value`. A value of `true` makes the element visible.
 
 - **`bindAttribute` returns `WatchHandlers`, not a function**: Use as `watch('prop', bindAttribute(el, 'name'))` — `watch` accepts both forms.
 

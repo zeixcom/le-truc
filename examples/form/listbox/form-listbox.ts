@@ -163,12 +163,11 @@ export default defineComponent<FormListboxProps>(
 		)
 
 		expose({
-			value: () =>
-				listbox.querySelector<HTMLButtonElement>(
-					'button[role="option"][aria-selected="true"]',
-				)?.value ?? '',
-			options: () =>
-				createElementsMemo(listbox, 'button[role="option"]:not([hidden])'),
+			value: first('button[role="option"][aria-selected="true"]')?.value ?? '',
+			options: createElementsMemo(
+				listbox,
+				'button[role="option"]:not([hidden])',
+			),
 			filter: '',
 			src: asString(),
 		})
@@ -212,7 +211,10 @@ export default defineComponent<FormListboxProps>(
 						})
 				: undefined,
 			host.src
-				? watch(createMemo(() => content.get().value), dangerouslySetInnerHTML(listbox))
+				? watch(
+						createMemo(() => content.get().value),
+						dangerouslySetInnerHTML(listbox),
+					)
 				: undefined,
 			// Focus management on listbox
 			on(listbox, 'click', ({ target }) => {

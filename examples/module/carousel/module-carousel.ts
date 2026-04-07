@@ -26,7 +26,7 @@ export default defineComponent<ModuleCarouselProps>(
 		let lastScrolled = -1
 
 		expose({
-			index: asInteger(() =>
+			index: asInteger(
 				Math.max(
 					slides.get().findIndex(slide => slide.ariaCurrent === 'true'),
 					0,

@@ -1,8 +1,17 @@
-import { createSensor, isMemo, type Sensor } from '@zeix/cause-effect'
+import {
+	batch,
+	createEffect,
+	createScope,
+	createSensor,
+	isMemo,
+	isRecord,
+	type Memo,
+	type Sensor,
+} from '@zeix/cause-effect'
 import type { ComponentProps } from './component'
-import { getFallback, type ParserOrFallback } from './parsers'
+import type { EffectDescriptor } from './effects'
 import { PASSIVE_EVENTS, schedule } from './scheduler'
-import type { UI } from './ui'
+import { DEV_MODE, elementName, LOG_WARN } from './util'
 
 /* === Types === */
 
@@ -11,11 +20,10 @@ type EventType<K extends string> = K extends keyof HTMLElementEventMap
 	: Event
 
 /**
- * Handler for a single event type inside `createEventsSensor` (v1.0 form).
+ * Handler for a single event type inside `createEventsSensor`.
  *
  * Receives a context object with:
  * - `event` — the original DOM event (typed to the specific event type)
- * - `ui` — the full component UI object
  * - `target` — the matched element (properly typed, unlike `event.target`)
  * - `prev` — the current sensor value before this event
  *
@@ -25,52 +33,135 @@ type EventType<K extends string> = K extends keyof HTMLElementEventMap
 type SensorEventHandler<
 	T extends {},
 	Evt extends Event,
-	U extends UI,
-	E extends Element,
-> = (context: {
-	event: Evt
-	ui: U
-	target: E
-	prev: T
-}) => T | void | Promise<void>
-
-/**
- * Map of event type names to `SensorEventHandler` functions, passed as the
- * third argument to `createEventsSensor` (v1.0 form). Each handler derives the
- * new sensor value from the event, or returns `void` to leave it unchanged.
- */
-type EventHandlers<T extends {}, U extends UI, E extends Element> = {
-	[K in keyof HTMLElementEventMap]?: SensorEventHandler<T, EventType<K>, U, E>
-}
-
-/**
- * Handler for a single event type inside `createEventsSensor` (v1.1 form).
- *
- * Receives a context object with:
- * - `event` — the original DOM event (typed to the specific event type)
- * - `target` — the matched element (properly typed, unlike `event.target`)
- * - `prev` — the current sensor value before this event
- *
- * The `ui` field is dropped in the v1.1 form — elements are available in
- * the factory closure directly. Return the new value or `void` to leave unchanged.
- */
-type SensorEventHandlerV2<
-	T extends {},
-	Evt extends Event,
 	E extends Element,
 > = (context: { event: Evt; target: E; prev: T }) => T | void | Promise<void>
 
 /**
- * Map of event type names to `SensorEventHandlerV2` functions for the v1.1 form.
+ * Map of event type names to `SensorEventHandler` functions.
+ * Each handler derives the new sensor value from the event, or returns `void` to leave it unchanged.
  */
-type EventHandlersV2<T extends {}, E extends Element> = {
-	[K in keyof HTMLElementEventMap]?: SensorEventHandlerV2<T, EventType<K>, E>
+type EventHandlers<T extends {}, E extends Element> = {
+	[K in keyof HTMLElementEventMap]?: SensorEventHandler<T, EventType<K>, E>
+}
+
+/**
+ * The `on` helper type in `FactoryContext`.
+ *
+ * Attaches an event listener. The handler always receives `(event, element)`.
+ * For Memo targets, uses event delegation (or per-element fallback for non-bubbling events).
+ */
+type FactoryOnHelper<P extends ComponentProps> = {
+	<E extends Element, T extends keyof HTMLElementEventMap>(
+		target: E,
+		type: T,
+		handler: (
+			event: HTMLElementEventMap[T],
+			element: E,
+		) => { [K in keyof P]?: P[K] } | void,
+		options?: AddEventListenerOptions,
+	): EffectDescriptor
+	<E extends Element>(
+		target: E,
+		type: string,
+		handler: (event: Event, element: E) => { [K in keyof P]?: P[K] } | void,
+		options?: AddEventListenerOptions,
+	): EffectDescriptor
+	<E extends Element, T extends keyof HTMLElementEventMap>(
+		target: Memo<E[]>,
+		type: T,
+		handler: (
+			event: HTMLElementEventMap[T],
+			element: E,
+		) => { [K in keyof P]?: P[K] } | void,
+		options?: AddEventListenerOptions,
+	): EffectDescriptor
+	<E extends Element>(
+		target: Memo<E[]>,
+		type: string,
+		handler: (event: Event, element: E) => { [K in keyof P]?: P[K] } | void,
+		options?: AddEventListenerOptions,
+	): EffectDescriptor
+}
+
+/* === Constants === */
+
+/**
+ * Events that do not bubble. When used as the `type` argument to `on()` with a Memo target,
+ * event delegation cannot be used — per-element listeners are set up as a fallback instead.
+ * In DEV_MODE, a warning is logged pointing toward the `each()` + `on()` pattern.
+ */
+const NON_BUBBLING_EVENTS = new Set([
+	'focus',
+	'blur',
+	'scroll',
+	'resize',
+	'load',
+	'unload',
+	'error',
+	'toggle',
+	'mouseenter',
+	'mouseleave',
+	'pointerenter',
+	'pointerleave',
+	'abort',
+	'canplay',
+	'canplaythrough',
+	'durationchange',
+	'emptied',
+	'ended',
+	'loadeddata',
+	'loadedmetadata',
+	'loadstart',
+	'pause',
+	'play',
+	'playing',
+	'progress',
+	'ratechange',
+	'seeked',
+	'seeking',
+	'stalled',
+	'suspend',
+	'timeupdate',
+	'volumechange',
+	'waiting',
+])
+
+/* === Internal Helpers === */
+
+/**
+ * Attach a single event listener to an element and return the cleanup function.
+ * Handles passive scheduling and the `{ prop: value }` return → `batch()` host update.
+ *
+ * @since 2.0
+ */
+const attachListener = <P extends ComponentProps, E extends Element>(
+	host: HTMLElement & P,
+	target: E,
+	type: string,
+	handler: (event: Event, element: E) => { [K in keyof P]?: P[K] } | void,
+	options: AddEventListenerOptions,
+): (() => void) => {
+	const listener = (e: Event) => {
+		const task = () => {
+			const result = handler(e, target)
+			if (!isRecord(result)) return
+			batch(() => {
+				for (const [key, value] of Object.entries(result)) {
+					;(host as any)[key] = value
+				}
+			})
+		}
+		if (options.passive) schedule(target, task)
+		else task()
+	}
+	target.addEventListener(type, listener, options)
+	return () => target.removeEventListener(type, listener)
 }
 
 /* === Exported Functions === */
 
 /**
- * Create a `Sensor<T>` driven by DOM events on a target element (v1.1 form).
+ * Create a `Sensor<T>` driven by DOM events on a target element.
  *
  * Use this inside `expose()` as a property initializer when a single reactive
  * value should be derived from events on a specific element. The listener is
@@ -79,174 +170,170 @@ type EventHandlersV2<T extends {}, E extends Element> = {
  * @since 1.1
  * @param {E} target - The element to listen on
  * @param {T} init - Initial value of the sensor
- * @param {EventHandlersV2<T, E>} events - Map of event type to handler function
+ * @param {EventHandlers<T, E>} events - Map of event type to handler function
  * @returns {Sensor<T>} Sensor that updates when matching events fire on target
  */
 function createEventsSensor<T extends {}, E extends Element>(
 	target: E,
 	init: T,
-	events: EventHandlersV2<T, E>,
-): Sensor<T>
+	events: EventHandlers<T, E>,
+): Sensor<T> {
+	let value = init
+	const eventMap = new Map<string, EventListener>()
+
+	return createSensor<T>(
+		set => {
+			for (const [type, handler] of Object.entries(events)) {
+				const options = { passive: PASSIVE_EVENTS.has(type) }
+				const listener = (e: Event) => {
+					const eventTarget = e.target as Node
+					if (!eventTarget || !target.contains(eventTarget)) return
+					e.stopPropagation()
+
+					const task = () => {
+						try {
+							const next = (handler as SensorEventHandler<T, Event, Element>)({
+								event: e,
+								target,
+								prev: value,
+							})
+							if (next == null || next instanceof Promise) return
+							if (!Object.is(next, value)) {
+								value = next
+								set(next)
+							}
+						} catch (error) {
+							e.stopImmediatePropagation()
+							throw error
+						}
+					}
+					if (options.passive) schedule(target, task)
+					else task()
+				}
+				eventMap.set(type, listener)
+				target.addEventListener(type, listener, options)
+			}
+			return () => {
+				if (eventMap.size) {
+					for (const [type, listener] of eventMap)
+						target.removeEventListener(type, listener)
+					eventMap.clear()
+				}
+			}
+		},
+		{ value },
+	)
+}
 
 /**
- * Create a `Reader` that produces a `Sensor<T>` driven by DOM events (v1.0 form).
+ * Create an `on` helper bound to a specific component host.
  *
- * Use this as a reactive property initializer when a single state value should be
- * derived from multiple event types (e.g. combining `click` and `keyup` into a
- * `selected` value), instead of updating host properties imperatively via `on()`.
+ * `on` attaches an event listener to an element or a `Memo<Element[]>` collection.
+ * The handler always receives `(event, element)` — a unified signature regardless
+ * of target type. Returns an `EffectDescriptor`.
  *
- * Event listeners are attached to the host element using event delegation.
- * Each handler receives `{ event, ui, target, prev }` and returns the new value,
- * or `void`/`Promise<void>` to leave the value unchanged. Passive events are
- * deferred via `schedule()`.
+ * For Memo targets, uses event delegation (single listener on the query root).
+ * Non-bubbling events with Memo targets fall back to per-element listeners;
+ * in DEV_MODE a warning is logged pointing toward `each()` + `on()`.
  *
- * @since 0.16.0
- * @param {ParserOrFallback<T, U>} init - Initial value, static fallback, or reader function
- * @param {K} key - Key of the UI object whose element(s) to listen on
- * @param {EventHandlers<T, U, any>} events - Map of event type to handler function
- * @returns {(ui: U & { host: HTMLElement & P }) => Sensor<T>} Reader that creates and returns the sensor
+ * @since 2.0
+ * @param host - The component host element
  */
-function createEventsSensor<
-	T extends {},
-	P extends ComponentProps,
-	U extends UI,
-	K extends keyof U,
->(
-	init: ParserOrFallback<T, U>,
-	key: K,
-	events: EventHandlers<T, U, any>,
-): (ui: U & { host: HTMLElement & P }) => Sensor<T>
+const makeOn = <P extends ComponentProps>(host: HTMLElement & P) => {
+	type OnHandler<E extends Element, Evt extends Event> = (
+		event: Evt,
+		element: E,
+	) => { [K in keyof P]?: P[K] } | void
 
-function createEventsSensor<T extends {}>(
-	targetOrInit: Element | ParserOrFallback<T, any>,
-	initOrKey: T | string | keyof any,
-	events: EventHandlersV2<T, any> | EventHandlers<T, any, any>,
-): Sensor<T> | ((ui: any) => Sensor<T>) {
-	// v1.1 form: first arg is a DOM Element
-	if (targetOrInit instanceof Element) {
-		const target = targetOrInit
-		let value = initOrKey as T
-		const eventMap = new Map<string, EventListener>()
-
-		return createSensor<T>(
-			set => {
-				for (const [type, handler] of Object.entries(events)) {
-					const options = { passive: PASSIVE_EVENTS.has(type) }
-					const listener = (e: Event) => {
-						const eventTarget = e.target as Node
-						if (!eventTarget || !target.contains(eventTarget)) return
-						e.stopPropagation()
-
-						const task = () => {
-							try {
-								const next = (
-									handler as SensorEventHandlerV2<T, Event, Element>
-								)({
-									event: e,
-									target,
-									prev: value,
-								})
-								if (next == null || next instanceof Promise) return
-								if (!Object.is(next, value)) {
-									value = next
-									set(next)
-								}
-							} catch (error) {
-								e.stopImmediatePropagation()
-								throw error
-							}
-						}
-						if (options.passive) schedule(target, task)
-						else task()
-					}
-					eventMap.set(type, listener)
-					target.addEventListener(type, listener, options)
-				}
-				return () => {
-					if (eventMap.size) {
-						for (const [type, listener] of eventMap)
-							target.removeEventListener(type, listener)
-						eventMap.clear()
-					}
-				}
-			},
-			{ value },
-		)
-	}
-
-	// v1.0 form: first arg is init/fallback, second is UI key string
-	const init = targetOrInit as ParserOrFallback<T, any>
-	const key = initOrKey as string
-
-	return (ui: any & { host: HTMLElement }) => {
-		const { host } = ui
-		let value: T = getFallback(ui, init)
-		const memo = isMemo<any[]>(ui[key]) ? ui[key] : null
-		const single = memo ? null : ui[key]
-		const eventMap = new Map<string, EventListener>()
-
-		const getTarget = (eventTarget: Node): any | undefined => {
-			if (single) {
-				return single.contains(eventTarget) ? single : undefined
+	function on<E extends Element, T extends keyof HTMLElementEventMap>(
+		target: E,
+		type: T,
+		handler: OnHandler<E, HTMLElementEventMap[T]>,
+		options?: AddEventListenerOptions,
+	): EffectDescriptor
+	function on<E extends Element>(
+		target: E,
+		type: string,
+		handler: OnHandler<E, Event>,
+		options?: AddEventListenerOptions,
+	): EffectDescriptor
+	function on<E extends Element, T extends keyof HTMLElementEventMap>(
+		target: Memo<E[]>,
+		type: T,
+		handler: OnHandler<E, HTMLElementEventMap[T]>,
+		options?: AddEventListenerOptions,
+	): EffectDescriptor
+	function on<E extends Element>(
+		target: Memo<E[]>,
+		type: string,
+		handler: OnHandler<E, Event>,
+		options?: AddEventListenerOptions,
+	): EffectDescriptor
+	function on(
+		target: Element | Memo<Element[]>,
+		type: string,
+		handler: OnHandler<Element, Event>,
+		options: AddEventListenerOptions = {},
+	): EffectDescriptor {
+		return () => {
+			if (!('passive' in options)) {
+				options = { ...options, passive: PASSIVE_EVENTS.has(type) }
 			}
-			for (const t of memo!.get()) if (t.contains(eventTarget)) return t
-		}
 
-		return createSensor<T>(
-			set => {
-				for (const [type, handler] of Object.entries(events)) {
-					const options = { passive: PASSIVE_EVENTS.has(type) }
-					const listener = (e: Event) => {
-						const eventTarget = e.target as Node
-						if (!eventTarget) return
-						const target = getTarget(eventTarget)
-						if (!target) return
-						e.stopPropagation()
-
-						const task = () => {
-							try {
-								const next = (
-									handler as SensorEventHandler<T, Event, any, any>
-								)({
-									event: e as any,
-									ui,
-									target,
-									prev: value,
-								})
-								if (next == null || next instanceof Promise) return
-								if (!Object.is(next, value)) {
-									value = next
-									set(next)
-								}
-							} catch (error) {
-								e.stopImmediatePropagation()
-								throw error
-							}
+			if (isMemo<Element[]>(target)) {
+				// Memo target: check whether this event type bubbles
+				if (NON_BUBBLING_EVENTS.has(type)) {
+					if (DEV_MODE) {
+						console[LOG_WARN](
+							`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`,
+						)
+					}
+					// Fall back to per-element listeners with per-element lifecycle
+					return createEffect(() => {
+						for (const el of target.get()) {
+							createScope(() => {
+								return attachListener(host, el, type, handler, options)
+							})
 						}
-						if (options.passive) schedule(host, task)
-						else task()
-					}
-					eventMap.set(type, listener)
-					host.addEventListener(type, listener, options)
+					})
 				}
-				return () => {
-					if (eventMap.size) {
-						for (const [type, listener] of eventMap)
-							host.removeEventListener(type, listener)
-						eventMap.clear()
+
+				// Event delegation: one listener on the query root
+				const root = host.shadowRoot ?? (host as unknown as Element)
+				const listener = (e: Event) => {
+					for (const el of target.get()) {
+						if (el === e.target || el.contains(e.target as Node)) {
+							const task = () => {
+								const result = handler(e, el)
+								if (!isRecord(result)) return
+								batch(() => {
+									for (const [key, value] of Object.entries(result)) {
+										;(host as any)[key] = value
+									}
+								})
+							}
+							if (options.passive) schedule(el, task)
+							else task()
+							break
+						}
 					}
 				}
-			},
-			{ value },
-		)
+				root.addEventListener(type, listener, options)
+				return () => root.removeEventListener(type, listener)
+			}
+
+			// Single Element target
+			return attachListener(host, target as Element, type, handler, options)
+		}
 	}
+	return on
 }
 
 export {
 	createEventsSensor,
 	type EventHandlers,
-	type EventHandlersV2,
 	type EventType,
+	type FactoryOnHelper,
+	makeOn,
 	type SensorEventHandler,
-	type SensorEventHandlerV2,
 }

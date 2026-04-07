@@ -2,7 +2,7 @@
 
 > **FactoryContext**\<`P`\> = [`ElementQueries`](ElementQueries.md) & `object`
 
-Defined in: [src/component.ts:240](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/component.ts#L240)
+Defined in: [src/component.ts:213](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/component.ts#L213)
 
 The context object passed to the v1.1 factory function.
 
@@ -18,7 +18,7 @@ Components destructure only what they need.
 
 ##### props
 
-[`Initializers`](Initializers.md)\<`P`, \{ \}\>
+[`Initializers`](Initializers.md)\<`P`\>
 
 ###### Returns
 

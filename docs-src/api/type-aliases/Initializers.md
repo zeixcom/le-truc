@@ -1,27 +1,23 @@
-### Type Alias: Initializers\<P, U\>
+### Type Alias: Initializers\<P\>
 
-> **Initializers**\<`P`, `U`\> = \{ \[K in keyof P\]?: P\[K\] \| Signal\<P\[K\]\> \| Parser\<P\[K\], ComponentUI\<P, U\>\> \| Reader\<MaybeSignal\<P\[K\]\>, ComponentUI\<P, U\>\> \| ((ui: ComponentUI\<P, U\>) =\> void) \}
+> **Initializers**\<`P`\> = \{ \[K in keyof P\]?: P\[K\] \| Signal\<P\[K\]\> \| Parser\<P\[K\]\> \| Reader\<MaybeSignal\<P\[K\]\>, HTMLElement & P\> \| (P\[K\] extends (args: any\[\]) =\> any ? P\[K\] & \{ \[METHOD\_BRAND\]: true \} : never) \}
 
-Defined in: [src/component.ts:105](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/component.ts#L105)
+Defined in: [src/component.ts:76](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/component.ts#L76)
 
 The `props` argument of `defineComponent` — a map from property names to their initializers.
 
 Each value may be:
 - A **static value** or **`Signal`** — used directly as the initial signal value.
-- A **`Parser`** (two-argument function branded with `asParser()`) — called with
-  `(ui, attributeValue)` at connect time and again on every attribute change.
-- A **`Reader`** (one-argument function) — called with `ui` at connect time; if it
+- A **`Parser`** (branded with `asParser()`) — called with the attribute value string
+  at connect time; for 4-param form also on every attribute change.
+- A **`Reader`** (one-argument function) — called with `host` at connect time; if it
   returns a function or `TaskCallback`, a computed/task signal is created; otherwise
   a mutable state signal is created.
-- A **`MethodProducer`** (branded with `asMethod()`) — called for side effect of
-  creating the method only; its return value is ignored.
+- A **`MethodProducer`** (branded with `asMethod()`) — assigned directly as the property
+  value; the function IS the method. Per-instance state lives in factory scope.
 
 #### Type Parameters
 
 ##### P
 
 `P` *extends* [`ComponentProps`](ComponentProps.md)
-
-##### U
-
-`U` *extends* [`UI`](UI.md)

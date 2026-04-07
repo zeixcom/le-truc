@@ -30,7 +30,7 @@ export default defineComponent<ModuleListProps>(
 		const textbox = first('form-textbox')
 		const add = first('basic-button.add')
 
-		const max = asInteger(MAX_ITEMS)({} as any, host.getAttribute('max'))
+		const max = asInteger(MAX_ITEMS)(host.getAttribute('max'))
 
 		let addKey = 0
 		expose({

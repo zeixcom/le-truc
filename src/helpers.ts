@@ -1,4 +1,4 @@
-import type { WatchHandlers } from './factory'
+import type { WatchHandlers } from './effects'
 import { safeSetAttribute, setTextPreservingComments } from './safety'
 import { schedule } from './scheduler'
 
@@ -11,7 +11,7 @@ import { schedule } from './scheduler'
  * HTML comment nodes. When `false` (default), sets `el.textContent` directly.
  * Numbers are coerced to strings via `String()`.
  *
- * @since 1.1
+ * @since 2.0
  * @param {Element} element - Target element
  * @param {boolean} [preserveComments=false] - Whether to preserve HTML comment nodes
  * @returns {(value: string | number) => void} Function that sets the text content
@@ -33,7 +33,7 @@ const bindText = (
  * TypeScript infers `E[K]` from the element type and key, so no explicit type
  * parameters are needed at call sites.
  *
- * @since 1.1
+ * @since 2.0
  * @param {E} element - Target element
  * @param {K} key - Property key to set
  * @returns {(value: E[K]) => void} Function that sets the property
@@ -53,7 +53,7 @@ const bindProperty =
  * `value=true` adds the token; `value=false` removes it.
  * If `transform` is provided, it converts the incoming value to a boolean first.
  *
- * @since 1.1
+ * @since 2.0
  * @param {Element} element - Target element
  * @param {string} token - CSS class token to toggle
  * @param {(value: T) => boolean} [transform] - Optional function to derive a boolean from the value
@@ -79,7 +79,7 @@ const bindClass =
  * Matches the direction of the v1.0 `show()` effect.
  * If `transform` is provided, it converts the incoming value to a boolean first.
  *
- * @since 1.1
+ * @since 2.0
  * @param {HTMLElement} element - Target element
  * @param {(value: T) => boolean} [transform] - Optional function to derive a boolean from the value
  * @returns {(value: T) => void} Function that sets element visibility
@@ -102,7 +102,7 @@ const bindVisible =
  *
  * Pass `allowUnsafe: true` only when the value has been validated upstream.
  *
- * @since 1.1
+ * @since 2.0
  * @param {Element} element - Target element
  * @param {string} name - Attribute name
  * @param {boolean} [allowUnsafe=false] - Skip security validation for string values
@@ -133,7 +133,7 @@ const bindAttribute = (
  * - `ok(string)` → `el.style.setProperty(prop, value)`
  * - `nil` → `el.style.removeProperty(prop)`, restoring the CSS cascade value
  *
- * @since 1.1
+ * @since 2.0
  * @param {HTMLElement | SVGElement | MathMLElement} element - Target element
  * @param {string} prop - CSS property name (e.g. `'color'`, `'--my-var'`)
  * @returns {RunHandlers<string>} Watch handlers for the style property

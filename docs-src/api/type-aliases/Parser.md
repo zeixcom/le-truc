@@ -1,8 +1,8 @@
-### Type Alias: Parser\<T, U\>
+### Type Alias: Parser\<T\>
 
-> **Parser**\<`T`, `U`\> = (`ui`, `value`, `old?`) => `T`
+> **Parser**\<`T`\> = (`value`) => `T`
 
-Defined in: [src/parsers.ts:7](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/parsers.ts#L7)
+Defined in: [src/parsers.ts:5](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/parsers.ts#L5)
 
 #### Type Parameters
 
@@ -10,23 +10,11 @@ Defined in: [src/parsers.ts:7](https://github.com/zeixcom/le-truc/blob/bfd2f81a8
 
 `T` *extends* `object`
 
-##### U
-
-`U` *extends* [`UI`](UI.md)
-
 #### Parameters
-
-##### ui
-
-`U`
 
 ##### value
 
 `string` \| `null` \| `undefined`
-
-##### old?
-
-`string` \| `null`
 
 #### Returns
 

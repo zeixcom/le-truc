@@ -1,24 +1,21 @@
-import { asParser, type Fallback, getFallback, type Parser } from '../parsers'
-import type { UI } from '../ui'
+import { asParser, type Parser } from '../parsers'
 
 /**
  * Parse a string as a localized date string, or a fallback when absent or invalid
  *
- * @since 1.1
- * @param {Fallback<string, U>} [fallback=''] - Fallback value or reader function
- * @returns {Parser<string, U>} Parser function
+ * @since 2.0
+ * @param {string} [fallback=''] - Fallback value
+ * @returns {Parser<string>} Parser function
  */
-const asDate = <U extends UI>(
-	fallback: Fallback<string, U> = '',
-): Parser<string, U> =>
-	asParser((ui: U, value: string | null | undefined) =>
+const asDate = (fallback: string = ''): Parser<string> =>
+	asParser((value: string | null | undefined) =>
 		value
 			? new Date(value).toLocaleDateString(undefined, {
 					year: 'numeric',
 					month: 'long',
 					day: 'numeric',
 				})
-			: getFallback(ui, fallback),
+			: fallback,
 	)
 
 export { asDate }

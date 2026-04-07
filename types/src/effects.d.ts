@@ -1,6 +1,5 @@
-import { type Cleanup, type MaybeCleanup, type Memo } from '@zeix/cause-effect';
+import { type MaybeCleanup, type Memo, type Signal } from '@zeix/cause-effect';
 import type { ComponentProps } from './component';
-import type { ElementFromKey, UI } from './ui';
 /**
  * A deferred effect: a thunk that, when called inside a reactive scope, creates
  * a reactive effect and returns an optional cleanup function.
@@ -11,7 +10,7 @@ import type { ElementFromKey, UI } from './ui';
  */
 type EffectDescriptor = () => MaybeCleanup;
 /**
- * The return value of the v1.1 factory function.
+ * The return value of the factory function.
  *
  * A flat array of effect descriptors (and optional falsy guards for conditional
  * effects). Falsy values (`false`, `undefined`) are filtered out before activation,
@@ -19,41 +18,89 @@ type EffectDescriptor = () => MaybeCleanup;
  */
 type FactoryResult = Array<EffectDescriptor | false | undefined>;
 /**
- * A single effect function bound to a host component and a target element.
- * Returned by built-in effect factories and by `updateElement`.
- * May return a cleanup function that runs when the component disconnects or
- * when the target element is removed.
- *
- * @deprecated Used only by the v1.0 4-param form of `defineComponent`.
+ * User-facing handler object for `watch()` with match branches.
+ * `ok` receives the resolved value directly (not a tuple) for single-source `watch()`.
+ * `err` receives a single Error (not an array) for convenience.
  */
-type Effect<P extends ComponentProps, E extends Element> = (host: HTMLElement & P, target: E) => MaybeCleanup;
-/**
- * One or more effects for a single UI element.
- *
- * @deprecated Used only by the v1.0 4-param form of `defineComponent`.
- */
-type ElementEffects<P extends ComponentProps, E extends Element> = Effect<P, E> | Effect<P, E>[];
-/**
- * The return type of the `setup` function passed to `defineComponent`.
- * Keys correspond to keys of the UI object (queried elements and `host`);
- * values are one or more effects to run for that element.
- *
- * @deprecated Used only by the v1.0 4-param form of `defineComponent`.
- */
-type Effects<P extends ComponentProps, U extends UI & {
-    host: HTMLElement & P;
-}> = {
-    [K in keyof U]?: ElementEffects<P, ElementFromKey<U, K>>;
+type WatchHandlers<T> = {
+    ok: (value: T) => MaybeCleanup | void;
+    err?: (error: Error) => MaybeCleanup | void;
+    nil?: () => MaybeCleanup | void;
 };
 /**
- * Activate effects returned by the setup function inside a reactive scope.
+ * A single reactive value to pass to a descendant Le Truc component property.
  *
- * @deprecated Used only by the v1.0 4-param form of `defineComponent`.
- * @since 0.15.0
+ * Three forms are accepted:
+ * - `keyof P` — a string property name on the host
+ * - `Signal<T>` — any signal
+ * - `(host: HTMLElement & P) => T` — a reader function receiving the host
  */
-declare const runEffects: <P extends ComponentProps, U extends UI & {
-    host: HTMLElement & P;
-}>(ui: U, effects: Effects<P, U>) => Cleanup;
+type PassedProp<T, P extends ComponentProps> = keyof P | Signal<T & {}> | ((host: HTMLElement & P) => T);
+/**
+ * A map of child component property names to the reactive values to inject into them.
+ * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
+ */
+type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
+    [K in keyof Q & string]?: PassedProp<Q[K], P>;
+};
+/**
+ * The `watch` helper type in `FactoryContext`.
+ *
+ * Drives a reactive effect from a signal source (property name, Signal, or array).
+ * Only the declared sources trigger re-runs — incidental reads inside the handler
+ * are not tracked. Returns an `EffectDescriptor`.
+ */
+type FactoryWatchHelper<P extends ComponentProps> = {
+    <K extends keyof P & string>(source: K, handler: (value: P[K]) => MaybeCleanup | void): EffectDescriptor;
+    <K extends keyof P & string>(source: K, handlers: WatchHandlers<P[K]>): EffectDescriptor;
+    <T extends {}>(source: Signal<T>, handler: (value: T) => MaybeCleanup | void): EffectDescriptor;
+    <T extends {}>(source: Signal<T>, handlers: WatchHandlers<T>): EffectDescriptor;
+    (source: Array<string | Signal<any>>, handler: (values: any[]) => MaybeCleanup | void): EffectDescriptor;
+};
+/**
+ * The `pass` helper type in `FactoryContext`.
+ *
+ * Passes reactive values to a descendant Le Truc component's Slot-backed signals.
+ * Supports single-element and Memo targets (per-element lifecycle for Memo).
+ */
+type FactoryPassHelper<P extends ComponentProps> = {
+    <Q extends ComponentProps>(target: HTMLElement & Q, props: PassedProps<P, Q>): EffectDescriptor;
+    <Q extends ComponentProps>(target: Memo<(HTMLElement & Q)[]>, props: PassedProps<P, Q>): EffectDescriptor;
+};
+/**
+ * Create a `watch` helper bound to a specific component host.
+ *
+ * `watch` wraps `match` to create a reactive effect driven by explicitly declared
+ * signal sources. Only the declared source signals trigger re-runs — other reads
+ * inside the handler are not tracked. Returns an `EffectDescriptor`.
+ *
+ * @since 2.0
+ * @param host - The component host element
+ */
+declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => {
+    <K extends keyof P & string>(source: K, handler: (value: P[K]) => MaybeCleanup | void): EffectDescriptor;
+    <K extends keyof P & string>(source: K, handlers: WatchHandlers<P[K]>): EffectDescriptor;
+    <T extends {}>(source: Signal<T>, handler: (value: T) => MaybeCleanup | void): EffectDescriptor;
+    <T extends {}>(source: Signal<T>, handlers: WatchHandlers<T>): EffectDescriptor;
+    (source: Array<(keyof P & string) | Signal<any>>, handler: (values: any[]) => MaybeCleanup | void): EffectDescriptor;
+};
+/**
+ * Create a `pass` helper bound to a specific component host.
+ *
+ * `pass` passes reactive values to a descendant Le Truc component by swapping
+ * its Slot-backed signals. The original signals are restored when the component
+ * disconnects. Supports both single-element and `Memo<Element[]>` targets.
+ *
+ * For Memo targets, uses per-element lifecycle: signals are swapped when elements
+ * enter the collection and restored when they leave.
+ *
+ * @since 2.0
+ * @param host - The component host element
+ */
+declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => {
+    <Q extends ComponentProps>(target: HTMLElement & Q, props: PassedProps<P, Q>): EffectDescriptor;
+    <Q extends ComponentProps>(target: Memo<(HTMLElement & Q)[]>, props: PassedProps<P, Q>): EffectDescriptor;
+};
 /**
  * Create per-element reactive effects from a `Memo<Element[]>`.
  *
@@ -63,8 +110,8 @@ declare const runEffects: <P extends ComponentProps, U extends UI & {
  * The callback receives a single element and returns a `FactoryResult` (array of
  * `EffectDescriptor`s) or a single `EffectDescriptor` (single-descriptor shortcut).
  *
- * @since 1.1
+ * @since 2.0
  */
 declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult): EffectDescriptor;
 declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => EffectDescriptor): EffectDescriptor;
-export { type Effect, type EffectDescriptor, type Effects, type ElementEffects, each, type FactoryResult, runEffects, };
+export { type EffectDescriptor, each, type FactoryPassHelper, type FactoryResult, type FactoryWatchHelper, makePass, makeWatch, type PassedProp, type PassedProps, type WatchHandlers, };

@@ -41,6 +41,7 @@ declare const NON_BUBBLING_EVENTS: Set<string>;
  * signal sources. Only the declared source signals trigger re-runs — other reads
  * inside the handler are not tracked. Returns an `EffectDescriptor`.
  *
+ * @since 2.0
  * @param host - The component host element
  */
 declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => {
@@ -61,6 +62,7 @@ declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => {
  * Non-bubbling events with Memo targets fall back to per-element listeners;
  * in DEV_MODE a warning is logged pointing toward `each()` + `on()`.
  *
+ * @since 2.0
  * @param host - The component host element
  */
 declare const makeOn: <P extends ComponentProps>(host: HTMLElement & P) => {
@@ -79,6 +81,7 @@ declare const makeOn: <P extends ComponentProps>(host: HTMLElement & P) => {
  * For Memo targets, uses per-element lifecycle: signals are swapped when elements
  * enter the collection and restored when they leave.
  *
+ * @since 2.0
  * @param host - The component host element
  */
 declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => {
@@ -92,6 +95,7 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => {
  * When activated, attaches a `context-request` listener to `host`; provides a
  * getter `() => host[context]` for each matching context key.
  *
+ * @since 2.0
  * @param host - The component host element
  */
 declare const makeProvideContexts: <P extends ComponentProps>(host: HTMLElement & P) => (contexts: Array<keyof P>) => EffectDescriptor;
@@ -102,6 +106,7 @@ declare const makeProvideContexts: <P extends ComponentProps>(host: HTMLElement 
  * and wraps the resolved getter in a `Memo<T>`. If no provider responds,
  * the Memo returns `fallback`. For use inside `expose()` as a property initializer.
  *
+ * @since 2.0
  * @param host - The component host element
  */
 declare const makeRequestContext: <P extends ComponentProps>(host: HTMLElement & P) => <T extends {}>(context: Context<string, () => T>, fallback: T) => Memo<T>;

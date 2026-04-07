@@ -1,30 +1,24 @@
 ### Function: asInteger()
 
-> **asInteger**\<`U`\>(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`number`, `U`\>
+> **asInteger**(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`number`\>
 
-Defined in: [src/parsers/number.ts:26](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/parsers/number.ts#L26)
+Defined in: [src/parsers/number.ts:25](https://github.com/zeixcom/le-truc/blob/f9b8cffe5799acfab716409be9dfb516ce44d8c2/src/parsers/number.ts#L25)
 
 Parse a string as a number forced to integer with a fallback
 
 Supports hexadecimal and scientific notation
 
-#### Type Parameters
-
-##### U
-
-`U` *extends* [`UI`](../type-aliases/UI.md)
-
 #### Parameters
 
 ##### fallback?
 
-[`Fallback`](../type-aliases/Fallback.md)\<`number`, `U`\> = `0`
+`number` = `0`
 
-Fallback value or reader function
+Fallback value
 
 #### Returns
 
-[`Parser`](../type-aliases/Parser.md)\<`number`, `U`\>
+[`Parser`](../type-aliases/Parser.md)\<`number`\>
 
 Parser function
 

@@ -24,14 +24,6 @@ type ElementQueries = {
     first: FirstElement;
     all: AllElements;
 };
-/** The shape of the UI object returned by the `select` function of `defineComponent`. */
-type UI = Record<string, Element | Memo<Element[]> | undefined>;
-/**
- * Extracts the element type stored at key `K` of a UI object `U`.
- * - If `U[K]` is a `Memo<E[]>`, resolves to `E`.
- * - If `U[K]` is a single `Element`, resolves to that element type.
- */
-type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<U[K] extends Memo<infer E extends Element[]> ? E[number] : U[K] extends Element ? U[K] : never>;
 /**
  * Create a memo of elements matching a CSS selector.
  * The MutationObserver is lazily activated when an effect first reads
@@ -55,5 +47,5 @@ declare function createElementsMemo<E extends Element>(parent: ParentNode, selec
  * @param {HTMLElement} host - The component host element
  * @returns {[ElementQueries, (callback: () => void) => void]} Query helpers and a dependency resolver
  */
-declare const getHelpers: (host: HTMLElement) => [ElementQueries, (run: () => void) => void];
-export { type AllElements, createElementsMemo, type ElementFromKey, type ElementFromSelector, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, type FirstElement, getHelpers, type KnownTag, type SplitByComma, type TrimWhitespace, type UI, };
+declare const makeElementQueries: (host: HTMLElement) => [ElementQueries, (run: () => void) => void];
+export { type AllElements, createElementsMemo, type ElementFromSelector, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, type FirstElement, type KnownTag, makeElementQueries, type SplitByComma, type TrimWhitespace, };

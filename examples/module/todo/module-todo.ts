@@ -1,4 +1,4 @@
-import { createEffect, createElementsMemo, defineComponent } from '../../..'
+import { createElementsMemo, createMemo, defineComponent } from '../../..'
 
 declare global {
 	interface HTMLElementTagNameMap {
@@ -6,7 +6,7 @@ declare global {
 	}
 }
 
-export default defineComponent('module-todo', ({ first, on, pass }) => {
+export default defineComponent('module-todo', ({ first, on, pass, watch }) => {
 	const form = first('form', 'Add a form element to enter a new todo item.')
 	const textbox = first(
 		'form-textbox',
@@ -47,10 +47,12 @@ export default defineComponent('module-todo', ({ first, on, pass }) => {
 			textbox.clear()
 		}),
 		pass(submit, { disabled: () => !textbox.length }),
-		() =>
-			createEffect(() => {
-				list.setAttribute('filter', filter?.value || 'all')
-			}),
+		watch(
+			createMemo(() => filter.value),
+			value => {
+				list.setAttribute('filter', value || 'all')
+			},
+		),
 		pass(count, { count: () => active.get().length }),
 		pass(clearCompleted, {
 			disabled: () => !completed.get().length,

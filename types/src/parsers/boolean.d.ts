@@ -1,5 +1,4 @@
 import { type Parser } from '../parsers';
-import type { UI } from '../ui';
 /**
  * Parser that converts a boolean HTML attribute to an actual boolean.
  *
@@ -8,7 +7,7 @@ import type { UI } from '../ui';
  * boolean attribute semantics while allowing explicit opt-out via `attr="false"`.
  *
  * @since 0.13.1
- * @returns {Parser<boolean, UI>} Parser that returns `true` if the attribute is set and not `"false"`, `false` otherwise
+ * @returns {Parser<boolean>} Parser that returns `true` if the attribute is set and not `"false"`, `false` otherwise
  */
-declare const asBoolean: () => Parser<boolean, UI>;
+declare const asBoolean: () => Parser<boolean>;
 export { asBoolean };

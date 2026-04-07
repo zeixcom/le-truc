@@ -1630,6 +1630,42 @@ function createSlot(initialSignal, options) {
 function isSlot(value) {
   return isObjectOfType(value, TYPE_SLOT);
 }
+// src/context.ts
+var CONTEXT_REQUEST = "context-request";
+
+class ContextRequestEvent extends Event {
+  context;
+  callback;
+  subscribe;
+  constructor(context, callback, subscribe = false) {
+    super(CONTEXT_REQUEST, {
+      bubbles: true,
+      composed: true
+    });
+    this.context = context;
+    this.callback = callback;
+    this.subscribe = subscribe;
+  }
+}
+var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
+  const listener = (e) => {
+    const { context, callback } = e;
+    if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
+      e.stopImmediatePropagation();
+      callback(() => host[context]);
+    }
+  };
+  host.addEventListener(CONTEXT_REQUEST, listener);
+  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
+});
+var makeRequestContext = (host) => (context, fallback) => {
+  let consumed = () => fallback;
+  host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
+    consumed = getter;
+  }));
+  return createMemo(consumed);
+};
+
 // src/util.ts
 var DEV_MODE = typeof process !== "undefined" && true;
 var LOG_WARN = "warn";
@@ -1659,13 +1695,6 @@ var classString = (classList) => classList?.length ? `.${Array.from(classList).j
 var isCustomElement = (element) => element.localName.includes("-");
 var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
 var elementName = (el) => el ? `<${el.localName}${idString(el.id)}${classString(el.classList)}>` : "<unknown>";
-var validatePropertyName = (prop) => {
-  if (RESERVED_WORDS.has(prop))
-    return `Property name "${prop}" is a reserved word`;
-  if (HTML_ELEMENT_PROPS.has(prop))
-    return `Property name "${prop}" conflicts with inherited HTMLElement property`;
-  return null;
-};
 
 // src/errors.ts
 class InvalidComponentNameError extends TypeError {
@@ -1679,22 +1708,6 @@ class InvalidPropertyNameError extends TypeError {
   constructor(component, prop, reason) {
     super(`Invalid property name "${prop}" for component <${component}>. ${reason}`);
     this.name = "InvalidPropertyNameError";
-  }
-}
-
-class InvalidEffectsError extends TypeError {
-  constructor(host, cause) {
-    super(`Invalid effects in component ${elementName(host)}. Effects must be a record of effects for UI elements or the component, or a Promise that resolves to effects.`);
-    this.name = "InvalidEffectsError";
-    if (cause)
-      this.cause = cause;
-  }
-}
-
-class InvalidUIKeyError extends TypeError {
-  constructor(host, key, where) {
-    super(`Invalid UI key "${key}" in ${where} of component ${elementName(host)}`);
-    this.name = "InvalidUIKeyError";
   }
 }
 
@@ -1726,67 +1739,6 @@ class InvalidCustomElementError extends TypeError {
   }
 }
 
-// src/effects.ts
-var runEffects = (ui, effects) => {
-  if (!isRecord(effects))
-    throw new InvalidEffectsError(ui.host);
-  return createScope(() => {
-    for (const key of Object.keys(effects)) {
-      const k = key;
-      if (!effects[k])
-        continue;
-      const fns = Array.isArray(effects[k]) ? effects[k] : [effects[k]];
-      if (isMemo(ui[k])) {
-        createEffect(() => {
-          for (const target of ui[k].get())
-            for (const fn of fns)
-              fn(ui.host, target);
-        });
-      } else if (ui[k]) {
-        for (const fn of fns)
-          fn(ui.host, ui[k]);
-      }
-    }
-  });
-};
-function each(memo, callback) {
-  return () => {
-    createEffect(() => {
-      for (const element of memo.get()) {
-        createScope(() => {
-          const result = callback(element);
-          if (Array.isArray(result)) {
-            for (const descriptor of result) {
-              if (descriptor)
-                descriptor();
-            }
-          } else if (typeof result === "function") {
-            result();
-          }
-        });
-      }
-    });
-  };
-}
-
-// src/context.ts
-var CONTEXT_REQUEST = "context-request";
-
-class ContextRequestEvent extends Event {
-  context;
-  callback;
-  subscribe;
-  constructor(context, callback, subscribe = false) {
-    super(CONTEXT_REQUEST, {
-      bubbles: true,
-      composed: true
-    });
-    this.context = context;
-    this.callback = callback;
-    this.subscribe = subscribe;
-  }
-}
-
 // src/internal.ts
 var componentSignals = new WeakMap;
 var getSignals = (el) => {
@@ -1798,72 +1750,7 @@ var getSignals = (el) => {
   return signals;
 };
 
-// src/scheduler.ts
-var PASSIVE_EVENTS = new Set([
-  "scroll",
-  "resize",
-  "mousewheel",
-  "touchstart",
-  "touchmove",
-  "wheel"
-]);
-var pendingElements = new Set;
-var tasks = new WeakMap;
-var requestId;
-var runTasks = () => {
-  requestId = undefined;
-  const elements = Array.from(pendingElements);
-  pendingElements.clear();
-  for (const element of elements)
-    tasks.get(element)?.();
-};
-var requestTick = () => {
-  if (requestId)
-    cancelAnimationFrame(requestId);
-  requestId = requestAnimationFrame(runTasks);
-};
-var schedule = (element, task) => {
-  tasks.set(element, task);
-  pendingElements.add(element);
-  requestTick();
-};
-
-// src/factory.ts
-var NON_BUBBLING_EVENTS = new Set([
-  "focus",
-  "blur",
-  "scroll",
-  "resize",
-  "load",
-  "unload",
-  "error",
-  "toggle",
-  "mouseenter",
-  "mouseleave",
-  "pointerenter",
-  "pointerleave",
-  "abort",
-  "canplay",
-  "canplaythrough",
-  "durationchange",
-  "emptied",
-  "ended",
-  "loadeddata",
-  "loadedmetadata",
-  "loadstart",
-  "pause",
-  "play",
-  "playing",
-  "progress",
-  "ratechange",
-  "seeked",
-  "seeking",
-  "stalled",
-  "suspend",
-  "timeupdate",
-  "volumechange",
-  "waiting"
-]);
+// src/effects.ts
 var resolveSignal = (host, source) => {
   if (typeof source === "string") {
     const sig = getSignals(host)[source];
@@ -1872,26 +1759,6 @@ var resolveSignal = (host, source) => {
     return createComputed(() => host[source]);
   }
   return source;
-};
-var attachListener = (host, target, type, handler, options) => {
-  const listener = (e) => {
-    const task = () => {
-      const result = handler(e, target);
-      if (!isRecord(result))
-        return;
-      batch(() => {
-        for (const [key, value] of Object.entries(result)) {
-          host[key] = value;
-        }
-      });
-    };
-    if (options.passive)
-      schedule(target, task);
-    else
-      task();
-  };
-  target.addEventListener(type, listener, options);
-  return () => target.removeEventListener(type, listener);
 };
 var toSignal = (host, value) => {
   if (isSignal(value))
@@ -1923,55 +1790,6 @@ var makeWatch = (host) => {
     };
   }
   return watch;
-};
-var makeOn = (host) => {
-  function on(target, type, handler, options = {}) {
-    return () => {
-      if (!("passive" in options)) {
-        options = { ...options, passive: PASSIVE_EVENTS.has(type) };
-      }
-      if (isMemo(target)) {
-        if (NON_BUBBLING_EVENTS.has(type)) {
-          if (DEV_MODE) {
-            console[LOG_WARN](`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
-          }
-          return createEffect(() => {
-            for (const el of target.get()) {
-              createScope(() => {
-                return attachListener(host, el, type, handler, options);
-              });
-            }
-          });
-        }
-        const root = host.shadowRoot ?? host;
-        const listener = (e) => {
-          for (const el of target.get()) {
-            if (el === e.target || el.contains(e.target)) {
-              const task = () => {
-                const result = handler(e, el);
-                if (!isRecord(result))
-                  return;
-                batch(() => {
-                  for (const [key, value] of Object.entries(result)) {
-                    host[key] = value;
-                  }
-                });
-              };
-              if (options.passive)
-                schedule(el, task);
-              else
-                task();
-              break;
-            }
-          }
-        };
-        root.addEventListener(type, listener, options);
-        return () => root.removeEventListener(type, listener);
-      }
-      return attachListener(host, target, type, handler, options);
-    };
-  }
-  return on;
 };
 var makePass = (host) => {
   const swapSlots = (target, props) => createScope(() => {
@@ -2024,23 +1842,206 @@ var makePass = (host) => {
   }
   return pass;
 };
-var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
-  const listener = (e) => {
-    const { context, callback } = e;
-    if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
-      e.stopImmediatePropagation();
-      callback(() => host[context]);
-    }
+function each(memo, callback) {
+  return () => {
+    createEffect(() => {
+      for (const element of memo.get()) {
+        createScope(() => {
+          const result = callback(element);
+          if (Array.isArray(result)) {
+            for (const descriptor of result) {
+              if (descriptor)
+                descriptor();
+            }
+          } else if (typeof result === "function") {
+            result();
+          }
+        });
+      }
+    });
   };
-  host.addEventListener(CONTEXT_REQUEST, listener);
-  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
-});
-var makeRequestContext = (host) => (context, fallback) => {
-  let consumed = () => fallback;
-  host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
-    consumed = getter;
-  }));
-  return createMemo(consumed);
+}
+
+// src/scheduler.ts
+var PASSIVE_EVENTS = new Set([
+  "scroll",
+  "resize",
+  "mousewheel",
+  "touchstart",
+  "touchmove",
+  "wheel"
+]);
+var pendingElements = new Set;
+var tasks = new WeakMap;
+var requestId;
+var runTasks = () => {
+  requestId = undefined;
+  const elements = Array.from(pendingElements);
+  pendingElements.clear();
+  for (const element of elements)
+    tasks.get(element)?.();
+};
+var requestTick = () => {
+  if (requestId)
+    cancelAnimationFrame(requestId);
+  requestId = requestAnimationFrame(runTasks);
+};
+var schedule = (element, task) => {
+  tasks.set(element, task);
+  pendingElements.add(element);
+  requestTick();
+};
+
+// src/events.ts
+var NON_BUBBLING_EVENTS = new Set([
+  "focus",
+  "blur",
+  "scroll",
+  "resize",
+  "load",
+  "unload",
+  "error",
+  "toggle",
+  "mouseenter",
+  "mouseleave",
+  "pointerenter",
+  "pointerleave",
+  "abort",
+  "canplay",
+  "canplaythrough",
+  "durationchange",
+  "emptied",
+  "ended",
+  "loadeddata",
+  "loadedmetadata",
+  "loadstart",
+  "pause",
+  "play",
+  "playing",
+  "progress",
+  "ratechange",
+  "seeked",
+  "seeking",
+  "stalled",
+  "suspend",
+  "timeupdate",
+  "volumechange",
+  "waiting"
+]);
+var attachListener = (host, target, type, handler, options) => {
+  const listener = (e) => {
+    const task = () => {
+      const result = handler(e, target);
+      if (!isRecord(result))
+        return;
+      batch(() => {
+        for (const [key, value] of Object.entries(result)) {
+          host[key] = value;
+        }
+      });
+    };
+    if (options.passive)
+      schedule(target, task);
+    else
+      task();
+  };
+  target.addEventListener(type, listener, options);
+  return () => target.removeEventListener(type, listener);
+};
+function createEventsSensor(target, init, events) {
+  let value = init;
+  const eventMap = new Map;
+  return createSensor((set) => {
+    for (const [type, handler] of Object.entries(events)) {
+      const options = { passive: PASSIVE_EVENTS.has(type) };
+      const listener = (e) => {
+        const eventTarget = e.target;
+        if (!eventTarget || !target.contains(eventTarget))
+          return;
+        e.stopPropagation();
+        const task = () => {
+          try {
+            const next = handler({
+              event: e,
+              target,
+              prev: value
+            });
+            if (next == null || next instanceof Promise)
+              return;
+            if (!Object.is(next, value)) {
+              value = next;
+              set(next);
+            }
+          } catch (error) {
+            e.stopImmediatePropagation();
+            throw error;
+          }
+        };
+        if (options.passive)
+          schedule(target, task);
+        else
+          task();
+      };
+      eventMap.set(type, listener);
+      target.addEventListener(type, listener, options);
+    }
+    return () => {
+      if (eventMap.size) {
+        for (const [type, listener] of eventMap)
+          target.removeEventListener(type, listener);
+        eventMap.clear();
+      }
+    };
+  }, { value });
+}
+var makeOn = (host) => {
+  function on(target, type, handler, options = {}) {
+    return () => {
+      if (!("passive" in options)) {
+        options = { ...options, passive: PASSIVE_EVENTS.has(type) };
+      }
+      if (isMemo(target)) {
+        if (NON_BUBBLING_EVENTS.has(type)) {
+          if (DEV_MODE) {
+            console[LOG_WARN](`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
+          }
+          return createEffect(() => {
+            for (const el of target.get()) {
+              createScope(() => {
+                return attachListener(host, el, type, handler, options);
+              });
+            }
+          });
+        }
+        const root = host.shadowRoot ?? host;
+        const listener = (e) => {
+          for (const el of target.get()) {
+            if (el === e.target || el.contains(e.target)) {
+              const task = () => {
+                const result = handler(e, el);
+                if (!isRecord(result))
+                  return;
+                batch(() => {
+                  for (const [key, value] of Object.entries(result)) {
+                    host[key] = value;
+                  }
+                });
+              };
+              if (options.passive)
+                schedule(el, task);
+              else
+                task();
+              break;
+            }
+          }
+        };
+        root.addEventListener(type, listener, options);
+        return () => root.removeEventListener(type, listener);
+      }
+      return attachListener(host, target, type, handler, options);
+    };
+  }
+  return on;
 };
 
 // src/parsers.ts
@@ -2049,25 +2050,11 @@ var METHOD_BRAND = Symbol("method");
 var isParser = (value) => {
   if (!isFunction(value))
     return false;
-  if (PARSER_BRAND in value)
-    return true;
-  if (value.length >= 2) {
-    if (DEV_MODE) {
-      console.warn(`isParser: unbranded two-argument function detected. Wrap custom parsers with asParser() to avoid misclassification when using default parameters or destructuring.`, value);
-    }
-    return true;
-  }
-  return false;
+  return PARSER_BRAND in value;
 };
 var isMethodProducer = (value) => isFunction(value) && (METHOD_BRAND in value);
-var isReader = (value) => isFunction(value);
-var getFallback = (ui, fallback) => isReader(fallback) ? fallback(ui) : fallback;
 var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
 var asMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
-var read = (reader, fallback) => (ui) => {
-  const value = reader(ui);
-  return typeof value === "string" && isParser(fallback) ? fallback(ui, value) : value ?? getFallback(ui, fallback);
-};
 
 // src/ui.ts
 var DEPENDENCY_TIMEOUT = 200;
@@ -2125,7 +2112,7 @@ function createElementsMemo(parent, selector) {
     }
   });
 }
-var getHelpers = (host) => {
+var makeElementQueries = (host) => {
   const root = host.shadowRoot ?? host;
   const dependencies = new Set;
   function first(selector, required) {
@@ -2177,98 +2164,52 @@ var getHelpers = (host) => {
 };
 
 // src/component.ts
-function defineComponent(name, propsOrFactory = {}, select = () => ({}), setup = () => ({})) {
+function defineComponent(name, factory) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
-  const factory = isFunction(propsOrFactory) ? propsOrFactory : null;
-  const props = factory ? {} : propsOrFactory;
-  if (!factory) {
-    for (const prop of Object.keys(props)) {
-      const error = validatePropertyName(prop);
-      if (error)
-        throw new InvalidPropertyNameError(name, prop, error);
-    }
-  }
 
   class Truc extends HTMLElement {
     debug;
-    #ui;
     #cleanup;
-    static observedAttributes = factory ? [] : Object.entries(props)?.filter(([, initializer]) => isParser(initializer)).map(([prop]) => prop) ?? [];
+    static observedAttributes = [];
     connectedCallback() {
-      const [elementQueries, resolveDependencies] = getHelpers(this);
+      const [elementQueries, resolveDependencies] = makeElementQueries(this);
       const host = this;
-      if (factory) {
-        const expose = (instanceProps) => {
-          const minimalUi = Object.freeze({ host });
-          this.#ui = minimalUi;
-          this.#initSignals(minimalUi, instanceProps);
-        };
-        const context = {
-          ...elementQueries,
-          host,
-          expose,
-          watch: makeWatch(host),
-          on: makeOn(host),
-          pass: makePass(host),
-          provideContexts: makeProvideContexts(host),
-          requestContext: makeRequestContext(host)
-        };
-        const result = factory(context);
-        if (Array.isArray(result)) {
-          if (!this.#ui) {
-            this.#ui = Object.freeze({ host });
+      const expose = (instanceProps) => {
+        this.#initSignals(instanceProps);
+      };
+      const context = {
+        ...elementQueries,
+        host,
+        expose,
+        watch: makeWatch(host),
+        on: makeOn(host),
+        pass: makePass(host),
+        provideContexts: makeProvideContexts(host),
+        requestContext: makeRequestContext(host)
+      };
+      const result = factory(context);
+      resolveDependencies(() => {
+        this.#cleanup = createScope(() => {
+          for (const descriptor of result) {
+            if (descriptor)
+              descriptor();
           }
-          resolveDependencies(() => {
-            this.#cleanup = createScope(() => {
-              for (const descriptor of result) {
-                if (descriptor)
-                  descriptor();
-              }
-            });
-          });
-        }
-      } else {
-        const ui = {
-          ...select(elementQueries),
-          host
-        };
-        this.#ui = ui;
-        Object.freeze(this.#ui);
-        this.#initSignals(ui, props);
-        resolveDependencies(() => {
-          this.#cleanup = unown(() => runEffects(ui, setup(ui)));
         });
-      }
+      });
     }
     disconnectedCallback() {
       if (isFunction(this.#cleanup))
         this.#cleanup();
     }
-    attributeChangedCallback(name2, oldValue, newValue) {
-      if (!this.#ui || newValue === oldValue || isComputed(getSignals(this)[name2]))
-        return;
-      const parser = props[name2];
-      if (!isParser(parser))
-        return;
-      const parsed = parser(this.#ui, newValue, oldValue);
-      if (name2 in this)
-        this[name2] = parsed;
-      else
-        this.#setAccessor(name2, parsed);
-    }
-    #initSignals(ui, instanceProps) {
+    #initSignals(instanceProps) {
       const createSignal2 = (key, initializer) => {
         if (isParser(initializer)) {
-          const result = initializer(ui, this.getAttribute(key));
+          const result = initializer(this.getAttribute(key));
           if (result != null)
             this.#setAccessor(key, result);
         } else if (isMethodProducer(initializer)) {
           this[key] = initializer;
-        } else if (isFunction(initializer)) {
-          const result = initializer(ui);
-          if (result != null)
-            this.#setAccessor(key, result);
         } else {
           const value = initializer;
           if (value != null)
@@ -2304,177 +2245,6 @@ function defineComponent(name, propsOrFactory = {}, select = () => ({}), setup =
   customElements.define(name, Truc);
   return customElements.get(name);
 }
-// src/events.ts
-function createEventsSensor(targetOrInit, initOrKey, events) {
-  if (targetOrInit instanceof Element) {
-    const target = targetOrInit;
-    let value = initOrKey;
-    const eventMap = new Map;
-    return createSensor((set) => {
-      for (const [type, handler] of Object.entries(events)) {
-        const options = { passive: PASSIVE_EVENTS.has(type) };
-        const listener = (e) => {
-          const eventTarget = e.target;
-          if (!eventTarget || !target.contains(eventTarget))
-            return;
-          e.stopPropagation();
-          const task = () => {
-            try {
-              const next = handler({
-                event: e,
-                target,
-                prev: value
-              });
-              if (next == null || next instanceof Promise)
-                return;
-              if (!Object.is(next, value)) {
-                value = next;
-                set(next);
-              }
-            } catch (error) {
-              e.stopImmediatePropagation();
-              throw error;
-            }
-          };
-          if (options.passive)
-            schedule(target, task);
-          else
-            task();
-        };
-        eventMap.set(type, listener);
-        target.addEventListener(type, listener, options);
-      }
-      return () => {
-        if (eventMap.size) {
-          for (const [type, listener] of eventMap)
-            target.removeEventListener(type, listener);
-          eventMap.clear();
-        }
-      };
-    }, { value });
-  }
-  const init = targetOrInit;
-  const key = initOrKey;
-  return (ui) => {
-    const { host } = ui;
-    let value = getFallback(ui, init);
-    const memo = isMemo(ui[key]) ? ui[key] : null;
-    const single = memo ? null : ui[key];
-    const eventMap = new Map;
-    const getTarget = (eventTarget) => {
-      if (single) {
-        return single.contains(eventTarget) ? single : undefined;
-      }
-      for (const t of memo.get())
-        if (t.contains(eventTarget))
-          return t;
-    };
-    return createSensor((set) => {
-      for (const [type, handler] of Object.entries(events)) {
-        const options = { passive: PASSIVE_EVENTS.has(type) };
-        const listener = (e) => {
-          const eventTarget = e.target;
-          if (!eventTarget)
-            return;
-          const target = getTarget(eventTarget);
-          if (!target)
-            return;
-          e.stopPropagation();
-          const task = () => {
-            try {
-              const next = handler({
-                event: e,
-                ui,
-                target,
-                prev: value
-              });
-              if (next == null || next instanceof Promise)
-                return;
-              if (!Object.is(next, value)) {
-                value = next;
-                set(next);
-              }
-            } catch (error) {
-              e.stopImmediatePropagation();
-              throw error;
-            }
-          };
-          if (options.passive)
-            schedule(host, task);
-          else
-            task();
-        };
-        eventMap.set(type, listener);
-        host.addEventListener(type, listener, options);
-      }
-      return () => {
-        if (eventMap.size) {
-          for (const [type, listener] of eventMap)
-            host.removeEventListener(type, listener);
-          eventMap.clear();
-        }
-      };
-    }, { value });
-  };
-}
-// src/parsers/boolean.ts
-var asBoolean = () => asParser((_, value) => value != null && value !== "false");
-// src/parsers/json.ts
-var asJSON = (fallback) => asParser((ui, value) => {
-  if ((value ?? fallback) == null)
-    throw new TypeError("asJSON: Value and fallback are both null or undefined");
-  if (value == null)
-    return getFallback(ui, fallback);
-  if (value === "")
-    throw new TypeError("Empty string is not valid JSON");
-  let result;
-  try {
-    result = JSON.parse(value);
-  } catch (error) {
-    throw new SyntaxError(`Failed to parse JSON: ${String(error)}`, {
-      cause: error
-    });
-  }
-  return result ?? getFallback(ui, fallback);
-});
-// src/parsers/number.ts
-var parseNumber = (parseFn, value) => {
-  if (value == null)
-    return;
-  const parsed = parseFn(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
-var asInteger = (fallback = 0) => asParser((ui, value) => {
-  if (value == null)
-    return getFallback(ui, fallback);
-  const trimmed = value.trim();
-  if (trimmed.toLowerCase().startsWith("0x"))
-    return parseNumber((v) => parseInt(v, 16), trimmed) ?? getFallback(ui, fallback);
-  const parsed = parseNumber(parseFloat, value);
-  return parsed != null ? Math.trunc(parsed) : getFallback(ui, fallback);
-});
-var asNumber = (fallback = 0) => asParser((ui, value) => parseNumber(parseFloat, value) ?? getFallback(ui, fallback));
-var asClampedInteger = (minFallback = 0, maxFallback = Number.MAX_SAFE_INTEGER) => asParser((ui, value) => {
-  const parsed = asInteger(minFallback)(ui, value);
-  const min = getFallback(ui, minFallback);
-  const max = getFallback(ui, maxFallback);
-  return Math.max(min, Math.min(parsed, max));
-});
-// src/parsers/date.ts
-var asDate = (fallback = "") => asParser((ui, value) => value ? new Date(value).toLocaleDateString(undefined, {
-  year: "numeric",
-  month: "long",
-  day: "numeric"
-}) : getFallback(ui, fallback));
-// src/parsers/string.ts
-var asString = (fallback = "") => asParser((ui, value) => value ?? getFallback(ui, fallback));
-var asEnum = (valid) => asParser((_, value) => {
-  if (value == null)
-    return valid[0];
-  const lowerValue = value.toLowerCase();
-  const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
-  return matchingValid ? value : valid[0];
-});
 // src/safety.ts
 var isSafeURL = (value) => {
   if (/^(mailto|tel):/i.test(value))
@@ -2502,6 +2272,7 @@ var setTextPreservingComments = (element, text) => {
   Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => node.remove());
   element.append(document.createTextNode(text));
 };
+
 // src/helpers.ts
 var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
   element.textContent = String(value);
@@ -2585,6 +2356,62 @@ var dangerouslySetInnerHTML = (element, options = {}) => ({
       element.innerHTML = "";
   }
 });
+// src/parsers/boolean.ts
+var asBoolean = () => asParser((value) => value != null && value !== "false");
+// src/parsers/date.ts
+var asDate = (fallback = "") => asParser((value) => value ? new Date(value).toLocaleDateString(undefined, {
+  year: "numeric",
+  month: "long",
+  day: "numeric"
+}) : fallback);
+// src/parsers/json.ts
+var asJSON = (fallback) => asParser((value) => {
+  if ((value ?? fallback) == null)
+    throw new TypeError("asJSON: Value and fallback are both null or undefined");
+  if (value == null)
+    return fallback;
+  if (value === "")
+    throw new TypeError("Empty string is not valid JSON");
+  let result;
+  try {
+    result = JSON.parse(value);
+  } catch (error) {
+    throw new SyntaxError(`Failed to parse JSON: ${String(error)}`, {
+      cause: error
+    });
+  }
+  return result ?? fallback;
+});
+// src/parsers/number.ts
+var parseNumber = (parseFn, value) => {
+  if (value == null)
+    return;
+  const parsed = parseFn(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+var asInteger = (fallback = 0) => asParser((value) => {
+  if (value == null)
+    return fallback;
+  const trimmed = value.trim();
+  if (trimmed.toLowerCase().startsWith("0x"))
+    return parseNumber((v) => parseInt(v, 16), trimmed) ?? fallback;
+  const parsed = parseNumber(parseFloat, value);
+  return parsed != null ? Math.trunc(parsed) : fallback;
+});
+var asNumber = (fallback = 0) => asParser((value) => parseNumber(parseFloat, value) ?? fallback);
+var asClampedInteger = (min = 0, max = Number.MAX_SAFE_INTEGER) => asParser((value) => {
+  const parsed = asInteger(min)(value);
+  return Math.max(min, Math.min(parsed, max));
+});
+// src/parsers/string.ts
+var asString = (fallback = "") => asParser((value) => value ?? fallback);
+var asEnum = (valid) => asParser((value) => {
+  if (value == null)
+    return valid[0];
+  const lowerValue = value.toLowerCase();
+  const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
+  return matchingValid ? value : valid[0];
+});
 export {
   valueString,
   untrack,
@@ -2592,7 +2419,6 @@ export {
   setTextPreservingComments,
   schedule,
   safeSetAttribute,
-  read,
   match,
   isTask,
   isStore,
@@ -2654,11 +2480,9 @@ export {
   ReadonlySignalError,
   NullishSignalValueError,
   MissingElementError,
-  InvalidUIKeyError,
   InvalidSignalValueError,
   InvalidReactivesError,
   InvalidPropertyNameError,
-  InvalidEffectsError,
   InvalidCustomElementError,
   InvalidComponentNameError,
   InvalidCallbackError,
