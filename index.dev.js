@@ -2358,7 +2358,7 @@ function defineComponent(name, propsOrFactory = {}, select = () => ({}), setup =
           if (result != null)
             this.#setAccessor(key, result);
         } else if (isMethodProducer(initializer)) {
-          initializer(ui);
+          this[key] = initializer;
         } else if (isFunction(initializer)) {
           const result = initializer(ui);
           if (result != null)
@@ -2714,6 +2714,18 @@ var asInteger = (fallback = 0) => asParser((ui, value) => {
   return parsed != null ? Math.trunc(parsed) : getFallback(ui, fallback);
 });
 var asNumber = (fallback = 0) => asParser((ui, value) => parseNumber(parseFloat, value) ?? getFallback(ui, fallback));
+var asClampedInteger = (minFallback = 0, maxFallback = Number.MAX_SAFE_INTEGER) => asParser((ui, value) => {
+  const parsed = asInteger(minFallback)(ui, value);
+  const min = getFallback(ui, minFallback);
+  const max = getFallback(ui, maxFallback);
+  return Math.max(min, Math.min(parsed, max));
+});
+// src/parsers/date.ts
+var asDate = (fallback = "") => asParser((ui, value) => value ? new Date(value).toLocaleDateString(undefined, {
+  year: "numeric",
+  month: "long",
+  day: "numeric"
+}) : getFallback(ui, fallback));
 // src/parsers/string.ts
 var asString = (fallback = "") => asParser((ui, value) => value ?? getFallback(ui, fallback));
 var asEnum = (valid) => asParser((_, value) => {
@@ -2730,11 +2742,11 @@ var bindText = (element, preserveComments = false) => preserveComments ? (value)
 var bindProperty = (element, key) => (value) => {
   element[key] = value;
 };
-var bindClass = (element, token) => (value) => {
-  element.classList.toggle(token, value);
+var bindClass = (element, token, transform) => (value) => {
+  element.classList.toggle(token, transform ? transform(value) : Boolean(value));
 };
-var bindVisible = (element) => (value) => {
-  element.hidden = !value;
+var bindVisible = (element, transform) => (value) => {
+  element.hidden = !(transform ? transform(value) : Boolean(value));
 };
 var bindAttribute = (element, name, allowUnsafe = false) => ({
   ok: (value) => {
@@ -2830,6 +2842,8 @@ export {
   asJSON,
   asInteger,
   asEnum,
+  asDate,
+  asClampedInteger,
   asBoolean,
   UnsetSignalValueError,
   SKIP_EQUALITY,

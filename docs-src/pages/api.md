@@ -16,6 +16,8 @@ layout: 'page'
 {% listnav title="Select a Symbol" %}
 - Functions
   - [asBoolean](./api/functions/asBoolean.html)
+  - [asClampedInteger](./api/functions/asClampedInteger.html)
+  - [asDate](./api/functions/asDate.html)
   - [asEnum](./api/functions/asEnum.html)
   - [asInteger](./api/functions/asInteger.html)
   - [asJSON](./api/functions/asJSON.html)

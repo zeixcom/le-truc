@@ -1,5 +1,6 @@
 import {
 	asString,
+	bindVisible,
 	createEffect,
 	createElementsMemo,
 	createMemo,
@@ -7,15 +8,15 @@ import {
 	dangerouslySetInnerHTML,
 	defineComponent,
 	each,
+	escapeHTML,
 } from '../../..'
-import { escapeHTML, html } from '../../_common/escapeHTML'
-
 import {
 	fetchWithCache,
 	isRecursiveURL,
 	isValidURL,
 } from '../../_common/fetchWithCache'
 import { highlightMatch } from '../../_common/highlightMatch'
+import { html } from '../../_common/html'
 
 /**
  * Form-aware Listbox Component
@@ -181,10 +182,7 @@ export default defineComponent<FormListboxProps>(
 				&& on(filterEl, 'input', () => {
 					host.filter = filterEl.value ?? ''
 				}),
-			clearBtn
-				&& watch(lowerFilter, f => {
-					clearBtn.hidden = !f
-				}),
+			clearBtn && watch(lowerFilter, bindVisible(clearBtn)),
 			clearBtn
 				&& on(clearBtn, 'click', () => {
 					host.filter = ''

@@ -1,5 +1,4 @@
-import { bindText, defineComponent } from '../../..'
-import { asClampedInteger } from '../../_common/asClampedInteger'
+import { asClampedInteger, bindText, defineComponent } from '../../..'
 
 export type BasicPluralizeProps = {
 	count: number

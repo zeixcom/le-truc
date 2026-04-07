@@ -50,16 +50,25 @@ const bindProperty =
  * Returns a function that toggles a CSS class token on an element.
  *
  * `value=true` adds the token; `value=false` removes it.
+ * If `transform` is provided, it converts the incoming value to a boolean first.
  *
  * @since 1.1
  * @param {Element} element - Target element
  * @param {string} token - CSS class token to toggle
- * @returns {(value: boolean) => void} Function that toggles the class
+ * @param {(value: T) => boolean} [transform] - Optional function to derive a boolean from the value
+ * @returns {(value: T) => void} Function that toggles the class
  */
 const bindClass =
-	(element: Element, token: string): ((value: boolean) => void) =>
-	(value: boolean) => {
-		element.classList.toggle(token, value)
+	<T = boolean>(
+		element: Element,
+		token: string,
+		transform?: (value: T) => boolean,
+	): ((value: T) => void) =>
+	(value: T) => {
+		element.classList.toggle(
+			token,
+			transform ? transform(value) : Boolean(value),
+		)
 	}
 
 /**
@@ -67,15 +76,20 @@ const bindClass =
  *
  * `value=true` makes the element visible; `value=false` hides it.
  * Matches the direction of the v1.0 `show()` effect.
+ * If `transform` is provided, it converts the incoming value to a boolean first.
  *
  * @since 1.1
  * @param {HTMLElement} element - Target element
- * @returns {(value: boolean) => void} Function that sets element visibility
+ * @param {(value: T) => boolean} [transform] - Optional function to derive a boolean from the value
+ * @returns {(value: T) => void} Function that sets element visibility
  */
 const bindVisible =
-	(element: HTMLElement): ((value: boolean) => void) =>
-	(value: boolean) => {
-		element.hidden = !value
+	<T = boolean>(
+		element: HTMLElement,
+		transform?: (value: T) => boolean,
+	): ((value: T) => void) =>
+	(value: T) => {
+		element.hidden = !(transform ? transform(value) : Boolean(value))
 	}
 
 /**

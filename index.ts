@@ -151,7 +151,8 @@ export {
 } from './src/parsers'
 export { asBoolean } from './src/parsers/boolean'
 export { asJSON } from './src/parsers/json'
-export { asInteger, asNumber } from './src/parsers/number'
+export { asClampedInteger, asInteger, asNumber } from './src/parsers/number'
+export { asDate } from './src/parsers/date'
 export { asEnum, asString } from './src/parsers/string'
 export {
 	escapeHTML,

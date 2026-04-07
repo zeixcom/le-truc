@@ -28,24 +28,28 @@ declare const bindProperty: <E extends Element, K extends keyof E & string>(elem
  * Returns a function that toggles a CSS class token on an element.
  *
  * `value=true` adds the token; `value=false` removes it.
+ * If `transform` is provided, it converts the incoming value to a boolean first.
  *
  * @since 1.1
  * @param {Element} element - Target element
  * @param {string} token - CSS class token to toggle
- * @returns {(value: boolean) => void} Function that toggles the class
+ * @param {(value: T) => boolean} [transform] - Optional function to derive a boolean from the value
+ * @returns {(value: T) => void} Function that toggles the class
  */
-declare const bindClass: (element: Element, token: string) => ((value: boolean) => void);
+declare const bindClass: <T = boolean>(element: Element, token: string, transform?: (value: T) => boolean) => ((value: T) => void);
 /**
  * Returns a function that controls element visibility via `el.hidden = !value`.
  *
  * `value=true` makes the element visible; `value=false` hides it.
  * Matches the direction of the v1.0 `show()` effect.
+ * If `transform` is provided, it converts the incoming value to a boolean first.
  *
  * @since 1.1
  * @param {HTMLElement} element - Target element
- * @returns {(value: boolean) => void} Function that sets element visibility
+ * @param {(value: T) => boolean} [transform] - Optional function to derive a boolean from the value
+ * @returns {(value: T) => void} Function that sets element visibility
  */
-declare const bindVisible: (element: HTMLElement) => ((value: boolean) => void);
+declare const bindVisible: <T = boolean>(element: HTMLElement, transform?: (value: T) => boolean) => ((value: T) => void);
 /**
  * Returns `RunHandlers` that set or toggle an attribute with security validation.
  *

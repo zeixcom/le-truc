@@ -16,7 +16,7 @@ test.describe('card-mediaqueries component', () => {
 
 		// Check that each has the expected structure
 		for (const component of [componentWithoutContext, componentWithContext]) {
-			await expect(component.locator('h2')).toBeVisible()
+			await expect(component.locator('h5')).toBeVisible()
 			await expect(component.locator('.motion')).toBeVisible()
 			await expect(component.locator('.theme')).toBeVisible()
 			await expect(component.locator('.viewport')).toBeVisible()
@@ -210,7 +210,7 @@ test.describe('card-mediaqueries component', () => {
 			if (contextMedia) {
 				const newCard = document.createElement('card-mediaqueries')
 				newCard.innerHTML = `
-					<h2>Additional Card</h2>
+					<h5>Additional Card</h5>
 					<dl>
 						<dt>Motion:</dt><dd class="motion"></dd>
 						<dt>Theme:</dt><dd class="theme"></dd>
@@ -290,7 +290,7 @@ test.describe('card-mediaqueries component', () => {
 				const innerContext = document.createElement('context-media')
 				const nestedCard = document.createElement('card-mediaqueries')
 				nestedCard.innerHTML = `
-					<h2>Nested Card</h2>
+					<h5>Nested Card</h5>
 					<dl>
 						<dt>Motion:</dt><dd class="motion"></dd>
 						<dt>Theme:</dt><dd class="theme"></dd>

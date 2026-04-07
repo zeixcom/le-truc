@@ -3,7 +3,7 @@ import type { Context } from './context';
 import { type EffectDescriptor, type Effects, type FactoryResult } from './effects';
 import type { PassedProps } from './effects/pass';
 import { type WatchHandlers } from './factory';
-import { type Parser, type Reader } from './parsers';
+import { METHOD_BRAND, type Parser, type Reader } from './parsers';
 import { type ElementQueries, type UI } from './ui';
 /**
  * Property names that must not be used as reactive component properties
@@ -47,11 +47,13 @@ type ComponentSetup<P extends ComponentProps, U extends UI> = (ui: ComponentUI<P
  * - A **`Reader`** (one-argument function) — called with `ui` at connect time; if it
  *   returns a function or `TaskCallback`, a computed/task signal is created; otherwise
  *   a mutable state signal is created.
- * - A **`MethodProducer`** (branded with `asMethod()`) — called for side effect of
- *   creating the method only; its return value is ignored.
+ * - A **`MethodProducer`** (branded with `asMethod()`) — assigned directly as the property
+ *   value; the function IS the method. Per-instance state lives in factory scope.
  */
 type Initializers<P extends ComponentProps, U extends UI> = {
-    [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K], ComponentUI<P, U>> | Reader<MaybeSignal<P[K]>, ComponentUI<P, U>> | ((ui: ComponentUI<P, U>) => void);
+    [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K], ComponentUI<P, U>> | Reader<MaybeSignal<P[K]>, ComponentUI<P, U>> | (P[K] extends (...args: any[]) => any ? P[K] & {
+        readonly [METHOD_BRAND]: true;
+    } : never);
 };
 /**
  * Any value that `#setAccessor` can turn into a signal:

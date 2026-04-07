@@ -15,7 +15,8 @@ export { createEventsSensor, type EventHandlers, type EventHandlersV2, type Sens
 export { asMethod, asParser, type Fallback, isMethodProducer, isParser, type LooseReader, type MethodProducer, type Parser, type ParserOrFallback, type Reader, read, } from './src/parsers';
 export { asBoolean } from './src/parsers/boolean';
 export { asJSON } from './src/parsers/json';
-export { asInteger, asNumber } from './src/parsers/number';
+export { asClampedInteger, asInteger, asNumber } from './src/parsers/number';
+export { asDate } from './src/parsers/date';
 export { asEnum, asString } from './src/parsers/string';
 export { escapeHTML, safeSetAttribute, setTextPreservingComments, } from './src/safety';
 export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, } from './src/helpers';

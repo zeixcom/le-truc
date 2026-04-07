@@ -32,30 +32,26 @@ export default defineComponent<ModuleListProps>(
 
 		const max = asInteger(MAX_ITEMS)({} as any, host.getAttribute('max'))
 
+		let addKey = 0
 		expose({
-			add: asMethod(() => {
-				let key = 0
-				host.add = (process?: (item: HTMLElement) => void) => {
-					const item = (template.content.cloneNode(true) as DocumentFragment)
-						.firstElementChild
-					if (item && item instanceof HTMLElement) {
-						item.dataset.key = String(key++)
-						if (process) process(item)
-						container.append(item)
-					} else {
-						throw new MissingElementError(
-							host,
-							'*',
-							'Template does not contain an item element.',
-						)
-					}
+			add: asMethod((process?: (item: HTMLElement) => void) => {
+				const item = (template.content.cloneNode(true) as DocumentFragment)
+					.firstElementChild
+				if (item && item instanceof HTMLElement) {
+					item.dataset.key = String(addKey++)
+					if (process) process(item)
+					container.append(item)
+				} else {
+					throw new MissingElementError(
+						host,
+						'*',
+						'Template does not contain an item element.',
+					)
 				}
 			}),
-			delete: asMethod(() => {
-				host.delete = (key: string) => {
-					const item = container.querySelector(`[data-key="${key}"]`)
-					if (item) item.remove()
-				}
+			delete: asMethod((key: string) => {
+				const item = container.querySelector(`[data-key="${key}"]`)
+				if (item) item.remove()
 			}),
 		})
 

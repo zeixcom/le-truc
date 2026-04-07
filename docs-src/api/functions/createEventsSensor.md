@@ -4,7 +4,7 @@
 
 > **createEventsSensor**\<`T`, `E`\>(`target`, `init`, `events`): [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-Defined in: [src/events.ts:85](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/events.ts#L85)
+Defined in: [src/events.ts:85](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/events.ts#L85)
 
 Create a `Sensor<T>` driven by DOM events on a target element (v1.1 form).
 
@@ -56,7 +56,7 @@ Sensor that updates when matching events fire on target
 
 > **createEventsSensor**\<`T`, `P`, `U`, `K`\>(`init`, `key`, `events`): (`ui`) => [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-Defined in: [src/events.ts:109](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/events.ts#L109)
+Defined in: [src/events.ts:109](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/events.ts#L109)
 
 Create a `Reader` that produces a `Sensor<T>` driven by DOM events (v1.0 form).
 

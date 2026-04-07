@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
 
-test.describe('basic-on: on() helper', () => {
+test.describe('test-on: on() helper', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/basic-on')
-		await page.waitForSelector('basic-on')
+		await page.goto('http://localhost:3000/test/test-on')
+		await page.waitForSelector('test-on')
 	})
 
 	test('element target — handler return updates host prop', async ({
@@ -51,7 +51,7 @@ test.describe('basic-on: on() helper', () => {
 		await page.locator('button#btn').click()
 
 		const count = await page.evaluate(
-			() => (document.querySelector('basic-on') as any).count,
+			() => (document.querySelector('test-on') as any).count,
 		)
 		expect(count).toBe(1)
 	})

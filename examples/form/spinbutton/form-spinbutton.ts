@@ -1,4 +1,4 @@
-import { createMemo, defineComponent } from '../../..'
+import { bindVisible, createMemo, defineComponent } from '../../..'
 
 export type FormSpinbuttonProps = {
 	value: number
@@ -37,8 +37,8 @@ export default defineComponent<FormSpinbuttonProps>(
 		)
 
 		expose({
-			value: parseInt(input.value, 10) || 0,
-			max: parseInt(input.max, 10) || 10,
+			value: Number.parseInt(input.value) || 0,
+			max: Number.parseInt(input.max) || 10,
 		})
 
 		return [
@@ -91,13 +91,11 @@ export default defineComponent<FormSpinbuttonProps>(
 				increment.ariaLabel = label || null
 			}),
 			zero
-				&& watch(nonZero, nz => {
-					zero.hidden = nz
-				}),
-			other
-				&& watch(nonZero, nz => {
-					other.hidden = !nz
-				}),
+				&& watch(
+					nonZero,
+					bindVisible(zero, nz => !nz),
+				),
+			other && watch(nonZero, bindVisible(other)),
 		]
 	},
 )

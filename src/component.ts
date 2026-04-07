@@ -34,7 +34,13 @@ import {
 	type WatchHandlers,
 } from './factory'
 import { getSignals } from './internal'
-import { isMethodProducer, isParser, type Parser, type Reader } from './parsers'
+import {
+	isMethodProducer,
+	isParser,
+	METHOD_BRAND,
+	type Parser,
+	type Reader,
+} from './parsers'
 import { type ElementQueries, getHelpers, type UI } from './ui'
 import { validatePropertyName } from './util'
 
@@ -99,8 +105,8 @@ type ComponentSetup<P extends ComponentProps, U extends UI> = (
  * - A **`Reader`** (one-argument function) — called with `ui` at connect time; if it
  *   returns a function or `TaskCallback`, a computed/task signal is created; otherwise
  *   a mutable state signal is created.
- * - A **`MethodProducer`** (branded with `asMethod()`) — called for side effect of
- *   creating the method only; its return value is ignored.
+ * - A **`MethodProducer`** (branded with `asMethod()`) — assigned directly as the property
+ *   value; the function IS the method. Per-instance state lives in factory scope.
  */
 type Initializers<P extends ComponentProps, U extends UI> = {
 	[K in keyof P]?:
@@ -108,7 +114,9 @@ type Initializers<P extends ComponentProps, U extends UI> = {
 		| Signal<P[K]>
 		| Parser<P[K], ComponentUI<P, U>>
 		| Reader<MaybeSignal<P[K]>, ComponentUI<P, U>>
-		| ((ui: ComponentUI<P, U>) => void)
+		| (P[K] extends (...args: any[]) => any
+				? P[K] & { readonly [METHOD_BRAND]: true }
+				: never)
 }
 
 /**
@@ -450,7 +458,7 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 					const result = initializer(ui, this.getAttribute(key))
 					if (result != null) this.#setAccessor(key, result)
 				} else if (isMethodProducer(initializer)) {
-					initializer(ui)
+					;(this as any)[key] = initializer
 				} else if (isFunction<MaybeSignal<P[K]>>(initializer)) {
 					const result = (
 						initializer as Reader<MaybeSignal<P[K]>, ComponentUI<P, U>>

@@ -1,5 +1,4 @@
-import { bindText, defineComponent } from '../../..'
-import { asClampedInteger } from '../../_common/asClampedInteger'
+import { asClampedInteger, bindText, defineComponent } from '../../..'
 
 export type ModulePaginationProps = {
 	max: number
@@ -30,20 +29,12 @@ export default defineComponent<ModulePaginationProps>(
 		const valueEl = first('.value')
 		const maxEl = first('.max')
 
-		const maxInit = asClampedInteger(1)({} as any, input.max)
-		const valueInit = asClampedInteger(1, maxInit)({} as any, input.value)
-
 		expose({
-			max: maxInit,
-			value: valueInit,
+			max: asClampedInteger(Number(input.max) ?? 1),
+			value: asClampedInteger(input.valueAsNumber ?? 1, host.max),
 		})
 
 		return [
-			watch(['value', 'max'], () => {
-				host.hidden = host.max <= 1
-				host.setAttribute('value', String(host.value))
-				host.setAttribute('max', String(host.max))
-			}),
 			on(host, 'keyup', (e, target) => {
 				const { key } = e
 				if (target instanceof HTMLInputElement) return
@@ -69,15 +60,22 @@ export default defineComponent<ModulePaginationProps>(
 				host.value--
 				if (host.value <= 1) next.focus()
 			}),
-			watch(['value', 'max'], () => {
-				input.value = String(host.value)
-				input.max = String(host.max)
-				prev.disabled = host.value <= 1
-				next.disabled = host.value >= host.max
-			}),
 			on(next, 'click', () => {
 				host.value++
 				if (host.value >= host.max) prev.focus()
+			}),
+			watch('value', value => {
+				host.setAttribute('value', String(value))
+				input.value = String(value)
+				prev.disabled = value <= 1
+			}),
+			watch('max', max => {
+				host.hidden = max <= 1
+				host.setAttribute('max', String(max))
+				input.max = String(max)
+			}),
+			watch(['value', 'max'], ([value, max]) => {
+				next.disabled = value >= max
 			}),
 			valueEl && watch('value', bindText(valueEl)),
 			maxEl && watch('max', bindText(maxEl)),

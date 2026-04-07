@@ -1,7 +1,9 @@
 import {
 	asMethod,
 	batch,
+	bindAttribute,
 	bindText,
+	bindVisible,
 	createEventsSensor,
 	createMemo,
 	createState,
@@ -47,15 +49,13 @@ export default defineComponent<FormComboboxProps>(
 			error: '',
 			description: descriptionEl?.textContent?.trim() ?? '',
 			clear: asMethod(() => {
-				host.clear = () => {
-					host.value = ''
-					textbox.value = ''
-					textbox.setCustomValidity('')
-					textbox.checkValidity()
-					textbox.dispatchEvent(new Event('input', { bubbles: true }))
-					textbox.dispatchEvent(new Event('change', { bubbles: true }))
-					textbox.focus()
-				}
+				host.value = ''
+				textbox.value = ''
+				textbox.setCustomValidity('')
+				textbox.checkValidity()
+				textbox.dispatchEvent(new Event('input', { bubbles: true }))
+				textbox.dispatchEvent(new Event('change', { bubbles: true }))
+				textbox.focus()
 			}),
 		})
 
@@ -65,9 +65,7 @@ export default defineComponent<FormComboboxProps>(
 		}
 
 		return [
-			watch('value', value => {
-				host.setAttribute('value', value)
-			}),
+			watch('value', bindAttribute(host, 'value')),
 			on(host, 'keyup', ({ key }: KeyboardEvent) => {
 				if (key === 'Escape') {
 					showPopup.set(false)
@@ -84,6 +82,7 @@ export default defineComponent<FormComboboxProps>(
 				}
 			}),
 			watch(isExpanded, expanded => {
+				listbox.hidden = !expanded
 				textbox.ariaExpanded = String(expanded)
 			}),
 			on(textbox, 'input', () => {
@@ -101,9 +100,6 @@ export default defineComponent<FormComboboxProps>(
 					if (isExpanded.get()) listbox.options[0]?.focus()
 				}
 			}),
-			watch(isExpanded, expanded => {
-				listbox.hidden = !expanded
-			}),
 			pass(listbox, {
 				filter: () => host.value,
 			}),
@@ -119,10 +115,7 @@ export default defineComponent<FormComboboxProps>(
 					})
 				}
 			}),
-			clearBtn
-				&& watch('length', length => {
-					clearBtn.hidden = !length
-				}),
+			clearBtn && watch('length', bindVisible(clearBtn)),
 			clearBtn
 				&& on(clearBtn, 'click', () => {
 					host.clear()

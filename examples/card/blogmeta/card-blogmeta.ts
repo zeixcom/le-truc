@@ -1,5 +1,4 @@
-import { bindText, defineComponent } from '../../..'
-import { asDate } from '../../_common/asDate'
+import { asDate, bindText, defineComponent } from '../../..'
 
 export type CardBlogmetaProps = {
 	date: string

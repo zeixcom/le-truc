@@ -1,6 +1,7 @@
 import {
 	asMethod,
 	bindText,
+	bindVisible,
 	createEventsSensor,
 	createMemo,
 	defineComponent,
@@ -53,15 +54,13 @@ export default defineComponent<FormTextboxProps>(
 			error: '',
 			description: descriptionMemo ?? descriptionEl?.textContent?.trim() ?? '',
 			clear: asMethod(() => {
-				host.clear = () => {
-					host.value = ''
-					textbox.value = ''
-					textbox.setCustomValidity('')
-					textbox.checkValidity()
-					textbox.dispatchEvent(new Event('input', { bubbles: true }))
-					textbox.dispatchEvent(new Event('change', { bubbles: true }))
-					textbox.focus()
-				}
+				host.value = ''
+				textbox.value = ''
+				textbox.setCustomValidity('')
+				textbox.checkValidity()
+				textbox.dispatchEvent(new Event('input', { bubbles: true }))
+				textbox.dispatchEvent(new Event('change', { bubbles: true }))
+				textbox.focus()
 			}),
 		})
 
@@ -88,10 +87,7 @@ export default defineComponent<FormTextboxProps>(
 					textbox.removeAttribute('aria-errormessage')
 				}
 			}),
-			clearBtn
-				&& watch('length', length => {
-					clearBtn.hidden = !length
-				}),
+			clearBtn && watch('length', bindVisible(clearBtn)),
 			clearBtn
 				&& on(clearBtn, 'click', () => {
 					host.clear()

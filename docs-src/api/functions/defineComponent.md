@@ -4,7 +4,7 @@
 
 > **defineComponent**\<`P`\>(`name`, `factory`): `HTMLElement` & `P`
 
-Defined in: [src/component.ts:268](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/component.ts#L268)
+Defined in: [src/component.ts:268](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/component.ts#L268)
 
 Define and register a reactive custom element using the v1.1 factory form.
 
@@ -52,7 +52,7 @@ If the component name is not a valid custom element name
 
 > **defineComponent**\<`P`, `U`\>(`name`, `props?`, `select?`, `setup?`): `HTMLElement` & `P`
 
-Defined in: [src/component.ts:289](https://github.com/zeixcom/le-truc/blob/2424f4ef3925d1048dd041ca1a4e10187e077e82/src/component.ts#L289)
+Defined in: [src/component.ts:289](https://github.com/zeixcom/le-truc/blob/bfd2f81a8a260038bb5d325733c64903b1f06cb3/src/component.ts#L289)
 
 Define and register a reactive custom element using the v1.0 4-param form.
 
