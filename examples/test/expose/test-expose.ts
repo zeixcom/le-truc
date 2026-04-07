@@ -7,7 +7,7 @@ export type TestExposeProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-expose': HTMLElement & TestExposeProps
+		'test-expose': HTMLElement & TestExposeProps
 	}
 }
 
@@ -17,7 +17,7 @@ declare global {
  * and accessible via host properties when the return array is empty.
  */
 export default defineComponent<TestExposeProps>(
-	'basic-expose',
+	'test-expose',
 	({ expose }) => {
 		expose({
 			greeting: 'Hello',

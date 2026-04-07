@@ -72,7 +72,8 @@ export default defineComponent<ModuleListProps>(
 					disabled: () =>
 						(textbox && !textbox.length) || container.children.length >= max,
 				}),
-			on(host, 'click', (e, target) => {
+			on(host, 'click', e => {
+				const target = e.target
 				if (
 					target instanceof HTMLElement
 					&& target.closest('basic-button.delete')

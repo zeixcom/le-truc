@@ -35,9 +35,9 @@ export default defineComponent<ModulePaginationProps>(
 		})
 
 		return [
-			on(host, 'keyup', (e, target) => {
+			on(host, 'keyup', e => {
 				const { key } = e
-				if (target instanceof HTMLInputElement) return
+				if (e.target instanceof HTMLInputElement) return
 
 				let nextPage = host.value
 				if ((key === 'ArrowLeft' || key === '-') && host.value > 1) nextPage--
