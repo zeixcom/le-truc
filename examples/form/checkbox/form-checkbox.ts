@@ -15,13 +15,11 @@ export default defineComponent<FormCheckboxProps>(
 	'form-checkbox',
 	({ expose, first, host, on, watch }) => {
 		const checkbox = first('input[type="checkbox"]', 'Add a native checkbox.')
-		const labelEl = first('.label')
+		const label = first('.label')
 
 		expose({
 			checked: checkbox.checked,
-			label: asString(
-				labelEl?.textContent ?? first('label')?.textContent ?? '',
-			),
+			label: asString(label?.textContent ?? first('label')?.textContent ?? ''),
 		})
 
 		return [
@@ -30,7 +28,7 @@ export default defineComponent<FormCheckboxProps>(
 				checkbox.checked = checked
 				host.toggleAttribute('checked', checked)
 			}),
-			labelEl && watch('label', bindText(labelEl)),
+			label && watch('label', bindText(label)),
 		]
 	},
 )

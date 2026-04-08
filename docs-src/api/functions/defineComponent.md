@@ -1,8 +1,8 @@
 ### Function: defineComponent()
 
-> **defineComponent**\<`P`\>(`name`, `factory`): `HTMLElement` & `P`
+> **defineComponent**\<`P`\>(`name`, `factory`): `CustomElementConstructor` \| `undefined`
 
-Defined in: [src/component.ts:129](https://github.com/zeixcom/le-truc/blob/26a8f71243082cdb967941bc1640290db2bf1985/src/component.ts#L129)
+Defined in: [src/component.ts:129](https://github.com/zeixcom/le-truc/blob/64495a8246bdcc3ad970b9cd968208c864711df0/src/component.ts#L129)
 
 Define and register a reactive custom element using the v1.1 factory form.
 
@@ -30,13 +30,13 @@ Custom element name (must contain a hyphen and start with a lowercase letter)
 
 ##### factory
 
-(`context`) => [`FactoryResult`](../type-aliases/FactoryResult.md)
+(`context`) => `void` \| [`FactoryResult`](../type-aliases/FactoryResult.md)
 
 Factory function that queries elements, calls expose(), and returns effect descriptors
 
 #### Returns
 
-`HTMLElement` & `P`
+`CustomElementConstructor` \| `undefined`
 
 #### Since
 

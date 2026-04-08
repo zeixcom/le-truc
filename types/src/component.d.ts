@@ -66,5 +66,5 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
-declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult): HTMLElement & P;
+declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | void): CustomElementConstructor | undefined;
 export { type ComponentProp, type ComponentProps, defineComponent, type FactoryContext, type Initializers, type MaybeSignal, type ReservedWords, };

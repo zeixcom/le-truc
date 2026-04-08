@@ -1,4 +1,5 @@
 import { asClampedInteger, bindText, defineComponent } from '../../..'
+import { getLocale } from '../../_common/getLocale'
 
 export type BasicPluralizeProps = {
 	count: number
@@ -9,8 +10,6 @@ declare global {
 		'basic-pluralize': HTMLElement & BasicPluralizeProps
 	}
 }
-
-const FALLBACK_LOCALE = 'en'
 
 export default defineComponent<BasicPluralizeProps>(
 	'basic-pluralize',
@@ -26,7 +25,7 @@ export default defineComponent<BasicPluralizeProps>(
 		const other = first('.other')
 
 		const pluralizer = new Intl.PluralRules(
-			host.closest('[lang]')?.getAttribute('lang') || FALLBACK_LOCALE,
+			getLocale(host),
 			host.hasAttribute('ordinal') ? { type: 'ordinal' } : undefined,
 		)
 

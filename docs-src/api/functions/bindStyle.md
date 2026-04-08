@@ -2,7 +2,7 @@
 
 > **bindStyle**(`element`, `prop`): [`WatchHandlers`](../type-aliases/WatchHandlers.md)\<`string`\>
 
-Defined in: [src/helpers.ts:141](https://github.com/zeixcom/le-truc/blob/26a8f71243082cdb967941bc1640290db2bf1985/src/helpers.ts#L141)
+Defined in: [src/helpers.ts:141](https://github.com/zeixcom/le-truc/blob/64495a8246bdcc3ad970b9cd968208c864711df0/src/helpers.ts#L141)
 
 Returns `RunHandlers` that set or remove an inline style property.
 

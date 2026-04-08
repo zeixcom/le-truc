@@ -188,20 +188,7 @@
 				<span class="language">ts</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">	batch,</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
-<span class="line"><span style="color:#F8F8F2">	createEffect,</span></span>
-<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
-<span class="line"><span style="color:#F8F8F2">	pass,</span></span>
-<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F92672"> type</span><span style="color:#F8F8F2"> { FormListboxProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../form-listbox/form-listbox'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F92672"> type</span><span style="color:#F8F8F2"> { ModuleLazyloadProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../module-lazyload/module-lazyload'</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleListnavUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">	listbox</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormListboxProps</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	lazyload</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleLazyloadProps</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">}</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { batch, createEffect, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">/**</span></span>
 <span class="line"><span style="color:#88846F"> * Extract the base path (first path segment) from an option value.</span></span>
@@ -265,69 +252,64 @@
 <span class="line"><span style="color:#F92672">	return</span><span style="color:#F8F8F2"> hash</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;{}, </span><span style="color:#A6E22E;text-decoration:underline">ModuleListnavUI</span><span style="color:#F8F8F2">>(</span></span>
-<span class="line"><span style="color:#E6DB74">	'module-listnav'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	{},</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">		listbox: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'form-listbox'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Required to select a partial to load'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		lazyload: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'module-lazyload'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Required to load a partial into'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">	}),</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">listbox</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> hasOption</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
-<span class="line"><span style="color:#F92672">			!!</span><span style="color:#F8F8F2">listbox.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">				`button[role="option"][value="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">CSS.</span><span style="color:#A6E22E">escape</span><span style="color:#F8F8F2">(value)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"]`</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">			)</span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'module-listnav'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> listbox </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'form-listbox'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Required to select a partial to load'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> lazyload </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'module-lazyload'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Required to load a partial into'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#88846F">		// Set initial selection from hash</span></span>
-<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (location.hash) {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> hashToValue</span><span style="color:#F8F8F2">(location.hash, listbox)</span></span>
-<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (value </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> hasOption</span><span style="color:#F8F8F2">(value)) listbox.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#A6E22E"> hasOption</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
+<span class="line"><span style="color:#F92672">		!!</span><span style="color:#F8F8F2">listbox.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			`button[role="option"][value="</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">CSS.</span><span style="color:#A6E22E">escape</span><span style="color:#F8F8F2">(value)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">"]`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">	// Set initial selection from hash</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (location.hash) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> hashToValue</span><span style="color:#F8F8F2">(location.hash, listbox)</span></span>
+<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (value </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> hasOption</span><span style="color:#F8F8F2">(value)) listbox.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">	// Track whether we're updating the hash ourselves to avoid loops</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	let</span><span style="color:#F8F8F2"> updatingHash </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">	// Update selection when hash changes (browser back/forward)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#A6E22E"> onHashChange</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (updatingHash) </span><span style="color:#F92672">return</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> hashToValue</span><span style="color:#F8F8F2">(location.hash, listbox)</span></span>
+<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (value </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> listbox.value </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> hasOption</span><span style="color:#F8F8F2">(value)) {</span></span>
+<span class="line"><span style="color:#A6E22E">			batch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				listbox.filter </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#F8F8F2">				listbox.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
+<span class="line"><span style="color:#F8F8F2">			})</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#88846F">		// Track whether we're updating the hash ourselves to avoid loops</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> updatingHash </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F92672">	return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">		pass</span><span style="color:#F8F8F2">(lazyload, { </span><span style="color:#A6E22E">src</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> listbox.value }),</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#88846F">		// Update selection when hash changes (browser back/forward)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> onHashChange</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (updatingHash) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#88846F">		// Sync location.hash ↔ listbox selection</span></span>
+<span class="line"><span style="color:#F8F8F2">		() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#88846F">			// Update hash when selection changes</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> cleanup </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createEffect</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> listbox.value</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">value) </span><span style="color:#F92672">return</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> hashToValue</span><span style="color:#F8F8F2">(location.hash, listbox)</span></span>
-<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (value </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> listbox.value </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> hasOption</span><span style="color:#F8F8F2">(value)) {</span></span>
-<span class="line"><span style="color:#A6E22E">				batch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">					listbox.filter </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
-<span class="line"><span style="color:#F8F8F2">					listbox.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
-<span class="line"><span style="color:#F8F8F2">				})</span></span>
-<span class="line"><span style="color:#F8F8F2">			}</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">			lazyload: </span><span style="color:#A6E22E">pass</span><span style="color:#F8F8F2">({ </span><span style="color:#A6E22E">src</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> listbox.value }),</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#88846F">			// Sync location.hash ↔ listbox selection</span></span>
-<span class="line"><span style="color:#A6E22E">			host</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#88846F">				// Update hash when selection changes</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> cleanup </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createEffect</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> listbox.value</span></span>
-<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">value) </span><span style="color:#F92672">return</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> hash </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> valueToHash</span><span style="color:#F8F8F2">(value, listbox)</span></span>
-<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (hash </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> location.hash </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> `#</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">hash</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">) {</span></span>
-<span class="line"><span style="color:#F8F8F2">						updatingHash </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
-<span class="line"><span style="color:#F8F8F2">						history.</span><span style="color:#A6E22E">replaceState</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">null</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">`#</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">hash</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">						updatingHash </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
-<span class="line"><span style="color:#F8F8F2">					}</span></span>
-<span class="line"><span style="color:#F8F8F2">				})</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">				window.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'hashchange'</span><span style="color:#F8F8F2">, onHashChange)</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#A6E22E">					cleanup</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F8F8F2">					window.</span><span style="color:#A6E22E">removeEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'hashchange'</span><span style="color:#F8F8F2">, onHashChange)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> hash </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> valueToHash</span><span style="color:#F8F8F2">(value, listbox)</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (hash </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> location.hash </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> `#</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">hash</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#F8F8F2">					updatingHash </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F8F8F2">					history.</span><span style="color:#A6E22E">replaceState</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">null</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">`#</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">hash</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					updatingHash </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"><span style="color:#F8F8F2">				}</span></span>
-<span class="line"><span style="color:#F8F8F2">			},</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span></span>
-<span class="line"><span style="color:#F8F8F2">	},</span></span>
-<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			})</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			window.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'hashchange'</span><span style="color:#F8F8F2">, onHashChange)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">				cleanup</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">				window.</span><span style="color:#A6E22E">removeEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'hashchange'</span><span style="color:#F8F8F2">, onHashChange)</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		},</span></span>
+<span class="line"><span style="color:#F8F8F2">	]</span></span>
+<span class="line"><span style="color:#F8F8F2">})</span></span>
 <span class="line"></span></code></pre>
 			</module-scrollarea>
 			<basic-button class="copy">

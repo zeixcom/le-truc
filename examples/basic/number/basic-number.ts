@@ -1,4 +1,5 @@
 import { asNumber, defineComponent } from '../../..'
+import { getLocale } from '../../_common/getLocale'
 
 export type BasicNumberProps = {
 	value: number
@@ -14,8 +15,6 @@ type Logger = {
 	onWarn: (message: string) => void
 	onError: (message: string) => void
 }
-
-const FALLBACK_LOCALE = 'en'
 
 function getNumberFormatter(
 	locale: string,
@@ -112,7 +111,7 @@ export default defineComponent<BasicNumberProps>(
 	'basic-number',
 	({ expose, host, watch }) => {
 		const formatter = getNumberFormatter(
-			host.closest('[lang]')?.getAttribute('lang') || FALLBACK_LOCALE,
+			getLocale(host),
 			host.getAttribute('options'),
 		)
 

@@ -128,16 +128,14 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  */
 function defineComponent<P extends ComponentProps>(
 	name: string,
-	factory: (context: FactoryContext<P>) => FactoryResult,
-): HTMLElement & P {
+	factory: (context: FactoryContext<P>) => FactoryResult | void,
+): CustomElementConstructor | undefined {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
 
 	class Truc extends HTMLElement {
 		debug?: boolean
 		#cleanup: MaybeCleanup
-
-		static observedAttributes = []
 
 		/**
 		 * Native callback when the custom element is first connected to the document
@@ -163,6 +161,7 @@ function defineComponent<P extends ComponentProps>(
 			}
 
 			const result = factory(context)
+			if (!result) return
 
 			resolveDependencies(() => {
 				this.#cleanup = createScope(() => {
@@ -187,7 +186,7 @@ function defineComponent<P extends ComponentProps>(
 		 * @param {Initializers<P>} instanceProps - Property initializers to process
 		 */
 		#initSignals(instanceProps: Initializers<P>): void {
-			const createSignal = <K extends keyof P & string>(
+			const createReactiveProperty = <K extends keyof P & string>(
 				key: K,
 				initializer: Initializers<P>[K],
 			) => {
@@ -203,7 +202,7 @@ function defineComponent<P extends ComponentProps>(
 			}
 			for (const [prop, initializer] of Object.entries(instanceProps)) {
 				if (initializer == null || prop in this) continue
-				createSignal(prop as keyof P & string, initializer)
+				createReactiveProperty(prop as keyof P & string, initializer)
 			}
 		}
 
@@ -242,7 +241,7 @@ function defineComponent<P extends ComponentProps>(
 	}
 
 	customElements.define(name, Truc)
-	return customElements.get(name) as unknown as HTMLElement & P
+	return customElements.get(name)
 }
 
 export {

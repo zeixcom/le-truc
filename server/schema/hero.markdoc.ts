@@ -6,17 +6,35 @@ import Markdoc, {
 	Tag,
 } from '@markdoc/markdoc'
 import { commonAttributes, standardChildren } from '../markdoc-constants'
+import { type TocItem } from '../markdoc-helpers'
+
+const MIN_TOC_HEADINGS = 3
 
 const hero: Schema = {
 	render: 'section-hero',
 	children: standardChildren,
 	attributes: commonAttributes,
 	transform(node: Node, config: Config) {
-		// Create a placeholder that will be replaced during page generation
-		const tocPlaceholder = new Markdoc.Tag('div', {
-			class: 'toc-placeholder',
-			'data-toc': 'true',
-		})
+		// Build TOC nav from H2 headings passed as variable (requires ≥ MIN_TOC_HEADINGS)
+		const tocItems = (config.variables?.toc ?? []) as TocItem[]
+		const tocNav =
+			tocItems.length >= MIN_TOC_HEADINGS
+				? new Tag('module-toc', {}, [
+						new Tag('nav', {}, [
+							new Tag('h2', {}, ['In This Page']),
+							new Tag(
+								'ol',
+								{},
+								tocItems.map(
+									({ id, text }) =>
+										new Tag('li', {}, [
+											new Tag('a', { href: `#${id}` }, [text]),
+										]),
+								),
+							),
+						]),
+					])
+				: null
 
 		// Separate title from other content
 		let title: RenderableTreeNode | null = null
@@ -37,16 +55,13 @@ const hero: Schema = {
 		// Add title (full width)
 		if (title) children.push(title)
 
-		// Create two-column layout with lead content and TOC placeholder
-		if (leadContent.length > 0) {
-			const layoutDiv = new Tag('div', { class: 'hero-layout' }, [
-				new Tag('div', { class: 'lead' }, leadContent),
-				tocPlaceholder,
-			])
-			children.push(layoutDiv)
-		} else if (tocPlaceholder) {
-			// Just TOC placeholder if no lead content
-			children.push(tocPlaceholder)
+		// Create two-column layout with lead content and TOC nav
+		if (leadContent.length > 0 || tocNav) {
+			const layoutChildren: RenderableTreeNode[] = []
+			if (leadContent.length > 0)
+				layoutChildren.push(new Tag('div', { class: 'lead' }, leadContent))
+			if (tocNav) layoutChildren.push(tocNav)
+			children.push(new Tag('div', { class: 'hero-layout' }, layoutChildren))
 		}
 
 		return new Tag('section-hero', node.attributes, children)

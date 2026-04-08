@@ -202,7 +202,8 @@
 				<span class="language">ts</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asNumber, </span><span style="color:#F92672">type</span><span style="color:#F8F8F2"> Component, defineComponent, setText } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asNumber, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { getLocale } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../_common/getLocale'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicNumberProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
@@ -210,7 +211,7 @@
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#E6DB74">		'basic-number'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicNumberProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#E6DB74">		'basic-number'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> &#x26;</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicNumberProps</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
@@ -218,8 +219,6 @@
 <span class="line"><span style="color:#A6E22E">	onWarn</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">message</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> void</span></span>
 <span class="line"><span style="color:#A6E22E">	onError</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">message</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> void</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> FALLBACK_LOCALE </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'en'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">function</span><span style="color:#A6E22E"> getNumberFormatter</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#FD971F;font-style:italic">	locale</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">,</span></span>
@@ -246,9 +245,9 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> drops</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">[] </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> []</span></span>
 <span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (style </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'currency'</span><span style="color:#F8F8F2">) {</span></span>
 <span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (</span></span>
-<span class="line"><span style="color:#F92672">			!</span><span style="color:#F8F8F2">o.currency </span><span style="color:#F92672">||</span></span>
-<span class="line"><span style="color:#F92672">			typeof</span><span style="color:#F8F8F2"> o.currency </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> 'string'</span><span style="color:#F92672"> ||</span></span>
-<span class="line"><span style="color:#F8F8F2">			o.currency.length </span><span style="color:#F92672">!==</span><span style="color:#AE81FF"> 3</span></span>
+<span class="line"><span style="color:#F92672">			!</span><span style="color:#F8F8F2">o.currency</span></span>
+<span class="line"><span style="color:#F92672">			||</span><span style="color:#F92672"> typeof</span><span style="color:#F8F8F2"> o.currency </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> 'string'</span></span>
+<span class="line"><span style="color:#F92672">			||</span><span style="color:#F8F8F2"> o.currency.length </span><span style="color:#F92672">!==</span><span style="color:#AE81FF"> 3</span></span>
 <span class="line"><span style="color:#F8F8F2">		) {</span></span>
 <span class="line"><span style="color:#A6E22E">			onError</span><span style="color:#F8F8F2">?.(</span></span>
 <span class="line"><span style="color:#E6DB74">				`style="currency" requires a 3-letter ISO currency (e.g. "CHF").`</span><span style="color:#F8F8F2">,</span></span>
@@ -314,16 +313,21 @@
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicNumberProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'basic-number'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	{ value: </span><span style="color:#A6E22E">asNumber</span><span style="color:#F8F8F2">() },</span></span>
-<span class="line"><span style="color:#AE81FF">	undefined</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> formatter </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> getNumberFormatter</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#F8F8F2">			host.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'[lang]'</span><span style="color:#F8F8F2">)?.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'lang'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> FALLBACK_LOCALE,</span></span>
+<span class="line"><span style="color:#A6E22E">			getLocale</span><span style="color:#F8F8F2">(host),</span></span>
 <span class="line"><span style="color:#F8F8F2">			host.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'options'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
-<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">			host: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> formatter.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(host.value)),</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({</span></span>
+<span class="line"><span style="color:#F8F8F2">			value: </span><span style="color:#A6E22E">asNumber</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">		})</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				host.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> formatter.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(value)</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">		]</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre>

@@ -250,107 +250,102 @@
 			</p>
 			<module-scrollarea orientation="horizontal">
 				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> ComponentUI,</span></span>
+<span class="line"><span style="color:#F8F8F2">	asMethod,</span></span>
+<span class="line"><span style="color:#F8F8F2">	bindText,</span></span>
+<span class="line"><span style="color:#F8F8F2">	bindVisible,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createEventsSensor,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createMemo,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
-<span class="line"><span style="color:#F8F8F2">	on,</span></span>
-<span class="line"><span style="color:#F8F8F2">	read,</span></span>
-<span class="line"><span style="color:#F8F8F2">	setAttribute,</span></span>
-<span class="line"><span style="color:#F8F8F2">	setProperty,</span></span>
-<span class="line"><span style="color:#F8F8F2">	setText,</span></span>
-<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { clearEffects, clearMethod } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/clearMethod'</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormTextboxProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> length</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
 <span class="line"><span style="color:#F8F8F2">	error</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
 <span class="line"><span style="color:#F8F8F2">	description</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
-<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#A6E22E"> clear</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> void</span></span>
-<span class="line"><span style="color:#F8F8F2">}</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormTextboxUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">	textbox</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLInputElement</span><span style="color:#F92672"> |</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLTextAreaElement</span></span>
-<span class="line"><span style="color:#F8F8F2">	clear</span><span style="color:#F92672">?:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> undefined</span></span>
-<span class="line"><span style="color:#F8F8F2">	error</span><span style="color:#F92672">?:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> undefined</span></span>
-<span class="line"><span style="color:#F8F8F2">	description</span><span style="color:#F92672">?:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> undefined</span></span>
+<span class="line"><span style="color:#A6E22E">	clear</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> void</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#E6DB74">		'form-textbox'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormTextboxProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#E6DB74">		'form-textbox'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> &#x26;</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormTextboxProps</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormTextboxProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">FormTextboxUI</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormTextboxProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'form-textbox'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	{</span></span>
-<span class="line"><span style="color:#F8F8F2">		value: </span><span style="color:#A6E22E">read</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.textbox.value, </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		length: </span><span style="color:#A6E22E">createEventsSensor</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#A6E22E">			read</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> ui.textbox.value.length, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#E6DB74">			'textbox'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">			{</span></span>
-<span class="line"><span style="color:#A6E22E">				input</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> target.value.length,</span></span>
-<span class="line"><span style="color:#F8F8F2">			},</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">		error: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#A6E22E">		description</span><span style="color:#F8F8F2">: ({</span></span>
-<span class="line"><span style="color:#F8F8F2">			host,</span></span>
-<span class="line"><span style="color:#F8F8F2">			description,</span></span>
-<span class="line"><span style="color:#F8F8F2">			textbox,</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ComponentUI</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormTextboxProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">FormTextboxUI</span><span style="color:#F8F8F2">>) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (description) {</span></span>
-<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (textbox.maxLength </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> &#x26;&#x26;</span><span style="color:#F8F8F2"> description.dataset.remaining) {</span></span>
-<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span></span>
-<span class="line"><span style="color:#F8F8F2">						description.dataset.remaining</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">.</span><span style="color:#A6E22E">replace</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">							'${n}'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#A6E22E">							String</span><span style="color:#F8F8F2">(textbox.maxLength </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> host.length),</span></span>
-<span class="line"><span style="color:#F8F8F2">						)</span></span>
-<span class="line"><span style="color:#F8F8F2">				}</span></span>
-<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> description.textContent?.</span><span style="color:#A6E22E">trim</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span></span>
-<span class="line"><span style="color:#F8F8F2">			} </span><span style="color:#F92672">else</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">				return</span><span style="color:#E6DB74"> ''</span></span>
-<span class="line"><span style="color:#F8F8F2">			}</span></span>
-<span class="line"><span style="color:#F8F8F2">		},</span></span>
-<span class="line"><span style="color:#F8F8F2">		clear: clearMethod,</span></span>
-<span class="line"><span style="color:#F8F8F2">	},</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">		textbox: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> textbox </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">			'input, textarea'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#E6DB74">			'Add a native input or textarea as descendant element.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">		clear: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button.clear'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		error: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.error'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		description: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.description'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">	}),</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">	ui</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> { host, textbox, error, description } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> ui</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> errorId </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> error?.id</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> descriptionId </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> description?.id</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> clearBtn </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button.clear'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> errorEl </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.error'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> descriptionEl </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.description'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">			textbox: [</span></span>
-<span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">					textbox.</span><span style="color:#A6E22E">checkValidity</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">						value: textbox.value,</span></span>
-<span class="line"><span style="color:#F8F8F2">						error: textbox.validationMessage,</span></span>
-<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> errorId </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> errorEl?.id</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> descriptionId </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> descriptionEl?.id</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Reactive description: tracks remaining character count if template is present</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> descriptionMemo </span><span style="color:#F92672">=</span></span>
+<span class="line"><span style="color:#F8F8F2">			descriptionEl </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> textbox.maxLength </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> &#x26;&#x26;</span><span style="color:#F8F8F2"> descriptionEl.dataset.remaining</span></span>
+<span class="line"><span style="color:#F92672">				?</span><span style="color:#A6E22E"> createMemo</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">						descriptionEl.dataset.remaining</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">.</span><span style="color:#A6E22E">replace</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">							'${n}'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#A6E22E">							String</span><span style="color:#F8F8F2">(textbox.maxLength </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> host.length),</span></span>
+<span class="line"><span style="color:#F8F8F2">						),</span></span>
+<span class="line"><span style="color:#F8F8F2">					)</span></span>
+<span class="line"><span style="color:#F92672">				:</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({</span></span>
+<span class="line"><span style="color:#F8F8F2">			value: textbox.value,</span></span>
+<span class="line"><span style="color:#F8F8F2">			length: </span><span style="color:#A6E22E">createEventsSensor</span><span style="color:#F8F8F2">(textbox, textbox.value.length, {</span></span>
+<span class="line"><span style="color:#A6E22E">				input</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> target.value.length,</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			error: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			description: descriptionMemo </span><span style="color:#F92672">??</span><span style="color:#F8F8F2"> descriptionEl?.textContent?.</span><span style="color:#A6E22E">trim</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			clear: </span><span style="color:#A6E22E">asMethod</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				host.value </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#F8F8F2">				textbox.value </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#F8F8F2">				textbox.</span><span style="color:#A6E22E">setCustomValidity</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">				textbox.</span><span style="color:#A6E22E">checkValidity</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">				textbox.</span><span style="color:#A6E22E">dispatchEvent</span><span style="color:#F8F8F2">(</span><span style="color:#F92672">new</span><span style="color:#A6E22E"> Event</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, { bubbles: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> }))</span></span>
+<span class="line"><span style="color:#F8F8F2">				textbox.</span><span style="color:#A6E22E">dispatchEvent</span><span style="color:#F8F8F2">(</span><span style="color:#F92672">new</span><span style="color:#A6E22E"> Event</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, { bubbles: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> }))</span></span>
+<span class="line"><span style="color:#F8F8F2">				textbox.</span><span style="color:#A6E22E">focus</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">		})</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Set aria-describedby once (static relationship)</span></span>
+<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (descriptionEl </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> descriptionId)</span></span>
+<span class="line"><span style="color:#F8F8F2">			textbox.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-describedby'</span><span style="color:#F8F8F2">, descriptionId)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(textbox, </span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				textbox.</span><span style="color:#A6E22E">checkValidity</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					value: textbox.value,</span></span>
+<span class="line"><span style="color:#F8F8F2">					error: textbox.validationMessage,</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				textbox.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'error'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">error</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				textbox.ariaInvalid </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(</span><span style="color:#F92672">!!</span><span style="color:#F8F8F2">error)</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (error </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> errorId) {</span></span>
+<span class="line"><span style="color:#F8F8F2">					textbox.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-errormessage'</span><span style="color:#F8F8F2">, errorId)</span></span>
+<span class="line"><span style="color:#F8F8F2">				} </span><span style="color:#F92672">else</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					textbox.</span><span style="color:#A6E22E">removeAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-errormessage'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			clearBtn </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'length'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindVisible</span><span style="color:#F8F8F2">(clearBtn)),</span></span>
+<span class="line"><span style="color:#F8F8F2">			clearBtn</span></span>
+<span class="line"><span style="color:#F92672">				&#x26;&#x26;</span><span style="color:#A6E22E"> on</span><span style="color:#F8F8F2">(clearBtn, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					host.</span><span style="color:#A6E22E">clear</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#A6E22E">				setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'ariaInvalid'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(</span><span style="color:#F92672">!!</span><span style="color:#F8F8F2">host.error)),</span></span>
-<span class="line"><span style="color:#A6E22E">				setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-errormessage'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span></span>
-<span class="line"><span style="color:#F8F8F2">					host.error </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> errorId </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> errorId </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> null</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">				),</span></span>
-<span class="line"><span style="color:#A6E22E">				setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-describedby'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span></span>
-<span class="line"><span style="color:#F8F8F2">					description </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> descriptionId </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> descriptionId </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> null</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">				),</span></span>
-<span class="line"><span style="color:#F8F8F2">			],</span></span>
-<span class="line"><span style="color:#F8F8F2">			clear: </span><span style="color:#A6E22E">clearEffects</span><span style="color:#F8F8F2">(ui),</span></span>
-<span class="line"><span style="color:#F8F8F2">			error: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'error'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">			description: </span><span style="color:#A6E22E">setText</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'description'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">			errorEl </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'error'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(errorEl)),</span></span>
+<span class="line"><span style="color:#F8F8F2">			descriptionEl </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'description'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(descriptionEl)),</span></span>
+<span class="line"><span style="color:#F8F8F2">		]</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre>

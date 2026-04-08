@@ -352,22 +352,14 @@
 				<span class="language">ts</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">	batch,</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> ComponentProps,</span></span>
-<span class="line"><span style="color:#F8F8F2">	createState,</span></span>
-<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
-<span class="line"><span style="color:#F8F8F2">	on,</span></span>
-<span class="line"><span style="color:#F8F8F2">	toggleClass,</span></span>
-<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { batch, bindClass, createState, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> MIN_INTERSECTION_RATIO </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> MAX_INTERSECTION_RATIO </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0.99</span><span style="color:#88846F"> // ignore rounding errors of fraction pixels</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#E6DB74">		'module-scrollarea'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ComponentProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#E6DB74">		'module-scrollarea'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
@@ -399,55 +391,50 @@
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">	'module-scrollarea'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#AE81FF">	undefined</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#AE81FF">	undefined</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> child </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.firstElementChild</span></span>
-<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">child) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> {}</span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'module-scrollarea'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> child </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.firstElementChild</span></span>
+<span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">child) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> []</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> overflowStart </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> overflowEnd </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> hasOverflow</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> overflowStart.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> overflowEnd.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> overflowStart </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> overflowEnd </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#A6E22E"> hasOverflow</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> overflowStart.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> overflowEnd.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> scrollCallback </span><span style="color:#F92672">=</span></span>
-<span class="line"><span style="color:#F8F8F2">			host.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'orientation'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'horizontal'</span></span>
-<span class="line"><span style="color:#F92672">				?</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">						overflowStart.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(host.scrollLeft </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">						overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#F8F8F2">							host.scrollLeft </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> host.scrollWidth </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> host.offsetWidth,</span></span>
-<span class="line"><span style="color:#F8F8F2">						)</span></span>
-<span class="line"><span style="color:#F8F8F2">					}</span></span>
-<span class="line"><span style="color:#F92672">				:</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">						overflowStart.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(host.scrollTop </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">						overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#F8F8F2">							host.scrollTop </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> host.scrollHeight </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> host.offsetHeight,</span></span>
-<span class="line"><span style="color:#F8F8F2">						)</span></span>
-<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> scrollCallback </span><span style="color:#F92672">=</span></span>
+<span class="line"><span style="color:#F8F8F2">		host.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'orientation'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'horizontal'</span></span>
+<span class="line"><span style="color:#F92672">			?</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					overflowStart.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(host.scrollLeft </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(host.scrollLeft </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> host.scrollWidth </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> host.offsetWidth)</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F92672">			:</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					overflowStart.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(host.scrollTop </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">						host.scrollTop </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> host.scrollHeight </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> host.offsetHeight,</span></span>
+<span class="line"><span style="color:#F8F8F2">					)</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">			host: [</span></span>
-<span class="line"><span style="color:#A6E22E">				toggleClass</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'overflow'</span><span style="color:#F8F8F2">, hasOverflow),</span></span>
-<span class="line"><span style="color:#A6E22E">				toggleClass</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'overflow-start'</span><span style="color:#F8F8F2">, overflowStart),</span></span>
-<span class="line"><span style="color:#A6E22E">				toggleClass</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'overflow-end'</span><span style="color:#F8F8F2">, overflowEnd),</span></span>
-<span class="line"><span style="color:#A6E22E">				observeOverflow</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#F8F8F2">					child,</span></span>
-<span class="line"><span style="color:#F8F8F2">					() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">						overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">					},</span></span>
-<span class="line"><span style="color:#F8F8F2">					() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">						overflowStart.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">						overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">					},</span></span>
-<span class="line"><span style="color:#F8F8F2">				),</span></span>
-<span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'scroll'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">hasOverflow</span><span style="color:#F8F8F2">()) </span><span style="color:#A6E22E">batch</span><span style="color:#F8F8F2">(scrollCallback)</span></span>
-<span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			],</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span></span>
-<span class="line"><span style="color:#F8F8F2">	},</span></span>
-<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">	return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">		watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">			[overflowStart, overflowEnd],</span></span>
+<span class="line"><span style="color:#A6E22E">			bindClass</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'overflow'</span><span style="color:#F8F8F2">, ([</span><span style="color:#FD971F;font-style:italic">os</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">oe</span><span style="color:#F8F8F2">]) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> os </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> oe),</span></span>
+<span class="line"><span style="color:#F8F8F2">		),</span></span>
+<span class="line"><span style="color:#A6E22E">		watch</span><span style="color:#F8F8F2">(overflowStart, </span><span style="color:#A6E22E">bindClass</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'overflow-start'</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#A6E22E">		watch</span><span style="color:#F8F8F2">(overflowEnd, </span><span style="color:#A6E22E">bindClass</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'overflow-end'</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#F8F8F2">		() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#A6E22E">			observeOverflow</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">				child,</span></span>
+<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					overflowStart.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#F8F8F2">			)(host),</span></span>
+<span class="line"><span style="color:#A6E22E">		on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'scroll'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">hasOverflow</span><span style="color:#F8F8F2">()) </span><span style="color:#A6E22E">batch</span><span style="color:#F8F8F2">(scrollCallback)</span></span>
+<span class="line"><span style="color:#F8F8F2">		}),</span></span>
+<span class="line"><span style="color:#F8F8F2">	]</span></span>
+<span class="line"><span style="color:#F8F8F2">})</span></span>
 <span class="line"></span></code></pre>
 			</module-scrollarea>
 			<basic-button class="copy">

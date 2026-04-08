@@ -2167,7 +2167,6 @@ function defineComponent(name, factory) {
   class Truc extends HTMLElement {
     debug;
     #cleanup;
-    static observedAttributes = [];
     connectedCallback() {
       const [elementQueries, resolveDependencies] = makeElementQueries(this);
       const host = this;
@@ -2185,6 +2184,8 @@ function defineComponent(name, factory) {
         requestContext: makeRequestContext(host)
       };
       const result = factory(context);
+      if (!result)
+        return;
       resolveDependencies(() => {
         this.#cleanup = createScope(() => {
           for (const descriptor of result) {
@@ -2199,7 +2200,7 @@ function defineComponent(name, factory) {
         this.#cleanup();
     }
     #initSignals(instanceProps) {
-      const createSignal2 = (key, initializer) => {
+      const createReactiveProperty = (key, initializer) => {
         if (isParser(initializer)) {
           const result = initializer(this.getAttribute(key));
           if (result != null)
@@ -2215,7 +2216,7 @@ function defineComponent(name, factory) {
       for (const [prop, initializer] of Object.entries(instanceProps)) {
         if (initializer == null || prop in this)
           continue;
-        createSignal2(prop, initializer);
+        createReactiveProperty(prop, initializer);
       }
     }
     #setAccessor(key, value) {

@@ -21,6 +21,7 @@ import {
 	injectModuleDemoPreview,
 	resolveInternalLinks,
 } from './html-shaping'
+import { extractTocItems } from './markdoc-helpers'
 import { getRelativePath } from './io'
 import markdocConfig from './markdoc.config'
 
@@ -58,6 +59,7 @@ export type PageMetadata = {
 	tags?: string[]
 	date?: string
 	author?: string
+	'modified-date'?: string
 	'author-avatar'?: string
 	'author-bio'?: string
 }
@@ -113,6 +115,7 @@ function extractFrontmatter(content: string): {
 				case 'author':
 				case 'author-avatar':
 				case 'author-bio':
+				case 'modified-date':
 					metadata[key] = value
 					break
 				case 'order':
@@ -175,7 +178,9 @@ const docsMarkdown: {
 				filename: file.filename,
 				relativePath,
 				lastModified: file.lastModified,
-				section: relativePath.includes('/') ? relativePath.split('/')[0] ?? '' : undefined,
+				section: relativePath.includes('/')
+					? (relativePath.split('/')[0] ?? '')
+					: undefined,
 			})
 		}
 		return pageInfos
@@ -223,10 +228,11 @@ const docsMarkdown: {
 					console.warn(`Markdoc validation errors for ${path}:`, errors)
 				}
 
-				// Transform the AST (pass basePath so link schema can resolve absolute hrefs)
+				// Transform the AST (pass basePath and toc headings for template use)
+				const toc = extractTocItems(ast)
 				const transformed = Markdoc.transform(ast, {
 					...markdocConfig,
-					variables: { basePath },
+					variables: { basePath, toc },
 				})
 
 				// Render to HTML

@@ -12,7 +12,7 @@
 		/>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=d4d6196b55ef7f67"
+			href="./assets/main.js?v=c902ec3afcab4996"
 		/>
 		<link
 			rel="stylesheet"
@@ -20,7 +20,7 @@
 		/>
 		<script
 			type="module"
-			src="./assets/main.js?v=d4d6196b55ef7f67"
+			src="./assets/main.js?v=c902ec3afcab4996"
 		></script>
 	</head>
 
@@ -98,7 +98,7 @@
 				</card-callout>
 			</header>
 
-			<main id="main" class="content-grid"><section-hero><h1 id="-components"><a name="-components" class="anchor" href="#-components"><span class="title">🏗️ Components</span><span class="permalink">#</span></a></h1><div class="hero-layout"><div class="lead"><p><strong>Create lightweight, self-contained Web Components with built-in reactivity</strong>. Le Truc lets you define custom elements that manage state efficiently, update the DOM automatically, and enhance server-rendered pages without an SPA framework.</p></div><div class="toc-placeholder" data-toc="true"></div></div></section-hero><section class="" id="undefined"><h2 id="defining-a-component"><a name="defining-a-component" class="anchor" href="#defining-a-component"><span class="title">Defining a Component</span><span class="permalink">#</span></a></h2><p>Le Truc builds on <strong>Web Components</strong>, extending <code>HTMLElement</code> to provide <strong>built-in state management and reactive updates</strong>.</p><card-callout class="tip" title="Le Truc enhances HTML — it doesn't replace it"><p>A Le Truc component <strong>wraps existing server-rendered content</strong>. The HTML inside the custom element is the starting point — visible before JavaScript runs. See <a href="getting-started.html#progressive-enhancement">Progressive Enhancement</a> for how this works.</p></card-callout><p>Le Truc creates components using the <code>defineComponent()</code> function:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
+			<main id="main" class="content-grid"><section-hero><h1 id="-components"><a name="-components" class="anchor" href="#-components"><span class="title">🏗️ Components</span><span class="permalink">#</span></a></h1><div class="hero-layout"><div class="lead"><p><strong>Create lightweight, self-contained Web Components with built-in reactivity</strong>. Le Truc lets you define custom elements that manage state efficiently, update the DOM automatically, and enhance server-rendered pages without an SPA framework.</p></div><module-toc><nav><h2>In This Page</h2><ol><li><a href="#defining-a-component">Defining a Component</a></li><li><a href="#component-lifecycle">Component Lifecycle</a></li><li><a href="#managing-state-with-signals">Managing State with Signals</a></li><li><a href="#selecting-elements">Selecting Elements</a></li><li><a href="#adding-event-listeners">Adding Event Listeners</a></li><li><a href="#synchronizing-state-with-effects">Synchronizing State with Effects</a></li></ol></nav></module-toc></div></section-hero><section class="" id="undefined"><h2 id="defining-a-component"><a name="defining-a-component" class="anchor" href="#defining-a-component"><span class="title">Defining a Component</span><span class="permalink">#</span></a></h2><p>Le Truc builds on <strong>Web Components</strong>, extending <code>HTMLElement</code> to provide <strong>built-in state management and reactive updates</strong>.</p><card-callout class="tip" title="Le Truc enhances HTML — it doesn't replace it"><p>A Le Truc component <strong>wraps existing server-rendered content</strong>. The HTML inside the custom element is the starting point — visible before JavaScript runs. See <a href="getting-started.html#progressive-enhancement">Progressive Enhancement</a> for how this works.</p></card-callout><p>Le Truc creates components using the <code>defineComponent()</code> function:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="language">js</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">defineComponent</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">  'my-component'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">  {},                    </span><span style="color:#88846F">// Reactive properties</span></span>
 <span class="line"><span style="color:#F8F8F2">  ({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>

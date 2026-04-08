@@ -87,13 +87,13 @@ type FactoryPassHelper<P extends ComponentProps> = {
  * @param host - The component host element
  */
 declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => {
-    <K extends keyof P & string>(source: K, handler: (value: P[K]) => MaybeCleanup | void): EffectDescriptor;
+    <K extends keyof P & string>(source: K, handler: (value: P[K]) => MaybeCleanup): EffectDescriptor;
     <K extends keyof P & string>(source: K, handlers: WatchHandlers<P[K]>): EffectDescriptor;
-    <T extends {}>(source: Signal<T>, handler: (value: T) => MaybeCleanup | void): EffectDescriptor;
+    <T extends {}>(source: Signal<T>, handler: (value: T) => MaybeCleanup): EffectDescriptor;
     <T extends {}>(source: Signal<T>, handlers: WatchHandlers<T>): EffectDescriptor;
-    <T extends {}>(source: () => T | Promise<T> | null | undefined, handler: (value: T) => MaybeCleanup | void): EffectDescriptor;
+    <T extends {}>(source: () => T | Promise<T> | null | undefined, handler: (value: T) => MaybeCleanup): EffectDescriptor;
     <T extends {}>(source: () => T | Promise<T> | null | undefined, handlers: WatchHandlers<T>): EffectDescriptor;
-    (source: Array<Reactive<NonNullable<unknown>, P>>, handler: (values: any[]) => MaybeCleanup | void): EffectDescriptor;
+    (source: Array<Reactive<NonNullable<unknown>, P>>, handler: (values: any[]) => MaybeCleanup): EffectDescriptor;
 };
 /**
  * Create a `pass` helper bound to a specific component host.

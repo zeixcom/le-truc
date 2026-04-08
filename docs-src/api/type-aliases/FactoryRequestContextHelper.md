@@ -2,7 +2,7 @@
 
 > **FactoryRequestContextHelper** = \<`T`\>(`context`, `fallback`) => [`Memo`](Memo.md)\<`T`\>
 
-Defined in: [src/context.ts:67](https://github.com/zeixcom/le-truc/blob/26a8f71243082cdb967941bc1640290db2bf1985/src/context.ts#L67)
+Defined in: [src/context.ts:67](https://github.com/zeixcom/le-truc/blob/64495a8246bdcc3ad970b9cd968208c864711df0/src/context.ts#L67)
 
 The `requestContext` helper type in `FactoryContext`.
 
