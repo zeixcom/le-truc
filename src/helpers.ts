@@ -190,7 +190,7 @@ type DangerouslySetInnerHTMLOptions = {
  * @param {DangerouslySetInnerHTMLOptions} [options] - Shadow DOM mode and script execution options
  * @returns {WatchHandlers<string>} Watch handlers that set the element's inner HTML
  */
-const dangerouslySetInnerHTML = (
+const dangerouslyBindInnerHTML = (
 	element: Element,
 	options: DangerouslySetInnerHTMLOptions = {},
 ): WatchHandlers<string> => ({
@@ -237,5 +237,5 @@ export {
 	bindText,
 	bindVisible,
 	type DangerouslySetInnerHTMLOptions,
-	dangerouslySetInnerHTML,
+	dangerouslyBindInnerHTML,
 }

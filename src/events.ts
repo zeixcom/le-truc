@@ -50,7 +50,7 @@ type EventHandlers<T extends {}, E extends Element> = {
  * Attaches an event listener. The handler always receives `(event, element)`.
  * For Memo targets, uses event delegation (or per-element fallback for non-bubbling events).
  */
-type FactoryOnHelper<P extends ComponentProps> = {
+type OnHelper<P extends ComponentProps> = {
 	<E extends Element, T extends keyof HTMLElementEventMap>(
 		target: E,
 		type: T,
@@ -333,7 +333,7 @@ export {
 	createEventsSensor,
 	type EventHandlers,
 	type EventType,
-	type FactoryOnHelper,
 	makeOn,
+	type OnHelper,
 	type SensorEventHandler,
 }

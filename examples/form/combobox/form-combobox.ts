@@ -1,5 +1,4 @@
 import {
-	asMethod,
 	batch,
 	bindAttribute,
 	bindText,
@@ -8,6 +7,7 @@ import {
 	createMemo,
 	createState,
 	defineComponent,
+	defineMethod,
 } from '../../..'
 
 export type FormComboboxProps = {
@@ -48,7 +48,7 @@ export default defineComponent<FormComboboxProps>(
 			}),
 			error: '',
 			description: descriptionEl?.textContent?.trim() ?? '',
-			clear: asMethod(() => {
+			clear: defineMethod(() => {
 				host.value = ''
 				textbox.value = ''
 				textbox.setCustomValidity('')

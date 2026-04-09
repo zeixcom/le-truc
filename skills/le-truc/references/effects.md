@@ -26,7 +26,7 @@ The `bind*` helpers create typed handler functions or `WatchHandlers` objects. P
 | Toggle a CSS class | `bindClass(el, token, transform?)` | `(value: T) => void` |
 | Set/remove an attribute | `bindAttribute(el, name, allowUnsafe?)` | `WatchHandlers<string \| boolean>` |
 | Set an inline style | `bindStyle(el, prop)` | `WatchHandlers<string>` |
-| Set innerHTML | `dangerouslySetInnerHTML(el, options?)` | `WatchHandlers<string>` |
+| Set innerHTML | `dangerouslyBindInnerHTML(el, options?)` | `WatchHandlers<string>` |
 | Attach an event listener | `on(target, type, handler, options?)` | returns `EffectDescriptor` |
 | Bind a Le Truc child's prop | `pass(target, props)` | returns `EffectDescriptor` |
 | Per-element effects on a Memo | `each(memo, callback)` | returns `EffectDescriptor` |
@@ -104,12 +104,12 @@ watch('opacity', bindStyle(overlay, 'opacity'))
 watch('accentColor', bindStyle(card, '--highlight-color'))
 ```
 
-### `dangerouslySetInnerHTML(element, options?)`
+### `dangerouslyBindInnerHTML(element, options?)`
 
 Returns `WatchHandlers<string>`. Pass directly to `watch`. Only use on trusted or sanitized content.
 
 ```typescript
-watch('highlightedHtml', dangerouslySetInnerHTML(codeBlock))
+watch('highlightedHtml', dangerouslyBindInnerHTML(codeBlock))
 ```
 
 Options: `{ shadowRootMode?: ShadowRootMode, allowScripts?: boolean }`.

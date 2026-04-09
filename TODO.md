@@ -20,7 +20,7 @@ All phases from the v1.1 refactoring are complete. The tasks below cover the rem
 
 - [ ] **12.1** Audit `index.ts`: check whether `resolveReactive`, `runEffects`, `updateElement`, `Effects`, `ElementEffects`, `ElementUpdater`, `Reactive`, `UpdateOperation` should remain public — these are v1.0 effect-building primitives. Consider marking them `@deprecated` or moving to a separate `legacy` re-export path.
 - [ ] **12.2** Audit whether `ComponentFactory`, `ComponentFactoryResult`, `ComponentSetup`, `ComponentUI` still need to be public in v1.1, or if they should be `@deprecated` in the type surface.
-- [ ] **12.3** Check that all `FactoryContext` helper types (`FactoryWatchHelper`, `FactoryEachHelper`, `FactoryOnHelper`, `FactoryPassHelper`, `FactoryProvideContextsHelper`, `FactoryRequestContextHelper`) are exported and documented — component authors may need them for type-annotated helper functions.
+- [ ] **12.3** Check that all `FactoryContext` helper types (`WatchHelper`, `FactoryEachHelper`, `OnHelper`, `PassHelper`, `ProvideContextsHelper`, `RequestContextHelper`) are exported and documented — component authors may need them for type-annotated helper functions.
 - [ ] **12.4** Update `index.ts` version comment from `// Le Truc 1.0.1` to reflect the current version.
 - [ ] **12.5** Run `bun run build`; run `bunx tsc --noEmit`.
 

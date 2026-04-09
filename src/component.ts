@@ -14,20 +14,20 @@ import {
 	type TaskCallback,
 } from '@zeix/cause-effect'
 import {
-	type FactoryProvideContextsHelper,
-	type FactoryRequestContextHelper,
 	makeProvideContexts,
 	makeRequestContext,
+	type ProvideContextsHelper,
+	type RequestContextHelper,
 } from './context'
 import {
-	type FactoryPassHelper,
 	type FactoryResult,
-	type FactoryWatchHelper,
 	makePass,
 	makeWatch,
+	type PassHelper,
+	type WatchHelper,
 } from './effects'
 import { InvalidComponentNameError } from './errors'
-import { type FactoryOnHelper, makeOn } from './events'
+import { makeOn, type OnHelper } from './events'
 import { getSignals } from './internal'
 import {
 	isMethodProducer,
@@ -67,7 +67,7 @@ type ComponentProps = Record<ComponentProp, NonNullable<unknown>>
  * - A **static value** or **`Signal`** — used directly as the initial signal value.
  * - A **`Parser`** (branded with `asParser()`) — called with the attribute value string
  *   at connect time; for 4-param form also on every attribute change.
- * - A **`MethodProducer`** (branded with `asMethod()`) — assigned directly as the property
+ * - A **`MethodProducer`** (branded with `defineMethod()`) — assigned directly as the property
  *   value; the function IS the method. Per-instance state lives in factory scope.
  */
 type Initializers<P extends ComponentProps> = {
@@ -101,11 +101,11 @@ type MaybeSignal<T extends {}> =
 type FactoryContext<P extends ComponentProps> = ElementQueries & {
 	host: HTMLElement & P
 	expose: (props: Initializers<P>) => void
-	watch: FactoryWatchHelper<P>
-	on: FactoryOnHelper<P>
-	pass: FactoryPassHelper<P>
-	provideContexts: FactoryProvideContextsHelper<P>
-	requestContext: FactoryRequestContextHelper
+	watch: WatchHelper<P>
+	on: OnHelper<P>
+	pass: PassHelper<P>
+	provideContexts: ProvideContextsHelper<P>
+	requestContext: RequestContextHelper
 }
 
 /* === Exported Functions === */

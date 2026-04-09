@@ -1,7 +1,7 @@
 import {
 	asInteger,
-	asMethod,
 	defineComponent,
+	defineMethod,
 	MissingElementError,
 } from '../../..'
 
@@ -34,7 +34,7 @@ export default defineComponent<ModuleListProps>(
 
 		let addKey = 0
 		expose({
-			add: asMethod((process?: (item: HTMLElement) => void) => {
+			add: defineMethod((process?: (item: HTMLElement) => void) => {
 				const item = (template.content.cloneNode(true) as DocumentFragment)
 					.firstElementChild
 				if (item && item instanceof HTMLElement) {
@@ -49,7 +49,7 @@ export default defineComponent<ModuleListProps>(
 					)
 				}
 			}),
-			delete: asMethod((key: string) => {
+			delete: defineMethod((key: string) => {
 				const item = container.querySelector(`[data-key="${key}"]`)
 				if (item) item.remove()
 			}),

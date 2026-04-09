@@ -120,7 +120,7 @@ Effects in Le Truc are **effect descriptors** — thunks `() => MaybeCleanup`. T
 | `bindProperty(el, key)` | `(value: T) => void` | Sets a DOM property directly |
 | `bindStyle(el, prop)` | `WatchHandlers<string>` | Sets/removes an inline style |
 | `bindVisible(el)` | `(value: boolean) => void` | Controls `el.hidden = !value` |
-| `dangerouslySetInnerHTML(el, opts?)` | `WatchHandlers<string>` | Sets innerHTML, optionally in a shadow root |
+| `dangerouslyBindInnerHTML(el, opts?)` | `WatchHandlers<string>` | Sets innerHTML, optionally in a shadow root |
 
 ### on() — event binding
 
@@ -214,7 +214,7 @@ Dispatches a `ContextRequestEvent` that bubbles up the DOM during `connectedCall
 
 ## The Scheduler
 
-`schedule(element, task)` deduplicates high-frequency DOM updates using `requestAnimationFrame`. A `WeakMap<Element, () => void>` stores the latest task per element. If the same element schedules multiple tasks before the next frame, only the last one runs. This is used by `on()` for passive events and by `dangerouslySetInnerHTML`.
+`schedule(element, task)` deduplicates high-frequency DOM updates using `requestAnimationFrame`. A `WeakMap<Element, () => void>` stores the latest task per element. If the same element schedules multiple tasks before the next frame, only the last one runs. This is used by `on()` for passive events and by `dangerouslyBindInnerHTML`.
 
 ## Security
 
@@ -279,20 +279,34 @@ Note: `each` is **not** part of `FactoryContext`. It is a standalone named expor
 
 ### Naming Convention
 
-Helpers pair by cardinality:
+Le Truc uses four prefix families, each mapping to a distinct layer of the stack:
+
+| Prefix | Layer | Examples | What it creates |
+|--------|-------|---------|-----------------|
+| `define*` | DOM / component | `defineComponent`, `defineMethod` | Things with a DOM identity — custom elements, methods that live on elements |
+| `bind*` | DOM update handlers | `bindText`, `bindAttribute`, `bindClass`, `bindVisible`, `bindStyle`, `bindProperty`, `dangerouslyBindInnerHTML` | Handler factories that apply a value to a DOM node; always used as the second argument to `watch()` |
+| `as*` | Parsers / type coercion | `asBoolean`, `asInteger`, `asNumber`, `asString`, `asEnum`, `asDate`, `asJSON`, `asClampedInteger`, `asParser` | Branded parser factories that coerce an attribute string to a typed value; pure data-level, no DOM involvement |
+| `create*` | Data flow / signals | `createState`, `createEffect`, `createScope`, `createSensor`, `createEventsSensor`, `createElementsMemo` | Reactive primitives from `@zeix/cause-effect` or Le Truc's signal-layer utilities |
+
+The `define*` / `bind*` split within the DOM layer reflects direction of coupling: `define*` brings a DOM concept into existence (register, install); `bind*` connects a data value to an existing DOM node (update, sync).
+
+`as*` parsers sit at the data level — they are standalone pure functions, independent of any element or component. They happen to be used inside `expose()` at connect time, but carry no DOM state themselves.
+
+Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestContext`, `expose`, `first`, `all`) are plain verbs — they are bound methods on `FactoryContext`, not standalone factory functions, so no prefix applies.
+
+Helpers also pair by cardinality:
 
 | Query | Effect |
 |-------|--------|
-| `first(selector)` → `Element` | `watch(signal, callback)` → effect on host property |
+| `first(selector)` → `Element` | `watch(source, handler)` → reactive effect on a single source |
 | `all(selector)` → `Memo<Element[]>` | `each(memo, callback)` → per-element effects *(standalone import)* |
 
 ### `expose(props)`
 
 Declares the component's reactive public API. Called once during factory execution. Internally calls `#initSignals()`:
 
-- **Parser** (branded with `PARSER_BRAND`) → called with `getAttribute(key)`, creates signal from result
-- **MethodProducer** (branded with `METHOD_BRAND`) → assigned directly as the property value; the function IS the method. Per-instance state lives in factory scope.
-- **Reader** `(host) => T` → called with the host element; result used as signal initializer
+- **Parser** (branded via `asParser()`) → called with `getAttribute(key)`, creates signal from result
+- **MethodProducer** (branded via `defineMethod()`) → assigned directly as the property value; the function IS the method. Per-instance state lives in factory scope.
 - **Static value or Signal** → used directly as signal initializer
 
 The parser receives `getAttribute(key)` from `#initSignals` — if the HTML attribute is set it wins; if absent the static fallback is used. Capture DOM state eagerly in the factory closure:
@@ -301,13 +315,13 @@ The parser receives `getAttribute(key)` from `#initSignals` — if the HTML attr
 label: asString(label?.textContent ?? first('label')?.textContent ?? '')
 ```
 
-**Methods**: `expose()` handles methods via `asMethod()`, keeping all public API declaration in one place.
+**Methods**: `expose()` handles methods via `defineMethod()`, keeping all public API declaration in one place.
 
 ```ts
 expose({
     checked: checkbox.checked,                    // static → createState
     label: asString(label?.textContent ?? ''),     // parser → reads attribute, falls back
-    clear: clearMethod,                            // asMethod → installs host.clear
+    clear: clearMethod,                            // defineMethod → installs host.clear
     length: createEventsSensor(textbox, 0, { ... }), // sensor → see §createEventsSensor
     theme: requestContext('theme', 'light'),        // context → see §requestContext
 })
@@ -635,7 +649,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 | `pass` with Memo auto-iterates | Built-in per-element lifecycle | Require `each(memo, el => pass(el, ...))` | Common enough to warrant first-class support; avoids boilerplate |
 | `each` callback returns array | Same shape as factory return | Void callback with self-registering helpers | Consistent at every level; composable; no dual-behavior for `watch`/`on` inside vs. outside `each` |
 | `each` as standalone export | Named export from `effects.ts`, not in `FactoryContext` | Keep in context like `watch`/`on` | `each` closes over no host state; including it unconditionally in the context object prevents tree-shaking for components that never use it |
-| `expose` handles methods | `asMethod()` stays, used inside `expose()` | Direct assignment on host, drop `asMethod` | Keeps all public API declaration in one place; `#initSignals` dispatch logic unchanged |
+| `expose` handles methods | `defineMethod()` stays, used inside `expose()` | Direct assignment on host, drop `defineMethod` | Keeps all public API declaration in one place; `#initSignals` dispatch logic unchanged |
 | Parsers unchanged | `Fallback<T, U>` already accepts plain values | Separate value-transformer API | No breaking change; reader-function fallbacks still valid for 4-param form |
 | Safety as importable utilities | `safeSetAttribute`, `escapeHTML`, etc. | Built into `watch`/factory helpers | Opt-in is appropriate; most DOM updates don't need validation |
 

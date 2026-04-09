@@ -40,7 +40,7 @@ ls examples/
 ### `data-flow.md`
 - `pass()` callout about Le Truc-only scope is accurate
 - `createMemo`, `createEventsSensor`, and other signal calls use current API
-- `asMethod()` description is accurate
+- `defineMethod()` description is accurate
 
 ### `getting-started.md`
 - Install command is current

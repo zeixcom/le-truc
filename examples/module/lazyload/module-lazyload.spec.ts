@@ -22,7 +22,7 @@ import { expect, test } from '@playwright/test'
  * Architecture Notes:
  * - Uses `asURL` parser with validation and security checks
  * - Implements `fetchWithCache` for HTTP caching support
- * - Uses `dangerouslySetInnerHTML` for content injection
+ * - Uses `dangerouslyBindInnerHTML` for content injection
  * - Manages loading/error states via reactive computed properties
  * - Protects against recursive loading scenarios
  */

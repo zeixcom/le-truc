@@ -66,14 +66,14 @@ const asParser = <T extends {}>(fn: Parser<T>): Parser<T> =>
  * @param {T} fn - Side-effect initializer to brand
  * @returns {T & { readonly [METHOD_BRAND]: true }} The same function, branded as a `MethodProducer`
  */
-const asMethod = <T extends (...args: any[]) => void>(
+const defineMethod = <T extends (...args: any[]) => void>(
 	fn: T,
 ): T & { readonly [METHOD_BRAND]: true } =>
 	Object.assign(fn, { [METHOD_BRAND]: true as const })
 
 export {
-	asMethod,
 	asParser,
+	defineMethod,
 	isMethodProducer,
 	isParser,
 	METHOD_BRAND,

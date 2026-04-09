@@ -4,7 +4,7 @@ declare const PASSIVE_EVENTS: Set<string>;
  * deduplication per element. If the same element schedules multiple tasks
  * before the next frame, only the latest task will be executed.
  *
- * Used internally by `on()` for passive events and by `dangerouslySetInnerHTML`.
+ * Used internally by `on()` for passive events and by `dangerouslyBindInnerHTML`.
  *
  * @since 0.11.0
  * @param {Element} element - Element used as the deduplication key

@@ -309,7 +309,7 @@
 <span class="line"><span style="color:#F8F8F2">	createElementsMemo,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createMemo,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createTask,</span></span>
-<span class="line"><span style="color:#F8F8F2">	dangerouslySetInnerHTML,</span></span>
+<span class="line"><span style="color:#F8F8F2">	dangerouslyBindInnerHTML,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
 <span class="line"><span style="color:#F8F8F2">	each,</span></span>
 <span class="line"><span style="color:#F8F8F2">	escapeHTML,</span></span>
@@ -381,7 +381,7 @@
 <span class="line"><span style="color:#E6DB74">			'[role="listbox"]'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#E6DB74">			'Needed to display list of options.'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> options </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> all</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span><span style="color:#F8F8F2">>(</span><span style="color:#E6DB74">'button[role="option"]'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> options </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button[role="option"]'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> renderOptions</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">items</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormListboxOption</span><span style="color:#F8F8F2">[]) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
 <span class="line"><span style="color:#F8F8F2">			items</span></span>
@@ -517,7 +517,7 @@
 <span class="line"><span style="color:#F8F8F2">			host.src</span></span>
 <span class="line"><span style="color:#F92672">				?</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#A6E22E">						createMemo</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> content.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().value),</span></span>
-<span class="line"><span style="color:#A6E22E">						dangerouslySetInnerHTML</span><span style="color:#F8F8F2">(listbox),</span></span>
+<span class="line"><span style="color:#A6E22E">						dangerouslyBindInnerHTML</span><span style="color:#F8F8F2">(listbox),</span></span>
 <span class="line"><span style="color:#F8F8F2">					)</span></span>
 <span class="line"><span style="color:#F92672">				:</span><span style="color:#AE81FF"> undefined</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#88846F">			// Focus management on listbox</span></span>

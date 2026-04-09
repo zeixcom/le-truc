@@ -5,7 +5,7 @@ import {
 	createElementsMemo,
 	createMemo,
 	createTask,
-	dangerouslySetInnerHTML,
+	dangerouslyBindInnerHTML,
 	defineComponent,
 	each,
 	escapeHTML,
@@ -77,7 +77,7 @@ export default defineComponent<FormListboxProps>(
 			'[role="listbox"]',
 			'Needed to display list of options.',
 		)
-		const options = all<HTMLButtonElement>('button[role="option"]')
+		const options = all('button[role="option"]')
 
 		const renderOptions = (items: FormListboxOption[]) =>
 			items
@@ -213,7 +213,7 @@ export default defineComponent<FormListboxProps>(
 			host.src
 				? watch(
 						createMemo(() => content.get().value),
-						dangerouslySetInnerHTML(listbox),
+						dangerouslyBindInnerHTML(listbox),
 					)
 				: undefined,
 			// Focus management on listbox

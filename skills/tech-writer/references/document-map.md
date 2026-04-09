@@ -45,7 +45,7 @@ and what to check in a consistency review.
 **Path:** `docs-src/pages/components.md`
 **Audience:** Developers learning to build Le Truc components
 **Register:** Tutorial — walks through real code with explanation; assumes JavaScript competence
-**Scope:** `defineComponent` factory form — `FactoryContext` helpers (`first`, `all`, `host`, `expose`, `watch`, `on`, `pass`); prop initializers (parsers, static values, signals, sensors); `bind*` helpers (`bindText`, `bindProperty`, `bindClass`, `bindVisible`, `bindAttribute`, `bindStyle`); `asMethod()` for imperative methods; `all()` + `each()` for dynamic collections
+**Scope:** `defineComponent` factory form — `FactoryContext` helpers (`first`, `all`, `host`, `expose`, `watch`, `on`, `pass`); prop initializers (parsers, static values, signals, sensors); `bind*` helpers (`bindText`, `bindProperty`, `bindClass`, `bindVisible`, `bindAttribute`, `bindStyle`); `defineMethod()` for imperative methods; `all()` + `each()` for dynamic collections
 
 **Update triggers:**
 - `defineComponent` signature changes
@@ -59,7 +59,7 @@ and what to check in a consistency review.
 - `defineComponent` call signature in all examples matches `src/component.ts`
 - Parser names and signatures match `src/parsers/`
 - `first()` and `all()` behavior description matches `src/ui.ts`
-- `asMethod()` description matches `src/parsers.ts`
+- `defineMethod()` description matches `src/parsers.ts`
 - All code examples compile against current exports in `index.ts`
 </pages_components_md>
 
@@ -67,19 +67,19 @@ and what to check in a consistency review.
 **Path:** `docs-src/pages/data-flow.md`
 **Audience:** Developers building multi-component UIs
 **Register:** Tutorial — builds from a concrete scenario; assumes the reader has read components.md
-**Scope:** `pass()` for parent-to-child signal binding, `provideContexts`/`requestContext` for shared ancestor state, `asMethod()` for imperative APIs on dynamic lists, event delegation
+**Scope:** `pass()` for parent-to-child signal binding, `provideContexts`/`requestContext` for shared ancestor state, `defineMethod()` for imperative APIs on dynamic lists, event delegation
 
 **Update triggers:**
 - `pass()` behavior or scope changes (e.g., Le Truc-only restriction clarified)
 - `provideContexts` / `requestContext` API changes
-- `asMethod()` usage changes
+- `defineMethod()` usage changes
 - `createMemo` or other signal API used in examples changes
 - Code examples reference a changed API
 
 **Consistency checks:**
 - `pass()` callout about Le Truc-only scope is accurate
 - `provideContexts` / `requestContext` example signatures match `src/context.ts`
-- `asMethod()` branding requirement is accurately stated
+- `defineMethod()` branding requirement is accurately stated
 - All code examples compile against current exports
 </pages_data_flow_md>
 

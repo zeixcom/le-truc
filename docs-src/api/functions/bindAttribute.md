@@ -2,7 +2,7 @@
 
 > **bindAttribute**(`element`, `name`, `allowUnsafe?`): [`WatchHandlers`](../type-aliases/WatchHandlers.md)\<`string` \| `boolean`\>
 
-Defined in: [src/helpers.ts:111](https://github.com/zeixcom/le-truc/blob/64495a8246bdcc3ad970b9cd968208c864711df0/src/helpers.ts#L111)
+Defined in: [src/helpers.ts:111](https://github.com/zeixcom/le-truc/blob/41c579cf74dea25346deb2e44ba0238619c3dcd3/src/helpers.ts#L111)
 
 Returns `RunHandlers` that set or toggle an attribute with security validation.
 

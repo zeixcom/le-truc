@@ -1,8 +1,8 @@
-### Type Alias: FactoryProvideContextsHelper\<P\>
+### Type Alias: ProvideContextsHelper\<P\>
 
-> **FactoryProvideContextsHelper**\<`P`\> = (`contexts`) => [`EffectDescriptor`](EffectDescriptor.md)
+> **ProvideContextsHelper**\<`P`\> = (`contexts`) => [`EffectDescriptor`](EffectDescriptor.md)
 
-Defined in: [src/context.ts:56](https://github.com/zeixcom/le-truc/blob/64495a8246bdcc3ad970b9cd968208c864711df0/src/context.ts#L56)
+Defined in: [src/context.ts:56](https://github.com/zeixcom/le-truc/blob/41c579cf74dea25346deb2e44ba0238619c3dcd3/src/context.ts#L56)
 
 The `provideContexts` helper type in `FactoryContext`.
 

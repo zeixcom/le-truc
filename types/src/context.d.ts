@@ -40,7 +40,7 @@ declare global {
  * Attaches a `context-request` listener to the host, providing the listed
  * property values as context to descendant consumers. Returns an `EffectDescriptor`.
  */
-type FactoryProvideContextsHelper<P extends ComponentProps> = (contexts: Array<keyof P>) => EffectDescriptor;
+type ProvideContextsHelper<P extends ComponentProps> = (contexts: Array<keyof P>) => EffectDescriptor;
 /**
  * The `requestContext` helper type in `FactoryContext`.
  *
@@ -48,7 +48,7 @@ type FactoryProvideContextsHelper<P extends ComponentProps> = (contexts: Array<k
  * that tracks the provider's value. Falls back to `fallback` if no provider responds.
  * For use inside `expose()` as a property initializer.
  */
-type FactoryRequestContextHelper = <T extends {}>(context: Context<string, () => T>, fallback: T) => Memo<T>;
+type RequestContextHelper = <T extends {}>(context: Context<string, () => T>, fallback: T) => Memo<T>;
 declare const CONTEXT_REQUEST = "context-request";
 /**
  * Class for context-request events
@@ -97,4 +97,4 @@ declare const makeProvideContexts: <P extends ComponentProps>(host: HTMLElement 
  * @param host - The component host element
  */
 declare const makeRequestContext: <P extends ComponentProps>(host: HTMLElement & P) => <T extends {}>(context: Context<string, () => T>, fallback: T) => Memo<T>;
-export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, type FactoryProvideContextsHelper, type FactoryRequestContextHelper, makeProvideContexts, makeRequestContext, type UnknownContext, };
+export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, makeProvideContexts, makeRequestContext, type ProvideContextsHelper, type RequestContextHelper, type UnknownContext, };

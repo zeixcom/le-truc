@@ -1,10 +1,10 @@
 import {
-	asMethod,
 	bindText,
 	bindVisible,
 	createEventsSensor,
 	createMemo,
 	defineComponent,
+	defineMethod,
 } from '../../..'
 
 export type FormTextboxProps = {
@@ -53,7 +53,7 @@ export default defineComponent<FormTextboxProps>(
 			}),
 			error: '',
 			description: descriptionMemo ?? descriptionEl?.textContent?.trim() ?? '',
-			clear: asMethod(() => {
+			clear: defineMethod(() => {
 				host.value = ''
 				textbox.value = ''
 				textbox.setCustomValidity('')

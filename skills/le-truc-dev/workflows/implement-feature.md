@@ -19,7 +19,7 @@ Use references/source-map.md to locate the file(s) involved. Read them fully bef
 Identify how similar features are implemented:
 - DOM helpers in `src/helpers.ts` return typed handler functions or `WatchHandlers` objects for use with `watch()`
 - Parsers use `asParser()` branding (see `src/parsers.ts`)
-- Method producers use `asMethod()` branding
+- Method producers use `defineMethod()` branding
 - Context uses the W3C Community Protocol (see `src/context.ts`)
 
 New features should follow the same internal patterns. Consistency is more important than elegance.
@@ -52,7 +52,7 @@ Do not update documentation for internal-only changes.
 <success_criteria>
 - Feature is confirmed in scope for le-truc (not cause-effect)
 - Source file(s) read before writing
-- Existing internal patterns followed (`bind*` helpers, `asParser`, `asMethod`, etc.)
+- Existing internal patterns followed (`bind*` helpers, `asParser`, `defineMethod`, etc.)
 - Tests pass
 - Public API documentation updated if the exported surface changed
 </success_criteria>

@@ -223,7 +223,7 @@
 <span class="line"><span style="color:#F8F8F2">	createEffect,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createMemo,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createTask,</span></span>
-<span class="line"><span style="color:#F8F8F2">	dangerouslySetInnerHTML,</span></span>
+<span class="line"><span style="color:#F8F8F2">	dangerouslyBindInnerHTML,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
 <span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
@@ -303,7 +303,7 @@
 <span class="line"><span style="color:#F8F8F2">					errorEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> res.error </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span></span>
 <span class="line"><span style="color:#F8F8F2">					content.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">res.ok</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(htmlContent, </span><span style="color:#A6E22E">dangerouslySetInnerHTML</span><span style="color:#F8F8F2">(content, {</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(htmlContent, </span><span style="color:#A6E22E">dangerouslyBindInnerHTML</span><span style="color:#F8F8F2">(content, {</span></span>
 <span class="line"><span style="color:#F8F8F2">				allowScripts: host.</span><span style="color:#A6E22E">hasAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'allow-scripts'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">			})),</span></span>
 <span class="line"><span style="color:#F8F8F2">		]</span></span>

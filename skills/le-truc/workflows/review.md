@@ -21,7 +21,7 @@ Do not propose changes to code you have not read.
 Work through references/anti-patterns.md and flag any violations. Also check:
 
 - **Props type**: every reactive property is explicitly typed; no implicit `any`
-- **Initializers**: attribute-driven props use `asString`/`asBoolean`/`asInteger`/`asNumber`/`asEnum`/`asJSON`; DOM-derived initial values are read directly before `expose()`; custom parsers wrapped with `asParser()`; method props wrapped with `asMethod()`
+- **Initializers**: attribute-driven props use `asString`/`asBoolean`/`asInteger`/`asNumber`/`asEnum`/`asJSON`; DOM-derived initial values are read directly before `expose()`; custom parsers wrapped with `asParser()`; method props wrapped with `defineMethod()`
 - **`expose()` called once**: all props declared in a single `expose()` call before any effects
 - **Return array**: every `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` is in the returned array; optional elements use the `el && watch(...)` guard pattern
 - **`on()` handlers**: return `{ prop: value }` when updating host props; return `void` for side-effects only

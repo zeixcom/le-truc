@@ -13,7 +13,7 @@ Use this table to find the authoritative source for the question:
 |---|---|
 | Component lifecycle (connectedCallback, #initSignals, disconnectedCallback) | `ARCHITECTURE.md` → "The Component Lifecycle"; `src/component.ts` |
 | Effect internals (watch, on, pass, each, EffectDescriptor) | `ARCHITECTURE.md` → "The Effect System"; `src/effects.ts`, `src/events.ts` |
-| DOM helper internals (bind*, dangerouslySetInnerHTML) | `ARCHITECTURE.md` → "The Effect System"; `src/helpers.ts` |
+| DOM helper internals (bind*, dangerouslyBindInnerHTML) | `ARCHITECTURE.md` → "The Effect System"; `src/helpers.ts` |
 | Parser/MethodProducer type system | `ARCHITECTURE.md` → "The Parser System"; `src/parsers.ts` |
 | UI query system (first, all, dependency resolution, selector type inference) | `ARCHITECTURE.md` → "The UI Query System"; `src/ui.ts` |
 | Context protocol internals | `ARCHITECTURE.md` → "The Context Protocol"; `src/context.ts` |

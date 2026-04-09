@@ -2049,7 +2049,7 @@ var isParser = (value) => {
 };
 var isMethodProducer = (value) => isFunction(value) && (METHOD_BRAND in value);
 var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
-var asMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
+var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 
 // src/ui.ts
 var DEPENDENCY_TIMEOUT = 200;
@@ -2318,7 +2318,7 @@ var SCRIPT_ATTRS = [
   "referrerpolicy",
   "fetchpriority"
 ];
-var dangerouslySetInnerHTML = (element, options = {}) => ({
+var dangerouslyBindInnerHTML = (element, options = {}) => ({
   ok: (html) => {
     const { shadowRootMode, allowScripts } = options;
     if (!html) {
@@ -2450,8 +2450,9 @@ export {
   isAsyncFunction,
   escapeHTML,
   each,
+  defineMethod,
   defineComponent,
-  dangerouslySetInnerHTML,
+  dangerouslyBindInnerHTML,
   createTask,
   createStore,
   createState,
@@ -2477,7 +2478,6 @@ export {
   asString,
   asParser,
   asNumber,
-  asMethod,
   asJSON,
   asInteger,
   asEnum,

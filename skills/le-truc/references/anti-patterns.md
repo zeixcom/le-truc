@@ -53,9 +53,9 @@ expose({
   clear: () => { host.value = '' }
 })
 
-// ✅ Wrap with asMethod() — fn is the method itself
+// ✅ Wrap with defineMethod() — fn is the method itself
 expose({
-  clear: asMethod(() => { host.value = '' })
+  clear: defineMethod(() => { host.value = '' })
 })
 ```
 
@@ -98,14 +98,14 @@ defineComponent<MyComponentProps>('my-component', ({ expose, watch }) => { … }
 }
 ```
 
-### `dangerouslySetInnerHTML` on untrusted content
+### `dangerouslyBindInnerHTML` on untrusted content
 
 ```typescript
 // ✗ XSS risk
-content: dangerouslySetInnerHTML('userGeneratedHtml')
+content: dangerouslyBindInnerHTML('userGeneratedHtml')
 
 // ✅ Only on server-rendered or pre-sanitised HTML
-content: dangerouslySetInnerHTML('highlightedCode')
+content: dangerouslyBindInnerHTML('highlightedCode')
 ```
 
 ### `pass()` on non-Le-Truc elements

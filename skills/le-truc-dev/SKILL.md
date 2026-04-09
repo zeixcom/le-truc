@@ -21,7 +21,7 @@ For deep dives into cause-effect signal internals, use the `cause-effect-dev` sk
 
 **Library boundary is firm.** `@zeix/cause-effect` owns all reactive primitives (signals, graph, scheduling). Le Truc owns the component model, DOM effects, parsers, context protocol, and accessibility. If a proposed feature requires no DOM API, it belongs in cause-effect, not here. See references/library-boundaries.md.
 
-**`asParser()` and `asMethod()` branding is required.** `isParser()` checks only for `PARSER_BRAND` — unbranded functions are NOT treated as parsers. Always brand custom parsers and method producers.
+**`asParser()` and `defineMethod()` branding is required.** `isParser()` checks only for `PARSER_BRAND` — unbranded functions are NOT treated as parsers. Always brand custom parsers and method producers.
 
 **Run the project's own test suite** after every change (check `package.json` for the command).
 </essential_principles>

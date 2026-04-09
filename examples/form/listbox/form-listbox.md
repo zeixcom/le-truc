@@ -1,6 +1,6 @@
 ### Form Listbox
 
-A full-featured listbox with client-side filtering and optional remote option loading. Demonstrates `createElementsMemo()` used directly as a property initializer to create a reactive live collection of visible options, `createTask()` for async JSON fetching with abort support, `dangerouslySetInnerHTML()` to render fetched HTML, and inline `createEffect()` calls inside the `options` effects to update individual option state without triggering a full list re-render. The `options` reactive property is a `Memo<HTMLButtonElement[]>` that tracks only currently visible (non-hidden) options, making it safe to use in parent components like `form-combobox`.
+A full-featured listbox with client-side filtering and optional remote option loading. Demonstrates `createElementsMemo()` used directly as a property initializer to create a reactive live collection of visible options, `createTask()` for async JSON fetching with abort support, `dangerouslyBindInnerHTML()` to render fetched HTML, and inline `createEffect()` calls inside the `options` effects to update individual option state without triggering a full list re-render. The `options` reactive property is a `Memo<HTMLButtonElement[]>` that tracks only currently visible (non-hidden) options, making it safe to use in parent components like `form-combobox`.
 
 #### Preview
 

@@ -85,7 +85,7 @@ type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
  * it are tracked in the pure phase — useful for deriving or transforming values
  * before the side-effectful handler runs.
  */
-type FactoryWatchHelper<P extends ComponentProps> = {
+type WatchHelper<P extends ComponentProps> = {
 	<K extends keyof P & string>(
 		source: K,
 		handler: (value: P[K]) => MaybeCleanup,
@@ -122,7 +122,7 @@ type FactoryWatchHelper<P extends ComponentProps> = {
  * Passes reactive values to a descendant Le Truc component's Slot-backed signals.
  * Supports single-element and Memo targets (per-element lifecycle for Memo).
  */
-type FactoryPassHelper<P extends ComponentProps> = {
+type PassHelper<P extends ComponentProps> = {
 	<Q extends ComponentProps>(
 		target: HTMLElement & Q,
 		props: PassedProps<P, Q>,
@@ -380,12 +380,12 @@ function each<E extends Element>(
 export {
 	type EffectDescriptor,
 	each,
-	type FactoryPassHelper,
 	type FactoryResult,
-	type FactoryWatchHelper,
 	makePass,
 	makeWatch,
 	type PassedProps,
+	type PassHelper,
 	type Reactive,
 	type WatchHandlers,
+	type WatchHelper,
 }

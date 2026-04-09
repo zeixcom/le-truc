@@ -53,7 +53,7 @@ declare global {
  * Attaches a `context-request` listener to the host, providing the listed
  * property values as context to descendant consumers. Returns an `EffectDescriptor`.
  */
-type FactoryProvideContextsHelper<P extends ComponentProps> = (
+type ProvideContextsHelper<P extends ComponentProps> = (
 	contexts: Array<keyof P>,
 ) => EffectDescriptor
 
@@ -64,7 +64,7 @@ type FactoryProvideContextsHelper<P extends ComponentProps> = (
  * that tracks the provider's value. Falls back to `fallback` if no provider responds.
  * For use inside `expose()` as a property initializer.
  */
-type FactoryRequestContextHelper = <T extends {}>(
+type RequestContextHelper = <T extends {}>(
 	context: Context<string, () => T>,
 	fallback: T,
 ) => Memo<T>
@@ -172,9 +172,9 @@ export {
 	type ContextCallback,
 	ContextRequestEvent,
 	type ContextType,
-	type FactoryProvideContextsHelper,
-	type FactoryRequestContextHelper,
 	makeProvideContexts,
 	makeRequestContext,
+	type ProvideContextsHelper,
+	type RequestContextHelper,
 	type UnknownContext,
 }

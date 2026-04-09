@@ -84,16 +84,16 @@ export {
 	type ContextCallback,
 	ContextRequestEvent,
 	type ContextType,
-	type FactoryProvideContextsHelper,
-	type FactoryRequestContextHelper,
+	type ProvideContextsHelper,
+	type RequestContextHelper,
 	type UnknownContext,
 } from './src/context'
 export {
 	type EffectDescriptor,
 	each,
-	type FactoryPassHelper,
+	type PassHelper,
 	type FactoryResult,
-	type FactoryWatchHelper,
+	type WatchHelper,
 	type PassedProps,
 	type Reactive,
 	type WatchHandlers,
@@ -110,7 +110,7 @@ export {
 	createEventsSensor,
 	type EventHandlers,
 	type EventType,
-	type FactoryOnHelper,
+	type OnHelper,
 	type SensorEventHandler,
 } from './src/events'
 export {
@@ -121,10 +121,10 @@ export {
 	bindText,
 	bindVisible,
 	type DangerouslySetInnerHTMLOptions,
-	dangerouslySetInnerHTML,
+	dangerouslyBindInnerHTML,
 } from './src/helpers'
 export {
-	asMethod,
+	defineMethod,
 	asParser,
 	isMethodProducer,
 	isParser,

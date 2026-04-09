@@ -290,13 +290,13 @@ The component coordination patterns above work with a fixed set of children. Whe
 
 ### Exposing Methods
 
-Not every component property is a reactive signal. When a property represents a **command** — something you call rather than something you observe — use `asMethod()`. It wraps an initializer that runs during setup and installs a callable method directly on `host`:
+Not every component property is a reactive signal. When a property represents a **command** — something you call rather than something you observe — use `defineMethod()`. It wraps an initializer that runs during setup and installs a callable method directly on `host`:
 
 ```js
 defineComponent(
   'module-list',
   {
-    add: asMethod(({ host, container, template }) => {
+    add: defineMethod(({ host, container, template }) => {
       let key = 0
       host.add = (process) => {
         const item = template.content.cloneNode(true).firstElementChild
@@ -307,7 +307,7 @@ defineComponent(
         }
       }
     }),
-    delete: asMethod(({ host, container }) => {
+    delete: defineMethod(({ host, container }) => {
       host.delete = (key) => {
         container.querySelector(`[data-key="${key}"]`)?.remove()
       }
@@ -320,9 +320,9 @@ defineComponent(
 After setup, callers can use `host.add()` and `host.delete(key)` imperatively — from a parent component, a script, or another framework.
 
 {% callout .tip %}
-**Always use `asMethod()`, never a plain function**
+**Always use `defineMethod()`, never a plain function**
 
-Le Truc identifies method producers by a brand (`METHOD_BRAND`) attached by `asMethod()`. A bare `(ui) => void` function is treated as a Reader, not a method producer. Wrapping with `asMethod()` is the required contract — the same way `asParser()` is required for custom parsers.
+Le Truc identifies method producers by a brand (`METHOD_BRAND`) attached by `defineMethod()`. A bare `(ui) => void` function is treated as a Reader, not a method producer. Wrapping with `defineMethod()` is the required contract — the same way `asParser()` is required for custom parsers.
 {% /callout %}
 
 ### HTML Structure
@@ -389,7 +389,7 @@ ui => {
 }
 ```
 
-`textbox.clear()` is itself a method property on `form-textbox` — the same `asMethod()` pattern in a child component. `pass()` drives the button's `disabled` state reactively from two conditions without the button knowing anything about either.
+`textbox.clear()` is itself a method property on `form-textbox` — the same `defineMethod()` pattern in a child component. `pass()` drives the button's `disabled` state reactively from two conditions without the button knowing anything about either.
 
 ### Full Example
 

@@ -31,7 +31,7 @@ type EventHandlers<T extends {}, E extends Element> = {
  * Attaches an event listener. The handler always receives `(event, element)`.
  * For Memo targets, uses event delegation (or per-element fallback for non-bubbling events).
  */
-type FactoryOnHelper<P extends ComponentProps> = {
+type OnHelper<P extends ComponentProps> = {
     <E extends Element, T extends keyof HTMLElementEventMap>(target: E, type: T, handler: (event: HTMLElementEventMap[T], element: E) => {
         [K in keyof P]?: P[K];
     } | void, options?: AddEventListenerOptions): EffectDescriptor;
@@ -79,4 +79,4 @@ declare const makeOn: <P extends ComponentProps>(host: HTMLElement & P) => {
     <E extends Element, T_1 extends keyof HTMLElementEventMap>(target: Memo<E[]>, type: T_1, handler: (event: HTMLElementEventMap[T_1], element: E) => { [K in keyof P]?: P[K]; } | void, options?: AddEventListenerOptions): EffectDescriptor;
     <E extends Element>(target: Memo<E[]>, type: string, handler: (event: Event, element: E) => { [K in keyof P]?: P[K]; } | void, options?: AddEventListenerOptions): EffectDescriptor;
 };
-export { createEventsSensor, type EventHandlers, type EventType, type FactoryOnHelper, makeOn, type SensorEventHandler, };
+export { createEventsSensor, type EventHandlers, type EventType, makeOn, type OnHelper, type SensorEventHandler, };

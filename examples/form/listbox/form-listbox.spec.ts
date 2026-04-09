@@ -308,7 +308,7 @@ test.describe('form-listbox component', () => {
 		await expect(visibleOptions.first()).toHaveText('Orange')
 	})
 
-	test('selection after scheduled innerHTML (simulating dangerouslySetInnerHTML)', async ({
+	test('selection after scheduled innerHTML (simulating dangerouslyBindInnerHTML)', async ({
 		page,
 	}) => {
 		const greenOption = page.locator(

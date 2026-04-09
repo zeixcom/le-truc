@@ -3,7 +3,7 @@ import {
 	createEffect,
 	createMemo,
 	createTask,
-	dangerouslySetInnerHTML,
+	dangerouslyBindInnerHTML,
 	defineComponent,
 } from '../../..'
 import {
@@ -83,7 +83,7 @@ export default defineComponent<ModuleLazyloadProps>(
 					errorEl.textContent = res.error ?? ''
 					content.hidden = !res.ok
 				}),
-			watch(htmlContent, dangerouslySetInnerHTML(content, {
+			watch(htmlContent, dangerouslyBindInnerHTML(content, {
 				allowScripts: host.hasAttribute('allow-scripts'),
 			})),
 		]

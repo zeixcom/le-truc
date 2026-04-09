@@ -11,7 +11,7 @@ All parsers are imported from `@zeix/le-truc`.
 | **Static value** | Prop starts with a fixed default not derived from DOM or attributes |
 | **Signal** | Prop is backed by an existing signal (e.g. `createEventsSensor(...)`) |
 | **MemoCallback** `() => T` | Prop is a derived computed value (unbranded thunk) |
-| **MethodProducer** (`asMethod`-wrapped) | Prop is an imperative method callable from outside |
+| **MethodProducer** (`defineMethod`-wrapped) | Prop is an imperative method callable from outside |
 
 > **Attribute semantics:** Attributes are for server-side configuration by HTML authors. Parsers in `expose()` are called **once at connect time** — they read the current attribute value from server-rendered markup. Attribute changes on a live document do not trigger re-parsing.
 
@@ -107,13 +107,13 @@ expose({
 
 The handler receives `{ event, target, prev }` and returns the new value (or `void` to leave unchanged).
 
-## `asMethod(fn)` — imperative methods
+## `defineMethod(fn)` — imperative methods
 
-`asMethod(fn)` brands `fn` as a `MethodProducer`. The function IS the method — it is installed directly as `host[key] = fn`.
+`defineMethod(fn)` brands `fn` as a `MethodProducer`. The function IS the method — it is installed directly as `host[key] = fn`.
 
 ```typescript
 expose({
-  clear: asMethod(() => {
+  clear: defineMethod(() => {
     host.value = ''
     textbox.value = ''
     textbox.dispatchEvent(new Event('input', { bubbles: true }))
@@ -121,7 +121,7 @@ expose({
 })
 ```
 
-**Always use `asMethod()`.** An unbranded `() => void` function is treated as a `MemoCallback`, not a method.
+**Always use `defineMethod()`.** An unbranded `() => void` function is treated as a `MemoCallback`, not a method.
 
 ## Custom parsers
 
@@ -148,5 +148,5 @@ expose({ color: asColor })
 | Prop's initial value comes from existing DOM content | Read directly before `expose()`, pass as static or fallback |
 | Prop has a fixed starting value | Static: `false`, `0`, `''`, `[]` |
 | Prop is a reactive value from a signal | Pass the signal directly |
-| Prop installs an imperative method on `host` | `asMethod(fn)` |
+| Prop installs an imperative method on `host` | `defineMethod(fn)` |
 | Prop is driven by DOM events | `createEventsSensor(element, init, events)` |

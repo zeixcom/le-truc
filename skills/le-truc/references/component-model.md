@@ -58,7 +58,7 @@ defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) =>
 | Initializer kind | How to recognize | Behavior |
 |---|---|---|
 | Parser | Branded with `asParser()` | Called with `host.getAttribute(key)` at connect time; result becomes the initial signal value |
-| `MethodProducer` | Branded with `asMethod()` | The function IS the method — installed as `host[key] = fn` |
+| `MethodProducer` | Branded with `defineMethod()` | The function IS the method — installed as `host[key] = fn` |
 | `Signal` | Any `Signal<T>` | Used directly as the backing signal |
 | Static value | Anything else (`string`, `number`, `boolean`, `[]`, …) | Wrapped in `createState()` |
 | `MemoCallback<T>` | `() => T` (unbranded thunk) | Wrapped in `createComputed()` — reactive derived value |
@@ -108,7 +108,7 @@ type WatchHandlers<T> = {
 }
 ```
 
-`bindAttribute`, `bindStyle`, and `dangerouslySetInnerHTML` return `WatchHandlers` — use them directly as the second argument to `watch`.
+`bindAttribute`, `bindStyle`, and `dangerouslyBindInnerHTML` return `WatchHandlers` — use them directly as the second argument to `watch`.
 
 ## `on(target, type, handler, options?)` — event listeners
 
