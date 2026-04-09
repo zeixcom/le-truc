@@ -2,7 +2,7 @@
 
 > **Reactive**\<`T`, `P`\> = keyof `P` \| [`Signal`](Signal.md)\<`T` & `object`\> \| (() => `T` \| `Promise`\<`T`\> \| `null` \| `undefined`)
 
-Defined in: [src/effects.ts:64](https://github.com/zeixcom/le-truc/blob/41c579cf74dea25346deb2e44ba0238619c3dcd3/src/effects.ts#L64)
+Defined in: [src/effects.ts:65](https://github.com/zeixcom/le-truc/blob/a45b49e21f141d0d53e4b986d3d37f6b090780f6/src/effects.ts#L65)
 
 A reactive value that drives a DOM update or a slot injection.
 

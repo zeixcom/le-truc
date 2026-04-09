@@ -17,6 +17,7 @@
   - `bindAttribute(element, name, allowUnsafe?)` — returns `WatchHandlers<string | boolean>` for attribute management; boolean values use `toggleAttribute`
   - `bindStyle(element, prop)` — returns `WatchHandlers<string>` for inline style; nil value calls `removeProperty`, restoring the CSS cascade
   - `dangerouslyBindInnerHTML(element, options?)` — returns `WatchHandlers<string>` for innerHTML with optional shadow DOM and script re-execution
+- **`each(memo, callback)` helper**: Creates per-element reactive effects from a `Memo<E[]>`. When elements enter the collection their effects are activated inside a per-element `createScope`; when they leave the scope is disposed. The callback receives a single element and returns a `FactoryResult` array or a single `EffectDescriptor`. Returned as an `EffectDescriptor` for inclusion in the factory return array.
 - **`asDate(fallback?)` parser**: New `Parser<string>` factory with a simplified signature — no longer requires a UI context parameter.
 - **`asClampedInteger(min?, max?)` parser**: Parser for clamped integer values; returns `min` (default `0`) when the attribute is absent or the parsed value is out of range.
 

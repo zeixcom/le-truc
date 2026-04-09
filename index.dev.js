@@ -1758,7 +1758,7 @@ var toSignal = (host, source) => {
     const sig = getSignals(host)[source];
     if (sig)
       return sig;
-    return createComputed(() => host[source]);
+    return createMemo(() => host[source]);
   }
   return source;
 };
@@ -1845,10 +1845,9 @@ function each(memo, callback) {
         createScope(() => {
           const result = callback(element);
           if (Array.isArray(result)) {
-            for (const descriptor of result) {
+            for (const descriptor of result)
               if (descriptor)
                 descriptor();
-            }
           } else if (typeof result === "function") {
             result();
           }
@@ -2042,11 +2041,7 @@ var makeOn = (host) => {
 // src/parsers.ts
 var PARSER_BRAND = Symbol("parser");
 var METHOD_BRAND = Symbol("method");
-var isParser = (value) => {
-  if (!isFunction(value))
-    return false;
-  return PARSER_BRAND in value;
-};
+var isParser = (value) => isFunction(value) && (PARSER_BRAND in value);
 var isMethodProducer = (value) => isFunction(value) && (METHOD_BRAND in value);
 var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
 var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });

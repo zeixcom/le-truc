@@ -29,10 +29,8 @@ const METHOD_BRAND: unique symbol = Symbol('method')
  * @param {unknown} value - Value to check if it is a parser
  * @returns {boolean} True if the value is a parser, false otherwise
  */
-const isParser = <T extends {}>(value: unknown): value is Parser<T> => {
-	if (!isFunction<T>(value)) return false
-	return PARSER_BRAND in value
-}
+const isParser = <T extends {}>(value: unknown): value is Parser<T> =>
+	isFunction(value) && PARSER_BRAND in value
 
 /**
  * Check if a value is a MethodProducer (branded side-effect initializer)

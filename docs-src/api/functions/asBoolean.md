@@ -2,7 +2,7 @@
 
 > **asBoolean**(): [`Parser`](../type-aliases/Parser.md)\<`boolean`\>
 
-Defined in: [src/parsers/boolean.ts:13](https://github.com/zeixcom/le-truc/blob/41c579cf74dea25346deb2e44ba0238619c3dcd3/src/parsers/boolean.ts#L13)
+Defined in: [src/parsers/boolean.ts:13](https://github.com/zeixcom/le-truc/blob/a45b49e21f141d0d53e4b986d3d37f6b090780f6/src/parsers/boolean.ts#L13)
 
 Parser that converts a boolean HTML attribute to an actual boolean.
 

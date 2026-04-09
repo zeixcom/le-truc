@@ -2,7 +2,7 @@
 
 > **asInteger**(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`number`\>
 
-Defined in: [src/parsers/number.ts:25](https://github.com/zeixcom/le-truc/blob/41c579cf74dea25346deb2e44ba0238619c3dcd3/src/parsers/number.ts#L25)
+Defined in: [src/parsers/number.ts:25](https://github.com/zeixcom/le-truc/blob/a45b49e21f141d0d53e4b986d3d37f6b090780f6/src/parsers/number.ts#L25)
 
 Parse a string as a number forced to integer with a fallback
 

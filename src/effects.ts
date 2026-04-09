@@ -1,6 +1,7 @@
 import {
 	createComputed,
 	createEffect,
+	createMemo,
 	createScope,
 	isFunction,
 	isMemo,
@@ -24,7 +25,7 @@ import { DEV_MODE, elementName, isCustomElement, LOG_WARN } from './util'
  * A deferred effect: a thunk that, when called inside a reactive scope, creates
  * a reactive effect and returns an optional cleanup function.
  *
- * Effect descriptors are returned by `run()`, `on()`, `each()`, `pass()`, and
+ * Effect descriptors are returned by `watch()`, `on()`, `each()`, `pass()`, and
  * `provideContexts()`. They are activated after dependency resolution, not
  * immediately when the factory function runs.
  */
@@ -35,7 +36,7 @@ type EffectDescriptor = () => MaybeCleanup
  *
  * A flat array of effect descriptors (and optional falsy guards for conditional
  * effects). Falsy values (`false`, `undefined`) are filtered out before activation,
- * enabling the `element && run(...)` conditional pattern.
+ * enabling the `element && watch(...)` conditional pattern.
  */
 type FactoryResult = Array<EffectDescriptor | false | undefined>
 
@@ -156,7 +157,7 @@ const toSignal = <T extends {}, P extends ComponentProps>(
 	if (typeof source === 'string') {
 		const sig = getSignals(host)[source]
 		if (sig) return sig
-		return createComputed(() => (host as any)[source])
+		return createMemo(() => (host as any)[source])
 	}
 	return source as Signal<T>
 }
@@ -365,9 +366,7 @@ function each<E extends Element>(
 				createScope(() => {
 					const result = callback(element)
 					if (Array.isArray(result)) {
-						for (const descriptor of result) {
-							if (descriptor) descriptor()
-						}
+						for (const descriptor of result) if (descriptor) descriptor()
 					} else if (typeof result === 'function') {
 						result()
 					}

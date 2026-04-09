@@ -4,7 +4,7 @@
 
 > **each**\<`E`\>(`memo`, `callback`): [`EffectDescriptor`](../type-aliases/EffectDescriptor.md)
 
-Defined in: [src/effects.ts:350](https://github.com/zeixcom/le-truc/blob/41c579cf74dea25346deb2e44ba0238619c3dcd3/src/effects.ts#L350)
+Defined in: [src/effects.ts:351](https://github.com/zeixcom/le-truc/blob/a45b49e21f141d0d53e4b986d3d37f6b090780f6/src/effects.ts#L351)
 
 Create per-element reactive effects from a `Memo<Element[]>`.
 
@@ -42,7 +42,7 @@ The callback receives a single element and returns a `FactoryResult` (array of
 
 > **each**\<`E`\>(`memo`, `callback`): [`EffectDescriptor`](../type-aliases/EffectDescriptor.md)
 
-Defined in: [src/effects.ts:354](https://github.com/zeixcom/le-truc/blob/41c579cf74dea25346deb2e44ba0238619c3dcd3/src/effects.ts#L354)
+Defined in: [src/effects.ts:355](https://github.com/zeixcom/le-truc/blob/a45b49e21f141d0d53e4b986d3d37f6b090780f6/src/effects.ts#L355)
 
 Create per-element reactive effects from a `Memo<Element[]>`.
 

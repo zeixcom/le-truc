@@ -4,7 +4,7 @@ import type { ComponentProps } from './component';
  * A deferred effect: a thunk that, when called inside a reactive scope, creates
  * a reactive effect and returns an optional cleanup function.
  *
- * Effect descriptors are returned by `run()`, `on()`, `each()`, `pass()`, and
+ * Effect descriptors are returned by `watch()`, `on()`, `each()`, `pass()`, and
  * `provideContexts()`. They are activated after dependency resolution, not
  * immediately when the factory function runs.
  */
@@ -14,7 +14,7 @@ type EffectDescriptor = () => MaybeCleanup;
  *
  * A flat array of effect descriptors (and optional falsy guards for conditional
  * effects). Falsy values (`false`, `undefined`) are filtered out before activation,
- * enabling the `element && run(...)` conditional pattern.
+ * enabling the `element && watch(...)` conditional pattern.
  */
 type FactoryResult = Array<EffectDescriptor | false | undefined>;
 /**

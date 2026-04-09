@@ -60,7 +60,7 @@ bun add @zeix/le-truc
 Then import the needed functions in your JavaScript:
 
 ```js#main.js
-import { asString, defineComponent, on, setText } from '@zeix/le-truc'
+import { asString, bindText, defineComponent } from '@zeix/le-truc'
 ```
 
 {% callout .tip title="Enabling dev-mode warnings" %}
@@ -146,30 +146,22 @@ Save the following inside a `<script type="module">` tag or an external JavaScri
 <script type="module">
   import {
     asString,
+    bindText,
     defineComponent,
-    on,
-    setText,
   } from 'https://cdn.jsdelivr.net/npm/@zeix/le-truc@latest/index.js'
 
-  defineComponent(
-    'basic-hello',
-    {
-      name: asString(ui => ui.output.textContent),
-    },
-    ({ first }) => ({
-      input: first('input', 'Needed to enter the name.'),
-      output: first('output', 'Needed to display the name.'),
-    }),
-    ({ host, input }) => {
-      const fallback = host.name
-      return {
-        input: on('input', () => {
-          host.name = input.value || fallback
-        }),
-        output: setText('name'),
-      }
-    },
-  )
+  defineComponent('basic-hello', ({ expose, first, on, watch }) => {
+    const input = first('input', 'Needed to enter the name.')
+    const output = first('output', 'Needed to display the name.')
+    const fallback = output.textContent || ''
+
+    expose({ name: asString(output.textContent ?? '') })
+
+    return [
+      on(input, 'input', () => ({ name: input.value || fallback })),
+      watch('name', bindText(output)),
+    ]
+  })
 </script>
 ```
 

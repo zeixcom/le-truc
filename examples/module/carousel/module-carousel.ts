@@ -1,4 +1,11 @@
-import { asInteger, createEffect, defineComponent, each } from '../../..'
+import {
+	asInteger,
+	bindProperty,
+	bindVisible,
+	createEffect,
+	defineComponent,
+	each,
+} from '../../..'
 
 export type ModuleCarouselProps = {
 	index: number
@@ -78,20 +85,14 @@ export default defineComponent<ModuleCarouselProps>(
 					}
 				}),
 
-			// Prev button: hide on first slide; move focus to next when hidden
-			watch('index', () => {
-				prev.hidden = host.index === 0
-			}),
+			// Prev button: move focus to next when hidden
 			on(prev, 'click', () => {
 				const newIndex = clamp(host.index - 1, slides.get().length)
 				host.index = newIndex
 				if (newIndex === 0) next.focus()
 			}),
 
-			// Next button: hide on last slide; move focus to prev when hidden
-			watch('index', () => {
-				next.hidden = host.index === slides.get().length - 1
-			}),
+			// Next button: move focus to prev when hidden
 			on(next, 'click', () => {
 				const newIndex = clamp(host.index + 1, slides.get().length)
 				host.index = newIndex
@@ -102,12 +103,6 @@ export default defineComponent<ModuleCarouselProps>(
 			on(dots, 'click', (_e, target) => {
 				host.index = parseInt(target.dataset.index || '0')
 			}),
-			each(dots, dot =>
-				watch('index', () => {
-					dot.ariaSelected = String(dot.dataset.index === String(host.index))
-					dot.tabIndex = dot.dataset.index === String(host.index) ? 0 : -1
-				}),
-			),
 
 			// Keyboard navigation for all nav buttons (prev, next, dots)
 			on(buttons, 'keyup', e => {
@@ -135,12 +130,28 @@ export default defineComponent<ModuleCarouselProps>(
 				}
 			}),
 
-			// Active slide indicator
+			// Effects for slides
 			each(slides, slide =>
-				watch('index', () => {
-					slide.ariaCurrent = String(slide.id === slides.get()[host.index]!.id)
-				}),
+				watch(
+					() => String(slide.id === slides.get()[host.index]?.id),
+					bindProperty(slide, 'ariaCurrent'),
+				),
 			),
+
+			// Effects for dot navigation
+			each(dots, dot =>
+				watch(
+					() => dot.dataset.index === String(host.index),
+					selected => {
+						dot.ariaSelected = String(selected)
+						dot.tabIndex = selected ? 0 : -1
+					},
+				),
+			),
+
+			// Effects for prev/next navigation
+			watch(() => host.index > 0, bindVisible(prev)),
+			watch(() => host.index < slides.get().length - 1, bindVisible(next)),
 		]
 	},
 )

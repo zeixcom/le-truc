@@ -142,7 +142,7 @@ my-button {
 {% section %}
 ## Reactive Styles
 
-CSS class variants become interactive when JavaScript toggles them in response to state. The contract is simple: **the class name in CSS must exactly match the token passed to `toggleClass()`**.
+CSS class variants become interactive when JavaScript toggles them in response to state. The contract is simple: **the class name in CSS must exactly match the token passed to `bindClass()`**.
 
 The `module-scrollarea` component demonstrates this clearly. The CSS defines what the shadow looks like when overflow is present:
 
@@ -160,14 +160,14 @@ module-scrollarea {
 }
 ```
 
-The component's setup function detects overflow state and applies the class:
+The component's factory creates a local signal and passes it to `watch()` + `bindClass()`:
 
 ```js
 const overflowEnd = createState(false)
 
-return {
-  host: toggleClass('overflow-end', overflowEnd),
-}
+return [
+  watch(overflowEnd, bindClass(host, 'overflow-end')),
+]
 ```
 
 When `overflowEnd` becomes `true`, Le Truc adds `overflow-end` to the host element. The CSS rule activates, and the shadow fades in. When it becomes `false`, the class is removed and the shadow fades out — no inline styles, no manual DOM manipulation.
@@ -176,7 +176,7 @@ The full example is a scroll container that shows fade shadows at either edge wh
 
 ### Attribute-driven Styles
 
-The same principle applies to attributes. Use `setAttribute()` to toggle an attribute that a CSS selector targets:
+The same principle applies to attributes. Use `watch()` + `bindAttribute()` to toggle an attribute that a CSS selector targets:
 
 ```css
 module-tabgroup {
@@ -188,11 +188,14 @@ module-tabgroup {
 ```
 
 ```js
-return {
-	tabs: setAttribute('aria-selected', tab =>
-	  String(host.selected === tab.getAttribute('aria-controls'))
-	),
-}
+return [
+  watch('selected', () => {
+    for (const tab of tabs.get()) {
+      tab.setAttribute('aria-selected',
+        String(host.selected === tab.getAttribute('aria-controls')))
+    }
+  }),
+]
 ```
 
 Prefer attributes over classes when the value has semantic meaning — screen readers and assistive technology understand `aria-selected`, `aria-expanded`, `disabled`, and similar attributes.

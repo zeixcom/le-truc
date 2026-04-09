@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 // Phase 1.9: minimal component using expose() + empty return array
 
-test.describe('v1.1 factory form: expose() + empty return array', () => {
+test.describe('v2.0 factory form: expose() + empty return array', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('http://localhost:3000/test/test-expose')
 		// test-expose has no visible content — wait for DOM attachment

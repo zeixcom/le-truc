@@ -11,7 +11,7 @@ declare global {
 }
 
 /**
- * Test component for the v1.1 factory `each()` helper.
+ * Test component for the v2.0 factory `each()` helper.
  * Exercises: nested run inside each, nested on inside each,
  * per-element lifecycle (add/remove), single-descriptor shortcut.
  */

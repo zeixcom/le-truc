@@ -22,16 +22,17 @@ A Le Truc component **wraps existing server-rendered content**. The HTML inside 
 Le Truc creates components using the `defineComponent()` function:
 
 ```js
-defineComponent(
-  'my-component',
-  {},                    // Reactive properties
-  ({ first, all }) => ({
-    // Select descendant elements
-  }),
-  ui => ({
-    // Component setup: return effects
-  }),
-)
+defineComponent('my-component', ({ expose, first, all, watch, on }) => {
+  // Query descendant elements
+  const el = first('selector')
+  // Declare reactive properties
+  expose({ /* ... */ })
+  // Return a flat array of effect descriptors
+  return [
+    watch(/* source */, /* handler */),
+    on(el, /* type */, /* handler */),
+  ]
+})
 ```
 
 Every Le Truc component must be registered with a valid custom element tag name (two or more words joined with `-`) as the first parameter.
@@ -59,95 +60,75 @@ Let's examine a complete component example to understand how Le Truc works. The 
 ```
 
 ```js
-defineComponent(
-  'basic-hello',
-  {
-    name: asString(ui => ui.output.textContent),
-  },
-  ({ first }) => ({
-    input: first('input', 'Needed to enter the name.'),
-    output: first('output', 'Needed to display the name.'),
-  }),
-  ({ host, input }) => {
-    const fallback = host.name
-    return {
-      input: on('input', () => {
-        host.name = input.value || fallback
-      }),
-      output: setText('name'),
-    }
-  },
-)
+defineComponent('basic-hello', ({ expose, first, on, watch }) => {
+  const input = first('input', 'Needed to enter the name.')
+  const output = first('output', 'Needed to display the name.')
+  const fallback = output.textContent || ''
+
+  expose({ name: asString(output.textContent ?? '') })
+
+  return [
+    on(input, 'input', () => ({ name: input.value || fallback })),
+    watch('name', bindText(output)),
+  ]
+})
 ```
 
 #### Reactive Properties
 
 ```js
-{
-  name: asString(ui => ui.output.textContent),
-}
+expose({ name: asString(output.textContent ?? '') })
 ```
 
-This creates a reactive property called `name`:
+This declares `name` as a reactive property:
 
-- `asString()` observes the attribute `name` and assigns its value as a string to the `name` property
-- `ui => ui.output.textContent` is a fallback reader — it reads the initial value from the DOM when no `name` attribute is present
-- Le Truc automatically reads `"World"` from the `<output>` element as the initial value, preserving the server-rendered content
+- `expose()` is called inside the factory to register reactive signal-backed accessors on `host`; it must be called before any effect references a property by name
+- `asString(fallback)` parses the `name` HTML attribute at connect time; if the attribute is absent, the fallback string is used
+- The fallback `output.textContent ?? ''` is a static value captured from the factory closure — Le Truc reads `"World"` from the `<output>` element, preserving the server-rendered content
 - When `name` changes, any effects that depend on it automatically update
 
-#### Select Function
+#### Querying Elements
 
-The select function is used to find descendant elements within the component's DOM:
+Element queries happen inline at the top of the factory body:
 
 ```js
-({ first }) => ({
-  input: first('input', 'Needed to enter the name.'),
-  output: first('output', 'Needed to display the name.'),
-}),
+const input = first('input', 'Needed to enter the name.')
+const output = first('output', 'Needed to display the name.')
 ```
 
-The select function must return a record of the selected elements, commonly called `ui`. Both property initializers and the setup function have access to this object, so elements are queried once and shared everywhere.
-
-This is a separate parameter from the setup function for a reason: Le Truc initializes components in three phases — **select elements → initialize properties → run effects**. Some property initializers need to read from the DOM (e.g. `read(ui => ui.input.value, asInteger())`), so the elements must be queried first. And some queried elements may be custom elements that haven't been upgraded yet, so Le Truc waits for their definitions before running effects.
-
-In the above example, the helper function `first()` is used to find the first descendant matching a selector. Also available is `all()` which returns a `Memo<E[]>` — a lazily observed collection that dynamically updates when matching elements are added or removed from the DOM. Both helper functions take a selector string and an optional error message explaining why the element is required for proper functioning of the component:
+`first()` finds the first descendant matching a selector. Also available is `all()`, which returns a `Memo<E[]>` — a lazily observed collection that dynamically updates when matching elements are added or removed from the DOM. Both helpers take a selector string and an optional error message:
 
 ```js
-// Optional element — effects for this key are skipped if not found
-input: first('input'),
+// Optional element — the result is null if not found; use && to skip effects conditionally
+const input = first('input')
 
 // Required element — throws MissingElementError with your message if not found
-input: first('input', 'Needed to enter the name.'),
+const input = first('input', 'Needed to enter the name.')
 ```
 
-#### Setup Function
+If a queried element is a custom element that has not been defined yet, Le Truc waits up to 200 ms for it to be defined before running effects. This ensures child components are always ready before parent effects activate.
 
-The setup function must return a record with an array of effects for properties of the `ui` object that is passed in. The additional `host` key of the `ui` object holds the component element itself.
+#### Returning Effects
+
+The factory returns a flat array of **effect descriptors** — deferred thunks that activate after all child custom element dependencies are resolved:
 
 ```js
-({ host, input }) => {
-  const fallback = host.name
-  return {
-    input: on('input', () => {
-      host.name = input.value || fallback
-    }),
-    output: setText('name'),
-  }
-},
+return [
+  on(input, 'input', () => ({ name: input.value || fallback })),
+  watch('name', bindText(output)),
+]
 ```
 
 Effects define **component behaviors**:
 
-- `input: on('input', ...)` adds an event listener to the `<input>` element
-- `output: setText('name')` keeps its text in sync with the `name` property
+- `on(input, 'input', ...)` adds an event listener to the `<input>` element; the handler may return `{ prop: value }` to batch-update host properties
+- `watch('name', bindText(output))` keeps `output`'s text in sync with the `name` property
 
 Characteristics of effects:
 
-- Effects run when the component is added to the page
-- Effects rerun when their dependencies change
-- Effects may return a cleanup function to be executed when the target element or the component is removed from the page
-
-The bundled effects `on()` and `setText()` in this case are partially applied functions that connect to component properties and the target element and return the appropriate cleanup function.
+- Effects run when the component connects to the DOM (after dependency resolution)
+- Reactive effects re-run when their declared source changes
+- Effects may return a cleanup function executed when the component disconnects
 
 {% /section %}
 
@@ -158,21 +139,18 @@ Le Truc manages the **Web Component lifecycle** from creation to removal. Here's
 
 ### Connected to the DOM
 
-In `connectedCallback()`, reactive properties are initialized and effects run. See [Managing State with Signals](#managing-state-with-signals) for the three ways to define a reactive property: static values, attribute parsers, and initializer functions.
+The factory function runs inside `connectedCallback()`. Element queries, `expose()`, and the returned effect descriptors all execute at this point — the factory is the component's setup phase, not its constructor. If the component disconnects and reconnects, the factory runs again with a fresh closure. See [Managing State with Signals](#managing-state-with-signals) for the ways to initialize reactive properties.
 
 ### Disconnected from the DOM
 
 In the `disconnectedCallback()` Le Truc runs all cleanup functions returned by effects during the setup phase in `connectedCallback()`. This will remove all event listeners and unsubscribe all signals the component is subscribed to, so you don't need to worry about memory leaks.
 
-If you added **event listeners** outside the scope of your component or **subscribed manually to external APIs** in a custom effect, you need to return a cleanup function:
+If you subscribe to **external APIs** that live outside the component's reactive scope, return a cleanup function from the effect descriptor:
 
 ```js
-defineComponent(
-  'my-component',
-  {},
-  () => ({}),
-  ({ host }) => ({
-    host: () => {
+defineComponent('my-component', ({ host }) => {
+  return [
+    () => {
       // Setup logic
       const observer = new IntersectionObserver(([entry]) => {
         // Do something
@@ -182,8 +160,8 @@ defineComponent(
       // Cleanup logic
       return () => observer.disconnect()
     },
-  }),
-)
+  ]
+})
 ```
 
 {% /section %}
@@ -206,37 +184,27 @@ Signals in Le Truc are of a **static type** and **non-nullable**. This allows to
 - If you use **TypeScript** (recommended), **you will be warned** that `null` or `undefined` cannot be assigned to a signal or if you try to assign a value of a wrong type.
 - If you use vanilla **JavaScript** without a build step, setting a signal to `null` or `undefined` **will throw a `NullishSignalValueError`**. However, strict type checking is not enforced at runtime.
 
-Effects have two special return values:
+When a `watch()` reactive source produces `null` or `undefined`, the `nil` branch of `WatchHandlers` fires if present:
 
-- **`undefined`**: Returned from a reader on error or when a property is missing — restores the **original server-rendered DOM value** that was captured when the component connected. This is the right thing to do when a value is temporarily unavailable.
-- **`null`**: Removes the attribute or style property from the element (e.g. `setAttribute` deletes the attribute; `setStyle` removes the inline style). Use `null` when the value should be explicitly absent.
+- **`bindAttribute(el, name)`** nil branch: calls `el.removeAttribute(name)` — removes the attribute entirely
+- **`bindStyle(el, prop)`** nil branch: calls `el.style.removeProperty(prop)` — restores the CSS cascade value
+- Plain function handlers (`bindText`, `bindProperty`, `bindClass`, `bindVisible`) have no nil branch — a nil source leaves the DOM unchanged
 
 ### Initializing State from Attributes
 
 The standard way to set initial state in Le Truc is via **server-rendered attributes** on the component that needs it. No props drilling as in other frameworks. Le Trucs provides some bundled attribute parsers to convert attribute values to the desired type. And you can also define your own custom parsers.
 
 ```js
-defineComponent(
-  'my-component',
-  {
+defineComponent('my-component', ({ expose }) => {
+  expose({
     count: asInteger(), // Bundled parser: Convert '42' -> 42
-    date: asParser((_, v) => new Date(v)), // Custom parser: '2025-12-12' -> Date object
-  },
-  () => ({
-    // Component UI
-  }),
-  () => ({
-    // Component setup
-  }),
-)
+    date: asParser(v => new Date(v ?? '')), // Custom parser: '2025-12-12' -> Date object
+  })
+})
 ```
 
-{% callout .caution %}
-**Careful**: Attributes **may not be present** on the element or **parsing to the desired type may fail**. To ensure **non-nullability** of signals, Le Truc falls back to neutral defaults if no fallback value is provided:
-
-- `""` (empty string) for `string`
-- `0` for `number`
-- `{}` (empty object) for objects of any kind
+{% callout .tip %}
+**Parsers run once at connect time.** The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser — use event handlers or direct property writes to update state post-connect.
 {% /callout %}
 
 ### Bundled Attribute Parsers
@@ -255,48 +223,32 @@ Use the provided selector utilities to find descendant elements within your comp
 Selects the first matching element:
 
 ```js
-defineComponent(
-  'basic-counter',
-  {
-    // Initialize properties
-  },
-  ({ first }) => ({
-    increment: first(
-      'button',
-      'Add a native button element to increment the count.',
-    ),
-    count: first('span', 'Add a span to display the count.'),
-  }),
-  ui => ({
-    // Component setup
-  }),
-)
+defineComponent('basic-counter', ({ expose, first, host, on, watch }) => {
+  const increment = first(
+    'button',
+    'Add a native button element to increment the count.',
+  )
+  const count = first('span', 'Add a span to display the count.')
+  // ...
+})
 ```
 
 ### all()
 
-Selects all matching elements:
+Selects all matching elements as a `Memo<E[]>`:
 
 ```js
-defineComponent(
-  'module-tabgroup',
-  {
-    // Initialize properties
-  },
-  ({ all }) => ({
-    tabs: all(
-      'button[role="tab"]',
-      'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
-    ),
-    panels: all(
-      '[role="tabpanel"]',
-      'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
-    ),
-  }),
-  ui => ({
-    // Component setup
-  }),
-)
+defineComponent('module-tabgroup', ({ all, expose, on, watch }) => {
+  const tabs = all(
+    'button[role="tab"]',
+    'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
+  )
+  const panels = all(
+    '[role="tabpanel"]',
+    'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
+  )
+  // ...
+})
 ```
 
 Without a hint string (second argument), `first()` returns `undefined` if no match is found and effects for that key are silently skipped. With a hint string, `first()` throws a `MissingElementError` if the element is missing — use this when the element is truly required for the component to function.
@@ -316,79 +268,64 @@ Event listeners respond to user interactions. They are the main cause for change
 
 ### on() — Imperative Event Handling
 
-The `on()` effect works like a familiar `addEventListener()` callback. It receives the DOM event and lets you imperatively update host properties:
+`on(target, type, handler)` is called from the factory context with an explicit target element or `Memo<E[]>` collection, and returned in the effect array:
 
 ```js
-defineComponent(
-  'my-component',
-  {
-    active: 0,
-    value: ''
-  },
-  ({ all, first }) => ({
-    buttons: all('button'),
-    input: first('input')
-  }),
-  ({ host, input }) => ({
-    buttons: on('click', ({ target }) => {
+defineComponent('my-component', ({ all, expose, first, host, on }) => {
+  const buttons = all('button')
+  const input = first('input')
+
+  expose({ active: 0, value: '' })
+
+  return [
+    on(buttons, 'click', (_e, target) => {
       // Set 'active' signal to value of data-index attribute of button
-      const index = parseInt(target.dataset.index, 10);
-      host.active = Number.isInteger(index) ? index : 0;
+      const index = parseInt(target.dataset.index ?? '0', 10)
+      host.active = Number.isInteger(index) ? index : 0
     }),
-    input: on('change', () => {
-      // Set 'value' signal to value of input element
-      host.value = input.value;
-    }),
-  })
-)
+    // Set 'value' signal to value of input element
+    on(input, 'change', () => ({ value: input.value })),
+  ]
+})
 ```
 
-The handler can also **return an object** to update multiple host properties at once. When it does, the updates are automatically batched for efficiency:
+The handler receives `(event, element)` — for `Memo` targets, `element` is the matched item from the collection. The handler can also **return an object** to batch-update multiple host properties at once:
 
 ```js
-on('click', () => ({
+on(button, 'click', () => ({
   count: host.count + 1,
   lastClicked: Date.now(),
 }))
 ```
 
-Since `on()` is an effect, it's attached to a specific UI element and automatically cleaned up when the component disconnects.
+`on()` returns an `EffectDescriptor` that is activated inside a reactive scope, so event listeners are automatically removed when the component disconnects.
 
 ### createEventsSensor() — Declarative Event-to-State Mapping
 
-For more complex event handling, `createEventsSensor()` takes a different approach: instead of imperatively mutating state, it **derives a single reactive value** from one or more event types. This value becomes a read-only property on the component.
+For cases where a **single reactive value is entirely derived from events**, `createEventsSensor(element, init, events)` creates a read-only `Sensor<T>` property. Pass it directly to `expose()`:
 
 ```js
-defineComponent(
-  'module-tabgroup',
-  {
-    // 'selected' is a read-only property derived entirely from events
-    selected: createEventsSensor(
-      read(ui => getSelected(ui.tabs.get(), isSelectedTab), ''),
-      'tabs',
-      {
-        click: ({ target }) => getAriaControls(target),
-        keyup: ({ event, ui, target, prev }) => {
-          // Handle arrow key navigation
-          if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
-            return getNextTab(ui.tabs.get(), target, event.key)
-          }
-        },
-      },
-    ),
-  },
-  // ...
-)
+defineComponent('my-input', ({ expose, first, watch }) => {
+  const textbox = first('input', 'A textbox is required.')
+
+  expose({
+    // 'length' is a read-only property derived entirely from events
+    length: createEventsSensor(textbox, textbox.value.length, {
+      input: ({ target }) => target.value.length,
+    }),
+  })
+
+  return [/* effects */]
+})
 ```
 
-The sensor handler receives a rich context object with typed access to:
+The sensor handler receives `{ event, target, prev }`:
 
 - **`event`** — the original DOM event
-- **`target`** — the matched element (with proper type information, unlike `event.target`)
-- **`ui`** — the full component UI object
-- **`prev`** — the previous value of the sensor
+- **`target`** — the element passed as the first argument (properly typed)
+- **`prev`** — the current sensor value before this event
 
-The sensor is created as a **property initializer** (second parameter of `defineComponent`), not as an effect. This means the resulting property is read-only — no other code can write to it. The sensor is the sole source of truth for that value.
+The sensor is declared inside `expose()`, making the property read-only — no other code can write to it. The sensor is the sole source of truth for that value.
 
 ### When to Use Which?
 
@@ -401,9 +338,9 @@ Use **`on()`** when you want to:
 - Keep the handler simple and familiar
 
 Use **`createEventsSensor()`** when you want to:
-- Derive a single value from multiple event types (click, keyboard, etc.)
+- Derive a single value from one or more event types
 - Ensure the property is read-only — only events can change it
-- Access the previous value, typed target element, or component UI in the handler
+- Access the previous value or the typed target element in the handler
 
 **Rule of thumb**: If you're *doing things* in response to an event, use `on()`. If an event stream *is* the state, use `createEventsSensor()`.
 {% /callout %}
@@ -417,104 +354,106 @@ Effects **automatically update the DOM** when signals change, avoiding manual DO
 
 ### Applying Effects
 
-Apply one or multiple effects in the setup function (for component itself) or in element selector functions:
+The factory returns a flat array of `EffectDescriptor`s. Each one is created by `watch()`, `on()`, `each()`, `pass()`, `provideContexts()`, or a plain thunk. The `watch(source, handler)` helper drives a DOM update from a declared reactive source:
 
 ```js
-return {
-  // On the component itself
-  host: setAttribute('open', 'open'), // Set 'open' attribute according to 'open' signal
-  // On element for the 'count' property of the UI object
-  count: [
-    setText('count'), // Update text content according to 'count' signal
-    toggleClass('even', 'isEven') // Toggle 'even' class according to 'isEven' signal
-  ]
-}
+return [
+  watch('open', bindAttribute(host, 'open')), // set attribute from 'open' signal
+  watch('count', bindText(count)),            // update text from 'count' signal
+  watch('isEven', bindClass(count, 'even')),  // toggle class from 'isEven' signal
+]
 ```
 
-The order of effects is not important. Feel free to apply them in any order that suits your needs.
+The order of descriptors does not matter.
 
 {% callout .tip %}
 **CSS must define what the class or attribute does**
 
-`toggleClass('even', ...)` adds or removes the `even` class — but nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `setAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
+`bindClass(el, 'even', ...)` adds or removes the `even` class — but nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `bindAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
 
 See [Reactive Styles](styling.html#reactive-styles) for examples of how CSS and effects work together.
 {% /callout %}
 
-### Bundled Effects
+### Per-element Effects with each()
 
-Le Truc provides many built-in effects for common DOM operations. See the [Effects section](api.html#effects) in the API reference for detailed descriptions and usage examples.
-
-### Simplifying Effect Notation
-
-For effects that take two arguments, **the second argument can be omitted** if the signal key matches the targeted property name, attribute, class, or style property.
-
-The following are equivalent:
+When you have a `Memo<E[]>` collection and need different effects for each element — not just one delegated listener — use `each(memo, callback)`. It creates a per-element reactive scope: effects activate when elements enter the collection and are disposed when they leave.
 
 ```js
-// setAttribute('open', 'open')
-setAttribute('open')
+defineComponent('module-carousel', ({ all, expose, host, watch }) => {
+  const dots = all('button[role="tab"]')
+
+  expose({ index: 0 })
+
+  return [
+    each(dots, dot =>
+      watch(
+        () => dot.dataset.index === String(host.index),
+        selected => {
+          dot.ariaSelected = String(selected)
+          dot.tabIndex = selected ? 0 : -1
+        },
+      ),
+    ),
+  ]
+})
 ```
 
-Here, `setAttribute('open')` automatically uses the `open` signal.
+The callback receives a single element and returns either a single `EffectDescriptor` or a `FactoryResult` array. `each()` itself returns an `EffectDescriptor` to include in the factory return array.
+
+{% callout .tip title="each() vs on() with a Memo target" %}
+Use `on(memo, type, handler)` when a single delegated listener on the host is enough — one click handler for all tabs, for example. Use `each(memo, callback)` when you need per-element reactive effects that depend on both the element and a signal — like updating `ariaSelected` on every dot when the selected index changes.
+{% /callout %}
+
+### DOM Binding Helpers
+
+Le Truc provides `bind*` helpers for common DOM update patterns. Each returns a handler (or `WatchHandlers` object) to pass to `watch()`. See the [Helpers section](api.html#helpers) in the API reference for descriptions and usage examples.
 
 ### Using Local Signals for Private State
 
-Local signals are useful for storing state that should not be exposed to the outside world. They can be used to manage internal state within a component:
+Local signals are useful for state that should not be exposed outside the component. Create them in the factory closure:
 
 ```js
-defineComponent(
-  'my-component',
-  {},
-  ({ first }) => ({
-    increment: first('button.increment'),
-    count: first('.count'),
-    double: first('.double')
-  }),
-  () => {
-    const count = createState(0)
-    const double = createMemo(() => count.get() * 2)
-    return {
-      increment: on('click', () => {
-        count.update(v => ++v)
-      }),
-      count: setText(count),
-      double: setText(double),
-    }
-  }
-)
+defineComponent('my-component', ({ first, on, watch }) => {
+  const increment = first('button.increment')
+  const count = first('.count')
+  const double = first('.double')
+
+  const countState = createState(0)
+  const doubleState = createMemo(() => countState.get() * 2)
+
+  return [
+    on(increment, 'click', () => { countState.update(v => ++v) }),
+    watch(countState, bindText(count)),
+    watch(doubleState, bindText(double)),
+  ]
+})
 ```
 
-Outside components cannot access the `count` or `double` signals.
+Outside components cannot access the `countState` or `doubleState` signals.
 
 ### Using Functions for Ad-hoc Derived State
 
-Instead of a signal key or a local signal, you can **pass a function** that derives a value dynamically:
+Instead of a named signal, you can **pass a thunk** as the `watch` source to derive a value inline:
 
 ```js
-defineComponent(
-  'my-component',
-  {
-    count: 0,
-  },
-  ({ first }) => ({
-    count: first('.count'),
-    double: first('.double')
-  }),
-  ({ host }) => ({
-    count: toggleClass('even', () => !(host.count % 2)),
-    double: setText(() => String(host.count * 2))
-  })
-)
+defineComponent('my-component', ({ expose, first, host, watch }) => {
+  const count = first('.count')
+  const double = first('.double')
+
+  expose({ count: 0 })
+
+  return [
+    watch(() => !(host.count % 2), bindClass(count, 'even')),
+    watch(() => String(host.count * 2), bindText(double)),
+  ]
+})
 ```
 
 {% callout .tip %}
 **When to use**
 
-- **Use a signal key or a local signal** when the state is part of the component's public interface or internally reused.
-- **Use a function** to **derive a value on the fly** when it is needed only in this one place.
-
-Ad-hoc derived state is more efficient than the overhead of a memoized computed signal for simple functions like converting to a string or boolean, formatting a value or performing a calculation.
+- **Use a property name or a local signal** when the state is part of the component's public interface or internally reused.
+- **Use a thunk** to **derive a value on the fly** when it is needed only in this one place.
 {% /callout %}
 
 ### Bidirectional Binding with Native Elements
@@ -524,42 +463,37 @@ Some native elements — checkboxes, text inputs, selects — hold state in **JS
 The `form-checkbox` component shows this pattern in full:
 
 ```js
-defineComponent(
-  'form-checkbox',
-  {
+defineComponent('form-checkbox', ({ expose, first, host, on, watch }) => {
+  const checkbox = first('input[type="checkbox"]', 'Add a native checkbox.')
+
+  expose({
     // Read initial checked state from the DOM property, not the attribute
-    checked: read(ui => ui.checkbox.checked, false),
-  },
-  ({ first }) => ({
-    checkbox: first('input[type="checkbox"]'),
-  }),
-  ({ host, checkbox }) => ({
-    checkbox: [
-      // Capture user interaction → update signal
-      on('change', () => {
-        host.checked = checkbox.checked
-      }),
-      // Sync signal → drive native element property
-      setProperty('checked'),
-    ],
-  }),
-)
+    checked: checkbox.checked,
+  })
+
+  return [
+    // Capture user interaction → update signal
+    on(checkbox, 'change', () => ({ checked: checkbox.checked })),
+    // Sync signal → drive native element property
+    watch('checked', bindProperty(checkbox, 'checked')),
+  ]
+})
 ```
 
 Three pieces work together:
 
-1. **`read(ui => ui.checkbox.checked, false)`** — initializes `checked` from the DOM property at setup time, picking up any server-rendered or pre-set state.
-2. **`on('change', ...)`** — updates `host.checked` when the user interacts with the checkbox.
-3. **`setProperty('checked')`** — drives `checkbox.checked = value` whenever the signal changes, including when a parent component sets `host.checked` programmatically.
+1. **`checkbox.checked`** — initializes `checked` from the DOM property at setup time, picking up any server-rendered or pre-set state.
+2. **`on(checkbox, 'change', ...)`** — returns `{ checked: checkbox.checked }` to update the signal when the user interacts with the checkbox.
+3. **`watch('checked', ...)`** — drives `checkbox.checked = value` whenever the signal changes, including when a parent component sets `host.checked` programmatically.
 
 This creates a full cycle: DOM → signal → DOM, with the signal as the single source of truth.
 
 {% callout .tip %}
-**`setProperty()` vs `setAttribute()`**
+**`bindProperty()` vs `bindAttribute()`**
 
-`setAttribute('checked', '')` sets the HTML attribute, which only controls the checkbox's *default* state and has no effect on the live `.checked` property once the page has loaded. `setProperty('checked')` calls the element's JS setter directly — the only reliable way to update native form element state at runtime.
+`bindAttribute(el, 'checked')` sets the HTML attribute, which only controls the checkbox's *default* state and has no effect on the live `.checked` property once the page has loaded. `bindProperty(el, 'checked')` assigns to the element's JS property directly — the only reliable way to update native form element state at runtime.
 
-Use `setProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, `ariaDisabled`.
+Use `bindProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, `ariaDisabled`.
 {% /callout %}
 
 {% /section %}

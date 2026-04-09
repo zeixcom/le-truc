@@ -140,7 +140,7 @@ const attachListener = <P extends ComponentProps, E extends Element>(
 	type: string,
 	handler: (event: Event, element: E) => { [K in keyof P]?: P[K] } | void,
 	options: AddEventListenerOptions,
-): (() => void) => {
+): EffectDescriptor => {
 	const listener = (e: Event) => {
 		const task = () => {
 			const result = handler(e, target)
