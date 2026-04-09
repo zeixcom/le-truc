@@ -17,37 +17,39 @@ Ask (or infer from context):
 Trace the chain from trigger to DOM update:
 
 ```
-attribute change  →  parser  →  host.prop (signal)
-                                      ↓
-                                effect reads prop
-                                      ↓
-                               DOM update on target
-                                      ↓
-                         event handler  →  { prop: value }
-                                      ↓
-                             signal updated  →  effect re-runs
+attribute at connect time → parser → host.prop (signal)
+                                            ↓
+event / property set ───────────→ host.prop (signal)
+                                            ↓
+                            watch(source, handler) re-runs
+                                            ↓
+                                  DOM update via bind*
+                                            ↓
+                        on(el, type, handler) → { prop: value }
+                                            ↓
+                             signal updated → watch re-runs
 ```
 
 Check each link in order:
 
-**Attribute → signal:**
-- Is the prop initializer a Parser (two-argument function wrapped with `asParser()`)? Only parsers are added to `observedAttributes`. A Reader (one-argument function) is called once at connect time — it does not react to attribute changes.
-- Is the attribute name exactly matching the prop name?
+**Attribute → signal (connect time only):**
+- Parsers in `expose()` are called **once** at connect time. Attribute changes after connect do NOT re-run parsers — there is no `observedAttributes`. If a prop must update on attribute change, it needs to be driven by events or external property sets.
+- Is the attribute name exactly matching the prop name passed to `expose()`?
 
-**Signal → effect:**
-- Is the prop read inside a reactive effect? A plain function that reads `host.propName` but is not inside an effect will not re-run.
-- Is the effect returned from the `setup` function? Effects not returned are not registered.
-- For `all(selector)` targets: the effect is wrapped in a `createEffect` that tracks the Memo — confirm the selector is correct and the MutationObserver fires for the relevant mutations.
+**Signal → `watch`:**
+- Is the source of `watch()` correct? A string prop name looks up `host[name]`; a thunk tracks all signals read inside it; a `Signal` is used directly.
+- Is the `watch()` descriptor included in the return array? Descriptors not in the array are never activated.
+- For `all(selector)` targets with `each()`: confirm the selector is correct and the MutationObserver fires for the relevant mutations.
 
-**Effect → DOM:**
-- Is the right target element named in the `setup` return? The key must match a key in the `select` return.
-- Does `undefined` from a reader restore the original DOM value rather than clearing it? (This is correct behavior, not a bug — see references/component-model.md.)
-- Does `null` from a reader trigger `delete` behavior (removes the attribute/style) rather than leaving the previous value?
+**`watch` → DOM:**
+- Is the right `bind*` helper or custom handler used? `bindProperty` for IDL attributes, `bindText` for text content, `bindAttribute` for HTML attributes.
+- Does `undefined` from a thunk source restore the original DOM value? (This is correct behavior — see references/component-model.md.)
+- Is an optional element guarded with `el && watch(...)`? A missing guard causes `watch` to fail on null.
 
 **Event handler → signal:**
-- Does the handler return a property update object `{ prop: value }`? If it returns `void`, the update must be done manually (e.g., `host.count++`).
-- Is the handler attached to the correct target element (UI key)?
-- For `readonly` sensor props: they cannot be set from outside (including from event handlers on other components). Use `on()` on the sensor-owning element instead.
+- Does the `on()` handler return a property update object `{ prop: value }`? If it returns `void`, the update must be done manually (e.g., `host.count++` directly).
+- Is the handler attached to the correct target element?
+- For `readonly` sensor props: they cannot be set from outside. Use `createEventsSensor` in `expose()` for the element that owns the events.
 
 ## Step 3: Enable debug logging
 

@@ -1,5 +1,4 @@
-import { asParser, type Fallback, getFallback, type Parser } from '../parsers'
-import type { UI } from '../ui'
+import { asParser, type Parser } from '../parsers'
 
 /* === Internal Functions === */
 
@@ -20,40 +19,56 @@ const parseNumber = (
  * Supports hexadecimal and scientific notation
  *
  * @since 0.11.0
- * @param {Fallback<number, U>} [fallback=0] - Fallback value or reader function
- * @returns {Parser<number, U>} Parser function
+ * @param {number} [fallback=0] - Fallback value
+ * @returns {Parser<number>} Parser function
  */
-const asInteger = <U extends UI>(
-	fallback: Fallback<number, U> = 0,
-): Parser<number, U> =>
-	asParser((ui: U, value: string | null | undefined) => {
-		if (value == null) return getFallback(ui, fallback)
+const asInteger = (fallback: number = 0): Parser<number> =>
+	asParser((value: string | null | undefined) => {
+		if (value == null) return fallback
 
 		// Handle hexadecimal notation
 		const trimmed = value.trim()
 		if (trimmed.toLowerCase().startsWith('0x'))
-			return (
-				parseNumber(v => parseInt(v, 16), trimmed) ?? getFallback(ui, fallback)
-			)
+			return parseNumber(v => parseInt(v, 16), trimmed) ?? fallback
 
 		// Handle other formats (including scientific notation)
 		const parsed = parseNumber(parseFloat, value)
-		return parsed != null ? Math.trunc(parsed) : getFallback(ui, fallback)
+		return parsed != null ? Math.trunc(parsed) : fallback
 	})
 
 /**
  * Parse a string as a number with a fallback
  *
  * @since 0.11.0
- * @param {Fallback<number, U>} [fallback=0] - Fallback value or reader function
- * @returns {Parser<number, U>} Parser function
+ * @param {number} [fallback=0] - Fallback value
+ * @returns {Parser<number>} Parser function
  */
-const asNumber = <U extends UI>(
-	fallback: Fallback<number, U> = 0,
-): Parser<number, U> =>
+const asNumber = (fallback: number = 0): Parser<number> =>
 	asParser(
-		(ui: U, value: string | null | undefined) =>
-			parseNumber(parseFloat, value) ?? getFallback(ui, fallback),
+		(value: string | null | undefined) =>
+			parseNumber(parseFloat, value) ?? fallback,
 	)
 
-export { asInteger, asNumber }
+/**
+ * Parse a string as a clamped integer (>= min, <= max) with fallbacks
+ *
+ * @since 2.0
+ * @param {number} [min=0] - Minimum value
+ * @param {number} [max=Number.MAX_SAFE_INTEGER] - Maximum value
+ * @returns {Parser<number>} Parser function
+ */
+const asClampedInteger = (
+	min: number = 0,
+	max: number = Number.MAX_SAFE_INTEGER,
+): Parser<number> =>
+	asParser((value: string | null | undefined) => {
+		if (value == null) return Math.max(min, Math.min(min, max))
+		const trimmed = value.trim()
+		const raw = trimmed.toLowerCase().startsWith('0x')
+			? parseNumber(v => parseInt(v, 16), trimmed)
+			: parseNumber(parseFloat, value)
+		const parsed = raw != null ? Math.trunc(raw) : min
+		return Math.max(min, Math.min(parsed, max))
+	})
+
+export { asClampedInteger, asInteger, asNumber }

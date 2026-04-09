@@ -21,11 +21,12 @@ Do not propose changes to code you have not read.
 Work through references/anti-patterns.md and flag any violations. Also check:
 
 - **Props type**: every reactive property is explicitly typed; no implicit `any`
-- **UI type**: every key returned by `select` has a type; `HTMLElement` subtypes used where selector allows inference
-- **Parsers**: attribute-driven props use a parser from `asString`/`asBoolean`/`asInteger`/`asNumber`/`asEnum`/`asJSON`; DOM-initialised props use `read(reader, fallback)`. Custom parsers wrapped with `asParser()`.
-- **Effects**: each effect targets the right element; `on()` handlers that only update `host` use the return-object shortcut; handlers that do more return `void`
-- **Custom effects**: every custom effect function returns a cleanup function
-- **Coordination**: `pass()` used only for Le Truc-to-Le Truc bindings; `setProperty()` used for all others (see references/coordination.md)
+- **Initializers**: attribute-driven props use `asString`/`asBoolean`/`asInteger`/`asNumber`/`asEnum`/`asJSON`; DOM-derived initial values are read directly before `expose()`; custom parsers wrapped with `asParser()`; method props wrapped with `defineMethod()`
+- **`expose()` called once**: all props declared in a single `expose()` call before any effects
+- **Return array**: every `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` is in the returned array; optional elements use the `el && watch(...)` guard pattern
+- **`on()` handlers**: return `{ prop: value }` when updating host props; return `void` for side-effects only
+- **Custom `watch` handlers**: return a cleanup function if they set up listeners or timers
+- **Coordination**: `pass()` used only for Le Truc-to-Le Truc bindings; `watch()` + `bindProperty()` used for all others (see references/coordination.md)
 
 ## Step 3: Check the HTML
 
@@ -45,7 +46,7 @@ Work through references/anti-patterns.md and flag any violations. Also check:
 
 Follow references/accessibility.md for the widget type. Verify:
 - Correct ARIA role on the appropriate element (or native element used instead)
-- Interactive ARIA states (`aria-expanded`, `aria-selected`, etc.) kept in sync via `toggleAttribute`/`setAttribute` effects
+- Interactive ARIA states (`aria-expanded`, `aria-selected`, etc.) kept in sync via `watch()` + `bindAttribute(el, name)`
 - Focus management is correct for the pattern (dialogs, menus, tabs)
 - Labels are present and associated
 

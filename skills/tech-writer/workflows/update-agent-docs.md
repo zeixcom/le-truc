@@ -30,7 +30,7 @@ Examples that do NOT belong here:
 **Adding an entry:**
 
 ```markdown
-- **`asParser()` branding is required for reliable parser detection**: `isParser()` falls back to `fn.length >= 2`, which is unreliable with default parameters, rest parameters, or destructuring. Always wrap custom parsers with `asParser()`. In `DEV_MODE`, unbranded functions trigger `console.warn`.
+- **`asParser()` branding is required for reliable parser detection**: `isParser()` checks only for `PARSER_BRAND`. Unbranded functions are NOT treated as parsers regardless of their signature. Always wrap custom parsers with `asParser()`. In `DEV_MODE`, unbranded functions trigger `console.warn`.
 ```
 
 Entry structure:

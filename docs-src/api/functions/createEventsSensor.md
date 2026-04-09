@@ -1,19 +1,14 @@
 ### Function: createEventsSensor()
 
-> **createEventsSensor**\<`T`, `P`, `U`, `K`\>(`init`, `key`, `events`): (`ui`) => [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
+> **createEventsSensor**\<`T`, `E`\>(`target`, `init`, `events`): [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-Defined in: [src/events.ts:67](https://github.com/zeixcom/le-truc/blob/aeeac355aad9805eb8ee281d5c2dacf08589e2c9/src/events.ts#L67)
+Defined in: [src/events.ts:176](https://github.com/zeixcom/le-truc/blob/a45b49e21f141d0d53e4b986d3d37f6b090780f6/src/events.ts#L176)
 
-Create a `Reader` that produces a `Sensor<T>` driven by DOM events on the host.
+Create a `Sensor<T>` driven by DOM events on a target element.
 
-Use this as a reactive property initializer when a single state value should be
-derived from multiple event types (e.g. combining `click` and `keyup` into a
-`selected` value), instead of updating host properties imperatively via `on()`.
-
-Event listeners are attached to the host element using event delegation.
-Each handler receives `{ event, ui, target, prev }` and returns the new value,
-or `void`/`Promise<void>` to leave the value unchanged. Passive events are
-deferred via `schedule()`.
+Use this inside `expose()` as a property initializer when a single reactive
+value should be derived from events on a specific element. The listener is
+attached directly to `target`; the handler receives `{ event, target, prev }`.
 
 #### Type Parameters
 
@@ -21,44 +16,36 @@ deferred via `schedule()`.
 
 `T` *extends* `object`
 
-##### P
+##### E
 
-`P` *extends* [`ComponentProps`](../type-aliases/ComponentProps.md)
-
-##### U
-
-`U` *extends* [`UI`](../type-aliases/UI.md)
-
-##### K
-
-`K` *extends* `string` \| `number` \| `symbol`
+`E` *extends* `Element`
 
 #### Parameters
 
+##### target
+
+`E`
+
+The element to listen on
+
 ##### init
 
-[`ParserOrFallback`](../type-aliases/ParserOrFallback.md)\<`T`, `U`\>
+`T`
 
-Initial value, static fallback, or reader function
-
-##### key
-
-`K`
-
-Key of the UI object whose element(s) to listen on
+Initial value of the sensor
 
 ##### events
 
-[`EventHandlers`](../type-aliases/EventHandlers.md)\<`T`, `U`, [`ElementFromKey`](../type-aliases/ElementFromKey.md)\<`U`, `K`\>\>
+[`EventHandlers`](../type-aliases/EventHandlers.md)\<`T`, `E`\>
 
 Map of event type to handler function
 
 #### Returns
 
-Reader that creates and returns the sensor
+[`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-(`ui`) => [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
+Sensor that updates when matching events fire on target
 
 #### Since
 
-0.16.0
+1.1

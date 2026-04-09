@@ -54,7 +54,7 @@ These rules apply to every document without exception:
 **Register:** Technical and precise. Third person, present tense. Implementation details are expected and welcome. Internal function names, type names, flag names, and field names are used freely without definition — this document assumes the reader has the source open.
 
 **Structure rules:**
-- Describe mechanisms, not intentions. Not "this enables efficient updates" but "when the effect re-runs, `updateElement` reads the current DOM value and skips the update if `Object.is(resolvedValue, current)`."
+- Describe mechanisms, not intentions. Not "this enables efficient updates" but "when `watch(source, handler)` re-runs, the handler receives the new value and applies it to the DOM directly."
 - File maps, dependency graphs, and lifecycle diagrams are appropriate. Match actual source structure exactly.
 
 **What to cut:**

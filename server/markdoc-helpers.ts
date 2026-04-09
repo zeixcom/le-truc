@@ -110,6 +110,25 @@ export function generateSlug(text: string): string {
 	return templateSlug(decoded)
 }
 
+/* === TOC Extraction === */
+
+export type TocItem = { id: string; text: string }
+
+export function extractTocItems(ast: Node): TocItem[] {
+	const items: TocItem[] = []
+	const walk = (node: Node) => {
+		if (node.type === 'heading' && node.attributes.level === 2) {
+			const text = extractTextFromNode(node)
+			items.push({ id: generateSlug(text), text })
+		}
+		if (node.children) {
+			for (const child of node.children) walk(child)
+		}
+	}
+	walk(ast)
+	return items
+}
+
 /* === Navigation Helpers === */
 
 const findLinkNode = (node: Node): Node | null => {

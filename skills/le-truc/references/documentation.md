@@ -23,7 +23,7 @@ A component documentation file uses the following sections. Include a section on
 
 **CSS classes** — when the component supports modifier classes on the host for visual variants.
 
-**Methods** — when the component installs imperative methods on `host` via `asMethod()`.
+**Methods** — when the component installs imperative methods on `host` via `defineMethod()`.
 
 **Events** — when the component dispatches custom events.
 

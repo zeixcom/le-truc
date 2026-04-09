@@ -13,8 +13,8 @@ Use the document map to confirm the page is the right target. Each page covers a
 |---|---|
 | `index.md` | Philosophy and positioning |
 | `getting-started.md` | Installation and first component |
-| `components.md` | `defineComponent` anatomy — props, select, setup |
-| `data-flow.md` | Component coordination — `pass()`, context, `asMethod()`, dynamic lists |
+| `components.md` | `defineComponent` anatomy — `expose()`, `watch()`, `on()`, `bind*` helpers |
+| `data-flow.md` | Component coordination — `pass()`, context, `defineMethod()`, dynamic lists |
 | `styling.md` | CSS scoping and custom properties |
 | `examples.md` | Navigation list of all example components |
 | `api.md` | Navigation list of all exported API symbols |

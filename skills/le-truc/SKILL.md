@@ -14,21 +14,36 @@ For deep signal-level questions, use the `cause-effect` skill — `@zeix/cause-e
 </scope>
 
 <essential_principles>
-**`defineComponent(name, props, select, setup)`** — every component is defined with these four arguments. No other entry point exists.
+**One form of `defineComponent`** — the factory form:
+
+```typescript
+defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) => {
+  const button = first('button', 'Add a native <button>.')
+  expose({ disabled: asBoolean() })
+  return [
+    on(button, 'click', () => { /* ... */ }),
+    watch('disabled', bindProperty(button, 'disabled')),
+  ]
+})
+```
+
+The factory receives a `FactoryContext` at connect time. Call `expose({ ... })` to declare reactive props. Return a flat array of effect descriptors created by `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()`. Falsy guards (`element && watch(...)`) are filtered out — use this for optional descendants.
 
 **`host` is the only external interface.** Components read and write state through `host.propName`. No querying outside the host's subtree, no direct property access on child components.
 
 **Reactivity flows in one direction:**
 ```
-attribute change → parser → host.prop (signal)
-                                 ↓
-                           effect reads prop
-                                 ↓
-                          DOM update on target
-                                 ↓
-                    event handler → { prop: value }
-                                 ↓
-                         signal updated → effect re-runs
+attribute at connect time → parser → host.prop (signal)
+                                              ↓
+event / property set ──────────→ host.prop (signal)
+                                              ↓
+                              watch(source, handler) re-runs
+                                              ↓
+                                    DOM update via bind*
+                                              ↓
+                          on(el, type, handler) → { prop: value }
+                                              ↓
+                               signal updated → watch re-runs
 ```
 
 **`@zeix/cause-effect` is re-exported.** Signal types (`State`, `Memo`, `Sensor`, `Slot`, etc.) and utilities (`batch`, `match`, `untrack`) are available directly from `@zeix/le-truc`. No separate install or import needed.
@@ -65,8 +80,8 @@ All in `references/`:
 | File | Contents |
 |---|---|
 | component-model.md | `defineComponent` args, reactivity flow, re-exported signal API |
-| effects.md | Which effect to use when: `setText`, `setAttribute`, `on`, `pass`, etc. |
-| parsers.md | Which parser to use when: `asString`, `asBoolean`, `asInteger`, `read`, etc. |
+| effects.md | Which bind* helper / effect to use when: `bindText`, `bindProperty`, `watch`, `on`, `pass`, `each`, etc. |
+| parsers.md | Which initializer to use in `expose()`: `asString`, `asBoolean`, `asInteger`, `defineMethod`, `createEventsSensor`, etc. |
 | coordination.md | `pass()`, `provideContexts`/`requestContext`, `on()` on host, `all()` |
 | markup.md | HTML structure: progressive enhancement, semantic nesting, variant examples |
 | styling.md | CSS: host scoping, nesting, custom properties, variant modifier classes |

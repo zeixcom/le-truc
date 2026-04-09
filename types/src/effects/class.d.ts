@@ -4,6 +4,7 @@ import { type Effect, type Reactive } from '../effects';
  * Effect for toggling a CSS class token on an element.
  * When the reactive value is true, the class is added; when false, it's removed.
  *
+ * @deprecated Use `watch('prop', value => { el.classList.toggle(token, value) })` in the v1.1 factory form instead.
  * @since 0.8.0
  * @param {string} token - CSS class token to toggle
  * @param {Reactive<boolean, P, E>} reactive - Reactive value bound to the class presence (defaults to class name)

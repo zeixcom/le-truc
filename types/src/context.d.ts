@@ -1,8 +1,7 @@
-import { type Cleanup, type Memo } from '@zeix/cause-effect';
-import type { Component, ComponentProps } from './component';
-import { type Fallback, type Reader } from './parsers';
-import type { UI } from './ui';
 /** @see https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md */
+import { type Memo } from '@zeix/cause-effect';
+import type { ComponentProps } from './component';
+import type { EffectDescriptor } from './effects';
 /**
  * A context key.
  *
@@ -35,6 +34,21 @@ declare global {
         'context-request': ContextRequestEvent<UnknownContext>;
     }
 }
+/**
+ * The `provideContexts` helper type in `FactoryContext`.
+ *
+ * Attaches a `context-request` listener to the host, providing the listed
+ * property values as context to descendant consumers. Returns an `EffectDescriptor`.
+ */
+type ProvideContextsHelper<P extends ComponentProps> = (contexts: Array<keyof P>) => EffectDescriptor;
+/**
+ * The `requestContext` helper type in `FactoryContext`.
+ *
+ * Dispatches a `context-request` event from the host and returns a `Memo<T>`
+ * that tracks the provider's value. Falls back to `fallback` if no provider responds.
+ * For use inside `expose()` as a property initializer.
+ */
+type RequestContextHelper = <T extends {}>(context: Context<string, () => T>, fallback: T) => Memo<T>;
 declare const CONTEXT_REQUEST = "context-request";
 /**
  * Class for context-request events
@@ -62,34 +76,25 @@ declare class ContextRequestEvent<T extends UnknownContext> extends Event {
     constructor(context: T, callback: ContextCallback<ContextType<T>>, subscribe?: boolean);
 }
 /**
- * Make reactive properties of this component available to descendant consumers via the context protocol.
+ * Create a `provideContexts` helper bound to a specific component host.
  *
- * Use in the setup function as `host: provideContexts([...])` — it is an `Effect`, not a property
- * initializer. It attaches a `context-request` listener to the host via `createScope`; when a
- * matching request arrives, it provides a getter `() => host[context]` to the requester.
- * The listener is removed on `disconnectedCallback` via the effect cleanup.
+ * Returns a function that takes a `contexts` array and returns an `EffectDescriptor`.
+ * When activated, attaches a `context-request` listener to `host`; provides a
+ * getter `() => host[context]` for each matching context key.
  *
- * @since 0.13.3
- * @param {Array<keyof P>} contexts - Reactive property names to expose as context
- * @returns {Effect} Effect that installs the context-request listener and returns a cleanup function
+ * @since 2.0
+ * @param host - The component host element
  */
-declare const provideContexts: <P extends ComponentProps>(contexts: Array<keyof P>) => ((host: Component<P>) => Cleanup);
+declare const makeProvideContexts: <P extends ComponentProps>(host: HTMLElement & P) => (contexts: Array<keyof P>) => EffectDescriptor;
 /**
- * Request a context value from an ancestor provider, returning a reactive `Memo<T>`.
+ * Create a `requestContext` helper bound to a specific component host.
  *
- * Use as a property initializer in `defineComponent`. During `connectedCallback`, dispatches
- * a `context-request` event that bubbles up the DOM. If an ancestor provider intercepts it,
- * the returned Memo reflects the provider's current value reactively. If no provider responds,
- * the Memo falls back to `fallback`.
+ * Returns a function that dispatches a `context-request` event from `host`
+ * and wraps the resolved getter in a `Memo<T>`. If no provider responds,
+ * the Memo returns `fallback`. For use inside `expose()` as a property initializer.
  *
- * @since 0.15.0
- * @param {Context<string, () => T>} context - Context key to request
- * @param {Fallback<T, U & { host: Component<P> }>} fallback - Static value or reader function used when no provider is found
- * @returns {Reader<Memo<T>, U & { host: Component<P> }>} Reader that dispatches the request and wraps the result in a Memo
+ * @since 2.0
+ * @param host - The component host element
  */
-declare const requestContext: <T extends {}, P extends ComponentProps, U extends UI>(context: Context<string, () => T>, fallback: Fallback<T, U & {
-    host: Component<P>;
-}>) => Reader<Memo<T>, U & {
-    host: Component<P>;
-}>;
-export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, provideContexts, requestContext, type UnknownContext, };
+declare const makeRequestContext: <P extends ComponentProps>(host: HTMLElement & P) => <T extends {}>(context: Context<string, () => T>, fallback: T) => Memo<T>;
+export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, makeProvideContexts, makeRequestContext, type ProvideContextsHelper, type RequestContextHelper, type UnknownContext, };

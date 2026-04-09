@@ -17,9 +17,9 @@ Use references/source-map.md to locate the file(s) involved. Read them fully bef
 ## Step 3: Understand the existing pattern
 
 Identify how similar features are implemented:
-- Effects follow the `updateElement(reactive, updater)` pattern (see `src/effects.ts`)
+- DOM helpers in `src/helpers.ts` return typed handler functions or `WatchHandlers` objects for use with `watch()`
 - Parsers use `asParser()` branding (see `src/parsers.ts`)
-- Method producers use `asMethod()` branding
+- Method producers use `defineMethod()` branding
 - Context uses the W3C Community Protocol (see `src/context.ts`)
 
 New features should follow the same internal patterns. Consistency is more important than elegance.
@@ -33,7 +33,7 @@ Read `CLAUDE.md` for any non-obvious constraints that apply to the area you are 
 Write the smallest change that satisfies the requirement. Prefer extending existing abstractions over new ones. If a new exported function is needed:
 
 - Add it to the appropriate `src/` file
-- Export it from `index.ts`
+- Export it from the appropriate `src/` file and from the package entry point
 - Add TypeScript type declarations to `types/` if the project uses a separate declarations directory
 
 ## Step 6: Update tests
@@ -52,7 +52,7 @@ Do not update documentation for internal-only changes.
 <success_criteria>
 - Feature is confirmed in scope for le-truc (not cause-effect)
 - Source file(s) read before writing
-- Existing internal patterns followed (updateElement, asParser, asMethod, etc.)
+- Existing internal patterns followed (`bind*` helpers, `asParser`, `defineMethod`, etc.)
 - Tests pass
 - Public API documentation updated if the exported surface changed
 </success_criteria>

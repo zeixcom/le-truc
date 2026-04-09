@@ -22,7 +22,7 @@ The only legal interface between a component and the outside world is `host` and
 const child = first('child-component')
 child.querySelector('button').disabled = true
 
-// ✅ Use pass() or setProperty() on the child component itself
+// ✅ Use pass() on the child component itself (or watch() + bindProperty() for non-Le Truc)
 ```
 
 ### Sibling communication
@@ -38,50 +38,52 @@ Lift shared state to a common ancestor and pass it down.
 ### Unbranded custom parsers
 
 ```typescript
-// ✗ Unreliable: default parameters reduce fn.length
-const myParser = (ui, value = '') => value.trim()
+// ✗ Not recognised as a parser — isParser() checks for PARSER_BRAND only
+const myParser = (value?: string) => value?.trim() ?? ''
 
 // ✅ Always use asParser()
-const myParser = asParser((ui, value = '') => value.trim())
+const myParser = asParser((value: string | null | undefined) => value?.trim() ?? '')
 ```
 
 ### Unbranded method producers
 
 ```typescript
-// ✗ Not recognised as a MethodProducer — treated as a Reader
-{
-  add: (ui) => { ui.host.add = () => { /* … */ } }
-}
+// ✗ Not recognised as a MethodProducer — treated as a MemoCallback
+expose({
+  clear: () => { host.value = '' }
+})
 
-// ✅ Wrap with asMethod()
-{
-  add: asMethod((ui) => { ui.host.add = () => { /* … */ } })
-}
+// ✅ Wrap with defineMethod() — fn is the method itself
+expose({
+  clear: defineMethod(() => { host.value = '' })
+})
 ```
 
-### Custom effects without a cleanup function
+### Custom watch handlers without a cleanup function
 
 ```typescript
 // ✗ Memory leak: listener never removed
-(host, target) => {
-  target.addEventListener('resize', handler)
-}
+watch('active', active => {
+  document.addEventListener('keydown', handler)
+})
 
 // ✅ Return a cleanup function
-(host, target) => {
-  target.addEventListener('resize', handler)
-  return () => target.removeEventListener('resize', handler)
-}
+watch('active', active => {
+  if (active) {
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }
+})
 ```
 
-### Missing TypeScript types on Props and UI
+### Missing TypeScript Props type
 
 ```typescript
-// ✗ No type safety — parsers and UI queries are the main type-safety mechanism
-defineComponent('my-component', { label: asString() }, …)
+// ✗ No type safety on host.propName access
+defineComponent('my-component', ({ expose, watch }) => { … })
 
-// ✅ Explicit generic types
-defineComponent<MyComponentProps, MyComponentUI>('my-component', …)
+// ✅ Explicit Props generic
+defineComponent<MyComponentProps>('my-component', ({ expose, watch }) => { … })
 ```
 
 ### Overloading one component with unrelated state
@@ -96,24 +98,24 @@ defineComponent<MyComponentProps, MyComponentUI>('my-component', …)
 }
 ```
 
-### `dangerouslySetInnerHTML` on untrusted content
+### `dangerouslyBindInnerHTML` on untrusted content
 
 ```typescript
 // ✗ XSS risk
-content: dangerouslySetInnerHTML('userGeneratedHtml')
+content: dangerouslyBindInnerHTML('userGeneratedHtml')
 
 // ✅ Only on server-rendered or pre-sanitised HTML
-content: dangerouslySetInnerHTML('highlightedCode')
+content: dangerouslyBindInnerHTML('highlightedCode')
 ```
 
 ### `pass()` on non-Le-Truc elements
 
 ```typescript
 // ✗ pass() bypasses non-Le-Truc change detection — the child never updates
-'lit-element': pass({ disabled: hostSignal })
+pass(litEl, { disabled: 'disabled' })
 
-// ✅ Use setProperty() for anything that isn't a Le Truc component
-'lit-element': setProperty('disabled')
+// ✅ Use watch() + bindProperty() for anything that isn't a Le Truc component
+watch('disabled', bindProperty(litEl, 'disabled'))
 ```
 
 ## HTML anti-patterns

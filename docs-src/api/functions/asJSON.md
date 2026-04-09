@@ -1,8 +1,8 @@
 ### Function: asJSON()
 
-> **asJSON**\<`T`, `U`\>(`fallback`): [`Parser`](../type-aliases/Parser.md)\<`T`, `U`\>
+> **asJSON**\<`T`\>(`fallback`): [`Parser`](../type-aliases/Parser.md)\<`T`\>
 
-Defined in: [src/parsers/json.ts:13](https://github.com/zeixcom/le-truc/blob/aeeac355aad9805eb8ee281d5c2dacf08589e2c9/src/parsers/json.ts#L13)
+Defined in: [src/parsers/json.ts:12](https://github.com/zeixcom/le-truc/blob/a45b49e21f141d0d53e4b986d3d37f6b090780f6/src/parsers/json.ts#L12)
 
 Parse a string as a JSON serialized object with a fallback
 
@@ -12,21 +12,17 @@ Parse a string as a JSON serialized object with a fallback
 
 `T` *extends* `object`
 
-##### U
-
-`U` *extends* [`UI`](../type-aliases/UI.md)
-
 #### Parameters
 
 ##### fallback
 
-[`Fallback`](../type-aliases/Fallback.md)\<`T`, `U`\>
+`T`
 
-Fallback value or reader function
+Fallback value
 
 #### Returns
 
-[`Parser`](../type-aliases/Parser.md)\<`T`, `U`\>
+[`Parser`](../type-aliases/Parser.md)\<`T`\>
 
 Parser function
 

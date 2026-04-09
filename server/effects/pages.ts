@@ -9,7 +9,7 @@ import {
 	writeFileSafe,
 } from '../io'
 import { performanceHints } from '../templates/performance-hints'
-import { escapeHtml, generateSlug } from '../templates/utils'
+import { escapeHtml, generateSlug, html, raw } from '../templates/utils'
 
 /* === Internal Functionals === */
 
@@ -76,22 +76,6 @@ const API_KIND_MAP: Record<string, string> = {
 	enumerations: 'Enumeration',
 }
 
-/** Extract h2/h3 headings from HTML and build a nav list for TOC */
-const buildToc = (htmlContent: string): string => {
-	const headingRegex = /<h([23])[^>]*id="([^"]*)"[^>]*>([\s\S]*?)<\/h[23]>/gi
-	const items: string[] = []
-	let match: RegExpExecArray | null
-	while ((match = headingRegex.exec(htmlContent)) !== null) {
-		const level = match[1]!
-		const id = escapeHtml(match[2]!)
-		// Normalize whitespace in heading text, then HTML-escape what remains
-		const rawText = match[3]!.replace(/\s+/g, ' ').trim()
-		const text = escapeHtml(rawText)
-		const indent = level === '3' ? ' style="padding-left:1rem"' : ''
-		items.push(`<a href="#${id}"${indent}>${text}</a>`)
-	}
-	return items.length > 0 ? `<nav>${items.join('\n')}</nav>` : ''
-}
 
 /** Compute api-category, api-name, api-kind for api layout pages */
 const getApiVariables = (
@@ -133,6 +117,7 @@ export const getBlogVariables = (
 	processedFile: ProcessedMarkdownFile,
 ): {
 	'published-date': string
+	'modified-date': string
 	'reading-time': string
 	'blog-tags': string
 	'author-avatar': string
@@ -161,6 +146,7 @@ export const getBlogVariables = (
 
 	return {
 		'published-date': metadata.date ?? '',
+		'modified-date': metadata['modified-date'] ?? '',
 		'reading-time': readingTime,
 		'blog-tags': blogTags,
 		'author-avatar': authorAvatar,
@@ -208,7 +194,8 @@ export const generateBlogExcerpts = (
 			const slug = post.relativePath.replace(/^blog\//, '').replace(/\.md$/, '')
 			const url = `${basePath}blog/${slug}.html`
 			const { 'reading-time': readingTime } = getBlogVariables(post)
-			const date = escapeHtml(post.metadata.date ?? '')
+			const publishedDate = escapeHtml(post.metadata.date ?? '')
+			const modifiedDate = escapeHtml(post.metadata['modified-date'] ?? '')
 			const rawAuthor = post.metadata.author ?? ''
 			const author = escapeHtml(rawAuthor)
 			const avatar = escapeHtml(
@@ -221,17 +208,30 @@ export const generateBlogExcerpts = (
 			const title = escapeHtml(post.title)
 			const description = escapeHtml(post.metadata.description ?? '')
 
-			return (
-				`<card-blogpost>\n`
-				+ `\t<h2><a href="${escapeHtml(url)}">${emoji} ${title}</a></h2>\n`
-				+ `\t<card-blogmeta>\n`
-				+ `\t\t<span>${avatar ? `\t\t<img src="${avatar}" alt="Avatar of${author}" />` : ''} <span>${author}</span></span>\n`
-				+ `\t\t<time datetime="${date}">${date}</time>\n`
-				+ `\t\t<span>${escapeHtml(readingTime)} min read</span>\n`
-				+ `\t</card-blogmeta>\n`
-				+ (description ? `\t<p>${description}</p>\n` : '')
-				+ `</card-blogpost>`
-			)
+			return html`<card-blogpost>
+				<h2><a href="${escapeHtml(url)}">${emoji} ${title}</a></h2>
+				<card-blogmeta>
+					<span
+						>${avatar
+							? raw(html`<img src="${avatar}" alt="Avatar of ${author}" />`)
+							: ''} <span>${author}</span></span
+					>
+					<span
+						><time class="published" datetime="${publishedDate}"
+							>${publishedDate}</time
+						>${modifiedDate
+							? raw(
+									html`· updated on
+										<time class="modified" datetime="${modifiedDate}"
+											>${modifiedDate}</time
+										>`,
+								)
+							: ''}
+					</span>
+					<span>${escapeHtml(readingTime)} min read</span>
+				</card-blogmeta>
+				${description ? raw(html`<p>${description}</p>`) : ''}
+			</card-blogpost>`
 		})
 		.join('\n')
 }
@@ -270,7 +270,6 @@ const applyTemplate = async (
 			'js-hash': assetHashes.js,
 			'performance-hints': performanceHintsHtml,
 			'additional-preloads': additionalPreloads.join('\n\t\t'),
-			toc: buildToc(processedFile.htmlContent),
 			// Convert metadata values to strings
 			...Object.fromEntries(
 				Object.entries(processedFile.metadata).map(([key, value]) => [
@@ -338,22 +337,27 @@ export const pagesEffect = (onRebuild?: () => void) => {
 								if (processedFile.relativePath === 'blog.md') {
 									// Inject hero + excerpt cards into the blog overview
 									const { metadata } = processedFile
-									const heroHtml =
-										`<section-hero>\n`
-										+ `\t<h1>${escapeHtml(metadata.emoji ?? '')} ${escapeHtml(metadata.title ?? 'Blog')}</h1>\n`
-										+ `<div class="hero-layout">\n`
-										+ `<div class="lead">\n`
-										+ (metadata.description
-											? `\t<p>${escapeHtml(metadata.description)}</p>\n`
-											: '')
-										+ `</div>`
-										+ `</div>`
-										+ `</section-hero>`
+									const heroHtml = html`<section-hero>
+										<h1>
+											${escapeHtml(metadata.emoji ?? '')}
+											${escapeHtml(metadata.title ?? 'Blog')}
+										</h1>
+										<div class="hero-layout">
+											<div class="lead">
+												${metadata.description
+													? raw(
+															html`<p>${escapeHtml(metadata.description)}</p>`,
+														)
+													: ''}
+											</div>
+										</div>
+									</section-hero>`
 									fileToRender = {
 										...processedFile,
-										htmlContent:
-											heroHtml
-											+ `\n<section class="blog-posts">\n${blogExcerpts}\n</section>`,
+										htmlContent: html`${raw(heroHtml)}
+											<section class="blog-posts">
+												${raw(blogExcerpts)}
+											</section>`,
 									}
 								} else if (processedFile.section === 'blog') {
 									// Add blog-specific template variables

@@ -44,14 +44,17 @@
 		"serve": "bun server/serve.ts",
 		"serve:docs": "bun server/serve.ts --build-first",
 		"serve:examples": "bun run build:examples && PLAYWRIGHT=1 bun server/serve.ts",
-		"test": "bunx playwright test examples",
+		"test": "bun test src/tests && bunx playwright test examples",
 		"test:component": "bun scripts/test-component.ts",
+		"test:src": "bun test src/tests",
 		"test:server": "bun test server/tests",
 		"test:server:unit": "bun test server/tests --bail",
 		"test:server:integration": "bun test server/tests --timeout 10000",
 		"test:server:watch": "bun test server/tests --watch"
 	},
 	"dependencies": {
+		"@types/bun": "^1.3.11",
+		"@types/node": "^25.5.2",
 		"@zeix/cause-effect": "^1.0.2"
 	},
 	"devDependencies": {

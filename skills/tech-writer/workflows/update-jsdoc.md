@@ -14,13 +14,14 @@ For each changed function, update the JSDoc block:
 
 ```typescript
 /**
- * Sets text content of an element by replacing child nodes.
+ * Returns a function that sets the text content of an element.
  *
- * @since 0.8.0
- * @param {Reactive<string, P, E>} reactive - Property name, signal, or reader; defaults to the effect name
- * @returns {Effect<P, E>} Effect that updates text content reactively
+ * @since 2.0
+ * @param {Element} element - Target element
+ * @param {boolean} [preserveComments=false] - Whether to preserve HTML comment nodes
+ * @returns {(value: string | number) => void} Function that sets the text content
  */
-const setText = …
+const bindText = …
 ```
 
 Rules:

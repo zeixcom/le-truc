@@ -4,6 +4,7 @@ import { type Effect, type Reactive } from '../effects';
  * Effect for setting the text content of an element.
  * Replaces all child nodes (except comments) with a single text node.
  *
+ * @deprecated Use `watch('prop', value => { el.textContent = value })` in the v1.1 factory form instead.
  * @since 0.8.0
  * @param {Reactive<string, P, E>} reactive - Reactive value bound to the text content
  * @returns {Effect<P, E>} Effect function that sets the text content of the element

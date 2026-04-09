@@ -105,22 +105,6 @@ type ElementQueries = {
 	all: AllElements
 }
 
-/** The shape of the UI object returned by the `select` function of `defineComponent`. */
-type UI = Record<string, Element | Memo<Element[]> | undefined>
-
-/**
- * Extracts the element type stored at key `K` of a UI object `U`.
- * - If `U[K]` is a `Memo<E[]>`, resolves to `E`.
- * - If `U[K]` is a single `Element`, resolves to that element type.
- */
-type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<
-	U[K] extends Memo<infer E extends Element[]>
-		? E[number]
-		: U[K] extends Element
-			? U[K]
-			: never
->
-
 /* === Constants === */
 
 const DEPENDENCY_TIMEOUT = 200
@@ -136,8 +120,11 @@ const DEPENDENCY_TIMEOUT = 200
  */
 const extractAttributes = (selector: string): string[] => {
 	const attributes = new Set<string>()
-	if (selector.includes('.')) attributes.add('class')
-	if (selector.includes('#')) attributes.add('id')
+	// Strip attribute selector content before checking for class/id shorthand,
+	// so that #/. inside [attr^="#anchor"] don't produce false positives.
+	const withoutAttrValues = selector.replace(/\[[^\]]*\]/g, '')
+	if (withoutAttrValues.includes('.')) attributes.add('class')
+	if (withoutAttrValues.includes('#')) attributes.add('id')
 	if (selector.includes('[')) {
 		const parts = selector.split('[')
 		for (let i = 1; i < parts.length; i++) {
@@ -231,7 +218,7 @@ function createElementsMemo<S extends string>(
  * @param {HTMLElement} host - The component host element
  * @returns {[ElementQueries, (callback: () => void) => void]} Query helpers and a dependency resolver
  */
-const getHelpers = (
+const makeElementQueries = (
 	host: HTMLElement,
 ): [ElementQueries, (run: () => void) => void] => {
 	const root = host.shadowRoot ?? host
@@ -366,7 +353,6 @@ const getHelpers = (
 export {
 	type AllElements,
 	createElementsMemo,
-	type ElementFromKey,
 	type ElementFromSelector,
 	type ElementFromSingleSelector,
 	type ElementQueries,
@@ -375,9 +361,8 @@ export {
 	type ExtractTag,
 	type ExtractTagFromSimpleSelector,
 	type FirstElement,
-	getHelpers,
 	type KnownTag,
+	makeElementQueries,
 	type SplitByComma,
 	type TrimWhitespace,
-	type UI,
 }

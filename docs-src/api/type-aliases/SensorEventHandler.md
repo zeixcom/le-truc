@@ -1,14 +1,13 @@
-### Type Alias: SensorEventHandler\<T, Evt, U, E\>
+### Type Alias: SensorEventHandler\<T, Evt, E\>
 
-> **SensorEventHandler**\<`T`, `Evt`, `U`, `E`\> = (`context`) => `T` \| `void` \| `Promise`\<`void`\>
+> **SensorEventHandler**\<`T`, `Evt`, `E`\> = (`context`) => `T` \| `void` \| `Promise`\<`void`\>
 
-Defined in: [src/events.ts:25](https://github.com/zeixcom/le-truc/blob/aeeac355aad9805eb8ee281d5c2dacf08589e2c9/src/events.ts#L25)
+Defined in: [src/events.ts:33](https://github.com/zeixcom/le-truc/blob/a45b49e21f141d0d53e4b986d3d37f6b090780f6/src/events.ts#L33)
 
 Handler for a single event type inside `createEventsSensor`.
 
 Receives a context object with:
 - `event` — the original DOM event (typed to the specific event type)
-- `ui` — the full component UI object
 - `target` — the matched element (properly typed, unlike `event.target`)
 - `prev` — the current sensor value before this event
 
@@ -24,10 +23,6 @@ leave the value unchanged.
 ##### Evt
 
 `Evt` *extends* `Event`
-
-##### U
-
-`U` *extends* [`UI`](UI.md)
 
 ##### E
 
@@ -48,10 +43,6 @@ leave the value unchanged.
 ###### target
 
 `E`
-
-###### ui
-
-`U`
 
 #### Returns
 

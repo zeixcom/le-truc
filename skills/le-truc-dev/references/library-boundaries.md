@@ -22,7 +22,7 @@ What belongs in @zeix/cause-effect vs. @zeix/le-truc. Both libraries are co-deve
 | Ownership (`createScope`) and scheduling (`batch`) | cause-effect | Graph lifecycle |
 | `match()` for unset/error state handling | cause-effect | Signal utility |
 | `defineComponent` / `Truc` class | le-truc | Requires `HTMLElement`, `customElements.define` |
-| DOM effects (`setText`, `setAttribute`, `on`, `pass`, …) | le-truc | Direct DOM manipulation |
+| DOM helpers (`bindText`, `bindProperty`, `bindAttribute`, `on`, `pass`, …) | le-truc | Direct DOM manipulation |
 | Attribute parsers (`asString`, `asBoolean`, `asInteger`, …) | le-truc | Attribute API is browser-only |
 | `first()` / `all()` DOM queries | le-truc | Requires `querySelector`, `MutationObserver` |
 | Context protocol (`provideContexts`, `requestContext`) | le-truc | Custom events, DOM event bubbling |

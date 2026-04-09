@@ -1,53 +1,82 @@
-import { type Sensor } from '@zeix/cause-effect';
-import type { Component, ComponentProps } from './component';
-import { type ParserOrFallback } from './parsers';
-import type { ElementFromKey, UI } from './ui';
+import { type Memo, type Sensor } from '@zeix/cause-effect';
+import type { ComponentProps } from './component';
+import type { EffectDescriptor } from './effects';
 type EventType<K extends string> = K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K] : Event;
 /**
  * Handler for a single event type inside `createEventsSensor`.
  *
  * Receives a context object with:
  * - `event` — the original DOM event (typed to the specific event type)
- * - `ui` — the full component UI object
  * - `target` — the matched element (properly typed, unlike `event.target`)
  * - `prev` — the current sensor value before this event
  *
  * Return the new sensor value to update it, or `void` / `Promise<void>` to
  * leave the value unchanged.
  */
-type SensorEventHandler<T extends {}, Evt extends Event, U extends UI, E extends Element> = (context: {
+type SensorEventHandler<T extends {}, Evt extends Event, E extends Element> = (context: {
     event: Evt;
-    ui: U;
     target: E;
     prev: T;
 }) => T | void | Promise<void>;
 /**
- * Map of event type names to `SensorEventHandler` functions, passed as the
- * third argument to `createEventsSensor`. Each handler derives the new sensor
- * value from the event, or returns `void` to leave it unchanged.
+ * Map of event type names to `SensorEventHandler` functions.
+ * Each handler derives the new sensor value from the event, or returns `void` to leave it unchanged.
  */
-type EventHandlers<T extends {}, U extends UI, E extends Element> = {
-    [K in keyof HTMLElementEventMap]?: SensorEventHandler<T, EventType<K>, U, E>;
+type EventHandlers<T extends {}, E extends Element> = {
+    [K in keyof HTMLElementEventMap]?: SensorEventHandler<T, EventType<K>, E>;
 };
 /**
- * Create a `Reader` that produces a `Sensor<T>` driven by DOM events on the host.
+ * The `on` helper type in `FactoryContext`.
  *
- * Use this as a reactive property initializer when a single state value should be
- * derived from multiple event types (e.g. combining `click` and `keyup` into a
- * `selected` value), instead of updating host properties imperatively via `on()`.
- *
- * Event listeners are attached to the host element using event delegation.
- * Each handler receives `{ event, ui, target, prev }` and returns the new value,
- * or `void`/`Promise<void>` to leave the value unchanged. Passive events are
- * deferred via `schedule()`.
- *
- * @since 0.16.0
- * @param {ParserOrFallback<T, U>} init - Initial value, static fallback, or reader function
- * @param {K} key - Key of the UI object whose element(s) to listen on
- * @param {EventHandlers<T, U, ElementFromKey<U, K>>} events - Map of event type to handler function
- * @returns {(ui: U & { host: Component<P> }) => Sensor<T>} Reader that creates and returns the sensor
+ * Attaches an event listener. The handler always receives `(event, element)`.
+ * For Memo targets, uses event delegation (or per-element fallback for non-bubbling events).
  */
-declare const createEventsSensor: <T extends {}, P extends ComponentProps, U extends UI, K extends keyof U>(init: ParserOrFallback<T, U>, key: K, events: EventHandlers<T, U, ElementFromKey<U, K>>) => ((ui: U & {
-    host: Component<P>;
-}) => Sensor<T>);
-export { createEventsSensor, type EventHandlers, type EventType, type SensorEventHandler, };
+type OnHelper<P extends ComponentProps> = {
+    <E extends Element, T extends keyof HTMLElementEventMap>(target: E, type: T, handler: (event: HTMLElementEventMap[T], element: E) => {
+        [K in keyof P]?: P[K];
+    } | void, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element>(target: E, type: string, handler: (event: Event, element: E) => {
+        [K in keyof P]?: P[K];
+    } | void, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element, T extends keyof HTMLElementEventMap>(target: Memo<E[]>, type: T, handler: (event: HTMLElementEventMap[T], element: E) => {
+        [K in keyof P]?: P[K];
+    } | void, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element>(target: Memo<E[]>, type: string, handler: (event: Event, element: E) => {
+        [K in keyof P]?: P[K];
+    } | void, options?: AddEventListenerOptions): EffectDescriptor;
+};
+/**
+ * Create a `Sensor<T>` driven by DOM events on a target element.
+ *
+ * Use this inside `expose()` as a property initializer when a single reactive
+ * value should be derived from events on a specific element. The listener is
+ * attached directly to `target`; the handler receives `{ event, target, prev }`.
+ *
+ * @since 1.1
+ * @param {E} target - The element to listen on
+ * @param {T} init - Initial value of the sensor
+ * @param {EventHandlers<T, E>} events - Map of event type to handler function
+ * @returns {Sensor<T>} Sensor that updates when matching events fire on target
+ */
+declare function createEventsSensor<T extends {}, E extends Element>(target: E, init: T, events: EventHandlers<T, E>): Sensor<T>;
+/**
+ * Create an `on` helper bound to a specific component host.
+ *
+ * `on` attaches an event listener to an element or a `Memo<Element[]>` collection.
+ * The handler always receives `(event, element)` — a unified signature regardless
+ * of target type. Returns an `EffectDescriptor`.
+ *
+ * For Memo targets, uses event delegation (single listener on the query root).
+ * Non-bubbling events with Memo targets fall back to per-element listeners;
+ * in DEV_MODE a warning is logged pointing toward `each()` + `on()`.
+ *
+ * @since 2.0
+ * @param host - The component host element
+ */
+declare const makeOn: <P extends ComponentProps>(host: HTMLElement & P) => {
+    <E extends Element, T extends keyof HTMLElementEventMap>(target: E, type: T, handler: (event: HTMLElementEventMap[T], element: E) => { [K in keyof P]?: P[K]; } | void, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element>(target: E, type: string, handler: (event: Event, element: E) => { [K in keyof P]?: P[K]; } | void, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element, T_1 extends keyof HTMLElementEventMap>(target: Memo<E[]>, type: T_1, handler: (event: HTMLElementEventMap[T_1], element: E) => { [K in keyof P]?: P[K]; } | void, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element>(target: Memo<E[]>, type: string, handler: (event: Event, element: E) => { [K in keyof P]?: P[K]; } | void, options?: AddEventListenerOptions): EffectDescriptor;
+};
+export { createEventsSensor, type EventHandlers, type EventType, makeOn, type OnHelper, type SensorEventHandler, };

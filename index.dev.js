@@ -1630,11 +1630,45 @@ function createSlot(initialSignal, options) {
 function isSlot(value) {
   return isObjectOfType(value, TYPE_SLOT);
 }
+// src/context.ts
+var CONTEXT_REQUEST = "context-request";
+
+class ContextRequestEvent extends Event {
+  context;
+  callback;
+  subscribe;
+  constructor(context, callback, subscribe = false) {
+    super(CONTEXT_REQUEST, {
+      bubbles: true,
+      composed: true
+    });
+    this.context = context;
+    this.callback = callback;
+    this.subscribe = subscribe;
+  }
+}
+var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
+  const listener = (e) => {
+    const { context, callback } = e;
+    if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
+      e.stopImmediatePropagation();
+      callback(() => host[context]);
+    }
+  };
+  host.addEventListener(CONTEXT_REQUEST, listener);
+  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
+});
+var makeRequestContext = (host) => (context, fallback) => {
+  let consumed = () => fallback;
+  host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
+    consumed = getter;
+  }));
+  return createMemo(consumed);
+};
+
 // src/util.ts
 var DEV_MODE = typeof process !== "undefined" && true;
-var LOG_DEBUG = "debug";
 var LOG_WARN = "warn";
-var LOG_ERROR = "error";
 var RESERVED_WORDS = new Set([
   "constructor",
   "prototype"
@@ -1661,18 +1695,6 @@ var classString = (classList) => classList?.length ? `.${Array.from(classList).j
 var isCustomElement = (element) => element.localName.includes("-");
 var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
 var elementName = (el) => el ? `<${el.localName}${idString(el.id)}${classString(el.classList)}>` : "<unknown>";
-var log = (value, msg, level = LOG_DEBUG) => {
-  if (DEV_MODE || [LOG_ERROR, LOG_WARN].includes(level))
-    console[level](msg, value);
-  return value;
-};
-var validatePropertyName = (prop) => {
-  if (RESERVED_WORDS.has(prop))
-    return `Property name "${prop}" is a reserved word`;
-  if (HTML_ELEMENT_PROPS.has(prop))
-    return `Property name "${prop}" conflicts with inherited HTMLElement property`;
-  return null;
-};
 
 // src/errors.ts
 class InvalidComponentNameError extends TypeError {
@@ -1686,22 +1708,6 @@ class InvalidPropertyNameError extends TypeError {
   constructor(component, prop, reason) {
     super(`Invalid property name "${prop}" for component <${component}>. ${reason}`);
     this.name = "InvalidPropertyNameError";
-  }
-}
-
-class InvalidEffectsError extends TypeError {
-  constructor(host, cause) {
-    super(`Invalid effects in component ${elementName(host)}. Effects must be a record of effects for UI elements or the component, or a Promise that resolves to effects.`);
-    this.name = "InvalidEffectsError";
-    if (cause)
-      this.cause = cause;
-  }
-}
-
-class InvalidUIKeyError extends TypeError {
-  constructor(host, key, where) {
-    super(`Invalid UI key "${key}" in ${where} of component ${elementName(host)}`);
-    this.name = "InvalidUIKeyError";
   }
 }
 
@@ -1733,96 +1739,6 @@ class InvalidCustomElementError extends TypeError {
   }
 }
 
-// src/effects.ts
-var getUpdateDescription = (op, name = "") => {
-  const ops = {
-    a: "attribute ",
-    c: "class ",
-    d: "dataset ",
-    h: "inner HTML",
-    m: "method call ",
-    p: "property ",
-    s: "style property ",
-    t: "text content"
-  };
-  return ops[op] + name;
-};
-var runEffects = (ui, effects) => {
-  if (!isRecord(effects))
-    throw new InvalidEffectsError(ui.host);
-  return createScope(() => {
-    for (const key of Object.keys(effects)) {
-      const k = key;
-      if (!effects[k])
-        continue;
-      const fns = Array.isArray(effects[k]) ? effects[k] : [effects[k]];
-      if (isMemo(ui[k])) {
-        createEffect(() => {
-          for (const target of ui[k].get())
-            for (const fn of fns)
-              fn(ui.host, target);
-        });
-      } else if (ui[k]) {
-        for (const fn of fns)
-          fn(ui.host, ui[k]);
-      }
-    }
-  });
-};
-var resolveReactive = (reactive, host, target, context) => {
-  try {
-    if (typeof reactive === "string") {
-      if (DEV_MODE && !(reactive in host)) {
-        log(reactive, `resolveReactive: property '${reactive}' does not exist on ${elementName(host)}`, LOG_WARN);
-      }
-      return host[reactive];
-    }
-    return isSignal(reactive) ? reactive.get() : isFunction(reactive) ? reactive(target) : undefined;
-  } catch (error) {
-    if (context) {
-      log(error, `Failed to resolve value of ${valueString(reactive)}${context ? ` for ${context}` : ""} in ${elementName(target)}${host !== target ? ` in ${elementName(host)}` : ""}`, LOG_ERROR);
-    }
-    return;
-  }
-};
-var updateElement = (reactive, updater) => (host, target) => {
-  const { op, name = "", read, update } = updater;
-  const operationDesc = getUpdateDescription(op, name);
-  const ok = (verb) => () => {
-    if (DEV_MODE && host.debug) {
-      log(target, `${verb} ${operationDesc} of ${elementName(target)} in ${elementName(host)}`);
-    }
-    updater.resolve?.(target);
-  };
-  const err = (verb) => (error) => {
-    log(error, `Failed to ${verb} ${operationDesc} of ${elementName(target)} in ${elementName(host)}`, LOG_ERROR);
-    updater.reject?.(error);
-  };
-  const fallback = read(target);
-  return createEffect(() => {
-    const value = resolveReactive(reactive, host, target, operationDesc);
-    const resolvedValue = value === undefined ? fallback : value === null ? updater.delete ? null : fallback : value;
-    if (updater.delete && resolvedValue === null) {
-      try {
-        updater.delete(target);
-        ok("delete")();
-      } catch (error) {
-        err("delete")(error);
-      }
-    } else if (resolvedValue != null) {
-      const current = read(target);
-      if (Object.is(resolvedValue, current))
-        return;
-      try {
-        update(target, resolvedValue);
-        ok("update")();
-      } catch (error) {
-        err("update")(error);
-      }
-    }
-  });
-};
-
 // src/internal.ts
 var componentSignals = new WeakMap;
 var getSignals = (el) => {
@@ -1834,39 +1750,310 @@ var getSignals = (el) => {
   return signals;
 };
 
+// src/effects.ts
+var toSignal = (host, source) => {
+  if (isFunction(source))
+    return createComputed(source);
+  if (typeof source === "string") {
+    const sig = getSignals(host)[source];
+    if (sig)
+      return sig;
+    return createMemo(() => host[source]);
+  }
+  return source;
+};
+var makeWatch = (host) => {
+  function watch(source, handlerOrHandlers) {
+    return () => {
+      const isArraySource = Array.isArray(source);
+      const sources = isArraySource ? source : [source];
+      const signals = sources.map((s) => toSignal(host, s));
+      if (typeof handlerOrHandlers === "function") {
+        const handler = handlerOrHandlers;
+        return createEffect(() => match(signals, {
+          ok: (values) => untrack(() => handler(isArraySource ? values : values[0]))
+        }));
+      }
+      const handlers = handlerOrHandlers;
+      const matchHandlers = {
+        ok: (values) => untrack(() => handlers.ok(isArraySource ? values : values[0]))
+      };
+      if (handlers.err)
+        matchHandlers.err = (errs) => untrack(() => handlers.err(errs[0]));
+      if (handlers.nil)
+        matchHandlers.nil = () => untrack(() => handlers.nil());
+      return createEffect(() => match(signals, matchHandlers));
+    };
+  }
+  return watch;
+};
+var makePass = (host) => {
+  const swapSlots = (target, props) => createScope(() => {
+    if (!isCustomElement(target))
+      throw new InvalidCustomElementError(target, `pass from ${elementName(host)}`);
+    if (!isRecord(props))
+      throw new InvalidReactivesError(host, target, props);
+    const signals = getSignals(target);
+    const targetName = elementName(target);
+    const cleanups = [];
+    for (const [prop, reactive] of Object.entries(props)) {
+      if (reactive == null)
+        continue;
+      if (!(prop in target)) {
+        if (DEV_MODE)
+          console[LOG_WARN](`pass(): property '${prop}' does not exist on ${targetName}`);
+        continue;
+      }
+      const signal = toSignal(host, reactive);
+      if (!signal)
+        continue;
+      const slot = signals[prop];
+      if (isSlot(slot)) {
+        const original = slot.current();
+        slot.replace(signal);
+        cleanups.push(() => slot.replace(original));
+        continue;
+      }
+      if (DEV_MODE)
+        console[LOG_WARN](`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`);
+    }
+    if (cleanups.length)
+      return () => {
+        for (const c of cleanups)
+          c();
+      };
+  });
+  function pass(target, props) {
+    return () => {
+      if (isMemo(target)) {
+        createEffect(() => {
+          for (const el of target.get()) {
+            createScope(() => swapSlots(el, props));
+          }
+        });
+      } else {
+        swapSlots(target, props);
+      }
+    };
+  }
+  return pass;
+};
+function each(memo, callback) {
+  return () => {
+    createEffect(() => {
+      for (const element of memo.get()) {
+        createScope(() => {
+          const result = callback(element);
+          if (Array.isArray(result)) {
+            for (const descriptor of result)
+              if (descriptor)
+                descriptor();
+          } else if (typeof result === "function") {
+            result();
+          }
+        });
+      }
+    });
+  };
+}
+
+// src/scheduler.ts
+var PASSIVE_EVENTS = new Set([
+  "scroll",
+  "resize",
+  "mousewheel",
+  "touchstart",
+  "touchmove",
+  "wheel"
+]);
+var pendingElements = new Set;
+var tasks = new WeakMap;
+var requestId;
+var runTasks = () => {
+  requestId = undefined;
+  const elements = Array.from(pendingElements);
+  pendingElements.clear();
+  for (const element of elements)
+    tasks.get(element)?.();
+};
+var requestTick = () => {
+  if (!requestId)
+    requestId = requestAnimationFrame(runTasks);
+};
+var schedule = (element, task) => {
+  tasks.set(element, task);
+  pendingElements.add(element);
+  requestTick();
+};
+
+// src/events.ts
+var NON_BUBBLING_EVENTS = new Set([
+  "focus",
+  "blur",
+  "scroll",
+  "resize",
+  "load",
+  "unload",
+  "error",
+  "toggle",
+  "mouseenter",
+  "mouseleave",
+  "pointerenter",
+  "pointerleave",
+  "abort",
+  "canplay",
+  "canplaythrough",
+  "durationchange",
+  "emptied",
+  "ended",
+  "loadeddata",
+  "loadedmetadata",
+  "loadstart",
+  "pause",
+  "play",
+  "playing",
+  "progress",
+  "ratechange",
+  "seeked",
+  "seeking",
+  "stalled",
+  "suspend",
+  "timeupdate",
+  "volumechange",
+  "waiting"
+]);
+var attachListener = (host, target, type, handler, options) => {
+  const listener = (e) => {
+    const task = () => {
+      const result = handler(e, target);
+      if (!isRecord(result))
+        return;
+      batch(() => {
+        for (const [key, value] of Object.entries(result)) {
+          host[key] = value;
+        }
+      });
+    };
+    if (options.passive)
+      schedule(target, task);
+    else
+      task();
+  };
+  target.addEventListener(type, listener, options);
+  return () => target.removeEventListener(type, listener);
+};
+function createEventsSensor(target, init, events) {
+  let value = init;
+  const eventMap = new Map;
+  return createSensor((set) => {
+    for (const [type, handler] of Object.entries(events)) {
+      const options = { passive: PASSIVE_EVENTS.has(type) };
+      const listener = (e) => {
+        const eventTarget = e.target;
+        if (!eventTarget || !target.contains(eventTarget))
+          return;
+        const task = () => {
+          try {
+            const next = handler({
+              event: e,
+              target,
+              prev: value
+            });
+            if (next == null || next instanceof Promise)
+              return;
+            if (!Object.is(next, value)) {
+              value = next;
+              set(next);
+            }
+          } catch (error) {
+            e.stopImmediatePropagation();
+            throw error;
+          }
+        };
+        if (options.passive)
+          schedule(target, task);
+        else
+          task();
+      };
+      eventMap.set(type, listener);
+      target.addEventListener(type, listener, options);
+    }
+    return () => {
+      if (eventMap.size) {
+        for (const [type, listener] of eventMap)
+          target.removeEventListener(type, listener);
+        eventMap.clear();
+      }
+    };
+  }, { value });
+}
+var makeOn = (host) => {
+  function on(target, type, handler, options = {}) {
+    return () => {
+      if (!("passive" in options)) {
+        options = { ...options, passive: PASSIVE_EVENTS.has(type) };
+      }
+      if (isMemo(target)) {
+        if (NON_BUBBLING_EVENTS.has(type)) {
+          if (DEV_MODE) {
+            console[LOG_WARN](`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
+          }
+          return createEffect(() => {
+            for (const el of target.get()) {
+              createScope(() => {
+                return attachListener(host, el, type, handler, options);
+              });
+            }
+          });
+        }
+        const root = host.shadowRoot ?? host;
+        const listener = (e) => {
+          const path = e.composedPath();
+          for (const el of target.get()) {
+            if (path.includes(el)) {
+              const task = () => {
+                const result = handler(e, el);
+                if (!isRecord(result))
+                  return;
+                batch(() => {
+                  for (const [key, value] of Object.entries(result)) {
+                    host[key] = value;
+                  }
+                });
+              };
+              if (options.passive)
+                schedule(el, task);
+              else
+                task();
+              break;
+            }
+          }
+        };
+        root.addEventListener(type, listener, options);
+        return () => root.removeEventListener(type, listener);
+      }
+      return attachListener(host, target, type, handler, options);
+    };
+  }
+  return on;
+};
+
 // src/parsers.ts
 var PARSER_BRAND = Symbol("parser");
 var METHOD_BRAND = Symbol("method");
-var isParser = (value) => {
-  if (!isFunction(value))
-    return false;
-  if (PARSER_BRAND in value)
-    return true;
-  if (value.length >= 2) {
-    if (DEV_MODE) {
-      console.warn(`isParser: unbranded two-argument function detected. Wrap custom parsers with asParser() to avoid misclassification when using default parameters or destructuring.`, value);
-    }
-    return true;
-  }
-  return false;
-};
+var isParser = (value) => isFunction(value) && (PARSER_BRAND in value);
 var isMethodProducer = (value) => isFunction(value) && (METHOD_BRAND in value);
-var isReader = (value) => isFunction(value);
-var getFallback = (ui, fallback) => isReader(fallback) ? fallback(ui) : fallback;
 var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
-var asMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
-var read = (reader, fallback) => (ui) => {
-  const value = reader(ui);
-  return typeof value === "string" && isParser(fallback) ? fallback(ui, value) : value ?? getFallback(ui, fallback);
-};
+var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 
 // src/ui.ts
 var DEPENDENCY_TIMEOUT = 200;
 var extractAttributes = (selector) => {
   const attributes = new Set;
-  if (selector.includes("."))
+  const withoutAttrValues = selector.replace(/\[[^\]]*\]/g, "");
+  if (withoutAttrValues.includes("."))
     attributes.add("class");
-  if (selector.includes("#"))
+  if (withoutAttrValues.includes("#"))
     attributes.add("id");
   if (selector.includes("[")) {
     const parts = selector.split("[");
@@ -1916,7 +2103,7 @@ function createElementsMemo(parent, selector) {
     }
   });
 }
-var getHelpers = (host) => {
+var makeElementQueries = (host) => {
   const root = host.shadowRoot ?? host;
   const dependencies = new Set;
   function first(selector, required) {
@@ -1968,69 +2155,64 @@ var getHelpers = (host) => {
 };
 
 // src/component.ts
-function defineComponent(name, props = {}, select = () => ({}), setup = () => ({})) {
+function defineComponent(name, factory) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
-  for (const prop of Object.keys(props)) {
-    const error = validatePropertyName(prop);
-    if (error)
-      throw new InvalidPropertyNameError(name, prop, error);
-  }
 
   class Truc extends HTMLElement {
     debug;
-    #ui;
     #cleanup;
-    static observedAttributes = Object.entries(props)?.filter(([, initializer]) => isParser(initializer)).map(([prop]) => prop) ?? [];
     connectedCallback() {
-      const [elementQueries, resolveDependencies] = getHelpers(this);
-      const ui = {
-        ...select(elementQueries),
-        host: this
+      const [elementQueries, resolveDependencies] = makeElementQueries(this);
+      const host = this;
+      const expose = (instanceProps) => {
+        this.#initSignals(instanceProps);
       };
-      this.#ui = ui;
-      Object.freeze(this.#ui);
-      const createSignal2 = (key, initializer) => {
-        if (isParser(initializer)) {
-          const result = initializer(ui, this.getAttribute(key));
-          if (result != null)
-            this.#setAccessor(key, result);
-        } else if (isMethodProducer(initializer)) {
-          initializer(ui);
-        } else if (isFunction(initializer)) {
-          const result = initializer(ui);
-          if (result != null)
-            this.#setAccessor(key, result);
-        } else {
-          const value = initializer;
-          if (value != null)
-            this.#setAccessor(key, value);
-        }
+      const context = {
+        ...elementQueries,
+        host,
+        expose,
+        watch: makeWatch(host),
+        on: makeOn(host),
+        pass: makePass(host),
+        provideContexts: makeProvideContexts(host),
+        requestContext: makeRequestContext(host)
       };
-      for (const [prop, initializer] of Object.entries(props)) {
-        if (initializer == null || prop in this)
-          continue;
-        createSignal2(prop, initializer);
-      }
+      const result = factory(context);
+      if (!result)
+        return;
       resolveDependencies(() => {
-        this.#cleanup = unown(() => runEffects(ui, setup(ui)));
+        this.#cleanup = createScope(() => {
+          for (const descriptor of result) {
+            if (descriptor)
+              descriptor();
+          }
+        });
       });
     }
     disconnectedCallback() {
       if (isFunction(this.#cleanup))
         this.#cleanup();
     }
-    attributeChangedCallback(name2, oldValue, newValue) {
-      if (!this.#ui || newValue === oldValue || isComputed(getSignals(this)[name2]))
-        return;
-      const parser = props[name2];
-      if (!isParser(parser))
-        return;
-      const parsed = parser(this.#ui, newValue, oldValue);
-      if (name2 in this)
-        this[name2] = parsed;
-      else
-        this.#setAccessor(name2, parsed);
+    #initSignals(instanceProps) {
+      const createReactiveProperty = (key, initializer) => {
+        if (isParser(initializer)) {
+          const result = initializer(this.getAttribute(key));
+          if (result != null)
+            this.#setAccessor(key, result);
+        } else if (isMethodProducer(initializer)) {
+          this[key] = initializer;
+        } else {
+          const value = initializer;
+          if (value != null)
+            this.#setAccessor(key, value);
+        }
+      };
+      for (const [prop, initializer] of Object.entries(instanceProps)) {
+        if (initializer == null || prop in this)
+          continue;
+        createReactiveProperty(prop, initializer);
+      }
     }
     #setAccessor(key, value) {
       const signal = isSignal(value) ? value : isFunction(value) ? createComputed(value) : createState(value);
@@ -2055,48 +2237,15 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
   customElements.define(name, Truc);
   return customElements.get(name);
 }
-// src/context.ts
-var CONTEXT_REQUEST = "context-request";
-
-class ContextRequestEvent extends Event {
-  context;
-  callback;
-  subscribe;
-  constructor(context, callback, subscribe = false) {
-    super(CONTEXT_REQUEST, {
-      bubbles: true,
-      composed: true
-    });
-    this.context = context;
-    this.callback = callback;
-    this.subscribe = subscribe;
-  }
-}
-var provideContexts = (contexts) => (host) => createScope(() => {
-  const listener = (e) => {
-    const { context, callback } = e;
-    if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
-      e.stopImmediatePropagation();
-      callback(() => host[context]);
-    }
-  };
-  host.addEventListener(CONTEXT_REQUEST, listener);
-  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
-});
-var requestContext = (context, fallback) => (ui) => {
-  let consumed = () => getFallback(ui, fallback);
-  ui.host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
-    consumed = getter;
-  }));
-  return createMemo(consumed);
-};
-// src/effects/attribute.ts
+// src/safety.ts
 var isSafeURL = (value) => {
+  if (/^(javascript|data|vbscript):/i.test(value))
+    return false;
   if (/^(mailto|tel):/i.test(value))
     return true;
   if (value.includes("://")) {
     try {
-      const url = new URL(value, window.location.origin);
+      const url = new URL(value);
       return ["http:", "https:", "ftp:"].includes(url.protocol);
     } catch {
       return false;
@@ -2112,119 +2261,74 @@ var safeSetAttribute = (element, attr, value) => {
     throw new Error(`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`);
   element.setAttribute(attr, value);
 };
-var setAttribute = (name, reactive = name) => updateElement(reactive, {
-  op: "a",
-  name,
-  read: (el) => el.getAttribute(name),
-  update: (el, value) => {
-    safeSetAttribute(el, name, value);
-  },
-  delete: (el) => {
-    el.removeAttribute(name);
-  }
-});
-var toggleAttribute = (name, reactive = name) => updateElement(reactive, {
-  op: "a",
-  name,
-  read: (el) => el.hasAttribute(name),
-  update: (el, value) => {
-    el.toggleAttribute(name, value);
-  }
-});
-// src/effects/class.ts
-var toggleClass = (token, reactive = token) => updateElement(reactive, {
-  op: "c",
-  name: token,
-  read: (el) => el.classList.contains(token),
-  update: (el, value) => {
-    el.classList.toggle(token, value);
-  }
-});
-// src/scheduler.ts
-var PASSIVE_EVENTS = new Set([
-  "scroll",
-  "resize",
-  "mousewheel",
-  "touchstart",
-  "touchmove",
-  "wheel"
-]);
-var pendingElements = new Set;
-var tasks = new WeakMap;
-var requestId;
-var runTasks = () => {
-  requestId = undefined;
-  const elements = Array.from(pendingElements);
-  pendingElements.clear();
-  for (const element of elements)
-    tasks.get(element)?.();
-};
-var requestTick = () => {
-  if (requestId)
-    cancelAnimationFrame(requestId);
-  requestId = requestAnimationFrame(runTasks);
-};
-var schedule = (element, task) => {
-  tasks.set(element, task);
-  pendingElements.add(element);
-  requestTick();
+var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+var setTextPreservingComments = (element, text) => {
+  Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => node.remove());
+  element.append(document.createTextNode(text));
 };
 
-// src/effects/event.ts
-var on = (type, handler, options = {}) => (host, target) => createScope(() => {
-  if (!("passive" in options))
-    options = { ...options, passive: PASSIVE_EVENTS.has(type) };
-  const listener = (e) => {
-    const task = () => {
-      const result = handler(e);
-      if (!isRecord(result))
-        return;
-      batch(() => {
-        for (const [key, value] of Object.entries(result)) {
-          try {
-            host[key] = value;
-          } catch (error) {
-            log(error, `Reactive property "${key}" on ${elementName(host)} from event ${type} on ${elementName(target)} could not be set, because it is read-only.`, LOG_ERROR);
-          }
-        }
-      });
-    };
-    if (options.passive)
-      schedule(target, task);
-    else
-      task();
-  };
-  target.addEventListener(type, listener, options);
-  return () => target.removeEventListener(type, listener);
+// src/helpers.ts
+var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
+  element.textContent = String(value);
+};
+var bindProperty = (element, key) => (value) => {
+  element[key] = value;
+};
+var bindClass = (element, token, transform) => (value) => {
+  element.classList.toggle(token, transform ? transform(value) : Boolean(value));
+};
+var bindVisible = (element, transform) => (value) => {
+  element.hidden = !(transform ? transform(value) : Boolean(value));
+};
+var bindAttribute = (element, name, allowUnsafe = false) => ({
+  ok: (value) => {
+    if (typeof value === "boolean") {
+      element.toggleAttribute(name, value);
+    } else if (allowUnsafe) {
+      element.setAttribute(name, value);
+    } else {
+      safeSetAttribute(element, name, value);
+    }
+  },
+  nil: () => {
+    element.removeAttribute(name);
+  }
 });
-// src/effects/html.ts
-var dangerouslySetInnerHTML = (reactive, options = {}) => updateElement(reactive, {
-  op: "h",
-  read: (el) => (el.shadowRoot || !options.shadowRootMode ? el : null)?.innerHTML ?? "",
-  update: (el, html) => {
+var bindStyle = (element, prop) => ({
+  ok: (value) => {
+    element.style.setProperty(prop, value);
+  },
+  nil: () => {
+    element.style.removeProperty(prop);
+  }
+});
+var SCRIPT_ATTRS = [
+  "type",
+  "src",
+  "async",
+  "defer",
+  "nomodule",
+  "crossorigin",
+  "integrity",
+  "referrerpolicy",
+  "fetchpriority"
+];
+var dangerouslyBindInnerHTML = (element, options = {}) => ({
+  ok: (html) => {
     const { shadowRootMode, allowScripts } = options;
     if (!html) {
-      if (el.shadowRoot)
-        el.shadowRoot.innerHTML = "<slot></slot>";
-      return "";
+      if (element.shadowRoot)
+        element.shadowRoot.innerHTML = "<slot></slot>";
+      else
+        element.innerHTML = "";
+      return;
     }
-    if (shadowRootMode && !el.shadowRoot)
-      el.attachShadow({ mode: shadowRootMode });
-    const target = el.shadowRoot || el;
-    schedule(el, () => {
+    if (shadowRootMode && !element.shadowRoot)
+      element.attachShadow({ mode: shadowRootMode });
+    const target = element.shadowRoot || element;
+    schedule(element, () => {
       target.innerHTML = html;
       if (allowScripts) {
-        const SCRIPT_ATTRS = [
-          "type",
-          "src",
-          "async",
-          "defer",
-          "nomodule",
-          "crossorigin",
-          "integrity",
-          "referrerpolicy",
-          "fetchpriority"
-        ];
         target.querySelectorAll("script").forEach((script) => {
           const newScript = document.createElement("script");
           for (const attr of SCRIPT_ATTRS) {
@@ -2238,162 +2342,37 @@ var dangerouslySetInnerHTML = (reactive, options = {}) => updateElement(reactive
         });
       }
     });
-    return allowScripts ? " with scripts" : "";
-  }
-});
-// src/effects/pass.ts
-var pass = (props) => (host, target) => createScope(() => {
-  if (!isCustomElement(target))
-    throw new InvalidCustomElementError(target, `pass from ${elementName(host)}`);
-  const reactives = isFunction(props) ? props(target) : props;
-  if (!isRecord(reactives))
-    throw new InvalidReactivesError(host, target, reactives);
-  const toSignal = (value) => {
-    if (isSignal(value))
-      return value;
-    const fn = typeof value === "string" && value in host ? () => host[value] : isFunction(value) ? value : undefined;
-    return fn ? createComputed(fn) : undefined;
-  };
-  const signals = getSignals(target);
-  const targetName = elementName(target);
-  const cleanups = [];
-  for (const [prop, reactive] of Object.entries(reactives)) {
-    if (reactive == null)
-      continue;
-    if (!(prop in target)) {
-      if (DEV_MODE)
-        console[LOG_WARN](`pass(): property '${prop}' does not exist on ${targetName}`);
-      continue;
-    }
-    const signal = toSignal(reactive);
-    if (!signal)
-      continue;
-    const slot = signals[prop];
-    if (isSlot(slot)) {
-      const original = slot.current();
-      slot.replace(signal);
-      cleanups.push(() => slot.replace(original));
-      continue;
-    }
-    if (DEV_MODE)
-      console[LOG_WARN](`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`);
-  }
-  if (cleanups.length)
-    return () => {
-      for (const c of cleanups)
-        c();
-    };
-});
-// src/effects/property.ts
-var setProperty = (key, reactive = key) => updateElement(reactive, {
-  op: "p",
-  name: key,
-  read: (el) => (key in el) ? el[key] ?? null : null,
-  update: (el, value) => {
-    el[key] = value;
-  }
-});
-var show = (reactive) => updateElement(reactive, {
-  op: "p",
-  name: "hidden",
-  read: (el) => !el.hidden,
-  update: (el, value) => {
-    el.hidden = !value;
-  }
-});
-// src/effects/style.ts
-var setStyle = (prop, reactive = prop) => updateElement(reactive, {
-  op: "s",
-  name: prop,
-  read: (el) => el.style.getPropertyValue(prop),
-  update: (el, value) => {
-    el.style.setProperty(prop, value);
   },
-  delete: (el) => {
-    el.style.removeProperty(prop);
+  nil: () => {
+    if (element.shadowRoot)
+      element.shadowRoot.innerHTML = "<slot></slot>";
+    else
+      element.innerHTML = "";
   }
 });
-// src/effects/text.ts
-var setText = (reactive) => updateElement(reactive, {
-  op: "t",
-  read: (el) => el.textContent,
-  update: (el, value) => {
-    Array.from(el.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => node.remove());
-    el.append(document.createTextNode(value));
-  }
-});
-// src/events.ts
-var createEventsSensor = (init, key, events) => (ui) => {
-  const { host } = ui;
-  let value = getFallback(ui, init);
-  const memo = isMemo(ui[key]) ? ui[key] : null;
-  const single = memo ? null : ui[key];
-  const eventMap = new Map;
-  const getTarget = (eventTarget) => {
-    if (single) {
-      return single.contains(eventTarget) ? single : undefined;
-    }
-    for (const t of memo.get())
-      if (t.contains(eventTarget))
-        return t;
-  };
-  return createSensor((set) => {
-    for (const [type, handler] of Object.entries(events)) {
-      const options = { passive: PASSIVE_EVENTS.has(type) };
-      const listener = (e) => {
-        const eventTarget = e.target;
-        if (!eventTarget)
-          return;
-        const target = getTarget(eventTarget);
-        if (!target)
-          return;
-        e.stopPropagation();
-        const task = () => {
-          try {
-            const next = handler({
-              event: e,
-              ui,
-              target,
-              prev: value
-            });
-            if (next == null || next instanceof Promise)
-              return;
-            if (!Object.is(next, value)) {
-              value = next;
-              set(next);
-            }
-          } catch (error) {
-            e.stopImmediatePropagation();
-            throw error;
-          }
-        };
-        if (options.passive)
-          schedule(host, task);
-        else
-          task();
-      };
-      eventMap.set(type, listener);
-      host.addEventListener(type, listener, options);
-    }
-    return () => {
-      if (eventMap.size) {
-        for (const [type, listener] of eventMap)
-          host.removeEventListener(type, listener);
-        eventMap.clear();
-      }
-    };
-  }, { value });
-};
 // src/parsers/boolean.ts
-var asBoolean = () => asParser((_, value) => value != null && value !== "false");
+var asBoolean = () => asParser((value) => value != null && value !== "false");
+// src/parsers/date.ts
+var asDate = (fallback = "") => asParser((value) => {
+  if (!value)
+    return fallback;
+  const date = new Date(value);
+  if (isNaN(date.getTime()))
+    return fallback;
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+});
 // src/parsers/json.ts
-var asJSON = (fallback) => asParser((ui, value) => {
+var asJSON = (fallback) => asParser((value) => {
   if ((value ?? fallback) == null)
     throw new TypeError("asJSON: Value and fallback are both null or undefined");
   if (value == null)
-    return getFallback(ui, fallback);
+    return fallback;
   if (value === "")
-    throw new TypeError("Empty string is not valid JSON");
+    throw new SyntaxError("Empty string is not valid JSON");
   let result;
   try {
     result = JSON.parse(value);
@@ -2402,7 +2381,7 @@ var asJSON = (fallback) => asParser((ui, value) => {
       cause: error
     });
   }
-  return result ?? getFallback(ui, fallback);
+  return result ?? fallback;
 });
 // src/parsers/number.ts
 var parseNumber = (parseFn, value) => {
@@ -2411,43 +2390,40 @@ var parseNumber = (parseFn, value) => {
   const parsed = parseFn(value);
   return Number.isFinite(parsed) ? parsed : undefined;
 };
-var asInteger = (fallback = 0) => asParser((ui, value) => {
+var asInteger = (fallback = 0) => asParser((value) => {
   if (value == null)
-    return getFallback(ui, fallback);
+    return fallback;
   const trimmed = value.trim();
   if (trimmed.toLowerCase().startsWith("0x"))
-    return parseNumber((v) => parseInt(v, 16), trimmed) ?? getFallback(ui, fallback);
+    return parseNumber((v) => parseInt(v, 16), trimmed) ?? fallback;
   const parsed = parseNumber(parseFloat, value);
-  return parsed != null ? Math.trunc(parsed) : getFallback(ui, fallback);
+  return parsed != null ? Math.trunc(parsed) : fallback;
 });
-var asNumber = (fallback = 0) => asParser((ui, value) => parseNumber(parseFloat, value) ?? getFallback(ui, fallback));
+var asNumber = (fallback = 0) => asParser((value) => parseNumber(parseFloat, value) ?? fallback);
+var asClampedInteger = (min = 0, max = Number.MAX_SAFE_INTEGER) => asParser((value) => {
+  if (value == null)
+    return Math.max(min, Math.min(min, max));
+  const trimmed = value.trim();
+  const raw = trimmed.toLowerCase().startsWith("0x") ? parseNumber((v) => parseInt(v, 16), trimmed) : parseNumber(parseFloat, value);
+  const parsed = raw != null ? Math.trunc(raw) : min;
+  return Math.max(min, Math.min(parsed, max));
+});
 // src/parsers/string.ts
-var asString = (fallback = "") => asParser((ui, value) => value ?? getFallback(ui, fallback));
-var asEnum = (valid) => asParser((_, value) => {
+var asString = (fallback = "") => asParser((value) => value ?? fallback);
+var asEnum = (valid) => asParser((value) => {
   if (value == null)
     return valid[0];
   const lowerValue = value.toLowerCase();
   const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
-  return matchingValid ? value : valid[0];
+  return matchingValid ?? valid[0];
 });
 export {
   valueString,
-  updateElement,
   untrack,
   unown,
-  toggleClass,
-  toggleAttribute,
-  show,
-  setText,
-  setStyle,
-  setProperty,
-  setAttribute,
+  setTextPreservingComments,
   schedule,
-  requestContext,
-  read,
-  provideContexts,
-  pass,
-  on,
+  safeSetAttribute,
   match,
   isTask,
   isStore,
@@ -2467,8 +2443,11 @@ export {
   isComputed,
   isCollection,
   isAsyncFunction,
+  escapeHTML,
+  each,
+  defineMethod,
   defineComponent,
-  dangerouslySetInnerHTML,
+  dangerouslyBindInnerHTML,
   createTask,
   createStore,
   createState,
@@ -2484,14 +2463,21 @@ export {
   createEffect,
   createComputed,
   createCollection,
+  bindVisible,
+  bindText,
+  bindStyle,
+  bindProperty,
+  bindClass,
+  bindAttribute,
   batch,
   asString,
   asParser,
   asNumber,
-  asMethod,
   asJSON,
   asInteger,
   asEnum,
+  asDate,
+  asClampedInteger,
   asBoolean,
   UnsetSignalValueError,
   SKIP_EQUALITY,
@@ -2499,11 +2485,9 @@ export {
   ReadonlySignalError,
   NullishSignalValueError,
   MissingElementError,
-  InvalidUIKeyError,
   InvalidSignalValueError,
   InvalidReactivesError,
   InvalidPropertyNameError,
-  InvalidEffectsError,
   InvalidCustomElementError,
   InvalidComponentNameError,
   InvalidCallbackError,

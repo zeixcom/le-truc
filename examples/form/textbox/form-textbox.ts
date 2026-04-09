@@ -1,0 +1,99 @@
+import {
+	bindText,
+	bindVisible,
+	createEventsSensor,
+	createMemo,
+	defineComponent,
+	defineMethod,
+} from '../../..'
+
+export type FormTextboxProps = {
+	value: string
+	readonly length: number
+	error: string
+	description: string
+	clear: () => void
+}
+
+declare global {
+	interface HTMLElementTagNameMap {
+		'form-textbox': HTMLElement & FormTextboxProps
+	}
+}
+
+export default defineComponent<FormTextboxProps>(
+	'form-textbox',
+	({ expose, first, host, on, watch }) => {
+		const textbox = first(
+			'input, textarea',
+			'Add a native input or textarea as descendant element.',
+		)
+		const clearBtn = first('button.clear')
+		const errorEl = first('.error')
+		const descriptionEl = first('.description')
+
+		const errorId = errorEl?.id
+		const descriptionId = descriptionEl?.id
+
+		// Reactive description: tracks remaining character count if template is present
+		const descriptionMemo =
+			descriptionEl && textbox.maxLength > 0 && descriptionEl.dataset.remaining
+				? createMemo(() =>
+						descriptionEl.dataset.remaining!.replace(
+							'${n}',
+							String(textbox.maxLength - host.length),
+						),
+					)
+				: null
+
+		expose({
+			value: textbox.value,
+			length: createEventsSensor(textbox, textbox.value.length, {
+				input: ({ target }) => target.value.length,
+			}),
+			error: '',
+			description: descriptionMemo ?? descriptionEl?.textContent?.trim() ?? '',
+			clear: defineMethod(() => {
+				host.value = ''
+				textbox.value = ''
+				textbox.setCustomValidity('')
+				textbox.checkValidity()
+				textbox.dispatchEvent(new Event('input', { bubbles: true }))
+				textbox.dispatchEvent(new Event('change', { bubbles: true }))
+				textbox.focus()
+			}),
+		})
+
+		// Set aria-describedby once (static relationship)
+		if (descriptionEl && descriptionId)
+			textbox.setAttribute('aria-describedby', descriptionId)
+
+		return [
+			on(textbox, 'change', () => {
+				textbox.checkValidity()
+				return {
+					value: textbox.value,
+					error: textbox.validationMessage,
+				}
+			}),
+			watch('value', value => {
+				textbox.value = value
+			}),
+			watch('error', error => {
+				textbox.ariaInvalid = String(!!error)
+				if (error && errorId) {
+					textbox.setAttribute('aria-errormessage', errorId)
+				} else {
+					textbox.removeAttribute('aria-errormessage')
+				}
+			}),
+			clearBtn && watch('length', bindVisible(clearBtn)),
+			clearBtn
+				&& on(clearBtn, 'click', () => {
+					host.clear()
+				}),
+			errorEl && watch('error', bindText(errorEl)),
+			descriptionEl && watch('description', bindText(descriptionEl)),
+		]
+	},
+)

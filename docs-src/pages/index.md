@@ -43,14 +43,13 @@ This means better SEO, faster initial page loads, and progressive enhancement th
 Progressively enhance the user experience by adding interactivity:
 
 ```js
-import { asString, defineComponent, setText } from '@zeix/le-truc'
+import { asString, bindText, defineComponent } from '@zeix/le-truc'
 
-defineComponent(
-  'hello-world',
-  { name: asString() },
-  q => ({ span: q.first('span') }),
-  () => ({ span: setText('name') }),
-)
+defineComponent('hello-world', ({ expose, first, watch }) => {
+  const span = first('span')
+  expose({ name: asString(span.textContent ?? '') })
+  return [watch('name', bindText(span))]
+})
 ```
 
 Le Truc augments what the platform already provides. It leverages the Web Components standard while adding just enough convenience functions to make reactive UI behaviors easy to implement.

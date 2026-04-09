@@ -1,15 +1,28 @@
 <overview>
-Which Le Truc parser or reader to use for each prop initialisation pattern.
+Which Le Truc parser or initializer to use for each prop in `expose()`.
 All parsers are imported from `@zeix/le-truc`.
 </overview>
 
-## Parser vs. Reader vs. static value
+## Initializer kinds in `expose()`
 
-| Initializer kind | Reacts to attribute changes? | Use when |
-|---|---|---|
-| **Parser** (`asParser`-wrapped, ≥2 args) | Yes — added to `observedAttributes` | Prop is driven by an HTML attribute |
-| **Reader** (1-arg function, no `asParser`) | No — called once at connect time | Prop is initialised from current DOM state |
-| **Static value** | No | Prop starts with a fixed default |
+| Initializer kind | Use when |
+|---|---|
+| **Parser** (`asParser`-wrapped) | Prop is configured by HTML authors via attributes in server-rendered markup |
+| **Static value** | Prop starts with a fixed default not derived from DOM or attributes |
+| **Signal** | Prop is backed by an existing signal (e.g. `createEventsSensor(...)`) |
+| **MemoCallback** `() => T` | Prop is a derived computed value (unbranded thunk) |
+| **MethodProducer** (`defineMethod`-wrapped) | Prop is an imperative method callable from outside |
+
+> **Attribute semantics:** Attributes are for server-side configuration by HTML authors. Parsers in `expose()` are called **once at connect time** — they read the current attribute value from server-rendered markup. Attribute changes on a live document do not trigger re-parsing.
+
+> **Reading initial DOM values:** Read element state directly before calling `expose()`, then pass the result as a static value or wrap in a parser:
+> ```typescript
+> expose({
+>   count: asInteger(parseInt(countEl.textContent || '0') || 0),
+>   value: textbox.value,
+>   label: asString(labelEl?.textContent ?? ''),
+> })
+> ```
 
 ## Parsers
 
@@ -24,13 +37,14 @@ label: asString()
 // fallback: static string
 placeholder: asString('Search…')
 
-// fallback: reader function (read from DOM at connect time)
-label: asString(ui => ui.label.textContent ?? '')
+// fallback derived from DOM — read before expose():
+const labelText = labelEl?.textContent ?? ''
+expose({ label: asString(labelText) })
 ```
 
 ### `asEnum(valid)`
 
-Constrains the attribute to a fixed set of allowed values (case-insensitive). Returns the first entry as default when the attribute is absent or unrecognised.
+Constrains the attribute to a fixed set of allowed values (case-insensitive). Returns the first entry as default when absent or unrecognised.
 
 ```typescript
 // first value is the default
@@ -41,7 +55,7 @@ variant: asEnum(['default', 'primary', 'danger'])
 
 ### `asBoolean()`
 
-Returns `true` when the attribute is present and its value is not `"false"`. Returns `false` otherwise. Matches the HTML boolean attribute convention.
+Returns `true` when the attribute is present and its value is not `"false"`. Returns `false` otherwise.
 
 ```typescript
 disabled: asBoolean()
@@ -57,6 +71,9 @@ Parses the attribute as an integer. Supports hexadecimal (`0x`) and scientific n
 count: asInteger()
 
 max: asInteger(100)
+
+// With DOM-derived fallback:
+count: asInteger(parseInt(countEl.textContent || '0') || 0)
 ```
 
 ### `asNumber(fallback?)`
@@ -70,51 +87,66 @@ progress: asNumber(0)
 
 ### `asJSON(fallback?)`
 
-Parses the attribute as JSON. Throws `TypeError` for invalid JSON. Use for structured config passed via attribute.
+Parses the attribute as JSON. Throws `TypeError` for invalid JSON.
 
 ```typescript
 config: asJSON({ theme: 'light', size: 'medium' })
 ```
 
-## `read(reader, fallback)` — DOM-initialised props
+## `createEventsSensor(element, init, events)` — event-driven props
 
-Composes a loose reader (may return `string | null | undefined`) with a parser or fallback into a typed `Reader<T>`. Use when the initial value should come from the DOM, not an attribute.
+Use inside `expose()` when a prop should update reactively from DOM events.
 
 ```typescript
-// Read text content of a span and parse as integer
-count: read(ui => ui.count.textContent, asInteger())
-
-// Read value from a native input
-value: read(ui => ui.input.value, asString())
-
-// Read text with a static fallback
-label: read(ui => ui.label?.textContent, 'Default label')
+expose({
+  length: createEventsSensor(textbox, textbox.value.length, {
+    input: ({ target }) => target.value.length,
+  }),
+})
 ```
 
-`read()` returns a Reader (one-argument function), so it is **not** added to `observedAttributes` — it is called once at connect time.
+The handler receives `{ event, target, prev }` and returns the new value (or `void` to leave unchanged).
+
+## `defineMethod(fn)` — imperative methods
+
+`defineMethod(fn)` brands `fn` as a `MethodProducer`. The function IS the method — it is installed directly as `host[key] = fn`.
+
+```typescript
+expose({
+  clear: defineMethod(() => {
+    host.value = ''
+    textbox.value = ''
+    textbox.dispatchEvent(new Event('input', { bubbles: true }))
+  }),
+})
+```
+
+**Always use `defineMethod()`.** An unbranded `() => void` function is treated as a `MemoCallback`, not a method.
 
 ## Custom parsers
 
-Wrap with `asParser()` so `isParser()` recognises the function reliably even when default parameters or destructuring would reduce `fn.length`:
+Wrap with `asParser()` so `isParser()` recognises the function reliably:
 
 ```typescript
 import { asParser } from '@zeix/le-truc'
 
-const asColor = asParser((ui, value) => {
+const asColor = asParser((value: string | null | undefined): string => {
   if (value == null) return '#000000'
   return CSS.supports('color', value) ? value : '#000000'
 })
+
+expose({ color: asColor })
 ```
 
-**Always use `asParser()` for custom parsers.** Without it, detection falls back to `fn.length >= 2`, which is unreliable with default parameters, rest parameters, or destructuring.
+**Always use `asParser()` for custom parsers.** Parser signature: `(value: string | null | undefined) => T`.
 
 ## Choosing the right initializer
 
 | Scenario | Use |
 |---|---|
-| Attribute controls the prop; HTML author sets it | `asBoolean()`, `asString()`, `asEnum()`, `asInteger()`, `asNumber()`, `asJSON()` |
-| Prop initial value lives in existing DOM content | `read(reader, fallback)` |
-| Prop has a fixed starting value, not attribute-driven | Static value: `false`, `0`, `''`, `[]` |
+| HTML author configures via attribute | `asBoolean()`, `asString()`, `asEnum()`, `asInteger()`, `asNumber()`, `asJSON()` |
+| Prop's initial value comes from existing DOM content | Read directly before `expose()`, pass as static or fallback |
+| Prop has a fixed starting value | Static: `false`, `0`, `''`, `[]` |
 | Prop is a reactive value from a signal | Pass the signal directly |
-| Prop installs an imperative method on `host` | `asMethod(fn)` |
-| Prop is driven by a DOM event (sensor-based) | `createEventsSensor(init, key, events)` from `events.ts` (see ARCHITECTURE.md) |
+| Prop installs an imperative method on `host` | `defineMethod(fn)` |
+| Prop is driven by DOM events | `createEventsSensor(element, init, events)` |

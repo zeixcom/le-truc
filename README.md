@@ -40,22 +40,23 @@ bun add @zeix/le-truc
 2. Define the component:
 
 ```js
-import { asString, defineComponent, on, setText } from '@zeix/le-truc'
+import { defineComponent, on, read, setText } from '@zeix/le-truc'
 
 defineComponent(
   'basic-hello',         // Component name (must contain a hyphen)
-  {                      // Reactive property — fallback read from DOM
-    name: asString(ui => ui.output.textContent)
-  },
-  ({ first }) => ({      // Select DOM elements
-    input: first('input', 'Needed to enter the name.'),
-    output: first('output', 'Needed to display the name.'),
-  }),
-  ({ host, input }) => { // Wire behaviour
-    const fallback = host.name
+  ({ first, host }) => { // Factory: query DOM elements, return ui/props/effects
+    const input = first('input', 'Needed to enter the name.')
+    const output = first('output', 'Needed to display the name.')
+    const fallback = output.textContent ?? 'World'
     return {
-      input: on('input', () => { host.name = input.value || fallback }),
-      output: setText('name'),
+      ui: { input, output },
+      props: {
+        name: read(() => output.textContent, fallback), // initial value from DOM
+      },
+      effects: {
+        input: on('input', () => { host.name = input.value || fallback }),
+        output: setText('name'),
+      },
     }
   },
 )
@@ -63,7 +64,7 @@ defineComponent(
 
 3. Import the module and watch it work.
 
-`defineComponent` returns a Custom Element class registered via `customElements.define()`. Properties declared in step 2 become reactive: reading them inside an effect tracks the dependency, writing them triggers only the affected DOM updates.
+`defineComponent` returns a Custom Element class registered via `customElements.define()`. Properties declared in `props` become reactive: reading them inside an effect tracks the dependency, writing them triggers only the affected DOM updates.
 
 ## Documentation
 

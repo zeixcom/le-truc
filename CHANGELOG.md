@@ -1,5 +1,50 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **`FactoryContext<P>` type**: New context object passed to the factory function, containing element query helpers (`first`, `all`), the `host` element, and factory helpers (`expose`, `watch`, `on`, `pass`, `provideContexts`, `requestContext`).
+- **`EffectDescriptor` type**: Deferred effect — a thunk `() => MaybeCleanup` that runs inside a reactive scope after all dependencies are resolved. Replaces the old `Effect<P, E>` type.
+- **`FactoryResult` type**: Return type of the factory function — a flat array of `EffectDescriptor | false | undefined`, enabling the `element && descriptor()` pattern for conditional effects.
+- **`WatchHandlers<T>` type**: Optional match-branch handlers with `ok`, `err`, and `nil` properties, accepted by `watch()` and DOM binding helpers.
+- **`PassedProps<P, Q>` type**: Props object for `pass()` — maps child component property names to `Reactive<Q[K], P>` values.
+- **DOM binding helpers** in a new `src/helpers.ts` module, each usable as a `watch()` handler:
+  - `bindText(element, preserveComments?)` — sets text content
+  - `bindProperty(element, key)` — sets a DOM property
+  - `bindClass(element, token, transform?)` — toggles a class
+  - `bindVisible(element, transform?)` — controls visibility via `el.hidden = !value`
+  - `bindAttribute(element, name, allowUnsafe?)` — returns `WatchHandlers<string | boolean>` for attribute management; boolean values use `toggleAttribute`
+  - `bindStyle(element, prop)` — returns `WatchHandlers<string>` for inline style; nil value calls `removeProperty`, restoring the CSS cascade
+  - `dangerouslyBindInnerHTML(element, options?)` — returns `WatchHandlers<string>` for innerHTML with optional shadow DOM and script re-execution
+- **`each(memo, callback)` helper**: Creates per-element reactive effects from a `Memo<E[]>`. When elements enter the collection their effects are activated inside a per-element `createScope`; when they leave the scope is disposed. The callback receives a single element and returns a `FactoryResult` array or a single `EffectDescriptor`. Returned as an `EffectDescriptor` for inclusion in the factory return array.
+- **`asDate(fallback?)` parser**: New `Parser<string>` factory with a simplified signature — no longer requires a UI context parameter.
+- **`asClampedInteger(min?, max?)` parser**: Parser for clamped integer values; returns `min` (default `0`) when the attribute is absent or the parsed value is out of range.
+
+### Changed
+
+- **`defineComponent()` API redesigned with a factory form**: The signature changed from `defineComponent<P, U>(name, props, select, setup)` to `defineComponent<P>(name, factory)`. This is a **breaking change** — the only way to define components is now the factory form. The factory receives a `FactoryContext<P>` and returns a flat `FactoryResult` array of `EffectDescriptor`s.
+- **Reactive properties declared via `expose()` inside the factory**: The `props` parameter and the `select` query builder are removed. Components call `context.expose(props)` at connect time to declare reactive properties, enabling per-instance initialization.
+- **`Parser<T>` signature simplified**: Parsers no longer receive the element or UI object. The signature is now `(value: string | null | undefined) => T`. Existing parsers using the old two-argument form must be migrated to `asParser()`.
+- **`Reactive<T>` type simplified**: Removed the element type parameter; thunks are now `() => T | Promise<T> | null | undefined` instead of `(target: E) => T | null | undefined`.
+- **Effect factories replaced by `watch()`, `on()`, `pass()` helpers**: The individual effect factory functions (`setAttribute`, `toggleClass`, `setProperty`, `setText`, etc.) are replaced by the general-purpose `watch(source, handler)` helper combined with the DOM binding helpers above.
+- **`on()` redesigned as a factory helper**: Accepts a single element or `Memo<E[]>` target and typed event names. Handlers receive `(event, element)` and may return `{ prop: value }` to batch-update host properties.
+- **`pass()` redesigned as a factory helper**: `pass(target, props)` returns an `EffectDescriptor` and works for both single elements and `Memo<E[]>` targets.
+- **`provideContexts()` and `requestContext()` are now `FactoryContext` methods**: Instantiated via `makeProvideContexts()` / `makeRequestContext()` bound to the host element. `provideContexts([...])` returns an `EffectDescriptor` to include in the return array.
+- **`getHelpers()` replaced by `makeElementQueries()`**: Returns a tuple `[ElementQueries, (run: () => void) => void]`; the `UI` type is no longer exported.
+- **`METHOD_BRAND` constant now exported**: Enables explicit branding checks for method producers; `isMethodProducer()` no longer falls back to `isFunction()`.
+
+### Removed
+
+- **Old 4-parameter `defineComponent()` form** `(name, props, select, setup)`: fully replaced by the 2-parameter factory form.
+- **`Effects<P, U>` return type and effect-object pattern**: Setup no longer returns a record keyed by UI element names.
+- **Effect factory modules** (`src/effects/attribute.ts`, `class.ts`, `event.ts`, `html.ts`, `property.ts`, `style.ts`, `text.ts`, `pass.ts`): all removed; functionality is provided by `watch()` + binding helpers.
+- **`Effect<P, E>`, `ElementEffects<P, E>`, `ElementUpdater<E, T>` types**: replaced by `EffectDescriptor`.
+- **`Reader<T, H>`, `LooseReader<T>`, `Fallback<T>`, `ParserOrFallback<T>` types and `isReader()`, `read()` functions**: removed from parsers API.
+- **`ComponentSetup<P, U>`, `ComponentUI<P, U>`, `Component<P>` types**: no longer needed with the factory form.
+- **`InvalidEffectsError`, `InvalidUIKeyError`, `InvalidPropertyNameError` error classes**: removed.
+- **`UI` type and `runEffects()` public export**: effects are now activated via descriptors inside a scope created during dependency resolution.
+
 ## 1.0.1
 
 ### Changed
@@ -109,7 +154,7 @@
 
 - **`pass()` no longer requires `configurable` property descriptors** on the target element and no longer leaks state on cleanup.
 - **`pass()` now warns in dev mode** when a property doesn't exist on the target (likely a typo) or has no Slot (non-Le Truc element), instead of silently doing nothing.
-- **`dangerouslySetInnerHTML` script cloning** now copies all functional and security-hardening attributes (`src`, `async`, `defer`, `nomodule`, `crossorigin`, `integrity`, `referrerpolicy`, `fetchpriority`) instead of only `type`. External scripts with `src` no longer become empty inline scripts.
+- **`dangerouslyBindInnerHTML` script cloning** now copies all functional and security-hardening attributes (`src`, `async`, `defer`, `nomodule`, `crossorigin`, `integrity`, `referrerpolicy`, `fetchpriority`) instead of only `type`. External scripts with `src` no longer become empty inline scripts.
 - **`createEventsSensor` now reacts to collection changes**: For `Memo`-backed element collections, `getTarget()` reads the current elements on each event instead of a stale snapshot captured at sensor creation time. Static single-element targets use a fast path with no array overhead.
 - **Dependency resolution no longer swallows errors silently**: `DependencyTimeoutError` is now logged via `console.warn` in dev mode. Previously, the `.catch` handler discarded all errors without any output.
 - **Dependency resolution filters out already-defined components**: A microtask defer before `Promise.race` filters out components that were defined synchronously after queries ran (e.g. co-bundled components), avoiding unnecessary waits.

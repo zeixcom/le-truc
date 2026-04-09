@@ -154,18 +154,20 @@ const computeSourcesHash = (
 	return calculateFileHash(combined)
 }
 
+export type { ApiCategory }
 // Exported for testing
 export {
-	parseGlobals,
-	generateApiIndexMarkdown,
 	computeSourcesHash,
+	generateApiIndexMarkdown,
+	parseGlobals,
 	sortCategories,
 }
-export type { ApiCategory }
 
 export const apiEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => { resolve = res })
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
 	const cleanup = createEffect(() => {
 		match([libraryScripts.sources], {
 			ok: async ([sources]) => {

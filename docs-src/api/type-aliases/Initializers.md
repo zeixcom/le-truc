@@ -1,27 +1,20 @@
-### Type Alias: Initializers\<P, U\>
+### Type Alias: Initializers\<P\>
 
-> **Initializers**\<`P`, `U`\> = \{ \[K in keyof P\]?: P\[K\] \| Signal\<P\[K\]\> \| Parser\<P\[K\], ComponentUI\<P, U\>\> \| Reader\<MaybeSignal\<P\[K\]\>, ComponentUI\<P, U\>\> \| ((ui: ComponentUI\<P, U\>) =\> void) \}
+> **Initializers**\<`P`\> = \{ \[K in keyof P\]?: P\[K\] \| Signal\<P\[K\]\> \| Parser\<P\[K\]\> \| (P\[K\] extends (args: any\[\]) =\> any ? P\[K\] & \{ \[METHOD\_BRAND\]: true \} : never) \}
 
-Defined in: [src/component.ts:80](https://github.com/zeixcom/le-truc/blob/aeeac355aad9805eb8ee281d5c2dacf08589e2c9/src/component.ts#L80)
+Defined in: [src/component.ts:73](https://github.com/zeixcom/le-truc/blob/a45b49e21f141d0d53e4b986d3d37f6b090780f6/src/component.ts#L73)
 
 The `props` argument of `defineComponent` — a map from property names to their initializers.
 
 Each value may be:
 - A **static value** or **`Signal`** — used directly as the initial signal value.
-- A **`Parser`** (two-argument function branded with `asParser()`) — called with
-  `(ui, attributeValue)` at connect time and again on every attribute change.
-- A **`Reader`** (one-argument function) — called with `ui` at connect time; if it
-  returns a function or `TaskCallback`, a computed/task signal is created; otherwise
-  a mutable state signal is created.
-- A **`MethodProducer`** (branded with `asMethod()`) — called for side effect of
-  creating the method only; its return value is ignored.
+- A **`Parser`** (branded with `asParser()`) — called with the attribute value string
+  at connect time; for 4-param form also on every attribute change.
+- A **`MethodProducer`** (branded with `defineMethod()`) — assigned directly as the property
+  value; the function IS the method. Per-instance state lives in factory scope.
 
 #### Type Parameters
 
 ##### P
 
 `P` *extends* [`ComponentProps`](ComponentProps.md)
-
-##### U
-
-`U` *extends* [`UI`](UI.md)

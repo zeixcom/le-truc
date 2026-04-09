@@ -10,11 +10,11 @@ A consistency review checks that all authored documents accurately reflect the c
 Read these files first — they are the source of truth:
 
 ```sh
-# Current exports
-src/index.ts
+# Current exports (generated)
+types/index.d.ts
 
 # Current source files
-ls src/ src/effects/ src/parsers/
+ls src/ src/parsers/
 
 # Current example components
 ls examples/
@@ -40,7 +40,7 @@ ls examples/
 ### `data-flow.md`
 - `pass()` callout about Le Truc-only scope is accurate
 - `createMemo`, `createEventsSensor`, and other signal calls use current API
-- `asMethod()` description is accurate
+- `defineMethod()` description is accurate
 
 ### `getting-started.md`
 - Install command is current
@@ -53,9 +53,9 @@ ls examples/
 
 ## Step 4: Check `ARCHITECTURE.md`
 
-- File map lists all files currently in `src/`, `src/effects/`, `src/parsers/`
+- File map lists all files currently in `src/` and `src/parsers/` (no `src/effects/` directory in v2.0)
 - No section describes a removed function or stale behavior
-- Built-in effects table matches current `src/effects/` exports
+- Built-in helpers/effects table matches current exports from `src/helpers.ts`, `src/effects.ts`, `src/events.ts`
 
 ## Step 5: Check `CLAUDE.md`
 

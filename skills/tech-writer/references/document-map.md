@@ -45,7 +45,7 @@ and what to check in a consistency review.
 **Path:** `docs-src/pages/components.md`
 **Audience:** Developers learning to build Le Truc components
 **Register:** Tutorial — walks through real code with explanation; assumes JavaScript competence
-**Scope:** `defineComponent` anatomy (four arguments), reactive properties (parsers, readers, static), select function (`first`, `all`), setup function (effects), `asMethod()` for imperative methods, `all()` for dynamic collections
+**Scope:** `defineComponent` factory form — `FactoryContext` helpers (`first`, `all`, `host`, `expose`, `watch`, `on`, `pass`); prop initializers (parsers, static values, signals, sensors); `bind*` helpers (`bindText`, `bindProperty`, `bindClass`, `bindVisible`, `bindAttribute`, `bindStyle`); `defineMethod()` for imperative methods; `all()` + `each()` for dynamic collections
 
 **Update triggers:**
 - `defineComponent` signature changes
@@ -59,7 +59,7 @@ and what to check in a consistency review.
 - `defineComponent` call signature in all examples matches `src/component.ts`
 - Parser names and signatures match `src/parsers/`
 - `first()` and `all()` behavior description matches `src/ui.ts`
-- `asMethod()` description matches `src/parsers.ts`
+- `defineMethod()` description matches `src/parsers.ts`
 - All code examples compile against current exports in `index.ts`
 </pages_components_md>
 
@@ -67,19 +67,19 @@ and what to check in a consistency review.
 **Path:** `docs-src/pages/data-flow.md`
 **Audience:** Developers building multi-component UIs
 **Register:** Tutorial — builds from a concrete scenario; assumes the reader has read components.md
-**Scope:** `pass()` for parent-to-child signal binding, `provideContexts`/`requestContext` for shared ancestor state, `asMethod()` for imperative APIs on dynamic lists, event delegation
+**Scope:** `pass()` for parent-to-child signal binding, `provideContexts`/`requestContext` for shared ancestor state, `defineMethod()` for imperative APIs on dynamic lists, event delegation
 
 **Update triggers:**
 - `pass()` behavior or scope changes (e.g., Le Truc-only restriction clarified)
 - `provideContexts` / `requestContext` API changes
-- `asMethod()` usage changes
+- `defineMethod()` usage changes
 - `createMemo` or other signal API used in examples changes
 - Code examples reference a changed API
 
 **Consistency checks:**
 - `pass()` callout about Le Truc-only scope is accurate
 - `provideContexts` / `requestContext` example signatures match `src/context.ts`
-- `asMethod()` branding requirement is accurately stated
+- `defineMethod()` branding requirement is accurately stated
 - All code examples compile against current exports
 </pages_data_flow_md>
 
@@ -180,23 +180,23 @@ and what to check in a consistency review.
 **Path:** `ARCHITECTURE.md`
 **Audience:** Contributors to the library; AI agents reasoning about internals
 **Register:** Technical, precise, internal-facing — implementation details expected and correct
-**Scope:** File map, dependency graph, component lifecycle (`connectedCallback`, `#setAccessor`, `attributeChangedCallback`, `disconnectedCallback`), effect system (`runEffects`, `updateElement`), UI query system (`first`, `all`, dependency resolution, selector type inference), parser system, event-driven sensors, context protocol, scheduler, security
+**Scope:** File map, dependency graph, component lifecycle (`connectedCallback`, `#setAccessor`, `#initSignals`, `disconnectedCallback`), effect system (`watch`/`makeWatch`, `on`/`makeOn`, `pass`/`makePass`, `each`, `EffectDescriptor`), `bind*` helpers, UI query system (`first`, `all`, dependency resolution, selector type inference), parser system, event-driven sensors, context protocol, scheduler, security
 
 **Update triggers:**
 - A source file is added to or removed from `src/`
 - The component lifecycle changes (initialization order, signal creation, dependency resolution)
-- `updateElement` or `runEffects` internals change
+- `makeWatch`, `makeOn`, `makePass`, or `each` internals change
 - `first()` / `all()` / dependency resolution behavior changes
 - Parser detection (`isParser`, `isMethodProducer`) changes
 - Context protocol implementation changes
 - Security validation rules change
 
 **Consistency checks:**
-- File map matches actual files in `src/` and `src/effects/` and `src/parsers/`
+- File map matches actual files in `src/` and `src/parsers/`
 - Lifecycle section matches `src/component.ts`
-- Effect system built-in effects table matches effects exported in `index.ts`
-- `pass()` description matches `src/effects/pass.ts`
-- Parser/Reader distinction matches `src/parsers.ts`
+- Effect system description matches `src/effects.ts`, `src/events.ts`, and `src/helpers.ts`
+- `pass()` description matches `src/effects.ts` (`makePass`)
+- Parser/MethodProducer distinction matches `src/parsers.ts`
 </ARCHITECTURE_md>
 
 <CLAUDE_md>
@@ -213,11 +213,11 @@ and what to check in a consistency review.
 **Consistency checks:**
 - Every entry is still accurate for the current implementation
 - No entry describes behavior that has since changed or been removed
-- Parser branding, MethodProducer branding, `pass()` scope, `all()` laziness, `setAttribute` security, `undefined` restore, dependency timeout, and debug mode are all documented
+- Parser branding, MethodProducer branding, `pass()` scope, `all()` laziness, `setAttribute` security, `undefined` restore, dependency timeout, debug mode, and factory-form `observedAttributes` behavior are all documented
 </CLAUDE_md>
 
 <jsdoc_in_src>
-**Path:** `src/*.ts`, `src/effects/*.ts`, `src/parsers/*.ts`
+**Path:** `src/*.ts`, `src/parsers/*.ts`
 **Audience:** IDE users (hover documentation); TypeDoc input for `docs-src/api/`
 **Register:** Brief, typed, precise — one-line summaries; `@param`/`@returns` only
 **Scope:** Public API functions and their parameters, return values, and non-obvious constraints. Internal helpers do not require JSDoc.

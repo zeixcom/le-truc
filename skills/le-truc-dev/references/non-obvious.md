@@ -3,23 +3,34 @@ Non-obvious behaviors in the le-truc source. These are the things most likely to
 Distilled from CLAUDE.md — that file is authoritative; this file is a quick reference.
 </overview>
 
+## Factory form opts out of observedAttributes entirely
+
+`defineComponent` sets `static observedAttributes = []` unconditionally. This is a deliberate trade-off, not an oversight.
+
+Consequences:
+- Parsers in `expose()` are called **once at connect time** — HTML authors can configure the component via attributes in server-rendered markup, but `attributeChangedCallback` never fires afterward.
+- The distinction is semantic: attributes are for server-side configuration; properties are for reactive client-side state.
+- There is no mechanism to make attributes reactive after connect — reactive state flows through the property interface only.
+
+The `FactoryContext` and `FactoryResult` types (both exported from `src/component.ts`) are the TypeScript surface for this pattern.
+
 ## Parser branding is required for reliable detection
 
-`isParser()` checks for `PARSER_BRAND` first. Unbranded functions fall back to `fn.length >= 2`, which is **unreliable**:
+`isParser()` checks only for `PARSER_BRAND`. Unbranded functions are NOT treated as parsers regardless of their signature.
 
-- Default parameters reduce `fn.length`: `(ui, value = '') => …` has `length === 1`
-- Rest parameters reduce `fn.length`: `(ui, ...args) => …` has `length === 1`
-- Destructuring does not reduce length but can cause confusion
+**Always use `asParser()` to create custom parsers.** Parser signature: `(value: string | null | undefined) => T`.
 
-**Always use `asParser()` to create custom parsers.** In `DEV_MODE`, using an unbranded function triggers `console.warn`.
+In `DEV_MODE`, using an unbranded function that resembles a parser triggers `console.warn`.
 
 ## MethodProducer is branded, not structurally distinguished
 
-`isMethodProducer()` checks for `METHOD_BRAND` only. An unbranded `(ui) => void` function is treated as a Reader (initialised at connect time), not a method producer.
+`isMethodProducer()` checks for `METHOD_BRAND` only. An unbranded `() => void` function is treated as a `MemoCallback` (wrapped in `createComputed`), not a method producer.
 
-**Always wrap method producer initializers with `asMethod()`.** Example: `clearMethod`, `add`, `delete` in `module-list`.
+**Always wrap method producer initializers with `defineMethod()`.** The function IS the method — it is installed directly as `host[key] = fn`.
 
-`provideContexts()` is an `Effect`, not a method producer. Use it in `setup` as `host: provideContexts([...])`, not in `props`.
+## `watch()` requires `createEffect` internally
+
+`watch()` (via `makeWatch`) wraps `match()` inside `createEffect()`. This is why `watch()` returns an `EffectDescriptor` — the `createEffect` only runs after dependency resolution, inside the `createScope` created in `connectedCallback`. Calling `match()` without `createEffect` would track dependencies synchronously and not re-run.
 
 ## `all()` MutationObserver is lazy
 
@@ -31,38 +42,27 @@ The observer watches only mutations implied by the CSS selector (class, ID, `[at
 
 `pass()` replaces the backing `Slot` signal of a child's property using `getSignals(target)`. For non-Le-Truc elements (Lit, Stencil, FAST, plain custom elements), `getSignals` returns nothing useful — the swap has no effect.
 
-**For non-Le-Truc elements, always use `setProperty()`.** Installing a reactive getter via `Object.defineProperty` (which is what `pass()` does internally) bypasses external frameworks' change-detection.
+**For non-Le-Truc elements, use `watch()` + `bindProperty()` instead.**
 
-## `setAttribute` throws on unsafe values — never silent
+## `safeSetAttribute` throws on unsafe values — never silent
 
 Two security checks throw errors (logged at `LOG_ERROR`):
 1. Attribute name starts with `on` (case-insensitive) — blocks event handler injection
 2. URL value uses an unsafe protocol — blocks `javascript:`, `data:`, etc. Allowed: `http:`, `https:`, `ftp:`, `mailto:`, `tel:`
 
-Violations are never silently swallowed. If `setAttribute` appears not to work, check the console for these errors first.
+`bindAttribute` uses `safeSetAttribute` by default. Pass `allowUnsafe: true` only when the value has been validated upstream.
 
 ## `undefined` from a reader restores the original DOM value
 
-When a reactive resolves to `undefined` (reader error, missing property, etc.), `updateElement` restores the DOM value captured at setup time — not blank/null. This is correct behavior: the component degrades gracefully to the pre-JS state rather than wiping content.
-
-The `RESET` symbol no longer exists. `undefined` is the reset mechanism.
+When a reactive resolves to `undefined`, the component degrades gracefully to the pre-JS state. The `RESET` symbol no longer exists — `undefined` is the reset mechanism.
 
 ## Dependency resolution has a 200ms timeout
 
 If a child custom element queried by `first()` or `all()` is not defined within 200ms, a `DependencyTimeoutError` is logged and effects proceed anyway. Effects run even if dependencies are missing — they do not block indefinitely.
 
-## `toggleAttribute` and `setAttribute` default to the effect name
-
-```typescript
-toggleAttribute('loading')     // reads host.loading
-setAttribute('aria-label')     // reads host['aria-label']
-```
-
-The second argument (reactive) may be omitted when the attribute name matches the property name. This means `toggleAttribute('aria-expanded', 'open')` is different: it reads `host.open`, not `host['aria-expanded']`.
-
 ## `on()` handler return value updates host
 
-If an event handler returns `{ prop: value }`, all returned entries are applied to `host` in a `batch()`. Returning `void` (or `undefined`) is a no-op — no host update occurs.
+If an event handler returns `{ prop: value }`, all returned entries are applied to `host` in a `batch()`. Returning `void` (or `undefined`) is a no-op — no host update occurs. The handler always receives `(event, element)` — second arg is the element, useful for Memo targets.
 
 ## Debug mode
 

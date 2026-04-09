@@ -322,63 +322,86 @@
 				<span class="language">ts</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
-<span class="line"><span style="color:#F8F8F2">	createEffect,</span></span>
-<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Memo,</span></span>
-<span class="line"><span style="color:#F8F8F2">	on,</span></span>
-<span class="line"><span style="color:#F8F8F2">	read,</span></span>
-<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { manageFocus } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../_common/manageFocus'</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { defineComponent, each } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormRadiogroupProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormRadiogroupUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">	radios</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Memo</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLInputElement</span><span style="color:#F8F8F2">[]></span></span>
-<span class="line"><span style="color:#F8F8F2">}</span></span>
-<span class="line"></span>
 <span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#E6DB74">		'form-radiogroup'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormRadiogroupProps</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#E6DB74">		'form-radiogroup'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> &#x26;</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormRadiogroupProps</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">/* === Constants === */</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> ENTER_KEY </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'Enter'</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> DECREMENT_KEYS </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> [</span><span style="color:#E6DB74">'ArrowLeft'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'ArrowUp'</span><span style="color:#F8F8F2">]</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> INCREMENT_KEYS </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> [</span><span style="color:#E6DB74">'ArrowRight'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'ArrowDown'</span><span style="color:#F8F8F2">]</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> FIRST_KEY </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'Home'</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> LAST_KEY </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'End'</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> HANDLED_KEYS </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> [</span><span style="color:#F92672">...</span><span style="color:#F8F8F2">DECREMENT_KEYS, </span><span style="color:#F92672">...</span><span style="color:#F8F8F2">INCREMENT_KEYS, FIRST_KEY, LAST_KEY]</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#A6E22E"> getIndex</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">radios</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLInputElement</span><span style="color:#F8F8F2">[]) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
 <span class="line"><span style="color:#F8F8F2">	radios.</span><span style="color:#A6E22E">findIndex</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">radio</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> radio.checked)</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormRadiogroupProps</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">FormRadiogroupUI</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormRadiogroupProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'form-radiogroup'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	{</span></span>
-<span class="line"><span style="color:#F8F8F2">		value: </span><span style="color:#A6E22E">read</span><span style="color:#F8F8F2">(({ </span><span style="color:#FD971F;font-style:italic">radios</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> radiosArray </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> radios.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> radiosArray[</span><span style="color:#A6E22E">getIndex</span><span style="color:#F8F8F2">(radiosArray)]?.value</span></span>
-<span class="line"><span style="color:#F8F8F2">		}, </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">	},</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">		radios: </span><span style="color:#A6E22E">all</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> radios </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> all</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">			'input[type="radio"]'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#E6DB74">			'Add at least two native radio buttons.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">	}),</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">radios</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">		host: </span><span style="color:#A6E22E">manageFocus</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> radios.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(), getIndex),</span></span>
-<span class="line"><span style="color:#F8F8F2">		radios: [</span></span>
-<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">				host.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (e.target </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLInputElement</span><span style="color:#F8F8F2">).value</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Roving tabindex focus management (inlined from manageFocus)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> focusIndex </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> getIndex</span><span style="color:#F8F8F2">(radios.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">())</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({</span></span>
+<span class="line"><span style="color:#F8F8F2">			value: radios.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()[focusIndex]?.value </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		})</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(radios, </span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, (</span><span style="color:#FD971F;font-style:italic">_e</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">el</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				host.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> el.value</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			(</span><span style="color:#FD971F;font-style:italic">_host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
-<span class="line"><span style="color:#A6E22E">				createEffect</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> isChecked </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.value </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> host.value</span></span>
-<span class="line"><span style="color:#F8F8F2">					target.checked </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> isChecked</span></span>
-<span class="line"><span style="color:#F8F8F2">					target.tabIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> isChecked </span><span style="color:#F92672">?</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> :</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> label </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'label'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#A6E22E">			each</span><span style="color:#F8F8F2">(radios, </span><span style="color:#FD971F;font-style:italic">radio</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
+<span class="line"><span style="color:#A6E22E">				watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> isChecked </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> radio.value </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> value</span></span>
+<span class="line"><span style="color:#F8F8F2">					radio.checked </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> isChecked</span></span>
+<span class="line"><span style="color:#F8F8F2">					radio.tabIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> isChecked </span><span style="color:#F92672">?</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> :</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> label </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> radio.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'label'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (label) label.classList.</span><span style="color:#A6E22E">toggle</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'selected'</span><span style="color:#F8F8F2">, isChecked)</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#F8F8F2">		],</span></span>
-<span class="line"><span style="color:#F8F8F2">	}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">(target </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">)) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (target.</span><span style="color:#A6E22E">hasAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">))</span></span>
+<span class="line"><span style="color:#F8F8F2">					focusIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> radios.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().</span><span style="color:#A6E22E">findIndex</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> item </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> target)</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'keydown'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> { key } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> e </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">KeyboardEvent</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">HANDLED_KEYS.</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(key)) </span><span style="color:#F92672">return</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> elements </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> radios.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">				e.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">				e.</span><span style="color:#A6E22E">stopPropagation</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> FIRST_KEY) focusIndex </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span></span>
+<span class="line"><span style="color:#F92672">				else</span><span style="color:#F92672"> if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> LAST_KEY) focusIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> elements.length </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span></span>
+<span class="line"><span style="color:#F92672">				else</span></span>
+<span class="line"><span style="color:#F8F8F2">					focusIndex </span><span style="color:#F92672">=</span></span>
+<span class="line"><span style="color:#F8F8F2">						(focusIndex</span></span>
+<span class="line"><span style="color:#F92672">							+</span><span style="color:#F8F8F2"> (INCREMENT_KEYS.</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(key) </span><span style="color:#F92672">?</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672"> :</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">							+</span><span style="color:#F8F8F2"> elements.length)</span></span>
+<span class="line"><span style="color:#F92672">						%</span><span style="color:#F8F8F2"> elements.length</span></span>
+<span class="line"><span style="color:#F8F8F2">				elements[focusIndex]?.</span><span style="color:#A6E22E">focus</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'keyup'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">key</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> ENTER_KEY) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#F8F8F2">				radios.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()[focusIndex]?.</span><span style="color:#A6E22E">click</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">		]</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre>
 			</module-scrollarea>

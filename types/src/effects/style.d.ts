@@ -6,6 +6,7 @@ import { type Effect, type Reactive } from '../effects';
  * When the reactive value is `null`, the style property is removed via
  * `el.style.removeProperty(prop)`. Otherwise it is set via `el.style.setProperty(prop, value)`.
  *
+ * @deprecated Use `watch('prop', value => { el.style.setProperty(prop, value) })` in the v1.1 factory form instead.
  * @since 0.8.0
  * @param {string} prop - CSS property name (e.g. `'color'`, `'--my-var'`)
  * @param {Reactive<string, P, E>} [reactive] - Reactive value for the style value (defaults to property name)

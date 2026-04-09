@@ -29,18 +29,13 @@ type EventHandler<P extends ComponentProps, Evt extends Event> = (event: Evt) =>
  *
  * Returns a cleanup function that removes the listener when the component disconnects.
  *
+ * @deprecated Use the `on(target, type, handler)` helper from `FactoryContext` in the v1.1 factory form instead.
+ * The factory helper returns an `EffectDescriptor` and receives `(event, element)` in its handler.
  * @since 0.14.0
  * @param {T} type - Event type (e.g. `'click'`, `'input'`)
  * @param {EventHandler<P, EventType<T>>} handler - Handler receiving the event
  * @param {AddEventListenerOptions} [options] - Listener options; `passive` is set automatically for high-frequency events
  * @returns {Effect<P, E>} Effect that attaches the listener and returns a cleanup function
- *
- * @example <caption>Side-effect-only handler</caption>
- * on('click', () => { analytics.track('button-clicked') })
- *
- * @example <caption>Property update shortcut</caption>
- * // Equivalent to: on('click', () => { host.count += 1 })
- * on('click', () => ({ count: host.count + 1 }))
  */
 declare const on: <T extends keyof HTMLElementEventMap | string, P extends ComponentProps, E extends Element = HTMLElement>(type: T, handler: EventHandler<P, EventType<T>>, options?: AddEventListenerOptions) => Effect<P, E>;
 export { type EventHandler, type EventType, on };
