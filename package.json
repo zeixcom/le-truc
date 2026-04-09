@@ -1,6 +1,6 @@
 {
 	"name": "@zeix/le-truc",
-	"version": "1.0.1",
+	"version": "2.0.0-next.1",
 	"description": "Le Truc - the thing for type-safe reactive web components",
 	"keywords": [
 		"Le Truc",

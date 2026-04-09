@@ -1,4 +1,4 @@
-// Le Truc 2.0.0
+// Le Truc 2.0.0-next
 
 // From Cause & Effect
 export {
@@ -91,12 +91,12 @@ export {
 export {
 	type EffectDescriptor,
 	each,
-	type PassHelper,
 	type FactoryResult,
-	type WatchHelper,
 	type PassedProps,
+	type PassHelper,
 	type Reactive,
 	type WatchHandlers,
+	type WatchHelper,
 } from './src/effects'
 export {
 	DependencyTimeoutError,
@@ -124,8 +124,8 @@ export {
 	dangerouslyBindInnerHTML,
 } from './src/helpers'
 export {
-	defineMethod,
 	asParser,
+	defineMethod,
 	isMethodProducer,
 	isParser,
 	type MethodProducer,
