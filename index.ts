@@ -46,6 +46,7 @@ export {
 	type ListOptions,
 	type MatchHandlers,
 	type MaybeCleanup,
+	type MaybePromise,
 	type Memo,
 	type MemoCallback,
 	match,
@@ -56,6 +57,7 @@ export {
 	type SensorOptions,
 	type Signal,
 	type SignalOptions,
+	type SingleMatchHandlers,
 	SKIP_EQUALITY,
 	type Slot,
 	type State,
@@ -96,7 +98,6 @@ export {
 	type PassedProps,
 	type PassHelper,
 	type Reactive,
-	type WatchHandlers,
 	type WatchHelper,
 } from './src/effects'
 export {

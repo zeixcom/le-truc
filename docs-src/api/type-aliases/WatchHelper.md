@@ -2,7 +2,7 @@
 
 > **WatchHelper**\<`P`\> = \{\<`K`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`K`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); (`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \}
 
-Defined in: [src/effects.ts:92](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/effects.ts#L92)
+Defined in: [src/effects.ts:83](https://github.com/zeixcom/le-truc/blob/90149bb8885c2e678e7571c228e4005108709147/src/effects.ts#L83)
 
 The `watch` helper type in `FactoryContext`.
 
@@ -38,7 +38,7 @@ before the side-effectful handler runs.
 
 ###### handler
 
-(`value`) => [`MaybeCleanup`](MaybeCleanup.md)
+(`value`) => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 ##### Returns
 
@@ -62,7 +62,7 @@ before the side-effectful handler runs.
 
 ###### handlers
 
-[`WatchHandlers`](WatchHandlers.md)\<`P`\[`K`\]\>
+[`SingleMatchHandlers`](SingleMatchHandlers.md)\<`P`\[`K`\]\>
 
 ##### Returns
 
@@ -86,7 +86,7 @@ before the side-effectful handler runs.
 
 ###### handler
 
-(`value`) => [`MaybeCleanup`](MaybeCleanup.md)
+(`value`) => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 ##### Returns
 
@@ -110,7 +110,7 @@ before the side-effectful handler runs.
 
 ###### handlers
 
-[`WatchHandlers`](WatchHandlers.md)\<`T`\>
+[`SingleMatchHandlers`](SingleMatchHandlers.md)\<`T`\>
 
 ##### Returns
 
@@ -134,7 +134,7 @@ before the side-effectful handler runs.
 
 ###### handler
 
-(`value`) => [`MaybeCleanup`](MaybeCleanup.md)
+(`value`) => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 ##### Returns
 
@@ -158,7 +158,7 @@ before the side-effectful handler runs.
 
 ###### handlers
 
-[`WatchHandlers`](WatchHandlers.md)\<`T`\>
+[`SingleMatchHandlers`](SingleMatchHandlers.md)\<`T`\>
 
 ##### Returns
 
@@ -176,7 +176,7 @@ before the side-effectful handler runs.
 
 ###### handler
 
-(`values`) => [`MaybeCleanup`](MaybeCleanup.md)
+(`values`) => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 ##### Returns
 

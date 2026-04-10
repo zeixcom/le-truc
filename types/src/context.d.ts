@@ -83,9 +83,10 @@ declare class ContextRequestEvent<T extends UnknownContext> extends Event {
  * getter `() => host[context]` for each matching context key.
  *
  * @since 2.0
- * @param host - The component host element
+ * @param {HTMLElement & P} host - The component host element
+ * @returns {ProvideContextsHelper<P>} Bound `provideContexts` function for the given host
  */
-declare const makeProvideContexts: <P extends ComponentProps>(host: HTMLElement & P) => (contexts: Array<keyof P>) => EffectDescriptor;
+declare const makeProvideContexts: <P extends ComponentProps>(host: HTMLElement & P) => ProvideContextsHelper<P>;
 /**
  * Create a `requestContext` helper bound to a specific component host.
  *
@@ -94,7 +95,8 @@ declare const makeProvideContexts: <P extends ComponentProps>(host: HTMLElement 
  * the Memo returns `fallback`. For use inside `expose()` as a property initializer.
  *
  * @since 2.0
- * @param host - The component host element
+ * @param {HTMLElement & P} host - The component host element
+ * @returns {RequestContextHelper} Bound `requestContext` function for the given host
  */
-declare const makeRequestContext: <P extends ComponentProps>(host: HTMLElement & P) => <T extends {}>(context: Context<string, () => T>, fallback: T) => Memo<T>;
+declare const makeRequestContext: <P extends ComponentProps>(host: HTMLElement & P) => RequestContextHelper;
 export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, makeProvideContexts, makeRequestContext, type ProvideContextsHelper, type RequestContextHelper, type UnknownContext, };

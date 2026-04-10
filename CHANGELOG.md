@@ -7,7 +7,8 @@
 - **`FactoryContext<P>` type**: New context object passed to the factory function, containing element query helpers (`first`, `all`), the `host` element, and factory helpers (`expose`, `watch`, `on`, `pass`, `provideContexts`, `requestContext`).
 - **`EffectDescriptor` type**: Deferred effect — a thunk `() => MaybeCleanup` that runs inside a reactive scope after all dependencies are resolved. Replaces the old `Effect<P, E>` type.
 - **`FactoryResult` type**: Return type of the factory function — a flat array of `EffectDescriptor | false | undefined`, enabling the `element && descriptor()` pattern for conditional effects.
-- **`WatchHandlers<T>` type**: Optional match-branch handlers with `ok`, `err`, and `nil` properties, accepted by `watch()` and DOM binding helpers. For single-source `watch()`, `ok` receives the resolved value directly (not a tuple) and `err` receives a single `Error` (not an array) — array-source `watch()` still delivers `values: any[]`.
+- **`SingleMatchHandlers<T>` type** (re-exported from `@zeix/cause-effect`): Match-branch handlers with `ok`, `err`, and `nil` properties, accepted by `watch()` and DOM binding helpers. `ok` receives the resolved value directly; `err` receives a single `Error`. All handler return types are `MaybePromise<MaybeCleanup>`, enabling async handlers for fire-and-forget side effects such as fetch calls or analytics.
+- **`MaybePromise<T>` type** (re-exported from `@zeix/cause-effect`): `T | Promise<T>` — the return type of async-capable handlers in `SingleMatchHandlers<T>`.
 - **`PassedProps<P, Q>` type**: Props object for `pass()` — maps child component property names to `Reactive<Q[K], P>` values.
 - **DOM binding helpers** in a new `src/helpers.ts` module, each usable as a `watch()` handler:
   - `bindText(element, preserveComments?)` — sets text content
@@ -36,6 +37,7 @@
 - **`provideContexts()` and `requestContext()` are now `FactoryContext` methods**: Instantiated via `makeProvideContexts()` / `makeRequestContext()` bound to the host element. `provideContexts([...])` returns an `EffectDescriptor` to include in the return array.
 - **`getHelpers()` replaced by `makeElementQueries()`**: Returns a tuple `[ElementQueries, (run: () => void) => void]`; the `UI` type is no longer exported.
 - **`METHOD_BRAND` constant now exported**: Enables explicit branding checks for method producers; `isMethodProducer()` no longer falls back to `isFunction()`.
+- **`@zeix/cause-effect` upgraded to `^1.1`**: Adds the `SingleMatchHandlers<T>` type and a single-signal `match(signal, handlers)` overload where `ok` receives the value directly and `err` receives a single `Error` (not an array). Async handlers (`MaybePromise<MaybeCleanup>`) are now supported across all branches; rejections are routed to `err` if provided, otherwise fall back to `console.error`.
 
 ### Removed
 

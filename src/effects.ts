@@ -8,9 +8,11 @@ import {
 	isRecord,
 	isSlot,
 	type MaybeCleanup,
+	type MaybePromise,
 	type Memo,
 	match,
 	type Signal,
+	type SingleMatchHandlers,
 	type Task,
 	untrack,
 } from '@zeix/cause-effect'
@@ -42,17 +44,6 @@ type EffectDescriptor = () => MaybeCleanup
  * `element && [watch(...)]` conditional pattern.
  */
 type FactoryResult = Array<EffectDescriptor | FactoryResult | Falsy>
-
-/**
- * User-facing handler object for `watch()` with match branches.
- * `ok` receives the resolved value directly (not a tuple) for single-source `watch()`.
- * `err` receives a single Error (not an array) for convenience.
- */
-type WatchHandlers<T> = {
-	ok: (value: T) => MaybeCleanup
-	err?: (error: Error) => MaybeCleanup
-	nil?: () => MaybeCleanup
-}
 
 /**
  * A reactive value that drives a DOM update or a slot injection.
@@ -92,31 +83,31 @@ type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
 type WatchHelper<P extends ComponentProps> = {
 	<K extends keyof P & string>(
 		source: K,
-		handler: (value: P[K]) => MaybeCleanup,
+		handler: (value: P[K]) => MaybePromise<MaybeCleanup>,
 	): EffectDescriptor
 	<K extends keyof P & string>(
 		source: K,
-		handlers: WatchHandlers<P[K]>,
+		handlers: SingleMatchHandlers<P[K]>,
 	): EffectDescriptor
 	<T extends {}>(
 		source: Signal<T>,
-		handler: (value: T) => MaybeCleanup,
+		handler: (value: T) => MaybePromise<MaybeCleanup>,
 	): EffectDescriptor
 	<T extends {}>(
 		source: Signal<T>,
-		handlers: WatchHandlers<T>,
+		handlers: SingleMatchHandlers<T>,
 	): EffectDescriptor
 	<T extends {}>(
 		source: () => T | Promise<T> | null | undefined,
-		handler: (value: T) => MaybeCleanup,
+		handler: (value: T) => MaybePromise<MaybeCleanup>,
 	): EffectDescriptor
 	<T extends {}>(
 		source: () => T | Promise<T> | null | undefined,
-		handlers: WatchHandlers<T>,
+		handlers: SingleMatchHandlers<T>,
 	): EffectDescriptor
 	(
 		source: Array<Reactive<NonNullable<unknown>, P>>,
-		handler: (values: any[]) => MaybeCleanup,
+		handler: (values: any[]) => MaybePromise<MaybeCleanup>,
 	): EffectDescriptor
 }
 
@@ -140,6 +131,22 @@ type PassHelper<P extends ComponentProps> = {
 /* === Internal Helpers === */
 
 /**
+ * Recursively activate a `FactoryResult` array of effect descriptors.
+ *
+ * Nested arrays are flattened; falsy values are skipped. Each truthy descriptor
+ * is called immediately so its reactive effects register in the current scope.
+ *
+ * @since 2.0
+ * @param {FactoryResult} result - Flat or nested array of effect descriptors to activate
+ */
+const activateResult = (result: FactoryResult): void => {
+	for (const descriptor of result) {
+		if (Array.isArray(descriptor)) activateResult(descriptor)
+		else if (descriptor) descriptor()
+	}
+}
+
+/**
  * Resolve a `Reactive` value to a Signal usable by `match`.
  *
  * - String: look up the signal in the component's signal map; fall back to a computed
@@ -150,6 +157,9 @@ type PassHelper<P extends ComponentProps> = {
  * - Signal/Memo: use directly.
  *
  * @since 2.0
+ * @param {HTMLElement & P} host - The component host element
+ * @param {Reactive<T, P>} source - Property name string, signal, or thunk to resolve
+ * @returns {Signal<T>} Resolved signal ready for use with `match()`
  */
 const toSignal = <T extends {}, P extends ComponentProps>(
 	host: HTMLElement & P,
@@ -175,69 +185,74 @@ const toSignal = <T extends {}, P extends ComponentProps>(
  * inside the handler are not tracked. Returns an `EffectDescriptor`.
  *
  * @since 2.0
- * @param host - The component host element
+ * @param {HTMLElement & P} host - The component host element
+ * @returns {WatchHelper<P>} Bound `watch` function for the given host
  */
 const makeWatch = <P extends ComponentProps>(host: HTMLElement & P) => {
 	function watch<K extends keyof P & string>(
 		source: K,
-		handler: (value: P[K]) => MaybeCleanup,
+		handler: (value: P[K]) => MaybePromise<MaybeCleanup>,
 	): EffectDescriptor
 	function watch<K extends keyof P & string>(
 		source: K,
-		handlers: WatchHandlers<P[K]>,
+		handlers: SingleMatchHandlers<P[K]>,
 	): EffectDescriptor
 	function watch<T extends {}>(
 		source: Signal<T>,
-		handler: (value: T) => MaybeCleanup,
+		handler: (value: T) => MaybePromise<MaybeCleanup>,
 	): EffectDescriptor
 	function watch<T extends {}>(
 		source: Signal<T>,
-		handlers: WatchHandlers<T>,
+		handlers: SingleMatchHandlers<T>,
 	): EffectDescriptor
 	function watch<T extends {}>(
 		source: () => T | Promise<T> | null | undefined,
-		handler: (value: T) => MaybeCleanup,
+		handler: (value: T) => MaybePromise<MaybeCleanup>,
 	): EffectDescriptor
 	function watch<T extends {}>(
 		source: () => T | Promise<T> | null | undefined,
-		handlers: WatchHandlers<T>,
+		handlers: SingleMatchHandlers<T>,
 	): EffectDescriptor
 	function watch(
 		source: Array<Reactive<NonNullable<unknown>, P>>,
-		handler: (values: any[]) => MaybeCleanup,
+		handler: (values: any[]) => MaybePromise<MaybeCleanup>,
 	): EffectDescriptor
 	function watch(
 		source:
 			| Reactive<NonNullable<unknown>, P>
 			| Array<Reactive<NonNullable<unknown>, P>>,
-		handlerOrHandlers: ((value: any) => MaybeCleanup) | WatchHandlers<any>,
+		handlerOrHandlers:
+			| ((value: any) => MaybePromise<MaybeCleanup>)
+			| SingleMatchHandlers<any>,
 	): EffectDescriptor {
 		return () => {
-			const isArraySource = Array.isArray(source)
-			const sources = isArraySource
-				? source
-				: [source as Reactive<NonNullable<unknown>, P>]
-			const signals = sources.map(s => toSignal(host, s))
-
-			if (typeof handlerOrHandlers === 'function') {
-				const handler = handlerOrHandlers
+			if (Array.isArray(source)) {
+				const signals = source.map(s => toSignal(host, s))
+				const handler = handlerOrHandlers as (
+					values: any[],
+				) => MaybePromise<MaybeCleanup>
 				return createEffect(() =>
-					match(signals, {
-						ok: values =>
-							untrack(() => handler(isArraySource ? values : values[0])),
+					match(signals, { ok: values => untrack(() => handler(values)) }),
+				)
+			}
+			const signal = toSignal(host, source as Reactive<NonNullable<unknown>, P>)
+			if (typeof handlerOrHandlers === 'function') {
+				return createEffect(() =>
+					match(signal, {
+						ok: value => untrack(() => handlerOrHandlers(value)),
 					}),
 				)
 			}
-			const handlers = handlerOrHandlers as WatchHandlers<any>
-			const matchHandlers: any = {
-				ok: (values: readonly any[]) =>
-					untrack(() => handlers.ok(isArraySource ? values : values[0])),
-			}
-			if (handlers.err)
-				matchHandlers.err = (errs: readonly Error[]) =>
-					untrack(() => handlers.err!(errs[0]!))
-			if (handlers.nil) matchHandlers.nil = () => untrack(() => handlers.nil!())
-			return createEffect(() => match(signals, matchHandlers))
+			const handlers = handlerOrHandlers
+			return createEffect(() =>
+				match(signal, {
+					ok: value => untrack(() => handlers.ok(value)),
+					...(handlers.err && {
+						err: (e: Error) => untrack(() => handlers.err!(e)),
+					}),
+					...(handlers.nil && { nil: () => untrack(() => handlers.nil!()) }),
+				}),
+			)
 		}
 	}
 	return watch
@@ -254,7 +269,8 @@ const makeWatch = <P extends ComponentProps>(host: HTMLElement & P) => {
  * enter the collection and restored when they leave.
  *
  * @since 2.0
- * @param host - The component host element
+ * @param {HTMLElement & P} host - The component host element
+ * @returns {PassHelper<P>} Bound `pass` function for the given host
  */
 const makePass = <P extends ComponentProps>(host: HTMLElement & P) => {
 	/**
@@ -370,17 +386,8 @@ function each<E extends Element>(
 			for (const element of memo.get()) {
 				createScope(() => {
 					const result = callback(element)
-					if (Array.isArray(result)) {
-						const activate = (res: FactoryResult) => {
-							for (const descriptor of res) {
-								if (Array.isArray(descriptor)) activate(descriptor)
-								else if (descriptor) descriptor()
-							}
-						}
-						activate(result)
-					} else if (typeof result === 'function') {
-						result()
-					}
+					if (Array.isArray(result)) activateResult(result)
+					else if (typeof result === 'function') result()
 				})
 			}
 		})
@@ -388,6 +395,7 @@ function each<E extends Element>(
 }
 
 export {
+	activateResult,
 	type EffectDescriptor,
 	each,
 	type FactoryResult,
@@ -397,6 +405,5 @@ export {
 	type PassedProps,
 	type PassHelper,
 	type Reactive,
-	type WatchHandlers,
 	type WatchHelper,
 }

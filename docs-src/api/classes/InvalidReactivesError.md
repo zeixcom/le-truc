@@ -1,6 +1,6 @@
 ### Class: InvalidReactivesError
 
-Defined in: [src/errors.ts:84](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/errors.ts#L84)
+Defined in: [src/errors.ts:84](https://github.com/zeixcom/le-truc/blob/90149bb8885c2e678e7571c228e4005108709147/src/errors.ts#L84)
 
 Error thrown when reactives passed to a component are invalid
 
@@ -18,7 +18,7 @@ Error thrown when reactives passed to a component are invalid
 
 > **new InvalidReactivesError**(`host`, `target`, `reactives`): `InvalidReactivesError`
 
-Defined in: [src/errors.ts:90](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/errors.ts#L90)
+Defined in: [src/errors.ts:90](https://github.com/zeixcom/le-truc/blob/90149bb8885c2e678e7571c228e4005108709147/src/errors.ts#L90)
 
 ###### Parameters
 
@@ -196,7 +196,7 @@ a();
 
 > `static` **captureStackTrace**(`targetObject`, `constructorOpt?`): `void`
 
-Defined in: node\_modules/bun-types/globals.d.ts:1042
+Defined in: node\_modules/@types/bun/node\_modules/bun-types/globals.d.ts:1042
 
 Create .stack property on a target object
 
@@ -248,7 +248,7 @@ Indicates whether the argument provided is a built-in Error instance or not.
 
 > `static` **isError**(`value`): `value is Error`
 
-Defined in: node\_modules/bun-types/globals.d.ts:1037
+Defined in: node\_modules/@types/bun/node\_modules/bun-types/globals.d.ts:1037
 
 Check if a value is an instance of Error
 

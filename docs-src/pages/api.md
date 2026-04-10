@@ -129,6 +129,7 @@ layout: 'page'
   - [ListOptions](./api/type-aliases/ListOptions.html)
   - [MatchHandlers](./api/type-aliases/MatchHandlers.html)
   - [MaybeCleanup](./api/type-aliases/MaybeCleanup.html)
+  - [MaybePromise](./api/type-aliases/MaybePromise.html)
   - [MaybeSignal](./api/type-aliases/MaybeSignal.html)
   - [Memo](./api/type-aliases/Memo.html)
   - [MemoCallback](./api/type-aliases/MemoCallback.html)
@@ -146,6 +147,7 @@ layout: 'page'
   - [SensorOptions](./api/type-aliases/SensorOptions.html)
   - [Signal](./api/type-aliases/Signal.html)
   - [SignalOptions](./api/type-aliases/SignalOptions.html)
+  - [SingleMatchHandlers](./api/type-aliases/SingleMatchHandlers.html)
   - [Slot](./api/type-aliases/Slot.html)
   - [SplitByComma](./api/type-aliases/SplitByComma.html)
   - [State](./api/type-aliases/State.html)
@@ -155,7 +157,6 @@ layout: 'page'
   - [TaskCallback](./api/type-aliases/TaskCallback.html)
   - [TrimWhitespace](./api/type-aliases/TrimWhitespace.html)
   - [UnknownContext](./api/type-aliases/UnknownContext.html)
-  - [WatchHandlers](./api/type-aliases/WatchHandlers.html)
   - [WatchHelper](./api/type-aliases/WatchHelper.html)
 {% /listnav %}
 

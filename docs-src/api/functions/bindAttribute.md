@@ -1,8 +1,8 @@
 ### Function: bindAttribute()
 
-> **bindAttribute**(`element`, `name`, `allowUnsafe?`): [`WatchHandlers`](../type-aliases/WatchHandlers.md)\<`string` \| `boolean`\>
+> **bindAttribute**(`element`, `name`, `allowUnsafe?`): [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string` \| `boolean`\>
 
-Defined in: [src/helpers.ts:97](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/helpers.ts#L97)
+Defined in: [src/helpers.ts:97](https://github.com/zeixcom/le-truc/blob/90149bb8885c2e678e7571c228e4005108709147/src/helpers.ts#L97)
 
 Returns `RunHandlers` that set or toggle an attribute with security validation.
 
@@ -34,7 +34,7 @@ Skip security validation for string values
 
 #### Returns
 
-[`WatchHandlers`](../type-aliases/WatchHandlers.md)\<`string` \| `boolean`\>
+[`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string` \| `boolean`\>
 
 Watch handlers for the attribute
 

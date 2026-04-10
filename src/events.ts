@@ -245,9 +245,12 @@ function createEventsSensor<T extends {}, E extends Element>(
  * in DEV_MODE a warning is logged pointing toward `each()` + `on()`.
  *
  * @since 2.0
- * @param host - The component host element
+ * @param {HTMLElement & P} host - The component host element
+ * @returns {OnHelper<P>} Bound `on` function for the given host
  */
-const makeOn = <P extends ComponentProps>(host: HTMLElement & P) => {
+const makeOn = <P extends ComponentProps>(
+	host: HTMLElement & P,
+): OnHelper<P> => {
 	type OnHandler<E extends Element, Evt extends Event> = (
 		event: Evt,
 		element: E,

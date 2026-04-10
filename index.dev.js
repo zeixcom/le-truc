@@ -1229,10 +1229,14 @@ function createEffect(fn) {
   runEffect(node);
   return dispose;
 }
-function match(signals, handlers) {
+function match(signalOrSignals, handlers) {
   if (!activeOwner)
     throw new RequiredOwnerError("match");
-  const { ok, err = console.error, nil } = handlers;
+  const isSingle = !Array.isArray(signalOrSignals);
+  const signals = isSingle ? [signalOrSignals] : signalOrSignals;
+  const { nil } = handlers;
+  const ok = isSingle ? (values2) => handlers.ok(values2[0]) : (values2) => handlers.ok(values2);
+  const err = isSingle && handlers.err ? (errors2) => handlers.err(errors2[0]) : handlers.err ?? console.error;
   let errors;
   let pending = false;
   const values = new Array(signals.length);
@@ -1669,27 +1673,6 @@ var makeRequestContext = (host) => (context, fallback) => {
 // src/util.ts
 var DEV_MODE = typeof process !== "undefined" && true;
 var LOG_WARN = "warn";
-var RESERVED_WORDS = new Set([
-  "constructor",
-  "prototype"
-]);
-var HTML_ELEMENT_PROPS = new Set([
-  "id",
-  "class",
-  "className",
-  "title",
-  "role",
-  "style",
-  "dataset",
-  "lang",
-  "dir",
-  "hidden",
-  "children",
-  "innerHTML",
-  "outerHTML",
-  "textContent",
-  "innerText"
-]);
 var idString = (id) => id ? `#${id}` : "";
 var classString = (classList) => classList?.length ? `.${Array.from(classList).join(".")}` : "";
 var isCustomElement = (element) => element.localName.includes("-");
@@ -1751,6 +1734,14 @@ var getSignals = (el) => {
 };
 
 // src/effects.ts
+var activateResult = (result) => {
+  for (const descriptor of result) {
+    if (Array.isArray(descriptor))
+      activateResult(descriptor);
+    else if (descriptor)
+      descriptor();
+  }
+};
 var toSignal = (host, source) => {
   if (isFunction(source))
     return createComputed(source);
@@ -1765,24 +1756,25 @@ var toSignal = (host, source) => {
 var makeWatch = (host) => {
   function watch(source, handlerOrHandlers) {
     return () => {
-      const isArraySource = Array.isArray(source);
-      const sources = isArraySource ? source : [source];
-      const signals = sources.map((s) => toSignal(host, s));
-      if (typeof handlerOrHandlers === "function") {
+      if (Array.isArray(source)) {
+        const signals = source.map((s) => toSignal(host, s));
         const handler = handlerOrHandlers;
-        return createEffect(() => match(signals, {
-          ok: (values) => untrack(() => handler(isArraySource ? values : values[0]))
+        return createEffect(() => match(signals, { ok: (values) => untrack(() => handler(values)) }));
+      }
+      const signal = toSignal(host, source);
+      if (typeof handlerOrHandlers === "function") {
+        return createEffect(() => match(signal, {
+          ok: (value) => untrack(() => handlerOrHandlers(value))
         }));
       }
       const handlers = handlerOrHandlers;
-      const matchHandlers = {
-        ok: (values) => untrack(() => handlers.ok(isArraySource ? values : values[0]))
-      };
-      if (handlers.err)
-        matchHandlers.err = (errs) => untrack(() => handlers.err(errs[0]));
-      if (handlers.nil)
-        matchHandlers.nil = () => untrack(() => handlers.nil());
-      return createEffect(() => match(signals, matchHandlers));
+      return createEffect(() => match(signal, {
+        ok: (value) => untrack(() => handlers.ok(value)),
+        ...handlers.err && {
+          err: (e) => untrack(() => handlers.err(e))
+        },
+        ...handlers.nil && { nil: () => untrack(() => handlers.nil()) }
+      }));
     };
   }
   return watch;
@@ -1846,19 +1838,10 @@ function each(memo, callback) {
       for (const element of memo.get()) {
         createScope(() => {
           const result = callback(element);
-          if (Array.isArray(result)) {
-            const activate = (res) => {
-              for (const descriptor of res) {
-                if (Array.isArray(descriptor))
-                  activate(descriptor);
-                else if (descriptor)
-                  descriptor();
-              }
-            };
-            activate(result);
-          } else if (typeof result === "function") {
+          if (Array.isArray(result))
+            activateResult(result);
+          else if (typeof result === "function")
             result();
-          }
         });
       }
     });
@@ -2192,17 +2175,7 @@ function defineComponent(name, factory) {
       if (!result)
         return;
       resolveDependencies(() => {
-        this.#cleanup = createScope(() => {
-          const activate = (res) => {
-            for (const descriptor of res) {
-              if (Array.isArray(descriptor))
-                activate(descriptor);
-              else if (descriptor)
-                descriptor();
-            }
-          };
-          activate(result);
-        });
+        this.#cleanup = createScope(() => activateResult(result));
       });
     }
     disconnectedCallback() {
@@ -2328,43 +2301,43 @@ var SCRIPT_ATTRS = [
   "referrerpolicy",
   "fetchpriority"
 ];
-var dangerouslyBindInnerHTML = (element, options = {}) => ({
-  ok: (html) => {
-    const { shadowRootMode, allowScripts } = options;
-    if (!html) {
-      if (element.shadowRoot)
-        element.shadowRoot.innerHTML = "<slot></slot>";
-      else
-        element.innerHTML = "";
-      return;
-    }
-    if (shadowRootMode && !element.shadowRoot)
-      element.attachShadow({ mode: shadowRootMode });
-    const target = element.shadowRoot || element;
-    schedule(element, () => {
-      target.innerHTML = html;
-      if (allowScripts) {
-        target.querySelectorAll("script").forEach((script) => {
-          const newScript = document.createElement("script");
-          for (const attr of SCRIPT_ATTRS) {
-            if (script.hasAttribute(attr))
-              newScript.setAttribute(attr, script.getAttribute(attr));
-          }
-          if (!script.hasAttribute("src"))
-            newScript.appendChild(document.createTextNode(script.textContent ?? ""));
-          target.appendChild(newScript);
-          script.remove();
-        });
-      }
-    });
-  },
-  nil: () => {
+var dangerouslyBindInnerHTML = (element, options = {}) => {
+  const reset = () => {
     if (element.shadowRoot)
       element.shadowRoot.innerHTML = "<slot></slot>";
     else
       element.innerHTML = "";
-  }
-});
+  };
+  return {
+    ok: (html) => {
+      if (!html) {
+        reset();
+        return;
+      }
+      const { shadowRootMode, allowScripts } = options;
+      if (shadowRootMode && !element.shadowRoot)
+        element.attachShadow({ mode: shadowRootMode });
+      const target = element.shadowRoot || element;
+      schedule(element, () => {
+        target.innerHTML = html;
+        if (allowScripts) {
+          target.querySelectorAll("script").forEach((script) => {
+            const newScript = document.createElement("script");
+            for (const attr of SCRIPT_ATTRS) {
+              if (script.hasAttribute(attr))
+                newScript.setAttribute(attr, script.getAttribute(attr));
+            }
+            if (!script.hasAttribute("src"))
+              newScript.appendChild(document.createTextNode(script.textContent ?? ""));
+            target.appendChild(newScript);
+            script.remove();
+          });
+        }
+      });
+    },
+    nil: reset
+  };
+};
 // src/parsers/boolean.ts
 var asBoolean = () => asParser((value) => value != null && value !== "false");
 // src/parsers/date.ts
@@ -2417,7 +2390,7 @@ var asInteger = (fallback = 0) => asParser((value) => {
 var asNumber = (fallback = 0) => asParser((value) => parseNumber(parseFloat, value) ?? fallback);
 var asClampedInteger = (min = 0, max = Number.MAX_SAFE_INTEGER) => asParser((value) => {
   if (value == null)
-    return Math.max(min, Math.min(min, max));
+    return min;
   const trimmed = value.trim();
   const raw = trimmed.toLowerCase().startsWith("0x") ? parseNumber((v) => parseInt(v, 16), trimmed) : parseNumber(parseFloat, value);
   const parsed = raw != null ? Math.trunc(raw) : min;

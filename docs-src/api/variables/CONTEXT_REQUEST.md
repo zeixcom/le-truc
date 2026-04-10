@@ -2,4 +2,4 @@
 
 > `const` **CONTEXT\_REQUEST**: `"context-request"` = `'context-request'`
 
-Defined in: [src/context.ts:74](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/context.ts#L74)
+Defined in: [src/context.ts:74](https://github.com/zeixcom/le-truc/blob/90149bb8885c2e678e7571c228e4005108709147/src/context.ts#L74)

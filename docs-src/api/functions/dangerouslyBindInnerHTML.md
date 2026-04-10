@@ -1,10 +1,10 @@
 ### Function: dangerouslyBindInnerHTML()
 
-> **dangerouslyBindInnerHTML**(`element`, `options?`): [`WatchHandlers`](../type-aliases/WatchHandlers.md)\<`string`\>
+> **dangerouslyBindInnerHTML**(`element`, `options?`): [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string`\>
 
-Defined in: [src/helpers.ts:177](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/helpers.ts#L177)
+Defined in: [src/helpers.ts:177](https://github.com/zeixcom/le-truc/blob/90149bb8885c2e678e7571c228e4005108709147/src/helpers.ts#L177)
 
-Returns `WatchHandlers<string>` that sets the inner HTML of an element,
+Returns `SingleMatchHandlers<string>` that sets the inner HTML of an element,
 with optional Shadow DOM and script re-execution support.
 
 - `ok(html)` → schedules `element.innerHTML = html` (or `shadowRoot.innerHTML`);
@@ -31,7 +31,7 @@ Shadow DOM mode and script execution options
 
 #### Returns
 
-[`WatchHandlers`](../type-aliases/WatchHandlers.md)\<`string`\>
+[`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string`\>
 
 Watch handlers that set the element's inner HTML
 

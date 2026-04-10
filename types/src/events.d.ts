@@ -71,12 +71,8 @@ declare function createEventsSensor<T extends {}, E extends Element>(target: E, 
  * in DEV_MODE a warning is logged pointing toward `each()` + `on()`.
  *
  * @since 2.0
- * @param host - The component host element
+ * @param {HTMLElement & P} host - The component host element
+ * @returns {OnHelper<P>} Bound `on` function for the given host
  */
-declare const makeOn: <P extends ComponentProps>(host: HTMLElement & P) => {
-    <E extends Element, T extends keyof HTMLElementEventMap>(target: E | Falsy, type: T, handler: (event: HTMLElementEventMap[T], element: E) => { [K in keyof P]?: P[K]; } | void | Falsy, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element>(target: E | Falsy, type: string, handler: (event: Event, element: E) => { [K in keyof P]?: P[K]; } | void | Falsy, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element, T_1 extends keyof HTMLElementEventMap>(target: Memo<E[]> | Falsy, type: T_1, handler: (event: HTMLElementEventMap[T_1], element: E) => { [K in keyof P]?: P[K]; } | void | Falsy, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element>(target: Memo<E[]> | Falsy, type: string, handler: (event: Event, element: E) => { [K in keyof P]?: P[K]; } | void | Falsy, options?: AddEventListenerOptions): EffectDescriptor;
-};
+declare const makeOn: <P extends ComponentProps>(host: HTMLElement & P) => OnHelper<P>;
 export { createEventsSensor, type EventHandlers, type EventType, makeOn, type OnHelper, type SensorEventHandler, };

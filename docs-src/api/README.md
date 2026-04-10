@@ -53,6 +53,7 @@
 - [ListOptions](type-aliases/ListOptions.md)
 - [MatchHandlers](type-aliases/MatchHandlers.md)
 - [MaybeCleanup](type-aliases/MaybeCleanup.md)
+- [MaybePromise](type-aliases/MaybePromise.md)
 - [MaybeSignal](type-aliases/MaybeSignal.md)
 - [Memo](type-aliases/Memo.md)
 - [MemoCallback](type-aliases/MemoCallback.md)
@@ -70,6 +71,7 @@
 - [SensorOptions](type-aliases/SensorOptions.md)
 - [Signal](type-aliases/Signal.md)
 - [SignalOptions](type-aliases/SignalOptions.md)
+- [SingleMatchHandlers](type-aliases/SingleMatchHandlers.md)
 - [Slot](type-aliases/Slot.md)
 - [SplitByComma](type-aliases/SplitByComma.md)
 - [State](type-aliases/State.md)
@@ -79,7 +81,6 @@
 - [TaskCallback](type-aliases/TaskCallback.md)
 - [TrimWhitespace](type-aliases/TrimWhitespace.md)
 - [UnknownContext](type-aliases/UnknownContext.md)
-- [WatchHandlers](type-aliases/WatchHandlers.md)
 - [WatchHelper](type-aliases/WatchHelper.md)
 
 #### Variables

@@ -20,6 +20,7 @@ import {
 	type RequestContextHelper,
 } from './context'
 import {
+	activateResult,
 	type FactoryResult,
 	type Falsy,
 	makePass,
@@ -165,15 +166,7 @@ function defineComponent<P extends ComponentProps>(
 			if (!result) return
 
 			resolveDependencies(() => {
-				this.#cleanup = createScope(() => {
-					const activate = (res: FactoryResult) => {
-						for (const descriptor of res) {
-							if (Array.isArray(descriptor)) activate(descriptor)
-							else if (descriptor) descriptor()
-						}
-					}
-					activate(result)
-				})
+				this.#cleanup = createScope(() => activateResult(result))
 			})
 		}
 

@@ -122,10 +122,11 @@ class ContextRequestEvent<T extends UnknownContext> extends Event {
  * getter `() => host[context]` for each matching context key.
  *
  * @since 2.0
- * @param host - The component host element
+ * @param {HTMLElement & P} host - The component host element
+ * @returns {ProvideContextsHelper<P>} Bound `provideContexts` function for the given host
  */
 const makeProvideContexts =
-	<P extends ComponentProps>(host: HTMLElement & P) =>
+	<P extends ComponentProps>(host: HTMLElement & P): ProvideContextsHelper<P> =>
 	(contexts: Array<keyof P>): EffectDescriptor =>
 	() =>
 		createScope(() => {
@@ -152,10 +153,11 @@ const makeProvideContexts =
  * the Memo returns `fallback`. For use inside `expose()` as a property initializer.
  *
  * @since 2.0
- * @param host - The component host element
+ * @param {HTMLElement & P} host - The component host element
+ * @returns {RequestContextHelper} Bound `requestContext` function for the given host
  */
 const makeRequestContext =
-	<P extends ComponentProps>(host: HTMLElement & P) =>
+	<P extends ComponentProps>(host: HTMLElement & P): RequestContextHelper =>
 	<T extends {}>(context: Context<string, () => T>, fallback: T): Memo<T> => {
 		let consumed: () => T = () => fallback
 		host.dispatchEvent(

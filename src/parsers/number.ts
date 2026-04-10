@@ -2,10 +2,18 @@ import { asParser, type Parser } from '../parsers'
 
 /* === Internal Functions === */
 
+/**
+ * Parse a string value using the given parse function, returning `undefined`
+ * if the value is nullish or the result is not finite.
+ *
+ * @param {(v: string) => number} parseFn - Parsing function (e.g. `parseFloat`, `parseInt`)
+ * @param {string | null | undefined} value - Raw attribute string to parse
+ * @returns {number | undefined} Parsed finite number, or `undefined` if unparseable
+ */
 const parseNumber = (
 	parseFn: (v: string) => number,
 	value: string | null | undefined,
-) => {
+): number | undefined => {
 	if (value == null) return
 	const parsed = parseFn(value)
 	return Number.isFinite(parsed) ? parsed : undefined
@@ -62,7 +70,7 @@ const asClampedInteger = (
 	max: number = Number.MAX_SAFE_INTEGER,
 ): Parser<number> =>
 	asParser((value: string | null | undefined) => {
-		if (value == null) return Math.max(min, Math.min(min, max))
+		if (value == null) return min
 		const trimmed = value.trim()
 		const raw = trimmed.toLowerCase().startsWith('0x')
 			? parseNumber(v => parseInt(v, 16), trimmed)

@@ -1,5 +1,14 @@
 /* === Internal Functions === */
 
+/**
+ * Check whether a URL string is safe to use as an attribute value.
+ *
+ * Rejects `javascript:`, `data:`, and `vbscript:` schemes. Allows relative paths,
+ * `mailto:`, `tel:`, and absolute URLs with `http:`, `https:`, or `ftp:` protocols.
+ *
+ * @param {string} value - URL string to validate
+ * @returns {boolean} `true` if the URL is considered safe, `false` otherwise
+ */
 const isSafeURL = (value: string): boolean => {
 	if (/^(javascript|data|vbscript):/i.test(value)) return false
 	if (/^(mailto|tel):/i.test(value)) return true

@@ -1,8 +1,8 @@
 ### Function: bindStyle()
 
-> **bindStyle**(`element`, `prop`): [`WatchHandlers`](../type-aliases/WatchHandlers.md)\<`string`\>
+> **bindStyle**(`element`, `prop`): [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string`\>
 
-Defined in: [src/helpers.ts:127](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/helpers.ts#L127)
+Defined in: [src/helpers.ts:127](https://github.com/zeixcom/le-truc/blob/90149bb8885c2e678e7571c228e4005108709147/src/helpers.ts#L127)
 
 Returns `RunHandlers` that set or remove an inline style property.
 
@@ -25,7 +25,7 @@ CSS property name (e.g. `'color'`, `'--my-var'`)
 
 #### Returns
 
-[`WatchHandlers`](../type-aliases/WatchHandlers.md)\<`string`\>
+[`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string`\>
 
 Watch handlers for the style property
 

@@ -1,4 +1,4 @@
-import type { WatchHandlers } from './effects'
+import type { SingleMatchHandlers } from '@zeix/cause-effect'
 import { safeSetAttribute, setTextPreservingComments } from './safety'
 import { schedule } from './scheduler'
 
@@ -92,13 +92,13 @@ const bindVisible =
  * @param {Element} element - Target element
  * @param {string} name - Attribute name
  * @param {boolean} [allowUnsafe=false] - Skip security validation for string values
- * @returns {WatchHandlers<string | boolean>} Watch handlers for the attribute
+ * @returns {SingleMatchHandlers<string | boolean>} Watch handlers for the attribute
  */
 const bindAttribute = (
 	element: Element,
 	name: string,
 	allowUnsafe: boolean = false,
-): WatchHandlers<string | boolean> => ({
+): SingleMatchHandlers<string | boolean> => ({
 	ok: (value: string | boolean) => {
 		if (typeof value === 'boolean') {
 			element.toggleAttribute(name, value)
@@ -122,12 +122,12 @@ const bindAttribute = (
  * @since 2.0
  * @param {HTMLElement | SVGElement | MathMLElement} element - Target element
  * @param {string} prop - CSS property name (e.g. `'color'`, `'--my-var'`)
- * @returns {WatchHandlers<string>} Watch handlers for the style property
+ * @returns {SingleMatchHandlers<string>} Watch handlers for the style property
  */
 const bindStyle = (
 	element: HTMLElement | SVGElement | MathMLElement,
 	prop: string,
-): WatchHandlers<string> => ({
+): SingleMatchHandlers<string> => ({
 	ok: (value: string) => {
 		element.style.setProperty(prop, value)
 	},
@@ -158,7 +158,7 @@ type DangerouslySetInnerHTMLOptions = {
 }
 
 /**
- * Returns `WatchHandlers<string>` that sets the inner HTML of an element,
+ * Returns `SingleMatchHandlers<string>` that sets the inner HTML of an element,
  * with optional Shadow DOM and script re-execution support.
  *
  * - `ok(html)` → schedules `element.innerHTML = html` (or `shadowRoot.innerHTML`);
@@ -172,46 +172,48 @@ type DangerouslySetInnerHTMLOptions = {
  * @since 2.0
  * @param {Element} element - Target element
  * @param {DangerouslySetInnerHTMLOptions} [options] - Shadow DOM mode and script execution options
- * @returns {WatchHandlers<string>} Watch handlers that set the element's inner HTML
+ * @returns {SingleMatchHandlers<string>} Watch handlers that set the element's inner HTML
  */
 const dangerouslyBindInnerHTML = (
 	element: Element,
 	options: DangerouslySetInnerHTMLOptions = {},
-): WatchHandlers<string> => ({
-	ok: (html: string) => {
-		const { shadowRootMode, allowScripts } = options
-		if (!html) {
-			if (element.shadowRoot) element.shadowRoot.innerHTML = '<slot></slot>'
-			else element.innerHTML = ''
-			return
-		}
-		if (shadowRootMode && !element.shadowRoot)
-			element.attachShadow({ mode: shadowRootMode })
-		const target = element.shadowRoot || element
-		schedule(element, () => {
-			target.innerHTML = html
-			if (allowScripts) {
-				target.querySelectorAll('script').forEach(script => {
-					const newScript = document.createElement('script')
-					for (const attr of SCRIPT_ATTRS) {
-						if (script.hasAttribute(attr))
-							newScript.setAttribute(attr, script.getAttribute(attr)!)
-					}
-					if (!script.hasAttribute('src'))
-						newScript.appendChild(
-							document.createTextNode(script.textContent ?? ''),
-						)
-					target.appendChild(newScript)
-					script.remove()
-				})
-			}
-		})
-	},
-	nil: () => {
+): SingleMatchHandlers<string> => {
+	const reset = () => {
 		if (element.shadowRoot) element.shadowRoot.innerHTML = '<slot></slot>'
 		else element.innerHTML = ''
-	},
-})
+	}
+	return {
+		ok: (html: string) => {
+			if (!html) {
+				reset()
+				return
+			}
+			const { shadowRootMode, allowScripts } = options
+			if (shadowRootMode && !element.shadowRoot)
+				element.attachShadow({ mode: shadowRootMode })
+			const target = element.shadowRoot || element
+			schedule(element, () => {
+				target.innerHTML = html
+				if (allowScripts) {
+					target.querySelectorAll('script').forEach(script => {
+						const newScript = document.createElement('script')
+						for (const attr of SCRIPT_ATTRS) {
+							if (script.hasAttribute(attr))
+								newScript.setAttribute(attr, script.getAttribute(attr)!)
+						}
+						if (!script.hasAttribute('src'))
+							newScript.appendChild(
+								document.createTextNode(script.textContent ?? ''),
+							)
+						target.appendChild(newScript)
+						script.remove()
+					})
+				}
+			})
+		},
+		nil: reset,
+	}
+}
 
 export {
 	bindAttribute,
