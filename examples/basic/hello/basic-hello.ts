@@ -1,4 +1,4 @@
-import { asString, bindText, defineComponent } from '../../..'
+import { bindText, defineComponent } from '../../..'
 
 export type BasicHelloProps = {
 	name: string
@@ -17,9 +17,7 @@ export default defineComponent<BasicHelloProps>(
 		const output = first('output', 'Needed to display the name.')
 		const fallback = output.textContent || ''
 
-		expose({
-			name: asString(output.textContent ?? ''),
-		})
+		expose({ name: output.textContent ?? '' })
 
 		return [
 			on(input, 'input', () => ({ name: input.value || fallback })),

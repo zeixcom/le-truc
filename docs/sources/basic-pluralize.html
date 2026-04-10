@@ -193,19 +193,19 @@
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
 <span class="line"><span style="color:#F8F8F2">			count </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'count'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(count)),</span></span>
-<span class="line"><span style="color:#F8F8F2">			none</span></span>
-<span class="line"><span style="color:#F92672">				&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'count'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			none </span><span style="color:#F92672">&#x26;&#x26;</span></span>
+<span class="line"><span style="color:#A6E22E">				watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'count'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">					none.hidden </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">!==</span><span style="color:#AE81FF"> 0</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			some</span></span>
-<span class="line"><span style="color:#F92672">				&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'count'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			some </span><span style="color:#F92672">&#x26;&#x26;</span></span>
+<span class="line"><span style="color:#A6E22E">				watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'count'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">					some.hidden </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">===</span><span style="color:#AE81FF"> 0</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
 <span class="line"><span style="color:#F92672">			...</span><span style="color:#F8F8F2">categories.</span><span style="color:#A6E22E">map</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">category</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> el </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> categoryElements[category]</span></span>
 <span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> (</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">					el</span></span>
-<span class="line"><span style="color:#F92672">					&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'count'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					el </span><span style="color:#F92672">&#x26;&#x26;</span></span>
+<span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'count'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">						el.hidden </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> pluralizer.</span><span style="color:#A6E22E">select</span><span style="color:#F8F8F2">(value) </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> category</span></span>
 <span class="line"><span style="color:#F8F8F2">					})</span></span>
 <span class="line"><span style="color:#F8F8F2">				)</span></span>

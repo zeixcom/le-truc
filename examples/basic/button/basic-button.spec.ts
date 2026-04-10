@@ -23,18 +23,26 @@ test.describe('basic-button component', () => {
 		await expect(badgeSpan).toHaveText('5')
 
 		// Update disabled status
-		await defaultElement.evaluate(node => { (node as any).disabled = true })
+		await defaultElement.evaluate(node => {
+			;(node as any).disabled = true
+		})
 		await expect(button).toBeDisabled()
 
-		await defaultElement.evaluate(node => { (node as any).disabled = false })
+		await defaultElement.evaluate(node => {
+			;(node as any).disabled = false
+		})
 		await expect(button).not.toBeDisabled()
 
 		// Update label
-		await defaultElement.evaluate(node => { (node as any).label = 'Wishlist' })
+		await defaultElement.evaluate(node => {
+			;(node as any).label = 'Wishlist'
+		})
 		await expect(labelSpan).toHaveText('Wishlist')
 
 		// Update badge
-		await defaultElement.evaluate(node => { (node as any).badge = '10' })
+		await defaultElement.evaluate(node => {
+			;(node as any).badge = '10'
+		})
 		await expect(badgeSpan).toHaveText('10')
 
 		// Update all
@@ -46,19 +54,6 @@ test.describe('basic-button component', () => {
 		await expect(button).toBeDisabled()
 		await expect(labelSpan).toHaveText('Back to Store')
 		await expect(badgeSpan).toHaveText('0')
-	})
-
-	test('supports initial attributes', async ({ page }) => {
-		// Use the existing initial attributes test element from HTML
-		const initialElement = page.locator('#initial-attrs-test')
-		const button = initialElement.locator('button')
-		const labelSpan = initialElement.locator('.label')
-		const badgeSpan = initialElement.locator('.badge')
-
-		// Should reflect initial attributes
-		await expect(button).toBeDisabled()
-		await expect(labelSpan).toHaveText('Delete Item')
-		await expect(badgeSpan).toHaveText('99')
 	})
 
 	test('updates via property changes', async ({ page }) => {
@@ -97,7 +92,9 @@ test.describe('basic-button component', () => {
 		await expect(button).toHaveText('Just Button Text')
 
 		// Test that disabled still works
-		await missingElement.evaluate(node => { (node as any).disabled = true })
+		await missingElement.evaluate(node => {
+			;(node as any).disabled = true
+		})
 		await expect(button).toBeDisabled()
 	})
 
@@ -113,7 +110,9 @@ test.describe('basic-button component', () => {
 		expect(labelValue).toBe('Button Text Only')
 
 		// Update label property - should not affect button text since no .label span
-		await fallbackElement.evaluate(node => { (node as any).label = 'New Label' })
+		await fallbackElement.evaluate(node => {
+			;(node as any).label = 'New Label'
+		})
 
 		await expect(button).toHaveText('Button Text Only') // Button text unchanged
 	})
@@ -123,13 +122,19 @@ test.describe('basic-button component', () => {
 		const booleanElement = page.locator('#boolean-test')
 		const button = booleanElement.locator('button')
 
-		await booleanElement.evaluate(node => { (node as any).disabled = true })
+		await booleanElement.evaluate(node => {
+			;(node as any).disabled = true
+		})
 		await expect(button).toBeDisabled()
 
-		await booleanElement.evaluate(node => { (node as any).disabled = false })
+		await booleanElement.evaluate(node => {
+			;(node as any).disabled = false
+		})
 		await expect(button).not.toBeDisabled()
 
-		await booleanElement.evaluate(node => { (node as any).disabled = true })
+		await booleanElement.evaluate(node => {
+			;(node as any).disabled = true
+		})
 		await expect(button).toBeDisabled()
 	})
 })

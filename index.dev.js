@@ -1825,6 +1825,8 @@ var makePass = (host) => {
   });
   function pass(target, props) {
     return () => {
+      if (!target)
+        return;
       if (isMemo(target)) {
         createEffect(() => {
           for (const el of target.get()) {
@@ -1845,9 +1847,15 @@ function each(memo, callback) {
         createScope(() => {
           const result = callback(element);
           if (Array.isArray(result)) {
-            for (const descriptor of result)
-              if (descriptor)
-                descriptor();
+            const activate = (res) => {
+              for (const descriptor of res) {
+                if (Array.isArray(descriptor))
+                  activate(descriptor);
+                else if (descriptor)
+                  descriptor();
+              }
+            };
+            activate(result);
           } else if (typeof result === "function") {
             result();
           }
@@ -1990,6 +1998,8 @@ function createEventsSensor(target, init, events) {
 var makeOn = (host) => {
   function on(target, type, handler, options = {}) {
     return () => {
+      if (!target)
+        return;
       if (!("passive" in options)) {
         options = { ...options, passive: PASSIVE_EVENTS.has(type) };
       }
@@ -2183,10 +2193,15 @@ function defineComponent(name, factory) {
         return;
       resolveDependencies(() => {
         this.#cleanup = createScope(() => {
-          for (const descriptor of result) {
-            if (descriptor)
-              descriptor();
-          }
+          const activate = (res) => {
+            for (const descriptor of res) {
+              if (Array.isArray(descriptor))
+                activate(descriptor);
+              else if (descriptor)
+                descriptor();
+            }
+          };
+          activate(result);
         });
       });
     }
@@ -2274,11 +2289,11 @@ var bindText = (element, preserveComments = false) => preserveComments ? (value)
 var bindProperty = (element, key) => (value) => {
   element[key] = value;
 };
-var bindClass = (element, token, transform) => (value) => {
-  element.classList.toggle(token, transform ? transform(value) : Boolean(value));
+var bindClass = (element, token) => (value) => {
+  element.classList.toggle(token, Boolean(value));
 };
-var bindVisible = (element, transform) => (value) => {
-  element.hidden = !(transform ? transform(value) : Boolean(value));
+var bindVisible = (element) => (value) => {
+  element.hidden = !value;
 };
 var bindAttribute = (element, name, allowUnsafe = false) => ({
   ok: (value) => {

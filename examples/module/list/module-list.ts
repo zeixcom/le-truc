@@ -56,22 +56,20 @@ export default defineComponent<ModuleListProps>(
 		})
 
 		return [
-			form
-				&& on(form, 'submit', e => {
-					e.preventDefault()
-					const content = textbox?.value
-					if (content) {
-						host.add(item => {
-							item.querySelector('slot')?.replaceWith(content)
-						})
-						textbox.clear()
-					}
-				}),
-			add
-				&& pass(add, {
-					disabled: () =>
-						(textbox && !textbox.length) || container.children.length >= max,
-				}),
+			on(form, 'submit', e => {
+				e.preventDefault()
+				const content = textbox?.value
+				if (content) {
+					host.add(item => {
+						item.querySelector('slot')?.replaceWith(content)
+					})
+					textbox.clear()
+				}
+			}),
+			pass(add, {
+				disabled: () =>
+					(textbox && !textbox.length) || container.children.length >= max,
+			}),
 			on(host, 'click', e => {
 				const target = e.target
 				if (

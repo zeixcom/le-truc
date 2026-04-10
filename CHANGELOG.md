@@ -1,23 +1,26 @@
 # Changelog
 
-## [Unreleased]
+## 2.0.0-next
 
 ### Added
 
 - **`FactoryContext<P>` type**: New context object passed to the factory function, containing element query helpers (`first`, `all`), the `host` element, and factory helpers (`expose`, `watch`, `on`, `pass`, `provideContexts`, `requestContext`).
 - **`EffectDescriptor` type**: Deferred effect — a thunk `() => MaybeCleanup` that runs inside a reactive scope after all dependencies are resolved. Replaces the old `Effect<P, E>` type.
 - **`FactoryResult` type**: Return type of the factory function — a flat array of `EffectDescriptor | false | undefined`, enabling the `element && descriptor()` pattern for conditional effects.
-- **`WatchHandlers<T>` type**: Optional match-branch handlers with `ok`, `err`, and `nil` properties, accepted by `watch()` and DOM binding helpers.
+- **`WatchHandlers<T>` type**: Optional match-branch handlers with `ok`, `err`, and `nil` properties, accepted by `watch()` and DOM binding helpers. For single-source `watch()`, `ok` receives the resolved value directly (not a tuple) and `err` receives a single `Error` (not an array) — array-source `watch()` still delivers `values: any[]`.
 - **`PassedProps<P, Q>` type**: Props object for `pass()` — maps child component property names to `Reactive<Q[K], P>` values.
 - **DOM binding helpers** in a new `src/helpers.ts` module, each usable as a `watch()` handler:
   - `bindText(element, preserveComments?)` — sets text content
   - `bindProperty(element, key)` — sets a DOM property
-  - `bindClass(element, token, transform?)` — toggles a class
-  - `bindVisible(element, transform?)` — controls visibility via `el.hidden = !value`
+  - `bindClass<T = boolean>(element, token)` — toggles a class; generic `T` allows non-boolean reactive values without a transform function
+  - `bindVisible<T = boolean>(element)` — controls visibility via `el.hidden = !value`; generic `T` allows non-boolean reactive values
   - `bindAttribute(element, name, allowUnsafe?)` — returns `WatchHandlers<string | boolean>` for attribute management; boolean values use `toggleAttribute`
   - `bindStyle(element, prop)` — returns `WatchHandlers<string>` for inline style; nil value calls `removeProperty`, restoring the CSS cascade
   - `dangerouslyBindInnerHTML(element, options?)` — returns `WatchHandlers<string>` for innerHTML with optional shadow DOM and script re-execution
 - **`each(memo, callback)` helper**: Creates per-element reactive effects from a `Memo<E[]>`. When elements enter the collection their effects are activated inside a per-element `createScope`; when they leave the scope is disposed. The callback receives a single element and returns a `FactoryResult` array or a single `EffectDescriptor`. Returned as an `EffectDescriptor` for inclusion in the factory return array.
+- **`createEventsSensor(element, init, events)` function** in `src/events.ts`: Creates a `Sensor<T>` driven by DOM events on a target element. Use inside `expose()` when a single reactive value should be derived from events. The `events` argument is an `EventHandlers<T, E>` map of event type names to `SensorEventHandler` functions; each handler receives `{ event, target, prev }` and returns the new value (or `void` to leave it unchanged).
+- **`SensorEventHandler<T, Evt, E>` type**: Handler inside `EventHandlers` — receives `{ event, target, prev }` and returns `T | void | Promise<void>`.
+- **`EventHandlers<T, E>` type**: Map of `HTMLElementEventMap` event type names to `SensorEventHandler` functions, used as the third argument to `createEventsSensor`.
 - **`asDate(fallback?)` parser**: New `Parser<string>` factory with a simplified signature — no longer requires a UI context parameter.
 - **`asClampedInteger(min?, max?)` parser**: Parser for clamped integer values; returns `min` (default `0`) when the attribute is absent or the parsed value is out of range.
 
@@ -28,7 +31,7 @@
 - **`Parser<T>` signature simplified**: Parsers no longer receive the element or UI object. The signature is now `(value: string | null | undefined) => T`. Existing parsers using the old two-argument form must be migrated to `asParser()`.
 - **`Reactive<T>` type simplified**: Removed the element type parameter; thunks are now `() => T | Promise<T> | null | undefined` instead of `(target: E) => T | null | undefined`.
 - **Effect factories replaced by `watch()`, `on()`, `pass()` helpers**: The individual effect factory functions (`setAttribute`, `toggleClass`, `setProperty`, `setText`, etc.) are replaced by the general-purpose `watch(source, handler)` helper combined with the DOM binding helpers above.
-- **`on()` redesigned as a factory helper**: Accepts a single element or `Memo<E[]>` target and typed event names. Handlers receive `(event, element)` and may return `{ prop: value }` to batch-update host properties.
+- **`on()` redesigned as a factory helper**: Accepts a single element or `Memo<E[]>` target and typed event names. Handlers receive `(event, element)` and may return `{ prop: value }` to batch-update host properties. For `Memo<E[]>` targets, uses event delegation (one listener on the shadow root or host); non-bubbling events (`focus`, `blur`, `scroll`, `mouseenter`, `mouseleave`, etc.) fall back to per-element listeners with per-element lifecycle — a DEV_MODE warning is logged pointing toward `each()` + `on()`.
 - **`pass()` redesigned as a factory helper**: `pass(target, props)` returns an `EffectDescriptor` and works for both single elements and `Memo<E[]>` targets.
 - **`provideContexts()` and `requestContext()` are now `FactoryContext` methods**: Instantiated via `makeProvideContexts()` / `makeRequestContext()` bound to the host element. `provideContexts([...])` returns an `EffectDescriptor` to include in the return array.
 - **`getHelpers()` replaced by `makeElementQueries()`**: Returns a tuple `[ElementQueries, (run: () => void) => void]`; the `UI` type is no longer exported.

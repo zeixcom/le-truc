@@ -21,6 +21,8 @@ import { DEV_MODE, elementName, isCustomElement, LOG_WARN } from './util'
 
 /* === Types === */
 
+type Falsy = false | null | undefined | '' | 0 | 0n
+
 /**
  * A deferred effect: a thunk that, when called inside a reactive scope, creates
  * a reactive effect and returns an optional cleanup function.
@@ -34,11 +36,12 @@ type EffectDescriptor = () => MaybeCleanup
 /**
  * The return value of the factory function.
  *
- * A flat array of effect descriptors (and optional falsy guards for conditional
- * effects). Falsy values (`false`, `undefined`) are filtered out before activation,
- * enabling the `element && watch(...)` conditional pattern.
+ * An array of effect descriptors (and optional falsy guards for conditional
+ * effects). Nested arrays are automatically flattened. Falsy values (`false`,
+ * `undefined`, `null`, `""`, `0`) are filtered out before activation, enabling the
+ * `element && [watch(...)]` conditional pattern.
  */
-type FactoryResult = Array<EffectDescriptor | false | undefined>
+type FactoryResult = Array<EffectDescriptor | FactoryResult | Falsy>
 
 /**
  * User-facing handler object for `watch()` with match branches.
@@ -125,11 +128,11 @@ type WatchHelper<P extends ComponentProps> = {
  */
 type PassHelper<P extends ComponentProps> = {
 	<Q extends ComponentProps>(
-		target: HTMLElement & Q,
+		target: (HTMLElement & Q) | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
 	<Q extends ComponentProps>(
-		target: Memo<(HTMLElement & Q)[]>,
+		target: Memo<(HTMLElement & Q)[]> | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
 }
@@ -309,18 +312,19 @@ const makePass = <P extends ComponentProps>(host: HTMLElement & P) => {
 		})
 
 	function pass<Q extends ComponentProps>(
-		target: HTMLElement & Q,
+		target: (HTMLElement & Q) | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
 	function pass<Q extends ComponentProps>(
-		target: Memo<(HTMLElement & Q)[]>,
+		target: Memo<(HTMLElement & Q)[]> | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
 	function pass<Q extends ComponentProps>(
-		target: (HTMLElement & Q) | Memo<(HTMLElement & Q)[]>,
+		target: (HTMLElement & Q) | Memo<(HTMLElement & Q)[]> | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor {
 		return () => {
+			if (!target) return
 			if (isMemo<(HTMLElement & Q)[]>(target)) {
 				// Memo target: per-element lifecycle via createEffect
 				createEffect(() => {
@@ -345,6 +349,7 @@ const makePass = <P extends ComponentProps>(host: HTMLElement & P) => {
  *
  * The callback receives a single element and returns a `FactoryResult` (array of
  * `EffectDescriptor`s) or a single `EffectDescriptor` (single-descriptor shortcut).
+ * Falsy values can also be returned to skip conditionally.
  *
  * @since 2.0
  */
@@ -354,11 +359,11 @@ function each<E extends Element>(
 ): EffectDescriptor
 function each<E extends Element>(
 	memo: Memo<E[]>,
-	callback: (element: E) => EffectDescriptor,
+	callback: (element: E) => EffectDescriptor | Falsy,
 ): EffectDescriptor
 function each<E extends Element>(
 	memo: Memo<E[]>,
-	callback: (element: E) => FactoryResult | EffectDescriptor,
+	callback: (element: E) => FactoryResult | EffectDescriptor | Falsy,
 ): EffectDescriptor {
 	return () => {
 		createEffect(() => {
@@ -366,7 +371,13 @@ function each<E extends Element>(
 				createScope(() => {
 					const result = callback(element)
 					if (Array.isArray(result)) {
-						for (const descriptor of result) if (descriptor) descriptor()
+						const activate = (res: FactoryResult) => {
+							for (const descriptor of res) {
+								if (Array.isArray(descriptor)) activate(descriptor)
+								else if (descriptor) descriptor()
+							}
+						}
+						activate(result)
 					} else if (typeof result === 'function') {
 						result()
 					}
@@ -380,6 +391,7 @@ export {
 	type EffectDescriptor,
 	each,
 	type FactoryResult,
+	type Falsy,
 	makePass,
 	makeWatch,
 	type PassedProps,

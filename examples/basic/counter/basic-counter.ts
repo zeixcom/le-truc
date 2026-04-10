@@ -1,4 +1,4 @@
-import { asInteger, bindText, defineComponent } from '../../..'
+import { bindText, defineComponent } from '../../..'
 
 export type BasicCounterProps = {
 	count: number
@@ -19,14 +19,10 @@ export default defineComponent<BasicCounterProps>(
 		)
 		const count = first('span', 'Add a span to display the count.')
 
-		expose({
-			count: asInteger(parseInt(count.textContent || '0') || 0),
-		})
+		expose({ count: Number.parseInt(count.textContent || '0') })
 
 		return [
-			on(increment, 'click', () => {
-				host.count++
-			}),
+			on(increment, 'click', () => ({ count: host.count + 1 })),
 			watch('count', bindText(count)),
 		]
 	},

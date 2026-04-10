@@ -33,6 +33,19 @@ test.describe('test-on: on() helper', () => {
 		await expect(output).toHaveText('20')
 	})
 
+	test('Falsy return — ignored (e.g. conditionally set state)', async ({
+		page,
+	}) => {
+		const output = page.locator('#output')
+		await expect(output).toHaveText('0')
+
+		await page.locator('input').first().press('A')
+		await expect(output).toHaveText('0')
+
+		await page.locator('input').first().press('Enter')
+		await expect(output).toHaveText('100')
+	})
+
 	test('non-bubbling (focus) Memo fallback — focusing input sets focused prop', async ({
 		page,
 	}) => {

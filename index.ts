@@ -92,6 +92,7 @@ export {
 	type EffectDescriptor,
 	each,
 	type FactoryResult,
+	type Falsy,
 	type PassedProps,
 	type PassHelper,
 	type Reactive,

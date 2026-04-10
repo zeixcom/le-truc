@@ -9,7 +9,7 @@ import {
 	type Sensor,
 } from '@zeix/cause-effect'
 import type { ComponentProps } from './component'
-import type { EffectDescriptor } from './effects'
+import type { EffectDescriptor, Falsy } from './effects'
 import { PASSIVE_EVENTS, schedule } from './scheduler'
 import { DEV_MODE, elementName, LOG_WARN } from './util'
 
@@ -52,33 +52,39 @@ type EventHandlers<T extends {}, E extends Element> = {
  */
 type OnHelper<P extends ComponentProps> = {
 	<E extends Element, T extends keyof HTMLElementEventMap>(
-		target: E,
+		target: E | Falsy,
 		type: T,
 		handler: (
 			event: HTMLElementEventMap[T],
 			element: E,
-		) => { [K in keyof P]?: P[K] } | void,
+		) => { [K in keyof P]?: P[K] } | void | Falsy,
 		options?: AddEventListenerOptions,
 	): EffectDescriptor
 	<E extends Element>(
-		target: E,
+		target: E | Falsy,
 		type: string,
-		handler: (event: Event, element: E) => { [K in keyof P]?: P[K] } | void,
+		handler: (
+			event: Event,
+			element: E,
+		) => { [K in keyof P]?: P[K] } | void | Falsy,
 		options?: AddEventListenerOptions,
 	): EffectDescriptor
 	<E extends Element, T extends keyof HTMLElementEventMap>(
-		target: Memo<E[]>,
+		target: Memo<E[]> | Falsy,
 		type: T,
 		handler: (
 			event: HTMLElementEventMap[T],
 			element: E,
-		) => { [K in keyof P]?: P[K] } | void,
+		) => { [K in keyof P]?: P[K] } | void | Falsy,
 		options?: AddEventListenerOptions,
 	): EffectDescriptor
 	<E extends Element>(
-		target: Memo<E[]>,
+		target: Memo<E[]> | Falsy,
 		type: string,
-		handler: (event: Event, element: E) => { [K in keyof P]?: P[K] } | void,
+		handler: (
+			event: Event,
+			element: E,
+		) => { [K in keyof P]?: P[K] } | void | Falsy,
 		options?: AddEventListenerOptions,
 	): EffectDescriptor
 }
@@ -138,7 +144,10 @@ const attachListener = <P extends ComponentProps, E extends Element>(
 	host: HTMLElement & P,
 	target: E,
 	type: string,
-	handler: (event: Event, element: E) => { [K in keyof P]?: P[K] } | void,
+	handler: (
+		event: Event,
+		element: E,
+	) => { [K in keyof P]?: P[K] } | void | Falsy,
 	options: AddEventListenerOptions,
 ): EffectDescriptor => {
 	const listener = (e: Event) => {
@@ -167,7 +176,7 @@ const attachListener = <P extends ComponentProps, E extends Element>(
  * value should be derived from events on a specific element. The listener is
  * attached directly to `target`; the handler receives `{ event, target, prev }`.
  *
- * @since 1.1
+ * @since 2.0
  * @param {E} target - The element to listen on
  * @param {T} init - Initial value of the sensor
  * @param {EventHandlers<T, E>} events - Map of event type to handler function
@@ -242,39 +251,41 @@ const makeOn = <P extends ComponentProps>(host: HTMLElement & P) => {
 	type OnHandler<E extends Element, Evt extends Event> = (
 		event: Evt,
 		element: E,
-	) => { [K in keyof P]?: P[K] } | void
+	) => { [K in keyof P]?: P[K] } | void | Falsy
 
 	function on<E extends Element, T extends keyof HTMLElementEventMap>(
-		target: E,
+		target: E | Falsy,
 		type: T,
 		handler: OnHandler<E, HTMLElementEventMap[T]>,
 		options?: AddEventListenerOptions,
 	): EffectDescriptor
 	function on<E extends Element>(
-		target: E,
+		target: E | Falsy,
 		type: string,
 		handler: OnHandler<E, Event>,
 		options?: AddEventListenerOptions,
 	): EffectDescriptor
 	function on<E extends Element, T extends keyof HTMLElementEventMap>(
-		target: Memo<E[]>,
+		target: Memo<E[]> | Falsy,
 		type: T,
 		handler: OnHandler<E, HTMLElementEventMap[T]>,
 		options?: AddEventListenerOptions,
 	): EffectDescriptor
 	function on<E extends Element>(
-		target: Memo<E[]>,
+		target: Memo<E[]> | Falsy,
 		type: string,
 		handler: OnHandler<E, Event>,
 		options?: AddEventListenerOptions,
 	): EffectDescriptor
 	function on(
-		target: Element | Memo<Element[]>,
+		target: Element | Memo<Element[]> | Falsy,
 		type: string,
 		handler: OnHandler<Element, Event>,
 		options: AddEventListenerOptions = {},
 	): EffectDescriptor {
 		return () => {
+			if (!target) return
+
 			if (!('passive' in options)) {
 				options = { ...options, passive: PASSIVE_EVENTS.has(type) }
 			}

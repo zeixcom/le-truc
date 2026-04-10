@@ -21,6 +21,7 @@ import {
 } from './context'
 import {
 	type FactoryResult,
+	type Falsy,
 	makePass,
 	makeWatch,
 	type PassHelper,
@@ -128,7 +129,7 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  */
 function defineComponent<P extends ComponentProps>(
 	name: string,
-	factory: (context: FactoryContext<P>) => FactoryResult | void,
+	factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void,
 ): CustomElementConstructor | undefined {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
@@ -165,9 +166,13 @@ function defineComponent<P extends ComponentProps>(
 
 			resolveDependencies(() => {
 				this.#cleanup = createScope(() => {
-					for (const descriptor of result) {
-						if (descriptor) descriptor()
+					const activate = (res: FactoryResult) => {
+						for (const descriptor of res) {
+							if (Array.isArray(descriptor)) activate(descriptor)
+							else if (descriptor) descriptor()
+						}
 					}
+					activate(result)
 				})
 			})
 		}

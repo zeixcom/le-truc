@@ -1,11 +1,12 @@
 ### Type Alias: FactoryResult
 
-> **FactoryResult** = ([`EffectDescriptor`](EffectDescriptor.md) \| `false` \| `undefined`)[]
+> **FactoryResult** = ([`EffectDescriptor`](EffectDescriptor.md) \| `FactoryResult` \| [`Falsy`](Falsy.md))[]
 
-Defined in: [src/effects.ts:41](https://github.com/zeixcom/le-truc/blob/31e7cc1b8e62c6f8981bd8a73ff42a136ac376b1/src/effects.ts#L41)
+Defined in: [src/effects.ts:44](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/effects.ts#L44)
 
 The return value of the factory function.
 
-A flat array of effect descriptors (and optional falsy guards for conditional
-effects). Falsy values (`false`, `undefined`) are filtered out before activation,
-enabling the `element && watch(...)` conditional pattern.
+An array of effect descriptors (and optional falsy guards for conditional
+effects). Nested arrays are automatically flattened. Falsy values (`false`,
+`undefined`, `null`, `""`, `0`) are filtered out before activation, enabling the
+`element && [watch(...)]` conditional pattern.

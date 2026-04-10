@@ -40,6 +40,9 @@ export default defineComponent<TestOnProps>(
 				count: Number(el.dataset.value ?? 0),
 			})),
 
+			// Falsy return is allowed and ignored (e.g. conditionally set state)
+			on(inputs, 'keydown', ({ key }) => key === 'Enter' && { count: 100 }),
+
 			// Non-bubbling event (focus) with Memo target — per-element fallback
 			on(inputs, 'focus', () => ({ focused: true })),
 

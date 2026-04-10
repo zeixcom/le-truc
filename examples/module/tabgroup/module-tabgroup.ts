@@ -48,7 +48,7 @@ export default defineComponent<ModuleTabgroupProps>(
 		})
 
 		return [
-			on(tabs, 'click', (e, target) => {
+			on(tabs, 'click', (_e, target) => {
 				selectedState.set(getAriaControls(target))
 			}),
 			on(tabs, 'keyup', (e, target) => {

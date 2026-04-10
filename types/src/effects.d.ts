@@ -1,5 +1,6 @@
 import { type MaybeCleanup, type Memo, type Signal } from '@zeix/cause-effect';
 import type { ComponentProps } from './component';
+type Falsy = false | null | undefined | '' | 0 | 0n;
 /**
  * A deferred effect: a thunk that, when called inside a reactive scope, creates
  * a reactive effect and returns an optional cleanup function.
@@ -12,11 +13,12 @@ type EffectDescriptor = () => MaybeCleanup;
 /**
  * The return value of the factory function.
  *
- * A flat array of effect descriptors (and optional falsy guards for conditional
- * effects). Falsy values (`false`, `undefined`) are filtered out before activation,
- * enabling the `element && watch(...)` conditional pattern.
+ * An array of effect descriptors (and optional falsy guards for conditional
+ * effects). Nested arrays are automatically flattened. Falsy values (`false`,
+ * `undefined`, `null`, `""`, `0`) are filtered out before activation, enabling the
+ * `element && [watch(...)]` conditional pattern.
  */
-type FactoryResult = Array<EffectDescriptor | false | undefined>;
+type FactoryResult = Array<EffectDescriptor | FactoryResult | Falsy>;
 /**
  * User-facing handler object for `watch()` with match branches.
  * `ok` receives the resolved value directly (not a tuple) for single-source `watch()`.
@@ -73,8 +75,8 @@ type WatchHelper<P extends ComponentProps> = {
  * Supports single-element and Memo targets (per-element lifecycle for Memo).
  */
 type PassHelper<P extends ComponentProps> = {
-    <Q extends ComponentProps>(target: HTMLElement & Q, props: PassedProps<P, Q>): EffectDescriptor;
-    <Q extends ComponentProps>(target: Memo<(HTMLElement & Q)[]>, props: PassedProps<P, Q>): EffectDescriptor;
+    <Q extends ComponentProps>(target: (HTMLElement & Q) | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
+    <Q extends ComponentProps>(target: Memo<(HTMLElement & Q)[]> | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
 };
 /**
  * Create a `watch` helper bound to a specific component host.
@@ -109,8 +111,8 @@ declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => {
  * @param host - The component host element
  */
 declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => {
-    <Q extends ComponentProps>(target: HTMLElement & Q, props: PassedProps<P, Q>): EffectDescriptor;
-    <Q extends ComponentProps>(target: Memo<(HTMLElement & Q)[]>, props: PassedProps<P, Q>): EffectDescriptor;
+    <Q extends ComponentProps>(target: (HTMLElement & Q) | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
+    <Q extends ComponentProps>(target: Memo<(HTMLElement & Q)[]> | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
 };
 /**
  * Create per-element reactive effects from a `Memo<Element[]>`.
@@ -120,9 +122,10 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => {
  *
  * The callback receives a single element and returns a `FactoryResult` (array of
  * `EffectDescriptor`s) or a single `EffectDescriptor` (single-descriptor shortcut).
+ * Falsy values can also be returned to skip conditionally.
  *
  * @since 2.0
  */
 declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult): EffectDescriptor;
-declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => EffectDescriptor): EffectDescriptor;
-export { type EffectDescriptor, each, type FactoryResult, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, type WatchHandlers, type WatchHelper, };
+declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => EffectDescriptor | Falsy): EffectDescriptor;
+export { type EffectDescriptor, each, type FactoryResult, type Falsy, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, type WatchHandlers, type WatchHelper, };

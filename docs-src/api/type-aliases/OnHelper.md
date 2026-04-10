@@ -2,7 +2,7 @@
 
 > **OnHelper**\<`P`\> = \{\<`E`, `T`\>(`target`, `type`, `handler`, `options?`): [`EffectDescriptor`](EffectDescriptor.md); \<`E`\>(`target`, `type`, `handler`, `options?`): [`EffectDescriptor`](EffectDescriptor.md); \<`E`, `T`\>(`target`, `type`, `handler`, `options?`): [`EffectDescriptor`](EffectDescriptor.md); \<`E`\>(`target`, `type`, `handler`, `options?`): [`EffectDescriptor`](EffectDescriptor.md); \}
 
-Defined in: [src/events.ts:53](https://github.com/zeixcom/le-truc/blob/31e7cc1b8e62c6f8981bd8a73ff42a136ac376b1/src/events.ts#L53)
+Defined in: [src/events.ts:53](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/events.ts#L53)
 
 The `on` helper type in `FactoryContext`.
 
@@ -33,7 +33,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### target
 
-`E`
+[`Falsy`](Falsy.md) \| `E`
 
 ###### type
 
@@ -41,7 +41,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### handler
 
-(`event`, `element`) => `void` \| \{ \[K in string \| number \| symbol\]?: P\[K\] \}
+(`event`, `element`) => `void` \| [`Falsy`](Falsy.md) \| \{ \[K in string \| number \| symbol\]?: P\[K\] \}
 
 ###### options?
 
@@ -65,7 +65,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### target
 
-`E`
+[`Falsy`](Falsy.md) \| `E`
 
 ###### type
 
@@ -73,7 +73,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### handler
 
-(`event`, `element`) => `void` \| \{ \[K in string \| number \| symbol\]?: P\[K\] \}
+(`event`, `element`) => `void` \| [`Falsy`](Falsy.md) \| \{ \[K in string \| number \| symbol\]?: P\[K\] \}
 
 ###### options?
 
@@ -101,7 +101,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### target
 
-[`Memo`](Memo.md)\<`E`[]\>
+[`Falsy`](Falsy.md) \| [`Memo`](Memo.md)\<`E`[]\>
 
 ###### type
 
@@ -109,7 +109,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### handler
 
-(`event`, `element`) => `void` \| \{ \[K in string \| number \| symbol\]?: P\[K\] \}
+(`event`, `element`) => `void` \| [`Falsy`](Falsy.md) \| \{ \[K in string \| number \| symbol\]?: P\[K\] \}
 
 ###### options?
 
@@ -133,7 +133,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### target
 
-[`Memo`](Memo.md)\<`E`[]\>
+[`Falsy`](Falsy.md) \| [`Memo`](Memo.md)\<`E`[]\>
 
 ###### type
 
@@ -141,7 +141,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### handler
 
-(`event`, `element`) => `void` \| \{ \[K in string \| number \| symbol\]?: P\[K\] \}
+(`event`, `element`) => `void` \| [`Falsy`](Falsy.md) \| \{ \[K in string \| number \| symbol\]?: P\[K\] \}
 
 ###### options?
 

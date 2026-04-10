@@ -1,4 +1,9 @@
-import { asClampedInteger, bindText, defineComponent } from '../../..'
+import {
+	asClampedInteger,
+	bindProperty,
+	bindText,
+	defineComponent,
+} from '../../..'
 
 export type ModulePaginationProps = {
 	max: number
@@ -74,9 +79,7 @@ export default defineComponent<ModulePaginationProps>(
 				host.setAttribute('max', String(max))
 				input.max = String(max)
 			}),
-			watch(['value', 'max'], ([value, max]) => {
-				next.disabled = value >= max
-			}),
+			watch(() => host.value >= host.max, bindProperty(next, 'disabled')),
 			valueEl && watch('value', bindText(valueEl)),
 			maxEl && watch('max', bindText(maxEl)),
 		]

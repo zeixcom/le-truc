@@ -64,13 +64,31 @@
 			{ "value": "America/Anguilla", "label": "🇦🇮 Anguilla" },
 			{ "value": "America/Antigua", "label": "🇦🇬 Antigua" },
 			{ "value": "America/Araguaina", "label": "🇧🇷 Araguaina" },
-			{ "value": "America/Argentina/La_Rioja", "label": "🇦🇷 Argentina (La Rioja)" },
-			{ "value": "America/Argentina/Rio_Gallegos", "label": "🇦🇷 Argentina (Rio Gallegos)" },
+			{
+				"value": "America/Argentina/La_Rioja",
+				"label": "🇦🇷 Argentina (La Rioja)"
+			},
+			{
+				"value": "America/Argentina/Rio_Gallegos",
+				"label": "🇦🇷 Argentina (Rio Gallegos)"
+			},
 			{ "value": "America/Argentina/Salta", "label": "🇦🇷 Argentina (Salta)" },
-			{ "value": "America/Argentina/San_Juan", "label": "🇦🇷 Argentina (San Juan)" },
-			{ "value": "America/Argentina/San_Luis", "label": "🇦🇷 Argentina (San Luis)" },
-			{ "value": "America/Argentina/Tucuman", "label": "🇦🇷 Argentina (Tucuman)" },
-			{ "value": "America/Argentina/Ushuaia", "label": "🇦🇷 Argentina (Ushuaia)" },
+			{
+				"value": "America/Argentina/San_Juan",
+				"label": "🇦🇷 Argentina (San Juan)"
+			},
+			{
+				"value": "America/Argentina/San_Luis",
+				"label": "🇦🇷 Argentina (San Luis)"
+			},
+			{
+				"value": "America/Argentina/Tucuman",
+				"label": "🇦🇷 Argentina (Tucuman)"
+			},
+			{
+				"value": "America/Argentina/Ushuaia",
+				"label": "🇦🇷 Argentina (Ushuaia)"
+			},
 			{ "value": "America/Aruba", "label": "🇦🇼 Aruba" },
 			{ "value": "America/Asuncion", "label": "🇵🇾 Asuncion" },
 			{ "value": "America/Bahia", "label": "🇧🇷 Bahia" },
@@ -125,10 +143,19 @@
 			{ "value": "America/Hermosillo", "label": "🇲🇽 Hermosillo" },
 			{ "value": "America/Indiana/Knox", "label": "🇺🇸 Indiana (Knox)" },
 			{ "value": "America/Indiana/Marengo", "label": "🇺🇸 Indiana (Marengo)" },
-			{ "value": "America/Indiana/Petersburg", "label": "🇺🇸 Indiana (Petersburg)" },
-			{ "value": "America/Indiana/Tell_City", "label": "🇺🇸 Indiana (Tell City)" },
+			{
+				"value": "America/Indiana/Petersburg",
+				"label": "🇺🇸 Indiana (Petersburg)"
+			},
+			{
+				"value": "America/Indiana/Tell_City",
+				"label": "🇺🇸 Indiana (Tell City)"
+			},
 			{ "value": "America/Indiana/Vevay", "label": "🇺🇸 Indiana (Vevay)" },
-			{ "value": "America/Indiana/Vincennes", "label": "🇺🇸 Indiana (Vincennes)" },
+			{
+				"value": "America/Indiana/Vincennes",
+				"label": "🇺🇸 Indiana (Vincennes)"
+			},
 			{ "value": "America/Indiana/Winamac", "label": "🇺🇸 Indiana (Winamac)" },
 			{ "value": "America/Indianapolis", "label": "🇺🇸 Indianapolis" },
 			{ "value": "America/Inuvik", "label": "🇨🇦 Inuvik" },
@@ -136,7 +163,10 @@
 			{ "value": "America/Jamaica", "label": "🇯🇲 Jamaica" },
 			{ "value": "America/Jujuy", "label": "🇦🇷 Jujuy" },
 			{ "value": "America/Juneau", "label": "🇺🇸 Juneau" },
-			{ "value": "America/Kentucky/Monticello", "label": "🇺🇸 Kentucky (Monticello)" },
+			{
+				"value": "America/Kentucky/Monticello",
+				"label": "🇺🇸 Kentucky (Monticello)"
+			},
 			{ "value": "America/Kralendijk", "label": "🇧🇶 Kralendijk" },
 			{ "value": "America/La_Paz", "label": "🇧🇴 La Paz" },
 			{ "value": "America/Lima", "label": "🇵🇪 Lima" },
@@ -164,9 +194,18 @@
 			{ "value": "America/New_York", "label": "🇺🇸 New York" },
 			{ "value": "America/Nome", "label": "🇺🇸 Nome" },
 			{ "value": "America/Noronha", "label": "🇧🇷 Noronha" },
-			{ "value": "America/North_Dakota/Beulah", "label": "🇺🇸 North Dakota (Beulah)" },
-			{ "value": "America/North_Dakota/Center", "label": "🇺🇸 North Dakota (Center)" },
-			{ "value": "America/North_Dakota/New_Salem", "label": "🇺🇸 North Dakota (New Salem)" },
+			{
+				"value": "America/North_Dakota/Beulah",
+				"label": "🇺🇸 North Dakota (Beulah)"
+			},
+			{
+				"value": "America/North_Dakota/Center",
+				"label": "🇺🇸 North Dakota (Center)"
+			},
+			{
+				"value": "America/North_Dakota/New_Salem",
+				"label": "🇺🇸 North Dakota (New Salem)"
+			},
 			{ "value": "America/Ojinaga", "label": "🇲🇽 Ojinaga" },
 			{ "value": "America/Panama", "label": "🇵🇦 Panama" },
 			{ "value": "America/Paramaribo", "label": "🇸🇷 Paramaribo" },
@@ -223,9 +262,7 @@
 	},
 	"arctic": {
 		"label": "Arctic",
-		"items": [
-			{ "value": "Arctic/Longyearbyen", "label": "🇸🇯 Longyearbyen" }
-		]
+		"items": [{ "value": "Arctic/Longyearbyen", "label": "🇸🇯 Longyearbyen" }]
 	},
 	"asia": {
 		"label": "Asia",

@@ -1,14 +1,13 @@
 import {
 	asString,
 	bindVisible,
-	createEffect,
 	createElementsMemo,
 	createMemo,
 	createTask,
-	dangerouslyBindInnerHTML,
 	defineComponent,
 	each,
 	escapeHTML,
+	schedule,
 } from '../../..'
 import {
 	fetchWithCache,
@@ -148,7 +147,6 @@ export default defineComponent<FormListboxProps>(
 		)
 
 		const lowerFilter = createMemo(() => host.filter.toLowerCase())
-		const hasError = () => (host.src ? !!content.get().error : false)
 
 		// Roving tabindex focus management for listbox (inlined from manageFocus)
 		const getVisibleOptions = () =>
@@ -177,45 +175,29 @@ export default defineComponent<FormListboxProps>(
 				host.setAttribute('value', value)
 				input.value = value
 			}),
-			filterEl
-				&& on(filterEl, 'input', () => {
-					host.filter = filterEl.value ?? ''
-				}),
-			clearBtn && watch(lowerFilter, bindVisible(clearBtn)),
-			clearBtn
-				&& on(clearBtn, 'click', () => {
-					host.filter = ''
-				}),
-			callout
-				&& (() =>
-					createEffect(() => {
-						callout.hidden = host.src ? content.get().ok : true
-						callout.classList.toggle('danger', hasError())
-					})),
-			loading
-				&& (() =>
-					createEffect(() => {
-						loading.hidden = !(host.src ? content.get().pending : false)
-					})),
-			errorEl
-				&& (() =>
-					createEffect(() => {
-						errorEl.hidden = !hasError()
-						errorEl.textContent = host.src ? content.get().error : ''
-					})),
-			// Render remote content into listbox
-			host.src
-				? () =>
-						createEffect(() => {
-							listbox.hidden = !content.get().ok
+			on(filterEl, 'input', (_e, el) => ({ filter: el.value ?? '' })),
+			clearBtn && [
+				watch(lowerFilter, bindVisible(clearBtn)),
+				on(clearBtn, 'click', () => ({ filter: '' })),
+			],
+			host.src && [
+				watch(content, ({ ok, error, pending, value }) => {
+					if (callout) {
+						callout.hidden = ok
+						callout.classList.toggle('danger', !!error)
+					}
+					if (loading) loading.hidden = !pending
+					if (errorEl) {
+						errorEl.hidden = !error
+						errorEl.textContent = error
+					}
+					listbox.hidden = !ok
+					if (ok)
+						schedule(listbox, () => {
+							listbox.innerHTML = value
 						})
-				: undefined,
-			host.src
-				? watch(
-						createMemo(() => content.get().value),
-						dangerouslyBindInnerHTML(listbox),
-					)
-				: undefined,
+				}),
+			],
 			// Focus management on listbox
 			on(listbox, 'click', ({ target }) => {
 				const option = (target as HTMLElement).closest(
@@ -248,22 +230,21 @@ export default defineComponent<FormListboxProps>(
 				getVisibleOptions()[focusIndex]?.click()
 			}),
 			// Per-option reactive effects
-			each(options, option => [
-				() => {
-					const textContent = option.textContent
-					const lowerText = textContent?.trim().toLowerCase()
-					return createEffect(() => {
-						const filterText = lowerFilter.get()
+			each(options, option => {
+				const textContent = option.textContent
+				const lowerText = textContent?.trim().toLowerCase()
+				return [
+					watch(lowerFilter, filterText => {
 						option.hidden = !lowerText?.includes(filterText)
 						option.innerHTML = highlightMatch(textContent, filterText)
-					})
-				},
-				watch('value', () => {
-					const isSelected = host.value === option.value
-					option.tabIndex = isSelected ? 0 : -1
-					option.ariaSelected = String(isSelected)
-				}),
-			]),
+					}),
+					watch('value', () => {
+						const isSelected = host.value === option.value
+						option.tabIndex = isSelected ? 0 : -1
+						option.ariaSelected = String(isSelected)
+					}),
+				]
+			}),
 		]
 	},
 )

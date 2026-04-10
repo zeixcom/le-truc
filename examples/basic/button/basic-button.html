@@ -15,21 +15,6 @@
 
 <hr />
 
-<!-- Initial attributes example - tests disabled="true", label="Delete Item", badge="99" -->
-<basic-button
-	id="initial-attrs-test"
-	disabled="true"
-	label="Delete Item"
-	badge="99"
->
-	<button type="button" class="destructive">
-		<span class="label">Default Label</span>
-		<span class="badge">0</span>
-	</button>
-</basic-button>
-
-<hr />
-
 <!-- Property changes example - tests direct property manipulation -->
 <basic-button id="property-test">
 	<button type="button" class="large">
@@ -41,7 +26,7 @@
 <hr />
 
 <!-- Missing elements example - tests graceful handling when .label/.badge spans are missing -->
-<basic-button id="missing-elements-test" label="No Spans" badge="Missing">
+<basic-button id="missing-elements-test">
 	<button type="button" class="small tertiary">Just Button Text</button>
 </basic-button>
 

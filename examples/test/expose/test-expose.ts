@@ -16,14 +16,11 @@ declare global {
  * Uses expose() only — no effects. Verifies that signals are created
  * and accessible via host properties when the return array is empty.
  */
-export default defineComponent<TestExposeProps>(
-	'test-expose',
-	({ expose }) => {
-		expose({
-			greeting: 'Hello',
-			count: 0,
-		})
+export default defineComponent<TestExposeProps>('test-expose', ({ expose }) => {
+	expose({
+		greeting: 'Hello',
+		count: 0,
+	})
 
-		return []
-	},
-)
+	return []
+})

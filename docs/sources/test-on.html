@@ -109,6 +109,9 @@
 <span class="line"><span style="color:#F8F8F2">				count: </span><span style="color:#A6E22E">Number</span><span style="color:#F8F8F2">(el.dataset.value </span><span style="color:#F92672">??</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">			})),</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Falsy return is allowed and ignored (e.g. conditionally set state)</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(inputs, </span><span style="color:#E6DB74">'keydown'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">key</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'Enter'</span><span style="color:#F92672"> &#x26;&#x26;</span><span style="color:#F8F8F2"> { count: </span><span style="color:#AE81FF">100</span><span style="color:#F8F8F2"> }),</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#88846F">			// Non-bubbling event (focus) with Memo target — per-element fallback</span></span>
 <span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(inputs, </span><span style="color:#E6DB74">'focus'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({ focused: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> })),</span></span>
 <span class="line"></span>

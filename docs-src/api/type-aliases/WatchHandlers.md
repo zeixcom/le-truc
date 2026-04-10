@@ -2,7 +2,7 @@
 
 > **WatchHandlers**\<`T`\> = `object`
 
-Defined in: [src/effects.ts:48](https://github.com/zeixcom/le-truc/blob/31e7cc1b8e62c6f8981bd8a73ff42a136ac376b1/src/effects.ts#L48)
+Defined in: [src/effects.ts:51](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/effects.ts#L51)
 
 User-facing handler object for `watch()` with match branches.
 `ok` receives the resolved value directly (not a tuple) for single-source `watch()`.
@@ -20,7 +20,7 @@ User-facing handler object for `watch()` with match branches.
 
 > `optional` **err?**: (`error`) => [`MaybeCleanup`](MaybeCleanup.md)
 
-Defined in: [src/effects.ts:50](https://github.com/zeixcom/le-truc/blob/31e7cc1b8e62c6f8981bd8a73ff42a136ac376b1/src/effects.ts#L50)
+Defined in: [src/effects.ts:53](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/effects.ts#L53)
 
 ###### Parameters
 
@@ -38,7 +38,7 @@ Defined in: [src/effects.ts:50](https://github.com/zeixcom/le-truc/blob/31e7cc1b
 
 > `optional` **nil?**: () => [`MaybeCleanup`](MaybeCleanup.md)
 
-Defined in: [src/effects.ts:51](https://github.com/zeixcom/le-truc/blob/31e7cc1b8e62c6f8981bd8a73ff42a136ac376b1/src/effects.ts#L51)
+Defined in: [src/effects.ts:54](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/effects.ts#L54)
 
 ###### Returns
 
@@ -50,7 +50,7 @@ Defined in: [src/effects.ts:51](https://github.com/zeixcom/le-truc/blob/31e7cc1b
 
 > **ok**: (`value`) => [`MaybeCleanup`](MaybeCleanup.md)
 
-Defined in: [src/effects.ts:49](https://github.com/zeixcom/le-truc/blob/31e7cc1b8e62c6f8981bd8a73ff42a136ac376b1/src/effects.ts#L49)
+Defined in: [src/effects.ts:52](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/effects.ts#L52)
 
 ###### Parameters
 

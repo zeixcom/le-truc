@@ -1,4 +1,4 @@
-import { asString, bindText, defineComponent } from '../../..'
+import { bindText, defineComponent } from '../../..'
 
 export type FormCheckboxProps = {
 	checked: boolean
@@ -19,7 +19,7 @@ export default defineComponent<FormCheckboxProps>(
 
 		expose({
 			checked: checkbox.checked,
-			label: asString(label?.textContent ?? first('label')?.textContent ?? ''),
+			label: label?.textContent ?? first('label')?.textContent ?? '',
 		})
 
 		return [

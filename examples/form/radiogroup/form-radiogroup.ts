@@ -33,27 +33,24 @@ export default defineComponent<FormRadiogroupProps>(
 		// Roving tabindex focus management (inlined from manageFocus)
 		let focusIndex = getIndex(radios.get())
 
-		expose({
-			value: radios.get()[focusIndex]?.value ?? '',
-		})
+		expose({ value: radios.get()[focusIndex]?.value ?? '' })
 
 		return [
-			on(radios, 'change', (_e, el) => {
-				host.value = el.value
-			}),
+			on(radios, 'change', (_e, el) => ({ value: el.value })),
 			each(radios, radio =>
-				watch('value', value => {
-					const isChecked = radio.value === value
-					radio.checked = isChecked
-					radio.tabIndex = isChecked ? 0 : -1
-					const label = radio.closest('label')
-					if (label) label.classList.toggle('selected', isChecked)
-				}),
+				watch(
+					() => radio.value === host.value,
+					isChecked => {
+						radio.checked = isChecked
+						radio.tabIndex = isChecked ? 0 : -1
+						radio.closest('label')?.classList.toggle('selected', isChecked)
+					},
+				),
 			),
 			on(host, 'click', ({ target }) => {
 				if (!(target instanceof HTMLElement)) return
 				if (target.hasAttribute('value'))
-					focusIndex = radios.get().findIndex(item => item === target)
+					focusIndex = radios.get().indexOf(target as HTMLInputElement)
 			}),
 			on(host, 'keydown', e => {
 				const { key } = e as KeyboardEvent

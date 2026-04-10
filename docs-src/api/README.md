@@ -44,6 +44,7 @@
 - [ExtractTagFromSimpleSelector](type-aliases/ExtractTagFromSimpleSelector.md)
 - [FactoryContext](type-aliases/FactoryContext.md)
 - [FactoryResult](type-aliases/FactoryResult.md)
+- [Falsy](type-aliases/Falsy.md)
 - [FirstElement](type-aliases/FirstElement.md)
 - [Guard](type-aliases/Guard.md)
 - [Initializers](type-aliases/Initializers.md)

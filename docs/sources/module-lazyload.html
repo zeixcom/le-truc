@@ -220,8 +220,6 @@
 			<module-scrollarea orientation="horizontal">
 				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	asString,</span></span>
-<span class="line"><span style="color:#F8F8F2">	createEffect,</span></span>
-<span class="line"><span style="color:#F8F8F2">	createMemo,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createTask,</span></span>
 <span class="line"><span style="color:#F8F8F2">	dangerouslyBindInnerHTML,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
@@ -285,27 +283,25 @@
 <span class="line"><span style="color:#F8F8F2">			{ value: { ok: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">, value: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, error: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, pending: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> } },</span></span>
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> htmlContent </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createMemo</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> result.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().value </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"></span>
 <span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({</span></span>
 <span class="line"><span style="color:#F8F8F2">			src: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(),</span></span>
 <span class="line"><span style="color:#F8F8F2">		})</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#F8F8F2">			() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
-<span class="line"><span style="color:#A6E22E">				createEffect</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> res </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> result.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> isError </span><span style="color:#F92672">=</span><span style="color:#F92672"> !!</span><span style="color:#F8F8F2">res.error</span></span>
-<span class="line"><span style="color:#F8F8F2">					callout.hidden </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> res.ok</span></span>
-<span class="line"><span style="color:#F8F8F2">					callout.classList.</span><span style="color:#A6E22E">toggle</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'danger'</span><span style="color:#F8F8F2">, isError)</span></span>
-<span class="line"><span style="color:#F8F8F2">					loading.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">res.pending</span></span>
-<span class="line"><span style="color:#F8F8F2">					errorEl.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">isError</span></span>
-<span class="line"><span style="color:#F8F8F2">					errorEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> res.error </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span></span>
-<span class="line"><span style="color:#F8F8F2">					content.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">res.ok</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(result, ({ </span><span style="color:#FD971F;font-style:italic">ok</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pending</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">error</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				callout.hidden </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> ok</span></span>
+<span class="line"><span style="color:#F8F8F2">				callout.classList.</span><span style="color:#A6E22E">toggle</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'danger'</span><span style="color:#F8F8F2">, </span><span style="color:#F92672">!!</span><span style="color:#F8F8F2">error)</span></span>
+<span class="line"><span style="color:#F8F8F2">				loading.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">pending</span></span>
+<span class="line"><span style="color:#F8F8F2">				errorEl.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">error</span></span>
+<span class="line"><span style="color:#F8F8F2">				errorEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> error </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#F8F8F2">				content.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">ok</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> result.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().value </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#A6E22E">				dangerouslyBindInnerHTML</span><span style="color:#F8F8F2">(content, {</span></span>
+<span class="line"><span style="color:#F8F8F2">					allowScripts: host.</span><span style="color:#A6E22E">hasAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'allow-scripts'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(htmlContent, </span><span style="color:#A6E22E">dangerouslyBindInnerHTML</span><span style="color:#F8F8F2">(content, {</span></span>
-<span class="line"><span style="color:#F8F8F2">				allowScripts: host.</span><span style="color:#A6E22E">hasAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'allow-scripts'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">			})),</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
 <span class="line"><span style="color:#F8F8F2">		]</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>

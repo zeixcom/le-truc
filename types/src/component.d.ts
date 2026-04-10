@@ -1,6 +1,6 @@
 import { type MemoCallback, type Signal, type TaskCallback } from '@zeix/cause-effect';
 import { type ProvideContextsHelper, type RequestContextHelper } from './context';
-import { type FactoryResult, type PassHelper, type WatchHelper } from './effects';
+import { type FactoryResult, type Falsy, type PassHelper, type WatchHelper } from './effects';
 import { type OnHelper } from './events';
 import { METHOD_BRAND, type Parser } from './parsers';
 import { type ElementQueries } from './ui';
@@ -66,5 +66,5 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
-declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | void): CustomElementConstructor | undefined;
+declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void): CustomElementConstructor | undefined;
 export { type ComponentProp, type ComponentProps, defineComponent, type FactoryContext, type Initializers, type MaybeSignal, type ReservedWords, };

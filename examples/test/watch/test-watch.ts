@@ -55,8 +55,10 @@ export default defineComponent<TestWatchProps>(
 				},
 			}),
 
-			// Conditional false — must be filtered out and never activate
-			false && watch('label', () => {}),
+			// Conditional falsy guards — must be filtered out and never activate
+			([false, undefined, null, '', 0, 0n] as const).map(
+				falsy => falsy && watch('label', () => {}),
+			),
 		]
 	},
 )

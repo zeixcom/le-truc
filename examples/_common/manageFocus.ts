@@ -21,7 +21,7 @@ export const manageFocus = <E extends HTMLInputElement | HTMLButtonElement>(
 	const onClick = (e: Event) => {
 		const target = e.target as HTMLElement
 		if (target && target.hasAttribute('value'))
-			index = getElements().findIndex(item => item === target)
+			index = getElements().indexOf(target as E)
 	}
 
 	const onKeydown = (e: Event) => {

@@ -51,25 +51,16 @@ const bindProperty =
  * Returns a function that toggles a CSS class token on an element.
  *
  * `value=true` adds the token; `value=false` removes it.
- * If `transform` is provided, it converts the incoming value to a boolean first.
  *
  * @since 2.0
  * @param {Element} element - Target element
  * @param {string} token - CSS class token to toggle
- * @param {(value: T) => boolean} [transform] - Optional function to derive a boolean from the value
  * @returns {(value: T) => void} Function that toggles the class
  */
 const bindClass =
-	<T = boolean>(
-		element: Element,
-		token: string,
-		transform?: (value: T) => boolean,
-	): ((value: T) => void) =>
+	<T = boolean>(element: Element, token: string): ((value: T) => void) =>
 	(value: T) => {
-		element.classList.toggle(
-			token,
-			transform ? transform(value) : Boolean(value),
-		)
+		element.classList.toggle(token, Boolean(value))
 	}
 
 /**
@@ -77,20 +68,15 @@ const bindClass =
  *
  * `value=true` makes the element visible; `value=false` hides it.
  * Matches the direction of the v1.0 `show()` effect.
- * If `transform` is provided, it converts the incoming value to a boolean first.
  *
  * @since 2.0
  * @param {HTMLElement} element - Target element
- * @param {(value: T) => boolean} [transform] - Optional function to derive a boolean from the value
  * @returns {(value: T) => void} Function that sets element visibility
  */
 const bindVisible =
-	<T = boolean>(
-		element: HTMLElement,
-		transform?: (value: T) => boolean,
-	): ((value: T) => void) =>
+	<T = boolean>(element: HTMLElement): ((value: T) => void) =>
 	(value: T) => {
-		element.hidden = !(transform ? transform(value) : Boolean(value))
+		element.hidden = !value
 	}
 
 /**
@@ -170,8 +156,6 @@ type DangerouslySetInnerHTMLOptions = {
 	shadowRootMode?: ShadowRootMode
 	allowScripts?: boolean
 }
-
-/* === More Exported Functions === */
 
 /**
  * Returns `WatchHandlers<string>` that sets the inner HTML of an element,

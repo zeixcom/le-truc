@@ -1,4 +1,5 @@
 import {
+	bindProperty,
 	bindText,
 	bindVisible,
 	createEventsSensor,
@@ -34,6 +35,7 @@ export default defineComponent<FormTextboxProps>(
 
 		const errorId = errorEl?.id
 		const descriptionId = descriptionEl?.id
+		if (descriptionId) textbox.setAttribute('aria-describedby', descriptionId)
 
 		// Reactive description: tracks remaining character count if template is present
 		const descriptionMemo =
@@ -64,10 +66,6 @@ export default defineComponent<FormTextboxProps>(
 			}),
 		})
 
-		// Set aria-describedby once (static relationship)
-		if (descriptionEl && descriptionId)
-			textbox.setAttribute('aria-describedby', descriptionId)
-
 		return [
 			on(textbox, 'change', () => {
 				textbox.checkValidity()
@@ -76,24 +74,20 @@ export default defineComponent<FormTextboxProps>(
 					error: textbox.validationMessage,
 				}
 			}),
-			watch('value', value => {
-				textbox.value = value
-			}),
+			watch('value', bindProperty(textbox, 'value')),
 			watch('error', error => {
 				textbox.ariaInvalid = String(!!error)
-				if (error && errorId) {
-					textbox.setAttribute('aria-errormessage', errorId)
-				} else {
-					textbox.removeAttribute('aria-errormessage')
-				}
+				if (error && errorId) textbox.setAttribute('aria-errormessage', errorId)
+				else textbox.removeAttribute('aria-errormessage')
 			}),
-			clearBtn && watch('length', bindVisible(clearBtn)),
-			clearBtn
-				&& on(clearBtn, 'click', () => {
-					host.clear()
-				}),
 			errorEl && watch('error', bindText(errorEl)),
 			descriptionEl && watch('description', bindText(descriptionEl)),
+			clearBtn && [
+				watch('length', bindVisible(clearBtn)),
+				on(clearBtn, 'click', () => {
+					host.clear()
+				}),
+			],
 		]
 	},
 )

@@ -203,7 +203,10 @@ test.describe('module-scrollarea component', () => {
 			expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth)
 		})
 
-		test('updates overflow classes on horizontal scroll', async ({ page, browserName }) => {
+		test('updates overflow classes on horizontal scroll', async ({
+			page,
+			browserName,
+		}) => {
 			// Flaky in CI/CD on WebKit due to scroll timing; verified locally
 			test.skip(browserName === 'webkit', 'Flaky on WebKit in CI')
 			const scrollarea = page.locator('#horizontal-overflow')

@@ -1,13 +1,12 @@
 ### Function: bindClass()
 
-> **bindClass**\<`T`\>(`element`, `token`, `transform?`): (`value`) => `void`
+> **bindClass**\<`T`\>(`element`, `token`): (`value`) => `void`
 
-Defined in: [src/helpers.ts:63](https://github.com/zeixcom/le-truc/blob/31e7cc1b8e62c6f8981bd8a73ff42a136ac376b1/src/helpers.ts#L63)
+Defined in: [src/helpers.ts:61](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/helpers.ts#L61)
 
 Returns a function that toggles a CSS class token on an element.
 
 `value=true` adds the token; `value=false` removes it.
-If `transform` is provided, it converts the incoming value to a boolean first.
 
 #### Type Parameters
 
@@ -28,12 +27,6 @@ Target element
 `string`
 
 CSS class token to toggle
-
-##### transform?
-
-(`value`) => `boolean`
-
-Optional function to derive a boolean from the value
 
 #### Returns
 

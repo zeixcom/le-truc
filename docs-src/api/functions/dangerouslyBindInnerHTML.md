@@ -2,7 +2,7 @@
 
 > **dangerouslyBindInnerHTML**(`element`, `options?`): [`WatchHandlers`](../type-aliases/WatchHandlers.md)\<`string`\>
 
-Defined in: [src/helpers.ts:193](https://github.com/zeixcom/le-truc/blob/31e7cc1b8e62c6f8981bd8a73ff42a136ac376b1/src/helpers.ts#L193)
+Defined in: [src/helpers.ts:177](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/helpers.ts#L177)
 
 Returns `WatchHandlers<string>` that sets the inner HTML of an element,
 with optional Shadow DOM and script re-execution support.

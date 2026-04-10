@@ -205,17 +205,10 @@
 				<span class="language">ts</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">	asJSON,</span></span>
-<span class="line"><span style="color:#F8F8F2">	asNumber,</span></span>
-<span class="line"><span style="color:#F8F8F2">	bindProperty,</span></span>
-<span class="line"><span style="color:#F8F8F2">	createMemo,</span></span>
-<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
-<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asJSON, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
-<span class="line"><span style="color:#F8F8F2">	thresholds</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeThreshold</span><span style="color:#F8F8F2">[]</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeThreshold</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
@@ -238,38 +231,37 @@
 <span class="line"><span style="color:#E6DB74">			'basic-number'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#E6DB74">			'Add a &#x3C;basic-number> element to display the value'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> label </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> labelEl </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">			'.label'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#E6DB74">			'Add an element to display the qualification label'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> max </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> meter.max</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> qualification </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createMemo</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#F8F8F2">			() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
-<span class="line"><span style="color:#F8F8F2">				host.thresholds.</span><span style="color:#A6E22E">find</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">threshold</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> host.value </span><span style="color:#F92672">>=</span><span style="color:#F8F8F2"> threshold.min) </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">					label: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">					color: </span><span style="color:#E6DB74">'var(--color-primary)'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({ value: meter.value })</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> thresholds </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> asJSON</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeThreshold</span><span style="color:#F8F8F2">[]>([])(</span></span>
+<span class="line"><span style="color:#F8F8F2">			host.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'thresholds'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({</span></span>
-<span class="line"><span style="color:#F8F8F2">			value: </span><span style="color:#A6E22E">asNumber</span><span style="color:#F8F8F2">(meter.value),</span></span>
-<span class="line"><span style="color:#F8F8F2">			thresholds: </span><span style="color:#A6E22E">asJSON</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeThreshold</span><span style="color:#F8F8F2">[]>([]),</span></span>
-<span class="line"><span style="color:#F8F8F2">		})</span></span>
-<span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">([</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'thresholds'</span><span style="color:#F8F8F2">], () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				meter.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
 <span class="line"><span style="color:#F8F8F2">				host.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">					'--basic-gauge-degree'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">					`</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">240</span><span style="color:#F92672"> *</span><span style="color:#F8F8F2"> host.value) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> max</span><span style="color:#F92672">}</span><span style="color:#E6DB74">deg`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">					`</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">240</span><span style="color:#F92672"> *</span><span style="color:#F8F8F2"> value) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> meter.max</span><span style="color:#F92672">}</span><span style="color:#E6DB74">deg`</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">				)</span></span>
-<span class="line"><span style="color:#F8F8F2">				host.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'--basic-gauge-color'</span><span style="color:#F8F8F2">, qualification.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().color)</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
-<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindProperty</span><span style="color:#F8F8F2">(meter, </span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">)),</span></span>
 <span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(valueEl, { </span><span style="color:#A6E22E">value</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.value }),</span></span>
-<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(qualification, </span><span style="color:#FD971F;font-style:italic">q</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">				label.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> q.label</span></span>
-<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">					thresholds.</span><span style="color:#A6E22E">find</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">threshold</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> host.value </span><span style="color:#F92672">>=</span><span style="color:#F8F8F2"> threshold.min) </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">						label: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">						color: </span><span style="color:#E6DB74">'var(--color-primary)'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					},</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">				qualification</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					labelEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> qualification.label</span></span>
+<span class="line"><span style="color:#F8F8F2">					host.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'--basic-gauge-color'</span><span style="color:#F8F8F2">, qualification.color)</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
 <span class="line"><span style="color:#F8F8F2">		]</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>

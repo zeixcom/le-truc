@@ -165,11 +165,11 @@
 <span class="line"><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> [year, month, day] </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> isoDate.</span><span style="color:#A6E22E">split</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'-'</span><span style="color:#F8F8F2">).</span><span style="color:#A6E22E">map</span><span style="color:#F8F8F2">(Number)</span></span>
 <span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (</span></span>
-<span class="line"><span style="color:#F92672">		!</span><span style="color:#F8F8F2">year</span></span>
-<span class="line"><span style="color:#F92672">		||</span><span style="color:#F8F8F2"> Number.</span><span style="color:#A6E22E">isNaN</span><span style="color:#F8F8F2">(year)</span></span>
-<span class="line"><span style="color:#F92672">		||</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">month</span></span>
-<span class="line"><span style="color:#F92672">		||</span><span style="color:#F8F8F2"> Number.</span><span style="color:#A6E22E">isNaN</span><span style="color:#F8F8F2">(month)</span></span>
-<span class="line"><span style="color:#F92672">		||</span><span style="color:#F8F8F2"> Number.</span><span style="color:#A6E22E">isNaN</span><span style="color:#F8F8F2">(day)</span></span>
+<span class="line"><span style="color:#F92672">		!</span><span style="color:#F8F8F2">year </span><span style="color:#F92672">||</span></span>
+<span class="line"><span style="color:#F8F8F2">		Number.</span><span style="color:#A6E22E">isNaN</span><span style="color:#F8F8F2">(year) </span><span style="color:#F92672">||</span></span>
+<span class="line"><span style="color:#F92672">		!</span><span style="color:#F8F8F2">month </span><span style="color:#F92672">||</span></span>
+<span class="line"><span style="color:#F8F8F2">		Number.</span><span style="color:#A6E22E">isNaN</span><span style="color:#F8F8F2">(month) </span><span style="color:#F92672">||</span></span>
+<span class="line"><span style="color:#F8F8F2">		Number.</span><span style="color:#A6E22E">isNaN</span><span style="color:#F8F8F2">(day)</span></span>
 <span class="line"><span style="color:#F8F8F2">	)</span></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#E6DB74"> 'invalid date'</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> date </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> Date</span><span style="color:#F8F8F2">(year, month </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">, day) </span><span style="color:#88846F">// avoid UTC offset shifting the day</span></span>

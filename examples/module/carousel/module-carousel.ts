@@ -1,11 +1,4 @@
-import {
-	asInteger,
-	bindProperty,
-	bindVisible,
-	createEffect,
-	defineComponent,
-	each,
-} from '../../..'
+import { bindProperty, bindVisible, defineComponent, each } from '../../..'
 
 export type ModuleCarouselProps = {
 	index: number
@@ -33,11 +26,9 @@ export default defineComponent<ModuleCarouselProps>(
 		let lastScrolled = -1
 
 		expose({
-			index: asInteger(
-				Math.max(
-					slides.get().findIndex(slide => slide.ariaCurrent === 'true'),
-					0,
-				),
+			index: Math.max(
+				slides.get().findIndex(slide => slide.ariaCurrent === 'true'),
+				0,
 			),
 		})
 
@@ -50,7 +41,7 @@ export default defineComponent<ModuleCarouselProps>(
 							if (entry.intersectionRatio > 0.5) {
 								const slideIndex = slides
 									.get()
-									.findIndex(slide => slide === entry.target)
+									.indexOf(entry.target as HTMLElement)
 								if (isNavigating) {
 									if (slideIndex === host.index) isNavigating = false
 								} else if (slideIndex !== host.index && slideIndex >= 0) {
@@ -68,22 +59,19 @@ export default defineComponent<ModuleCarouselProps>(
 			},
 
 			// Scroll to slide when index changes (skip if IO already scrolled there)
-			() =>
-				createEffect(() => {
-					const idx = host.index
-					if (lastScrolled < 0) {
-						lastScrolled = idx
-						return
-					}
-					if (lastScrolled !== idx) {
-						lastScrolled = idx
-						isNavigating = true
-						slides.get()[idx]!.scrollIntoView({
-							behavior: 'smooth',
-							block: 'nearest',
-						})
-					}
-				}),
+			watch('index', idx => {
+				if (lastScrolled < 0) {
+					lastScrolled = idx
+					return
+				}
+				if (lastScrolled !== idx) {
+					lastScrolled = idx
+					isNavigating = true
+					slides
+						.get()
+						[idx]!.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+				}
+			}),
 
 			// Prev button: move focus to next when hidden
 			on(prev, 'click', () => {

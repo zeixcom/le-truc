@@ -27,9 +27,7 @@ export default defineComponent<ModuleDialogProps>(
 		let scrollTop = 0
 		let activeElement: HTMLElement | null = null
 
-		expose({
-			open: false,
-		})
+		expose({ open: false })
 
 		return [
 			watch('open', open => {
@@ -59,12 +57,8 @@ export default defineComponent<ModuleDialogProps>(
 			}),
 			on(openButton, 'click', () => ({ open: true })),
 			on(closeButton, 'click', () => ({ open: false })),
-			on(dialog, 'click', ({ target }) => {
-				if (target === dialog) host.open = false
-			}),
-			on(dialog, 'keydown', ({ key }: KeyboardEvent) => {
-				if (key === 'Escape') host.open = false
-			}),
+			on(dialog, 'click', ({ target }) => target === dialog && { open: false }),
+			on(dialog, 'keydown', ({ key }) => key === 'Escape' && { open: false }),
 		]
 	},
 )

@@ -1,6 +1,6 @@
 import { type Memo, type Sensor } from '@zeix/cause-effect';
 import type { ComponentProps } from './component';
-import type { EffectDescriptor } from './effects';
+import type { EffectDescriptor, Falsy } from './effects';
 type EventType<K extends string> = K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K] : Event;
 /**
  * Handler for a single event type inside `createEventsSensor`.
@@ -32,18 +32,18 @@ type EventHandlers<T extends {}, E extends Element> = {
  * For Memo targets, uses event delegation (or per-element fallback for non-bubbling events).
  */
 type OnHelper<P extends ComponentProps> = {
-    <E extends Element, T extends keyof HTMLElementEventMap>(target: E, type: T, handler: (event: HTMLElementEventMap[T], element: E) => {
+    <E extends Element, T extends keyof HTMLElementEventMap>(target: E | Falsy, type: T, handler: (event: HTMLElementEventMap[T], element: E) => {
         [K in keyof P]?: P[K];
-    } | void, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element>(target: E, type: string, handler: (event: Event, element: E) => {
+    } | void | Falsy, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element>(target: E | Falsy, type: string, handler: (event: Event, element: E) => {
         [K in keyof P]?: P[K];
-    } | void, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element, T extends keyof HTMLElementEventMap>(target: Memo<E[]>, type: T, handler: (event: HTMLElementEventMap[T], element: E) => {
+    } | void | Falsy, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element, T extends keyof HTMLElementEventMap>(target: Memo<E[]> | Falsy, type: T, handler: (event: HTMLElementEventMap[T], element: E) => {
         [K in keyof P]?: P[K];
-    } | void, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element>(target: Memo<E[]>, type: string, handler: (event: Event, element: E) => {
+    } | void | Falsy, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element>(target: Memo<E[]> | Falsy, type: string, handler: (event: Event, element: E) => {
         [K in keyof P]?: P[K];
-    } | void, options?: AddEventListenerOptions): EffectDescriptor;
+    } | void | Falsy, options?: AddEventListenerOptions): EffectDescriptor;
 };
 /**
  * Create a `Sensor<T>` driven by DOM events on a target element.
@@ -52,7 +52,7 @@ type OnHelper<P extends ComponentProps> = {
  * value should be derived from events on a specific element. The listener is
  * attached directly to `target`; the handler receives `{ event, target, prev }`.
  *
- * @since 1.1
+ * @since 2.0
  * @param {E} target - The element to listen on
  * @param {T} init - Initial value of the sensor
  * @param {EventHandlers<T, E>} events - Map of event type to handler function
@@ -74,9 +74,9 @@ declare function createEventsSensor<T extends {}, E extends Element>(target: E, 
  * @param host - The component host element
  */
 declare const makeOn: <P extends ComponentProps>(host: HTMLElement & P) => {
-    <E extends Element, T extends keyof HTMLElementEventMap>(target: E, type: T, handler: (event: HTMLElementEventMap[T], element: E) => { [K in keyof P]?: P[K]; } | void, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element>(target: E, type: string, handler: (event: Event, element: E) => { [K in keyof P]?: P[K]; } | void, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element, T_1 extends keyof HTMLElementEventMap>(target: Memo<E[]>, type: T_1, handler: (event: HTMLElementEventMap[T_1], element: E) => { [K in keyof P]?: P[K]; } | void, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element>(target: Memo<E[]>, type: string, handler: (event: Event, element: E) => { [K in keyof P]?: P[K]; } | void, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element, T extends keyof HTMLElementEventMap>(target: E | Falsy, type: T, handler: (event: HTMLElementEventMap[T], element: E) => { [K in keyof P]?: P[K]; } | void | Falsy, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element>(target: E | Falsy, type: string, handler: (event: Event, element: E) => { [K in keyof P]?: P[K]; } | void | Falsy, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element, T_1 extends keyof HTMLElementEventMap>(target: Memo<E[]> | Falsy, type: T_1, handler: (event: HTMLElementEventMap[T_1], element: E) => { [K in keyof P]?: P[K]; } | void | Falsy, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element>(target: Memo<E[]> | Falsy, type: string, handler: (event: Event, element: E) => { [K in keyof P]?: P[K]; } | void | Falsy, options?: AddEventListenerOptions): EffectDescriptor;
 };
 export { createEventsSensor, type EventHandlers, type EventType, makeOn, type OnHelper, type SensorEventHandler, };

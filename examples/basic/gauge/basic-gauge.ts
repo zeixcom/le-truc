@@ -1,14 +1,7 @@
-import {
-	asJSON,
-	asNumber,
-	bindProperty,
-	createMemo,
-	defineComponent,
-} from '../../..'
+import { asJSON, defineComponent } from '../../..'
 
 export type BasicGaugeProps = {
 	value: number
-	thresholds: BasicGaugeThreshold[]
 }
 
 export type BasicGaugeThreshold = {
@@ -31,38 +24,37 @@ export default defineComponent<BasicGaugeProps>(
 			'basic-number',
 			'Add a <basic-number> element to display the value',
 		)
-		const label = first(
+		const labelEl = first(
 			'.label',
 			'Add an element to display the qualification label',
 		)
-		const max = meter.max
 
-		const qualification = createMemo(
-			() =>
-				host.thresholds.find(threshold => host.value >= threshold.min) || {
-					label: '',
-					color: 'var(--color-primary)',
-				},
+		expose({ value: meter.value })
+
+		const thresholds = asJSON<BasicGaugeThreshold[]>([])(
+			host.getAttribute('thresholds'),
 		)
 
-		expose({
-			value: asNumber(meter.value),
-			thresholds: asJSON<BasicGaugeThreshold[]>([]),
-		})
-
 		return [
-			watch(['value', 'thresholds'], () => {
+			watch('value', value => {
+				meter.value = value
 				host.style.setProperty(
 					'--basic-gauge-degree',
-					`${(240 * host.value) / max}deg`,
+					`${(240 * value) / meter.max}deg`,
 				)
-				host.style.setProperty('--basic-gauge-color', qualification.get().color)
 			}),
-			watch('value', bindProperty(meter, 'value')),
 			pass(valueEl, { value: () => host.value }),
-			watch(qualification, q => {
-				label.textContent = q.label
-			}),
+			watch(
+				() =>
+					thresholds.find(threshold => host.value >= threshold.min) || {
+						label: '',
+						color: 'var(--color-primary)',
+					},
+				qualification => {
+					labelEl.textContent = qualification.label
+					host.style.setProperty('--basic-gauge-color', qualification.color)
+				},
+			),
 		]
 	},
 )

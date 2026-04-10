@@ -48,19 +48,19 @@ export default defineComponent<BasicPluralizeProps>(
 
 		return [
 			count && watch('count', bindText(count)),
-			none
-				&& watch('count', value => {
+			none &&
+				watch('count', value => {
 					none.hidden = value !== 0
 				}),
-			some
-				&& watch('count', value => {
+			some &&
+				watch('count', value => {
 					some.hidden = value === 0
 				}),
 			...categories.map(category => {
 				const el = categoryElements[category]
 				return (
-					el
-					&& watch('count', value => {
+					el &&
+					watch('count', value => {
 						el.hidden = pluralizer.select(value) !== category
 					})
 				)

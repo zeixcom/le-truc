@@ -1,10 +1,4 @@
-import {
-	asBoolean,
-	asString,
-	bindProperty,
-	bindText,
-	defineComponent,
-} from '../../..'
+import { bindProperty, bindText, defineComponent } from '../../..'
 
 export type BasicButtonProps = {
 	disabled: boolean
@@ -26,9 +20,9 @@ export default defineComponent<BasicButtonProps>(
 		const badge = first('span.badge')
 
 		expose({
-			disabled: asBoolean(),
-			label: asString(label?.textContent ?? button.textContent ?? ''),
-			badge: asString(badge?.textContent ?? ''),
+			disabled: button.disabled,
+			label: label?.textContent ?? button.textContent ?? '',
+			badge: badge?.textContent ?? '',
 		})
 
 		return [

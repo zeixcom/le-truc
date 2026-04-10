@@ -31,15 +31,6 @@ test.describe('basic-hello component', () => {
 		await expect(output).toHaveText('World')
 	})
 
-	test('supports initial name attribute', async ({ page }) => {
-		// Use the existing element with initial name from HTML
-		const initialElement = page.locator('#initial-name-test')
-		const output = initialElement.locator('output')
-
-		// Should show the initial name "Alice"
-		await expect(output).toHaveText('Alice')
-	})
-
 	test('updates when name property changes programmatically', async ({
 		page,
 	}) => {
@@ -142,4 +133,3 @@ test.describe('factory form: property interface', () => {
 		expect(observed).toHaveLength(0)
 	})
 })
-

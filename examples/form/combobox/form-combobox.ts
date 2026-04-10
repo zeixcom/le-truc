@@ -35,6 +35,7 @@ export default defineComponent<FormComboboxProps>(
 
 		const errorId = errorEl?.id
 		const descriptionId = descriptionEl?.id
+		if (descriptionId) textbox.setAttribute('aria-describedby', descriptionId)
 
 		const showPopup = createState(false)
 		const isExpanded = createMemo(
@@ -59,11 +60,6 @@ export default defineComponent<FormComboboxProps>(
 			}),
 		})
 
-		// Set static aria attributes
-		if (descriptionEl && descriptionId) {
-			textbox.setAttribute('aria-describedby', descriptionId)
-		}
-
 		return [
 			watch('value', bindAttribute(host, 'value')),
 			on(host, 'keyup', ({ key }: KeyboardEvent) => {
@@ -75,12 +71,10 @@ export default defineComponent<FormComboboxProps>(
 			}),
 			watch('error', error => {
 				textbox.ariaInvalid = String(!!error)
-				if (error && errorId) {
-					textbox.setAttribute('aria-errormessage', errorId)
-				} else {
-					textbox.removeAttribute('aria-errormessage')
-				}
+				if (error && errorId) textbox.setAttribute('aria-errormessage', errorId)
+				else textbox.removeAttribute('aria-errormessage')
 			}),
+			errorEl && watch('error', bindText(errorEl)),
 			watch(isExpanded, expanded => {
 				listbox.hidden = !expanded
 				textbox.ariaExpanded = String(expanded)
@@ -93,16 +87,14 @@ export default defineComponent<FormComboboxProps>(
 					showPopup.set(true)
 				})
 			}),
-			on(textbox, 'keydown', (e: KeyboardEvent) => {
-				const { key, altKey } = e
+			descriptionEl && watch('description', bindText(descriptionEl)),
+			on(textbox, 'keydown', ({ key, altKey }) => {
 				if (key === 'ArrowDown') {
 					if (altKey) showPopup.set(true)
 					if (isExpanded.get()) listbox.options[0]?.focus()
 				}
 			}),
-			pass(listbox, {
-				filter: () => host.value,
-			}),
+			pass(listbox, { filter: () => host.value }),
 			on(listbox, 'change', ({ target }: Event) => {
 				if (target instanceof HTMLInputElement) {
 					textbox.value = target.value
@@ -115,13 +107,12 @@ export default defineComponent<FormComboboxProps>(
 					})
 				}
 			}),
-			clearBtn && watch('length', bindVisible(clearBtn)),
-			clearBtn
-				&& on(clearBtn, 'click', () => {
+			clearBtn && [
+				watch('length', bindVisible(clearBtn)),
+				on(clearBtn, 'click', () => {
 					host.clear()
 				}),
-			errorEl && watch('error', bindText(errorEl)),
-			descriptionEl && watch('description', bindText(descriptionEl)),
+			],
 		]
 	},
 )

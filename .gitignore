@@ -152,3 +152,4 @@ vite.config.ts.timestamp-*
 
 # Claude
 .claude
+.DS_Store

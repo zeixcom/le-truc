@@ -250,6 +250,7 @@
 			</p>
 			<module-scrollarea orientation="horizontal">
 				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	bindProperty,</span></span>
 <span class="line"><span style="color:#F8F8F2">	bindText,</span></span>
 <span class="line"><span style="color:#F8F8F2">	bindVisible,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createEventsSensor,</span></span>
@@ -285,6 +286,7 @@
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> errorId </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> errorEl?.id</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> descriptionId </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> descriptionEl?.id</span></span>
+<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (descriptionId) textbox.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-describedby'</span><span style="color:#F8F8F2">, descriptionId)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">		// Reactive description: tracks remaining character count if template is present</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> descriptionMemo </span><span style="color:#F92672">=</span></span>
@@ -315,10 +317,6 @@
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#F8F8F2">		})</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#88846F">		// Set aria-describedby once (static relationship)</span></span>
-<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (descriptionEl </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> descriptionId)</span></span>
-<span class="line"><span style="color:#F8F8F2">			textbox.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-describedby'</span><span style="color:#F8F8F2">, descriptionId)</span></span>
-<span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
 <span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(textbox, </span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">				textbox.</span><span style="color:#A6E22E">checkValidity</span><span style="color:#F8F8F2">()</span></span>
@@ -327,24 +325,20 @@
 <span class="line"><span style="color:#F8F8F2">					error: textbox.validationMessage,</span></span>
 <span class="line"><span style="color:#F8F8F2">				}</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
-<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">				textbox.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
-<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindProperty</span><span style="color:#F8F8F2">(textbox, </span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">)),</span></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'error'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">error</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">				textbox.ariaInvalid </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(</span><span style="color:#F92672">!!</span><span style="color:#F8F8F2">error)</span></span>
-<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (error </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> errorId) {</span></span>
-<span class="line"><span style="color:#F8F8F2">					textbox.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-errormessage'</span><span style="color:#F8F8F2">, errorId)</span></span>
-<span class="line"><span style="color:#F8F8F2">				} </span><span style="color:#F92672">else</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">					textbox.</span><span style="color:#A6E22E">removeAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-errormessage'</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (error </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> errorId) textbox.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-errormessage'</span><span style="color:#F8F8F2">, errorId)</span></span>
+<span class="line"><span style="color:#F92672">				else</span><span style="color:#F8F8F2"> textbox.</span><span style="color:#A6E22E">removeAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-errormessage'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			clearBtn </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'length'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindVisible</span><span style="color:#F8F8F2">(clearBtn)),</span></span>
-<span class="line"><span style="color:#F8F8F2">			clearBtn</span></span>
-<span class="line"><span style="color:#F92672">				&#x26;&#x26;</span><span style="color:#A6E22E"> on</span><span style="color:#F8F8F2">(clearBtn, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">					host.</span><span style="color:#A6E22E">clear</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F8F8F2">				}),</span></span>
 <span class="line"><span style="color:#F8F8F2">			errorEl </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'error'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(errorEl)),</span></span>
 <span class="line"><span style="color:#F8F8F2">			descriptionEl </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'description'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(descriptionEl)),</span></span>
+<span class="line"><span style="color:#F8F8F2">			clearBtn </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">				watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'length'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindVisible</span><span style="color:#F8F8F2">(clearBtn)),</span></span>
+<span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(clearBtn, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					host.</span><span style="color:#A6E22E">clear</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">				}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			],</span></span>
 <span class="line"><span style="color:#F8F8F2">		]</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>

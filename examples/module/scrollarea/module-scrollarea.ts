@@ -60,8 +60,8 @@ export default defineComponent('module-scrollarea', ({ host, on, watch }) => {
 
 	return [
 		watch(
-			[overflowStart, overflowEnd],
-			bindClass(host, 'overflow', ([os, oe]) => os || oe),
+			() => overflowStart.get() || overflowEnd.get(),
+			bindClass(host, 'overflow'),
 		),
 		watch(overflowStart, bindClass(host, 'overflow-start')),
 		watch(overflowEnd, bindClass(host, 'overflow-end')),

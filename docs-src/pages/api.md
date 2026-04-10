@@ -120,6 +120,7 @@ layout: 'page'
   - [ExtractTagFromSimpleSelector](./api/type-aliases/ExtractTagFromSimpleSelector.html)
   - [FactoryContext](./api/type-aliases/FactoryContext.html)
   - [FactoryResult](./api/type-aliases/FactoryResult.html)
+  - [Falsy](./api/type-aliases/Falsy.html)
   - [FirstElement](./api/type-aliases/FirstElement.html)
   - [Guard](./api/type-aliases/Guard.html)
   - [Initializers](./api/type-aliases/Initializers.html)

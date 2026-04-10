@@ -1,14 +1,13 @@
 ### Function: bindVisible()
 
-> **bindVisible**\<`T`\>(`element`, `transform?`): (`value`) => `void`
+> **bindVisible**\<`T`\>(`element`): (`value`) => `void`
 
-Defined in: [src/helpers.ts:88](https://github.com/zeixcom/le-truc/blob/31e7cc1b8e62c6f8981bd8a73ff42a136ac376b1/src/helpers.ts#L88)
+Defined in: [src/helpers.ts:77](https://github.com/zeixcom/le-truc/blob/61a4980d5c6f404aabf340d018832f060d2545fc/src/helpers.ts#L77)
 
 Returns a function that controls element visibility via `el.hidden = !value`.
 
 `value=true` makes the element visible; `value=false` hides it.
 Matches the direction of the v1.0 `show()` effect.
-If `transform` is provided, it converts the incoming value to a boolean first.
 
 #### Type Parameters
 
@@ -23,12 +22,6 @@ If `transform` is provided, it converts the incoming value to a boolean first.
 `HTMLElement`
 
 Target element
-
-##### transform?
-
-(`value`) => `boolean`
-
-Optional function to derive a boolean from the value
 
 #### Returns
 

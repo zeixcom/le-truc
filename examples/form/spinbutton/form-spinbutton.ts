@@ -1,4 +1,9 @@
-import { bindVisible, createMemo, defineComponent } from '../../..'
+import {
+	bindProperty,
+	bindVisible,
+	createMemo,
+	defineComponent,
+} from '../../..'
 
 export type FormSpinbuttonProps = {
 	value: number
@@ -32,9 +37,6 @@ export default defineComponent<FormSpinbuttonProps>(
 
 		const nonZero = createMemo(() => host.value !== 0)
 		const incrementLabel = increment.ariaLabel || 'Increment'
-		const ariaLabel = createMemo(() =>
-			nonZero.get() || !zero ? incrementLabel : zero.textContent,
-		)
 
 		expose({
 			value: Number.parseInt(input.value) || 0,
@@ -59,11 +61,10 @@ export default defineComponent<FormSpinbuttonProps>(
 				host.value = clamped
 			}),
 			on(controls, 'click', (_e, el) => {
-				if (el.classList.contains('decrement')) {
+				if (el.classList.contains('decrement'))
 					host.value = Math.max(0, host.value - 1)
-				} else if (el.classList.contains('increment')) {
+				else if (el.classList.contains('increment'))
 					host.value = Math.min(host.max, host.value + 1)
-				}
 			}),
 			on(controls, 'keydown', (e, _el) => {
 				const { key } = e as KeyboardEvent
@@ -74,28 +75,20 @@ export default defineComponent<FormSpinbuttonProps>(
 					host.value = Math.min(host.max, Math.max(0, host.value + delta))
 				}
 			}),
+
 			watch(nonZero, nz => {
 				input.hidden = !nz
 				decrement.hidden = !nz
 			}),
-			watch('value', v => {
-				input.value = String(v)
-			}),
-			watch('max', m => {
-				input.max = String(m)
-			}),
-			watch(['value', 'max'], () => {
-				increment.disabled = host.value >= host.max
-			}),
-			watch(ariaLabel, label => {
-				increment.ariaLabel = label || null
-			}),
 			zero
-				&& watch(
-					nonZero,
-					bindVisible(zero, nz => !nz),
-				),
+				&& watch(nonZero, nz => {
+					zero.hidden = nz
+					increment.ariaLabel = nz ? incrementLabel : zero.textContent
+				}),
 			other && watch(nonZero, bindVisible(other)),
+			watch(() => String(host.value), bindProperty(input, 'value')),
+			watch(() => String(host.max), bindProperty(input, 'max')),
+			watch(() => host.value >= host.max, bindProperty(increment, 'disabled')),
 		]
 	},
 )

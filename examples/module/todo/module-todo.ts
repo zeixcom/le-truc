@@ -1,4 +1,4 @@
-import { createElementsMemo, createMemo, defineComponent } from '../../..'
+import { createElementsMemo, defineComponent } from '../../..'
 
 declare global {
 	interface HTMLElementTagNameMap {
@@ -48,7 +48,7 @@ export default defineComponent('module-todo', ({ first, on, pass, watch }) => {
 		}),
 		pass(submit, { disabled: () => !textbox.length }),
 		watch(
-			createMemo(() => filter.value),
+			() => filter.value,
 			value => {
 				list.setAttribute('filter', value || 'all')
 			},

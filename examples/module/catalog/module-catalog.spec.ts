@@ -214,7 +214,9 @@ test.describe('module-catalog component', () => {
 
 		// Verify component properties match expected values
 		const componentValues = await page.evaluate(() => {
-			const spinbuttons = document.querySelectorAll('#default-test form-spinbutton')
+			const spinbuttons = document.querySelectorAll(
+				'#default-test form-spinbutton',
+			)
 			return Array.from(spinbuttons).map((sb: any) => sb.value)
 		})
 
@@ -375,7 +377,9 @@ test.describe('module-catalog component', () => {
 
 		// Verify each spinbutton has value 1
 		const values = await page.evaluate(() => {
-			const spinbuttons = document.querySelectorAll('#default-test form-spinbutton')
+			const spinbuttons = document.querySelectorAll(
+				'#default-test form-spinbutton',
+			)
 			return Array.from(spinbuttons).map((sb: any) => sb.value)
 		})
 		expect(values).toEqual([1, 1, 1])
@@ -394,4 +398,3 @@ test.describe('module-catalog component', () => {
 		expect(hasPublicProps).toBe(false)
 	})
 })
-
