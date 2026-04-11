@@ -188,7 +188,9 @@ const toSignal = <T extends {}, P extends ComponentProps>(
  * @param {HTMLElement & P} host - The component host element
  * @returns {WatchHelper<P>} Bound `watch` function for the given host
  */
-const makeWatch = <P extends ComponentProps>(host: HTMLElement & P) => {
+const makeWatch = <P extends ComponentProps>(
+	host: HTMLElement & P,
+): WatchHelper<P> => {
 	function watch<K extends keyof P & string>(
 		source: K,
 		handler: (value: P[K]) => MaybePromise<MaybeCleanup>,
@@ -272,7 +274,9 @@ const makeWatch = <P extends ComponentProps>(host: HTMLElement & P) => {
  * @param {HTMLElement & P} host - The component host element
  * @returns {PassHelper<P>} Bound `pass` function for the given host
  */
-const makePass = <P extends ComponentProps>(host: HTMLElement & P) => {
+const makePass = <P extends ComponentProps>(
+	host: HTMLElement & P,
+): PassHelper<P> => {
 	/**
 	 * Perform the slot-swap for a single target element.
 	 * Returns a cleanup that restores all original slot signals.

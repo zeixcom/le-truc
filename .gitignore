@@ -151,5 +151,5 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Claude
-.claude
+.claude/settings.local.json
 .DS_Store
