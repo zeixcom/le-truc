@@ -2,7 +2,7 @@
 
 > **isSlot**\<`T`\>(`value`): `value is Slot<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:52
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:56
 
 Checks if a value is a Slot signal.
 

@@ -2,7 +2,7 @@
 
 > **createEventsSensor**\<`T`, `E`\>(`target`, `init`, `events`): [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-Defined in: [src/events.ts:185](https://github.com/zeixcom/le-truc/blob/90149bb8885c2e678e7571c228e4005108709147/src/events.ts#L185)
+Defined in: [src/events.ts:195](https://github.com/zeixcom/le-truc/blob/4b464bcaf232e6baac491b9eb42d2a86dd71e380/src/events.ts#L195)
 
 Create a `Sensor<T>` driven by DOM events on a target element.
 

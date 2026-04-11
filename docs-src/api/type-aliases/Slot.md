@@ -2,7 +2,7 @@
 
 > **Slot**\<`T`\> = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:13
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:16
 
 A signal that delegates its value to a swappable backing signal.
 
@@ -11,6 +11,9 @@ while allowing the backing signal to be replaced without breaking subscribers.
 The object shape is compatible with `Object.defineProperty()` descriptors:
 `get`, `set`, `configurable`, and `enumerable` are used by the property definition;
 `replace()` and `current()` are kept on the slot object for integration-layer control.
+
+Slots are not `MutableSignal`s: they are forwarding layers, not value owners.
+`set()` delegates to the backing signal; `update()` is intentionally absent.
 
 #### Type Parameters
 
@@ -26,7 +29,7 @@ The type of value held by the delegated signal.
 
 > `readonly` **\[toStringTag\]**: `"Slot"`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:14
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:17
 
 ***
 
@@ -34,7 +37,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:14
 
 > **configurable**: `true`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:16
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:19
 
 Descriptor field: allows the property to be redefined or deleted.
 
@@ -44,7 +47,7 @@ Descriptor field: allows the property to be redefined or deleted.
 
 > **enumerable**: `true`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:18
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:21
 
 Descriptor field: the property shows up during enumeration.
 
@@ -54,7 +57,7 @@ Descriptor field: the property shows up during enumeration.
 
 > **current**(): [`Signal`](Signal.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:26
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:29
 
 Returns the currently delegated signal.
 
@@ -68,7 +71,7 @@ Returns the currently delegated signal.
 
 > **get**(): `T`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:20
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:23
 
 Reads the current value from the delegated signal, tracking dependencies.
 
@@ -82,7 +85,7 @@ Reads the current value from the delegated signal, tracking dependencies.
 
 > **replace**\<`U`\>(`next`): `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:24
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:27
 
 Swaps the backing signal, invalidating all downstream subscribers. Narrowing (`U extends T`) is allowed.
 
@@ -108,7 +111,7 @@ Swaps the backing signal, invalidating all downstream subscribers. Narrowing (`U
 
 > **set**(`next`): `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:22
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:25
 
 Writes a value to the delegated signal. Throws `ReadonlySignalError` if the delegated signal is read-only.
 

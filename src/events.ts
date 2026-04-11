@@ -10,7 +10,7 @@ import {
 } from '@zeix/cause-effect'
 import type { ComponentProps } from './component'
 import type { EffectDescriptor, Falsy } from './effects'
-import { PASSIVE_EVENTS, schedule } from './scheduler'
+import { throttle } from './scheduler'
 import { DEV_MODE, elementName, LOG_WARN } from './util'
 
 /* === Types === */
@@ -91,6 +91,16 @@ type OnHelper<P extends ComponentProps> = {
 
 /* === Constants === */
 
+// High-frequency events that are passive by default and should be scheduled
+const PASSIVE_EVENTS = new Set([
+	'scroll',
+	'resize',
+	'mousewheel',
+	'touchstart',
+	'touchmove',
+	'wheel',
+])
+
 /**
  * Events that do not bubble. When used as the `type` argument to `on()` with a Memo target,
  * event delegation cannot be used — per-element listeners are set up as a fallback instead.
@@ -150,21 +160,21 @@ const attachListener = <P extends ComponentProps, E extends Element>(
 	) => { [K in keyof P]?: P[K] } | void | Falsy,
 	options: AddEventListenerOptions,
 ): EffectDescriptor => {
-	const listener = (e: Event) => {
-		const task = () => {
-			const result = handler(e, target)
-			if (!isRecord(result)) return
-			batch(() => {
-				for (const [key, value] of Object.entries(result)) {
-					;(host as any)[key] = value
-				}
-			})
-		}
-		if (options.passive) schedule(target, task)
-		else task()
+	const rawListener = (e: Event) => {
+		const result = handler(e, target)
+		if (!isRecord(result)) return
+		batch(() => {
+			for (const [key, value] of Object.entries(result)) {
+				;(host as any)[key] = value
+			}
+		})
 	}
+	const listener = options.passive ? throttle(rawListener) : rawListener
 	target.addEventListener(type, listener, options)
-	return () => target.removeEventListener(type, listener)
+	return () => {
+		target.removeEventListener(type, listener)
+		;(listener as any).cancel?.()
+	}
 }
 
 /* === Exported Functions === */
@@ -188,46 +198,40 @@ function createEventsSensor<T extends {}, E extends Element>(
 	events: EventHandlers<T, E>,
 ): Sensor<T> {
 	let value = init
-	const eventMap = new Map<string, EventListener>()
 
 	return createSensor<T>(
 		set => {
+			const controller = new AbortController()
 			for (const [type, handler] of Object.entries(events)) {
-				const options = { passive: PASSIVE_EVENTS.has(type) }
-				const listener = (e: Event) => {
+				const passive = PASSIVE_EVENTS.has(type)
+				const rawListener = (e: Event) => {
 					const eventTarget = e.target as Node
 					if (!eventTarget || !target.contains(eventTarget)) return
-
-					const task = () => {
-						try {
-							const next = (handler as SensorEventHandler<T, Event, Element>)({
-								event: e,
-								target,
-								prev: value,
-							})
-							if (next == null || next instanceof Promise) return
-							if (!Object.is(next, value)) {
-								value = next
-								set(next)
-							}
-						} catch (error) {
-							e.stopImmediatePropagation()
-							throw error
+					try {
+						const next = (handler as SensorEventHandler<T, Event, Element>)({
+							event: e,
+							target,
+							prev: value,
+						})
+						if (next == null || next instanceof Promise) return
+						if (!Object.is(next, value)) {
+							value = next
+							set(next)
 						}
+					} catch (error) {
+						e.stopImmediatePropagation()
+						throw error
 					}
-					if (options.passive) schedule(target, task)
-					else task()
 				}
-				eventMap.set(type, listener)
-				target.addEventListener(type, listener, options)
+				const listener = passive
+					? throttle(rawListener, controller.signal)
+					: rawListener
+				target.addEventListener(type, listener, {
+					passive,
+					signal: controller.signal,
+				})
 			}
-			return () => {
-				if (eventMap.size) {
-					for (const [type, listener] of eventMap)
-						target.removeEventListener(type, listener)
-					eventMap.clear()
-				}
-			}
+			return () => controller.abort()
 		},
 		{ value },
 	)
@@ -313,27 +317,27 @@ const makeOn = <P extends ComponentProps>(
 
 				// Event delegation: one listener on the query root
 				const root = host.shadowRoot ?? (host as unknown as Element)
-				const listener = (e: Event) => {
+				const rawListener = (e: Event) => {
 					const path = e.composedPath()
 					for (const el of target.get()) {
 						if (path.includes(el)) {
-							const task = () => {
-								const result = handler(e, el)
-								if (!isRecord(result)) return
-								batch(() => {
-									for (const [key, value] of Object.entries(result)) {
-										;(host as any)[key] = value
-									}
-								})
-							}
-							if (options.passive) schedule(el, task)
-							else task()
+							const result = handler(e, el)
+							if (!isRecord(result)) return
+							batch(() => {
+								for (const [key, value] of Object.entries(result)) {
+									;(host as any)[key] = value
+								}
+							})
 							break
 						}
 					}
 				}
+				const listener = options.passive ? throttle(rawListener) : rawListener
 				root.addEventListener(type, listener, options)
-				return () => root.removeEventListener(type, listener)
+				return () => {
+					root.removeEventListener(type, listener)
+					;(listener as any).cancel?.()
+				}
 			}
 
 			// Single Element target

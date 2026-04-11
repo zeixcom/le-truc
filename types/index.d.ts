@@ -12,5 +12,5 @@ export { asJSON } from './src/parsers/json';
 export { asClampedInteger, asInteger, asNumber } from './src/parsers/number';
 export { asEnum, asString } from './src/parsers/string';
 export { escapeHTML, safeSetAttribute, setTextPreservingComments, } from './src/safety';
-export { schedule } from './src/scheduler';
+export { schedule, throttle } from './src/scheduler';
 export { type AllElements, createElementsMemo, type ElementFromSelector, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, type FirstElement, type KnownTag, type SplitByComma, type TrimWhitespace, } from './src/ui';

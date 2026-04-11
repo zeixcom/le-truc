@@ -1607,6 +1607,8 @@ function createSlot(initialSignal, options) {
     return node.value;
   };
   const set = (next) => {
+    if (isSlot(delegated))
+      return delegated.set(next);
     if (!isMutableSignal(delegated))
       throw new ReadonlySignalError(TYPE_SLOT);
     validateSignalValue(TYPE_SLOT, next, guard);
@@ -1849,16 +1851,9 @@ function each(memo, callback) {
 }
 
 // src/scheduler.ts
-var PASSIVE_EVENTS = new Set([
-  "scroll",
-  "resize",
-  "mousewheel",
-  "touchstart",
-  "touchmove",
-  "wheel"
-]);
 var pendingElements = new Set;
 var tasks = new WeakMap;
+var throttledCallbacks = new Set;
 var requestId;
 var runTasks = () => {
   requestId = undefined;
@@ -1866,6 +1861,10 @@ var runTasks = () => {
   pendingElements.clear();
   for (const element of elements)
     tasks.get(element)?.();
+  const callbacks = Array.from(throttledCallbacks);
+  throttledCallbacks.clear();
+  for (const cb of callbacks)
+    cb();
 };
 var requestTick = () => {
   if (!requestId)
@@ -1876,8 +1875,40 @@ var schedule = (element, task) => {
   pendingElements.add(element);
   requestTick();
 };
+var throttle = (fn, signal) => {
+  let pending = false;
+  let lastArgs;
+  const flush2 = () => {
+    pending = false;
+    fn(...lastArgs);
+  };
+  const wrapped = (...args) => {
+    lastArgs = args;
+    if (pending)
+      return;
+    pending = true;
+    throttledCallbacks.add(flush2);
+    requestTick();
+  };
+  wrapped.cancel = () => {
+    if (pending) {
+      throttledCallbacks.delete(flush2);
+      pending = false;
+    }
+  };
+  signal?.addEventListener("abort", wrapped.cancel, { once: true });
+  return wrapped;
+};
 
 // src/events.ts
+var PASSIVE_EVENTS = new Set([
+  "scroll",
+  "resize",
+  "mousewheel",
+  "touchstart",
+  "touchmove",
+  "wheel"
+]);
 var NON_BUBBLING_EVENTS = new Set([
   "focus",
   "blur",
@@ -1914,68 +1945,57 @@ var NON_BUBBLING_EVENTS = new Set([
   "waiting"
 ]);
 var attachListener = (host, target, type, handler, options) => {
-  const listener = (e) => {
-    const task = () => {
-      const result = handler(e, target);
-      if (!isRecord(result))
-        return;
-      batch(() => {
-        for (const [key, value] of Object.entries(result)) {
-          host[key] = value;
-        }
-      });
-    };
-    if (options.passive)
-      schedule(target, task);
-    else
-      task();
+  const rawListener = (e) => {
+    const result = handler(e, target);
+    if (!isRecord(result))
+      return;
+    batch(() => {
+      for (const [key, value] of Object.entries(result)) {
+        host[key] = value;
+      }
+    });
   };
+  const listener = options.passive ? throttle(rawListener) : rawListener;
   target.addEventListener(type, listener, options);
-  return () => target.removeEventListener(type, listener);
+  return () => {
+    target.removeEventListener(type, listener);
+    listener.cancel?.();
+  };
 };
 function createEventsSensor(target, init, events) {
   let value = init;
-  const eventMap = new Map;
   return createSensor((set) => {
+    const controller = new AbortController;
     for (const [type, handler] of Object.entries(events)) {
-      const options = { passive: PASSIVE_EVENTS.has(type) };
-      const listener = (e) => {
+      const passive = PASSIVE_EVENTS.has(type);
+      const rawListener = (e) => {
         const eventTarget = e.target;
         if (!eventTarget || !target.contains(eventTarget))
           return;
-        const task = () => {
-          try {
-            const next = handler({
-              event: e,
-              target,
-              prev: value
-            });
-            if (next == null || next instanceof Promise)
-              return;
-            if (!Object.is(next, value)) {
-              value = next;
-              set(next);
-            }
-          } catch (error) {
-            e.stopImmediatePropagation();
-            throw error;
+        try {
+          const next = handler({
+            event: e,
+            target,
+            prev: value
+          });
+          if (next == null || next instanceof Promise)
+            return;
+          if (!Object.is(next, value)) {
+            value = next;
+            set(next);
           }
-        };
-        if (options.passive)
-          schedule(target, task);
-        else
-          task();
+        } catch (error) {
+          e.stopImmediatePropagation();
+          throw error;
+        }
       };
-      eventMap.set(type, listener);
-      target.addEventListener(type, listener, options);
+      const listener = passive ? throttle(rawListener, controller.signal) : rawListener;
+      target.addEventListener(type, listener, {
+        passive,
+        signal: controller.signal
+      });
     }
-    return () => {
-      if (eventMap.size) {
-        for (const [type, listener] of eventMap)
-          target.removeEventListener(type, listener);
-        eventMap.clear();
-      }
-    };
+    return () => controller.abort();
   }, { value });
 }
 var makeOn = (host) => {
@@ -2000,30 +2020,28 @@ var makeOn = (host) => {
           });
         }
         const root = host.shadowRoot ?? host;
-        const listener = (e) => {
+        const rawListener = (e) => {
           const path = e.composedPath();
           for (const el of target.get()) {
             if (path.includes(el)) {
-              const task = () => {
-                const result = handler(e, el);
-                if (!isRecord(result))
-                  return;
-                batch(() => {
-                  for (const [key, value] of Object.entries(result)) {
-                    host[key] = value;
-                  }
-                });
-              };
-              if (options.passive)
-                schedule(el, task);
-              else
-                task();
+              const result = handler(e, el);
+              if (!isRecord(result))
+                return;
+              batch(() => {
+                for (const [key, value] of Object.entries(result)) {
+                  host[key] = value;
+                }
+              });
               break;
             }
           }
         };
+        const listener = options.passive ? throttle(rawListener) : rawListener;
         root.addEventListener(type, listener, options);
-        return () => root.removeEventListener(type, listener);
+        return () => {
+          root.removeEventListener(type, listener);
+          listener.cancel?.();
+        };
       }
       return attachListener(host, target, type, handler, options);
     };
@@ -2409,6 +2427,7 @@ export {
   valueString,
   untrack,
   unown,
+  throttle,
   setTextPreservingComments,
   schedule,
   safeSetAttribute,

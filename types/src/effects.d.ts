@@ -89,15 +89,7 @@ declare const activateResult: (result: FactoryResult) => void;
  * @param {HTMLElement & P} host - The component host element
  * @returns {WatchHelper<P>} Bound `watch` function for the given host
  */
-declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => {
-    <K extends keyof P & string>(source: K, handler: (value: P[K]) => MaybePromise<MaybeCleanup>): EffectDescriptor;
-    <K extends keyof P & string>(source: K, handlers: SingleMatchHandlers<P[K]>): EffectDescriptor;
-    <T extends {}>(source: Signal<T>, handler: (value: T) => MaybePromise<MaybeCleanup>): EffectDescriptor;
-    <T extends {}>(source: Signal<T>, handlers: SingleMatchHandlers<T>): EffectDescriptor;
-    <T extends {}>(source: () => T | Promise<T> | null | undefined, handler: (value: T) => MaybePromise<MaybeCleanup>): EffectDescriptor;
-    <T extends {}>(source: () => T | Promise<T> | null | undefined, handlers: SingleMatchHandlers<T>): EffectDescriptor;
-    (source: Array<Reactive<NonNullable<unknown>, P>>, handler: (values: any[]) => MaybePromise<MaybeCleanup>): EffectDescriptor;
-};
+declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => WatchHelper<P>;
 /**
  * Create a `pass` helper bound to a specific component host.
  *
@@ -112,10 +104,7 @@ declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => {
  * @param {HTMLElement & P} host - The component host element
  * @returns {PassHelper<P>} Bound `pass` function for the given host
  */
-declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => {
-    <Q extends ComponentProps>(target: (HTMLElement & Q) | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
-    <Q extends ComponentProps>(target: Memo<(HTMLElement & Q)[]> | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
-};
+declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => PassHelper<P>;
 /**
  * Create per-element reactive effects from a `Memo<Element[]>`.
  *

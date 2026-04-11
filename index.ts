@@ -143,7 +143,7 @@ export {
 	safeSetAttribute,
 	setTextPreservingComments,
 } from './src/safety'
-export { schedule } from './src/scheduler'
+export { schedule, throttle } from './src/scheduler'
 export {
 	type AllElements,
 	createElementsMemo,

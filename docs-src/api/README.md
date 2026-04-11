@@ -148,6 +148,7 @@
 - [safeSetAttribute](functions/safeSetAttribute.md)
 - [schedule](functions/schedule.md)
 - [setTextPreservingComments](functions/setTextPreservingComments.md)
+- [throttle](functions/throttle.md)
 - [unown](functions/unown.md)
 - [untrack](functions/untrack.md)
 - [valueString](functions/valueString.md)

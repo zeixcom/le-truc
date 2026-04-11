@@ -73,6 +73,7 @@ layout: 'page'
   - [safeSetAttribute](./api/functions/safeSetAttribute.html)
   - [schedule](./api/functions/schedule.html)
   - [setTextPreservingComments](./api/functions/setTextPreservingComments.html)
+  - [throttle](./api/functions/throttle.html)
   - [unown](./api/functions/unown.html)
   - [untrack](./api/functions/untrack.html)
   - [valueString](./api/functions/valueString.html)
