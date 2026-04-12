@@ -118,6 +118,33 @@ pass(litEl, { disabled: 'disabled' })
 watch('disabled', bindProperty(litEl, 'disabled'))
 ```
 
+### Non-live DOM snapshots used as reactive inputs
+
+Reactive thunks and `pass()` props are re-evaluated when their signal dependencies change. Reading a DOM property that returns a **snapshot** (a static value at call time) will not trigger re-evaluation when the DOM changes — causing stale state.
+
+```typescript
+// ✗ querySelector returns a snapshot reference — does not update reactively
+pass(add, {
+  disabled: () => host.querySelector('[data-item]') === null,
+})
+
+// ✅ Use a live collection (HTMLCollection is always current)
+// container.children is live — .length reflects the current child count on every read
+pass(add, {
+  disabled: () => container.children.length === 0,
+})
+
+// ✅ Or use createElementsMemo for a signal-backed reactive collection
+const items = createElementsMemo(container, '[data-item]')
+pass(add, {
+  disabled: () => items.get().length === 0,
+})
+```
+
+**Live DOM APIs:** `element.children`, `element.childNodes`, `element.getElementsByTagName()`, `element.getElementsByClassName()` — all return live `HTMLCollection` or `NodeList` that reflect the current DOM on every `.length` or index access.
+
+**Snapshot DOM APIs:** `element.querySelectorAll()`, `element.querySelector()` (returns one element or null at call time), `Array.from(collection)`, spread `[...collection]` — all produce static snapshots that do not update.
+
 ## HTML anti-patterns
 
 ### Empty custom element (no descendant content)

@@ -14,7 +14,24 @@ watch(source, handler)
 - `source` — a prop name string, a `Signal`, or a thunk `() => T`
 - `handler` — either `(value: T) => void` (plain function) or `WatchHandlers<T>` (object with `ok`, `nil?`, `err?` branches)
 
-The `bind*` helpers create typed handler functions or `WatchHandlers` objects. Pass them directly to `watch`.
+The `bind*` helpers create typed handler functions or `WatchHandlers` objects and can be passed directly to `watch`. They are **optional shortcuts** — plain handler functions that update the DOM directly are equally valid and often cleaner when multiple DOM updates belong together.
+
+### Thunk sources enable bind helpers with transformations
+
+A thunk `() => T` as source lets you apply a transformation before passing the value to a bind helper:
+
+```typescript
+// Prop is a number, but bindProperty(input, 'value') needs a string
+watch(() => String(host.value), bindProperty(input, 'value'))
+
+// Derived boolean from two props — passes cleanly to bindVisible
+watch(() => host.value > 0 && !host.disabled, bindVisible(clearBtn))
+
+// Computed string for a CSS custom property
+watch(() => `${host.hue}deg`, bindStyle(host, '--hue'))
+```
+
+Without thunks, these would require a custom handler. Thunks let you keep the intent declarative.
 
 ## Choosing a helper
 

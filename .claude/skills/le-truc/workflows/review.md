@@ -23,9 +23,10 @@ Work through references/anti-patterns.md and flag any violations. Also check:
 - **Props type**: every reactive property is explicitly typed; no implicit `any`
 - **Initializers**: attribute-driven props use `asString`/`asBoolean`/`asInteger`/`asNumber`/`asEnum`/`asJSON`; DOM-derived initial values are read directly before `expose()`; custom parsers wrapped with `asParser()`; method props wrapped with `defineMethod()`
 - **`expose()` called once**: all props declared in a single `expose()` call before any effects
-- **Return array**: every `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` is in the returned array; optional elements use the `el && watch(...)` guard pattern
+- **Return array**: every `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` is in the returned array; optional elements use the `el && watch(...)` guard pattern where appropriate (note: `on(el, ...)` and `pass(el, ...)` handle falsy targets internally — no guard required for those)
 - **`on()` handlers**: return `{ prop: value }` when updating host props; return `void` for side-effects only
 - **Custom `watch` handlers**: return a cleanup function if they set up listeners or timers
+- **Reactivity**: DOM values read inside reactive thunks must stay current — prefer live DOM APIs (`element.children`, `getElementsByTagName`) over snapshot APIs (`querySelectorAll`, `Array.from`) when used as reactive inputs; or use `createElementsMemo` for a signal-backed collection
 - **Coordination**: `pass()` used only for Le Truc-to-Le Truc bindings; `watch()` + `bindProperty()` used for all others (see references/coordination.md)
 
 ## Step 3: Check the HTML
@@ -57,14 +58,15 @@ If a `.md` file is present, verify it covers the sections required by references
 ## Step 7: Report
 
 Summarise findings in three categories:
-- **Must fix**: correctness issues, anti-patterns, broken accessibility
+- **Must fix**: correctness issues, anti-patterns, broken reactivity, broken accessibility
 - **Should fix**: missing documentation, suboptimal coordination patterns
-- **Optional**: style suggestions only worth making if the author asks
+- **Optional**: only if explicitly asked — do not suggest splitting watch handlers into bind helpers, adding guards to `on`/`pass` calls, or other style preferences
 </process>
 
 <success_criteria>
 - No violations from references/anti-patterns.md
 - ARIA and semantics correct for the widget type
 - Correct coordination mechanism in use
+- No broken reactivity (snapshot DOM APIs used where live collections or signals are needed)
 - Documentation complete and accurate
 </success_criteria>
