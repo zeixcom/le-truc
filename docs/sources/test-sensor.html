@@ -83,7 +83,7 @@
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">/**</span></span>
-<span class="line"><span style="color:#88846F"> * Test component for the v1.1 `createEventsSensor(target, init, events)` form.</span></span>
+<span class="line"><span style="color:#88846F"> * Test component for the v2 `createEventsSensor(target, init, events)` form.</span></span>
 <span class="line"><span style="color:#88846F"> *</span></span>
 <span class="line"><span style="color:#88846F"> * Uses a direct element reference instead of a UI key string. The sensor</span></span>
 <span class="line"><span style="color:#88846F"> * attaches its listener to the input element and returns a Sensor&#x3C;T> directly</span></span>
@@ -96,9 +96,9 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> output </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'#output'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add element with id="output".'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({</span></span>
-<span class="line"><span style="color:#88846F">			// v1.1 form: element target, plain init value, no `read()` wrapper</span></span>
+<span class="line"><span style="color:#88846F">			// v2 form: element target, plain init value, no `read()` wrapper</span></span>
 <span class="line"><span style="color:#F8F8F2">			length: </span><span style="color:#A6E22E">createEventsSensor</span><span style="color:#F8F8F2">(input, input.value.length, {</span></span>
-<span class="line"><span style="color:#A6E22E">				input</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> target.value.length,</span></span>
+<span class="line"><span style="color:#A6E22E">				input</span><span style="color:#F8F8F2">: (</span><span style="color:#FD971F;font-style:italic">_event</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> target.value.length,</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#F8F8F2">			value: input.value,</span></span>
 <span class="line"><span style="color:#F8F8F2">		})</span></span>

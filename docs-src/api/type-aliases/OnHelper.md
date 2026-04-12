@@ -2,12 +2,10 @@
 
 > **OnHelper**\<`P`\> = \{\<`E`, `T`\>(`target`, `type`, `handler`, `options?`): [`EffectDescriptor`](EffectDescriptor.md); \<`E`\>(`target`, `type`, `handler`, `options?`): [`EffectDescriptor`](EffectDescriptor.md); \<`E`, `T`\>(`target`, `type`, `handler`, `options?`): [`EffectDescriptor`](EffectDescriptor.md); \<`E`\>(`target`, `type`, `handler`, `options?`): [`EffectDescriptor`](EffectDescriptor.md); \}
 
-Defined in: [src/events.ts:53](https://github.com/zeixcom/le-truc/blob/4b464bcaf232e6baac491b9eb42d2a86dd71e380/src/events.ts#L53)
+Defined in: [src/events.ts:40](https://github.com/zeixcom/le-truc/blob/651798956eac55c47eec3d0590fc814ef1eb2ef9/src/events.ts#L40)
 
-The `on` helper type in `FactoryContext`.
-
-Attaches an event listener. The handler always receives `(event, element)`.
-For Memo targets, uses event delegation (or per-element fallback for non-bubbling events).
+`on` helper bound to a component host. Accepts a single element or `Memo<E[]>` target
+and typed event names. Returns an `EffectDescriptor`.
 
 #### Type Parameters
 
@@ -33,7 +31,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### target
 
-[`Falsy`](Falsy.md) \| `E`
+[`Falsy`](Falsy.md) \| [`Memo`](Memo.md)\<`E`[]\>
 
 ###### type
 
@@ -41,7 +39,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### handler
 
-(`event`, `element`) => `void` \| [`Falsy`](Falsy.md) \| \{ \[K in string \| number \| symbol\]?: P\[K\] \}
+[`OnEventHandler`](OnEventHandler.md)\<`P`, `HTMLElementEventMap`\[`T`\], `E`\>
 
 ###### options?
 
@@ -65,7 +63,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### target
 
-[`Falsy`](Falsy.md) \| `E`
+[`Falsy`](Falsy.md) \| [`Memo`](Memo.md)\<`E`[]\>
 
 ###### type
 
@@ -73,7 +71,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### handler
 
-(`event`, `element`) => `void` \| [`Falsy`](Falsy.md) \| \{ \[K in string \| number \| symbol\]?: P\[K\] \}
+[`OnEventHandler`](OnEventHandler.md)\<`P`, `Event`, `E`\>
 
 ###### options?
 
@@ -101,7 +99,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### target
 
-[`Falsy`](Falsy.md) \| [`Memo`](Memo.md)\<`E`[]\>
+[`Falsy`](Falsy.md) \| `E`
 
 ###### type
 
@@ -109,7 +107,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### handler
 
-(`event`, `element`) => `void` \| [`Falsy`](Falsy.md) \| \{ \[K in string \| number \| symbol\]?: P\[K\] \}
+[`OnEventHandler`](OnEventHandler.md)\<`P`, `HTMLElementEventMap`\[`T`\], `E`\>
 
 ###### options?
 
@@ -133,7 +131,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### target
 
-[`Falsy`](Falsy.md) \| [`Memo`](Memo.md)\<`E`[]\>
+[`Falsy`](Falsy.md) \| `E`
 
 ###### type
 
@@ -141,7 +139,7 @@ For Memo targets, uses event delegation (or per-element fallback for non-bubblin
 
 ###### handler
 
-(`event`, `element`) => `void` \| [`Falsy`](Falsy.md) \| \{ \[K in string \| number \| symbol\]?: P\[K\] \}
+[`OnEventHandler`](OnEventHandler.md)\<`P`, `Event`, `E`\>
 
 ###### options?
 

@@ -1,6 +1,6 @@
 ### Class: InvalidPropertyNameError
 
-Defined in: [src/errors.ts:28](https://github.com/zeixcom/le-truc/blob/4b464bcaf232e6baac491b9eb42d2a86dd71e380/src/errors.ts#L28)
+Defined in: [src/errors.ts:28](https://github.com/zeixcom/le-truc/blob/651798956eac55c47eec3d0590fc814ef1eb2ef9/src/errors.ts#L28)
 
 Error thrown when trying to assign a property name that conflicts with reserved words or inherited HTMLElement properties
 
@@ -18,7 +18,7 @@ Error thrown when trying to assign a property name that conflicts with reserved 
 
 > **new InvalidPropertyNameError**(`component`, `prop`, `reason`): `InvalidPropertyNameError`
 
-Defined in: [src/errors.ts:34](https://github.com/zeixcom/le-truc/blob/4b464bcaf232e6baac491b9eb42d2a86dd71e380/src/errors.ts#L34)
+Defined in: [src/errors.ts:34](https://github.com/zeixcom/le-truc/blob/651798956eac55c47eec3d0590fc814ef1eb2ef9/src/errors.ts#L34)
 
 ###### Parameters
 

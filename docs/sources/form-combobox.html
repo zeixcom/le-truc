@@ -296,7 +296,6 @@
 <span class="line"><span style="color:#F8F8F2">	bindAttribute,</span></span>
 <span class="line"><span style="color:#F8F8F2">	bindText,</span></span>
 <span class="line"><span style="color:#F8F8F2">	bindVisible,</span></span>
-<span class="line"><span style="color:#F8F8F2">	createEventsSensor,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createMemo,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createState,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
@@ -334,12 +333,11 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> isExpanded </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createMemo</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#F8F8F2">			() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> showPopup.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> listbox.options.length </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> length </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(textbox.value.length)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({</span></span>
 <span class="line"><span style="color:#F8F8F2">			value: textbox.value,</span></span>
-<span class="line"><span style="color:#F8F8F2">			length: </span><span style="color:#A6E22E">createEventsSensor</span><span style="color:#F8F8F2">(textbox, textbox.value.length, {</span></span>
-<span class="line"><span style="color:#A6E22E">				input</span><span style="color:#F8F8F2">: ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> target.value.length,</span></span>
-<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			length: length.get,</span></span>
 <span class="line"><span style="color:#F8F8F2">			error: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">			description: descriptionEl?.textContent?.</span><span style="color:#A6E22E">trim</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">			clear: </span><span style="color:#A6E22E">defineMethod</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
@@ -373,6 +371,7 @@
 <span class="line"><span style="color:#F8F8F2">				textbox.ariaExpanded </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(expanded)</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(textbox, </span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				length.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(textbox.value.length)</span></span>
 <span class="line"><span style="color:#F8F8F2">				textbox.</span><span style="color:#A6E22E">checkValidity</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#A6E22E">				batch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">					host.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> textbox.value</span></span>
@@ -401,7 +400,7 @@
 <span class="line"><span style="color:#F8F8F2">				}</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#F8F8F2">			clearBtn </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">				watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'length'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindVisible</span><span style="color:#F8F8F2">(clearBtn)),</span></span>
+<span class="line"><span style="color:#A6E22E">				watch</span><span style="color:#F8F8F2">(length, </span><span style="color:#A6E22E">bindVisible</span><span style="color:#F8F8F2">(clearBtn)),</span></span>
 <span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(clearBtn, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">					host.</span><span style="color:#A6E22E">clear</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>

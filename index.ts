@@ -109,11 +109,9 @@ export {
 	MissingElementError,
 } from './src/errors'
 export {
-	createEventsSensor,
-	type EventHandlers,
 	type EventType,
+	type OnEventHandler,
 	type OnHelper,
-	type SensorEventHandler,
 } from './src/events'
 export {
 	bindAttribute,

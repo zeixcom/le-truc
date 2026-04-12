@@ -1,0 +1,994 @@
+<module-tabgroup>
+		<div role="tablist" aria-label="Tabs">
+		<button
+		type="button"
+		role="tab"
+		id="trigger_form-colorgraph_html"
+		aria-controls="panel_form-colorgraph_html"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		HTML
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_form-colorgraph_css"
+		aria-controls="panel_form-colorgraph_css"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		CSS
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_form-colorgraph_ts"
+		aria-controls="panel_form-colorgraph_ts"
+		aria-selected="true"
+		tabindex="0"
+	>
+		TypeScript
+	</button>
+	</div> <div
+		role="tabpanel"
+		id="panel_form-colorgraph_html"
+		aria-labelledby="trigger_form-colorgraph_html"
+		 hidden
+	>
+		<module-codeblock
+			language="html"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">form-colorgraph.html</span>
+				<span class="language">html</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">form-colorgraph</span><span style="color:#A6E22E"> color</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"oklch(.48 .23 263)"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"graph"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">canvas</span><span style="color:#A6E22E"> width</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"400"</span><span style="color:#A6E22E"> height</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"400"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">canvas</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"knob"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"visually-hidden"</span><span style="color:#F8F8F2">>Drag&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">ol</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"presentation"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten80"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten60"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten40"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten20"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken20"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken40"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken60"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken80"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">ol</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span></span>
+<span class="line"><span style="color:#A6E22E">		class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"slider"</span></span>
+<span class="line"><span style="color:#A6E22E">		role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"slider"</span></span>
+<span class="line"><span style="color:#A6E22E">		tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue-label"</span></span>
+<span class="line"><span style="color:#F8F8F2">	></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">canvas</span><span style="color:#A6E22E"> width</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"360"</span><span style="color:#A6E22E"> height</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"1"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">canvas</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"thumb"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span><span style="color:#F8F8F2">>Lightness&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"input"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"number"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"unit"</span><span style="color:#F8F8F2">>%&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"buttons"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"decrement"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Decrement lightness"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				−</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"increment"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Increment lightness"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				+</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness-error"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span><span style="color:#F8F8F2">>Chroma&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"input"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"number"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"buttons"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"decrement"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Decrement chroma"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				−</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"increment"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Increment chroma"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				+</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma-error"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue-label"</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span><span style="color:#F8F8F2">>Hue&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"input"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"number"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"unit"</span><span style="color:#F8F8F2">>°&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"buttons"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"decrement"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Decrement hue"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				−</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"increment"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Increment hue"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				+</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue-error"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">form-colorgraph</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span></code></pre>
+			</module-scrollarea>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_form-colorgraph_css"
+		aria-labelledby="trigger_form-colorgraph_css"
+		 hidden
+	>
+		<module-codeblock
+			language="css"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">form-colorgraph.css</span>
+				<span class="language">css</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">form-colorgraph</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">    --color-base: </span><span style="color:#66D9EF">transparent</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">    --step-size: </span><span style="color:#AE81FF">1.25</span><span style="color:#F92672">rem</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">    display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">flex</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">    flex-direction</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">column</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">    gap</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">    margin</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m) </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">    .graph {</span></span>
+<span class="line"><span style="color:#F8F8F2">        --canvas-size: </span><span style="color:#AE81FF">400</span><span style="color:#F92672">px</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">relative</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        width</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">100</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">block</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        user-select</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        transition</span><span style="color:#F8F8F2">: opacity </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--transition-medium) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--easing-inout);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">        &#x26; canvas {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            width</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--canvas-size);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--canvas-size);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            aspect-ratio</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            user-select</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">        .knob</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">absolute</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            top</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            left</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            width</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            border-radius</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">50</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-base);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            border</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> solid</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-border);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            box-shadow</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#AE81FF"> 0</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-xxs) </span><span style="color:#AE81FF">2</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-shadow);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            cursor</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">move</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            user-select</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            touch-action</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            transform</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">translate</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#66D9EF">                calc</span><span style="color:#F8F8F2">(</span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height) </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> -2</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#66D9EF">                calc</span><span style="color:#F8F8F2">(</span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height) </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> -2</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">            );</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">            &#x26;:focus-visible {</span></span>
+<span class="line"><span style="color:#F8F8F2">                box-shadow: </span><span style="color:#AE81FF">0</span><span style="color:#AE81FF"> 0</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-xxs) </span><span style="color:#AE81FF">2</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-selection);</span></span>
+<span class="line"><span style="color:#F8F8F2">            }</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">        &#x26; </span><span style="color:#F92672">ol</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            list-style</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            margin</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            padding</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            user-select</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">        &#x26; </span><span style="color:#F92672">li</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">absolute</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            box-sizing</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">border-box</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            top</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            left</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            width</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--step-size);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--step-size);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            transform</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">translate</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#66D9EF">                calc</span><span style="color:#F8F8F2">(</span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--step-size) </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> -2</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#66D9EF">                calc</span><span style="color:#F8F8F2">(</span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--step-size) </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> -2</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">            );</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            border-radius</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">100</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">transparent</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            border</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> solid</span><span style="color:#66D9EF"> black</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-dimmed);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            user-select</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">        .lighten80</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-lighten80);</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#A6E22E">        .lighten60</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-lighten60);</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#A6E22E">        .lighten40</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-lighten40);</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#A6E22E">        .lighten20</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-lighten20);</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#A6E22E">        .darken20</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-darken20);</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#A6E22E">        .darken40</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-darken40);</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#A6E22E">        .darken60</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-darken60);</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#A6E22E">        .darken80</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-darken80);</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">    ></span><span style="color:#A6E22E"> .lightness</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F92672">    ></span><span style="color:#A6E22E"> .chroma</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F92672">    ></span><span style="color:#A6E22E"> .hue</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">grid</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        align-items</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">center</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        column-gap</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-template-areas</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">"label label"</span><span style="color:#E6DB74"> "input buttons"</span><span style="color:#E6DB74"> "error error"</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-template-columns</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">fr</span><span style="color:#66D9EF"> auto</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        max-width</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">12</span><span style="color:#F92672">rem</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">    &#x26; </span><span style="color:#F92672">label</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">    &#x26; </span><span style="color:#F92672">button</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-dimmed);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        transition</span><span style="color:#F8F8F2">: opacity </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--transition-short) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--easing-inout);</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">    &#x26; </span><span style="color:#F92672">label</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-area</span><span style="color:#F8F8F2">: label;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">block</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        margin-bottom</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xxs);</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">    &#x26; </span><span style="color:#F92672">input</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">inline-block</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        box-sizing</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">border-box</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-input);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        border</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        border-bottom</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> solid</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-border);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        padding</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xxs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-m);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        text-align</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">right</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        width</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">100</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        transition</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">color</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--transition-short) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--easing-inout);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        appearance</span><span style="color:#F8F8F2">: textfield;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        -moz-appearance</span><span style="color:#F8F8F2">: textfield;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">        &#x26;::</span><span style="color:#66D9EF">-webkit-outer-spin-button</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">        &#x26;::</span><span style="color:#66D9EF">-webkit-inner-spin-button</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF">            -webkit-appearance</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            margin</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">        &#x26;[</span><span style="color:#A6E22E">aria-invalid</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"true"</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            box-shadow</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#AE81FF"> 0</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-xxs) </span><span style="color:#AE81FF">2</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-error-invalid);</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">        &#x26;</span><span style="color:#A6E22E">::placeholder</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-translucent);</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">    .input</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-area</span><span style="color:#F8F8F2">: input;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">inline-flex</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        align-items</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">center</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">    .error</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-area</span><span style="color:#F8F8F2">: error;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        margin</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs) </span><span style="color:#AE81FF">0</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-xs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        line-height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--line-height-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">color-mix</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">in</span><span style="color:#66D9EF"> srgb</span><span style="color:#F8F8F2">, </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text) </span><span style="color:#AE81FF">50</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">, </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-error));</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">        &#x26;:empty {</span></span>
+<span class="line"><span style="color:#F8F8F2">            display: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">    .slider</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">        --slider-width: </span><span style="color:#AE81FF">400</span><span style="color:#F92672">px</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">        --slider-height: </span><span style="color:#AE81FF">40</span><span style="color:#F92672">px</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">        --track-width: </span><span style="color:#AE81FF">360</span><span style="color:#F92672">px</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">        --track-height: </span><span style="color:#AE81FF">8</span><span style="color:#F92672">px</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">        --track-offset: </span><span style="color:#AE81FF">20</span><span style="color:#F92672">px</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">relative</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">inline-block</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--slider-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        user-select</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        transition</span><span style="color:#F8F8F2">: opacity </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--transition-medium) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--easing-inout);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">        &#x26; canvas {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            width</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">calc</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">100</span><span style="color:#F92672">%</span><span style="color:#F92672"> -</span><span style="color:#AE81FF"> 2</span><span style="color:#F92672"> *</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--track-offset));</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--track-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            margin</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">calc</span><span style="color:#F8F8F2">(</span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--track-offset) </span><span style="color:#F92672">-</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--track-height) </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> 2</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF">                var</span><span style="color:#F8F8F2">(--track-offset);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            user-select</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">    .thumb</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">absolute</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        top</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">calc</span><span style="color:#F8F8F2">(</span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--slider-height) </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> 2</span><span style="color:#F8F8F2">);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        left</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--track-offset);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        width</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-base);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        box-sizing</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">border-box</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        border</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> solid</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-border);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        border-radius</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">50</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        box-shadow</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#AE81FF"> 0</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-xxs) </span><span style="color:#AE81FF">2</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-shadow);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        cursor</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">ew-resize</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        user-select</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        touch-action</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-dimmed);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        transform</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">translate</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#66D9EF">            calc</span><span style="color:#F8F8F2">(</span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height) </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> -2</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#66D9EF">            calc</span><span style="color:#F8F8F2">(</span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height) </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> -2</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">        );</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">    .buttons</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-area</span><span style="color:#F8F8F2">: buttons;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">flex</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        align-items</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">center</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">        &#x26; button {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            flex-grow</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            box-sizing</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">border-box</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            min-width</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            border</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> solid</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-border);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-secondary);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            padding</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            font-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--font-size-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            line-height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--line-height-s);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            white-space</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">nowrap</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            cursor</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">pointer</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            transition</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">all</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--transition-shorter) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--easing-inout);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">            &#x26;:</span><span style="color:#66D9EF">disabled</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">                opacity: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-translucent);</span></span>
+<span class="line"><span style="color:#F8F8F2">            }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">            &#x26;</span><span style="color:#A6E22E">:not</span><span style="color:#F8F8F2">(</span><span style="color:#A6E22E">:disabled</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">                cursor</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">pointer</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">                opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-solid);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">                &#x26;:hover {</span></span>
+<span class="line"><span style="color:#F8F8F2">                    background-color: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-secondary-hover);</span></span>
+<span class="line"><span style="color:#F8F8F2">                }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">                &#x26;</span><span style="color:#A6E22E">:active</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">                    background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-secondary-active);</span></span>
+<span class="line"><span style="color:#F8F8F2">                }</span></span>
+<span class="line"><span style="color:#F8F8F2">            }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">            &#x26;</span><span style="color:#A6E22E">:first-of-type</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">                border-radius</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs) </span><span style="color:#AE81FF">0</span><span style="color:#AE81FF"> 0</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-xs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">                border-right-width</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">            }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">            &#x26;</span><span style="color:#A6E22E">:last-of-type</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">                border-radius</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-xs) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs) </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">            }</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">@container</span><span style="color:#F8F8F2"> (width > 27rem) {</span></span>
+<span class="line"><span style="color:#F92672">    form-colorgraph</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">grid</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-template-areas</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">"graph graph graph"</span><span style="color:#E6DB74"> "slider slider slider"</span><span style="color:#E6DB74"> "lightness chroma hue"</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-template-columns</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">fr</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672">fr</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672">fr</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        gap</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-s) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        align-items</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">start</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">        .graph {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            grid-area</span><span style="color:#F8F8F2">: graph;</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#A6E22E">        .slider</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            grid-area</span><span style="color:#F8F8F2">: slider;</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#A6E22E">        .lightness</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            grid-area</span><span style="color:#F8F8F2">: lightness;</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#A6E22E">        .chroma</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            grid-area</span><span style="color:#F8F8F2">: chroma;</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#A6E22E">        .hue</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">            grid-area</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">hue</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">        }</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span></code></pre>
+			</module-scrollarea>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_form-colorgraph_ts"
+		aria-labelledby="trigger_form-colorgraph_ts"
+		
+	>
+		<module-codeblock
+			language="ts"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">form-colorgraph.ts</span>
+				<span class="language">ts</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	bindStyle,</span></span>
+<span class="line"><span style="color:#F8F8F2">	bindText,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createMemo,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createState,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineMethod,</span></span>
+<span class="line"><span style="color:#F8F8F2">	each,</span></span>
+<span class="line"><span style="color:#F8F8F2">	throttle,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { clampChroma, formatCss, inGamut, </span><span style="color:#F92672">type</span><span style="color:#F8F8F2"> Oklch } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> 'culori/fn'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asOklch } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../_common/asOklch.ts'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { getStepColor } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../_common/getStepColor.ts'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphAxis</span><span style="color:#F92672"> =</span><span style="color:#E6DB74"> 'l'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'c'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'h'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	color</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Oklch</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> lightness</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> chroma</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> hue</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#A6E22E">	stepDown</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">axis</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphAxis</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">bigStep</span><span style="color:#F92672">?:</span><span style="color:#66D9EF;font-style:italic"> boolean</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> void</span></span>
+<span class="line"><span style="color:#A6E22E">	stepUp</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">axis</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphAxis</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">bigStep</span><span style="color:#F92672">?:</span><span style="color:#66D9EF;font-style:italic"> boolean</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#66D9EF;font-style:italic"> void</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'form-colorgraph'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> &#x26;</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphProps</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> inP3Gamut </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> inGamut</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'p3'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> inRGBGamut </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> inGamut</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'rgb'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> fn2Digits </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#F8F8F2"> Intl.</span><span style="color:#A6E22E">NumberFormat</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'en-US'</span><span style="color:#F8F8F2">, { maximumFractionDigits: </span><span style="color:#AE81FF">2</span><span style="color:#F8F8F2"> })</span></span>
+<span class="line"><span style="color:#F8F8F2">	.format</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> fn4Digits </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#F8F8F2"> Intl.</span><span style="color:#A6E22E">NumberFormat</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'en-US'</span><span style="color:#F8F8F2">, { maximumFractionDigits: </span><span style="color:#AE81FF">4</span><span style="color:#F8F8F2"> })</span></span>
+<span class="line"><span style="color:#F8F8F2">	.format</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> TRACK_OFFSET </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 20</span><span style="color:#88846F"> // pixels</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> CONTRAST_THRESHOLD </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0.71</span><span style="color:#88846F"> // lightness</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> AXIS_MAX </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> { l: </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">, c: </span><span style="color:#AE81FF">0.4</span><span style="color:#F8F8F2">, h: </span><span style="color:#AE81FF">360</span><span style="color:#F8F8F2"> }</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> AXIS_STEP </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> { l: </span><span style="color:#AE81FF">0.0025</span><span style="color:#F8F8F2">, c: </span><span style="color:#AE81FF">0.001</span><span style="color:#F8F8F2">, h: </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2"> }</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> AXIS_BIGSTEP </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> { l: </span><span style="color:#AE81FF">0.05</span><span style="color:#F8F8F2">, c: </span><span style="color:#AE81FF">0.02</span><span style="color:#F8F8F2">, h: </span><span style="color:#AE81FF">15</span><span style="color:#F8F8F2"> }</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#A6E22E"> getStep</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">axis</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphAxis</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">shiftKey</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">	shiftKey </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> AXIS_BIGSTEP[axis] </span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> AXIS_STEP[axis]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphProps</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#E6DB74">	'form-colorgraph'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#88846F">		// Required elements</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> inputs </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			l: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">				'input[name="lightness"]'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">				'Add an &#x3C;input[name="lightness"]> element to control the lightness of the color.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
+<span class="line"><span style="color:#F8F8F2">			c: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">				'input[name="chroma"]'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">				'Add an &#x3C;input[name="chroma"]> element to control the chroma of the color.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
+<span class="line"><span style="color:#F8F8F2">			h: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">				'input[name="hue"]'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">				'Add an &#x3C;input[name="hue"]> element to control the hue of the color.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> graphEl </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'.graph'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add a &#x3C;.graph> element as a container for the color graph.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> canvas </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'.graph canvas'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add a &#x3C;canvas> element inside the graph to display the lightness/chroma graph.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> sliderEl </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'.slider'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add a &#x3C;.slider> element as a container for track and thumb.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> track </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'.slider canvas'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add a &#x3C;canvas> element inside the slider to display the hue slider track.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		) </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLCanvasElement</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> knob </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'.knob'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add a &#x3C;.knob> element as a drag knob to control lightness and chroma.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> thumb </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'.thumb'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add a &#x3C;.thumb> element as a drag knob to control the hue.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> allInputs </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> allErrors </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.error'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> decrementBtns </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button.decrement'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> incrementBtns </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button.increment'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Initialize</span></span>
+<span class="line"><span style="color:#F92672">		for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> [key, input] </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> Object.</span><span style="color:#A6E22E">entries</span><span style="color:#F8F8F2">(inputs)) {</span></span>
+<span class="line"><span style="color:#F8F8F2">			input.min </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> '0'</span></span>
+<span class="line"><span style="color:#F8F8F2">			input.max </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'l'</span><span style="color:#F92672"> ?</span><span style="color:#E6DB74"> '100'</span><span style="color:#F92672"> :</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'c'</span><span style="color:#F92672"> ?</span><span style="color:#E6DB74"> '0.4'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> '360'</span></span>
+<span class="line"><span style="color:#F8F8F2">			input.step </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'any'</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">		sliderEl.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-valuemin'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'0'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">		sliderEl.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-valuemax'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'360'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Internal states</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> canvasSize </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(graphEl.</span><span style="color:#A6E22E">getBoundingClientRect</span><span style="color:#F8F8F2">().width)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> trackWidth </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createMemo</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> canvasSize.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 2</span><span style="color:#F92672"> *</span><span style="color:#F8F8F2"> TRACK_OFFSET)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> errors </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			l: </span><span style="color:#A6E22E">createState</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">			c: </span><span style="color:#A6E22E">createState</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">			h: </span><span style="color:#A6E22E">createState</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Helper functions</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> formatNumber</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">axis</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphAxis</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> v </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> axis </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'l'</span><span style="color:#F92672"> ?</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 100</span><span style="color:#F92672"> :</span><span style="color:#F8F8F2"> value</span></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> axis </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'c'</span><span style="color:#F92672"> ?</span><span style="color:#A6E22E"> fn4Digits</span><span style="color:#F8F8F2">(v) </span><span style="color:#F92672">:</span><span style="color:#A6E22E"> fn2Digits</span><span style="color:#F8F8F2">(v)</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> getAxis</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphAxis</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> null</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (target.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.lightness'</span><span style="color:#F8F8F2">)) </span><span style="color:#F92672">return</span><span style="color:#E6DB74"> 'l'</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (target.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.chroma'</span><span style="color:#F8F8F2">)) </span><span style="color:#F92672">return</span><span style="color:#E6DB74"> 'c'</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (target.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.hue'</span><span style="color:#F8F8F2">)) </span><span style="color:#F92672">return</span><span style="color:#E6DB74"> 'h'</span></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> getColorFromPosition</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">			x</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">			y</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">			h</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">			alpha</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F92672"> =</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#66D9EF;font-style:italic"> =></span></span>
+<span class="line"><span style="color:#A6E22E">			formatCss</span><span style="color:#F8F8F2">({</span></span>
+<span class="line"><span style="color:#F8F8F2">				mode: </span><span style="color:#E6DB74">'oklch'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">				l: </span><span style="color:#AE81FF">1</span><span style="color:#F92672"> -</span><span style="color:#F8F8F2"> y,</span></span>
+<span class="line"><span style="color:#F8F8F2">				c: x </span><span style="color:#F92672">*</span><span style="color:#F8F8F2"> AXIS_MAX.c,</span></span>
+<span class="line"><span style="color:#F8F8F2">				h,</span></span>
+<span class="line"><span style="color:#F8F8F2">				alpha,</span></span>
+<span class="line"><span style="color:#F8F8F2">			})</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> setStepPosition</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLLIElement</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">color</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Oklch</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> void</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> size </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> canvasSize.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> x </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Math.</span><span style="color:#A6E22E">round</span><span style="color:#F8F8F2">((color.c </span><span style="color:#F92672">*</span><span style="color:#F8F8F2"> size) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> AXIS_MAX.c)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> y </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Math.</span><span style="color:#A6E22E">round</span><span style="color:#F8F8F2">((</span><span style="color:#AE81FF">1</span><span style="color:#F92672"> -</span><span style="color:#F8F8F2"> color.l) </span><span style="color:#F92672">*</span><span style="color:#F8F8F2"> size)</span></span>
+<span class="line"><span style="color:#F8F8F2">			target.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'background-color'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">formatCss</span><span style="color:#F8F8F2">(color))</span></span>
+<span class="line"><span style="color:#F8F8F2">			target.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">				'border-color'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">				color.l </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> CONTRAST_THRESHOLD </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'black'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'white'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			)</span></span>
+<span class="line"><span style="color:#F8F8F2">			target.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'left'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">`</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">x</span><span style="color:#F92672">}</span><span style="color:#E6DB74">px`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			target.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'top'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">`</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">y</span><span style="color:#F92672">}</span><span style="color:#E6DB74">px`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> getHueFromPosition</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">x</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Oklch</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> newColor </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> { </span><span style="color:#F92672">...</span><span style="color:#F8F8F2">host.color, h: x </span><span style="color:#F92672">*</span><span style="color:#F8F8F2"> AXIS_MAX.h }</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">inRGBGamut</span><span style="color:#F8F8F2">(newColor)) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> newColor</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">inP3Gamut</span><span style="color:#F8F8F2">(newColor)) newColor.alpha </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0.5</span></span>
+<span class="line"><span style="color:#F92672">			else</span><span style="color:#F8F8F2"> newColor.alpha </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> newColor</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> commit</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">color</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Oklch</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			host.color </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> color</span></span>
+<span class="line"><span style="color:#F92672">			for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> [</span><span style="color:#E6DB74">'l'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'c'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'h'</span><span style="color:#F8F8F2">])</span></span>
+<span class="line"><span style="color:#F8F8F2">				errors[key </span><span style="color:#F92672">as</span><span style="color:#F92672"> keyof</span><span style="color:#F92672"> typeof</span><span style="color:#F8F8F2"> errors].</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> getValue</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">axis</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphAxis</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">			axis </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'l'</span><span style="color:#F92672"> ?</span><span style="color:#F8F8F2"> host.lightness </span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> axis </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'c'</span><span style="color:#F92672"> ?</span><span style="color:#F8F8F2"> host.chroma </span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> host.hue</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#A6E22E"> setToNearestStep</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">axis</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphAxis</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> nearest </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Math.</span><span style="color:#A6E22E">round</span><span style="color:#F8F8F2">(value </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> AXIS_STEP[axis]) </span><span style="color:#F92672">*</span><span style="color:#F8F8F2"> AXIS_STEP[axis]</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (nearest </span><span style="color:#F92672">&#x3C;</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> nearest </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> AXIS_MAX[axis]) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> color </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> { </span><span style="color:#F92672">...</span><span style="color:#F8F8F2">host.color, [axis]: nearest }</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">inP3Gamut</span><span style="color:#F8F8F2">(color)) {</span></span>
+<span class="line"><span style="color:#A6E22E">				commit</span><span style="color:#F8F8F2">(color)</span></span>
+<span class="line"><span style="color:#F8F8F2">			} </span><span style="color:#F92672">else</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				inputs[axis].</span><span style="color:#A6E22E">setCustomValidity</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'Color out of gamut'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">				errors[axis].</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(inputs[axis].validationMessage)</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> moveKnob </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> throttle</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">			(</span><span style="color:#FD971F;font-style:italic">x</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">y</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">top</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">left</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">size</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> color </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">					...</span><span style="color:#F8F8F2">host.color,</span></span>
+<span class="line"><span style="color:#F8F8F2">					c: Math.</span><span style="color:#A6E22E">min</span><span style="color:#F8F8F2">(Math.</span><span style="color:#A6E22E">max</span><span style="color:#F8F8F2">((x </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> left) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> size, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">), </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">*</span><span style="color:#F8F8F2"> AXIS_MAX.c,</span></span>
+<span class="line"><span style="color:#F8F8F2">					l: </span><span style="color:#AE81FF">1</span><span style="color:#F92672"> -</span><span style="color:#F8F8F2"> Math.</span><span style="color:#A6E22E">min</span><span style="color:#F8F8F2">(Math.</span><span style="color:#A6E22E">max</span><span style="color:#F8F8F2">((y </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> top) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> size, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">), </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">inP3Gamut</span><span style="color:#F8F8F2">(color)) </span><span style="color:#A6E22E">commit</span><span style="color:#F8F8F2">(color)</span></span>
+<span class="line"><span style="color:#F8F8F2">			},</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> moveThumb </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> throttle</span><span style="color:#F8F8F2">((</span><span style="color:#FD971F;font-style:italic">x</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">left</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">width</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> color </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				...</span><span style="color:#F8F8F2">host.color,</span></span>
+<span class="line"><span style="color:#F8F8F2">				h: Math.</span><span style="color:#A6E22E">min</span><span style="color:#F8F8F2">(Math.</span><span style="color:#A6E22E">max</span><span style="color:#F8F8F2">((x </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> left) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> width, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">), </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">*</span><span style="color:#F8F8F2"> AXIS_MAX.h,</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">inP3Gamut</span><span style="color:#F8F8F2">(color)) </span><span style="color:#A6E22E">commit</span><span style="color:#F8F8F2">(color)</span></span>
+<span class="line"><span style="color:#F8F8F2">		})</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({</span></span>
+<span class="line"><span style="color:#F8F8F2">			color: </span><span style="color:#A6E22E">asOklch</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#A6E22E">			lightness</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.color.l,</span></span>
+<span class="line"><span style="color:#A6E22E">			chroma</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.color.c,</span></span>
+<span class="line"><span style="color:#A6E22E">			hue</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.color.h </span><span style="color:#F92672">??</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			stepDown: </span><span style="color:#A6E22E">defineMethod</span><span style="color:#F8F8F2">((</span><span style="color:#FD971F;font-style:italic">axis</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphAxis</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">bigStep</span><span style="color:#F92672"> =</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">				setToNearestStep</span><span style="color:#F8F8F2">(axis, </span><span style="color:#A6E22E">getValue</span><span style="color:#F8F8F2">(axis) </span><span style="color:#F92672">-</span><span style="color:#A6E22E"> getStep</span><span style="color:#F8F8F2">(axis, bigStep))</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			stepUp: </span><span style="color:#A6E22E">defineMethod</span><span style="color:#F8F8F2">((</span><span style="color:#FD971F;font-style:italic">axis</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormColorgraphAxis</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">bigStep</span><span style="color:#F92672"> =</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">				setToNearestStep</span><span style="color:#F8F8F2">(axis, </span><span style="color:#A6E22E">getValue</span><span style="color:#F8F8F2">(axis) </span><span style="color:#F92672">+</span><span style="color:#A6E22E"> getStep</span><span style="color:#F8F8F2">(axis, bigStep))</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">		})</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> effects </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#88846F">			// ResizeObserver — runs once at connect, cleanup at disconnect</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> graphEl,</span></span>
+<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> setCanvasSize </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> throttle</span><span style="color:#F8F8F2">((</span><span style="color:#FD971F;font-style:italic">w</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">						canvasSize.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(w)</span></span>
+<span class="line"><span style="color:#F8F8F2">					})</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> resizeObserver </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> ResizeObserver</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">						setCanvasSize</span><span style="color:#F8F8F2">(graphEl.clientWidth)</span></span>
+<span class="line"><span style="color:#F8F8F2">					})</span></span>
+<span class="line"><span style="color:#F8F8F2">					resizeObserver.</span><span style="color:#A6E22E">observe</span><span style="color:#F8F8F2">(graphEl)</span></span>
+<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">						resizeObserver.</span><span style="color:#A6E22E">disconnect</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">						setCanvasSize.</span><span style="color:#A6E22E">cancel</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Host CSS variable</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#A6E22E"> formatCss</span><span style="color:#F8F8F2">(host.color), </span><span style="color:#A6E22E">bindStyle</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'--color-base'</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Input per-element effects</span></span>
+<span class="line"><span style="color:#A6E22E">			each</span><span style="color:#F8F8F2">(allInputs, </span><span style="color:#FD971F;font-style:italic">input</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> axis </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> getAxis</span><span style="color:#F8F8F2">(input)</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#F8F8F2">					axis</span></span>
+<span class="line"><span style="color:#F92672">						&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(errors[axis], </span><span style="color:#FD971F;font-style:italic">error</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">							input.ariaInvalid </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(</span><span style="color:#F92672">!!</span><span style="color:#F8F8F2">error)</span></span>
+<span class="line"><span style="color:#F92672">							if</span><span style="color:#F8F8F2"> (error </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> input.id)</span></span>
+<span class="line"><span style="color:#F8F8F2">								input.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-errormessage'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">`</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">input.id</span><span style="color:#F92672">}</span><span style="color:#E6DB74">-error`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">							else</span><span style="color:#F8F8F2"> input.</span><span style="color:#A6E22E">removeAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-errormessage'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">						}),</span></span>
+<span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'color'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">color</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (axis) input.value </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> formatNumber</span><span style="color:#F8F8F2">(axis, color[axis] </span><span style="color:#F92672">??</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					}),</span></span>
+<span class="line"><span style="color:#A6E22E">					on</span><span style="color:#F8F8F2">(input, </span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">axis) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> input.valueAsNumber</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> newColor </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">							...</span><span style="color:#F8F8F2">host.color,</span></span>
+<span class="line"><span style="color:#F8F8F2">							[axis]: axis </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'l'</span><span style="color:#F92672"> ?</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> 100</span><span style="color:#F92672"> :</span><span style="color:#F8F8F2"> value,</span></span>
+<span class="line"><span style="color:#F8F8F2">						}</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">inP3Gamut</span><span style="color:#F8F8F2">(newColor)) {</span></span>
+<span class="line"><span style="color:#A6E22E">							commit</span><span style="color:#F8F8F2">(newColor)</span></span>
+<span class="line"><span style="color:#F8F8F2">						} </span><span style="color:#F92672">else</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">							input.</span><span style="color:#A6E22E">setCustomValidity</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'Color out of gamut'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">							errors[axis].</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(input.validationMessage)</span></span>
+<span class="line"><span style="color:#F8F8F2">						}</span></span>
+<span class="line"><span style="color:#F8F8F2">					}),</span></span>
+<span class="line"><span style="color:#F8F8F2">				]</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Error text per-element effects</span></span>
+<span class="line"><span style="color:#A6E22E">			each</span><span style="color:#F8F8F2">(allErrors, </span><span style="color:#FD971F;font-style:italic">errorEl</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> axis </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> getAxis</span><span style="color:#F8F8F2">(errorEl </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> [axis </span><span style="color:#F92672">?</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(errors[axis], </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(errorEl)) </span><span style="color:#F92672">:</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">]</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Graph pointer interaction + canvas size CSS variable</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(graphEl, </span><span style="color:#E6DB74">'pointerdown'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">event</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> { top, left } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> canvas.</span><span style="color:#A6E22E">getBoundingClientRect</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> size </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> canvasSize.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">				graphEl.</span><span style="color:#A6E22E">setPointerCapture</span><span style="color:#F8F8F2">(event.pointerId)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#A6E22E"> handleMove</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">PointerEvent</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> last </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (e.</span><span style="color:#A6E22E">getCoalescedEvents</span><span style="color:#F8F8F2">?.() </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> []).</span><span style="color:#A6E22E">pop</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> e</span></span>
+<span class="line"><span style="color:#A6E22E">					moveKnob</span><span style="color:#F8F8F2">(last.clientX, last.clientY, top, left, size)</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#A6E22E"> handleUp</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					graphEl.</span><span style="color:#A6E22E">removeEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'pointermove'</span><span style="color:#F8F8F2">, handleMove)</span></span>
+<span class="line"><span style="color:#F8F8F2">					graphEl.</span><span style="color:#A6E22E">removeEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'pointerup'</span><span style="color:#F8F8F2">, handleUp)</span></span>
+<span class="line"><span style="color:#F8F8F2">					moveKnob.</span><span style="color:#A6E22E">cancel</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">				graphEl.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'pointermove'</span><span style="color:#F8F8F2">, handleMove, { passive: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> })</span></span>
+<span class="line"><span style="color:#F8F8F2">				graphEl.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'pointerup'</span><span style="color:#F8F8F2">, handleUp)</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> canvasSize.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">+</span><span style="color:#E6DB74"> 'px'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindStyle</span><span style="color:#F8F8F2">(graphEl, </span><span style="color:#E6DB74">'--canvas-size'</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Graph canvas: redraw on hue or size change</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({ hue: host.hue, n: Math.</span><span style="color:#A6E22E">round</span><span style="color:#F8F8F2">(canvasSize.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()) }),</span></span>
+<span class="line"><span style="color:#F8F8F2">				({ </span><span style="color:#FD971F;font-style:italic">hue</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">n</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					canvas.width </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> n</span></span>
+<span class="line"><span style="color:#F8F8F2">					canvas.height </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> n</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> ctx </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> canvas.</span><span style="color:#A6E22E">getContext</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'2d'</span><span style="color:#F8F8F2">, { colorSpace: </span><span style="color:#E6DB74">'display-p3'</span><span style="color:#F8F8F2"> })</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">ctx) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#A6E22E"> maxChroma</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">l</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">gamut</span><span style="color:#F92672">:</span><span style="color:#E6DB74"> 'rgb'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'p3'</span><span style="color:#F92672"> =</span><span style="color:#E6DB74"> 'rgb'</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#A6E22E">						clampChroma</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">							{ mode: </span><span style="color:#E6DB74">'oklch'</span><span style="color:#F8F8F2">, l, c: AXIS_MAX.c, h: hue },</span></span>
+<span class="line"><span style="color:#E6DB74">							'oklch'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">							gamut,</span></span>
+<span class="line"><span style="color:#F8F8F2">						).c </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> AXIS_MAX.c</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#A6E22E"> gradientStops</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">						minX</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">						maxX</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">						y</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">						alpha</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F92672"> =</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					)</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> [</span><span style="color:#66D9EF;font-style:italic">string</span><span style="color:#F8F8F2">, </span><span style="color:#66D9EF;font-style:italic">string</span><span style="color:#F8F8F2">] </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">						getColorFromPosition</span><span style="color:#F8F8F2">(minX, y, hue, alpha),</span></span>
+<span class="line"><span style="color:#A6E22E">						getColorFromPosition</span><span style="color:#F8F8F2">(maxX, y, hue, alpha),</span></span>
+<span class="line"><span style="color:#F8F8F2">					]</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#A6E22E"> drawGradient</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">						minX</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">						y</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">						gamut</span><span style="color:#F92672">:</span><span style="color:#E6DB74"> 'rgb'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'p3'</span><span style="color:#F92672"> =</span><span style="color:#E6DB74"> 'rgb'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					)</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> [</span><span style="color:#66D9EF;font-style:italic">number</span><span style="color:#F8F8F2">, </span><span style="color:#66D9EF;font-style:italic">string</span><span style="color:#F8F8F2">] </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> maxX </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> maxChroma</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">1</span><span style="color:#F92672"> -</span><span style="color:#F8F8F2"> y </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> n, gamut) </span><span style="color:#F92672">*</span><span style="color:#F8F8F2"> n</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> gradient </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> ctx.</span><span style="color:#A6E22E">createLinearGradient</span><span style="color:#F8F8F2">(minX, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, maxX, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> stops </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> gradientStops</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">							minX </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> n,</span></span>
+<span class="line"><span style="color:#F8F8F2">							maxX </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> n,</span></span>
+<span class="line"><span style="color:#F8F8F2">							y </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> n,</span></span>
+<span class="line"><span style="color:#F8F8F2">							gamut </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'p3'</span><span style="color:#F92672"> ?</span><span style="color:#AE81FF"> 0.5</span><span style="color:#F92672"> :</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">						)</span></span>
+<span class="line"><span style="color:#F8F8F2">						gradient.</span><span style="color:#A6E22E">addColorStop</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, stops[</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">])</span></span>
+<span class="line"><span style="color:#F8F8F2">						gradient.</span><span style="color:#A6E22E">addColorStop</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">, stops[</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">])</span></span>
+<span class="line"><span style="color:#F8F8F2">						ctx.fillStyle </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> gradient</span></span>
+<span class="line"><span style="color:#F8F8F2">						ctx.</span><span style="color:#A6E22E">fillRect</span><span style="color:#F8F8F2">(minX, y, maxX </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> minX, </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">						return</span><span style="color:#F8F8F2"> [maxX, stops[</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">]]</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">					ctx.</span><span style="color:#A6E22E">clearRect</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, n, n)</span></span>
+<span class="line"><span style="color:#F92672">					for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">let</span><span style="color:#F8F8F2"> y </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">; y </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> n; y</span><span style="color:#F92672">++</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> [maxRgbX, maxRgbColor] </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> drawGradient</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, y)</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">inP3Gamut</span><span style="color:#F8F8F2">(maxRgbColor)) </span><span style="color:#A6E22E">drawGradient</span><span style="color:#F8F8F2">(maxRgbX, y, </span><span style="color:#E6DB74">'p3'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Knob position</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">					l: host.lightness,</span></span>
+<span class="line"><span style="color:#F8F8F2">					c: host.chroma,</span></span>
+<span class="line"><span style="color:#F8F8F2">					size: canvasSize.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">				}),</span></span>
+<span class="line"><span style="color:#F8F8F2">				({ </span><span style="color:#FD971F;font-style:italic">l</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">c</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">size</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					knob.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'top'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">`</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">Math.</span><span style="color:#A6E22E">round</span><span style="color:#F8F8F2">((</span><span style="color:#AE81FF">1</span><span style="color:#F92672"> -</span><span style="color:#F8F8F2"> l) </span><span style="color:#F92672">*</span><span style="color:#F8F8F2"> size)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">px`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					knob.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">						'left'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">						`</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">Math.</span><span style="color:#A6E22E">round</span><span style="color:#F8F8F2">((c </span><span style="color:#F92672">*</span><span style="color:#F8F8F2"> size) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> AXIS_MAX.c)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">px`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					)</span></span>
+<span class="line"><span style="color:#F8F8F2">					knob.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">						'--color-border'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">						l </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> CONTRAST_THRESHOLD </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'black'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'white'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					)</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Slider pointer interaction + ARIA + CSS variable</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(sliderEl, </span><span style="color:#E6DB74">'pointerdown'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">event</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> left </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> track.</span><span style="color:#A6E22E">getBoundingClientRect</span><span style="color:#F8F8F2">().left</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> width </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> trackWidth.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">				sliderEl.</span><span style="color:#A6E22E">setPointerCapture</span><span style="color:#F8F8F2">(event.pointerId)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#A6E22E"> handleMove</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">PointerEvent</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> last </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (e.</span><span style="color:#A6E22E">getCoalescedEvents</span><span style="color:#F8F8F2">?.() </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> []).</span><span style="color:#A6E22E">pop</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> e</span></span>
+<span class="line"><span style="color:#A6E22E">					moveThumb</span><span style="color:#F8F8F2">(last.clientX, left, width)</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#A6E22E"> handleUp</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					sliderEl.</span><span style="color:#A6E22E">removeEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'pointermove'</span><span style="color:#F8F8F2">, handleMove)</span></span>
+<span class="line"><span style="color:#F8F8F2">					sliderEl.</span><span style="color:#A6E22E">removeEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'pointerup'</span><span style="color:#F8F8F2">, handleUp)</span></span>
+<span class="line"><span style="color:#F8F8F2">					moveThumb.</span><span style="color:#A6E22E">cancel</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">				sliderEl.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'pointermove'</span><span style="color:#F8F8F2">, handleMove, { passive: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> })</span></span>
+<span class="line"><span style="color:#F8F8F2">				sliderEl.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'pointerup'</span><span style="color:#F8F8F2">, handleUp)</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> trackWidth.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">+</span><span style="color:#E6DB74"> 'px'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#A6E22E">				bindStyle</span><span style="color:#F8F8F2">(sliderEl, </span><span style="color:#E6DB74">'--track-width'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'hue'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">hue</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				sliderEl.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-valuenow'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">String</span><span style="color:#F8F8F2">(hue))</span></span>
+<span class="line"><span style="color:#F8F8F2">				sliderEl.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-valuetext'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">formatNumber</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'h'</span><span style="color:#F8F8F2">, hue) </span><span style="color:#F92672">+</span><span style="color:#E6DB74"> '°'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Track canvas: redraw on color or track width change</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({ color: host.color, n: Math.</span><span style="color:#A6E22E">round</span><span style="color:#F8F8F2">(trackWidth.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()) }),</span></span>
+<span class="line"><span style="color:#F8F8F2">				({ </span><span style="color:#FD971F;font-style:italic">n</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					track.width </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> n</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> ctx </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> track.</span><span style="color:#A6E22E">getContext</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'2d'</span><span style="color:#F8F8F2">, { colorSpace: </span><span style="color:#E6DB74">'display-p3'</span><span style="color:#F8F8F2"> })</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">ctx) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#F8F8F2">					ctx.</span><span style="color:#A6E22E">clearRect</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, n, </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">					for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">let</span><span style="color:#F8F8F2"> x </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">; x </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> n; x</span><span style="color:#F92672">++</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#F8F8F2">						ctx.fillStyle </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> formatCss</span><span style="color:#F8F8F2">(</span><span style="color:#A6E22E">getHueFromPosition</span><span style="color:#F8F8F2">(x </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> n))</span></span>
+<span class="line"><span style="color:#F8F8F2">						ctx.</span><span style="color:#A6E22E">fillRect</span><span style="color:#F8F8F2">(x, </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">, </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Thumb position</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
+<span class="line"><span style="color:#F8F8F2">					hue: host.hue,</span></span>
+<span class="line"><span style="color:#F8F8F2">					l: host.lightness,</span></span>
+<span class="line"><span style="color:#F8F8F2">					tw: trackWidth.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">				}),</span></span>
+<span class="line"><span style="color:#F8F8F2">				({ </span><span style="color:#FD971F;font-style:italic">hue</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">l</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">tw</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					thumb.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">						'left'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">						`</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">Math.</span><span style="color:#A6E22E">round</span><span style="color:#F8F8F2">((hue </span><span style="color:#F92672">*</span><span style="color:#F8F8F2"> tw) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> AXIS_MAX.h) </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> TRACK_OFFSET</span><span style="color:#F92672">}</span><span style="color:#E6DB74">px`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					)</span></span>
+<span class="line"><span style="color:#F8F8F2">					thumb.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">						'--color-border'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">						l </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> CONTRAST_THRESHOLD </span><span style="color:#F92672">?</span><span style="color:#E6DB74"> 'black'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'white'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					)</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Decrement buttons</span></span>
+<span class="line"><span style="color:#A6E22E">			each</span><span style="color:#F8F8F2">(decrementBtns, </span><span style="color:#FD971F;font-style:italic">btn</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> axis </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> getAxis</span><span style="color:#F8F8F2">(btn)</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">					on</span><span style="color:#F8F8F2">(btn, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">event</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (axis) host.</span><span style="color:#A6E22E">stepDown</span><span style="color:#F8F8F2">(axis, (event </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">MouseEvent</span><span style="color:#F8F8F2">).shiftKey)</span></span>
+<span class="line"><span style="color:#F8F8F2">					}),</span></span>
+<span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'color'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">color</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">axis) {</span></span>
+<span class="line"><span style="color:#F8F8F2">							btn.disabled </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F92672">							return</span></span>
+<span class="line"><span style="color:#F8F8F2">						}</span></span>
+<span class="line"><span style="color:#F8F8F2">						btn.disabled </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (color[axis] </span><span style="color:#F92672">??</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">&#x3C;=</span><span style="color:#AE81FF"> 0</span></span>
+<span class="line"><span style="color:#F8F8F2">					}),</span></span>
+<span class="line"><span style="color:#F8F8F2">				]</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Increment buttons</span></span>
+<span class="line"><span style="color:#A6E22E">			each</span><span style="color:#F8F8F2">(incrementBtns, </span><span style="color:#FD971F;font-style:italic">btn</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> axis </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> getAxis</span><span style="color:#F8F8F2">(btn)</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">					on</span><span style="color:#F8F8F2">(btn, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">event</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (axis) host.</span><span style="color:#A6E22E">stepUp</span><span style="color:#F8F8F2">(axis, (event </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">MouseEvent</span><span style="color:#F8F8F2">).shiftKey)</span></span>
+<span class="line"><span style="color:#F8F8F2">					}),</span></span>
+<span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'color'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">color</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">axis) {</span></span>
+<span class="line"><span style="color:#F8F8F2">							btn.disabled </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F92672">							return</span></span>
+<span class="line"><span style="color:#F8F8F2">						}</span></span>
+<span class="line"><span style="color:#F8F8F2">						btn.disabled </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (color[axis] </span><span style="color:#F92672">??</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">>=</span><span style="color:#F8F8F2"> AXIS_MAX[axis]</span></span>
+<span class="line"><span style="color:#F8F8F2">					}),</span></span>
+<span class="line"><span style="color:#F8F8F2">				]</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">			// Keyboard navigation</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'keydown'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">event</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> { key, shiftKey } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> event </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">KeyboardEvent</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> target </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (event </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">KeyboardEvent</span><span style="color:#F8F8F2">).target </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> null</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span></span>
+<span class="line"><span style="color:#F92672">					!</span><span style="color:#F8F8F2">target</span></span>
+<span class="line"><span style="color:#F92672">					||</span><span style="color:#F8F8F2"> (target.localName </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'input'</span></span>
+<span class="line"><span style="color:#F92672">						&#x26;&#x26;</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowLeft'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowRight'</span><span style="color:#F8F8F2">))</span></span>
+<span class="line"><span style="color:#F8F8F2">				)</span></span>
+<span class="line"><span style="color:#F92672">					return</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (key.</span><span style="color:#A6E22E">substring</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">, </span><span style="color:#AE81FF">5</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'Arrow'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> [</span><span style="color:#E6DB74">'+'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'-'</span><span style="color:#F8F8F2">].</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(key)) {</span></span>
+<span class="line"><span style="color:#F8F8F2">					event.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">					event.</span><span style="color:#A6E22E">stopPropagation</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> axis </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> getAxis</span><span style="color:#F8F8F2">(target)</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (axis) {</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowLeft'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowDown'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> '-'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">							host.</span><span style="color:#A6E22E">stepDown</span><span style="color:#F8F8F2">(axis, shiftKey)</span></span>
+<span class="line"><span style="color:#F92672">						else</span><span style="color:#F92672"> if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowRight'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowUp'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> '+'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">							host.</span><span style="color:#A6E22E">stepUp</span><span style="color:#F8F8F2">(axis, shiftKey)</span></span>
+<span class="line"><span style="color:#F8F8F2">					} </span><span style="color:#F92672">else</span><span style="color:#F92672"> if</span><span style="color:#F8F8F2"> (target.role </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'slider'</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowLeft'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowDown'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> '-'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">							host.</span><span style="color:#A6E22E">stepDown</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'h'</span><span style="color:#F8F8F2">, shiftKey)</span></span>
+<span class="line"><span style="color:#F92672">						else</span><span style="color:#F92672"> if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowRight'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowUp'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> '+'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">							host.</span><span style="color:#A6E22E">stepUp</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'h'</span><span style="color:#F8F8F2">, shiftKey)</span></span>
+<span class="line"><span style="color:#F8F8F2">					} </span><span style="color:#F92672">else</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">						switch</span><span style="color:#F8F8F2"> (key) {</span></span>
+<span class="line"><span style="color:#F92672">							case</span><span style="color:#E6DB74"> 'ArrowDown'</span><span style="color:#F8F8F2">:</span></span>
+<span class="line"><span style="color:#F8F8F2">								host.</span><span style="color:#A6E22E">stepDown</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'l'</span><span style="color:#F8F8F2">, shiftKey)</span></span>
+<span class="line"><span style="color:#F92672">								break</span></span>
+<span class="line"><span style="color:#F92672">							case</span><span style="color:#E6DB74"> 'ArrowUp'</span><span style="color:#F8F8F2">:</span></span>
+<span class="line"><span style="color:#F8F8F2">								host.</span><span style="color:#A6E22E">stepUp</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'l'</span><span style="color:#F8F8F2">, shiftKey)</span></span>
+<span class="line"><span style="color:#F92672">								break</span></span>
+<span class="line"><span style="color:#F92672">							case</span><span style="color:#E6DB74"> 'ArrowLeft'</span><span style="color:#F8F8F2">:</span></span>
+<span class="line"><span style="color:#F8F8F2">								host.</span><span style="color:#A6E22E">stepDown</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'c'</span><span style="color:#F8F8F2">, shiftKey)</span></span>
+<span class="line"><span style="color:#F92672">								break</span></span>
+<span class="line"><span style="color:#F92672">							case</span><span style="color:#E6DB74"> 'ArrowRight'</span><span style="color:#F8F8F2">:</span></span>
+<span class="line"><span style="color:#F8F8F2">								host.</span><span style="color:#A6E22E">stepUp</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'c'</span><span style="color:#F8F8F2">, shiftKey)</span></span>
+<span class="line"><span style="color:#F92672">								break</span></span>
+<span class="line"><span style="color:#F92672">							case</span><span style="color:#E6DB74"> '-'</span><span style="color:#F8F8F2">:</span></span>
+<span class="line"><span style="color:#F8F8F2">								host.</span><span style="color:#A6E22E">stepDown</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'h'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">								break</span></span>
+<span class="line"><span style="color:#F92672">							case</span><span style="color:#E6DB74"> '+'</span><span style="color:#F8F8F2">:</span></span>
+<span class="line"><span style="color:#F8F8F2">								host.</span><span style="color:#A6E22E">stepUp</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'h'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">								break</span></span>
+<span class="line"><span style="color:#F8F8F2">						}</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">		]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">		for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">let</span><span style="color:#F8F8F2"> i </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">; i </span><span style="color:#F92672">&#x3C;</span><span style="color:#AE81FF"> 5</span><span style="color:#F8F8F2">; i</span><span style="color:#F92672">++</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> li </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`li.lighten</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">5</span><span style="color:#F92672"> -</span><span style="color:#F8F8F2"> i) </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 20</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (li)</span></span>
+<span class="line"><span style="color:#F8F8F2">				effects.</span><span style="color:#A6E22E">push</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">						() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({ color: host.color, size: canvasSize.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() }),</span></span>
+<span class="line"><span style="color:#F8F8F2">						({ </span><span style="color:#FD971F;font-style:italic">color</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">							setStepPosition</span><span style="color:#F8F8F2">(li, </span><span style="color:#A6E22E">getStepColor</span><span style="color:#F8F8F2">(color, </span><span style="color:#AE81FF">1</span><span style="color:#F92672"> -</span><span style="color:#F8F8F2"> i </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> 10</span><span style="color:#F8F8F2">))</span></span>
+<span class="line"><span style="color:#F8F8F2">						},</span></span>
+<span class="line"><span style="color:#F8F8F2">					),</span></span>
+<span class="line"><span style="color:#F8F8F2">				)</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F92672">		for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">let</span><span style="color:#F8F8F2"> i </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">; i </span><span style="color:#F92672">&#x3C;</span><span style="color:#AE81FF"> 5</span><span style="color:#F8F8F2">; i</span><span style="color:#F92672">++</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> li </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`li.darken</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">i </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 20</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (li)</span></span>
+<span class="line"><span style="color:#F8F8F2">				effects.</span><span style="color:#A6E22E">push</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">						() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({ color: host.color, size: canvasSize.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() }),</span></span>
+<span class="line"><span style="color:#F8F8F2">						({ </span><span style="color:#FD971F;font-style:italic">color</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">							setStepPosition</span><span style="color:#F8F8F2">(li, </span><span style="color:#A6E22E">getStepColor</span><span style="color:#F8F8F2">(color, </span><span style="color:#AE81FF">1</span><span style="color:#F92672"> -</span><span style="color:#F8F8F2"> (i </span><span style="color:#F92672">+</span><span style="color:#AE81FF"> 5</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> 10</span><span style="color:#F8F8F2">))</span></span>
+<span class="line"><span style="color:#F8F8F2">						},</span></span>
+<span class="line"><span style="color:#F8F8F2">					),</span></span>
+<span class="line"><span style="color:#F8F8F2">				)</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> effects</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre>
+			</module-scrollarea>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+	</module-tabgroup>

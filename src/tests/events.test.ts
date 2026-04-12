@@ -6,8 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { createEffect } from '@zeix/cause-effect'
-import { createEventsSensor } from '../events'
+import { makeOn } from '../events'
 
 /* === RAF Mock === */
 
@@ -32,58 +31,42 @@ const flushRAF = () => {
 	for (const cb of cbs) cb(0)
 }
 
-/* === createEventsSensor === */
+/* === makeOn — async handler === */
 
-describe('createEventsSensor', () => {
-	const makeEl = () => {
+describe('makeOn async handlers', () => {
+	type HostProps = { count: number }
+
+	const makeStubs = () => {
+		// Minimal host stub with one tracked property
+		const host = { count: 0, shadowRoot: null } as unknown as HTMLElement &
+			HostProps
+
+		// Target element stub with addEventListener
 		const listeners = new Map<string, EventListener>()
-		const el = {
+		const target = {
 			addEventListener: (type: string, listener: EventListener) =>
 				listeners.set(type, listener),
 			removeEventListener: (type: string) => listeners.delete(type),
-			contains: () => true,
 		} as unknown as Element
+
 		const dispatch = (type: string) => {
-			const e = {
-				target: el,
-				stopImmediatePropagation: () => {},
-			} as unknown as Event
-			listeners.get(type)?.(e)
+			listeners.get(type)?.(new Event(type))
 		}
-		return { el, dispatch }
+
+		return { host, target, dispatch }
 	}
 
-	test('two passive event types both run once per frame', () => {
-		const { el, dispatch } = makeEl()
-		const scrollCalls: number[] = []
-		const wheelCalls: number[] = []
+	test('async handler: Promise return value is ignored — host is not updated', async () => {
+		const { host, target, dispatch } = makeStubs()
+		const on = makeOn(host)
 
-		const sensor = createEventsSensor(el, 0, {
-			scroll: ({ prev }) => {
-				scrollCalls.push(prev + 1)
-				return prev + 1
-			},
-			wheel: ({ prev }) => {
-				wheelCalls.push(prev + 10)
-				return prev + 10
-			},
-		})
+		// @ts-expect-error async handler should not return a value
+		const descriptor = on(target, 'click', async () => ({ count: 42 }))
+		descriptor()
 
-		// Sensors are lazy — activate by reading inside an effect
-		createEffect(() => void sensor.get())
-
-		dispatch('scroll')
-		dispatch('wheel')
-
-		// Neither handler should have run yet
-		expect(scrollCalls).toHaveLength(0)
-		expect(wheelCalls).toHaveLength(0)
-
-		flushRAF()
-
-		// Both handlers run exactly once per frame — the previous schedule-slot
-		// bug would have dropped whichever fired first
-		expect(scrollCalls).toHaveLength(1)
-		expect(wheelCalls).toHaveLength(1)
+		dispatch('click')
+		await Promise.resolve()
+		// Promise resolved, but on() never awaits it — host must remain unchanged
+		expect(host.count).toBe(0)
 	})
 })

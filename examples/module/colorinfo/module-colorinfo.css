@@ -1,0 +1,103 @@
+module-colorinfo {
+    --swatch-size: var(--input-height);
+    --color-fallback: transparent;
+
+    display: inline-flex;
+    gap: var(--space-l);
+
+    & summary {
+        cursor: pointer;
+        margin: 0 0 var(--space-s);
+
+        &::marker {
+            color: var(--color-text-soft);
+        }
+    }
+
+    & details[open] summary {
+        margin-bottom: var(--space-xs);
+    }
+
+    .summary {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-s);
+        margin-left: var(--space-xs);
+        vertical-align: middle;
+    }
+
+    .swatch {
+        position: relative;
+        display: inline-block;
+        background: var(--color-swatch);
+        width: var(--swatch-size);
+        height: var(--swatch-size);
+        border-radius: var(--space-xxs);
+        overflow: hidden;
+
+        &::before {
+            position: absolute;
+            content: "";
+            display: block;
+            width: 0;
+            height: 0;
+            border-left: var(--swatch-size) solid transparent;
+            border-bottom: var(--swatch-size) solid var(--color-fallback);
+        }
+    }
+
+    .label {
+        display: inline-block;
+        line-height: 1;
+    }
+
+    & strong,
+    & small {
+        display: block;
+    }
+
+    & strong {
+        font-size: var(--font-size-m);
+    }
+
+    & small {
+        color: var(--color-text-soft);
+        font-size: var(--font-size-xs);
+    }
+
+    .details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 var(--space-m);
+        margin-left: var(--space-l);
+    }
+
+    & dl {
+        margin: 0 0 var(--space-s);
+        display: inline-grid;
+        grid-template-rows: auto auto;
+        gap: var(--space-xxs) var(--space-xs);
+
+        &:last-of-type dt {
+            display: none;
+        }
+    }
+
+    & dt {
+        grid-column: 1;
+        color: var(--color-text-soft);
+        display: inline-block;
+        text-align: right;
+        font-size: var(--font-size-s);
+        font-weight: 400;
+        line-height: var(--line-height-s);
+    }
+
+    & dd {
+        grid-column: 2;
+        display: inline-block;
+        margin: 0;
+        font-size: var(--font-size-s);
+        line-height: var(--line-height-s);
+    }
+}

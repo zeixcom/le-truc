@@ -5,7 +5,7 @@ module-listnav module-lazyload {
 @media screen and (min-width: 48em) {
 	module-listnav {
 		display: grid;
-		grid-template-columns: 1fr 2fr;
+		grid-template-columns: 1fr 3fr;
 		gap: var(--space-xl);
 
 		& module-lazyload {

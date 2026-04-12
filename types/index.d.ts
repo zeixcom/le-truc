@@ -3,7 +3,7 @@ export { type ComponentProp, type ComponentProps, defineComponent, type FactoryC
 export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, type ProvideContextsHelper, type RequestContextHelper, type UnknownContext, } from './src/context';
 export { type EffectDescriptor, each, type FactoryResult, type Falsy, type PassedProps, type PassHelper, type Reactive, type WatchHelper, } from './src/effects';
 export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPropertyNameError, InvalidReactivesError, MissingElementError, } from './src/errors';
-export { createEventsSensor, type EventHandlers, type EventType, type OnHelper, type SensorEventHandler, } from './src/events';
+export { type EventType, type OnEventHandler, type OnHelper, } from './src/events';
 export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, type DangerouslySetInnerHTMLOptions, dangerouslyBindInnerHTML, } from './src/helpers';
 export { asParser, defineMethod, isMethodProducer, isParser, type MethodProducer, type Parser, } from './src/parsers';
 export { asBoolean } from './src/parsers/boolean';

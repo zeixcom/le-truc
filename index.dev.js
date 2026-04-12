@@ -1962,42 +1962,6 @@ var attachListener = (host, target, type, handler, options) => {
     listener.cancel?.();
   };
 };
-function createEventsSensor(target, init, events) {
-  let value = init;
-  return createSensor((set) => {
-    const controller = new AbortController;
-    for (const [type, handler] of Object.entries(events)) {
-      const passive = PASSIVE_EVENTS.has(type);
-      const rawListener = (e) => {
-        const eventTarget = e.target;
-        if (!eventTarget || !target.contains(eventTarget))
-          return;
-        try {
-          const next = handler({
-            event: e,
-            target,
-            prev: value
-          });
-          if (next == null || next instanceof Promise)
-            return;
-          if (!Object.is(next, value)) {
-            value = next;
-            set(next);
-          }
-        } catch (error) {
-          e.stopImmediatePropagation();
-          throw error;
-        }
-      };
-      const listener = passive ? throttle(rawListener, controller.signal) : rawListener;
-      target.addEventListener(type, listener, {
-        passive,
-        signal: controller.signal
-      });
-    }
-    return () => controller.abort();
-  }, { value });
-}
 var makeOn = (host) => {
   function on(target, type, handler, options = {}) {
     return () => {
@@ -2026,7 +1990,7 @@ var makeOn = (host) => {
             if (path.includes(el)) {
               const result = handler(e, el);
               if (!isRecord(result))
-                return;
+                break;
               batch(() => {
                 for (const [key, value] of Object.entries(result)) {
                   host[key] = value;
@@ -2465,7 +2429,6 @@ export {
   createMutableSignal,
   createMemo,
   createList,
-  createEventsSensor,
   createElementsMemo,
   createEffect,
   createComputed,

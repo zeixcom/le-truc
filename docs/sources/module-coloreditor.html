@@ -1,0 +1,911 @@
+<module-tabgroup>
+		<div role="tablist" aria-label="Tabs">
+		<button
+		type="button"
+		role="tab"
+		id="trigger_module-coloreditor_html"
+		aria-controls="panel_module-coloreditor_html"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		HTML
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_module-coloreditor_css"
+		aria-controls="panel_module-coloreditor_css"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		CSS
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_module-coloreditor_ts"
+		aria-controls="panel_module-coloreditor_ts"
+		aria-selected="true"
+		tabindex="0"
+	>
+		TypeScript
+	</button>
+	</div> <div
+		role="tabpanel"
+		id="panel_module-coloreditor_html"
+		aria-labelledby="trigger_module-coloreditor_html"
+		 hidden
+	>
+		<module-codeblock
+			language="html"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">module-coloreditor.html</span>
+				<span class="language">html</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-coloreditor</span><span style="color:#A6E22E"> color</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"oklch(.48 .23 263)"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Blue"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">card-colorscale</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"scale tiny"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">ol</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"presentation"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten80"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten60"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten40"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten20"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"base"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken20"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken40"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken60"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken80"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">ol</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">card-colorscale</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">form-textbox</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name-input"</span><span style="color:#F8F8F2">>Color name&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"input"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">input</span></span>
+<span class="line"><span style="color:#A6E22E">				type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"text"</span></span>
+<span class="line"><span style="color:#A6E22E">				id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name-input"</span></span>
+<span class="line"><span style="color:#A6E22E">				name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name"</span></span>
+<span class="line"><span style="color:#A6E22E">				value</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Blue"</span></span>
+<span class="line"><span style="color:#A6E22E">				autocomplete</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"off"</span></span>
+<span class="line"><span style="color:#A6E22E">				required</span></span>
+<span class="line"><span style="color:#F8F8F2">			/></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name-error"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"description"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"polite"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"name-description"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">form-textbox</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">form-colorgraph</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"graph"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">canvas</span><span style="color:#A6E22E"> width</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"400"</span><span style="color:#A6E22E"> height</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"400"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">canvas</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"knob"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"visually-hidden"</span><span style="color:#F8F8F2">>Drag&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">ol</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"presentation"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten80"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten60"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten40"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten20"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken20"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken40"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken60"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">li</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken80"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">ol</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span></span>
+<span class="line"><span style="color:#A6E22E">			class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"slider"</span></span>
+<span class="line"><span style="color:#A6E22E">			role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"slider"</span></span>
+<span class="line"><span style="color:#A6E22E">			tabindex</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-controls</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">			aria-labelledby</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue-label"</span></span>
+<span class="line"><span style="color:#F8F8F2">		></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">canvas</span><span style="color:#A6E22E"> width</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"360"</span><span style="color:#A6E22E"> height</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"1"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">canvas</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"thumb"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span><span style="color:#F8F8F2">>Lightness&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"input"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"number"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"unit"</span><span style="color:#F8F8F2">>%&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"buttons"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">					type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">					class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"decrement"</span></span>
+<span class="line"><span style="color:#A6E22E">					aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Decrement lightness"</span></span>
+<span class="line"><span style="color:#F8F8F2">				></span></span>
+<span class="line"><span style="color:#F8F8F2">					−</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">					type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">					class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"increment"</span></span>
+<span class="line"><span style="color:#A6E22E">					aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Increment lightness"</span></span>
+<span class="line"><span style="color:#F8F8F2">				></span></span>
+<span class="line"><span style="color:#F8F8F2">					+</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness-error"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span><span style="color:#F8F8F2">>Chroma&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"input"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"number"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"buttons"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"decrement"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Decrement chroma"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					−</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"increment"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Increment chroma"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					+</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma-error"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue-label"</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span><span style="color:#F8F8F2">>Hue&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"input"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span><span style="color:#A6E22E"> name</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"number"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"unit"</span><span style="color:#F8F8F2">>°&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"buttons"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"decrement"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Decrement hue"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					−</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"increment"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Increment hue"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					+</span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"error"</span><span style="color:#A6E22E"> aria-live</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"assertive"</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue-error"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">form-colorgraph</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"info"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">module-colorinfo</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten80"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"summary"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"swatch"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">small</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hex"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"details"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Lightness:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"percent","maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Chroma:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Hue:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>OKLCH:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"en"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							oklch(&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#F8F8F2">							>)</span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>RGB:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"rgb"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>HSL:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hsl"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">module-colorinfo</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">module-colorinfo</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten60"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"summary"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"swatch"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">small</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hex"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"details"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Lightness:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"percent","maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Chroma:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Hue:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>OKLCH:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"en"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							oklch(&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#F8F8F2">							>)</span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>RGB:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"rgb"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>HSL:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hsl"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">module-colorinfo</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">module-colorinfo</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten40"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"summary"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"swatch"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">small</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hex"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"details"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Lightness:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"percent","maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Chroma:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Hue:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>OKLCH:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"en"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							oklch(&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#F8F8F2">							>)</span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>RGB:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"rgb"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>HSL:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hsl"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">module-colorinfo</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">module-colorinfo</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lighten20"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"summary"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"swatch"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">small</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hex"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"details"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Lightness:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"percent","maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Chroma:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Hue:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>OKLCH:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"en"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							oklch(&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#F8F8F2">							>)</span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>RGB:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"rgb"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>HSL:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hsl"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">module-colorinfo</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">module-colorinfo</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"base"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">details</span><span style="color:#A6E22E"> open</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"summary"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"swatch"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">small</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hex"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"details"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Lightness:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"percent","maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Chroma:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Hue:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>OKLCH:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"en"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							oklch(&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#F8F8F2">							>)</span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>RGB:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"rgb"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>HSL:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hsl"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">module-colorinfo</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">module-colorinfo</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken20"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"summary"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"swatch"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">small</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hex"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"details"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Lightness:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"percent","maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Chroma:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Hue:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>OKLCH:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"en"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							oklch(&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#F8F8F2">							>)</span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>RGB:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"rgb"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>HSL:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hsl"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">module-colorinfo</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">module-colorinfo</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken40"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"summary"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"swatch"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">small</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hex"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"details"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Lightness:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"percent","maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Chroma:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Hue:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>OKLCH:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> lang</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"en"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							oklch(&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#F8F8F2">							>)</span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>RGB:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"rgb"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>HSL:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hsl"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">module-colorinfo</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">module-colorinfo</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken60"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"summary"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"swatch"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">small</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hex"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"details"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Lightness:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"percent","maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Chroma:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Hue:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>OKLCH:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							oklch(&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#F8F8F2">							>)</span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>RGB:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"rgb"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>HSL:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hsl"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">module-colorinfo</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">module-colorinfo</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"darken80"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"summary"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"swatch"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">strong</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">small</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hex"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">small</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">summary</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"details"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Lightness:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"style":"percent","maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Chroma:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>Hue:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>OKLCH:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							oklch(&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"lightness"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"chroma"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":4}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#A6E22E">								class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hue"</span></span>
+<span class="line"><span style="color:#A6E22E">								options</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">'{"maximumFractionDigits":2}'</span></span>
+<span class="line"><span style="color:#F8F8F2">							>&#x3C;/</span><span style="color:#F92672">basic-number</span></span>
+<span class="line"><span style="color:#F8F8F2">							>)</span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>RGB:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"rgb"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">>HSL:&#x3C;/</span><span style="color:#F92672">dt</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">dd</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"hsl"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">dd</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">dl</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">details</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">module-colorinfo</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-coloreditor</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span></code></pre>
+			</module-scrollarea>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_module-coloreditor_css"
+		aria-labelledby="trigger_module-coloreditor_css"
+		 hidden
+	>
+		<module-codeblock
+			language="css"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">module-coloreditor.css</span>
+				<span class="language">css</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">module-coloreditor</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">    display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">grid</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">    grid-template-areas</span><span style="color:#F8F8F2">:</span></span>
+<span class="line"><span style="color:#E6DB74">        "scale name"</span></span>
+<span class="line"><span style="color:#E6DB74">        "graph graph"</span></span>
+<span class="line"><span style="color:#E6DB74">        "lightness lightness"</span></span>
+<span class="line"><span style="color:#E6DB74">        "chroma chroma"</span></span>
+<span class="line"><span style="color:#E6DB74">        "hue hue"</span></span>
+<span class="line"><span style="color:#E6DB74">        "info info"</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">    grid-template-columns</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">auto</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672">fr</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">    column-gap</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">    > form-colorgraph {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-area</span><span style="color:#F8F8F2">: graph;</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">    ></span><span style="color:#A6E22E"> .hue</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-area</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">hue</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">    ></span><span style="color:#A6E22E"> .lightness</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-area</span><span style="color:#F8F8F2">: lightness;</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">    ></span><span style="color:#A6E22E"> .chroma</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-area</span><span style="color:#F8F8F2">: chroma;</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">    ></span><span style="color:#A6E22E"> .scale</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-area</span><span style="color:#F8F8F2">: scale;</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">    ></span><span style="color:#A6E22E"> .name</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-area</span><span style="color:#F8F8F2">: name;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        margin</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-s) </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">    ></span><span style="color:#A6E22E"> .info</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-area</span><span style="color:#F8F8F2">: info;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">flex</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        flex-direction</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">column</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        gap</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs);</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">@container</span><span style="color:#F8F8F2"> (width > 45rem) {</span></span>
+<span class="line"><span style="color:#F92672">    module-coloreditor</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-template-areas</span><span style="color:#F8F8F2">:</span></span>
+<span class="line"><span style="color:#E6DB74">            "scale name info"</span></span>
+<span class="line"><span style="color:#E6DB74">            "graph graph info"</span></span>
+<span class="line"><span style="color:#E6DB74">            "lightness lightness info"</span></span>
+<span class="line"><span style="color:#E6DB74">            "chroma chroma info"</span></span>
+<span class="line"><span style="color:#E6DB74">            "hue hue info"</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">        grid-template-columns</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">auto</span><span style="color:#AE81FF"> 3</span><span style="color:#F92672">fr</span><span style="color:#AE81FF"> 2</span><span style="color:#F92672">fr</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span></code></pre>
+			</module-scrollarea>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_module-coloreditor_ts"
+		aria-labelledby="trigger_module-coloreditor_ts"
+		
+	>
+		<module-codeblock
+			language="ts"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">module-coloreditor.ts</span>
+				<span class="language">ts</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asString, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	colorsNamed,</span></span>
+<span class="line"><span style="color:#F8F8F2">	differenceCiede2000,</span></span>
+<span class="line"><span style="color:#F8F8F2">	nearest,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Oklch,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> 'culori/fn'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asOklch } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../_common/asOklch'</span></span>
+<span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { getStepColor } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../_common/getStepColor'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleColoreditorProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	color</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Oklch</span></span>
+<span class="line"><span style="color:#F8F8F2">	name</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> nearest</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> lightness</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> chroma</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> hue</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'module-coloreditor'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> &#x26;</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleColoreditorProps</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> nearestNamedColor </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> nearest</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">	Object.</span><span style="color:#A6E22E">keys</span><span style="color:#F8F8F2">(colorsNamed),</span></span>
+<span class="line"><span style="color:#A6E22E">	differenceCiede2000</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleColoreditorProps</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#E6DB74">	'module-coloreditor'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> textbox </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'form-textbox'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> colorgraph </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'form-colorgraph'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> colorscale </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'card-colorscale'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> colorinfoBase </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'module-colorinfo.base'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({</span></span>
+<span class="line"><span style="color:#F8F8F2">			color: </span><span style="color:#A6E22E">asOklch</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">			name: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'Blue'</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#A6E22E">			nearest</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#A6E22E"> nearestNamedColor</span><span style="color:#F8F8F2">(host.color)[</span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">] </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#A6E22E">			lightness</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.color.l,</span></span>
+<span class="line"><span style="color:#A6E22E">			chroma</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.color.c,</span></span>
+<span class="line"><span style="color:#A6E22E">			hue</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.color.h </span><span style="color:#F92672">??</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		})</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> effects </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'change'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">event</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> { target } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> event</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (target </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLInputElement</span><span style="color:#F92672"> &#x26;&#x26;</span><span style="color:#F8F8F2"> target.name </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'name'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> { name: target.value }</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			textbox</span></span>
+<span class="line"><span style="color:#F92672">				&#x26;&#x26;</span><span style="color:#A6E22E"> pass</span><span style="color:#F8F8F2">(textbox, {</span></span>
+<span class="line"><span style="color:#F8F8F2">					value: </span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#A6E22E">					description</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#E6DB74"> `Nearest named CSS color: </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">host.nearest</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">				}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			colorgraph </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> pass</span><span style="color:#F8F8F2">(colorgraph, { color: </span><span style="color:#E6DB74">'color'</span><span style="color:#F8F8F2"> }),</span></span>
+<span class="line"><span style="color:#F8F8F2">			colorscale </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> pass</span><span style="color:#F8F8F2">(colorscale, { color: </span><span style="color:#E6DB74">'color'</span><span style="color:#F8F8F2">, name: </span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2"> }),</span></span>
+<span class="line"><span style="color:#F8F8F2">			colorinfoBase</span></span>
+<span class="line"><span style="color:#F92672">				&#x26;&#x26;</span><span style="color:#A6E22E"> pass</span><span style="color:#F8F8F2">(colorinfoBase, {</span></span>
+<span class="line"><span style="color:#F8F8F2">					color: </span><span style="color:#E6DB74">'color'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#A6E22E">					name</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">host.name</span><span style="color:#F92672">}</span><span style="color:#E6DB74"> 500`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">				}),</span></span>
+<span class="line"><span style="color:#F8F8F2">		]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">		for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">let</span><span style="color:#F8F8F2"> i </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">; i </span><span style="color:#F92672">&#x3C;</span><span style="color:#AE81FF"> 5</span><span style="color:#F8F8F2">; i</span><span style="color:#F92672">++</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> infoLighten </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`module-colorinfo.lighten</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">5</span><span style="color:#F92672"> -</span><span style="color:#F8F8F2"> i) </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 20</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			effects.</span><span style="color:#A6E22E">push</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#A6E22E">				pass</span><span style="color:#F8F8F2">(infoLighten, {</span></span>
+<span class="line"><span style="color:#A6E22E">					color</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#A6E22E"> getStepColor</span><span style="color:#F8F8F2">(host.color, </span><span style="color:#AE81FF">1</span><span style="color:#F92672"> -</span><span style="color:#F8F8F2"> i </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> 10</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#A6E22E">					name</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">host.name</span><span style="color:#F92672">}</span><span style="color:#F92672"> ${</span><span style="color:#F8F8F2">i </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 100</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">				}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			)</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F92672">		for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">let</span><span style="color:#F8F8F2"> i </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">; i </span><span style="color:#F92672">&#x3C;</span><span style="color:#AE81FF"> 5</span><span style="color:#F8F8F2">; i</span><span style="color:#F92672">++</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> infoDarken </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`module-colorinfo.darken</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">i </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 20</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			effects.</span><span style="color:#A6E22E">push</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#A6E22E">				pass</span><span style="color:#F8F8F2">(infoDarken, {</span></span>
+<span class="line"><span style="color:#A6E22E">					color</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#A6E22E"> getStepColor</span><span style="color:#F8F8F2">(host.color, </span><span style="color:#AE81FF">1</span><span style="color:#F92672"> -</span><span style="color:#F8F8F2"> (i </span><span style="color:#F92672">+</span><span style="color:#AE81FF"> 5</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> 10</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#A6E22E">					name</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">host.name</span><span style="color:#F92672">}</span><span style="color:#F92672"> ${</span><span style="color:#F8F8F2">(i </span><span style="color:#F92672">+</span><span style="color:#AE81FF"> 5</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 100</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">				}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			)</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> effects</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre>
+			</module-scrollarea>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+	</module-tabgroup>

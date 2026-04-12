@@ -5,34 +5,18 @@ import { expect, test } from '@playwright/test'
  *
  * Test Coverage Summary:
  *
- * ✅ WORKING FEATURES:
+ * FEATURES COVERED:
  * - Initial state rendering with proper ARIA attributes
- * - Value property now works correctly (writable, syncs to DOM)
- * - Validation error handling works (depends on value property)
+ * - Value updates on change event; length updates on input event
+ * - Validation error handling
  * - Writable properties (error, description, value) update correctly
- * - Clear button and clear() method work correctly
- * - Textarea value and length sensors work correctly
- * - Character remaining count works for textarea with maxlength
- * - Form integration works (native FormData collection)
- * - DOM events fire correctly (input, change)
+ * - Clear button and clear() method
+ * - Textarea value and length
+ * - Character remaining count for textarea with maxlength
+ * - Form integration (native FormData collection)
+ * - DOM events (input, change)
  * - Property type validation
  * - Readonly length property protection
- *
- * 🚫 BROKEN/LAZY FEATURES:
- * - Input length sensor is lazy (only updates when watched)
- *
- * 📝 COMPONENT BEHAVIOR NOTES:
- * - Value property works correctly with eager change event listeners
- * - Length sensor is lazy (only updates when watched, like textarea description)
- * - Validation works correctly thanks to eager change listeners
- * - Value property is writable and can be set programmatically for autosuggest
- * - DOM operations work fine throughout
- *
- * 🔧 TESTING APPROACH:
- * - Tests validate current working behavior
- * - Length sensor laziness is documented but not considered broken
- * - Tests serve as regression suite for the working implementation
- * - Comprehensive coverage of all component features
  */
 
 test.describe('form-textbox component', () => {
@@ -78,52 +62,51 @@ test.describe('form-textbox component', () => {
 
 	// ===== SENSOR BEHAVIOR TESTS =====
 
-	test('value updates on change event, length sensor is lazy', async ({
+	test('value updates on change event, length updates on input event', async ({
 		page,
 	}) => {
 		const input = page.locator('form-textbox input').first()
 
-		// Type some text
+		// Type some text - fires input events per keystroke
 		await input.type('John')
 
-		// Length sensor doesn't update (lazy - no watchers for input components)
+		// Length updates eagerly on input; value not yet set (needs change event)
 		let state = await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
 			return { value: element.value, length: element.length }
 		})
-		expect(state.length).toBe(0) // Lazy sensor - no watchers
+		expect(state.length).toBe(4)
 		expect(state.value).toBe('') // Value hasn't changed yet - needs change event
 
 		// Blur triggers change event
 		await input.blur()
 
-		// Now value should update
+		// Now value should update too
 		state = await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
 			return { value: element.value, length: element.length }
 		})
-		expect(state.value).toBe('John') // Now works!
-		expect(state.length).toBe(0) // Still 0 - no watchers for input
+		expect(state.value).toBe('John')
+		expect(state.length).toBe(4)
 	})
 
-	test('value property works, length sensor is lazy', async ({ page }) => {
+	test('value and length both reflect state after input and change', async ({
+		page,
+	}) => {
 		const input = page.locator('form-textbox input').first()
 
-		// Type some text
 		await (input as any).type('test')
 		await input.blur()
 
-		// Value works, length is lazy
 		const state = await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
 			return { value: element.value, length: element.length }
 		})
 
-		// Value now works correctly!
 		expect(state.value).toBe('test')
-		expect(state.length).toBe(0) // Lazy sensor - no watchers
+		expect(state.length).toBe(4)
 
-		// The DOM input itself works fine
+		// The DOM input reflects state
 		await expect(input).toHaveValue('test')
 	})
 
@@ -370,7 +353,7 @@ test.describe('form-textbox component', () => {
 	test('value property is writable, length is readonly', async ({ page }) => {
 		const input = page.locator('form-textbox input').first()
 
-		// Type some text
+		// Fill fires an input event, then blur fires a change event
 		await input.fill('test value')
 		await input.blur()
 
@@ -379,15 +362,15 @@ test.describe('form-textbox component', () => {
 			const element = document.querySelector('form-textbox') as any
 			return { value: element.value, length: element.length }
 		})
-		expect(state.value).toBe('test value') // Now works!
-		expect(state.length).toBe(0) // Lazy sensor - no watchers
+		expect(state.value).toBe('test value')
+		expect(state.length).toBe(10)
 
-		// Value property is writable, length should be ignored
+		// Value property is writable; assigning length should be silently ignored
 		await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
 			element.value = 'changed value'
 			try {
-				element.length = 999 // This should be ignored
+				element.length = 999 // should be ignored — length is readonly
 			} catch (_e) {
 				// Expected - length should be readonly
 			}
@@ -396,13 +379,13 @@ test.describe('form-textbox component', () => {
 		// Check that value was set and synced to DOM
 		await expect(input).toHaveValue('changed value')
 
-		// Properties should reflect the changes
+		// length is not updated by JS assignment — no input event fired
 		state = await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
 			return { value: element.value, length: element.length }
 		})
-		expect(state.value).toBe('changed value') // Value is writable
-		expect(state.length).toBe(0) // Length remains 0 (readonly/lazy)
+		expect(state.value).toBe('changed value')
+		expect(state.length).toBe(10) // unchanged — no input event since fill
 	})
 
 	// ===== FORM INTEGRATION TESTS =====

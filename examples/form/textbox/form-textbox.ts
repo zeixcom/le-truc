@@ -2,8 +2,8 @@ import {
 	bindProperty,
 	bindText,
 	bindVisible,
-	createEventsSensor,
 	createMemo,
+	createState,
 	defineComponent,
 	defineMethod,
 } from '../../..'
@@ -48,11 +48,11 @@ export default defineComponent<FormTextboxProps>(
 					)
 				: null
 
+		const length = createState(textbox.value.length)
+
 		expose({
 			value: textbox.value,
-			length: createEventsSensor(textbox, textbox.value.length, {
-				input: ({ target }) => target.value.length,
-			}),
+			length: length.get,
 			error: '',
 			description: descriptionMemo ?? descriptionEl?.textContent?.trim() ?? '',
 			clear: defineMethod(() => {
@@ -74,6 +74,9 @@ export default defineComponent<FormTextboxProps>(
 					error: textbox.validationMessage,
 				}
 			}),
+			on(textbox, 'input', () => {
+				length.set(textbox.value.length)
+			}),
 			watch('value', bindProperty(textbox, 'value')),
 			watch('error', error => {
 				textbox.ariaInvalid = String(!!error)
@@ -83,7 +86,7 @@ export default defineComponent<FormTextboxProps>(
 			errorEl && watch('error', bindText(errorEl)),
 			descriptionEl && watch('description', bindText(descriptionEl)),
 			clearBtn && [
-				watch('length', bindVisible(clearBtn)),
+				watch(length, bindVisible(clearBtn)),
 				on(clearBtn, 'click', () => {
 					host.clear()
 				}),

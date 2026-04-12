@@ -3,7 +3,6 @@ import {
 	bindAttribute,
 	bindText,
 	bindVisible,
-	createEventsSensor,
 	createMemo,
 	createState,
 	defineComponent,
@@ -41,12 +40,11 @@ export default defineComponent<FormComboboxProps>(
 		const isExpanded = createMemo(
 			() => showPopup.get() && listbox.options.length > 0,
 		)
+		const length = createState(textbox.value.length)
 
 		expose({
 			value: textbox.value,
-			length: createEventsSensor(textbox, textbox.value.length, {
-				input: ({ target }) => target.value.length,
-			}),
+			length: length.get,
 			error: '',
 			description: descriptionEl?.textContent?.trim() ?? '',
 			clear: defineMethod(() => {
@@ -80,6 +78,7 @@ export default defineComponent<FormComboboxProps>(
 				textbox.ariaExpanded = String(expanded)
 			}),
 			on(textbox, 'input', () => {
+				length.set(textbox.value.length)
 				textbox.checkValidity()
 				batch(() => {
 					host.value = textbox.value
@@ -108,7 +107,7 @@ export default defineComponent<FormComboboxProps>(
 				}
 			}),
 			clearBtn && [
-				watch('length', bindVisible(clearBtn)),
+				watch(length, bindVisible(clearBtn)),
 				on(clearBtn, 'click', () => {
 					host.clear()
 				}),

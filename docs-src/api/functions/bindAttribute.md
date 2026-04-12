@@ -2,7 +2,7 @@
 
 > **bindAttribute**(`element`, `name`, `allowUnsafe?`): [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string` \| `boolean`\>
 
-Defined in: [src/helpers.ts:97](https://github.com/zeixcom/le-truc/blob/4b464bcaf232e6baac491b9eb42d2a86dd71e380/src/helpers.ts#L97)
+Defined in: [src/helpers.ts:97](https://github.com/zeixcom/le-truc/blob/651798956eac55c47eec3d0590fc814ef1eb2ef9/src/helpers.ts#L97)
 
 Returns `RunHandlers` that set or toggle an attribute with security validation.
 
