@@ -413,6 +413,10 @@
 <span class="line"><span style="color:#F8F8F2">				}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">	return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">		on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'scroll'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">hasOverflow</span><span style="color:#F8F8F2">()) </span><span style="color:#A6E22E">batch</span><span style="color:#F8F8F2">(scrollCallback)</span></span>
+<span class="line"><span style="color:#F8F8F2">		}),</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#A6E22E">		watch</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#F8F8F2">			() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> overflowStart.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> overflowEnd.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(),</span></span>
 <span class="line"><span style="color:#A6E22E">			bindClass</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'overflow'</span><span style="color:#F8F8F2">),</span></span>
@@ -430,9 +434,6 @@
 <span class="line"><span style="color:#F8F8F2">					overflowEnd.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F8F8F2">				},</span></span>
 <span class="line"><span style="color:#F8F8F2">			)(host),</span></span>
-<span class="line"><span style="color:#A6E22E">		on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'scroll'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">hasOverflow</span><span style="color:#F8F8F2">()) </span><span style="color:#A6E22E">batch</span><span style="color:#F8F8F2">(scrollCallback)</span></span>
-<span class="line"><span style="color:#F8F8F2">		}),</span></span>
 <span class="line"><span style="color:#F8F8F2">	]</span></span>
 <span class="line"><span style="color:#F8F8F2">})</span></span>
 <span class="line"></span></code></pre>

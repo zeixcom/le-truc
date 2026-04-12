@@ -243,6 +243,8 @@
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(valueEl, { </span><span style="color:#A6E22E">value</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.value }),</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">				meter.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
 <span class="line"><span style="color:#F8F8F2">				host.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span></span>
@@ -250,7 +252,6 @@
 <span class="line"><span style="color:#E6DB74">					`</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">240</span><span style="color:#F92672"> *</span><span style="color:#F8F8F2"> value) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> meter.max</span><span style="color:#F92672">}</span><span style="color:#E6DB74">deg`</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">				)</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
-<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(valueEl, { </span><span style="color:#A6E22E">value</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.value }),</span></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span></span>
 <span class="line"><span style="color:#F8F8F2">					thresholds.</span><span style="color:#A6E22E">find</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">threshold</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> host.value </span><span style="color:#F92672">>=</span><span style="color:#F8F8F2"> threshold.min) </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> {</span></span>

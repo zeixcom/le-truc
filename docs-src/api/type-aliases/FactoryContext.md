@@ -2,7 +2,7 @@
 
 > **FactoryContext**\<`P`\> = [`ElementQueries`](ElementQueries.md) & `object`
 
-Defined in: [src/component.ts:103](https://github.com/zeixcom/le-truc/blob/651798956eac55c47eec3d0590fc814ef1eb2ef9/src/component.ts#L103)
+Defined in: [src/component.ts:103](https://github.com/zeixcom/le-truc/blob/715e9bd5c4e382082b6ddd7a0cf9768da5f33744/src/component.ts#L103)
 
 The context object passed to the v1.1 factory function.
 

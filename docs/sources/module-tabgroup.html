@@ -470,9 +470,7 @@
 <span class="line"><span style="color:#A6E22E">			getSelected</span><span style="color:#F8F8F2">(tabs.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(), </span><span style="color:#FD971F;font-style:italic">tab</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> tab.ariaSelected </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'true'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({</span></span>
-<span class="line"><span style="color:#F8F8F2">			selected: </span><span style="color:#A6E22E">createMemo</span><span style="color:#F8F8F2">(selectedState.get),</span></span>
-<span class="line"><span style="color:#F8F8F2">		})</span></span>
+<span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({ selected: selectedState.get })</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
 <span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(tabs, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, (</span><span style="color:#FD971F;font-style:italic">_e</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
@@ -507,6 +505,7 @@
 <span class="line"><span style="color:#F8F8F2">					selectedState.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(next)</span></span>
 <span class="line"><span style="color:#F8F8F2">				}</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'selected'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F92672">				for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> tab </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> tabs.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()) {</span></span>
 <span class="line"><span style="color:#F8F8F2">					tab.ariaSelected </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(</span><span style="color:#A6E22E">isCurrentTab</span><span style="color:#F8F8F2">(tab))</span></span>

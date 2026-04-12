@@ -202,7 +202,7 @@
 				<span class="language">ts</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asNumber, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asNumber, bindText, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { getLocale } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../_common/getLocale'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">BasicNumberProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
@@ -245,9 +245,9 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> drops</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">[] </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> []</span></span>
 <span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (style </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'currency'</span><span style="color:#F8F8F2">) {</span></span>
 <span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (</span></span>
-<span class="line"><span style="color:#F92672">			!</span><span style="color:#F8F8F2">o.currency </span><span style="color:#F92672">||</span></span>
-<span class="line"><span style="color:#F92672">			typeof</span><span style="color:#F8F8F2"> o.currency </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> 'string'</span><span style="color:#F92672"> ||</span></span>
-<span class="line"><span style="color:#F8F8F2">			o.currency.length </span><span style="color:#F92672">!==</span><span style="color:#AE81FF"> 3</span></span>
+<span class="line"><span style="color:#F92672">			!</span><span style="color:#F8F8F2">o.currency</span></span>
+<span class="line"><span style="color:#F92672">			||</span><span style="color:#F92672"> typeof</span><span style="color:#F8F8F2"> o.currency </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> 'string'</span></span>
+<span class="line"><span style="color:#F92672">			||</span><span style="color:#F8F8F2"> o.currency.length </span><span style="color:#F92672">!==</span><span style="color:#AE81FF"> 3</span></span>
 <span class="line"><span style="color:#F8F8F2">		) {</span></span>
 <span class="line"><span style="color:#A6E22E">			onError</span><span style="color:#F8F8F2">?.(</span></span>
 <span class="line"><span style="color:#E6DB74">				`style="currency" requires a 3-letter ISO currency (e.g. "CHF").`</span><span style="color:#F8F8F2">,</span></span>
@@ -319,15 +319,9 @@
 <span class="line"><span style="color:#F8F8F2">			host.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'options'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">		)</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({</span></span>
-<span class="line"><span style="color:#F8F8F2">			value: </span><span style="color:#A6E22E">asNumber</span><span style="color:#F8F8F2">(),</span></span>
-<span class="line"><span style="color:#F8F8F2">		})</span></span>
+<span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({ value: </span><span style="color:#A6E22E">asNumber</span><span style="color:#F8F8F2">() })</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">				host.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> formatter.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(value)</span></span>
-<span class="line"><span style="color:#F8F8F2">			}),</span></span>
-<span class="line"><span style="color:#F8F8F2">		]</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span><span style="color:#A6E22E">watch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> formatter.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(host.value), </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(host))]</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre>

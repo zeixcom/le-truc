@@ -475,33 +475,8 @@
 <span class="line"><span style="color:#F8F8F2">		})</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">				host.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, value)</span></span>
-<span class="line"><span style="color:#F8F8F2">				input.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
-<span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(filterEl, </span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, (</span><span style="color:#FD971F;font-style:italic">_e</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">el</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({ filter: el.value </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2"> })),</span></span>
-<span class="line"><span style="color:#F8F8F2">			clearBtn </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">				watch</span><span style="color:#F8F8F2">(lowerFilter, </span><span style="color:#A6E22E">bindVisible</span><span style="color:#F8F8F2">(clearBtn)),</span></span>
-<span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(clearBtn, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({ filter: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2"> })),</span></span>
-<span class="line"><span style="color:#F8F8F2">			],</span></span>
-<span class="line"><span style="color:#F8F8F2">			host.src </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">				watch</span><span style="color:#F8F8F2">(content, ({ </span><span style="color:#FD971F;font-style:italic">ok</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">error</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pending</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (callout) {</span></span>
-<span class="line"><span style="color:#F8F8F2">						callout.hidden </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> ok</span></span>
-<span class="line"><span style="color:#F8F8F2">						callout.classList.</span><span style="color:#A6E22E">toggle</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'danger'</span><span style="color:#F8F8F2">, </span><span style="color:#F92672">!!</span><span style="color:#F8F8F2">error)</span></span>
-<span class="line"><span style="color:#F8F8F2">					}</span></span>
-<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (loading) loading.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">pending</span></span>
-<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (errorEl) {</span></span>
-<span class="line"><span style="color:#F8F8F2">						errorEl.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">error</span></span>
-<span class="line"><span style="color:#F8F8F2">						errorEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> error</span></span>
-<span class="line"><span style="color:#F8F8F2">					}</span></span>
-<span class="line"><span style="color:#F8F8F2">					listbox.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">ok</span></span>
-<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (ok)</span></span>
-<span class="line"><span style="color:#A6E22E">						schedule</span><span style="color:#F8F8F2">(listbox, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">							listbox.innerHTML </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
-<span class="line"><span style="color:#F8F8F2">						})</span></span>
-<span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			],</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(clearBtn, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({ filter: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2"> })),</span></span>
 <span class="line"><span style="color:#88846F">			// Focus management on listbox</span></span>
 <span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(listbox, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">target</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> option </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (target </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">).</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span></span>
@@ -533,6 +508,30 @@
 <span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> ENTER_KEY) </span><span style="color:#F92672">return</span></span>
 <span class="line"><span style="color:#A6E22E">				getVisibleOptions</span><span style="color:#F8F8F2">()[focusIndex]?.</span><span style="color:#A6E22E">click</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				host.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, value)</span></span>
+<span class="line"><span style="color:#F8F8F2">				input.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			host.src </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">				watch</span><span style="color:#F8F8F2">(content, ({ </span><span style="color:#FD971F;font-style:italic">ok</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">error</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pending</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (callout) {</span></span>
+<span class="line"><span style="color:#F8F8F2">						callout.hidden </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> ok</span></span>
+<span class="line"><span style="color:#F8F8F2">						callout.classList.</span><span style="color:#A6E22E">toggle</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'danger'</span><span style="color:#F8F8F2">, </span><span style="color:#F92672">!!</span><span style="color:#F8F8F2">error)</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (loading) loading.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">pending</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (errorEl) {</span></span>
+<span class="line"><span style="color:#F8F8F2">						errorEl.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">error</span></span>
+<span class="line"><span style="color:#F8F8F2">						errorEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> error</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">					listbox.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">ok</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (ok)</span></span>
+<span class="line"><span style="color:#A6E22E">						schedule</span><span style="color:#F8F8F2">(listbox, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">							listbox.innerHTML </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
+<span class="line"><span style="color:#F8F8F2">						})</span></span>
+<span class="line"><span style="color:#F8F8F2">				}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			],</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#88846F">			// Per-option reactive effects</span></span>
 <span class="line"><span style="color:#A6E22E">			each</span><span style="color:#F8F8F2">(options, </span><span style="color:#FD971F;font-style:italic">option</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> option.textContent</span></span>
@@ -549,6 +548,8 @@
 <span class="line"><span style="color:#F8F8F2">					}),</span></span>
 <span class="line"><span style="color:#F8F8F2">				]</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			clearBtn </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(lowerFilter, </span><span style="color:#A6E22E">bindVisible</span><span style="color:#F8F8F2">(clearBtn)),</span></span>
 <span class="line"><span style="color:#F8F8F2">		]</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>

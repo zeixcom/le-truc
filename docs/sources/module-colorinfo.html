@@ -313,15 +313,16 @@
 <span class="line"><span style="color:#F8F8F2">		})</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(lightnessEls, { value: </span><span style="color:#E6DB74">'lightness'</span><span style="color:#F8F8F2"> }),</span></span>
+<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(chromaEls, { value: </span><span style="color:#E6DB74">'chroma'</span><span style="color:#F8F8F2"> }),</span></span>
+<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(hueEls, { value: </span><span style="color:#E6DB74">'hue'</span><span style="color:#F8F8F2"> }),</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'css'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindStyle</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'--color-swatch'</span><span style="color:#F8F8F2">)),</span></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'hex'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindStyle</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'--color-fallback'</span><span style="color:#F8F8F2">)),</span></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(labelStrong)),</span></span>
 <span class="line"><span style="color:#F8F8F2">			hexEl </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'hex'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(hexEl)),</span></span>
 <span class="line"><span style="color:#F8F8F2">			rgbEl </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'rgb'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(rgbEl)),</span></span>
 <span class="line"><span style="color:#F8F8F2">			hslEl </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'hsl'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(hslEl)),</span></span>
-<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(lightnessEls, { value: </span><span style="color:#E6DB74">'lightness'</span><span style="color:#F8F8F2"> }),</span></span>
-<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(chromaEls, { value: </span><span style="color:#E6DB74">'chroma'</span><span style="color:#F8F8F2"> }),</span></span>
-<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(hueEls, { value: </span><span style="color:#E6DB74">'hue'</span><span style="color:#F8F8F2"> }),</span></span>
 <span class="line"><span style="color:#F8F8F2">		]</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
