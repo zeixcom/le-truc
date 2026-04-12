@@ -24,6 +24,7 @@ export default defineComponent<FormCheckboxProps>(
 
 		return [
 			on(checkbox, 'change', () => ({ checked: checkbox.checked })),
+
 			watch('checked', checked => {
 				checkbox.checked = checked
 				host.toggleAttribute('checked', checked)

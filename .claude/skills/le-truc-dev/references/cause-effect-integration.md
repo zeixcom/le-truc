@@ -35,9 +35,11 @@ The cleanup in `pass()` restores the original signal (`slot.replace(original)`) 
 
 The `equals` option uses element-identity comparison (`a.length === b.length && a.every((el, i) => el === b[i])`). Since cause-effect 0.18.4, `equals` is fully respected by `invalidate()` — effects skip re-runs when the matched element set has not changed.
 
-## Sensor — event-driven readonly props
+## Sensor — advanced async or callback-driven state
 
-`createEventsSensor(element, init, events)` in `src/events.ts` wraps a cause-effect `Sensor<T>` for event-driven state. The sensor activates when first read and deactivates when it has no more readers. Used inside `expose()` for props driven by DOM events (e.g., input length, checkbox checked state).
+`createSensor<T>` from cause-effect is re-exported by le-truc. It creates a reactive value that is only writable from within its own setup callback. It activates lazily (when first read inside a reactive context) and deactivates when it has no more readers.
+
+For event-driven component props, use `createState` + `on` instead — the setup is explicit, the listener attaches at connect time, and there is no delegation. `createSensor` is appropriate when the value source is asynchronous or requires complex lifecycle management beyond what `on()` provides.
 
 ## createScope — effect lifetime
 

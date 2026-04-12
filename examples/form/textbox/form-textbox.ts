@@ -77,6 +77,10 @@ export default defineComponent<FormTextboxProps>(
 			on(textbox, 'input', () => {
 				length.set(textbox.value.length)
 			}),
+			on(clearBtn, 'click', () => {
+				host.clear()
+			}),
+
 			watch('value', bindProperty(textbox, 'value')),
 			watch('error', error => {
 				textbox.ariaInvalid = String(!!error)
@@ -85,12 +89,7 @@ export default defineComponent<FormTextboxProps>(
 			}),
 			errorEl && watch('error', bindText(errorEl)),
 			descriptionEl && watch('description', bindText(descriptionEl)),
-			clearBtn && [
-				watch(length, bindVisible(clearBtn)),
-				on(clearBtn, 'click', () => {
-					host.clear()
-				}),
-			],
+			clearBtn && watch(length, bindVisible(clearBtn)),
 		]
 	},
 )

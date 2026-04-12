@@ -19,20 +19,19 @@ export default defineComponent<ModuleCodeblockProps>(
 		const overlay = first('button.overlay')
 		const copy = first('basic-button.copy')
 
-		expose({
-			collapsed: asBoolean(),
-		})
+		expose({ collapsed: asBoolean() })
 
 		return [
-			watch('collapsed', bindAttribute(host, 'collapsed')),
 			on(overlay, 'click', () => ({ collapsed: false })),
-			copy &&
-				copyToClipboard(code, copy as HTMLElement & BasicButtonProps, {
+			copy
+				&& copyToClipboard(code, copy as HTMLElement & BasicButtonProps, {
 					success: copy.getAttribute('copy-success') || 'Copied!',
 					error:
-						copy.getAttribute('copy-error') ||
-						'Error trying to copy to clipboard!',
+						copy.getAttribute('copy-error')
+						|| 'Error trying to copy to clipboard!',
 				}),
+
+			watch('collapsed', bindAttribute(host, 'collapsed')),
 		]
 	},
 )

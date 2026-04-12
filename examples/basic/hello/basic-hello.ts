@@ -21,6 +21,7 @@ export default defineComponent<BasicHelloProps>(
 
 		return [
 			on(input, 'input', () => ({ name: input.value || fallback })),
+
 			watch('name', bindText(output)),
 		]
 	},

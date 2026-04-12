@@ -23,6 +23,7 @@ export default defineComponent<BasicCounterProps>(
 
 		return [
 			on(increment, 'click', () => ({ count: host.count + 1 })),
+
 			watch('count', bindText(count)),
 		]
 	},

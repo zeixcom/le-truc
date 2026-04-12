@@ -1,6 +1,6 @@
 ### Module Tabgroup
 
-A keyboard-accessible tab group that derives the selected tab from event delegation using `createEventsSensor()`. Demonstrates using `read()` to initialise a sensor's value by inspecting `aria-selected` across a `Memo<HTMLButtonElement[]>` target, handling multiple event types (`click`, `keyup`) in one sensor with arrow-key and Home/End navigation, applying `setProperty()` on `Memo` targets to keep `ariaSelected` and `tabIndex` in sync with the selected state, and using `show()` on a second `Memo` target to reveal only the matching panel.
+A keyboard-accessible tab group. Demonstrates `createState()` with `on()` for the read-only `selected` property, separate `on()` handlers on a `Memo<HTMLButtonElement[]>` target for `click` and `keyup` with arrow-key and Home/End navigation, and a single `watch()` effect that keeps `ariaSelected`, `tabIndex`, and panel visibility in sync with the selected state.
 
 #### Preview
 

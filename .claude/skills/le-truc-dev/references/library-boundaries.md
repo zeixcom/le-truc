@@ -26,7 +26,6 @@ What belongs in @zeix/cause-effect vs. @zeix/le-truc. Both libraries are co-deve
 | Attribute parsers (`asString`, `asBoolean`, `asInteger`, …) | le-truc | Attribute API is browser-only |
 | `first()` / `all()` DOM queries | le-truc | Requires `querySelector`, `MutationObserver` |
 | Context protocol (`provideContexts`, `requestContext`) | le-truc | Custom events, DOM event bubbling |
-| `createEventsSensor` | le-truc | `addEventListener`, event delegation |
 | Security validation (`setAttribute`) | le-truc | DOM-level protection |
 | `rAF`-based scheduler | le-truc | `requestAnimationFrame` is browser-only |
 

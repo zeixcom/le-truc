@@ -69,6 +69,7 @@ export default defineComponent<ModulePaginationProps>(
 				host.value++
 				if (host.value >= host.max) prev.focus()
 			}),
+
 			watch('value', value => {
 				host.setAttribute('value', String(value))
 				input.value = String(value)

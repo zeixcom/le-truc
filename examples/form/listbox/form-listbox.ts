@@ -171,33 +171,8 @@ export default defineComponent<FormListboxProps>(
 		})
 
 		return [
-			watch('value', value => {
-				host.setAttribute('value', value)
-				input.value = value
-			}),
 			on(filterEl, 'input', (_e, el) => ({ filter: el.value ?? '' })),
-			clearBtn && [
-				watch(lowerFilter, bindVisible(clearBtn)),
-				on(clearBtn, 'click', () => ({ filter: '' })),
-			],
-			host.src && [
-				watch(content, ({ ok, error, pending, value }) => {
-					if (callout) {
-						callout.hidden = ok
-						callout.classList.toggle('danger', !!error)
-					}
-					if (loading) loading.hidden = !pending
-					if (errorEl) {
-						errorEl.hidden = !error
-						errorEl.textContent = error
-					}
-					listbox.hidden = !ok
-					if (ok)
-						schedule(listbox, () => {
-							listbox.innerHTML = value
-						})
-				}),
-			],
+			on(clearBtn, 'click', () => ({ filter: '' })),
 			// Focus management on listbox
 			on(listbox, 'click', ({ target }) => {
 				const option = (target as HTMLElement).closest(
@@ -229,6 +204,30 @@ export default defineComponent<FormListboxProps>(
 				if (key !== ENTER_KEY) return
 				getVisibleOptions()[focusIndex]?.click()
 			}),
+
+			watch('value', value => {
+				host.setAttribute('value', value)
+				input.value = value
+			}),
+			host.src && [
+				watch(content, ({ ok, error, pending, value }) => {
+					if (callout) {
+						callout.hidden = ok
+						callout.classList.toggle('danger', !!error)
+					}
+					if (loading) loading.hidden = !pending
+					if (errorEl) {
+						errorEl.hidden = !error
+						errorEl.textContent = error
+					}
+					listbox.hidden = !ok
+					if (ok)
+						schedule(listbox, () => {
+							listbox.innerHTML = value
+						})
+				}),
+			],
+
 			// Per-option reactive effects
 			each(options, option => {
 				const textContent = option.textContent
@@ -245,6 +244,8 @@ export default defineComponent<FormListboxProps>(
 					}),
 				]
 			}),
+
+			clearBtn && watch(lowerFilter, bindVisible(clearBtn)),
 		]
 	},
 )

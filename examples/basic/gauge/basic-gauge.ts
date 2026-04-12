@@ -36,6 +36,8 @@ export default defineComponent<BasicGaugeProps>(
 		)
 
 		return [
+			pass(valueEl, { value: () => host.value }),
+
 			watch('value', value => {
 				meter.value = value
 				host.style.setProperty(
@@ -43,7 +45,6 @@ export default defineComponent<BasicGaugeProps>(
 					`${(240 * value) / meter.max}deg`,
 				)
 			}),
-			pass(valueEl, { value: () => host.value }),
 			watch(
 				() =>
 					thresholds.find(threshold => host.value >= threshold.min) || {

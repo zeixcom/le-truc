@@ -264,9 +264,9 @@ The `all()` function returns a `Memo<E[]>` — a memoized, reactive signal of al
 {% section %}
 ## Adding Event Listeners
 
-Event listeners respond to user interactions. They are the main cause for changes in component state. Le Truc provides two approaches for handling events, each suited to different situations.
+Event listeners respond to user interactions. They are the main cause for changes in component state.
 
-### on() — Imperative Event Handling
+### on() — Event Handling
 
 `on(target, type, handler)` is called from the factory context with an explicit target element or `Memo<E[]>` collection, and returned in the effect array:
 
@@ -300,50 +300,33 @@ on(button, 'click', () => ({
 
 `on()` returns an `EffectDescriptor` that is activated inside a reactive scope, so event listeners are automatically removed when the component disconnects.
 
-### createEventsSensor() — Declarative Event-to-State Mapping
+### Read-Only Event-Driven Properties
 
-For cases where a **single reactive value is entirely derived from events**, `createEventsSensor(element, init, events)` creates a read-only `Sensor<T>` property. Pass it directly to `expose()`:
+To expose a property that consumers can read but never directly set, create a `State` in the factory closure and expose only its getter. The `on()` handler updates the value:
 
-```js
-defineComponent('my-input', ({ expose, first, watch }) => {
+```js#my-input.ts
+defineComponent('my-input', ({ expose, first, on }) => {
   const textbox = first('input', 'A textbox is required.')
+  const length = createState(textbox.value.length)
 
   expose({
-    // 'length' is a read-only property derived entirely from events
-    length: createEventsSensor(textbox, textbox.value.length, {
-      input: ({ target }) => target.value.length,
-    }),
+    value: textbox.value,
+    length: length.get,  // read-only — consumers can read, not set
   })
 
-  return [/* effects */]
+  return [
+    on(textbox, 'input', () => {
+      length.set(textbox.value.length)
+    }),
+  ]
 })
 ```
 
-The sensor handler receives `{ event, target, prev }`:
+Exposing `state.get` rather than the full `State` is what makes the property read-only. When watching this property inside the same factory, pass the signal directly instead of a string prop name — it skips the host slot lookup:
 
-- **`event`** — the original DOM event
-- **`target`** — the element passed as the first argument (properly typed)
-- **`prev`** — the current sensor value before this event
-
-The sensor is declared inside `expose()`, making the property read-only — no other code can write to it. The sensor is the sole source of truth for that value.
-
-### When to Use Which?
-
-{% callout .tip %}
-**Choosing the right approach**
-
-Use **`on()`** when you want to:
-- React to a single event type on an element
-- Imperatively update one or more host properties
-- Keep the handler simple and familiar
-
-Use **`createEventsSensor()`** when you want to:
-- Derive a single value from one or more event types
-- Ensure the property is read-only — only events can change it
-- Access the previous value or the typed target element in the handler
-
-**Rule of thumb**: If you're *doing things* in response to an event, use `on()`. If an event stream *is* the state, use `createEventsSensor()`.
-{% /callout %}
+```js
+watch(length, bindVisible(clearBtn))
+```
 
 {% /section %}
 

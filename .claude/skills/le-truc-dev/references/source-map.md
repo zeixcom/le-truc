@@ -19,7 +19,7 @@ Core files in `src/`:
 |---|---|
 | `component.ts` | `defineComponent`, `Truc` class, component lifecycle, `#setAccessor`, `FactoryContext` |
 | `effects.ts` | `makeWatch`, `makePass`, `each`, `EffectDescriptor`, `FactoryResult`, `Reactive`, `WatchHandlers` |
-| `events.ts` | `makeOn`, `createEventsSensor`, `OnHelper` |
+| `events.ts` | `makeOn`, `OnHelper` |
 | `helpers.ts` | `bindText`, `bindProperty`, `bindClass`, `bindVisible`, `bindAttribute`, `bindStyle`, `dangerouslyBindInnerHTML` |
 | `ui.ts` | `first`, `all`, `makeElementQueries`, `createElementsMemo`, selector type inference |
 | `parsers.ts` | `Parser`/`MethodProducer` types; `isParser`, `isMethodProducer`, `asParser`, `defineMethod` |

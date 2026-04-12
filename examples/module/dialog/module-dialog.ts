@@ -30,6 +30,11 @@ export default defineComponent<ModuleDialogProps>(
 		expose({ open: false })
 
 		return [
+			on(openButton, 'click', () => ({ open: true })),
+			on(closeButton, 'click', () => ({ open: false })),
+			on(dialog, 'click', ({ target }) => target === dialog && { open: false }),
+			on(dialog, 'keydown', ({ key }) => key === 'Escape' && { open: false }),
+
 			watch('open', open => {
 				if (open) {
 					scrollTop = document.documentElement.scrollTop
@@ -55,10 +60,6 @@ export default defineComponent<ModuleDialogProps>(
 					dialog.close()
 				}
 			}),
-			on(openButton, 'click', () => ({ open: true })),
-			on(closeButton, 'click', () => ({ open: false })),
-			on(dialog, 'click', ({ target }) => target === dialog && { open: false }),
-			on(dialog, 'keydown', ({ key }) => key === 'Escape' && { open: false }),
 		]
 	},
 )

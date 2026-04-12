@@ -59,23 +59,14 @@ export default defineComponent<FormComboboxProps>(
 		})
 
 		return [
-			watch('value', bindAttribute(host, 'value')),
+			pass(listbox, { filter: () => host.value }),
+
 			on(host, 'keyup', ({ key }: KeyboardEvent) => {
 				if (key === 'Escape') {
 					showPopup.set(false)
 					textbox.focus()
 				}
 				if (key === 'Delete') host.clear()
-			}),
-			watch('error', error => {
-				textbox.ariaInvalid = String(!!error)
-				if (error && errorId) textbox.setAttribute('aria-errormessage', errorId)
-				else textbox.removeAttribute('aria-errormessage')
-			}),
-			errorEl && watch('error', bindText(errorEl)),
-			watch(isExpanded, expanded => {
-				listbox.hidden = !expanded
-				textbox.ariaExpanded = String(expanded)
 			}),
 			on(textbox, 'input', () => {
 				length.set(textbox.value.length)
@@ -86,14 +77,12 @@ export default defineComponent<FormComboboxProps>(
 					showPopup.set(true)
 				})
 			}),
-			descriptionEl && watch('description', bindText(descriptionEl)),
 			on(textbox, 'keydown', ({ key, altKey }) => {
 				if (key === 'ArrowDown') {
 					if (altKey) showPopup.set(true)
 					if (isExpanded.get()) listbox.options[0]?.focus()
 				}
 			}),
-			pass(listbox, { filter: () => host.value }),
 			on(listbox, 'change', ({ target }: Event) => {
 				if (target instanceof HTMLInputElement) {
 					textbox.value = target.value
@@ -106,12 +95,23 @@ export default defineComponent<FormComboboxProps>(
 					})
 				}
 			}),
-			clearBtn && [
-				watch(length, bindVisible(clearBtn)),
-				on(clearBtn, 'click', () => {
-					host.clear()
-				}),
-			],
+			on(clearBtn, 'click', () => {
+				host.clear()
+			}),
+
+			watch('value', bindAttribute(host, 'value')),
+			watch('error', error => {
+				textbox.ariaInvalid = String(!!error)
+				if (error && errorId) textbox.setAttribute('aria-errormessage', errorId)
+				else textbox.removeAttribute('aria-errormessage')
+			}),
+			errorEl && watch('error', bindText(errorEl)),
+			descriptionEl && watch('description', bindText(descriptionEl)),
+			watch(isExpanded, expanded => {
+				listbox.hidden = !expanded
+				textbox.ariaExpanded = String(expanded)
+			}),
+			clearBtn && watch(length, bindVisible(clearBtn)),
 		]
 	},
 )

@@ -43,7 +43,7 @@ defineComponent<MyProps>('my-element', ({ expose, first, host, on, watch }) => {
 
 - **`undefined` from a reader restores original DOM value**: When a reactive resolves to `undefined` (e.g. after an error in a reader, or a missing property), the effect restores the DOM value captured at setup time — not a blank/null state. The `RESET` symbol no longer exists.
 
-- **`createEventsSensor` signature**: `createEventsSensor(element, init, events)` — the element is the first argument, `init` is a static initial value. Used inside `expose()`: `length: createEventsSensor(textbox, textbox.value.length, { input: ({ target }) => target.value.length })`.
+- **Event-driven read-only props use `createState` + `on`**: Expose `state.get` (not the full `State`) to make a prop readable but not settable by consumers. Update the value in an `on()` handler. To watch the prop inside the factory, pass the signal directly: `watch(length, bindVisible(clearBtn))`.
 
 - **Debug mode**: Set `host.debug = true` on a component instance for verbose per-instance logging. For project-wide enhanced errors and logging, build with `process.env.DEV_MODE=true`.
 

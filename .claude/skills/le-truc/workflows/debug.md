@@ -49,7 +49,7 @@ Check each link in order:
 **Event handler → signal:**
 - Does the `on()` handler return a property update object `{ prop: value }`? If it returns `void`, the update must be done manually (e.g., `host.count++` directly).
 - Is the handler attached to the correct target element?
-- For `readonly` sensor props: they cannot be set from outside. Use `createEventsSensor` in `expose()` for the element that owns the events.
+- For read-only event-driven props: expose `state.get` (not the full `State`), and update the value in an `on()` handler. Consumers can read the prop but cannot set it.
 
 ## Step 3: Enable debug logging
 

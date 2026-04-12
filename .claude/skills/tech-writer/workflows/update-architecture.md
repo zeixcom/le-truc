@@ -21,7 +21,7 @@ Match the change type to the section:
 | `makeWatch`, `makeOn`, `makePass`, or `each` | "The Effect System" |
 | `first()`, `all()`, or dependency resolution | "The UI Query System" |
 | Parser/Reader/MethodProducer detection | "The Parser System" |
-| `createEventsSensor` | "Event-Driven Sensors" |
+| Event-driven read-only props (`createState` + `on`) | "Event-Driven Sensors" |
 | `provideContexts`/`requestContext` | "The Context Protocol" |
 | `schedule()` | "The Scheduler" |
 | `setAttribute` security rules | "Security" |

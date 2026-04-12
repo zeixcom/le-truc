@@ -66,7 +66,7 @@ export default defineComponent<FormSpinbuttonProps>(
 				else if (el.classList.contains('increment'))
 					host.value = Math.min(host.max, host.value + 1)
 			}),
-			on(controls, 'keydown', (e, _el) => {
+			on(controls, 'keydown', e => {
 				const { key } = e as KeyboardEvent
 				if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
 					e.stopPropagation()

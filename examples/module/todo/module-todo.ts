@@ -1,4 +1,4 @@
-import { createElementsMemo, defineComponent } from '../../..'
+import { bindAttribute, createElementsMemo, defineComponent } from '../../..'
 
 declare global {
 	interface HTMLElementTagNameMap {
@@ -37,6 +37,14 @@ export default defineComponent('module-todo', ({ first, on, pass, watch }) => {
 	const completed = createElementsMemo(list, 'form-checkbox[checked]')
 
 	return [
+		pass(submit, { disabled: () => !textbox.length }),
+		pass(count, { count: () => active.get().length }),
+		pass(clearCompleted, {
+			disabled: () => !completed.get().length,
+			badge: () =>
+				completed.get().length ? String(completed.get().length) : '',
+		}),
+
 		on(form, 'submit', e => {
 			e.preventDefault()
 			const value = textbox.value.trim()
@@ -46,23 +54,12 @@ export default defineComponent('module-todo', ({ first, on, pass, watch }) => {
 			})
 			textbox.clear()
 		}),
-		pass(submit, { disabled: () => !textbox.length }),
-		watch(
-			() => filter.value,
-			value => {
-				list.setAttribute('filter', value || 'all')
-			},
-		),
-		pass(count, { count: () => active.get().length }),
-		pass(clearCompleted, {
-			disabled: () => !completed.get().length,
-			badge: () =>
-				completed.get().length ? String(completed.get().length) : '',
-		}),
 		on(clearCompleted, 'click', () => {
 			const items = completed.get()
 			for (let i = items.length - 1; i >= 0; i--)
 				items[i]!.closest('li')?.remove()
 		}),
+
+		watch(() => filter.value || 'all', bindAttribute(list, 'filter')),
 	]
 })

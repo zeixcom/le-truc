@@ -1,6 +1,6 @@
 ### Form Combobox
 
-An advanced form component that coordinates a text input with a popup `form-listbox`. Demonstrates multiple Le Truc concepts together: `createEventsSensor()` for the read-only `length` property, `createState()` and `createMemo()` for private reactive state inside the setup function, `pass()` to push the filter value into the child listbox reactively, multiple effects per UI element, and `setAttribute()` for dynamic ARIA attributes (`aria-errormessage`, `aria-describedby`, `aria-expanded`). The `clear` method property shows the MethodProducer pattern for exposing imperative actions as reactive properties.
+An advanced form component that coordinates a text input with a popup `form-listbox`. Demonstrates multiple Le Truc concepts together: `createState()` with `on()` for the read-only `length` property, `createMemo()` for private derived state (`isExpanded`), `pass()` to push the filter value into the child listbox reactively, `batch()` for simultaneous prop updates, multiple effects per UI element, and `setAttribute()` for dynamic ARIA attributes (`aria-errormessage`, `aria-describedby`, `aria-expanded`). The `clear` method property shows the MethodProducer pattern for exposing imperative actions as reactive properties.
 
 #### Preview
 

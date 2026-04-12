@@ -59,6 +59,10 @@ export default defineComponent('module-scrollarea', ({ host, on, watch }) => {
 				}
 
 	return [
+		on(host, 'scroll', () => {
+			if (hasOverflow()) batch(scrollCallback)
+		}),
+
 		watch(
 			() => overflowStart.get() || overflowEnd.get(),
 			bindClass(host, 'overflow'),
@@ -76,8 +80,5 @@ export default defineComponent('module-scrollarea', ({ host, on, watch }) => {
 					overflowEnd.set(false)
 				},
 			)(host),
-		on(host, 'scroll', () => {
-			if (hasOverflow()) batch(scrollCallback)
-		}),
 	]
 })

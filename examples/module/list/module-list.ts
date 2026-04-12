@@ -56,6 +56,11 @@ export default defineComponent<ModuleListProps>(
 		})
 
 		return [
+			pass(add, {
+				disabled: () =>
+					(textbox && !textbox.length) || container.children.length >= max,
+			}),
+
 			on(form, 'submit', e => {
 				e.preventDefault()
 				const content = textbox?.value
@@ -65,10 +70,6 @@ export default defineComponent<ModuleListProps>(
 					})
 					textbox.clear()
 				}
-			}),
-			pass(add, {
-				disabled: () =>
-					(textbox && !textbox.length) || container.children.length >= max,
 			}),
 			on(host, 'click', e => {
 				const target = e.target

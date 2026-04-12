@@ -37,16 +37,6 @@ export default defineComponent<FormRadiogroupProps>(
 
 		return [
 			on(radios, 'change', (_e, el) => ({ value: el.value })),
-			each(radios, radio =>
-				watch(
-					() => radio.value === host.value,
-					isChecked => {
-						radio.checked = isChecked
-						radio.tabIndex = isChecked ? 0 : -1
-						radio.closest('label')?.classList.toggle('selected', isChecked)
-					},
-				),
-			),
 			on(host, 'click', ({ target }) => {
 				if (!(target instanceof HTMLElement)) return
 				if (target.hasAttribute('value'))
@@ -73,6 +63,17 @@ export default defineComponent<FormRadiogroupProps>(
 				if (key !== ENTER_KEY) return
 				radios.get()[focusIndex]?.click()
 			}),
+
+			each(radios, radio =>
+				watch(
+					() => radio.value === host.value,
+					isChecked => {
+						radio.checked = isChecked
+						radio.tabIndex = isChecked ? 0 : -1
+						radio.closest('label')?.classList.toggle('selected', isChecked)
+					},
+				),
+			),
 		]
 	},
 )

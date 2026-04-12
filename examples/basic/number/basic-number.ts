@@ -1,4 +1,4 @@
-import { asNumber, defineComponent } from '../../..'
+import { asNumber, bindText, defineComponent } from '../../..'
 import { getLocale } from '../../_common/getLocale'
 
 export type BasicNumberProps = {
@@ -41,9 +41,9 @@ function getNumberFormatter(
 	const drops: string[] = []
 	if (style === 'currency') {
 		if (
-			!o.currency ||
-			typeof o.currency !== 'string' ||
-			o.currency.length !== 3
+			!o.currency
+			|| typeof o.currency !== 'string'
+			|| o.currency.length !== 3
 		) {
 			onError?.(
 				`style="currency" requires a 3-letter ISO currency (e.g. "CHF").`,
@@ -115,14 +115,8 @@ export default defineComponent<BasicNumberProps>(
 			host.getAttribute('options'),
 		)
 
-		expose({
-			value: asNumber(),
-		})
+		expose({ value: asNumber() })
 
-		return [
-			watch('value', value => {
-				host.textContent = formatter.format(value)
-			}),
-		]
+		return [watch(() => formatter.format(host.value), bindText(host))]
 	},
 )

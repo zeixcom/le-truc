@@ -1,10 +1,10 @@
-import { asString, defineComponent } from '../../..'
 import {
 	colorsNamed,
 	differenceCiede2000,
 	nearest,
 	type Oklch,
 } from 'culori/fn'
+import { asString, defineComponent } from '../../..'
 import { asOklch } from '../../_common/asOklch'
 import { getStepColor } from '../../_common/getStepColor'
 

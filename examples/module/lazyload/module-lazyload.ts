@@ -63,9 +63,7 @@ export default defineComponent<ModuleLazyloadProps>(
 			{ value: { ok: false, value: '', error: '', pending: true } },
 		)
 
-		expose({
-			src: asString(),
-		})
+		expose({ src: asString() })
 
 		return [
 			watch(result, ({ ok, pending, error }) => {

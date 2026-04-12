@@ -1,3 +1,4 @@
+import { clampChroma, formatCss, inGamut, type Oklch } from 'culori/fn'
 import {
 	bindStyle,
 	bindText,
@@ -8,7 +9,6 @@ import {
 	each,
 	throttle,
 } from '../../..'
-import { clampChroma, formatCss, inGamut, type Oklch } from 'culori/fn'
 import { asOklch } from '../../_common/asOklch.ts'
 import { getStepColor } from '../../_common/getStepColor.ts'
 

@@ -1,6 +1,6 @@
 ### Form Textbox
 
-A general-purpose text field wrapper for `input` or `textarea` elements. Demonstrates `createEventsSensor()` for the read-only `length` property, a conditional Reader initializer for `description` that produces either a static string or a computed function (remaining characters) depending on DOM attributes, the MethodProducer pattern for `clear`, and `setAttribute()` for dynamic ARIA linkage (`aria-errormessage`, `aria-describedby`). Designed to be composable — `form-combobox` and `module-todo` both embed it and drive it via `pass()`.
+A general-purpose text field wrapper for `input` or `textarea` elements. Demonstrates `createState()` with `on()` for the read-only `length` property, `createMemo()` for a computed `description` that shows remaining character count when `data-remaining` is set on the description element, the MethodProducer pattern for `clear`, and `setAttribute()` for dynamic ARIA linkage (`aria-errormessage`, `aria-describedby`). Designed to be composable — `form-combobox` and `module-todo` both embed it and drive it via `pass()`.
 
 #### Preview
 

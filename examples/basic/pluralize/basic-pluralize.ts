@@ -1,4 +1,9 @@
-import { asClampedInteger, bindText, defineComponent } from '../../..'
+import {
+	asClampedInteger,
+	bindText,
+	bindVisible,
+	defineComponent,
+} from '../../..'
 import { getLocale } from '../../_common/getLocale'
 
 export type BasicPluralizeProps = {
@@ -48,21 +53,16 @@ export default defineComponent<BasicPluralizeProps>(
 
 		return [
 			count && watch('count', bindText(count)),
-			none &&
-				watch('count', value => {
-					none.hidden = value !== 0
-				}),
-			some &&
-				watch('count', value => {
-					some.hidden = value === 0
-				}),
+			none && watch(() => host.count === 0, bindVisible(none)),
+			some && watch(() => host.count !== 0, bindVisible(some)),
 			...categories.map(category => {
 				const el = categoryElements[category]
 				return (
-					el &&
-					watch('count', value => {
-						el.hidden = pluralizer.select(value) !== category
-					})
+					el
+					&& watch(
+						() => pluralizer.select(host.count) === category,
+						bindVisible(el),
+					)
 				)
 			}),
 		]

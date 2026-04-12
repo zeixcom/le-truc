@@ -83,7 +83,7 @@ All in `references/`:
 |---|---|
 | component-model.md | `defineComponent` args, reactivity flow, re-exported signal API |
 | effects.md | Which bind* helper / effect to use when: `bindText`, `bindProperty`, `watch`, `on`, `pass`, `each`, etc. |
-| parsers.md | Which initializer to use in `expose()`: `asString`, `asBoolean`, `asInteger`, `defineMethod`, `createEventsSensor`, etc. |
+| parsers.md | Which initializer to use in `expose()`: `asString`, `asBoolean`, `asInteger`, `defineMethod`, `state.get`, etc. |
 | coordination.md | `pass()`, `provideContexts`/`requestContext`, `on()` on host, `all()` |
 | markup.md | HTML structure: progressive enhancement, semantic nesting, variant examples |
 | styling.md | CSS: host scoping, nesting, custom properties, variant modifier classes |

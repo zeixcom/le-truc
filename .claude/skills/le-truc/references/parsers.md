@@ -9,7 +9,7 @@ All parsers are imported from `@zeix/le-truc`.
 |---|---|
 | **Parser** (`asParser`-wrapped) | Prop is configured by HTML authors via attributes in server-rendered markup |
 | **Static value** | Prop starts with a fixed default not derived from DOM or attributes |
-| **Signal** | Prop is backed by an existing signal (e.g. `createEventsSensor(...)`) |
+| **Signal (`state.get`)** | Prop is read-only to consumers; expose the getter of a `createState()` in the factory closure |
 | **MemoCallback** `() => T` | Prop is a derived computed value (unbranded thunk) |
 | **MethodProducer** (`defineMethod`-wrapped) | Prop is an imperative method callable from outside |
 
@@ -93,19 +93,33 @@ Parses the attribute as JSON. Throws `TypeError` for invalid JSON.
 config: asJSON({ theme: 'light', size: 'medium' })
 ```
 
-## `createEventsSensor(element, init, events)` — event-driven props
+## Event-driven read-only props — `createState` + `on`
 
-Use inside `expose()` when a prop should update reactively from DOM events.
+For props that update from DOM events and should not be settable by consumers, create a `State` in the factory closure and expose only its getter:
 
 ```typescript
+const length = createState(textbox.value.length)
+
 expose({
-  length: createEventsSensor(textbox, textbox.value.length, {
-    input: ({ target }) => target.value.length,
-  }),
+  value: textbox.value,
+  length: length.get,  // getter only — consumers cannot set this prop
 })
+
+return [
+  on(textbox, 'input', () => {
+    length.set(textbox.value.length)
+  }),
+  // ...
+]
 ```
 
-The handler receives `{ event, target, prev }` and returns the new value (or `void` to leave unchanged).
+Write-protection comes from exposing `state.get` — a plain reactive function — rather than the full `State`. Consumers see a reactive getter with no setter.
+
+To watch this prop inside the same factory, pass the signal directly rather than the string prop name:
+
+```typescript
+watch(length, bindVisible(clearBtn))  // direct signal — skips host slot lookup
+```
 
 ## `defineMethod(fn)` — imperative methods
 
@@ -149,4 +163,4 @@ expose({ color: asColor })
 | Prop has a fixed starting value | Static: `false`, `0`, `''`, `[]` |
 | Prop is a reactive value from a signal | Pass the signal directly |
 | Prop installs an imperative method on `host` | `defineMethod(fn)` |
-| Prop is driven by DOM events | `createEventsSensor(element, init, events)` |
+| Prop is event-driven and read-only to consumers | `createState(init)` in factory closure; expose `state.get`; update via `on()` handler |

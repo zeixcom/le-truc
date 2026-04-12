@@ -43,9 +43,7 @@ export default defineComponent<ModuleTabgroupProps>(
 			getSelected(tabs.get(), tab => tab.ariaSelected === 'true'),
 		)
 
-		expose({
-			selected: createMemo(selectedState.get),
-		})
+		expose({ selected: selectedState.get })
 
 		return [
 			on(tabs, 'click', (_e, target) => {
@@ -80,6 +78,7 @@ export default defineComponent<ModuleTabgroupProps>(
 					selectedState.set(next)
 				}
 			}),
+
 			watch('selected', () => {
 				for (const tab of tabs.get()) {
 					tab.ariaSelected = String(isCurrentTab(tab))

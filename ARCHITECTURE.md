@@ -10,7 +10,7 @@ src/
   effects.ts          Effect primitives: EffectDescriptor, FactoryResult, each()
   ui.ts               DOM queries (first/all), dependency resolution, selector type inference
   parsers.ts          Parser/Reader type system and branding utilities
-  events.ts           Event-driven sensor factory (createEventsSensor)
+  events.ts           Event binding helpers (makeOn, OnHelper)
   context.ts          Context protocol (provide/request) for dependency injection
   helpers.ts          bind* convenience WatchHandlers for use with watch()
   scheduler.ts        rAF-based task deduplication
@@ -168,23 +168,25 @@ Parsers transform HTML attribute strings into typed JavaScript values. `Parser<T
 
 Parsers are called once at connect time with `this.getAttribute(key)`. `static observedAttributes = []` — attributes don't drive reactive updates after connect.
 
-## Event-Driven Sensors
+## Event-Driven State
 
-`createEventsSensor(element, init, events)` creates a `Sensor<T>` — a signal driven by DOM events. Used inside `expose()` to declare a sensor-backed reactive property. The element is the first argument (explicit, not a UI key string).
+For props that derive from DOM events and should be read-only to consumers, use `createState` + `on`:
 
 ```ts
+const length = createState(textbox.value.length)
+
 expose({
-    length: createEventsSensor(textbox, textbox.value.length, {
-        input: ({ target }) => (target as HTMLInputElement).value.length,
-    }),
+    length: length.get,  // getter only — consumers cannot set this prop
 })
+
+return [
+    on(textbox, 'input', () => {
+        length.set(textbox.value.length)
+    }),
+]
 ```
 
-Internally, the sensor attaches listeners to the element and emits a new value whenever a matched event fires. The sensor is created via `createSensor(set => ...)` from `@zeix/cause-effect`, which manages the lifecycle (activate when read, deactivate when unwatched).
-
-This is more declarative than `on()`: instead of imperatively updating host properties, the sensor produces a single reactive value from multiple event types. Use case: combining `input`, `change`, `focus`, `blur` into a single state value.
-
-The sensor is created via `createSensor(set => ...)` from `@zeix/cause-effect`, which manages the lifecycle (activate when read, deactivate when unwatched).
+Exposing `state.get` rather than the full `State` makes `host.length` readable but not settable from outside. The `on()` handler attaches synchronously at connect time. Pass the signal directly to `watch()` within the same factory to skip the host slot lookup: `watch(length, bindVisible(clearBtn))`.
 
 ## The Context Protocol
 
@@ -475,22 +477,6 @@ expose({
 
 The signature changes slightly: `requestContext` is provided as a factory helper that captures `host`, so the user no longer needs to pass it. Internally dispatches the event from `host` and returns a `Memo<T>`.
 
-### `createEventsSensor(target, init, events)` — Event-Driven Sensor
-
-Refactored to accept a target element directly instead of a UI key string.
-
-```ts
-expose({
-    length: createEventsSensor(textbox, textbox.value.length, {
-        input: ({ target }) => target.value.length,
-    }),
-})
-```
-
-The `target` parameter replaces the string `key` lookup. The `init` parameter is a plain value (not `read(reader, fallback)` — `read` is eliminated). Internally, `createEventsSensor` still returns a `Sensor<T>` that `#initSignals` handles.
-
-**Handler context**: The `ui` field in handler context objects becomes unnecessary (elements are in the closure). The handler receives `{ event, target, prev }` — dropping `ui`.
-
 ### Component Lifecycle (v1.1)
 
 ```
@@ -531,9 +517,9 @@ With built-in effects (`setAttribute`, `toggleAttribute`, etc.) no longer wrappi
 
 These are opt-in imports, not factory helpers. Authors who use native DOM methods directly accept responsibility for validation.
 
-### Worked Example: `form-combobox` in v1.1
+### Worked Example: `form-combobox`
 
-The combobox is one of the most complex components (6 UI targets, 12 effects, event sensors, `pass`, `show`, memos). Here's how it translates:
+The combobox is one of the most complex components (6 UI targets, 12 effects, private state, `pass`, memos). Here's how it looks:
 
 ```ts
 export default defineComponent<FormComboboxProps, FormComboboxUI>(
@@ -552,12 +538,11 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
         const isExpanded = createMemo(
             () => showPopup.get() && listbox.options.length > 0,
         )
+        const length = createState(textbox.value.length)
 
         expose({
             value: '',
-            length: createEventsSensor(textbox, textbox.value.length, {
-                input: ({ target }) => target.value.length,
-            }),
+            length: length.get,
             error: '',
             description: description?.textContent ?? '',
             clear: clearMethod,
@@ -588,6 +573,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
                 textbox.ariaExpanded = String(expanded)
             }),
             on(textbox, 'input', (_event, el) => {
+                length.set(el.value.length)
                 el.checkValidity()
                 batch(() => {
                     host.value = el.value
@@ -621,7 +607,7 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
             }),
 
             // Clear button
-            clear && watch('length', length => { clear.hidden = !length }),
+            clear && watch(length, l => { clear.hidden = !l }),
             clear && on(clear, 'click', () => { host.clear() }),
 
             // Text displays
