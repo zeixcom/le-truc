@@ -40,6 +40,8 @@ Never use the templates `html` tag inside a Markdoc schema transform. Never use 
 **`SERVER.md` is the authoritative architecture document.** Read it before changing any major component. `TESTS.md` governs all test decisions.
 
 **Run `bun test server/tests` after every change.**
+
+**Run the linter** after every change to `server/`: `bunx biome check --write ./server`.
 </essential_principles>
 
 <intake>
@@ -85,6 +87,25 @@ All in `references/`:
 | template-system.md | `html`/`xml`/`css`/`js` template tags, escaping, `raw()`, composition utilities |
 | testing.md | Test categories, commands, file conventions, test-utils.ts helper API |
 </reference_index>
+
+<post_task_protocol>
+After completing any task, in this order:
+
+1. **Run tests:** `bun test server/tests` — all tests must pass
+2. **Run linter:** `bunx biome check --write ./server` — no new lint errors
+3. **Update TODO.md** (only if the task was assigned via TODO.md):
+   - If the change affects **server API, HTTP routes, build pipeline behavior, or template output** → mark `— done, pending review ⏳` and add handoff:
+     ```
+     **Changed:** which file(s) and what (function name, route, effect)
+     **How:** key implementation note (1–2 sentences)
+     **Check:** what the Architect should focus on
+     ```
+   - If the change is a **bug fix, test, or config tweak** → mark `— done ✓` and add `**Changed:**` only
+4. **Write to NOTES.md** if you encountered an unexpected challenge or want to deviate from the plan:
+   - Use the format defined in the `architect` skill's `<notes_format>` section
+   - Stop work on the task — do not continue on assumptions
+   - Wait for Architect or user to resolve before proceeding
+</post_task_protocol>
 
 <workflows_index>
 All in `workflows/`:

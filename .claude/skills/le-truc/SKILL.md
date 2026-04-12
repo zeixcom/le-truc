@@ -33,20 +33,22 @@ The factory receives a `FactoryContext` at connect time. Call `expose({ ... })` 
 
 **Reactivity flows in one direction:**
 ```
-attribute at connect time → parser → host.prop (signal)
-                                              ↓
-event / property set ──────────→ host.prop (signal)
-                                              ↓
-                              watch(source, handler) re-runs
-                                              ↓
-                                    DOM update via bind*
-                                              ↓
-                          on(el, type, handler) → { prop: value }
-                                              ↓
-                               signal updated → watch re-runs
+attribute at connect time → parser
+                              ↓
+event / property set → host.prop (signal)
+                              ↓
+                 watch(source, handler) re-runs
+                              ↓
+                      DOM update via bind*
+                              ↓
+            on(el, type, handler) → { prop: value }
+                              ↓
+                signal updated → watch re-runs
 ```
 
 **`@zeix/cause-effect` is re-exported.** Signal types (`State`, `Memo`, `Sensor`, `Slot`, etc.) and utilities (`batch`, `match`, `untrack`) are available directly from `@zeix/le-truc`. No separate install or import needed.
+
+**Run the full test suite after every change.** Check `package.json` for the test command.
 </essential_principles>
 
 <intake>

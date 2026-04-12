@@ -61,11 +61,16 @@ const html = Markdoc.renderers.html(tree)
 ```
 
 If the fix touches HTTP routing, verify `guardPath()` still blocks traversal attempts.
+
+## Step 6: Post-task protocol
+
+Follow the `<post_task_protocol>` defined in SKILL.md. Bug fixes do not require API review — mark `— done ✓`.
 </process>
 
 <success_criteria>
 - The specific bug no longer occurs
 - A regression test covers the fixed case
-- `bun test server/tests` passes with no new failures
+- `bun test server/tests` passes with no new failures, linter clean
 - No unrelated code changed
+- TODO.md updated if task was assigned via TODO.md
 </success_criteria>

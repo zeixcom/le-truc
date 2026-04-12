@@ -24,6 +24,8 @@ For deep dives into cause-effect signal internals, use the `cause-effect-dev` sk
 **`asParser()` and `defineMethod()` branding is required.** `isParser()` checks only for `PARSER_BRAND` — unbranded functions are NOT treated as parsers. Always brand custom parsers and method producers.
 
 **Run the project's own test suite** after every change (check `package.json` for the command).
+
+**Run the linter** after every change to `src/`: `bun run lint`.
 </essential_principles>
 
 <intake>
@@ -61,6 +63,25 @@ All in `references/`:
 | cause-effect-integration.md | How le-truc uses cause-effect internally (Slot, Memo, Sensor, Scope) |
 | non-obvious.md | Tricky behaviors not obvious from the code (distilled from CLAUDE.md) |
 </reference_index>
+
+<post_task_protocol>
+After completing any task, in this order:
+
+1. **Run tests:** `bun run test` — all tests must pass
+2. **Run linter:** `bun run lint` — no new lint errors
+3. **Update TODO.md** (only if the task was assigned via TODO.md):
+   - If the change affects the **public API surface** → mark `— done, pending review ⏳` and add handoff:
+     ```
+     **Changed:** which file(s) and what (function name, lines)
+     **How:** key implementation note (1–2 sentences)
+     **Check:** what the Architect should focus on
+     ```
+   - If the change is a **bug fix, test, or internal-only** → mark `— done ✓` and add `**Changed:**` only
+4. **Write to NOTES.md** if you encountered an unexpected challenge or want to deviate from the plan:
+   - Use the format defined in the `architect` skill's `<notes_format>` section
+   - Stop work on the task — do not continue on assumptions
+   - Wait for Architect or user to resolve before proceeding
+</post_task_protocol>
 
 <workflows_index>
 All in `workflows/`:

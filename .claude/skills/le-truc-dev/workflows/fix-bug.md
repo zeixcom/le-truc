@@ -52,6 +52,10 @@ Write the smallest fix. Avoid changing unrelated behavior. If the fix touches `w
 ## Step 6: Verify
 
 Run the full test suite. If no test covered this bug, add one before closing.
+
+## Step 7: Post-task protocol
+
+Follow the `<post_task_protocol>` defined in SKILL.md. Bug fixes do not require API review — mark `— done ✓`.
 </process>
 
 <success_criteria>
@@ -59,5 +63,6 @@ Run the full test suite. If no test covered this bug, add one before closing.
 - Fix is minimal — no unrelated changes
 - Non-obvious behavior documented in references/non-obvious.md if it wasn't already
 - Test added for the regression
-- Full test suite passes
+- Full test suite passes, linter clean
+- TODO.md updated if task was assigned via TODO.md
 </success_criteria>

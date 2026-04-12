@@ -47,12 +47,17 @@ If the change adds or modifies a public API:
 - Update `docs-src/pages/` narrative documentation as needed
 
 Do not update documentation for internal-only changes.
+
+## Step 8: Post-task protocol
+
+Follow the `<post_task_protocol>` defined in SKILL.md.
 </process>
 
 <success_criteria>
 - Feature is confirmed in scope for le-truc (not cause-effect)
 - Source file(s) read before writing
 - Existing internal patterns followed (`bind*` helpers, `asParser`, `defineMethod`, etc.)
-- Tests pass
+- Tests pass, linter clean
 - Public API documentation updated if the exported surface changed
+- TODO.md updated with handoff (if task was assigned via TODO.md)
 </success_criteria>

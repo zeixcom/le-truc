@@ -64,14 +64,18 @@ Run `bun test server/tests` and verify all tests pass before moving on.
 
 - Add/update the effects or routes table in `server/SERVER.md`
 - Update `references/source-map.md` if a new file was created
-- Update `server/TASKS.md` if this closes an open task
+
+## Step 6: Post-task protocol
+
+Follow the `<post_task_protocol>` defined in SKILL.md.
 </process>
 
 <success_criteria>
 - Feature works correctly in `bun run dev` (watch mode)
-- `bun test server/tests` passes
+- `bun test server/tests` passes, linter clean
 - No hardcoded paths — all paths via constants from `server/config.ts`
 - All file writes use `writeFileSafe()` (skips unchanged files)
 - All dynamic paths guarded with `guardPath()` where applicable
 - `server/SERVER.md` reflects the change
+- TODO.md updated with handoff (if task was assigned via TODO.md)
 </success_criteria>
