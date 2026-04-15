@@ -59,7 +59,9 @@ export { generatePanels }
 
 export const sourcesEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => { resolve = res })
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
 	const cleanup = createEffect(() => {
 		match(
 			[

@@ -16,7 +16,10 @@ function makeSlide(title: string, children: Node[] = []): Node {
 	return new Node('tag', { title }, children, 'slide')
 }
 
-function transformCarousel(slides: Node[], extraAttrs: Record<string, unknown> = {}): Tag {
+function transformCarousel(
+	slides: Node[],
+	extraAttrs: Record<string, unknown> = {},
+): Tag {
 	const node = new Node('tag', extraAttrs, slides, 'carousel')
 	return carousel.transform!(node, {}) as Tag
 }
@@ -46,7 +49,10 @@ describe('carousel schema', () => {
 	})
 
 	test('wraps tab buttons in role="tablist"', () => {
-		const result = transformCarousel([makeSlide('Slide One'), makeSlide('Slide Two')])
+		const result = transformCarousel([
+			makeSlide('Slide One'),
+			makeSlide('Slide Two'),
+		])
 		const nav = result.children.find(
 			c => c instanceof Tag && (c as Tag).name === 'nav',
 		) as Tag | undefined
@@ -58,7 +64,10 @@ describe('carousel schema', () => {
 	})
 
 	test('includes a tabpanel div for each slide', () => {
-		const result = transformCarousel([makeSlide('Slide One'), makeSlide('Slide Two')])
+		const result = transformCarousel([
+			makeSlide('Slide One'),
+			makeSlide('Slide Two'),
+		])
 		const slidesDiv = result.children.find(
 			c => c instanceof Tag && (c as Tag).attributes.class === 'slides',
 		) as Tag | undefined
@@ -81,7 +90,8 @@ describe('carousel schema', () => {
 	test('includes visually-hidden heading for accessibility', () => {
 		const result = transformCarousel([makeSlide('Slide One')])
 		const hiddenHeading = (result.children as Tag[]).find(
-			c => c instanceof Tag && (c as Tag).attributes.class === 'visually-hidden',
+			c =>
+				c instanceof Tag && (c as Tag).attributes.class === 'visually-hidden',
 		)
 		expect(hiddenHeading).toBeTruthy()
 	})

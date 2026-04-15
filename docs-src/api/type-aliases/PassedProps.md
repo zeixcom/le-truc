@@ -2,7 +2,7 @@
 
 > **PassedProps**\<`P`, `Q`\> = `{ [K in keyof Q & string]?: Reactive<Q[K], P> }`
 
-Defined in: [src/effects.ts:68](https://github.com/zeixcom/le-truc/blob/351fe6de1fcacfd814112a86c890ce84f0ea57f3/src/effects.ts#L68)
+Defined in: [src/effects.ts:68](https://github.com/zeixcom/le-truc/blob/1ff860948e8aefc37567a7ed075841ad9cefb228/src/effects.ts#L68)
 
 A map of child component property names to the reactive values to inject into them.
 Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.

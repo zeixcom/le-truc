@@ -2,7 +2,7 @@
 
 > **setTextPreservingComments**(`element`, `text`): `void`
 
-Defined in: [src/safety.ts:84](https://github.com/zeixcom/le-truc/blob/351fe6de1fcacfd814112a86c890ce84f0ea57f3/src/safety.ts#L84)
+Defined in: [src/safety.ts:84](https://github.com/zeixcom/le-truc/blob/1ff860948e8aefc37567a7ed075841ad9cefb228/src/safety.ts#L84)
 
 Set the text content of an element while preserving comment nodes.
 

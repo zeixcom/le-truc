@@ -88,7 +88,9 @@ describe('sitemap', () => {
 
 	test('includes the sitemap xmlns on <urlset>', () => {
 		const result = sitemap([mockPage()], BASE)
-		expect(result).toContain('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"')
+		expect(result).toContain(
+			'xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
+		)
 	})
 
 	test('wraps entries in <urlset>', () => {

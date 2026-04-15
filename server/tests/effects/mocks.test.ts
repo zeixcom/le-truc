@@ -2,8 +2,8 @@
  * Unit Tests for effects/mocks.ts — Mock File Output Path Derivation
  */
 
-import { join } from 'path'
 import { describe, expect, test } from 'bun:test'
+import { join } from 'path'
 import { COMPONENTS_DIR, TEST_DIR } from '../../config'
 import { getMockOutputPath } from '../../effects/mocks'
 
@@ -12,7 +12,9 @@ describe('getMockOutputPath', () => {
 		const result = getMockOutputPath(
 			join(COMPONENTS_DIR, 'module-lazyload/mocks/simple-text.html'),
 		)
-		expect(result).toBe(join(TEST_DIR, 'module-lazyload/mocks/simple-text.html'))
+		expect(result).toBe(
+			join(TEST_DIR, 'module-lazyload/mocks/simple-text.html'),
+		)
 	})
 
 	test('maps a JSON mock path to docs/test/', () => {

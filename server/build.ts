@@ -21,10 +21,7 @@ import { sourcesEffect } from './effects/sources'
  */
 
 export async function build(
-	options: {
-		watch?: boolean
-		hmrBroadcast?: (message: any) => void
-	} = {},
+	options: { watch?: boolean; hmrBroadcast?: (message: any) => void } = {},
 ) {
 	const startTime = performance.now()
 	const { watch = false, hmrBroadcast: broadcast } = options
@@ -38,15 +35,16 @@ export async function build(
 
 		// Debounced reload: coalesces rapid back-to-back rebuilds into one HMR message
 		let reloadTimer: ReturnType<typeof setTimeout> | null = null
-		const scheduleReload = watch && broadcast
-			? () => {
-					if (reloadTimer) clearTimeout(reloadTimer)
-					reloadTimer = setTimeout(() => {
-						reloadTimer = null
-						broadcast('reload')
-					}, 50)
-				}
-			: undefined
+		const scheduleReload =
+			watch && broadcast
+				? () => {
+						if (reloadTimer) clearTimeout(reloadTimer)
+						reloadTimer = setTimeout(() => {
+							reloadTimer = null
+							broadcast('reload')
+						}, 50)
+					}
+				: undefined
 
 		const api = apiEffect(scheduleReload)
 		const apiPages = apiPagesEffect(scheduleReload)

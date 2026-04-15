@@ -21,9 +21,9 @@ import {
 	injectModuleDemoPreview,
 	resolveInternalLinks,
 } from './html-shaping'
-import { extractTocItems } from './markdoc-helpers'
 import { getRelativePath } from './io'
 import markdocConfig from './markdoc.config'
+import { extractTocItems } from './markdoc-helpers'
 
 /* === Types === */
 

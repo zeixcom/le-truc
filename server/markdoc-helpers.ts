@@ -9,18 +9,18 @@ import { generateSlug as templateSlug } from './templates/utils'
 
 // Re-export constants and attribute classes to maintain backward compatibility
 export {
-	ClassAttribute,
-	IdAttribute,
 	CalloutClassAttribute,
+	ClassAttribute,
 	classAttribute,
-	idAttribute,
-	styleAttribute,
-	titleAttribute,
-	requiredTitleAttribute,
 	commonAttributes,
-	styledAttributes,
-	standardChildren,
+	IdAttribute,
+	idAttribute,
+	requiredTitleAttribute,
 	richChildren,
+	standardChildren,
+	styleAttribute,
+	styledAttributes,
+	titleAttribute,
 } from './markdoc-constants'
 
 /* === Types === */
@@ -337,8 +337,8 @@ const parseHTML = (html: string): ParsedElement | string => {
 	const attributesString = openTagMatch[2]!.trim()
 
 	const isSelfClosing =
-		attributesString.endsWith('/')
-		|| [
+		attributesString.endsWith('/') ||
+		[
 			'img',
 			'br',
 			'hr',

@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
+import { isAbsolute } from 'path'
 import {
 	ASSETS_DIR,
 	COMPONENTS_DIR,
@@ -24,7 +25,6 @@ import {
 	SOURCES_DIR,
 	TEST_DIR,
 } from '../config'
-import { isAbsolute } from 'path'
 
 /* === PAGE_ORDER === */
 

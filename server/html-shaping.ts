@@ -23,8 +23,7 @@ export const highlightCodeBlocks = async (html: string): Promise<string> => {
 
 	// Collect all matches with their positions first, then apply replacements
 	// from right to left so earlier offsets remain valid.
-	const replacements: { start: number; end: number; replacement: string }[] =
-		[]
+	const replacements: { start: number; end: number; replacement: string }[] = []
 	let match: RegExpExecArray | null
 
 	while ((match = codeBlockRegex.exec(html)) !== null) {

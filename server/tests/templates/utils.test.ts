@@ -19,8 +19,8 @@ import {
 	js,
 	mapSafe,
 	minify,
-	raw,
 	RawHtml,
+	raw,
 	requiresCrossorigin,
 	type SortableItem,
 	safeRender,
@@ -46,7 +46,9 @@ describe('html tagged template', () => {
 	test('should escape string values', () => {
 		const value = '<script>alert("xss")</script>'
 		const result = html`<div>${value}</div>`
-		expect(result).toBe('<div>&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;</div>')
+		expect(result).toBe(
+			'<div>&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;</div>',
+		)
 	})
 
 	test('should pass through RawHtml values unescaped', () => {

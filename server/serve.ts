@@ -111,7 +111,10 @@ const findComponentHtmlPath = (componentName: string): string | null => {
 	return null
 }
 
-const findMockFilePath = (componentName: string, mockName: string): string | null => {
+const findMockFilePath = (
+	componentName: string,
+	mockName: string,
+): string | null => {
 	const htmlPath = findComponentHtmlPath(componentName)
 	if (!htmlPath) return null
 	const componentDir = htmlPath.substring(0, htmlPath.lastIndexOf('/'))
@@ -222,10 +225,10 @@ async function checkPort(port: number): Promise<void> {
 		})
 		if (response.ok) {
 			console.error(
-				`❌ Port ${port} is already in use by another server.\n\n`
-					+ `   Kill the blocking process:\n`
-					+ `     lsof -ti:${port} | xargs kill\n\n`
-					+ `   Or change the port in server/config.ts\n`,
+				`❌ Port ${port} is already in use by another server.\n\n` +
+					`   Kill the blocking process:\n` +
+					`     lsof -ti:${port} | xargs kill\n\n` +
+					`   Or change the port in server/config.ts\n`,
 			)
 			process.exit(1)
 		}
@@ -305,18 +308,14 @@ async function startServer() {
 
 			// Component tests mock files
 			'/test/:component/mocks/:mock': req => {
-				const filePath = findMockFilePath(
-					req.params.component,
-					req.params.mock,
-				)
+				const filePath = findMockFilePath(req.params.component, req.params.mock)
 				return filePath
 					? handleStaticFile(filePath)
 					: new Response('Not Found', { status: 404 })
 			},
 
 			// Component tests
-			'/test/:component': req =>
-				handleComponentTest(req.params.component),
+			'/test/:component': req => handleComponentTest(req.params.component),
 
 			// Not found for test routes
 			'/test/*': new Response('Not Found', { status: 404 }),

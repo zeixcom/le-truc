@@ -76,7 +76,6 @@ const API_KIND_MAP: Record<string, string> = {
 	enumerations: 'Enumeration',
 }
 
-
 /** Compute api-category, api-name, api-kind for api layout pages */
 const getApiVariables = (
 	relativePath: string,
@@ -139,10 +138,8 @@ export const getBlogVariables = (
 	// Derive avatar path from author name if not explicitly set
 	const author = metadata.author ?? ''
 	const authorAvatar =
-		metadata['author-avatar']
-		|| (author
-			? `${basePath}assets/img/avatar/${generateSlug(author)}.jpg`
-			: '')
+		metadata['author-avatar'] ||
+		(author ? `${basePath}assets/img/avatar/${generateSlug(author)}.jpg` : '')
 
 	return {
 		'published-date': metadata.date ?? '',
@@ -194,41 +191,43 @@ export const generateBlogExcerpts = (
 			const slug = post.relativePath.replace(/^blog\//, '').replace(/\.md$/, '')
 			const url = `${basePath}blog/${slug}.html`
 			const { 'reading-time': readingTime } = getBlogVariables(post)
-			const publishedDate = escapeHtml(post.metadata.date ?? '')
-			const modifiedDate = escapeHtml(post.metadata['modified-date'] ?? '')
-			const rawAuthor = post.metadata.author ?? ''
-			const author = escapeHtml(rawAuthor)
-			const avatar = escapeHtml(
-				post.metadata['author-avatar']
-					|| (rawAuthor
-						? `${basePath}assets/img/avatar/${generateSlug(rawAuthor)}.jpg`
-						: ''),
-			)
-			const emoji = escapeHtml(post.metadata.emoji ?? '📝')
-			const title = escapeHtml(post.title)
-			const description = escapeHtml(post.metadata.description ?? '')
+			const publishedDate = post.metadata.date ?? ''
+			const modifiedDate = post.metadata['modified-date'] ?? ''
+			const author = post.metadata.author ?? ''
+			const avatar =
+				post.metadata['author-avatar'] ||
+				(author
+					? `${basePath}assets/img/avatar/${generateSlug(author)}.jpg`
+					: '')
+			const emoji = post.metadata.emoji ?? '📝'
+			const title = post.title
+			const description = post.metadata.description ?? ''
 
 			return html`<card-blogpost>
-				<h2><a href="${escapeHtml(url)}">${emoji} ${title}</a></h2>
+				<h2><a href="${url}">${emoji} ${title}</a></h2>
 				<card-blogmeta>
 					<span
-						>${avatar
-							? raw(html`<img src="${avatar}" alt="Avatar of ${author}" />`)
-							: ''} <span>${author}</span></span
+						>${
+							avatar
+								? raw(html`<img src="${avatar}" alt="Avatar of ${author}" />`)
+								: ''
+						} <span>${author}</span></span
 					>
 					<span
 						><time class="published" datetime="${publishedDate}"
 							>${publishedDate}</time
-						>${modifiedDate
-							? raw(
-									html`· updated on
+						>${
+							modifiedDate
+								? raw(
+										html`· updated on
 										<time class="modified" datetime="${modifiedDate}"
 											>${modifiedDate}</time
 										>`,
-								)
-							: ''}
+									)
+								: ''
+						}
 					</span>
-					<span>${escapeHtml(readingTime)} min read</span>
+					<span>${readingTime} min read</span>
 				</card-blogmeta>
 				${description ? raw(html`<p>${description}</p>`) : ''}
 			</card-blogpost>`
@@ -339,16 +338,16 @@ export const pagesEffect = (onRebuild?: () => void) => {
 									const { metadata } = processedFile
 									const heroHtml = html`<section-hero>
 										<h1>
-											${escapeHtml(metadata.emoji ?? '')}
-											${escapeHtml(metadata.title ?? 'Blog')}
+											${metadata.emoji ?? ''}
+											${metadata.title ?? 'Blog'}
 										</h1>
 										<div class="hero-layout">
 											<div class="lead">
-												${metadata.description
-													? raw(
-															html`<p>${escapeHtml(metadata.description)}</p>`,
-														)
-													: ''}
+												${
+													metadata.description
+														? raw(html`<p>${metadata.description}</p>`)
+														: ''
+												}
 											</div>
 										</div>
 									</section-hero>`

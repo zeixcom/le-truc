@@ -6,7 +6,9 @@ import { menu } from '../templates/menu'
 
 export const menuEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => { resolve = res })
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
 	const cleanup = createEffect(() => {
 		match([docsMarkdown.pageInfos], {
 			ok: async ([pageInfos]) => {

@@ -1,6 +1,6 @@
+import { createHash } from 'crypto'
 import { existsSync } from 'fs'
 import { mkdir, readdir, stat } from 'fs/promises'
-import { createHash } from 'crypto'
 import { basename, dirname, extname, join, relative } from 'path'
 import { brotliCompressSync, gzipSync } from 'zlib'
 import type { FileInfo } from './file-signals'
@@ -13,10 +13,10 @@ import type { RequestContext } from './serve'
  */
 const isPlaywrightRunning = (): boolean => {
 	return !!(
-		process.env.PLAYWRIGHT_TEST_BASE_URL
-		|| process.env.PLAYWRIGHT
-		|| process.env.PWTEST_SKIP_TEST_OUTPUT
-		|| process.argv.some(arg => arg.includes('playwright'))
+		process.env.PLAYWRIGHT_TEST_BASE_URL ||
+		process.env.PLAYWRIGHT ||
+		process.env.PWTEST_SKIP_TEST_OUTPUT ||
+		process.argv.some(arg => arg.includes('playwright'))
 	)
 }
 

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Betting on the Platform – Le Truc Blog</title>
+		<meta name="description" content="Why we built Le Truc around the browser's native rendering instead of replacing it – and why that bet gets stronger every year." />
+		<meta name="author" content="Esther Brunner" />
+		<meta name="article:published_time" content="2026-04-15" />
+		<meta name="article:modified_time" content="" />
+		<link
+			rel="preload"
+			href="../assets/main.css?v=4437e32d6c988f24"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="../assets/main.js?v=c51062f0d3ad99a5"
+		/>
+		<link
+			rel="stylesheet"
+			href="../assets/main.css?v=4437e32d6c988f24"
+		/>
+		<script
+			type="module"
+			src="../assets/main.js?v=c51062f0d3ad99a5"
+		></script>
+	</head>
+	<body class="blog">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">
+					<a href="../blog.html">Le Truc Blog</a>
+					<small>2.0.0-next.4</small>
+				</h1>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<main id="main" class="content-grid">
+				<section-hero>
+					<h1>🎲 Betting on the Platform</h1>
+					<div class="hero-layout">
+						<div class="lead">
+							<card-blogmeta>
+								<span>
+									<img src="../assets/img/avatar/esther-brunner.jpg" alt="Avatar of Esther Brunner" />
+									<span>Esther Brunner</span>
+								</span>
+								<time datetime="2026-04-15">
+									2026-04-15
+								</time>
+								<span>4 min read</span>
+							</card-blogmeta>
+							<p>Why we built Le Truc around the browser's native rendering instead of replacing it – and why that bet gets stronger every year.</p>
+						</div>
+					</div>
+				</section-hero>
+				<section class="" id="undefined"><h2 id="the-abstraction-tax"><a name="the-abstraction-tax" class="anchor" href="#the-abstraction-tax"><span class="title">The abstraction tax</span><span class="permalink">#</span></a></h2><p>Every useful abstraction layer over the web platform has eventually become technical debt. Not because the abstraction was wrong – often it was brilliant – but because the platform caught up. jQuery shaped the DOM API. Sass shaped native CSS. Lodash and Moment.js shaped modern JS APIs. The pattern is consistent enough to treat it as a law: a successful abstraction teaches the platform what to absorb next.</p><p>We're not saying frameworks will disappear. We're saying what they fill today will shrink. And that matters if you're building with a ten-year horizon.</p><h2 id="what-we-learned-from-react"><a name="what-we-learned-from-react" class="anchor" href="#what-we-learned-from-react"><span class="title">What we learned from React</span><span class="permalink">#</span></a></h2><p>React changed how we build for the web. Components, reactivity, TypeScript-first design – we want all of that, and Le Truc keeps all of it.</p><p>The one place we deliberately depart from React is the virtual DOM. Every update cycle means reconciling a virtual model against the real one. That has a runtime cost, but the bigger issue is the failure modes it creates: stale closures, hydration mismatches, tearing, <code>useEffect</code> timing bugs. Those aren't implementation quirks. They're structural – the inevitable result of maintaining two parallel models of your UI simultaneously.</p><h2 id="what-we-chose-not-to-do"><a name="what-we-chose-not-to-do" class="anchor" href="#what-we-chose-not-to-do"><span class="title">What we chose not to do</span><span class="permalink">#</span></a></h2><p>We looked at the alternatives seriously. A compiler-based approach – like Svelte or Solid – genuinely hits the sweet spot if you want co-location of HTML, CSS, and JavaScript with fine-grained reactivity and full type-safety. The tradeoff is a proprietary file format, a compiler you depend on, server-side TypeScript, and an initial render/hydration step that sends data and templates twice over the wire.</p><p>We looked at custom languages too – Elm, Marko – each technically impressive, each ultimately constrained by tooling and portability. Leaving the JavaScript ecosystem buys elegance at a cost we weren't willing to pay.</p><p>So we made a different set of tradeoffs. Le Truc abandons co-location – HTML and behaviour live in separate files – but keeps components, fine-grained reactivity, and first-class TypeScript. More importantly, it stays entirely within the bounds of the client-side web platform. There is no virtual DOM. There is no reconciliation step. There is one model of your UI: the DOM. Your server renders it. Your signals update it.</p><h2 id="what-you-get-for-free"><a name="what-you-get-for-free" class="anchor" href="#what-you-get-for-free"><span class="title">What you get for free</span><span class="permalink">#</span></a></h2><p>Betting on the platform is not just a philosophical position. It pays out in three concrete ways.</p><ol><li><p><strong>An entire class of bugs simply does not exist.</strong> Hydration mismatches, stale closure bugs, useEffect ordering issues, tearing – all of these are symptoms of maintaining an abstraction layer that can diverge from the platform. When your rendering model is the platform, there is nothing to diverge. Your browser's inspector is the only dev tooling you need. What you see in the elements panel is exactly what your code produces, with no intermediate representation to reason about.</p></li><li><p><strong>Performance that unlocks genuinely different use cases.</strong> Skipping the re-render and re-check cycle is not just a benchmark win. It is the difference between being able to build a live trading terminal, a collaborative vector editor, a MIDI sequencer, or a data grid with real formula dependency tracking. Dropping out of the component model entirely into canvas or WebGL is one way around that – but it's not always what you want. Le Truc lets you stay in the type-safe, reactive, component-based abstraction at frame-rate scale. That combination does not otherwise exist.</p></li><li><p><strong>Long-term stability that compounds.</strong> React's future is controlled by Meta. The web platform's future is controlled by a standards body with broad industry representation. Those are different risk profiles. The web platform has also demonstrated, consistently, that it absorbs the ideas from successful abstractions – which means Le Truc can become thinner as the platform grows. What we add today, the platform absorbs over time.</p></li></ol><ul><li>jQuery → <code>querySelector</code>, <code>fetch</code>, <code>classList</code></li><li>Sass → custom properties, nesting, <code>@layer</code>, <code>@scope</code></li><li>Lodash → <code>Array.flat</code>, <code>Object.entries</code>, optional chaining</li><li>Moment.js → <code>Intl.DateTimeFormat</code>, upcoming <code>Temporal</code></li><li>Bootstrap → <code>&lt;dialog&gt;</code>, popover, anchor positioning</li><li>React → Web Components, proposed <code>Signal</code></li></ul><p>We're not betting against React. We're betting on where the platform is going – building something that gets cheaper to own the further it goes.</p></section>
+			</main>
+			<!-- <div class="blog-nav">
+				<div class="content-grid">
+					<div class="content">
+						<nav class="blog-nav-links" aria-label="Blog navigation">
+							<a href="../blog/2026-04-12-removing-createeventssensor.html" class="blog-nav-link prev">
+								<span class="blog-nav-label">← Previous</span>
+								<span class="blog-nav-title">Removing createEventsSensor</span>
+							</a>
+							<a href="../blog.html" class="blog-nav-link">
+								📋 All Posts
+							</a>
+							<a href="" class="blog-nav-link next">
+								<span class="blog-nav-label">Next →</span>
+								<span class="blog-nav-title"></span>
+							</a>
+						</nav>
+					</div>
+				</div>
+			</div> -->
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2026 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

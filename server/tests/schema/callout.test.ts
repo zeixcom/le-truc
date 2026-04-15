@@ -7,14 +7,17 @@
 
 import { describe, expect, test } from 'bun:test'
 import Markdoc, { Node, Tag } from '@markdoc/markdoc'
-import callout from '../../schema/callout.markdoc'
 import { CalloutClassAttribute } from '../../markdoc-constants'
+import callout from '../../schema/callout.markdoc'
 
 /* === Helpers === */
 
 const config = { tags: { callout } }
 
-function transformCallout(attrs: Record<string, unknown>, children: Node[] = []): Tag {
+function transformCallout(
+	attrs: Record<string, unknown>,
+	children: Node[] = [],
+): Tag {
 	const node = new Node('tag', attrs, children, 'callout')
 	return Markdoc.transform(node, config) as Tag
 }

@@ -13,7 +13,10 @@ import section from '../../schema/section.markdoc'
 
 const config = { tags: { section } }
 
-function transformSection(attrs: Record<string, unknown>, children: Node[] = []): Tag {
+function transformSection(
+	attrs: Record<string, unknown>,
+	children: Node[] = [],
+): Tag {
 	const node = new Node('tag', attrs, children, 'section')
 	return Markdoc.transform(node, config) as Tag
 }

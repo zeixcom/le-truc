@@ -1,7 +1,6 @@
 import { existsSync, watch } from 'node:fs'
 import { batch, createList, type List } from '@zeix/cause-effect'
 import { Glob } from 'bun'
-import { join } from 'path'
 import type { FileInfo } from './file-signals'
 import { createFileInfo, getFilePath, isPlaywrightRunning } from './io'
 
@@ -38,52 +37,54 @@ export const watchFiles = async (
 
 	const shouldWatch = !playwrightDetected
 
-	// Collect pending filenames and debounce rapid bursts (e.g. TypeDoc writing
-	// 140 files) into a single batch update so downstream effects run once.
-	const pendingChanges = new Set<string>()
+	// Debounce rapid bursts (e.g. TypeDoc writing 140 files) into a single
+	// batch update so downstream effects re-run only once.
+	// On macOS, fs.watch can coalesce multiple creation events into fewer
+	// callbacks, so we rescan the whole directory on every flush rather than
+	// relying on the set of filenames we happened to receive.
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 	const flushChanges = async (fileList: List<FileInfo>) => {
-		const filenames = [...pendingChanges]
-		pendingChanges.clear()
+		// Rescan the entire directory so no events are missed
+		const scannedFiles = new Map<string, FileInfo>()
+		if (existsSync(directory)) {
+			for await (const file of glob.scan(directory)) {
+				if (excludeGlob && excludeGlob.match(file)) continue
+				const filePath = getFilePath(directory, file)
+				const filename = file.split(/[\\/]/).pop() || ''
+				const fileInfo = await createFileInfo(filePath, filename)
+				if (fileInfo.exists) scannedFiles.set(filePath, fileInfo)
+			}
+		}
 
-		// Resolve all file infos in parallel before touching signals
-		const updates = await Promise.all(
-			filenames.map(async filename => {
-				const filePath = join(directory, filename)
-				if (!existsSync(filePath)) {
-					return { filePath, fileInfo: null } as const
-				}
-				const fileInfo = await createFileInfo(
-					filePath,
-					filename.split(/[\\/]/).pop() || '',
-				)
-				return { filePath, fileInfo } as const
-			}),
-		)
+		// Snapshot current list state before mutating
+		const currentItems = fileList.get()
 
 		// Apply all signal mutations in one batch → effects re-run only once
 		batch(() => {
-			for (const { filePath, fileInfo } of updates) {
-				if (!fileInfo) {
-					fileList.remove(filePath)
-				} else {
-					const existing = fileList.byKey(filePath)
-					if (existing) {
-						if (existing.get().hash !== fileInfo.hash) {
-							fileList.replace(filePath, fileInfo)
-						}
-					} else {
-						fileList.add(fileInfo)
+			for (const [filePath, fileInfo] of scannedFiles) {
+				const existing = fileList.byKey(filePath)
+				if (existing) {
+					if (existing.get().hash !== fileInfo.hash) {
+						fileList.replace(filePath, fileInfo)
 					}
+				} else {
+					fileList.add(fileInfo)
+				}
+			}
+			for (const item of currentItems) {
+				if (!scannedFiles.has(item.path)) {
+					fileList.remove(item.path)
 				}
 			}
 		})
 	}
 
-	const handleFileChange = (fileList: List<FileInfo>, filename: string) => {
-		if (!isMatching(filename)) return
-		pendingChanges.add(filename)
+	const scheduleFlush = (fileList: List<FileInfo>, filename: string | null) => {
+		// If we have a specific filename, filter out non-matching paths eagerly
+		// to avoid unnecessary rescans. A null filename (macOS coalesced event)
+		// always triggers a rescan.
+		if (filename !== null && !isMatching(filename)) return
 		if (debounceTimer !== null) clearTimeout(debounceTimer)
 		debounceTimer = setTimeout(() => {
 			debounceTimer = null
@@ -104,10 +105,15 @@ export const watchFiles = async (
 								persistent: true,
 							},
 							(_event, filename) => {
-								if (!filename) return
-								handleFileChange(fileList, filename)
+								scheduleFlush(
+									fileList,
+									typeof filename === 'string' ? filename : null,
+								)
 							},
 						)
+						// Rescan immediately on activation to pick up any files written
+						// between initial scan and watcher setup (lazy activation gap).
+						flushChanges(fileList)
 						return () => watcher.close()
 					},
 				}

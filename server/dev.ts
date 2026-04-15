@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
-import { broadcastToHMRClients, startServer } from './serve'
 import { build } from './build'
+import { broadcastToHMRClients, startServer } from './serve'
 
 /**
  * Unified Development Server

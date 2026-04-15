@@ -2,7 +2,7 @@
 
 > **bindStyle**(`element`, `prop`): [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string`\>
 
-Defined in: [src/helpers.ts:127](https://github.com/zeixcom/le-truc/blob/351fe6de1fcacfd814112a86c890ce84f0ea57f3/src/helpers.ts#L127)
+Defined in: [src/helpers.ts:127](https://github.com/zeixcom/le-truc/blob/1ff860948e8aefc37567a7ed075841ad9cefb228/src/helpers.ts#L127)
 
 Returns `RunHandlers` that set or remove an inline style property.
 
