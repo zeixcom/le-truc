@@ -2,7 +2,7 @@
 
 > **asParser**\<`T`\>(`fn`): [`Parser`](../type-aliases/Parser.md)\<`T`\>
 
-Defined in: [src/parsers.ts:54](https://github.com/zeixcom/le-truc/blob/1ff860948e8aefc37567a7ed075841ad9cefb228/src/parsers.ts#L54)
+Defined in: [src/parsers.ts:54](https://github.com/zeixcom/le-truc/blob/140b6dc06947f79d7c702f41086292e3d7a7ae86/src/parsers.ts#L54)
 
 Brand a custom parser function with the `PARSER_BRAND` symbol.
 

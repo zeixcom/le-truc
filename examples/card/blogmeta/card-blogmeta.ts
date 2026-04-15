@@ -7,6 +7,9 @@ declare global {
 	}
 }
 
+const INVALID_DATE = 'invalid date'
+const UNKNOWN_DATE = 'unknown date'
+
 function formatLocalDate(
 	locale: string,
 	isoDate: string,
@@ -14,13 +17,13 @@ function formatLocalDate(
 ): string {
 	const [year, month, day] = isoDate.split('-').map(Number)
 	if (
-		!year ||
-		Number.isNaN(year) ||
-		!month ||
-		Number.isNaN(month) ||
-		Number.isNaN(day)
+		!year
+		|| Number.isNaN(year)
+		|| !month
+		|| Number.isNaN(month)
+		|| Number.isNaN(day)
 	)
-		return 'invalid date'
+		return INVALID_DATE
 	const date = new Date(year, month - 1, day) // avoid UTC offset shifting the day
 	return new Intl.DateTimeFormat(locale, { dateStyle }).format(date)
 }
@@ -30,16 +33,19 @@ export default defineComponent('card-blogmeta', ({ host, first }) => {
 		'time.published',
 		'Add a <time> element to display the publication date.',
 	)
-	const modified = first('time.modified')
+	const modifiedSpan = first('span.modified')
+	const modified = first('.modified time')
 	const locale = getLocale(host)
 
 	published.textContent = published.dateTime
 		? formatLocalDate(locale, published.dateTime)
-		: 'unknown date'
+		: UNKNOWN_DATE
 
 	if (modified) {
-		modified.textContent = modified.dateTime
+		const modifiedDate = modified.dateTime
 			? formatLocalDate(locale, modified.dateTime)
-			: 'unknown date'
+			: INVALID_DATE
+		if (modifiedSpan && modifiedDate === INVALID_DATE) modifiedSpan.remove()
+		else modified.textContent = modifiedDate
 	}
 })

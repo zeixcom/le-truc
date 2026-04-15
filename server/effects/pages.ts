@@ -138,8 +138,10 @@ export const getBlogVariables = (
 	// Derive avatar path from author name if not explicitly set
 	const author = metadata.author ?? ''
 	const authorAvatar =
-		metadata['author-avatar'] ||
-		(author ? `${basePath}assets/img/avatar/${generateSlug(author)}.jpg` : '')
+		metadata['author-avatar']
+		|| (author
+			? `${basePath}assets/img/avatar/${generateSlug(author)}.jpg`
+			: '')
 
 	return {
 		'published-date': metadata.date ?? '',
@@ -195,8 +197,8 @@ export const generateBlogExcerpts = (
 			const modifiedDate = post.metadata['modified-date'] ?? ''
 			const author = post.metadata.author ?? ''
 			const avatar =
-				post.metadata['author-avatar'] ||
-				(author
+				post.metadata['author-avatar']
+				|| (author
 					? `${basePath}assets/img/avatar/${generateSlug(author)}.jpg`
 					: '')
 			const emoji = post.metadata.emoji ?? '📝'
@@ -207,25 +209,21 @@ export const generateBlogExcerpts = (
 				<h2><a href="${url}">${emoji} ${title}</a></h2>
 				<card-blogmeta>
 					<span
-						>${
-							avatar
-								? raw(html`<img src="${avatar}" alt="Avatar of ${author}" />`)
-								: ''
-						} <span>${author}</span></span
+						>${avatar
+							? raw(html`<img src="${avatar}" alt="Avatar of ${author}" />`)
+							: ''} <span>${author}</span></span
 					>
 					<span
 						><time class="published" datetime="${publishedDate}"
 							>${publishedDate}</time
-						>${
-							modifiedDate
-								? raw(
-										html`· updated on
-										<time class="modified" datetime="${modifiedDate}"
-											>${modifiedDate}</time
-										>`,
-									)
-								: ''
-						}
+						>${modifiedDate
+							? raw(
+									html`<span class="modified">
+										· updated on
+										<time datetime="${modifiedDate}">${modifiedDate}</time>
+									</span>`,
+								)
+							: ''}
 					</span>
 					<span>${readingTime} min read</span>
 				</card-blogmeta>
@@ -337,17 +335,12 @@ export const pagesEffect = (onRebuild?: () => void) => {
 									// Inject hero + excerpt cards into the blog overview
 									const { metadata } = processedFile
 									const heroHtml = html`<section-hero>
-										<h1>
-											${metadata.emoji ?? ''}
-											${metadata.title ?? 'Blog'}
-										</h1>
+										<h1>${metadata.emoji ?? ''} ${metadata.title ?? 'Blog'}</h1>
 										<div class="hero-layout">
 											<div class="lead">
-												${
-													metadata.description
-														? raw(html`<p>${metadata.description}</p>`)
-														: ''
-												}
+												${metadata.description
+													? raw(html`<p>${metadata.description}</p>`)
+													: ''}
 											</div>
 										</div>
 									</section-hero>`

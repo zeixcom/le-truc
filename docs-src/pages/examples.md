@@ -49,6 +49,7 @@ layout: 'page'
   - [Pagination](./examples/module-pagination.html)
   - [Scrollarea](./examples/module-scrollarea.html)
   - [Tabgroup](./examples/module-tabgroup.html)
+  - [Ticker](./examples/module-ticker.html)
   - [Todo](./examples/module-todo.html)
 {% /listnav %}
 

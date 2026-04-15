@@ -50,9 +50,17 @@
 									<img src="{{ author-avatar }}" alt="Avatar of {{ author }}" />
 									<span>{{ author }}</span>
 								</span>
-								<time datetime="{{ published-date }}">
-									{{ published-date }}
-								</time>
+								<span>
+									<time class="published" datetime="{{ published-date }}">
+										{{ published-date }}
+									</time>
+									<span class="modified">
+										· updated on
+										<time datetime="{{ modified-date }}">
+											{{ modified-date }}
+										</time>
+									</span>
+								</span>
 								<span>{{ reading-time }} min read</span>
 							</card-blogmeta>
 							<p>{{ description }}</p>

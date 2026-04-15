@@ -2,7 +2,7 @@
 
 > **bindProperty**\<`E`, `K`\>(`element`, `key`): (`value`) => `void`
 
-Defined in: [src/helpers.ts:42](https://github.com/zeixcom/le-truc/blob/1ff860948e8aefc37567a7ed075841ad9cefb228/src/helpers.ts#L42)
+Defined in: [src/helpers.ts:42](https://github.com/zeixcom/le-truc/blob/140b6dc06947f79d7c702f41086292e3d7a7ae86/src/helpers.ts#L42)
 
 Returns a function that sets a DOM property directly on an element.
 
