@@ -85,6 +85,8 @@
 #### Variables
 
 - [CONTEXT\_REQUEST](variables/CONTEXT_REQUEST.md)
+- [DEEP\_EQUALITY](variables/DEEP_EQUALITY.md)
+- [DEFAULT\_EQUALITY](variables/DEFAULT_EQUALITY.md)
 - [SKIP\_EQUALITY](variables/SKIP_EQUALITY.md)
 
 #### Functions
@@ -127,17 +129,16 @@
 - [isAsyncFunction](functions/isAsyncFunction.md)
 - [isCollection](functions/isCollection.md)
 - [isComputed](functions/isComputed.md)
-- [isEqual](functions/isEqual.md)
 - [isFunction](functions/isFunction.md)
 - [isList](functions/isList.md)
 - [isMemo](functions/isMemo.md)
 - [isMethodProducer](functions/isMethodProducer.md)
 - [isMutableSignal](functions/isMutableSignal.md)
-- [isObjectOfType](functions/isObjectOfType.md)
 - [isParser](functions/isParser.md)
 - [isRecord](functions/isRecord.md)
 - [isSensor](functions/isSensor.md)
 - [isSignal](functions/isSignal.md)
+- [isSignalOfType](functions/isSignalOfType.md)
 - [isSlot](functions/isSlot.md)
 - [isState](functions/isState.md)
 - [isStore](functions/isStore.md)
@@ -149,4 +150,4 @@
 - [throttle](functions/throttle.md)
 - [unown](functions/unown.md)
 - [untrack](functions/untrack.md)
-- [valueString](functions/valueString.md)
+- [~~valueString~~](functions/valueString.md)

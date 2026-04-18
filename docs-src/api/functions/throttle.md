@@ -2,7 +2,7 @@
 
 > **throttle**\<`T`\>(`fn`, `signal?`): `T` & `object`
 
-Defined in: [src/scheduler.ts:57](https://github.com/zeixcom/le-truc/blob/140b6dc06947f79d7c702f41086292e3d7a7ae86/src/scheduler.ts#L57)
+Defined in: [src/scheduler.ts:57](https://github.com/zeixcom/le-truc/blob/f8dbc86585fb0a5dd6f0ac2867231d04b1cf7d6c/src/scheduler.ts#L57)
 
 Throttle a function to execute at most once per animation frame, always
 using the latest arguments. Shares the same RAF tick as `schedule()`.

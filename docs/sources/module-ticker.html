@@ -779,8 +779,14 @@
 				<span class="language">ts</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asNumber, createList, defineComponent, each, schedule } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F92672"> type</span><span style="color:#F8F8F2"> { BasicButtonProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../basic/button/basic-button'</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	asNumber,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createList,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createMemo,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F8F8F2">	each,</span></span>
+<span class="line"><span style="color:#F8F8F2">	schedule,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">/* === Fantasy symbol generator === */</span></span>
 <span class="line"></span>
@@ -980,26 +986,55 @@
 <span class="line"><span style="color:#A6E22E">			each</span><span style="color:#F8F8F2">(rows, </span><span style="color:#FD971F;font-style:italic">row</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> symbol </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> row.dataset.symbol </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> item </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> tickers.</span><span style="color:#A6E22E">byKey</span><span style="color:#F8F8F2">(symbol)</span></span>
-<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">item) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">item </span><span style="color:#F92672">||</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">row.isConnected) </span><span style="color:#F92672">return</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> priceEl </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> row.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.price'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> changeEl </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> row.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.change'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> volumeEl </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> row.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.volume'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">priceEl </span><span style="color:#F92672">||</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">changeEl </span><span style="color:#F92672">||</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">volumeEl) </span><span style="color:#F92672">return</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> (</span></span>
-<span class="line"><span style="color:#F8F8F2">					row.isConnected</span></span>
-<span class="line"><span style="color:#F92672">					&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(item, ({ </span><span style="color:#FD971F;font-style:italic">open</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">price</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">volume</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#A6E22E">						schedule</span><span style="color:#F8F8F2">(row, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">							const</span><span style="color:#F8F8F2"> change </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (price </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> open) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> open</span></span>
-<span class="line"><span style="color:#F8F8F2">							priceEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> priceFormat.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(price)</span></span>
-<span class="line"><span style="color:#F8F8F2">							changeEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> changeFormat.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(change)</span></span>
-<span class="line"><span style="color:#F8F8F2">							row.dataset.direction </span><span style="color:#F92672">=</span></span>
-<span class="line"><span style="color:#F8F8F2">								change </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> ?</span><span style="color:#E6DB74"> 'up'</span><span style="color:#F92672"> :</span><span style="color:#F8F8F2"> change </span><span style="color:#F92672">&#x3C;</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> ?</span><span style="color:#E6DB74"> 'down'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'flat'</span></span>
-<span class="line"><span style="color:#F8F8F2">							volumeEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> volumeFormat.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(volume)</span></span>
-<span class="line"><span style="color:#F8F8F2">						})</span></span>
-<span class="line"><span style="color:#F8F8F2">					})</span></span>
-<span class="line"><span style="color:#F8F8F2">				)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> changeMemo </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createMemo</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> { open, price } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> item.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> (price </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> open) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> open</span></span>
+<span class="line"><span style="color:#F8F8F2">				})</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">						() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> priceFormat.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(item.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().price),</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">						price</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">							schedule</span><span style="color:#F8F8F2">(priceEl, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">								priceEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> price</span></span>
+<span class="line"><span style="color:#F8F8F2">							})</span></span>
+<span class="line"><span style="color:#F8F8F2">						},</span></span>
+<span class="line"><span style="color:#F8F8F2">					),</span></span>
+<span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">						() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> changeFormat.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(changeMemo.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()),</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">						change</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">							schedule</span><span style="color:#F8F8F2">(changeEl, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">								changeEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> change</span></span>
+<span class="line"><span style="color:#F8F8F2">							})</span></span>
+<span class="line"><span style="color:#F8F8F2">						},</span></span>
+<span class="line"><span style="color:#F8F8F2">					),</span></span>
+<span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">						() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">							const</span><span style="color:#F8F8F2"> change </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> changeMemo.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">							return</span><span style="color:#F8F8F2"> change </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> ?</span><span style="color:#E6DB74"> 'up'</span><span style="color:#F92672"> :</span><span style="color:#F8F8F2"> change </span><span style="color:#F92672">&#x3C;</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> ?</span><span style="color:#E6DB74"> 'down'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'flat'</span></span>
+<span class="line"><span style="color:#F8F8F2">						},</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">						direction</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">							schedule</span><span style="color:#F8F8F2">(row, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">								row.dataset.direction </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> direction</span></span>
+<span class="line"><span style="color:#F8F8F2">							})</span></span>
+<span class="line"><span style="color:#F8F8F2">						},</span></span>
+<span class="line"><span style="color:#F8F8F2">					),</span></span>
+<span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">						() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> volumeFormat.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(item.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().volume),</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">						volume</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">							schedule</span><span style="color:#F8F8F2">(volumeEl, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">								volumeEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> volume</span></span>
+<span class="line"><span style="color:#F8F8F2">							})</span></span>
+<span class="line"><span style="color:#F8F8F2">						},</span></span>
+<span class="line"><span style="color:#F8F8F2">					),</span></span>
+<span class="line"><span style="color:#F8F8F2">				]</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">			// Batch-add one full block: update tickers list first so each() finds</span></span>

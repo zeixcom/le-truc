@@ -15,15 +15,15 @@ declare const bindText: (element: Element, preserveComments?: boolean) => ((valu
 /**
  * Returns a function that sets a DOM property directly on an element.
  *
- * TypeScript infers `E[K]` from the element type and key, so no explicit type
+ * TypeScript infers `O[K]` from the object type and key, so no explicit type
  * parameters are needed at call sites.
  *
  * @since 2.0
- * @param {E} element - Target element
+ * @param {O} object - Target object
  * @param {K} key - Property key to set
- * @returns {(value: E[K]) => void} Function that sets the property
+ * @returns {(value: O[K]) => void} Function that sets the property
  */
-declare const bindProperty: <E extends Element, K extends keyof E & string>(element: E, key: K) => ((value: E[K]) => void);
+declare const bindProperty: <O extends Object, K extends keyof O & string>(object: O, key: K) => ((value: O[K]) => void);
 /**
  * Returns a function that toggles a CSS class token on an element.
  *

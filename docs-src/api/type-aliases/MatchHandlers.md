@@ -67,3 +67,17 @@ Called when all signals have a value. Receives a tuple of resolved values.
 ###### Returns
 
 [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
+
+***
+
+##### stale?
+
+> `optional` **stale?**: () => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:19
+
+Called when all signals have a (stale) value but one or more Task signals are re-computing. Falls back to `ok` if absent.
+
+###### Returns
+
+[`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>

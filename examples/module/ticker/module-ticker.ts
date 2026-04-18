@@ -1,5 +1,11 @@
-import { asNumber, createList, defineComponent, each, schedule } from '../../..'
-import type { BasicButtonProps } from '../../basic/button/basic-button'
+import {
+	asNumber,
+	createList,
+	createMemo,
+	defineComponent,
+	each,
+	schedule,
+} from '../../..'
 
 /* === Fantasy symbol generator === */
 
@@ -199,26 +205,55 @@ export default defineComponent<ModuleTickerProps>(
 			each(rows, row => {
 				const symbol = row.dataset.symbol ?? ''
 				const item = tickers.byKey(symbol)
-				if (!item) return
+				if (!item || !row.isConnected) return
 
 				const priceEl = row.querySelector('.price')
 				const changeEl = row.querySelector('.change')
 				const volumeEl = row.querySelector('.volume')
 				if (!priceEl || !changeEl || !volumeEl) return
 
-				return (
-					row.isConnected
-					&& watch(item, ({ open, price, volume }) => {
-						schedule(row, () => {
-							const change = (price - open) / open
-							priceEl.textContent = priceFormat.format(price)
-							changeEl.textContent = changeFormat.format(change)
-							row.dataset.direction =
-								change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
-							volumeEl.textContent = volumeFormat.format(volume)
-						})
-					})
-				)
+				const changeMemo = createMemo(() => {
+					const { open, price } = item.get()
+					return (price - open) / open
+				})
+
+				return [
+					watch(
+						() => priceFormat.format(item.get().price),
+						price => {
+							schedule(priceEl, () => {
+								priceEl.textContent = price
+							})
+						},
+					),
+					watch(
+						() => changeFormat.format(changeMemo.get()),
+						change => {
+							schedule(changeEl, () => {
+								changeEl.textContent = change
+							})
+						},
+					),
+					watch(
+						() => {
+							const change = changeMemo.get()
+							return change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
+						},
+						direction => {
+							schedule(row, () => {
+								row.dataset.direction = direction
+							})
+						},
+					),
+					watch(
+						() => volumeFormat.format(item.get().volume),
+						volume => {
+							schedule(volumeEl, () => {
+								volumeEl.textContent = volume
+							})
+						},
+					),
+				]
 			}),
 
 			// Batch-add one full block: update tickers list first so each() finds

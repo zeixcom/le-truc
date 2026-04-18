@@ -2,7 +2,7 @@
 
 > **isTask**\<`T`\>(`value`): `value is Task<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:78
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:79
 
 Checks if a value is a Task signal.
 

@@ -7,7 +7,7 @@
 - **`FactoryContext<P>` type**: New context object passed to the factory function, containing element query helpers (`first`, `all`), the `host` element, and factory helpers (`expose`, `watch`, `on`, `pass`, `provideContexts`, `requestContext`).
 - **`EffectDescriptor` type**: Deferred effect — a thunk `() => MaybeCleanup` that runs inside a reactive scope after all dependencies are resolved. Replaces the old `Effect<P, E>` type.
 - **`FactoryResult` type**: Return type of the factory function — a flat array of `EffectDescriptor | false | undefined`, enabling the `element && descriptor()` pattern for conditional effects.
-- **`SingleMatchHandlers<T>` type** (re-exported from `@zeix/cause-effect`): Match-branch handlers with `ok`, `err`, and `nil` properties, accepted by `watch()` and DOM binding helpers. `ok` receives the resolved value directly; `err` receives a single `Error`. All handler return types are `MaybePromise<MaybeCleanup>`, enabling async handlers for fire-and-forget side effects such as fetch calls or analytics.
+- **`SingleMatchHandlers<T>` type** (re-exported from `@zeix/cause-effect`): Match-branch handlers with `ok`, `err`, `nil`, and `stale` properties, accepted by `watch()` and DOM binding helpers. `ok` receives the resolved value directly; `err` receives a single `Error`. `stale` fires when the signal has a retained value and a `Task` is re-executing (`isPending() === true`); omitting it falls back to `ok`. Routing precedence: `nil` > `err` > `stale` > `ok`. All handler return types are `MaybePromise<MaybeCleanup>`, enabling async handlers for fire-and-forget side effects such as fetch calls or analytics.
 - **`MaybePromise<T>` type** (re-exported from `@zeix/cause-effect`): `T | Promise<T>` — the return type of async-capable handlers in `SingleMatchHandlers<T>`.
 - **`PassedProps<P, Q>` type**: Props object for `pass()` — maps child component property names to `Reactive<Q[K], P>` values.
 - **DOM binding helpers** in a new `src/helpers.ts` module, each usable as a `watch()` handler:
@@ -39,6 +39,7 @@
 - **`getHelpers()` replaced by `makeElementQueries()`**: Returns a tuple `[ElementQueries, (run: () => void) => void]`; the `UI` type is no longer exported.
 - **`METHOD_BRAND` constant now exported**: Enables explicit branding checks for method producers; `isMethodProducer()` no longer falls back to `isFunction()`.
 - **`@zeix/cause-effect` upgraded to `^1.1.1`**: Adds the `SingleMatchHandlers<T>` type and a single-signal `match(signal, handlers)` overload where `ok` receives the value directly and `err` receives a single `Error` (not an array). Async handlers (`MaybePromise<MaybeCleanup>`) are now supported across all branches; rejections are routed to `err` if provided, otherwise fall back to `console.error`.
+- **`@zeix/cause-effect` upgraded to `^1.2.0`**: Adds `stale` to `SingleMatchHandlers<T>` and `MatchHandlers<T>`. Also exports `isSignalOfType<T>()` (replaces deprecated `isObjectOfType()`), `DEEP_EQUALITY`, and `DEFAULT_EQUALITY`; all re-exported from `index.ts`.
 
 ### Removed
 

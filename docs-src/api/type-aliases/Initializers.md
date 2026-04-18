@@ -2,7 +2,7 @@
 
 > **Initializers**\<`P`\> = \{ \[K in keyof P\]?: P\[K\] \| Signal\<P\[K\]\> \| Parser\<P\[K\]\> \| (P\[K\] extends (args: any\[\]) =\> any ? P\[K\] & \{ \[METHOD\_BRAND\]: true \} : never) \}
 
-Defined in: [src/component.ts:75](https://github.com/zeixcom/le-truc/blob/140b6dc06947f79d7c702f41086292e3d7a7ae86/src/component.ts#L75)
+Defined in: [src/component.ts:75](https://github.com/zeixcom/le-truc/blob/f8dbc86585fb0a5dd6f0ac2867231d04b1cf7d6c/src/component.ts#L75)
 
 The `props` argument of `defineComponent` — a map from property names to their initializers.
 

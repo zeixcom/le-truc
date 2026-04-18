@@ -4,7 +4,7 @@
 
 > **createElementsMemo**\<`S`\>(`parent`, `selector`): [`Memo`](../type-aliases/Memo.md)\<[`ElementFromSelector`](../type-aliases/ElementFromSelector.md)\<`S`\>[]\>
 
-Defined in: [src/ui.ts:155](https://github.com/zeixcom/le-truc/blob/140b6dc06947f79d7c702f41086292e3d7a7ae86/src/ui.ts#L155)
+Defined in: [src/ui.ts:155](https://github.com/zeixcom/le-truc/blob/f8dbc86585fb0a5dd6f0ac2867231d04b1cf7d6c/src/ui.ts#L155)
 
 Create a memo of elements matching a CSS selector.
 The MutationObserver is lazily activated when an effect first reads
@@ -44,7 +44,7 @@ Reactive memo of current matching elements
 
 > **createElementsMemo**\<`E`\>(`parent`, `selector`): [`Memo`](../type-aliases/Memo.md)\<`E`[]\>
 
-Defined in: [src/ui.ts:159](https://github.com/zeixcom/le-truc/blob/140b6dc06947f79d7c702f41086292e3d7a7ae86/src/ui.ts#L159)
+Defined in: [src/ui.ts:159](https://github.com/zeixcom/le-truc/blob/f8dbc86585fb0a5dd6f0ac2867231d04b1cf7d6c/src/ui.ts#L159)
 
 Create a memo of elements matching a CSS selector.
 The MutationObserver is lazily activated when an effect first reads

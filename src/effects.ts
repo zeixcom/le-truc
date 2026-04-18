@@ -253,6 +253,9 @@ const makeWatch = <P extends ComponentProps>(
 						err: (e: Error) => untrack(() => handlers.err!(e)),
 					}),
 					...(handlers.nil && { nil: () => untrack(() => handlers.nil!()) }),
+					...(handlers.stale && {
+						stale: () => untrack(() => handlers.stale!()),
+					}),
 				}),
 			)
 		}
@@ -375,15 +378,7 @@ const makePass = <P extends ComponentProps>(
  */
 function each<E extends Element>(
 	memo: Memo<E[]>,
-	callback: (element: E) => FactoryResult,
-): EffectDescriptor
-function each<E extends Element>(
-	memo: Memo<E[]>,
-	callback: (element: E) => EffectDescriptor | Falsy,
-): EffectDescriptor
-function each<E extends Element>(
-	memo: Memo<E[]>,
-	callback: (element: E) => FactoryResult | EffectDescriptor | Falsy,
+	callback: (element: E) => FactoryResult | EffectDescriptor | Falsy | void,
 ): EffectDescriptor {
 	return () => {
 		createEffect(() => {

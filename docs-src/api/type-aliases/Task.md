@@ -30,7 +30,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:10
 
 > **abort**(): `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:28
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:29
 
 Aborts the current computation if one is running.
 The task's AbortSignal will be triggered.
@@ -67,9 +67,10 @@ UnsetSignalValueError If the task value is still unset when read.
 
 > **isPending**(): `boolean`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:23
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:24
 
 Checks if the task is currently executing.
+Used by `match()` to route to the `stale` handler when the task has a retained value.
 
 ###### Returns
 

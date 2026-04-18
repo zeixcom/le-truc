@@ -2,7 +2,7 @@
 
 > **asDate**(`fallback?`): [`Parser`](../type-aliases/Parser.md)\<`string`\>
 
-Defined in: [src/parsers/date.ts:10](https://github.com/zeixcom/le-truc/blob/140b6dc06947f79d7c702f41086292e3d7a7ae86/src/parsers/date.ts#L10)
+Defined in: [src/parsers/date.ts:10](https://github.com/zeixcom/le-truc/blob/f8dbc86585fb0a5dd6f0ac2867231d04b1cf7d6c/src/parsers/date.ts#L10)
 
 Parse a string as a localized date string, or a fallback when absent or invalid
 

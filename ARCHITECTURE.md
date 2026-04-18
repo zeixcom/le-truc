@@ -350,11 +350,12 @@ watch(['value', 'filter'], ([value, filter]) => {
     // re-runs when either host.value or host.filter changes
 })
 
-// MatchHandlers form — ok/nil/err paths:
+// MatchHandlers form — ok/nil/err/stale paths (precedence: nil > err > stale > ok):
 watch('src', {
     ok: src => { renderContent(src) },
     nil: () => { resetToEmpty() },
     err: error => { showError(error) },
+    stale: () => { showRefreshIndicator() },
 })
 ```
 

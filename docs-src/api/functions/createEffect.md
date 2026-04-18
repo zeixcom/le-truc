@@ -2,7 +2,7 @@
 
 > **createEffect**(`fn`): [`Cleanup`](../type-aliases/Cleanup.md)
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:61
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:65
 
 Creates a reactive effect that automatically runs when its dependencies change.
 Effects run immediately upon creation and re-run when any tracked signal changes.

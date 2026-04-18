@@ -2,7 +2,7 @@
 
 > **SingleMatchHandlers**\<`T`\> = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:24
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:26
 
 Handlers for a single signal passed to `match()`.
 
@@ -20,7 +20,7 @@ The value type of the signal being matched
 
 > `optional` **err?**: (`error`) => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:28
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:30
 
 Called when the signal holds an error. Receives the error directly. Defaults to `console.error`.
 
@@ -40,7 +40,7 @@ Called when the signal holds an error. Receives the error directly. Defaults to 
 
 > `optional` **nil?**: () => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:30
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:32
 
 Called when the signal is unset (pending).
 
@@ -54,7 +54,7 @@ Called when the signal is unset (pending).
 
 > **ok**: (`value`) => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:26
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:28
 
 Called when the signal has a value. Receives the resolved value directly.
 
@@ -63,6 +63,20 @@ Called when the signal has a value. Receives the resolved value directly.
 ##### value
 
 `T`
+
+###### Returns
+
+[`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
+
+***
+
+##### stale?
+
+> `optional` **stale?**: () => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:34
+
+Called when the signal has a (stale) value but the Task is re-computing. Falls back to `ok` if absent.
 
 ###### Returns
 
