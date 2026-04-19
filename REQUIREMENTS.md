@@ -143,8 +143,8 @@ When a required element is missing (`MissingElementError`), the error message mu
 **S4. Development mode with enhanced diagnostics**
 When `DEV_MODE` is enabled: detailed error messages with component context, warnings for dependency resolution timeouts, and effect execution logging.
 
-**S5. Scheduler deduplication for high-frequency events**
-Passive events (scroll, resize, touch, wheel) and `dangerouslyBindInnerHTML` updates must be deduplicated per-element via `requestAnimationFrame` to prevent frame drops.
+**S5. Scheduler deduplication for innerHTML mutations**
+`dangerouslyBindInnerHTML` updates must be deferred and deduplicated via `requestAnimationFrame`. Deduplication is per element so multiple helpers targeting the same element all run, while rapid re-fires of the same helper within one frame collapse to a single write. Passive event handlers (`on()` with scroll, resize, etc.) are separately throttled at the signal-graph input level via `throttle()` to prevent upstream churn.
 
 ### Should Avoid
 

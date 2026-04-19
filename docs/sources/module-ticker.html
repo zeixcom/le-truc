@@ -781,11 +781,12 @@
 			<module-scrollarea orientation="horizontal">
 				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	asNumber,</span></span>
+<span class="line"><span style="color:#F8F8F2">	bindProperty,</span></span>
+<span class="line"><span style="color:#F8F8F2">	bindText,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createList,</span></span>
 <span class="line"><span style="color:#F8F8F2">	createMemo,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
 <span class="line"><span style="color:#F8F8F2">	each,</span></span>
-<span class="line"><span style="color:#F8F8F2">	schedule,</span></span>
 <span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">/* === Fantasy symbol generator === */</span></span>
@@ -968,10 +969,7 @@
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">			// Intentionally stupid: signal updates every 10ms, far faster than</span></span>
-<span class="line"><span style="color:#88846F">			// any display can show. DOM writes are decoupled via schedule(row, …)</span></span>
-<span class="line"><span style="color:#88846F">			// which deduplicates per-row writes to the next RAF — so the browser</span></span>
-<span class="line"><span style="color:#88846F">			// only paints the latest value once per frame regardless of how many</span></span>
-<span class="line"><span style="color:#88846F">			// signal updates fired in between.</span></span>
+<span class="line"><span style="color:#88846F">			// any display can show.</span></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'running'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">v</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">v) </span><span style="color:#F92672">return</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> id </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> setInterval</span><span style="color:#F8F8F2">(tick, </span><span style="color:#AE81FF">10</span><span style="color:#F8F8F2">)</span></span>
@@ -999,40 +997,21 @@
 <span class="line"><span style="color:#F8F8F2">				})</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#F8F8F2">						() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> priceFormat.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(item.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().price),</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">						price</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#A6E22E">							schedule</span><span style="color:#F8F8F2">(priceEl, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">								priceEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> price</span></span>
-<span class="line"><span style="color:#F8F8F2">							})</span></span>
-<span class="line"><span style="color:#F8F8F2">						},</span></span>
-<span class="line"><span style="color:#F8F8F2">					),</span></span>
+<span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> priceFormat.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(item.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().price), </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(priceEl)),</span></span>
 <span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#F8F8F2">						() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> changeFormat.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(changeMemo.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()),</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">						change</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#A6E22E">							schedule</span><span style="color:#F8F8F2">(changeEl, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">								changeEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> change</span></span>
-<span class="line"><span style="color:#F8F8F2">							})</span></span>
-<span class="line"><span style="color:#F8F8F2">						},</span></span>
+<span class="line"><span style="color:#A6E22E">						bindText</span><span style="color:#F8F8F2">(changeEl),</span></span>
 <span class="line"><span style="color:#F8F8F2">					),</span></span>
 <span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#F8F8F2">						() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">							const</span><span style="color:#F8F8F2"> change </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> changeMemo.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F92672">							return</span><span style="color:#F8F8F2"> change </span><span style="color:#F92672">></span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> ?</span><span style="color:#E6DB74"> 'up'</span><span style="color:#F92672"> :</span><span style="color:#F8F8F2"> change </span><span style="color:#F92672">&#x3C;</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> ?</span><span style="color:#E6DB74"> 'down'</span><span style="color:#F92672"> :</span><span style="color:#E6DB74"> 'flat'</span></span>
 <span class="line"><span style="color:#F8F8F2">						},</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">						direction</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#A6E22E">							schedule</span><span style="color:#F8F8F2">(row, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">								row.dataset.direction </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> direction</span></span>
-<span class="line"><span style="color:#F8F8F2">							})</span></span>
-<span class="line"><span style="color:#F8F8F2">						},</span></span>
+<span class="line"><span style="color:#A6E22E">						bindProperty</span><span style="color:#F8F8F2">(row.dataset, </span><span style="color:#E6DB74">'direction'</span><span style="color:#F8F8F2">),</span></span>
 <span class="line"><span style="color:#F8F8F2">					),</span></span>
 <span class="line"><span style="color:#A6E22E">					watch</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#F8F8F2">						() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> volumeFormat.</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(item.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().volume),</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">						volume</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#A6E22E">							schedule</span><span style="color:#F8F8F2">(volumeEl, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">								volumeEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> volume</span></span>
-<span class="line"><span style="color:#F8F8F2">							})</span></span>
-<span class="line"><span style="color:#F8F8F2">						},</span></span>
+<span class="line"><span style="color:#A6E22E">						bindText</span><span style="color:#F8F8F2">(volumeEl),</span></span>
 <span class="line"><span style="color:#F8F8F2">					),</span></span>
 <span class="line"><span style="color:#F8F8F2">				]</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
@@ -1047,7 +1026,7 @@
 <span class="line"><span style="color:#F8F8F2">					{ length: BLOCK_SIZE },</span></span>
 <span class="line"><span style="color:#F8F8F2">					() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> symbol </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> nextSymbol</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> price </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Math.</span><span style="color:#A6E22E">round</span><span style="color:#F8F8F2">((</span><span style="color:#AE81FF">10</span><span style="color:#F92672"> +</span><span style="color:#F8F8F2"> Math.</span><span style="color:#A6E22E">random</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 990</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 100</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> 100</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> price </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Math.</span><span style="color:#A6E22E">round</span><span style="color:#F8F8F2">((</span><span style="color:#AE81FF">10</span><span style="color:#F92672"> +</span><span style="color:#F8F8F2"> Math.</span><span style="color:#A6E22E">random</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 1000</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 100</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> 100</span></span>
 <span class="line"><span style="color:#F92672">						return</span><span style="color:#F8F8F2"> { symbol, open: price, price, volume: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2"> }</span></span>
 <span class="line"><span style="color:#F8F8F2">					},</span></span>
 <span class="line"><span style="color:#F8F8F2">				)</span></span>

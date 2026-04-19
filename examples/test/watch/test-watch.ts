@@ -12,7 +12,7 @@ declare global {
 }
 
 /**
- * Test component for the v1.1 factory `watch()` helper.
+ * Test component for the v2 factory `watch()` helper.
  * Exercises: single prop, array form, direct Signal, MatchHandlers, conditional false.
  */
 export default defineComponent<TestWatchProps>(

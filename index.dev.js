@@ -1719,7 +1719,10 @@ var makeWatch = (host) => {
         ...handlers.err && {
           err: (e) => untrack(() => handlers.err(e))
         },
-        ...handlers.nil && { nil: () => untrack(() => handlers.nil()) }
+        ...handlers.nil && { nil: () => untrack(() => handlers.nil()) },
+        ...handlers.stale && {
+          stale: () => untrack(() => handlers.stale())
+        }
       }));
     };
   }
@@ -1795,14 +1798,14 @@ function each(memo, callback) {
 }
 
 // src/scheduler.ts
-var pendingElements = new Set;
+var objects = new Set;
 var tasks = new WeakMap;
 var throttledCallbacks = new Set;
 var requestId;
 var runTasks = () => {
   requestId = undefined;
-  const elements = Array.from(pendingElements);
-  pendingElements.clear();
+  const elements = Array.from(objects);
+  objects.clear();
   for (const element of elements)
     tasks.get(element)?.();
   const callbacks = Array.from(throttledCallbacks);
@@ -1814,9 +1817,9 @@ var requestTick = () => {
   if (!requestId)
     requestId = requestAnimationFrame(runTasks);
 };
-var schedule = (element, task) => {
-  tasks.set(element, task);
-  pendingElements.add(element);
+var schedule = (key, task) => {
+  tasks.set(key, task);
+  objects.add(key);
   requestTick();
 };
 var throttle = (fn, signal) => {
@@ -2182,6 +2185,17 @@ var setTextPreservingComments = (element, text) => {
 };
 
 // src/helpers.ts
+var SCRIPT_ATTRS = [
+  "type",
+  "src",
+  "async",
+  "defer",
+  "nomodule",
+  "crossorigin",
+  "integrity",
+  "referrerpolicy",
+  "fetchpriority"
+];
 var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
   element.textContent = String(value);
 };
@@ -2216,17 +2230,6 @@ var bindStyle = (element, prop) => ({
     element.style.removeProperty(prop);
   }
 });
-var SCRIPT_ATTRS = [
-  "type",
-  "src",
-  "async",
-  "defer",
-  "nomodule",
-  "crossorigin",
-  "integrity",
-  "referrerpolicy",
-  "fetchpriority"
-];
 var dangerouslyBindInnerHTML = (element, options = {}) => {
   const reset = () => {
     if (element.shadowRoot)

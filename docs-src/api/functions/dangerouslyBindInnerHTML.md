@@ -2,18 +2,17 @@
 
 > **dangerouslyBindInnerHTML**(`element`, `options?`): [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string`\>
 
-Defined in: [src/helpers.ts:177](https://github.com/zeixcom/le-truc/blob/f8dbc86585fb0a5dd6f0ac2867231d04b1cf7d6c/src/helpers.ts#L177)
+Defined in: [src/helpers.ts:175](https://github.com/zeixcom/le-truc/blob/1fbe7a16df53520ae334ded40a50f57cafc83af1/src/helpers.ts#L175)
 
 Returns `SingleMatchHandlers<string>` that sets the inner HTML of an element,
 with optional Shadow DOM and script re-execution support.
 
 - `ok(html)` → schedules `element.innerHTML = html` (or `shadowRoot.innerHTML`);
   if `allowScripts` is true, re-executes `<script>` elements after injection.
-- `nil` → sets `innerHTML = ''` (or restores `<slot></slot>` in shadow root).
+- `nil` → resets `innerHTML = ''` (or `<slot></slot>` in shadow root).
 
-**Security note:** Setting innerHTML bypasses XSS protections. Only use with
-trusted or sanitized content. Pass `allowScripts: true` only when the content
-source is trusted upstream.
+**Security note:** Only use with trusted or sanitized content. Pass `allowScripts: true`
+only when the content source is trusted upstream.
 
 #### Parameters
 
@@ -33,7 +32,7 @@ Shadow DOM mode and script execution options
 
 [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string`\>
 
-Watch handlers that set the element's inner HTML
+Match handlers that schedule the innerHTML mutation
 
 #### Since
 

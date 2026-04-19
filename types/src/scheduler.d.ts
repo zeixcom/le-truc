@@ -1,15 +1,15 @@
 /**
  * Schedule a task to be executed on the next animation frame, with automatic
  * deduplication per element. If the same element schedules multiple tasks
- * before the next frame, only the latest task will be executed.
+ * before the next frame, only the latest task executes.
  *
  * Used internally by `dangerouslyBindInnerHTML`.
  *
  * @since 0.11.0
- * @param {Element} element - Element used as the deduplication key
- * @param {() => void} task - Function to execute on the next animation frame
+ * @param key - Deduplication key; typically the target Element
+ * @param task - Function to execute on the next animation frame
  */
-declare const schedule: (element: Element, task: () => void) => void;
+declare const schedule: (key: object, task: () => void) => void;
 /**
  * Throttle a function to execute at most once per animation frame, always
  * using the latest arguments. Shares the same RAF tick as `schedule()`.

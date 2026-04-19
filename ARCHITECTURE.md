@@ -478,7 +478,7 @@ expose({
 
 The signature changes slightly: `requestContext` is provided as a factory helper that captures `host`, so the user no longer needs to pass it. Internally dispatches the event from `host` and returns a `Memo<T>`.
 
-### Component Lifecycle (v1.1)
+### Component Lifecycle (v2)
 
 ```
 connectedCallback()
@@ -514,114 +514,9 @@ With built-in effects (`setAttribute`, `toggleAttribute`, etc.) no longer wrappi
 
 - **`safeSetAttribute(element, name, value)`** — validates URL protocols, blocks `on*` handlers
 - **`escapeHTML(text)`** — already exists in examples; promote to library export
-- **`setTextPreservingComments(element, text)`** — replaces non-comment child nodes (what `setText` does internally)
+- **`setTextPreservingComments(element, text)`** — replaces non-comment child nodes (what `bindText` does internally)
 
 These are opt-in imports, not factory helpers. Authors who use native DOM methods directly accept responsibility for validation.
-
-### Worked Example: `form-combobox`
-
-The combobox is one of the most complex components (6 UI targets, 12 effects, private state, `pass`, memos). Here's how it looks:
-
-```ts
-export default defineComponent<FormComboboxProps, FormComboboxUI>(
-    'form-combobox',
-    ({ all, expose, first, host, on, pass, watch }) => {
-        const textbox = first('input', 'Needed to enter value.')
-        const listbox = first('form-listbox', 'Needed to display options.')
-        const clear = first('button.clear')
-        const error = first('form-combobox > .error')
-        const description = first('.description')
-
-        const errorId = error?.id
-        const descriptionId = description?.id
-
-        const showPopup = createState(false)
-        const isExpanded = createMemo(
-            () => showPopup.get() && listbox.options.length > 0,
-        )
-        const length = createState(textbox.value.length)
-
-        expose({
-            value: '',
-            length: length.get,
-            error: '',
-            description: description?.textContent ?? '',
-            clear: clearMethod,
-        })
-
-        return [
-            // Host effects
-            watch('value', value => {
-                host.setAttribute('value', value)
-            }),
-            on(host, 'keyup', ({ key }) => {
-                if (key === 'Escape') {
-                    showPopup.set(false)
-                    textbox.focus()
-                }
-                if (key === 'Delete') host.clear()
-            }),
-
-            // Textbox effects
-            watch(['error', 'description'], ([err, desc]) => {
-                textbox.ariaInvalid = String(!!err)
-                textbox.setAttribute('aria-errormessage',
-                    err && errorId ? errorId : '')
-                textbox.setAttribute('aria-describedby',
-                    desc && descriptionId ? descriptionId : '')
-            }),
-            watch(isExpanded, expanded => {
-                textbox.ariaExpanded = String(expanded)
-            }),
-            on(textbox, 'input', (_event, el) => {
-                length.set(el.value.length)
-                el.checkValidity()
-                batch(() => {
-                    host.value = el.value
-                    host.error = el.validationMessage ?? ''
-                    showPopup.set(true)
-                })
-            }),
-            on(textbox, 'keydown', (event) => {
-                const { key, altKey } = event
-                if (key === 'ArrowDown') {
-                    if (altKey) showPopup.set(true)
-                    if (isExpanded.get()) listbox.options[0]?.focus()
-                }
-            }),
-
-            // Listbox effects
-            watch(isExpanded, expanded => { listbox.hidden = !expanded }),
-            pass(listbox, { filter: () => host.value }),
-            on(listbox, 'change', (event) => {
-                const input = event.target
-                if (input instanceof HTMLInputElement) {
-                    textbox.value = input.value
-                    textbox.checkValidity()
-                    batch(() => {
-                        host.value = input.value
-                        host.error = textbox.validationMessage ?? ''
-                        showPopup.set(false)
-                        textbox.focus()
-                    })
-                }
-            }),
-
-            // Clear button
-            clear && watch(length, l => { clear.hidden = !l }),
-            clear && on(clear, 'click', () => { host.clear() }),
-
-            // Text displays
-            error && watch('error', text => { error.textContent = text }),
-            description && watch('description', text => {
-                description.textContent = text
-            }),
-        ]
-    },
-)
-```
-
-**What changed**: 13 imports → 4 (`asString`, `batch`, `createMemo`, `createState`; the rest come from the factory context). No `ui` returned. No `effects` keyed by element name. Effects are grouped logically (by concern) rather than structurally (by target element). Optional elements use `&&` guards in the flat array.
 
 ### Key Decisions
 
@@ -639,27 +534,3 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 | `expose` handles methods | `defineMethod()` stays, used inside `expose()` | Direct assignment on host, drop `defineMethod` | Keeps all public API declaration in one place; `#initSignals` dispatch logic unchanged |
 | Parsers unchanged | `Fallback<T, U>` already accepts plain values | Separate value-transformer API | No breaking change; reader-function fallbacks still valid for 4-param form |
 | Safety as importable utilities | `safeSetAttribute`, `escapeHTML`, etc. | Built into `watch`/factory helpers | Opt-in is appropriate; most DOM updates don't need validation |
-
-### Implementation Plan
-
-1. **Phase 1: Engine** — Modify `connectedCallback` to support the new factory return shape (flat array of effect descriptors). Implement `expose()` calling `#initSignals`. Keep v1.0 `{ ui, props, effects }` return working alongside — detect which form by checking `Array.isArray(result)` vs `isRecord(result)`.
-
-2. **Phase 2: Core helpers** — Implement `watch()` (wrapping `match`), `each()` (collection lifecycle), new `on(target, type, handler)` with Memo delegation overload, new `pass(target, props)` with Memo overload. Wire them into the factory context.
-
-3. **Phase 3: Context & sensors** — Refactor `provideContexts` and `requestContext` as factory-context-bound helpers. Refactor `createEventsSensor` to accept target element directly, drop `ui` from handler context.
-
-4. **Phase 4: Safety utilities** — Extract `safeSetAttribute`, promote `escapeHTML`, implement `setTextPreservingComments`. Export from library.
-
-5. **Phase 5: Migration** — Convert example components to the new form. Use the test suite (~1150 tests, 3 browsers) as correctness backstop. Prioritize: simple components first (basic-*), then form components, then complex modules.
-
-6. **Phase 6: Deprecation** — Mark `read()`, built-in effects (`setText`, `setAttribute`, etc.), and the `{ ui, props, effects }` return shape as `@deprecated` with JSDoc pointing to v1.1 equivalents. Mark 4-param `defineComponent` overload as `@deprecated`. Update type declarations in `types/`. Update `CLAUDE.md` surprising behaviors. Removal deferred to v2.0.
-
-### Resolved Decisions
-
-- **4-param form**: Supported in v1.1 but marked `@deprecated`. Built-in effects (`setText`, etc.) remain available for its `setup` function. Removal decision deferred to v2.0.
-- **`each` single-descriptor shortcut**: `each(slides, slide => watch('index', ...))` (without brackets) accepted as overload.
-- **Non-bubbling events**: Exhaustive list maintained. DEV_MODE warns and falls back to per-element; production silently falls back. No throws.
-
-### Remaining Open Questions
-
-1. **`watch` with MatchHandlers and arrays**: The exact TypeScript overload signatures need design. `watch(source, callback)` vs `watch(source, { ok, nil, err })` vs `watch([s1, s2], ([v1, v2]) => ...)` — three overloads with tuple typing for the array form. Consider whether this complexity belongs in Le Truc or should be upstreamed to Cause & Effect first (as mentioned in VERSION_1.1_GOALS.md). To be resolved during Phase 2 implementation.

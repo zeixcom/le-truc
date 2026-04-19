@@ -1,10 +1,11 @@
 import {
 	asNumber,
+	bindProperty,
+	bindText,
 	createList,
 	createMemo,
 	defineComponent,
 	each,
-	schedule,
 } from '../../..'
 
 /* === Fantasy symbol generator === */
@@ -187,10 +188,7 @@ export default defineComponent<ModuleTickerProps>(
 			}),
 
 			// Intentionally stupid: signal updates every 10ms, far faster than
-			// any display can show. DOM writes are decoupled via schedule(row, …)
-			// which deduplicates per-row writes to the next RAF — so the browser
-			// only paints the latest value once per frame regardless of how many
-			// signal updates fired in between.
+			// any display can show.
 			watch('running', v => {
 				if (!v) return
 				const id = setInterval(tick, 10)
@@ -218,40 +216,21 @@ export default defineComponent<ModuleTickerProps>(
 				})
 
 				return [
-					watch(
-						() => priceFormat.format(item.get().price),
-						price => {
-							schedule(priceEl, () => {
-								priceEl.textContent = price
-							})
-						},
-					),
+					watch(() => priceFormat.format(item.get().price), bindText(priceEl)),
 					watch(
 						() => changeFormat.format(changeMemo.get()),
-						change => {
-							schedule(changeEl, () => {
-								changeEl.textContent = change
-							})
-						},
+						bindText(changeEl),
 					),
 					watch(
 						() => {
 							const change = changeMemo.get()
 							return change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
 						},
-						direction => {
-							schedule(row, () => {
-								row.dataset.direction = direction
-							})
-						},
+						bindProperty(row.dataset, 'direction'),
 					),
 					watch(
 						() => volumeFormat.format(item.get().volume),
-						volume => {
-							schedule(volumeEl, () => {
-								volumeEl.textContent = volume
-							})
-						},
+						bindText(volumeEl),
 					),
 				]
 			}),
@@ -266,7 +245,7 @@ export default defineComponent<ModuleTickerProps>(
 					{ length: BLOCK_SIZE },
 					() => {
 						const symbol = nextSymbol()
-						const price = Math.round((10 + Math.random() * 990) * 100) / 100
+						const price = Math.round((10 + Math.random() * 1000) * 100) / 100
 						return { symbol, open: price, price, volume: 0 }
 					},
 				)
