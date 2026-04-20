@@ -52,20 +52,22 @@ export default defineComponent<ModuleLazyloadProps>(
 
 		return [
 			watch(content, {
-				nil: () => {
-					callout.hidden = false
-					callout.classList.remove('danger')
-					loading.hidden = false
-					errorEl.hidden = true
-					errorEl.textContent = ''
-					contentEl.hidden = true
-				},
-				ok: html => {
+				ok: content => {
 					callout.hidden = true
 					loading.hidden = true
-					errorEl.hidden = true
 					contentEl.hidden = false
-					setHTML(html)
+					setHTML(content)
+				},
+				nil: () => {
+					callout.hidden = false
+					loading.hidden = false
+					contentEl.hidden = true
+				},
+				stale: () => {
+					contentEl.style.setProperty('opacity', 'var(--opacity-dimmed)')
+					return () => {
+						contentEl.style.removeProperty('opacity')
+					}
 				},
 				err: error => {
 					callout.hidden = false
@@ -74,6 +76,11 @@ export default defineComponent<ModuleLazyloadProps>(
 					errorEl.hidden = false
 					errorEl.textContent = error.message
 					contentEl.hidden = true
+					return () => {
+						callout.classList.remove('danger')
+						errorEl.hidden = true
+						errorEl.textContent = ''
+					}
 				},
 			}),
 		]

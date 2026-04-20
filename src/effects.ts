@@ -234,30 +234,19 @@ const makeWatch = <P extends ComponentProps>(
 					values: any[],
 				) => MaybePromise<MaybeCleanup>
 				return createEffect(() =>
-					match(signals, { ok: values => untrack(() => handler(values)) }),
+					match(signals, { ok: values => () => handler(values) }),
 				)
 			}
 			const signal = toSignal(host, source as Reactive<NonNullable<unknown>, P>)
 			if (typeof handlerOrHandlers === 'function') {
 				return createEffect(() =>
 					match(signal, {
-						ok: value => untrack(() => handlerOrHandlers(value)),
+						ok: value => () => handlerOrHandlers(value),
 					}),
 				)
 			}
 			const handlers = handlerOrHandlers
-			return createEffect(() =>
-				match(signal, {
-					ok: value => untrack(() => handlers.ok(value)),
-					...(handlers.err && {
-						err: (e: Error) => untrack(() => handlers.err!(e)),
-					}),
-					...(handlers.nil && { nil: () => untrack(() => handlers.nil!()) }),
-					...(handlers.stale && {
-						stale: () => untrack(() => handlers.stale!()),
-					}),
-				}),
-			)
+			return createEffect(() => match(signal, handlers))
 		}
 	}
 	return watch

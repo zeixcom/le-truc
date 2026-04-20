@@ -1705,25 +1705,16 @@ var makeWatch = (host) => {
       if (Array.isArray(source)) {
         const signals = source.map((s) => toSignal(host, s));
         const handler = handlerOrHandlers;
-        return createEffect(() => match(signals, { ok: (values) => untrack(() => handler(values)) }));
+        return createEffect(() => match(signals, { ok: (values) => () => handler(values) }));
       }
       const signal = toSignal(host, source);
       if (typeof handlerOrHandlers === "function") {
         return createEffect(() => match(signal, {
-          ok: (value) => untrack(() => handlerOrHandlers(value))
+          ok: (value) => () => handlerOrHandlers(value)
         }));
       }
       const handlers = handlerOrHandlers;
-      return createEffect(() => match(signal, {
-        ok: (value) => untrack(() => handlers.ok(value)),
-        ...handlers.err && {
-          err: (e) => untrack(() => handlers.err(e))
-        },
-        ...handlers.nil && { nil: () => untrack(() => handlers.nil()) },
-        ...handlers.stale && {
-          stale: () => untrack(() => handlers.stale())
-        }
-      }));
+      return createEffect(() => match(signal, handlers));
     };
   }
   return watch;

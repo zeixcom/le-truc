@@ -272,20 +272,22 @@
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(content, {</span></span>
-<span class="line"><span style="color:#A6E22E">				nil</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">					callout.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
-<span class="line"><span style="color:#F8F8F2">					callout.classList.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'danger'</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">					loading.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
-<span class="line"><span style="color:#F8F8F2">					errorEl.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
-<span class="line"><span style="color:#F8F8F2">					errorEl.textContent </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
-<span class="line"><span style="color:#F8F8F2">					contentEl.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
-<span class="line"><span style="color:#F8F8F2">				},</span></span>
-<span class="line"><span style="color:#A6E22E">				ok</span><span style="color:#F8F8F2">: </span><span style="color:#FD971F;font-style:italic">html</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">				ok</span><span style="color:#F8F8F2">: </span><span style="color:#FD971F;font-style:italic">content</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">					callout.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
 <span class="line"><span style="color:#F8F8F2">					loading.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
-<span class="line"><span style="color:#F8F8F2">					errorEl.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
 <span class="line"><span style="color:#F8F8F2">					contentEl.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
-<span class="line"><span style="color:#A6E22E">					setHTML</span><span style="color:#F8F8F2">(html)</span></span>
+<span class="line"><span style="color:#A6E22E">					setHTML</span><span style="color:#F8F8F2">(content)</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#A6E22E">				nil</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					callout.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">					loading.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">					contentEl.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#A6E22E">				stale</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">					contentEl.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'opacity'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'var(--opacity-dimmed)'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">						contentEl.style.</span><span style="color:#A6E22E">removeProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'opacity'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
 <span class="line"><span style="color:#F8F8F2">				},</span></span>
 <span class="line"><span style="color:#A6E22E">				err</span><span style="color:#F8F8F2">: </span><span style="color:#FD971F;font-style:italic">error</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">					callout.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
@@ -294,6 +296,11 @@
 <span class="line"><span style="color:#F8F8F2">					errorEl.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"><span style="color:#F8F8F2">					errorEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> error.message</span></span>
 <span class="line"><span style="color:#F8F8F2">					contentEl.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">						callout.classList.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'danger'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">						errorEl.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F8F8F2">						errorEl.textContent </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
 <span class="line"><span style="color:#F8F8F2">				},</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#F8F8F2">		]</span></span>

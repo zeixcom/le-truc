@@ -14,7 +14,7 @@ import { expect, test } from '@playwright/test'
  * - ✅ Content replacement and DOM injection
  * - ✅ Recursive loading prevention
  * - ✅ URL validation and security checks
- * - ✅ Dynamic src attribute changes
+ * - ✅ Dynamic src attribute changes with stale dimming during re-fetch
  * - ✅ Graceful handling of missing DOM elements
  * - ✅ CSS and JavaScript execution in loaded content
  * - ✅ Nested custom component initialization
@@ -265,6 +265,57 @@ test.describe('module-lazyload component', () => {
 			// Verify property reflects the URL
 			const srcProperty = await loader.evaluate(node => (node as any).src)
 			expect(srcProperty).toContain('simple-text.html')
+		})
+
+		test('dims content while re-fetching after src property changes', async ({
+			page,
+		}) => {
+			const loader = page.locator('#dynamic-src-test')
+			const content = loader.locator('.content')
+
+			// Load initial content
+			await loader.evaluate(node => {
+				;(node as any).src = '/test/module-lazyload/mocks/simple-text.html'
+			})
+			await expect(content).toBeVisible({ timeout: 1000 })
+			await expect(content).toContainText('Simple Text Content')
+
+			// Intercept next fetch to introduce a delay, giving time to observe stale state
+			let resolveDelay!: () => void
+			const delayPromise = new Promise<void>(resolve => {
+				resolveDelay = resolve
+			})
+			await page.route('**/mocks/with-styles.html', async route => {
+				await delayPromise
+				await route.continue()
+			})
+
+			// Change src — task enters stale state (re-fetching with retained value)
+			await loader.evaluate(node => {
+				;(node as any).src = '/test/module-lazyload/mocks/with-styles.html'
+			})
+
+			// While re-fetching: content is still visible but dimmed
+			await expect(content).toBeVisible()
+			await page.waitForFunction(
+				el => (el as HTMLElement).style.opacity === 'var(--opacity-dimmed)',
+				await content.elementHandle(),
+				{ timeout: 1000 },
+			)
+			const opacityDuringFetch = await content.evaluate(
+				el => (el as HTMLElement).style.opacity,
+			)
+			expect(opacityDuringFetch).toBe('var(--opacity-dimmed)')
+
+			// Release the delayed fetch
+			resolveDelay()
+
+			// After load: new content visible, opacity style removed
+			await expect(content).toContainText('Styled Content', { timeout: 3000 })
+			const opacityAfterLoad = await content.evaluate(
+				el => (el as HTMLElement).style.opacity,
+			)
+			expect(opacityAfterLoad).toBe('')
 		})
 
 		test('clears content when src becomes invalid', async ({ page }) => {

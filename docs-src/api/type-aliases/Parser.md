@@ -2,7 +2,7 @@
 
 > **Parser**\<`T`\> = (`value`) => `T`
 
-Defined in: [src/parsers.ts:5](https://github.com/zeixcom/le-truc/blob/1fbe7a16df53520ae334ded40a50f57cafc83af1/src/parsers.ts#L5)
+Defined in: [src/parsers.ts:5](https://github.com/zeixcom/le-truc/blob/0e16726a6b6b9bb6f06cac4d48e841e3343f2b6f/src/parsers.ts#L5)
 
 #### Type Parameters
 
