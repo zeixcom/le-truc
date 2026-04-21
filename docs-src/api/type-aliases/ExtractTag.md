@@ -2,7 +2,7 @@
 
 > **ExtractTag**\<`S`\> = [`ExtractTagFromSimpleSelector`](ExtractTagFromSimpleSelector.md)\<[`ExtractRightmostSelector`](ExtractRightmostSelector.md)\<`S`\>\>
 
-Defined in: [src/ui.ts:51](https://github.com/zeixcom/le-truc/blob/3d378e339ca819861372f356f408d3d000b2c62c/src/ui.ts#L51)
+Defined in: [src/ui.ts:51](https://github.com/zeixcom/le-truc/blob/c06fbd9800df065e7a4d81949422b458792c2deb/src/ui.ts#L51)
 
 #### Type Parameters
 

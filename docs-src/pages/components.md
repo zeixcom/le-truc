@@ -65,7 +65,7 @@ defineComponent('basic-hello', ({ expose, first, on, watch }) => {
   const output = first('output', 'Needed to display the name.')
   const fallback = output.textContent || ''
 
-  expose({ name: asString(output.textContent ?? '') })
+  expose({ name: output.textContent ?? '' })
 
   return [
     on(input, 'input', () => ({ name: input.value || fallback })),
@@ -77,15 +77,14 @@ defineComponent('basic-hello', ({ expose, first, on, watch }) => {
 #### Reactive Properties
 
 ```js
-expose({ name: asString(output.textContent ?? '') })
+expose({ name: output.textContent ?? '' })
 ```
 
 This declares `name` as a reactive property:
 
-- `expose()` is called inside the factory to register reactive signal-backed accessors on `host`; it must be called before any effect references a property by name
-- `asString(fallback)` parses the `name` HTML attribute at connect time; if the attribute is absent, the fallback string is used
-- The fallback `output.textContent ?? ''` is a static value captured from the factory closure — Le Truc reads `"World"` from the `<output>` element, preserving the server-rendered content
-- When `name` changes, any effects that depend on it automatically update
+- `expose()` registers signal-backed accessors on `host`; call it before any effect references a property by name
+- `output.textContent ?? ''` initializes `name` from the DOM content at connect time — Le Truc reads `"World"` from the `<output>` element, preserving the server-rendered content
+- When `name` changes, any effects that depend on it update automatically
 
 #### Querying Elements
 
@@ -99,7 +98,7 @@ const output = first('output', 'Needed to display the name.')
 `first()` finds the first descendant matching a selector. Also available is `all()`, which returns a `Memo<E[]>` — a lazily observed collection that dynamically updates when matching elements are added or removed from the DOM. Both helpers take a selector string and an optional error message:
 
 ```js
-// Optional element — the result is null if not found; use && to skip effects conditionally
+// Optional element — returns undefined if not found; use && to skip effects conditionally
 const input = first('input')
 
 // Required element — throws MissingElementError with your message if not found
@@ -169,7 +168,7 @@ defineComponent('my-component', ({ host }) => {
 {% section %}
 ## Managing State with Signals
 
-Le Truc manages state using **signals**, which are atomic reactive states that trigger updates when they change. We use regular properties for public component states:
+Le Truc manages state using **signals** — reactive values that propagate changes automatically. Signals are exposed as regular JavaScript properties on the component host:
 
 ```js
 console.log('count' in el) // Check if the signal exists
@@ -179,12 +178,12 @@ el.count = 42 // Update the signal value
 
 ### Characteristics and Special Values
 
-Signals in Le Truc are of a **static type** and **non-nullable**. This allows to **simplify the logic** as you will never have to check the type or perform null-checks.
+Signals are **statically typed** and **non-nullable** — no null-checks needed inside effects.
 
-- If you use **TypeScript** (recommended), **you will be warned** that `null` or `undefined` cannot be assigned to a signal or if you try to assign a value of a wrong type.
-- If you use vanilla **JavaScript** without a build step, setting a signal to `null` or `undefined` **will throw a `NullishSignalValueError`**. However, strict type checking is not enforced at runtime.
+- With **TypeScript**, assigning `null`, `undefined`, or a wrong type to a signal property is a compile-time error.
+- With vanilla **JavaScript**, setting a signal to `null` or `undefined` throws a `NullishSignalValueError` at runtime. Type mismatches are not caught.
 
-When a `watch()` reactive source produces `null` or `undefined`, the `nil` branch of `WatchHandlers` fires if present:
+When a `watch()` reactive source produces `null` or `undefined`, the `nil` branch of `SingleMatchHandlers` fires if present:
 
 - **`bindAttribute(el, name)`** nil branch: calls `el.removeAttribute(name)` — removes the attribute entirely
 - **`bindStyle(el, prop)`** nil branch: calls `el.style.removeProperty(prop)` — restores the CSS cascade value
@@ -192,7 +191,7 @@ When a `watch()` reactive source produces `null` or `undefined`, the `nil` branc
 
 ### Initializing State from Attributes
 
-The standard way to set initial state in Le Truc is via **server-rendered attributes** on the component that needs it. No props drilling as in other frameworks. Le Trucs provides some bundled attribute parsers to convert attribute values to the desired type. And you can also define your own custom parsers.
+The standard way to set initial state is via **server-rendered attributes** on the component element. Pass a `Parser` function to `expose()` — Le Truc calls it with the attribute value at connect time. Bundled parsers cover common types; `asParser()` wraps any custom parser function.
 
 ```js
 defineComponent('my-component', ({ expose }) => {
@@ -203,8 +202,8 @@ defineComponent('my-component', ({ expose }) => {
 })
 ```
 
-{% callout .tip %}
-**Parsers run once at connect time.** The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser — use event handlers or direct property writes to update state post-connect.
+{% callout .tip title="Parsers run once at connect time" %}
+The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser — use event handlers or direct property writes to update state post-connect.
 {% /callout %}
 
 ### Bundled Attribute Parsers
@@ -256,7 +255,7 @@ Without a hint string (second argument), `first()` returns `undefined` if no mat
 The `all()` function returns a `Memo<E[]>` — a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. Because it's reactive, effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM.
 
 {% callout .tip %}
-**Tip**: `all()` observes structural changes and re-runs effects accordingly. Prefer `first()` when targeting a single element known to be present at connection time.
+`all()` observes structural changes and re-runs effects accordingly. Prefer `first()` when targeting a single element known to be present at connection time.
 {% /callout %}
 
 {% /section %}
@@ -349,10 +348,8 @@ return [
 
 The order of descriptors does not matter.
 
-{% callout .tip %}
-**CSS must define what the class or attribute does**
-
-`bindClass(el, 'even', ...)` adds or removes the `even` class — but nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `bindAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
+{% callout .tip title="CSS must define what the class or attribute does" %}
+`bindClass(el, 'even')` adds or removes the `even` class — but nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `bindAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
 
 See [Reactive Styles](styling.html#reactive-styles) for examples of how CSS and effects work together.
 {% /callout %}
@@ -389,7 +386,7 @@ Use `on(memo, type, handler)` when a single delegated listener on the host is en
 
 ### DOM Binding Helpers
 
-Le Truc provides `bind*` helpers for common DOM update patterns. Each returns a handler (or `WatchHandlers` object) to pass to `watch()`. See the [Helpers section](api.html#helpers) in the API reference for descriptions and usage examples.
+Le Truc provides `bind*` helpers for common DOM update patterns. Each returns a handler (or `SingleMatchHandlers` object) to pass to `watch()`. See the [Helpers section](api.html#helpers) in the API reference for descriptions and usage examples.
 
 ### Using Local Signals for Private State
 
@@ -432,11 +429,9 @@ defineComponent('my-component', ({ expose, first, host, watch }) => {
 })
 ```
 
-{% callout .tip %}
-**When to use**
-
+{% callout .tip title="When to use" %}
 - **Use a property name or a local signal** when the state is part of the component's public interface or internally reused.
-- **Use a thunk** to **derive a value on the fly** when it is needed only in this one place.
+- **Use a thunk** when the derived value is only needed in this one place.
 {% /callout %}
 
 ### Bidirectional Binding with Native Elements
@@ -471,9 +466,7 @@ Three pieces work together:
 
 This creates a full cycle: DOM → signal → DOM, with the signal as the single source of truth.
 
-{% callout .tip %}
-**`bindProperty()` vs `bindAttribute()`**
-
+{% callout .tip title="`bindProperty()` vs `bindAttribute()`" %}
 `bindAttribute(el, 'checked')` sets the HTML attribute, which only controls the checkbox's *default* state and has no effect on the live `.checked` property once the page has loaded. `bindProperty(el, 'checked')` assigns to the element's JS property directly — the only reliable way to update native form element state at runtime.
 
 Use `bindProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, `ariaDisabled`.

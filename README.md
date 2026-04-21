@@ -40,31 +40,28 @@ bun add @zeix/le-truc
 2. Define the component:
 
 ```js
-import { defineComponent, on, read, setText } from '@zeix/le-truc'
+import { bindText, defineComponent } from '@zeix/le-truc'
 
 defineComponent(
-  'basic-hello',         // Component name (must contain a hyphen)
-  ({ first, host }) => { // Factory: query DOM elements, return ui/props/effects
+  'basic-hello',                     // Component name (must contain a hyphen)
+  ({ expose, first, on, watch }) => { // Factory: query DOM, declare props, return effects
     const input = first('input', 'Needed to enter the name.')
     const output = first('output', 'Needed to display the name.')
-    const fallback = output.textContent ?? 'World'
-    return {
-      ui: { input, output },
-      props: {
-        name: read(() => output.textContent, fallback), // initial value from DOM
-      },
-      effects: {
-        input: on('input', () => { host.name = input.value || fallback }),
-        output: setText('name'),
-      },
-    }
+    const fallback = output.textContent || ''
+
+    expose({ name: output.textContent ?? '' }) // declare reactive prop
+
+    return [
+      on(input, 'input', () => ({ name: input.value || fallback })),
+      watch('name', bindText(output)),
+    ]
   },
 )
 ```
 
 3. Import the module and watch it work.
 
-`defineComponent` returns a Custom Element class registered via `customElements.define()`. Properties declared in `props` become reactive: reading them inside an effect tracks the dependency, writing them triggers only the affected DOM updates.
+`defineComponent` registers the element via `customElements.define()`. `expose()` declares reactive properties, `watch()` wires up DOM updates that fire only when the tracked signal actually changes, `on()` binds event listeners.
 
 ## Documentation
 

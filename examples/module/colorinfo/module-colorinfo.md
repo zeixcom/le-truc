@@ -1,6 +1,6 @@
 ### Module Colorinfo
 
-An expandable color swatch with OKLCH, hex, RGB, and HSL details. Demonstrates multiple readonly computed properties derived from a single `color` reactive, `bindStyle()` for CSS custom properties (`--color-swatch`, `--color-fallback`), `pass()` on a `NodeList` of `basic-number` elements to push individual channel values, and `bindText()` for the name and hex label.
+An expandable color swatch with OKLCH, hex, RGB, and HSL details. Demonstrates multiple readonly computed properties derived from a single `color` reactive, `bindStyle()` for CSS custom properties (`--color-swatch`, `--color-fallback`), `pass()` on `basic-number` elements to push individual channel values, and `bindText()` for the name and hex label.
 
 #### Preview
 

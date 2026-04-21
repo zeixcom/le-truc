@@ -2,58 +2,6 @@
 
 Le Truc is a reactive custom elements library. This document describes how the pieces in `src/` fit together.
 
-## File Map
-
-```
-src/
-  component.ts        The heart: defineComponent() and the Truc class
-  effects.ts          Effect primitives: EffectDescriptor, FactoryResult, each()
-  ui.ts               DOM queries (first/all), dependency resolution, selector type inference
-  parsers.ts          Parser/Reader type system and branding utilities
-  events.ts           Event binding helpers (makeOn, OnHelper)
-  context.ts          Context protocol (provide/request) for dependency injection
-  helpers.ts          bind* convenience WatchHandlers for use with watch()
-  scheduler.ts        rAF-based task deduplication
-  errors.ts           Domain-specific error classes
-  internal.ts         Internal signal map (getSignals) — shared by component.ts and factory.ts
-  util.ts             Logging, element introspection, property validation
-
-  parsers/
-    boolean.ts        asBoolean
-    json.ts           asJSON
-    number.ts         asInteger, asNumber, asClampedInteger
-    string.ts         asString, asEnum
-    date.ts           asDate
-```
-
-## Dependency Graph
-
-Arrows mean "imports from". The graph flows bottom-up from leaf utilities to `component.ts`.
-
-```
-util.ts ─────────────────────────────────────────────┐
-errors.ts ──────── util.ts                           │
-scheduler.ts ──── (leaf, no internal imports)        │
-parsers.ts ─────── (leaf, no internal imports)       │
-parsers/* ──────── parsers.ts                        │
-                                                     │
-internal.ts ────── (leaf, signal storage)            │
-ui.ts ──────────── errors.ts, util.ts                │
-effects.ts ─────── (leaf: cause-effect only)         │
-                                                     │
-events.ts ──────── scheduler.ts                      │
-                                                     │
-context.ts ─────── (leaf: protocol types only)       │
-                                                     │
-factory.ts ─────── component.ts (types), context.ts, │
-                   effects.ts, errors.ts, internal.ts,│
-                   scheduler.ts, util.ts             │
-                                                     │
-component.ts ───── effects.ts, errors.ts, factory.ts,│
-                   internal.ts, parsers.ts, ui.ts,   │
-                   util.ts                           │
-```
-
 The single external dependency is `@zeix/cause-effect`, which provides the reactive primitives used by Le Truc: `createState`, `createComputed`, `createEffect`, `createMemo`, `createScope`, `createSensor`, `createSlot`, `createTask`, `createStore`, `createList`, `createCollection`, `Signal`, `Memo`, `Sensor`, `Slot`, `batch`, `match`, `unown`, `untrack`, and various type guards and utility functions. See `index.ts` for the full re-export surface.
 
 ## The Component Lifecycle
@@ -75,10 +23,9 @@ connectedCallback()
   │     descriptors = factory(context)   ← expose() called inside; signals created
   │
   │     #initSignals dispatches per initializer:
-  │       ├─ Parser (PARSER_BRAND)?      →  parser(this.getAttribute(key))
+  │       ├─ Parser (PARSER_BRAND)?          →  parser(this.getAttribute(key))
   │       ├─ MethodProducer (METHOD_BRAND)?  →  assign directly to host
-  │       ├─ Function (Reader)?          →  reader(host)
-  │       └─ Otherwise                  →  use value directly (static or Signal)
+  │       └─ Otherwise                       →  convert to signal
   │       Each non-null result is passed to #setAccessor(key, value).
   │
   └─ 3. resolveDependencies(() => {
@@ -102,7 +49,7 @@ The Slot enables signal swapping: `pass()` calls `slot.replace(newSignal)` to in
 
 ### disconnectedCallback — cleanup
 
-Calls the cleanup function returned by `runEffects()`, which tears down all effects and event listeners.
+Calls the cleanup function stored from `createScope()`, which tears down all effects and event listeners.
 
 ## The Effect System
 
@@ -144,7 +91,7 @@ Calls `root.querySelector()`. If the matched element is an undefined custom elem
 
 ### all(selector, required?)
 
-Returns a `Memo<E[]>` created by `createElementsMemo()`. This sets up a `MutationObserver` (lazily, via the `watched` option on `createMemo`) that watches for `childList`, `subtree`, and relevant attribute changes. The memo always contains the current matching elements; added/removed diffs are derived downstream by the owning `createEffect` in `runEffects`.
+Returns a `Memo<E[]>` created by `createElementsMemo()`. This sets up a `MutationObserver` (lazily, via the `watched` option on `createMemo`) that watches for `childList`, `subtree`, and relevant attribute changes. The memo always contains the current matching elements; added/removed diffs are derived downstream by the owning `createEffect`.
 
 The `MutationObserver` config is smart about which attributes to watch: `extractAttributes(selector)` parses the CSS selector to find attribute names implied by `.class`, `#id`, and `[attr]` patterns.
 
@@ -287,8 +234,8 @@ Le Truc uses four prefix families, each mapping to a distinct layer of the stack
 |--------|-------|---------|-----------------|
 | `define*` | DOM / component | `defineComponent`, `defineMethod` | Things with a DOM identity — custom elements, methods that live on elements |
 | `bind*` | DOM update handlers | `bindText`, `bindAttribute`, `bindClass`, `bindVisible`, `bindStyle`, `bindProperty`, `dangerouslyBindInnerHTML` | Handler factories that apply a value to a DOM node; always used as the second argument to `watch()` |
-| `as*` | Parsers / type coercion | `asBoolean`, `asInteger`, `asNumber`, `asString`, `asEnum`, `asDate`, `asJSON`, `asClampedInteger`, `asParser` | Branded parser factories that coerce an attribute string to a typed value; pure data-level, no DOM involvement |
-| `create*` | Data flow / signals | `createState`, `createEffect`, `createScope`, `createSensor`, `createEventsSensor`, `createElementsMemo` | Reactive primitives from `@zeix/cause-effect` or Le Truc's signal-layer utilities |
+| `as*` | Parsers / type coercion | `asBoolean`, `asInteger`, `asNumber`, `asString`, `asEnum`, `asJSON`, `asClampedInteger`, `asParser` | Branded parser factories that coerce an attribute string to a typed value; pure data-level, no DOM involvement |
+| `create*` | Data flow / signals | `createState`, `createEffect`, `createScope`, `createSensor`, `createElementsMemo` | Reactive primitives from `@zeix/cause-effect` or Le Truc's signal-layer utilities |
 
 The `define*` / `bind*` split within the DOM layer reflects direction of coupling: `define*` brings a DOM concept into existence (register, install); `bind*` connects a data value to an existing DOM node (update, sync).
 
@@ -320,12 +267,14 @@ label: asString(label?.textContent ?? first('label')?.textContent ?? '')
 **Methods**: `expose()` handles methods via `defineMethod()`, keeping all public API declaration in one place.
 
 ```ts
+const length = createState(textbox.value.length)
+
 expose({
-    checked: checkbox.checked,                    // static → createState
-    label: asString(label?.textContent ?? ''),     // parser → reads attribute, falls back
-    clear: clearMethod,                            // defineMethod → installs host.clear
-    length: createEventsSensor(textbox, 0, { ... }), // sensor → see §createEventsSensor
-    theme: requestContext('theme', 'light'),        // context → see §requestContext
+    checked: checkbox.checked,                 // static → createState
+    label: asString(label?.textContent ?? ''), // parser → reads attribute, falls back
+    clear: clearMethod,                        // defineMethod → installs host.clear
+    length: length.get,                        // getter only → read-only to consumers
+    theme: requestContext('theme', 'light'),   // context → see §requestContext
 })
 ```
 

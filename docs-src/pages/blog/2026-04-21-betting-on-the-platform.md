@@ -3,7 +3,7 @@ title: Betting on the Platform
 description: Why we built Le Truc around the browser's native rendering instead of replacing it – and why that bet gets stronger every year.
 emoji: 🎲
 layout: blog
-date: 2026-04-15
+date: 2026-04-21
 author: Esther Brunner
 tags: web platform, frontend architecture
 ---
