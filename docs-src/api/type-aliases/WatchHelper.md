@@ -2,7 +2,7 @@
 
 > **WatchHelper**\<`P`\> = \{\<`K`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`K`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \<`T`\>(`source`, `handlers`): [`EffectDescriptor`](EffectDescriptor.md); (`source`, `handler`): [`EffectDescriptor`](EffectDescriptor.md); \}
 
-Defined in: [src/effects.ts:83](https://github.com/zeixcom/le-truc/blob/c06fbd9800df065e7a4d81949422b458792c2deb/src/effects.ts#L83)
+Defined in: [src/effects.ts:83](https://github.com/zeixcom/le-truc/blob/8cc5e3630332bc351e89d0aacefd1cc293e2dfad/src/effects.ts#L83)
 
 The `watch` helper type in `FactoryContext`.
 

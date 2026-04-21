@@ -19,6 +19,7 @@ import { watchFiles } from './file-watcher'
 import {
 	highlightCodeBlocks,
 	injectModuleDemoPreview,
+	injectTableOfContents,
 	resolveInternalLinks,
 } from './html-shaping'
 import { getRelativePath } from './io'
@@ -248,6 +249,7 @@ const docsMarkdown: {
 				htmlContent = await highlightCodeBlocks(htmlContent)
 				htmlContent = injectModuleDemoPreview(htmlContent)
 				htmlContent = resolveInternalLinks(htmlContent, basePath)
+				htmlContent = injectTableOfContents(htmlContent, toc)
 
 				// Extract title
 				let title = frontmatter.title

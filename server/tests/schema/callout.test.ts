@@ -49,6 +49,27 @@ describe('callout schema', () => {
 		expect(result.children.length).toBeGreaterThan(0)
 	})
 
+	test('renders title as <p><strong> prepended to children', () => {
+		const result = transformCallout({ class: 'info', title: 'Heads up' })
+		const first = result.children[0] as Tag
+		expect(first).toBeInstanceOf(Tag)
+		expect(first.name).toBe('p')
+		const strong = first.children[0] as Tag
+		expect(strong).toBeInstanceOf(Tag)
+		expect(strong.name).toBe('strong')
+		expect(strong.children[0]).toBe('Heads up')
+	})
+
+	test('does not pass title as attribute to card-callout', () => {
+		const result = transformCallout({ class: 'info', title: 'Heads up' })
+		expect(result.attributes.title).toBeUndefined()
+	})
+
+	test('omits title paragraph when title is absent', () => {
+		const result = transformCallout({ class: 'info' })
+		expect(result.children).toHaveLength(0)
+	})
+
 	test('accepts all valid class values without error', () => {
 		const validClasses = ['info', 'tip', 'danger', 'note', 'caution']
 		for (const cls of validClasses) {

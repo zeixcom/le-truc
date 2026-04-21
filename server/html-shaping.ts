@@ -1,4 +1,5 @@
 import { codeToHtml } from 'shiki'
+import type { TocItem } from './markdoc-helpers'
 
 const decodeHtmlEntities = (value: string): string =>
 	value
@@ -89,6 +90,22 @@ export const resolveInternalLinks = (html: string, basePath: string): string =>
 		}
 		return _match
 	})
+
+export const injectTableOfContents = (html: string, toc: TocItem[]): string => {
+	if (toc.length < 2)
+		return html.replace(
+			/<div class="toc-placeholder" data-toc="true"><\/div>/g,
+			'',
+		)
+	const items = toc
+		.map(({ id, text }) => `<li><a href="#${id}">${text}</a></li>`)
+		.join('')
+	const nav = `<nav class="toc" aria-label="On this page"><ol>${items}</ol></nav>`
+	return html.replace(
+		/<div class="toc-placeholder" data-toc="true"><\/div>/g,
+		nav,
+	)
+}
 
 export const injectModuleDemoPreview = (html: string): string =>
 	html.replace(

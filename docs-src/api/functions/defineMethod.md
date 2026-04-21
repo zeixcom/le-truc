@@ -2,7 +2,7 @@
 
 > **defineMethod**\<`T`\>(`fn`): `T` & `object`
 
-Defined in: [src/parsers.ts:67](https://github.com/zeixcom/le-truc/blob/c06fbd9800df065e7a4d81949422b458792c2deb/src/parsers.ts#L67)
+Defined in: [src/parsers.ts:67](https://github.com/zeixcom/le-truc/blob/8cc5e3630332bc351e89d0aacefd1cc293e2dfad/src/parsers.ts#L67)
 
 Brand a custom method-producer function with the `METHOD_BRAND` symbol.
 

@@ -2,7 +2,7 @@
 
 > **dangerouslyBindInnerHTML**(`element`, `options?`): [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string`\>
 
-Defined in: [src/helpers.ts:175](https://github.com/zeixcom/le-truc/blob/c06fbd9800df065e7a4d81949422b458792c2deb/src/helpers.ts#L175)
+Defined in: [src/helpers.ts:175](https://github.com/zeixcom/le-truc/blob/8cc5e3630332bc351e89d0aacefd1cc293e2dfad/src/helpers.ts#L175)
 
 Returns `SingleMatchHandlers<string>` that sets the inner HTML of an element,
 with optional Shadow DOM and script re-execution support.
