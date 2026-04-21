@@ -36,6 +36,10 @@
 - **`provideContexts()` and `requestContext()` are factory context helpers**: Both are bound to the host element and called directly from the factory. `provideContexts([...])` returns an `EffectDescriptor` to include in the return array.
 - **`@zeix/cause-effect` upgraded to `^1.2.1`**: Adds `SingleMatchHandlers<T>` with a single-signal `match(signal, handlers)` overload (`ok` receives the value directly, `err` a single `Error`), async handlers (`MaybePromise<MaybeCleanup>`) across all branches, and the `stale` branch for `Task` signals. Also exports `isSignalOfType<T>()` (replaces deprecated `isObjectOfType()`), `DEEP_EQUALITY`, and `DEFAULT_EQUALITY`; all re-exported from Le Truc's `index.ts`.
 
+### Fixed
+
+- **`extractAttributes` ReDoS**: Replaced `/\[[^\]]*\]/g` with a linear O(n) depth-counter scan, eliminating O(n²) backtracking on selectors containing many `[` without a closing `]`. Also fixed attribute name extraction to split on `]` before stripping non-alphanumeric characters, preventing characters after `]` (e.g. `#id` in `.nav[aria-expanded]#id`) from leaking into the extracted name.
+
 ### Removed
 
 - **Old 4-parameter `defineComponent()` form** `(name, props, select, setup)` — fully replaced by the factory form.

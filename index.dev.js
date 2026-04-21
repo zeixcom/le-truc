@@ -1975,7 +1975,17 @@ var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 var DEPENDENCY_TIMEOUT = 200;
 var extractAttributes = (selector) => {
   const attributes = new Set;
-  const withoutAttrValues = selector.replace(/\[[^\]]*\]/g, "");
+  let withoutAttrValues = "";
+  let depth = 0;
+  for (const ch of selector) {
+    if (ch === "[")
+      depth++;
+    else if (ch === "]") {
+      if (depth > 0)
+        depth--;
+    } else if (depth === 0)
+      withoutAttrValues += ch;
+  }
   if (withoutAttrValues.includes("."))
     attributes.add("class");
   if (withoutAttrValues.includes("#"))
@@ -1986,7 +1996,7 @@ var extractAttributes = (selector) => {
       const part = parts[i];
       if (!part || !part.includes("]"))
         continue;
-      const attrName = part.split("=")[0].trim().replace(/[^a-zA-Z0-9_-]/g, "");
+      const attrName = part.split("=")[0].split("]")[0].trim().replace(/[^a-zA-Z0-9_-]/g, "");
       if (attrName)
         attributes.add(attrName);
     }
