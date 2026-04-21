@@ -8,6 +8,13 @@ import { getFilePath, writeFileSafe } from '../io'
 
 export const getMockOutputPath = (filePath: string): string => {
 	const rel = relative(COMPONENTS_DIR, filePath)
+	const parts = rel.split('/')
+	// Convert <type>/<name>/mocks/... to <type>-<name>/mocks/... to match HTML src and URL pattern.
+	if (parts.length >= 4 && parts[2] === 'mocks') {
+		const componentName = `${parts[0]}-${parts[1]}`
+		const mockRelPath = parts.slice(2).join('/')
+		return getFilePath(TEST_DIR, componentName, mockRelPath)
+	}
 	return getFilePath(TEST_DIR, rel)
 }
 
