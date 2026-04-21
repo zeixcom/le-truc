@@ -336,13 +336,14 @@ function recomputeTask(node) {
       return;
     node.controller = undefined;
     const error = err instanceof Error ? err : new Error(String(err));
-    if (!node.error || error.name !== node.error.name || error.message !== node.error.message) {
-      node.error = error;
-      for (let e = node.sinks;e; e = e.nextSink)
-        propagate(e.sink);
-      if (batchDepth === 0)
-        flush();
-    }
+    batch(() => {
+      if (!node.error || error.name !== node.error.name || error.message !== node.error.message) {
+        node.error = error;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+      }
+      setState(node.pendingNode, false);
+    });
   });
   node.flags = FLAG_CLEAN;
 }
@@ -1717,16 +1718,15 @@ var makeWatch = (host) => {
       if (Array.isArray(source)) {
         const signals = source.map((s) => toSignal(host, s));
         const handler = handlerOrHandlers;
-        return createEffect(() => match(signals, { ok: (values) => () => handler(values) }));
+        return createEffect(() => match(signals, { ok: (values) => untrack(() => handler(values)) }));
       }
       const signal = toSignal(host, source);
       if (typeof handlerOrHandlers === "function") {
         return createEffect(() => match(signal, {
-          ok: (value) => () => handlerOrHandlers(value)
+          ok: (value) => untrack(() => handlerOrHandlers(value))
         }));
       }
-      const handlers = handlerOrHandlers;
-      return createEffect(() => match(signal, handlers));
+      return createEffect(() => match(signal, handlerOrHandlers));
     };
   }
   return watch;
@@ -2272,19 +2272,6 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
 };
 // src/parsers/boolean.ts
 var asBoolean = () => asParser((value) => value != null && value !== "false");
-// src/parsers/date.ts
-var asDate = (fallback = "") => asParser((value) => {
-  if (!value)
-    return fallback;
-  const date = new Date(value);
-  if (isNaN(date.getTime()))
-    return fallback;
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  });
-});
 // src/parsers/json.ts
 var asJSON = (fallback) => asParser((value) => {
   if ((value ?? fallback) == null)
@@ -2395,7 +2382,6 @@ export {
   asJSON,
   asInteger,
   asEnum,
-  asDate,
   asClampedInteger,
   asBoolean,
   UnsetSignalValueError,

@@ -2,6 +2,6 @@
 
 > **UnknownContext** = [`Context`](Context.md)\<`unknown`, `unknown`\>
 
-Defined in: [src/context.ts:26](https://github.com/zeixcom/le-truc/blob/56101c7b29abec1b313b7eb357a8db22a4da0ef6/src/context.ts#L26)
+Defined in: [src/context.ts:26](https://github.com/zeixcom/le-truc/blob/3d378e339ca819861372f356f408d3d000b2c62c/src/context.ts#L26)
 
 An unknown context type

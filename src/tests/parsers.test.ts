@@ -5,7 +5,6 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { asDate } from '../parsers/date'
 import { asJSON } from '../parsers/json'
 import { asClampedInteger, asInteger, asNumber } from '../parsers/number'
 import { asEnum, asString } from '../parsers/string'
@@ -106,29 +105,6 @@ describe('asString', () => {
 
 	test('returns empty string fallback by default', () => {
 		expect(asString()(undefined)).toBe('')
-	})
-})
-
-/* === parsers/date.ts === */
-
-describe('asDate', () => {
-	test('returns fallback for null', () => {
-		expect(asDate('n/a')(null)).toBe('n/a')
-	})
-
-	test('returns fallback for empty string', () => {
-		expect(asDate('n/a')('')).toBe('n/a')
-	})
-
-	test('returns fallback for invalid date string', () => {
-		expect(asDate('n/a')('not-a-date')).toBe('n/a')
-	})
-
-	test('returns a non-empty string for a valid ISO date', () => {
-		const result = asDate()('2024-01-15')
-		expect(typeof result).toBe('string')
-		expect(result.length).toBeGreaterThan(0)
-		expect(result).not.toBe('Invalid Date')
 	})
 })
 

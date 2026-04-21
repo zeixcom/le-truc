@@ -20,7 +20,6 @@
   - `dangerouslyBindInnerHTML(element, options?)` — returns `WatchHandlers<string>` for innerHTML with optional shadow DOM and script re-execution
 - **`each(memo, callback)` helper**: Creates per-element reactive effects from a `Memo<E[]>`. When elements enter the collection their effects are activated inside a per-element `createScope`; when they leave the scope is disposed. The callback receives a single element and returns a `FactoryResult` array or a single `EffectDescriptor`. Returned as an `EffectDescriptor` for inclusion in the factory return array.
 - **`OnEventHandler<P, Evt, E>` type** exported from `src/events.ts`: Handler signature for `on()` — receives `(event, element)` and may return `{ prop: value }` to batch-update host properties, `Promise<void>` for fire-and-forget side effects, or `void`.
-- **`asDate(fallback?)` parser**: New `Parser<string>` factory with a simplified signature — no longer requires a UI context parameter.
 - **`asClampedInteger(min?, max?)` parser**: Parser for clamped integer values; returns `min` (default `0`) when the attribute is absent or the parsed value is out of range.
 - **`throttle(fn, signal?)` utility**: New exported function in `src/scheduler.ts`. Wraps any function to execute at most once per animation frame, always using the latest arguments. Shares the same RAF tick as `schedule()`. The returned function has a `.cancel()` method that discards any pending invocation. Accepts an optional `AbortSignal` — when the signal fires, the pending invocation is cancelled automatically.
 

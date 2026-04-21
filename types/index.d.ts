@@ -7,7 +7,6 @@ export { type EventType, type OnEventHandler, type OnHelper, } from './src/event
 export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, type DangerouslySetInnerHTMLOptions, dangerouslyBindInnerHTML, } from './src/helpers';
 export { asParser, defineMethod, isMethodProducer, isParser, type MethodProducer, type Parser, } from './src/parsers';
 export { asBoolean } from './src/parsers/boolean';
-export { asDate } from './src/parsers/date';
 export { asJSON } from './src/parsers/json';
 export { asClampedInteger, asInteger, asNumber } from './src/parsers/number';
 export { asEnum, asString } from './src/parsers/string';

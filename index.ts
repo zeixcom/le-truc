@@ -133,7 +133,7 @@ export {
 	type Parser,
 } from './src/parsers'
 export { asBoolean } from './src/parsers/boolean'
-export { asDate } from './src/parsers/date'
+
 export { asJSON } from './src/parsers/json'
 export { asClampedInteger, asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'

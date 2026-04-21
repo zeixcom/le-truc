@@ -93,7 +93,6 @@
 
 - [asBoolean](functions/asBoolean.md)
 - [asClampedInteger](functions/asClampedInteger.md)
-- [asDate](functions/asDate.md)
 - [asEnum](functions/asEnum.md)
 - [asInteger](functions/asInteger.md)
 - [asJSON](functions/asJSON.md)

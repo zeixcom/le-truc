@@ -2,7 +2,7 @@
 
 > **DangerouslySetInnerHTMLOptions** = `object`
 
-Defined in: [src/helpers.ts:7](https://github.com/zeixcom/le-truc/blob/56101c7b29abec1b313b7eb357a8db22a4da0ef6/src/helpers.ts#L7)
+Defined in: [src/helpers.ts:7](https://github.com/zeixcom/le-truc/blob/3d378e339ca819861372f356f408d3d000b2c62c/src/helpers.ts#L7)
 
 #### Properties
 
@@ -10,7 +10,7 @@ Defined in: [src/helpers.ts:7](https://github.com/zeixcom/le-truc/blob/56101c7b2
 
 > `optional` **allowScripts?**: `boolean`
 
-Defined in: [src/helpers.ts:9](https://github.com/zeixcom/le-truc/blob/56101c7b29abec1b313b7eb357a8db22a4da0ef6/src/helpers.ts#L9)
+Defined in: [src/helpers.ts:9](https://github.com/zeixcom/le-truc/blob/3d378e339ca819861372f356f408d3d000b2c62c/src/helpers.ts#L9)
 
 ***
 
@@ -18,4 +18,4 @@ Defined in: [src/helpers.ts:9](https://github.com/zeixcom/le-truc/blob/56101c7b2
 
 > `optional` **shadowRootMode?**: `ShadowRootMode`
 
-Defined in: [src/helpers.ts:8](https://github.com/zeixcom/le-truc/blob/56101c7b29abec1b313b7eb357a8db22a4da0ef6/src/helpers.ts#L8)
+Defined in: [src/helpers.ts:8](https://github.com/zeixcom/le-truc/blob/3d378e339ca819861372f356f408d3d000b2c62c/src/helpers.ts#L8)
