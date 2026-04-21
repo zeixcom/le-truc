@@ -48,6 +48,7 @@ layout: 'page'
   - [Listnav](./examples/module-listnav.html)
   - [Pagination](./examples/module-pagination.html)
   - [Scrollarea](./examples/module-scrollarea.html)
+  - [Splitview](./examples/module-splitview.html)
   - [Tabgroup](./examples/module-tabgroup.html)
   - [Ticker](./examples/module-ticker.html)
   - [Todo](./examples/module-todo.html)
