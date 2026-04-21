@@ -31,9 +31,9 @@ const processApiFile = async (file: FileInfo): Promise<void> => {
 	// Skip index files — only process individual API entries
 	const filename = relativePath.split('/').pop() || ''
 	if (
-		filename === 'globals.md'
-		|| filename === 'README.md'
-		|| filename.startsWith('_')
+		filename === 'globals.md' ||
+		filename === 'README.md' ||
+		filename.startsWith('_')
 	) {
 		return
 	}
@@ -88,7 +88,9 @@ export { stripBreadcrumbs }
 
 export const apiPagesEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => { resolve = res })
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
 	const cleanup = createEffect(() => {
 		match([apiMarkdown.sources], {
 			ok: async ([apiFiles]) => {

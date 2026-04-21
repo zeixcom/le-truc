@@ -18,8 +18,8 @@ function calculatePriority(page: PageInfo): string {
 		// Root pages get higher priority
 		return SITEMAP_PRIORITIES.ROOT_PAGE
 	} else if (
-		page.section === 'api'
-		&& page.relativePath.includes('README.md')
+		page.section === 'api' &&
+		page.relativePath.includes('README.md')
 	) {
 		// API overview page
 		return SITEMAP_PRIORITIES.API_OVERVIEW

@@ -176,11 +176,11 @@
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">	></span><span style="color:#F92672"> module-list</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x26;[</span><span style="color:#66D9EF;font-style:italic">filter</span><span style="color:#F8F8F2">='completed'] li:not(:has([checked])) {</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;[</span><span style="color:#66D9EF;font-style:italic">filter</span><span style="color:#F8F8F2">="completed"] li:not(:has([checked])) {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">		&#x26;[</span><span style="color:#A6E22E">filter</span><span style="color:#F92672">=</span><span style="color:#E6DB74">'active'</span><span style="color:#F8F8F2">] </span><span style="color:#F92672">li</span><span style="color:#A6E22E">:has</span><span style="color:#F8F8F2">([</span><span style="color:#A6E22E">checked</span><span style="color:#F8F8F2">]) {</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;[</span><span style="color:#A6E22E">filter</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"active"</span><span style="color:#F8F8F2">] </span><span style="color:#F92672">li</span><span style="color:#A6E22E">:has</span><span style="color:#F8F8F2">([</span><span style="color:#A6E22E">checked</span><span style="color:#F8F8F2">]) {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"></span>
@@ -209,7 +209,7 @@
 <span class="line"><span style="color:#F92672">	></span><span style="color:#F92672"> footer</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">grid</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		grid-template-columns</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">fr</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672">fr</span><span style="color:#F8F8F2">;</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		grid-template-areas</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">'filter filter'</span><span style="color:#E6DB74"> 'count clear'</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		grid-template-areas</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">"filter filter"</span><span style="color:#E6DB74"> "count clear"</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		align-items</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">center</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		gap</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m);</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		margin</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
@@ -245,7 +245,7 @@
 <span class="line"></span>
 <span class="line"><span style="color:#F8F8F2">		&#x26; </span><span style="color:#F92672">footer</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			grid-template-columns</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">fr</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672">fr</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672">fr</span><span style="color:#F8F8F2">;</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			grid-template-areas</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">'count filter clear'</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			grid-template-areas</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">"count filter clear"</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
@@ -274,98 +274,71 @@
 				<span class="language">ts</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Component,</span></span>
-<span class="line"><span style="color:#F8F8F2">	createElementsMemo,</span></span>
-<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
-<span class="line"><span style="color:#F8F8F2">	on,</span></span>
-<span class="line"><span style="color:#F8F8F2">	pass,</span></span>
-<span class="line"><span style="color:#F8F8F2">	setAttribute,</span></span>
-<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../..'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F92672"> type</span><span style="color:#F8F8F2"> { BasicButtonProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../basic-button/basic-button'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F92672"> type</span><span style="color:#F8F8F2"> { BasicPluralizeProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../basic-pluralize/basic-pluralize'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F92672"> type</span><span style="color:#F8F8F2"> { FormRadiogroupProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../form-radiogroup/form-radiogroup'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F92672"> type</span><span style="color:#F8F8F2"> { FormTextboxProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../form-textbox/form-textbox'</span></span>
-<span class="line"><span style="color:#F92672">import</span><span style="color:#F92672"> type</span><span style="color:#F8F8F2"> { ModuleListProps } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../module-list/module-list'</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleTodoUI</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">	form</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLFormElement</span></span>
-<span class="line"><span style="color:#F8F8F2">	textbox</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormTextboxProps</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	submit</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicButtonProps</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	list</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleListProps</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	count</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicPluralizeProps</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	filter</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormRadiogroupProps</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	clearCompleted</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicButtonProps</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">}</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { bindAttribute, createElementsMemo, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#E6DB74">		'module-todo'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Component</span><span style="color:#F8F8F2">&#x3C;{}></span></span>
+<span class="line"><span style="color:#E6DB74">		'module-todo'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;{}, </span><span style="color:#A6E22E;text-decoration:underline">ModuleTodoUI</span><span style="color:#F8F8F2">>(</span></span>
-<span class="line"><span style="color:#E6DB74">	'module-todo'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	{},</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> ({</span></span>
-<span class="line"><span style="color:#F8F8F2">		form: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'form'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a form element to enter a new todo item.'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">		textbox: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">			'form-textbox'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">			'Add &#x3C;form-textbox> component to enter a new todo item.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">		submit: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">			'basic-button.submit'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">			'Add &#x3C;basic-button.submit> component to submit the form.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">		list: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">			'module-list'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">			'Add &#x3C;module-list> component to display a list of todo items.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">		count: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">			'basic-pluralize'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">			'Add &#x3C;basic-pluralize> component to display the number of todo items.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">		filter: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">			'form-radiogroup'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">			'Add &#x3C;form-radiogroup> component to filter todo items.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">		clearCompleted: </span><span style="color:#A6E22E">first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">			'basic-button.clear-completed'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">			'Add &#x3C;basic-button.clear-completed> component to clear completed todo items.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		),</span></span>
-<span class="line"><span style="color:#F8F8F2">	}),</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">textbox</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">list</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">filter</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> active </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createElementsMemo</span><span style="color:#F8F8F2">(list, </span><span style="color:#E6DB74">'form-checkbox:not([checked])'</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> completed </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createElementsMemo</span><span style="color:#F8F8F2">(list, </span><span style="color:#E6DB74">'form-checkbox[checked]'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'module-todo'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> form </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'form'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a form element to enter a new todo item.'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> textbox </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">		'form-textbox'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">		'Add &#x3C;form-textbox> component to enter a new todo item.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> submit </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">		'basic-button.submit'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">		'Add &#x3C;basic-button.submit> component to submit the form.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> list </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">		'module-list'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">		'Add &#x3C;module-list> component to display a list of todo items.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> count </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">		'basic-pluralize'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">		'Add &#x3C;basic-pluralize> component to display the number of todo items.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> filter </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">		'form-radiogroup'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">		'Add &#x3C;form-radiogroup> component to filter todo items.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> clearCompleted </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">		'basic-button.clear-completed'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">		'Add &#x3C;basic-button.clear-completed> component to clear completed todo items.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	)</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">			form: </span><span style="color:#A6E22E">on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'submit'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">				e.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> textbox.value.</span><span style="color:#A6E22E">trim</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">value) </span><span style="color:#F92672">return</span></span>
-<span class="line"><span style="color:#F8F8F2">				list.</span><span style="color:#A6E22E">add</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">					item.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'slot'</span><span style="color:#F8F8F2">)?.</span><span style="color:#A6E22E">replaceWith</span><span style="color:#F8F8F2">(value)</span></span>
-<span class="line"><span style="color:#F8F8F2">				})</span></span>
-<span class="line"><span style="color:#F8F8F2">				textbox.</span><span style="color:#A6E22E">clear</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F8F8F2">			}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			submit: </span><span style="color:#A6E22E">pass</span><span style="color:#F8F8F2">({ </span><span style="color:#A6E22E">disabled</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">textbox.length }),</span></span>
-<span class="line"><span style="color:#F8F8F2">			list: </span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'filter'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> filter?.value </span><span style="color:#F92672">||</span><span style="color:#E6DB74"> 'all'</span><span style="color:#F8F8F2">),</span></span>
-<span class="line"><span style="color:#F8F8F2">			count: </span><span style="color:#A6E22E">pass</span><span style="color:#F8F8F2">({ </span><span style="color:#A6E22E">count</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> active.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length }),</span></span>
-<span class="line"><span style="color:#F8F8F2">			clearCompleted: [</span></span>
-<span class="line"><span style="color:#A6E22E">				pass</span><span style="color:#F8F8F2">({</span></span>
-<span class="line"><span style="color:#A6E22E">					disabled</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length,</span></span>
-<span class="line"><span style="color:#A6E22E">					badge</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span></span>
-<span class="line"><span style="color:#F8F8F2">						completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length </span><span style="color:#F92672">?</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length) </span><span style="color:#F92672">:</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#A6E22E">				on</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> items </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F92672">					for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">let</span><span style="color:#F8F8F2"> i </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> items.length </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">; i </span><span style="color:#F92672">>=</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">; i</span><span style="color:#F92672">--</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">						items[i]</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'li'</span><span style="color:#F8F8F2">)?.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			],</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span></span>
-<span class="line"><span style="color:#F8F8F2">	},</span></span>
-<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> active </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createElementsMemo</span><span style="color:#F8F8F2">(list, </span><span style="color:#E6DB74">'form-checkbox:not([checked])'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> completed </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createElementsMemo</span><span style="color:#F8F8F2">(list, </span><span style="color:#E6DB74">'form-checkbox[checked]'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">	return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">		pass</span><span style="color:#F8F8F2">(submit, { </span><span style="color:#A6E22E">disabled</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">textbox.length }),</span></span>
+<span class="line"><span style="color:#A6E22E">		pass</span><span style="color:#F8F8F2">(count, { </span><span style="color:#A6E22E">count</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> active.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length }),</span></span>
+<span class="line"><span style="color:#A6E22E">		pass</span><span style="color:#F8F8F2">(clearCompleted, {</span></span>
+<span class="line"><span style="color:#A6E22E">			disabled</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length,</span></span>
+<span class="line"><span style="color:#A6E22E">			badge</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span></span>
+<span class="line"><span style="color:#F8F8F2">				completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length </span><span style="color:#F92672">?</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length) </span><span style="color:#F92672">:</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">		on</span><span style="color:#F8F8F2">(form, </span><span style="color:#E6DB74">'submit'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			e.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> textbox.value.</span><span style="color:#A6E22E">trim</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">value) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#F8F8F2">			list.</span><span style="color:#A6E22E">add</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				item.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'slot'</span><span style="color:#F8F8F2">)?.</span><span style="color:#A6E22E">replaceWith</span><span style="color:#F8F8F2">(value)</span></span>
+<span class="line"><span style="color:#F8F8F2">			})</span></span>
+<span class="line"><span style="color:#F8F8F2">			textbox.</span><span style="color:#A6E22E">clear</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">		}),</span></span>
+<span class="line"><span style="color:#A6E22E">		on</span><span style="color:#F8F8F2">(clearCompleted, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> items </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">			for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">let</span><span style="color:#F8F8F2"> i </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> items.length </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">; i </span><span style="color:#F92672">>=</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">; i</span><span style="color:#F92672">--</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">				items[i]</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'li'</span><span style="color:#F8F8F2">)?.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">		}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">		watch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> filter.value </span><span style="color:#F92672">||</span><span style="color:#E6DB74"> 'all'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindAttribute</span><span style="color:#F8F8F2">(list, </span><span style="color:#E6DB74">'filter'</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#F8F8F2">	]</span></span>
+<span class="line"><span style="color:#F8F8F2">})</span></span>
 <span class="line"></span></code></pre>
 			</module-scrollarea>
 			<basic-button class="copy">

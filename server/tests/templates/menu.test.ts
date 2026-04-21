@@ -123,9 +123,7 @@ describe('menu', () => {
 	})
 
 	test('renders empty <ol> when no root pages exist', () => {
-		const pages = [
-			mockPage({ title: 'API Page', section: 'api' }),
-		]
+		const pages = [mockPage({ title: 'API Page', section: 'api' })]
 		const result = menu(pages)
 		expect(result).toContain('<section-menu>')
 		expect(result).toContain('<ol>')

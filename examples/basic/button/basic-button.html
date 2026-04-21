@@ -1,0 +1,48 @@
+<card-callout>
+	<p>
+		Try changing the <code>badge</code>, <code>disabled</code>, or
+		<code>label</code> attributes in the inspector.
+	</p>
+</card-callout>
+
+<!-- Default example - tests initial state and dynamic updates -->
+<basic-button>
+	<button type="button">
+		<span class="label">🛒 Shopping Cart</span>
+		<span class="badge">5</span>
+	</button>
+</basic-button>
+
+<hr />
+
+<!-- Property changes example - tests direct property manipulation -->
+<basic-button id="property-test">
+	<button type="button" class="large">
+		<span class="label">🛒 Shopping Cart</span>
+		<span class="badge">5</span>
+	</button>
+</basic-button>
+
+<hr />
+
+<!-- Missing elements example - tests graceful handling when .label/.badge spans are missing -->
+<basic-button id="missing-elements-test">
+	<button type="button" class="small tertiary">Just Button Text</button>
+</basic-button>
+
+<hr />
+
+<!-- Text fallback example - tests label property fallback to button text content -->
+<basic-button id="text-fallback-test">
+	<button type="button" class="primary">Button Text Only</button>
+</basic-button>
+
+<hr />
+
+<!-- Boolean attribute variations example - tests '', 'false', 'disabled', '0', and removeAttribute -->
+<basic-button id="boolean-test">
+	<button type="button" class="constructive">
+		<span class="label">Boolean Test</span>
+		<span class="badge">Test</span>
+	</button>
+</basic-button>

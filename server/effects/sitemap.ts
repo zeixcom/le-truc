@@ -6,7 +6,9 @@ import { sitemap } from '../templates/sitemap'
 
 export const sitemapEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => { resolve = res })
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
 	const cleanup = createEffect(() => {
 		match([docsMarkdown.pageInfos], {
 			ok: async ([pageInfos]): Promise<void> => {

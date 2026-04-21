@@ -1,14 +1,12 @@
 ### Function: asParser()
 
-> **asParser**\<`T`, `U`\>(`fn`): [`Parser`](../type-aliases/Parser.md)\<`T`, `U`\>
+> **asParser**\<`T`\>(`fn`): [`Parser`](../type-aliases/Parser.md)\<`T`\>
 
-Defined in: [src/parsers.ts:114](https://github.com/zeixcom/le-truc/blob/be10586073df9ae2ebe5b85bd4fcca8a69e532d4/src/parsers.ts#L114)
+Defined in: [src/parsers.ts:54](https://github.com/zeixcom/le-truc/blob/c5ac50af47ae40f80c1a0a08f969acee81e2622e/src/parsers.ts#L54)
 
 Brand a custom parser function with the `PARSER_BRAND` symbol.
 
-Use this to wrap any custom two-argument parser so `isParser()` can
-identify it reliably even when default parameters or destructuring
-would otherwise reduce `function.length`.
+Use this to wrap any custom parser so `isParser()` can identify it reliably.
 
 #### Type Parameters
 
@@ -16,21 +14,17 @@ would otherwise reduce `function.length`.
 
 `T` *extends* `object`
 
-##### U
-
-`U` *extends* [`UI`](../type-aliases/UI.md)
-
 #### Parameters
 
 ##### fn
 
-[`Parser`](../type-aliases/Parser.md)\<`T`, `U`\>
+[`Parser`](../type-aliases/Parser.md)\<`T`\>
 
 Custom parser function to brand
 
 #### Returns
 
-[`Parser`](../type-aliases/Parser.md)\<`T`, `U`\>
+[`Parser`](../type-aliases/Parser.md)\<`T`\>
 
 The same function, branded
 

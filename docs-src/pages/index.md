@@ -8,7 +8,7 @@ description: 'Overview and key benefits of Le Truc'
 
 # 📖 Introduction
 
-**Web development doesn't need to be complicated**. Le Truc lets you create reactive Web Components that enhance your existing HTML.
+**Le Truc adds a reactive layer to server-rendered HTML.** Keep your existing backend. Le Truc wires type-safe component properties to fine-grained DOM updates in the browser, without re-rendering and without a JavaScript server.
 {% /hero %}
 
 {% section .breakout %}
@@ -20,11 +20,9 @@ description: 'Overview and key benefits of Le Truc'
 {% slide title="We Can Have Nice Things!" class="purple" %}
 - Embrace the Web Platform
 - Use any server-side technology to render HTML
-- Have components
-- Have reactivity
-- Have type-safety
-- Have optimal performance
-- Have fun!
+- Type-safe reactive components
+- Fine-grained DOM updates — no VDOM, no diffing
+- Under 10 kB gzipped, tree-shakeable
 {% /slide %}
 
 {% slide title="HTML First." class="pink" %}
@@ -43,31 +41,28 @@ This means better SEO, faster initial page loads, and progressive enhancement th
 Progressively enhance the user experience by adding interactivity:
 
 ```js
-import { asString, defineComponent, setText } from '@zeix/le-truc'
+import { bindText, defineComponent } from '@zeix/le-truc'
 
-defineComponent(
-  'hello-world',
-  { name: asString() },
-  q => ({ span: q.first('span') }),
-  () => ({ span: setText('name') }),
-)
+defineComponent('hello-world', ({ expose, first, watch }) => {
+  const span = first('span')
+  expose({ name: span.textContent ?? '' })
+  return [watch('name', bindText(span))]
+})
 ```
 
-Le Truc augments what the platform already provides. It leverages the Web Components standard while adding just enough convenience functions to make reactive UI behaviors easy to implement.
+The component is a native Custom Element. Its `name` property is reactive — reading it inside an effect tracks the dependency; writing it triggers only the affected DOM update.
 {% /slide %}
 
 {% slide title="Faster. Because We Do Less." class="green" %}
-- Unlike SPA frameworks (React, Vue, Angular, Svelte, Lit, etc.) we **never render** on the client. Instead, the server and browser do this work. Like it's 1995.
-- Because we never render on the client, we need no JSON data and no JS templates either. This means less data over the wire and no plumbing DB → JSON → JS → HTML.
-- Unlike Hypermedia frameworks (HTMX, Datastar) we don't compensate for the lack of client-side rendering by a network request if not needed. If possible, we calculate the new state on the client.
-- We just add event listeners and set up a signal graph. Invisible work that doesn't cause layout shifts.
-- When the user interacts with the UI, we know exactly what to do. We just do fine-grained updates to the DOM. No VDOM, no diffing. Wait for signal 🚦 and go! 🏁
+- SPA frameworks (React, Vue, Angular, Svelte, Lit, etc.) render on the client. Le Truc **never does**. The server renders HTML; the browser shows it immediately — no hydration, no double templates, no DB → JSON → JS → HTML pipeline.
+- Hypermedia frameworks (HTMX, Datastar) avoid client rendering but fetch new HTML from the server on every state change. Le Truc updates state locally — a network request only when your logic actually needs server data.
+- Le Truc sets up event listeners and a signal graph. No layout shifts, no VDOM, no diffing. When state changes, only the affected DOM nodes update.
 {% /slide %}
 
 {% slide title="Minimal Size." class="blue" %}
-Because we add fewer abstractions, we can keep the library small (approximately 10kB gzipped).
+Because we add fewer abstractions, we can keep the library small (under 10 kB gzipped, tree-shakeable).
 
-HTML ain't broken. CSS ain't broken. JavaScript ain't broken. We just want to split it in chunks (components), detect bugs early (type safety), and have predictable updates without tight coupling (reactivity). That's what we stand for.
+HTML, CSS, and JavaScript already solve most of the problem. Le Truc adds what's missing: component boundaries, compile-time type safety, and predictable reactive updates without tight coupling.
 {% /slide %}
 
 {% /carousel %}

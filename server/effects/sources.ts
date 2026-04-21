@@ -59,7 +59,9 @@ export { generatePanels }
 
 export const sourcesEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => { resolve = res })
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
 	const cleanup = createEffect(() => {
 		match(
 			[
@@ -77,20 +79,23 @@ export const sourcesEffect = (onRebuild?: () => void) => {
 						const tsMap = toPathMap(tsFiles)
 
 						for (const html of htmlFiles) {
-							// Only process main component HTML files (examples/component-name/component-name.html)
+							// Only process main component HTML files (examples/<type>/<name>/<type>-<name>.html)
 							// Skip test files and other auxiliary HTML files
 							const pathParts = html.path.split('/')
 
-							if (pathParts.length < 3) continue
+							if (pathParts.length < 4) continue
 
-							const componentName = pathParts[pathParts.length - 2]!
+							const typeName = pathParts[pathParts.length - 3]!
+							const dirName = pathParts[pathParts.length - 2]!
 							const fileName = pathParts[pathParts.length - 1]!.replace(
 								/\.html$/,
 								'',
 							)
 
-							// Skip if filename doesn't match component directory name
-							if (componentName !== fileName) continue
+							// Skip if filename doesn't match <type>-<name> pattern
+							if (fileName !== `${typeName}-${dirName}`) continue
+
+							const componentName = fileName
 
 							const name = html.path.replace(/\.html$/, '')
 							const css = cssMap.get(name + '.css')

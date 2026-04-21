@@ -46,7 +46,8 @@
 			"complexity": {
 				"noExtraBooleanCast": "error",
 				"noUselessCatch": "error",
-				"noUselessTypeConstraint": "error"
+				"noUselessTypeConstraint": "error",
+				"useIndexOf": "warn"
 			},
 			"correctness": {
 				"noConstAssign": "error",

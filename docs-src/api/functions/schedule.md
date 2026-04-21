@@ -1,22 +1,22 @@
 ### Function: schedule()
 
-> **schedule**(`element`, `task`): `void`
+> **schedule**(`key`, `task`): `void`
 
-Defined in: [src/scheduler.ts:44](https://github.com/zeixcom/le-truc/blob/be10586073df9ae2ebe5b85bd4fcca8a69e532d4/src/scheduler.ts#L44)
+Defined in: [src/scheduler.ts:35](https://github.com/zeixcom/le-truc/blob/c5ac50af47ae40f80c1a0a08f969acee81e2622e/src/scheduler.ts#L35)
 
 Schedule a task to be executed on the next animation frame, with automatic
 deduplication per element. If the same element schedules multiple tasks
-before the next frame, only the latest task will be executed.
+before the next frame, only the latest task executes.
 
-Used internally by `on()` for passive events and by `dangerouslySetInnerHTML`.
+Used internally by `dangerouslyBindInnerHTML`.
 
 #### Parameters
 
-##### element
+##### key
 
-`Element`
+`object`
 
-Element used as the deduplication key
+Deduplication key; typically the target Element
 
 ##### task
 

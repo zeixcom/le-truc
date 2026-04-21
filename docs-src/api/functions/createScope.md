@@ -2,7 +2,7 @@
 
 > **createScope**(`fn`): [`Cleanup`](../type-aliases/Cleanup.md)
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:220
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:241
 
 Creates a new ownership scope for managing cleanup of nested effects and resources.
 All effects created within the scope will be automatically disposed when the scope is disposed.

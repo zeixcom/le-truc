@@ -1,0 +1,56 @@
+module-coloreditor {
+    display: grid;
+    grid-template-areas:
+        "scale name"
+        "graph graph"
+        "lightness lightness"
+        "chroma chroma"
+        "hue hue"
+        "info info";
+    grid-template-columns: auto 1fr;
+    column-gap: var(--space-m);
+
+    > form-colorgraph {
+        grid-area: graph;
+    }
+
+    > .hue {
+        grid-area: hue;
+    }
+
+    > .lightness {
+        grid-area: lightness;
+    }
+
+    > .chroma {
+        grid-area: chroma;
+    }
+
+    > .scale {
+        grid-area: scale;
+    }
+
+    > .name {
+        grid-area: name;
+        margin: var(--space-s) 0;
+    }
+
+    > .info {
+        grid-area: info;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+    }
+}
+
+@container (width > 45rem) {
+    module-coloreditor {
+        grid-template-areas:
+            "scale name info"
+            "graph graph info"
+            "lightness lightness info"
+            "chroma chroma info"
+            "hue hue info";
+        grid-template-columns: auto 3fr 2fr;
+    }
+}

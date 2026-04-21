@@ -162,9 +162,9 @@ describe('fence schema - collapse functionality', () => {
 		const result = fence.transform!(node, {}) as Tag
 		const expandButton = result.children.find(
 			child =>
-				child instanceof Tag
-				&& child.name === 'button'
-				&& child.attributes.class === 'overlay',
+				child instanceof Tag &&
+				child.name === 'button' &&
+				child.attributes.class === 'overlay',
 		)
 
 		expect(expandButton).toBeDefined()
@@ -180,9 +180,9 @@ describe('fence schema - collapse functionality', () => {
 		const result = fence.transform!(node, {}) as Tag
 		const expandButton = result.children.find(
 			child =>
-				child instanceof Tag
-				&& child.name === 'button'
-				&& child.attributes.class === 'overlay',
+				child instanceof Tag &&
+				child.name === 'button' &&
+				child.attributes.class === 'overlay',
 		)
 
 		expect(expandButton).toBeUndefined()
@@ -198,9 +198,9 @@ describe('fence schema - collapse functionality', () => {
 		const result = fence.transform!(node, {}) as Tag
 		const expandButton = result.children.find(
 			child =>
-				child instanceof Tag
-				&& child.name === 'button'
-				&& child.attributes.class === 'overlay',
+				child instanceof Tag &&
+				child.name === 'button' &&
+				child.attributes.class === 'overlay',
 		) as Tag
 
 		expect(expandButton.attributes['aria-expanded']).toBe('false')

@@ -40,44 +40,6 @@ class InvalidPropertyNameError extends TypeError {
 }
 
 /**
- * Error thrown when setup function does not return effects
- *
- * @since 0.14.0
- */
-class InvalidEffectsError extends TypeError {
-	/**
-	 * @param {HTMLElement} host - Host component
-	 * @param {Error} cause - Error that caused the invalid effects
-	 */
-	constructor(host: HTMLElement, cause?: Error) {
-		super(
-			`Invalid effects in component ${elementName(host)}. Effects must be a record of effects for UI elements or the component, or a Promise that resolves to effects.`,
-		)
-		this.name = 'InvalidEffectsError'
-		if (cause) this.cause = cause
-	}
-}
-
-/**
- * Error thrown if UI key is invalid
- *
- * @since 0.15.1
- */
-class InvalidUIKeyError extends TypeError {
-	/**
-	 * @param {HTMLElement} host - Host component
-	 * @param {string} key - Invalid key
-	 * @param {string} where - Where the key is used
-	 */
-	constructor(host: HTMLElement, key: string, where: string) {
-		super(
-			`Invalid UI key "${key}" in ${where} of component ${elementName(host)}`,
-		)
-		this.name = 'InvalidUIKeyError'
-	}
-}
-
-/**
  * Error thrown when a required descendant element does not exist in a component's DOM subtree
  *
  * @since 0.14.0
@@ -153,9 +115,7 @@ export {
 	DependencyTimeoutError,
 	InvalidComponentNameError,
 	InvalidCustomElementError,
-	InvalidEffectsError,
 	InvalidPropertyNameError,
 	InvalidReactivesError,
-	InvalidUIKeyError,
 	MissingElementError,
 }

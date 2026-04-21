@@ -105,22 +105,6 @@ type ElementQueries = {
 	all: AllElements
 }
 
-/** The shape of the UI object returned by the `select` function of `defineComponent`. */
-type UI = Record<string, Element | Memo<Element[]> | undefined>
-
-/**
- * Extracts the element type stored at key `K` of a UI object `U`.
- * - If `U[K]` is a `Memo<E[]>`, resolves to `E`.
- * - If `U[K]` is a single `Element`, resolves to that element type.
- */
-type ElementFromKey<U extends UI, K extends keyof U> = NonNullable<
-	U[K] extends Memo<infer E extends Element[]>
-		? E[number]
-		: U[K] extends Element
-			? U[K]
-			: never
->
-
 /* === Constants === */
 
 const DEPENDENCY_TIMEOUT = 200
@@ -136,8 +120,19 @@ const DEPENDENCY_TIMEOUT = 200
  */
 const extractAttributes = (selector: string): string[] => {
 	const attributes = new Set<string>()
-	if (selector.includes('.')) attributes.add('class')
-	if (selector.includes('#')) attributes.add('id')
+	// Strip attribute selector content before checking for class/id shorthand,
+	// so that #/. inside [attr^="#anchor"] don't produce false positives.
+	// Linear scan instead of regex to avoid O(n²) backtracking on inputs like `[[[[`.
+	let withoutAttrValues = ''
+	let depth = 0
+	for (const ch of selector) {
+		if (ch === '[') depth++
+		else if (ch === ']') {
+			if (depth > 0) depth--
+		} else if (depth === 0) withoutAttrValues += ch
+	}
+	if (withoutAttrValues.includes('.')) attributes.add('class')
+	if (withoutAttrValues.includes('#')) attributes.add('id')
 	if (selector.includes('[')) {
 		const parts = selector.split('[')
 		for (let i = 1; i < parts.length; i++) {
@@ -145,6 +140,7 @@ const extractAttributes = (selector: string): string[] => {
 			if (!part || !part.includes(']')) continue
 			const attrName = part
 				.split('=')[0]!
+				.split(']')[0]!
 				.trim()
 				.replace(/[^a-zA-Z0-9_-]/g, '')
 			if (attrName) attributes.add(attrName)
@@ -231,7 +227,7 @@ function createElementsMemo<S extends string>(
  * @param {HTMLElement} host - The component host element
  * @returns {[ElementQueries, (callback: () => void) => void]} Query helpers and a dependency resolver
  */
-const getHelpers = (
+const makeElementQueries = (
 	host: HTMLElement,
 ): [ElementQueries, (run: () => void) => void] => {
 	const root = host.shadowRoot ?? host
@@ -366,7 +362,6 @@ const getHelpers = (
 export {
 	type AllElements,
 	createElementsMemo,
-	type ElementFromKey,
 	type ElementFromSelector,
 	type ElementFromSingleSelector,
 	type ElementQueries,
@@ -374,10 +369,10 @@ export {
 	type ExtractRightmostSelector,
 	type ExtractTag,
 	type ExtractTagFromSimpleSelector,
+	extractAttributes,
 	type FirstElement,
-	getHelpers,
 	type KnownTag,
+	makeElementQueries,
 	type SplitByComma,
 	type TrimWhitespace,
-	type UI,
 }

@@ -122,8 +122,8 @@
 	--color-overlay-hover: rgb(0 0 0 / 0.05);
 	--color-overlay-active: rgb(0 0 0 / 0.1);
 
-	--font-family-sans: 'Helvetica Neue', Arial, Roboto, sans-serif;
-	--font-family-mono: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+	--font-family-sans: "Helvetica Neue", Arial, Roboto, sans-serif;
+	--font-family-mono: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
 
 	--font-weight-regular: 400;
 	--font-weight-bold: 700;
@@ -468,7 +468,7 @@ a[href] {
 	}
 }
 
-[aria-hidden='true'],
+[aria-hidden="true"],
 [hidden] {
 	display: none !important;
 }

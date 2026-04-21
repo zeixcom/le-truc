@@ -5,7 +5,7 @@
  * accessible heading generation, anchor links, and slug generation.
  */
 
-import { describe, test, expect } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { Node, Tag } from '@markdoc/markdoc'
 import heading from '../../schema/heading.markdoc'
 

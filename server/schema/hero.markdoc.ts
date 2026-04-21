@@ -12,13 +12,13 @@ const hero: Schema = {
 	children: standardChildren,
 	attributes: commonAttributes,
 	transform(node: Node, config: Config) {
-		// Create a placeholder that will be replaced during page generation
-		const tocPlaceholder = new Markdoc.Tag('div', {
-			class: 'toc-placeholder',
-			'data-toc': 'true',
-		})
+		const tocPlaceholder = new Tag(
+			'div',
+			{ class: 'toc-placeholder', 'data-toc': 'true' },
+			[],
+		)
 
-		// Separate title from other content
+		// Separate title from lead paragraphs
 		let title: RenderableTreeNode | null = null
 		const leadContent: RenderableTreeNode[] = []
 
@@ -34,18 +34,19 @@ const hero: Schema = {
 		// Create the structured layout
 		const children: RenderableTreeNode[] = []
 
-		// Add title (full width)
+		// Title spans full width
 		if (title) children.push(title)
 
-		// Create two-column layout with lead content and TOC placeholder
 		if (leadContent.length > 0) {
-			const layoutDiv = new Tag('div', { class: 'hero-layout' }, [
-				new Tag('div', { class: 'lead' }, leadContent),
-				tocPlaceholder,
-			])
-			children.push(layoutDiv)
-		} else if (tocPlaceholder) {
-			// Just TOC placeholder if no lead content
+			// Two-column layout: lead text + toc placeholder
+			children.push(
+				new Tag('div', { class: 'hero-layout' }, [
+					new Tag('div', { class: 'lead' }, leadContent),
+					tocPlaceholder,
+				]),
+			)
+		} else {
+			// No lead content: toc placeholder sits directly under the hero
 			children.push(tocPlaceholder)
 		}
 

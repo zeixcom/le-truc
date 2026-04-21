@@ -6,7 +6,7 @@ import { createOrderedSort, html } from './utils'
 
 // Menu item template
 export function menuItem(page: PageInfo): string {
-	return html` <li>
+	return html`<li>
 		<a href="${page.url}">
 			<span class="icon">${page.emoji}</span>
 			<strong>${page.title}</strong>

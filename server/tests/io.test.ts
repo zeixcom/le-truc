@@ -5,18 +5,22 @@
  * and integration tests for createFileInfo, writeFileSafe, getCompressedBuffer, isPlaywrightRunning
  */
 
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import {
 	calculateFileHash,
+	createFileInfo,
+	fileExists,
+	getCompressedBuffer,
 	getFilePath,
 	getRelativePath,
-	createFileInfo,
-	writeFileSafe,
-	getCompressedBuffer,
 	isPlaywrightRunning,
-	fileExists,
+	writeFileSafe,
 } from '../io'
-import { createTempDir, createTempFile, mockRequestContext } from './helpers/test-utils'
+import {
+	createTempDir,
+	createTempFile,
+	mockRequestContext,
+} from './helpers/test-utils'
 
 /* === Unit Tests: Pure Functions === */
 

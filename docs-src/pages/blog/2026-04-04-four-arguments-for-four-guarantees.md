@@ -1,9 +1,10 @@
 ---
 title: Four Arguments for Four Guarantees
-description: We tried to reduce defineComponent to fewer parameters. Here is what those four arguments actually guarantee — and what we are exploring for version 1.1.
+description: We tried to reduce defineComponent to fewer parameters. Here is what those four arguments actually guarantee — and the factory form we are introducing for version 2.0.
 emoji: 🔬
 layout: blog
 date: 2026-04-04
+modified-date: 2026-04-21
 author: Esther Brunner
 tags: architecture, design
 ---
@@ -135,50 +136,47 @@ The four arguments to `defineComponent` each eliminate a failure mode:
 3. **`resolveDependencies`** (implicit, between `select` and `setup`) — effects never run on elements whose class hasn't been registered yet.
 4. **`setup`** — effects are declarative, track their own dependencies, and are scoped to the component's lifetime. Cleanup is automatic on disconnect.
 
-The four-parameter shape is the API making explicit which things need to happen when. It looks like more than it needs to be until you've debugged a custom element where one of these guarantees was missing.
+The four-parameter form makes explicit what needs to happen when. It looks like more than it needs to be until you've debugged a custom element where one of these guarantees was missing.
 
-## What we're exploring for version 1.1
+## The factory form for version 2.0
 
-The four-parameter form is not going away. But we've been working on a two-parameter alternative that trades one guarantee for a cleaner authoring experience, and we'd like your feedback before we commit to it.
+{% callout .tip title="Updated April 7, 2026" %}
+This section was updated after the post was first published. The design below reflects the current proposal, including the decision to make version 2.0 a breaking change. You can read the full discussion and see the earlier version in the [GitHub issue](https://github.com/zeixcom/le-truc/issues/34).
+{% /callout %}
 
-The idea: a single setup function that returns `ui`, `props`, and `effects` together.
+For version 2.0, we're replacing the four-parameter form with a two-parameter factory. A single function receives context helpers, declares props with `expose()`, and returns a flat array of effects.
 
 ```ts#form-checkbox.ts
-defineComponent<FormCheckboxProps, FormCheckboxUI>(
+defineComponent<FormCheckboxProps>(
   'form-checkbox',
-  ({ first, host }) => {
+  ({ expose, first, host, on, watch }) => {
     const checkbox = first('input[type="checkbox"]', 'Add a native checkbox.')
     const label = first('.label')
-    return {
-      ui: { checkbox, label },
-      props: {
-        checked: read(() => checkbox.checked, false),
-        label: asString(
-          () => label?.textContent ?? host.querySelector('label')?.textContent ?? '',
-        ),
-      },
-      effects: {
-        host: toggleAttribute('checked'),
-        checkbox: [
-          on('change', () => ({ checked: checkbox.checked })),
-          setProperty('checked'),
-        ],
-        label: setText('label'),
-      },
-    }
+
+    expose({
+      checked: checkbox.checked,
+      label: label?.textContent ?? first('label')?.textContent ?? '',
+    })
+
+    return [
+      on(checkbox, 'change', () => ({ checked: checkbox.checked })),
+      watch('checked', checked => {
+        checkbox.checked = checked
+        host.toggleAttribute('checked', checked)
+      }),
+      label && watch('label', bindText(label)),
+    ]
   },
 )
 ```
 
-`checkbox` and `label` are declared once as local variables and referenced directly in `props` and `effects` via closure. No `ui.checkbox` indirection, no destructuring at multiple points for the same elements.
+`checkbox` and `label` are declared once and referenced directly — in `expose()`, in event handlers, in `watch()` callbacks. There's also no separate `ComponentUI` type to declare. The factory closure captures queried elements, and TypeScript infers their types from the selector strings.
 
-**The tradeoff.** The first guarantee — that `observedAttributes` is automatically derived from the props map at class-definition time — no longer applies. The props map is inside the setup callback, evaluated per-instance when a component connects. The browser requires `observedAttributes` to be static, declared before any instance exists, so automatic derivation isn't possible.
+**The pivot.** Version 1.x thought about effects from the element's perspective: for this element, run this effect, update this property to this reactive value. The factory form flips it: when this reactive value changes, run this function. The `watch()` callback is plain procedural code — `checkbox.checked = checked`, `host.toggleAttribute('checked', checked)`. Standard DOM manipulation, fewer imports. Anything else inside the factory is regular JavaScript.
 
-The two-parameter form therefore drops attribute observation. External state must go through the property interface (`element.checked = true`) rather than attributes (`element.setAttribute('checked', '')`). That's what we recommend for programmatic control anyway, so most code won't need to change. But it is a real constraint.
+**The tradeoff.** No more `observedAttributes`. Parsers in `expose()` still run once at connect time, so server-rendered HTML can configure initial state via attributes. But `attributeChangedCallback` never fires. After connection, external state goes through the property interface. Attributes carry state from server to client; reactive properties drive client state. That split is sound.
 
-The four-parameter form will continue to be supported at least until version 2.0. Nothing changes for components that rely on attribute observation.
+**A breaking change.** Supporting the factory form alongside the old effects API would mean two implementations of the same concept in one library. We're not doing that. Le Truc stays small, with one mental model for effects. Version 2.0 drops the four-parameter form entirely. A clear breaking change is more honest than two parallel implementations.
 
-We think the two-parameter form is clearer for the common case. Before we introduce it in version 1.1 as the canonical form, we'd like to hear from you: does this tradeoff make sense? Is there a use case we haven't considered?
-
-[Share your feedback on GitHub →](https://github.com/zeixcom/le-truc/issues/34)
+[Follow the discussion on GitHub →](https://github.com/zeixcom/le-truc/issues/34)
 {% /section %}

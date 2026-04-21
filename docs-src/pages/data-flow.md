@@ -7,7 +7,7 @@ description: 'Passing state, events, context'
 {% hero %}
 # 🔄 Data Flow
 
-**Learn how Le Truc components can work together seamlessly.** Start with simple parent-child relationships, then explore advanced patterns like custom events and shared state. Build modular, loosely coupled components that communicate efficiently.
+**Learn how Le Truc components coordinate state.** Pass reactive signals from parent to child with `pass()`, expose callable methods with `defineMethod()`, and share values across the component tree with context.
 {% /hero %}
 
 {% section %}
@@ -32,56 +32,53 @@ Although `BasicButton` and `FormSpinbutton` are completely independent, they nee
 The **parent component (`ModuleCatalog`) knows about its children**, meaning it can **read state from and pass state to** them. It uses `all()` to observe all `FormSpinbutton` quantities reactively, then `pass()` to drive the `BasicButton`'s `badge` and `disabled` state:
 
 ```js#module-catalog.js
-defineComponent(
-  'module-catalog',
-  {},
-  ({ all, first }) => ({
-    button: first('basic-button', 'Add a button to go go the Shopping Cart'),
-    spinbuttons: all(
-      'form-spinbutton',
-      'Add spinbutton components to calculate sum from.',
-    ),
-  }),
-  ({ spinbuttons }) => {
-    const total = createMemo(() =>
-      spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
-    )
-    return {
-      button: pass({
-        disabled: () => !total.get(),
-        badge: () => (total.get() > 0 ? String(total.get()) : ''),
-      }),
-    }
-  },
-)
+defineComponent('module-catalog', ({ all, first, pass }) => {
+  const button = first('basic-button', 'Add a button to go to the Shopping Cart')
+  const spinbuttons = all(
+    'form-spinbutton',
+    'Add spinbutton components to calculate sum from.',
+  )
+  const total = createMemo(() =>
+    spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
+  )
+
+  return [
+    pass(button, {
+      disabled: () => !total.get(),
+      badge: () => (total.get() > 0 ? String(total.get()) : ''),
+    }),
+  ]
+})
 ```
 
 Whenever any `<form-spinbutton>` value changes, `total` updates and the badge reflects the new count — no event listeners or manual wiring needed.
 
 {% callout .tip title="pass() works with Le Truc components only" %}
-`pass()` replaces the backing signal of the child's reactive property directly — this only works for Le Truc components whose properties are Slot-backed. For non-Le Truc custom elements (Lit, Stencil, FAST, etc.) or plain HTML elements, use `setProperty()` instead. It goes through the element's public setter and works correctly regardless of the child's internal framework.
+`pass()` replaces the backing signal of the child's reactive property directly — this only works for Le Truc components whose properties are Slot-backed. For non-Le Truc custom elements (Lit, Stencil, FAST, etc.) or plain HTML elements, use `watch(source, bindProperty(el, key))` instead. `bindProperty` assigns to the element's public JS setter and works correctly regardless of the child's internal framework.
 {% /callout %}
 
 ### Child Component: BasicButton
 
-The `BasicButton` component **displays a badge when needed** – it does not know about any other component nor track state itself. It just exposes a reactive properties `badge` of type `string` and `disabled` of type `boolean` and has effects to react to state changes that updates the DOM subtree.
+The `BasicButton` component **displays a badge when needed** – it does not know about any other component nor track state itself. It exposes reactive properties `disabled`, `label`, and `badge` and has effects to keep the DOM subtree in sync with those properties.
 
 ```js#basic-button.js
-defineComponent(
-  'basic-button',
-  {
-    disabled: asBoolean(),
-    badge: asString(ui => ui.badge?.textContent ?? ''),
-  },
-  ({ first }) => ({
-    button: first('button', 'Add a native button as descendant.'),
-    badge: first('span.badge'),
-  }),
-  () => ({
-    button: setProperty('disabled'),
-    badge: setText('badge'),
-  }),
-)
+defineComponent('basic-button', ({ expose, first, watch }) => {
+  const button = first('button', 'Add a native button as descendant.')
+  const label = first('span.label')
+  const badge = first('span.badge')
+
+  expose({
+    disabled: button.disabled,
+    label: label?.textContent ?? button.textContent ?? '',
+    badge: badge?.textContent ?? '',
+  })
+
+  return [
+    watch('disabled', bindProperty(button, 'disabled')),
+    label && watch('label', bindText(label)),
+    badge && watch('badge', bindText(badge)),
+  ]
+})
 ```
 
 - Whenever the `disabled` property is updated by a parent component, the button is disabled or enabled.
@@ -93,87 +90,68 @@ defineComponent(
 The `FormSpinbutton` component reacts to user interactions and exposes a reactive property `value` of type `number`. It updates its own internal DOM subtree, but doesn't know about any other component nor where the value is used.
 
 ```js#form-spinbutton.js
-defineComponent(
-  'form-spinbutton',
-  {
-    value: createEventsSensor(
-      read(ui => ui.input.value, asInteger()),
-      'controls',
-      {
-        change: ({ ui, target, prev }) => {
-          if (!(target instanceof HTMLInputElement)) return prev
+defineComponent('form-spinbutton', ({ all, expose, first, host, on, watch }) => {
+  const controls = all('button, input:not([disabled])')
+  const increment = first('button.increment', 'Add a native button to increment the value')
+  const decrement = first('button.decrement', 'Add a native button to decrement the value')
+  const input = first('input.value', 'Add a native input to display the value')
+  const zero = first('.zero')
+  const other = first('.other')
 
-          const resetTo = (next: number) => {
-            target.value = String(next)
-            target.checkValidity()
-            return next
-          }
+  const nonZero = createMemo(() => host.value !== 0)
+  const incrementLabel = increment.ariaLabel || 'Increment'
 
-          const next = Number(target.value)
-          if (!Number.isInteger(next)) return resetTo(prev)
-          const clamped = Math.min(ui.host.max, Math.max(0, next))
-          if (next !== clamped) return resetTo(clamped)
-          return clamped
-        },
-        click: ({ target, prev }) =>
-          prev +
-          (target.classList.contains('decrement')
-            ? -1
-            : target.classList.contains('increment')
-              ? 1
-              : 0),
-        keydown: ({ ui, event, prev }) => {
-          const { key } = event
-          if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
-            event.stopPropagation()
-            event.preventDefault()
-            const next = prev + (key === 'ArrowDown' || key === '-' ? -1 : 1)
-            return Math.min(ui.host.max, Math.max(0, next))
-          }
-        },
-      },
-    ),
-    max: read(ui => ui.input.max, asInteger(10)),
-  },
-  ({ all, first }) => ({
-    controls: all(
-      'button, input:not([disabled])',
-    ),
-    increment: first(
-      'button.increment',
-      'Add a native button to increment the value',
-    ),
-    decrement: first(
-      'button.decrement',
-      'Add a native button to decrement the value',
-    ),
-    input: first('input.value', 'Add a native input to display the value'),
-    zero: first('.zero'),
-    other: first('.other'),
-  }),
-  ({ host, increment, zero }) => {
-    const nonZero = createMemo(() => host.value !== 0)
-    const incrementLabel = increment.ariaLabel || 'Increment'
-    const ariaLabel = createMemo(() =>
-      nonZero.get() || !zero ? incrementLabel : zero.textContent,
-    )
+  expose({
+    value: Number.parseInt(input.value) || 0,
+    max: Number.parseInt(input.max) || 10,
+  })
 
-    return {
-      input: [
-        show(nonZero),
-        setProperty('value'),
-        setProperty('max', () => String(host.max)),
-      ],
-      decrement: show(nonZero),
-      increment: [
-        setProperty('disabled', () => host.value >= host.max),
-        setProperty('ariaLabel', ariaLabel),
-      ],
-      zero: show(() => !nonZero.get()),
-      other: show(nonZero),
-    }
-  },
-)
+  return [
+    on(controls, 'change', (_e, target) => {
+      if (!(target instanceof HTMLInputElement)) return
+      const next = Number(target.value)
+      if (!Number.isInteger(next)) {
+        target.value = String(host.value)
+        target.checkValidity()
+        return
+      }
+      const clamped = Math.min(host.max, Math.max(0, next))
+      if (next !== clamped) {
+        target.value = String(clamped)
+        target.checkValidity()
+      }
+      host.value = clamped
+    }),
+    on(controls, 'click', (_e, el) => {
+      if (el.classList.contains('decrement')) {
+        host.value = Math.max(0, host.value - 1)
+      } else if (el.classList.contains('increment')) {
+        host.value = Math.min(host.max, host.value + 1)
+      }
+    }),
+    on(controls, 'keydown', (e) => {
+      const { key } = e
+      if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
+        e.stopPropagation()
+        e.preventDefault()
+        const delta = key === 'ArrowDown' || key === '-' ? -1 : 1
+        host.value = Math.min(host.max, Math.max(0, host.value + delta))
+      }
+    }),
+    watch(nonZero, nz => {
+      input.hidden = !nz
+      decrement.hidden = !nz
+    }),
+    zero && watch(nonZero, nz => {
+      zero.hidden = nz
+      increment.ariaLabel = nz ? incrementLabel : zero.textContent
+    }),
+    other && watch(nonZero, bindVisible(other)),
+    watch(() => String(host.value), bindProperty(input, 'value')),
+    watch(() => String(host.max), bindProperty(input, 'max')),
+    watch(() => host.value >= host.max, bindProperty(increment, 'disabled')),
+  ]
+})
 ```
 
 - Whenever the user clicks a button or presses a handled key, the value property is updated.
@@ -290,39 +268,35 @@ The component coordination patterns above work with a fixed set of children. Whe
 
 ### Exposing Methods
 
-Not every component property is a reactive signal. When a property represents a **command** — something you call rather than something you observe — use `asMethod()`. It wraps an initializer that runs during setup and installs a callable method directly on `host`:
+Not every component property is a reactive signal. When a property represents a **command** — something you call rather than something you observe — use `defineMethod()`. Pass it directly to `expose()` with the callable function as the argument:
 
 ```js
-defineComponent(
-  'module-list',
-  {
-    add: asMethod(({ host, container, template }) => {
-      let key = 0
-      host.add = (process) => {
-        const item = template.content.cloneNode(true).firstElementChild
-        if (item instanceof HTMLElement) {
-          item.dataset.key = String(key++) // stable identity for removal
-          if (process) process(item)       // optional post-processing before insert
-          container.append(item)
-        }
+defineComponent('module-list', ({ expose, first }) => {
+  const container = first('[data-container]', 'Add a container element for items.')
+  const template = first('template', 'Add a template element for items.')
+
+  let addKey = 0
+  expose({
+    add: defineMethod((process) => {
+      const item = template.content.cloneNode(true).firstElementChild
+      if (item instanceof HTMLElement) {
+        item.dataset.key = String(addKey++) // stable identity for removal
+        if (process) process(item)          // optional post-processing before insert
+        container.append(item)
       }
     }),
-    delete: asMethod(({ host, container }) => {
-      host.delete = (key) => {
-        container.querySelector(`[data-key="${key}"]`)?.remove()
-      }
+    delete: defineMethod((key) => {
+      container.querySelector(`[data-key="${key}"]`)?.remove()
     }),
-  },
+  })
   // ...
-)
+})
 ```
 
-After setup, callers can use `host.add()` and `host.delete(key)` imperatively — from a parent component, a script, or another framework.
+The function passed to `defineMethod()` IS the callable method — `host.add` and `host.delete` will be that function. The `container`, `template`, and `addKey` references come from the factory closure. After connect, callers can use `host.add()` and `host.delete(key)` imperatively.
 
-{% callout .tip %}
-**Always use `asMethod()`, never a plain function**
-
-Le Truc identifies method producers by a brand (`METHOD_BRAND`) attached by `asMethod()`. A bare `(ui) => void` function is treated as a Reader, not a method producer. Wrapping with `asMethod()` is the required contract — the same way `asParser()` is required for custom parsers.
+{% callout .tip title="Always use defineMethod(), never a plain function" %}
+Le Truc identifies method producers by a brand symbol attached by `defineMethod()`. An unbranded function passed to `expose()` is treated as a thunk instead. The same rule applies to custom parsers: always use `asParser()`.
 {% /callout %}
 
 ### HTML Structure
@@ -347,16 +321,16 @@ Items already present in the container on first render are preserved. The `<temp
 
 ### Handling Deletion by Event Delegation
 
-Rather than attaching a listener to each delete button, use event delegation on the host: one `on('click', ...)` handler checks whether the click reached a delete button, then removes the closest keyed ancestor:
+Rather than attaching a listener to each delete button, use event delegation on the host: one `on(host, 'click', ...)` handler checks whether the click reached a delete button, then removes the closest keyed ancestor:
 
 ```js
-host: on('click', e => {
-  const { target } = e
+on(host, 'click', e => {
+  const target = e.target
   if (target instanceof HTMLElement && target.closest('basic-button.delete')) {
     e.stopPropagation()
     target.closest('[data-key]')?.remove()
   }
-}),
+})
 ```
 
 This scales to any number of items and works for items added after setup — no re-binding needed.
@@ -366,12 +340,19 @@ This scales to any number of items and works for items added after setup — no 
 `module-list` also coordinates with a `form-textbox` and an add `basic-button`. When the form is submitted, it reads the textbox value, adds the item, then clears the input. The add button is disabled when the textbox is empty or the item limit is reached:
 
 ```js
-ui => {
-  const { host, container, textbox } = ui
-  const max = asInteger(1000)(ui, host.getAttribute('max'))
+({ expose, first, host, on, pass }) => {
+  const container = first('[data-container]', 'Add a container element for items.')
+  const template = first('template', 'Add a template element for items.')
+  const form = first('form')
+  const textbox = first('form-textbox')
+  const add = first('basic-button.add')
 
-  return {
-    form: on('submit', e => {
+  const max = asInteger(1000)(host.getAttribute('max'))
+
+  // ... expose({ add: defineMethod(...), delete: defineMethod(...) })
+
+  return [
+    form && on(form, 'submit', e => {
       e.preventDefault()
       const content = textbox?.value
       if (content) {
@@ -381,15 +362,16 @@ ui => {
         textbox.clear() // call method on child component
       }
     }),
-    add: pass({
+    add && pass(add, {
       disabled: () =>
         (textbox && !textbox.length) || container.children.length >= max,
     }),
-  }
+    on(host, 'click', e => { /* delegation for delete */ }),
+  ]
 }
 ```
 
-`textbox.clear()` is itself a method property on `form-textbox` — the same `asMethod()` pattern in a child component. `pass()` drives the button's `disabled` state reactively from two conditions without the button knowing anything about either.
+`textbox.clear()` is itself a method property on `form-textbox` — the same `defineMethod()` pattern in a child component. `pass()` drives the button's `disabled` state reactively from two conditions without the button knowing anything about either.
 
 ### Full Example
 
@@ -456,7 +438,7 @@ export const MEDIA_THEME = 'media-theme' as Context<
 
 ### Provider Component
 
-The **provider component** creates the shared state and makes it available to descendants:
+The **provider component** creates the shared state inside `expose()` and calls `provideContexts()` in the returned effect array. The example below is a simplified excerpt showing two of the four media contexts — see the full source for the complete implementation:
 
 ```ts#context-media.ts
 export type ContextMediaProps = {
@@ -466,34 +448,36 @@ export type ContextMediaProps = {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'context-media': Component<ContextMediaProps>
+    'context-media': HTMLElement & ContextMediaProps
   }
 }
 
 export default defineComponent<ContextMediaProps>(
   'context-media',
-  {
-    [MEDIA_MOTION]: () => {
-      const mql = matchMedia('(prefers-reduced-motion: reduce)')
-      const motion = createState(mql.matches ? 'reduce' : 'no-preference')
-      mql.addEventListener('change', e => {
-        motion.set(e.matches ? 'reduce' : 'no-preference')
-      })
-      return motion
-    },
-    [MEDIA_THEME]: () => {
-      const mql = matchMedia('(prefers-color-scheme: dark)')
-      const theme = createState(mql.matches ? 'dark' : 'light')
-      mql.addEventListener('change', e => {
-        theme.set(e.matches ? 'dark' : 'light')
-      })
-      return theme
-    },
+  ({ expose, provideContexts }) => {
+    expose({
+      [MEDIA_MOTION]: createSensor(
+        set => {
+          const mql = matchMedia('(prefers-reduced-motion: reduce)')
+          const listener = (e) => set(e.matches ? 'reduce' : 'no-preference')
+          mql.addEventListener('change', listener)
+          return () => mql.removeEventListener('change', listener)
+        },
+        { value: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduce' : 'no-preference' },
+      ),
+      [MEDIA_THEME]: createSensor(
+        set => {
+          const mql = matchMedia('(prefers-color-scheme: dark)')
+          const listener = (e) => set(e.matches ? 'dark' : 'light')
+          mql.addEventListener('change', listener)
+          return () => mql.removeEventListener('change', listener)
+        },
+        { value: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' },
+      ),
+    })
+
+    return [provideContexts([MEDIA_MOTION, MEDIA_THEME])]
   },
-  undefined, // Component has no own descendant elements
-  () => ({
-    host: provideContexts([MEDIA_MOTION, MEDIA_THEME]),
-  }),
 )
 ```
 
@@ -523,7 +507,7 @@ The provider component wraps your entire application or a section that needs sha
 
 ## Consuming Context
 
-**Consumer components** use `requestContext()` to access shared state from ancestor providers. The context is automatically reactive - when the provider updates the context, all consumers update immediately.
+**Consumer components** use `requestContext()` inside `expose()` to access shared state from ancestor providers. The returned `Memo<T>` is reactive — when the provider's signal updates, all consumers update automatically.
 
 ### Consumer Component
 
@@ -532,18 +516,26 @@ Here's a simple card that displays the current motion and theme preferences:
 ```js#card-mediaqueries.js
 export default defineComponent(
   'card-mediaqueries',
-  {
-    motion: requestContext(MEDIA_MOTION, 'unknown'),
-    theme: requestContext(MEDIA_THEME, 'unknown'),
+  ({ expose, first, requestContext, watch }) => {
+    const motionEl = first('.motion')
+    const themeEl = first('.theme')
+    const viewportEl = first('.viewport')
+    const orientationEl = first('.orientation')
+
+    expose({
+      motion: requestContext(MEDIA_MOTION, 'unknown'),
+      theme: requestContext(MEDIA_THEME, 'unknown'),
+      viewport: requestContext(MEDIA_VIEWPORT, 'unknown'),
+      orientation: requestContext(MEDIA_ORIENTATION, 'unknown'),
+    })
+
+    return [
+      motionEl && watch('motion', bindText(motionEl)),
+      themeEl && watch('theme', bindText(themeEl)),
+      viewportEl && watch('viewport', bindText(viewportEl)),
+      orientationEl && watch('orientation', bindText(orientationEl)),
+    ]
   },
-  ({ first }) => ({
-    motion: first('.motion'),
-    theme: first('.theme'),
-  }),
-  () => ({
-    motion: setText('motion'),
-    theme: setText('theme'),
-  }),
 )
 ```
 

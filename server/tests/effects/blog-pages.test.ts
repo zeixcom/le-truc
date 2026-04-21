@@ -187,7 +187,7 @@ describe('generateBlogExcerpts', () => {
 			author: 'Alice',
 		})
 		const result = generateBlogExcerpts([post])
-		expect(result).toContain('<time datetime="2026-03-09">')
+		expect(result).toContain('class="published" datetime="2026-03-09"')
 		expect(result).toContain('<span>Alice</span>')
 	})
 
@@ -243,6 +243,19 @@ describe('generateBlogExcerpts', () => {
 		const result = generateBlogExcerpts([post])
 		expect(result).not.toContain('<b>Bold</b>')
 		expect(result).toContain('&lt;b&gt;')
+	})
+
+	test('does not double-escape apostrophes or other HTML entities in title', () => {
+		const post = makePost({
+			slug: 'apostrophe-test',
+			date: '2026-03-09',
+			title: "Why we built Le Truc around the browser's native rendering",
+		})
+		const result = generateBlogExcerpts([post])
+		// The html template escapes ' to &#39; exactly once
+		expect(result).toContain('browser&#39;s')
+		// Must not be double-escaped (& → &amp; → visible &#39; in browser)
+		expect(result).not.toContain('&amp;#39;')
 	})
 })
 

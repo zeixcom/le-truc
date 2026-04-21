@@ -4,7 +4,7 @@
 
 > **createTask**\<`T`\>(`fn`, `options`): [`Task`](../type-aliases/Task.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:67
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:68
 
 Creates an asynchronous reactive computation (colorless async).
 The computation automatically tracks dependencies and re-executes when they change.
@@ -66,7 +66,7 @@ if (user.isPending()) {
 
 > **createTask**\<`T`\>(`fn`, `options?`): [`Task`](../type-aliases/Task.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:70
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/task.d.ts:71
 
 Creates an asynchronous reactive computation (colorless async).
 The computation automatically tracks dependencies and re-executes when they change.

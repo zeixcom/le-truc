@@ -1,18 +1,19 @@
 // node_modules/@zeix/cause-effect/src/util.ts
+var ASYNC_FUNCTION_PROTO = Object.getPrototypeOf(async function() {});
 function isFunction(fn) {
   return typeof fn === "function";
 }
 function isAsyncFunction(fn) {
-  return isFunction(fn) && fn.constructor.name === "AsyncFunction";
+  return isFunction(fn) && Object.getPrototypeOf(fn) === ASYNC_FUNCTION_PROTO;
 }
 function isSyncFunction(fn) {
-  return isFunction(fn) && fn.constructor.name !== "AsyncFunction";
+  return isFunction(fn) && Object.getPrototypeOf(fn) !== ASYNC_FUNCTION_PROTO;
 }
-function isObjectOfType(value, type) {
-  return Object.prototype.toString.call(value) === `[object ${type}]`;
+function isSignalOfType(value, type) {
+  return value != null && value[Symbol.toStringTag] === type;
 }
 function isRecord(value) {
-  return isObjectOfType(value, "Object");
+  return value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype;
 }
 function isUniformArray(value, guard = (item) => item != null) {
   return Array.isArray(value) && value.every(guard);
@@ -112,6 +113,41 @@ var batchDepth = 0;
 var flushing = false;
 var DEFAULT_EQUALITY = (a, b) => a === b;
 var SKIP_EQUALITY = (_a, _b) => false;
+var deepEqual = (a, b) => {
+  if (Object.is(a, b))
+    return true;
+  if (typeof a !== typeof b)
+    return false;
+  if (a == null || typeof a !== "object" || b == null || typeof b !== "object")
+    return false;
+  const aIsArray = Array.isArray(a);
+  if (aIsArray !== Array.isArray(b))
+    return false;
+  if (aIsArray) {
+    const aa = a;
+    const ba = b;
+    if (aa.length !== ba.length)
+      return false;
+    for (let i = 0;i < aa.length; i++)
+      if (!deepEqual(aa[i], ba[i]))
+        return false;
+    return true;
+  }
+  if (isRecord(a) && isRecord(b)) {
+    const aKeys = Object.keys(a);
+    if (aKeys.length !== Object.keys(b).length)
+      return false;
+    for (const key of aKeys) {
+      if (!(key in b))
+        return false;
+      if (!deepEqual(a[key], b[key]))
+        return false;
+    }
+    return true;
+  }
+  return false;
+};
+var DEEP_EQUALITY = (a, b) => deepEqual(a, b);
 function isValidEdge(checkEdge, node) {
   const sourcesTail = node.sourcesTail;
   if (sourcesTail) {
@@ -281,30 +317,33 @@ function recomputeTask(node) {
     activeSink = prevWatcher;
     trimSources(node);
   }
+  setState(node.pendingNode, true);
   promise.then((next) => {
     if (controller.signal.aborted)
       return;
     node.controller = undefined;
-    if (node.error || !node.equals(next, node.value)) {
-      node.value = next;
-      node.error = undefined;
-      for (let e = node.sinks;e; e = e.nextSink)
-        propagate(e.sink);
-      if (batchDepth === 0)
-        flush();
-    }
+    batch(() => {
+      if (node.error || !node.equals(next, node.value)) {
+        node.value = next;
+        node.error = undefined;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+      }
+      setState(node.pendingNode, false);
+    });
   }, (err) => {
     if (controller.signal.aborted)
       return;
     node.controller = undefined;
     const error = err instanceof Error ? err : new Error(String(err));
-    if (!node.error || error.name !== node.error.name || error.message !== node.error.message) {
-      node.error = error;
-      for (let e = node.sinks;e; e = e.nextSink)
-        propagate(e.sink);
-      if (batchDepth === 0)
-        flush();
-    }
+    batch(() => {
+      if (!node.error || error.name !== node.error.name || error.message !== node.error.message) {
+        node.error = error;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+      }
+      setState(node.pendingNode, false);
+    });
   });
   node.flags = FLAG_CLEAN;
 }
@@ -387,16 +426,16 @@ function createScope(fn) {
   const prevOwner = activeOwner;
   const scope = { cleanup: null };
   activeOwner = scope;
+  const dispose = () => runCleanup(scope);
   try {
     const out = fn();
     if (typeof out === "function")
       registerCleanup(scope, out);
-    const dispose = () => runCleanup(scope);
-    if (prevOwner)
-      registerCleanup(prevOwner, dispose);
     return dispose;
   } finally {
     activeOwner = prevOwner;
+    if (prevOwner)
+      registerCleanup(prevOwner, dispose);
   }
 }
 function unown(fn) {
@@ -407,6 +446,18 @@ function unown(fn) {
   } finally {
     activeOwner = prev;
   }
+}
+function makeSubscribe(node, onWatch) {
+  return onWatch ? () => {
+    if (activeSink) {
+      if (!node.sinks)
+        node.stop = onWatch();
+      link(node, activeSink);
+    }
+  } : () => {
+    if (activeSink)
+      link(node, activeSink);
+  };
 }
 // node_modules/@zeix/cause-effect/src/nodes/state.ts
 function createState(value, options) {
@@ -438,56 +489,10 @@ function createState(value, options) {
   };
 }
 function isState(value) {
-  return isObjectOfType(value, TYPE_STATE);
+  return isSignalOfType(value, TYPE_STATE);
 }
 
 // node_modules/@zeix/cause-effect/src/nodes/list.ts
-function isEqual(a, b, visited) {
-  if (Object.is(a, b))
-    return true;
-  if (typeof a !== typeof b)
-    return false;
-  if (a == null || typeof a !== "object" || b == null || typeof b !== "object")
-    return false;
-  if (!visited)
-    visited = new WeakSet;
-  if (visited.has(a) || visited.has(b))
-    throw new CircularDependencyError("isEqual");
-  visited.add(a);
-  visited.add(b);
-  try {
-    const aIsArray = Array.isArray(a);
-    if (aIsArray !== Array.isArray(b))
-      return false;
-    if (aIsArray) {
-      const aa = a;
-      const ba = b;
-      if (aa.length !== ba.length)
-        return false;
-      for (let i = 0;i < aa.length; i++)
-        if (!isEqual(aa[i], ba[i], visited))
-          return false;
-      return true;
-    }
-    if (isRecord(a) && isRecord(b)) {
-      const aKeys = Object.keys(a);
-      const bKeys = Object.keys(b);
-      if (aKeys.length !== bKeys.length)
-        return false;
-      for (const key of aKeys) {
-        if (!(key in b))
-          return false;
-        if (!isEqual(a[key], b[key], visited))
-          return false;
-      }
-      return true;
-    }
-    return false;
-  } finally {
-    visited.delete(a);
-    visited.delete(b);
-  }
-}
 function keysEqual(a, b) {
   if (a.length !== b.length)
     return false;
@@ -505,7 +510,6 @@ function getKeyGenerator(keyConfig) {
   ];
 }
 function diffArrays(prev, next, prevKeys, generateKey, contentBased) {
-  const visited = new WeakSet;
   const add = {};
   const change = {};
   const remove = {};
@@ -531,7 +535,7 @@ function diffArrays(prev, next, prevKeys, generateKey, contentBased) {
     if (!prevByKey.has(key)) {
       add[key] = val;
       changed = true;
-    } else if (!isEqual(prevByKey.get(key), val, visited)) {
+    } else if (!DEEP_EQUALITY(prevByKey.get(key), val)) {
       change[key] = val;
       changed = true;
     }
@@ -560,23 +564,8 @@ function createList(value, options) {
     sourcesTail: null,
     sinks: null,
     sinksTail: null,
-    equals: isEqual,
+    equals: DEEP_EQUALITY,
     error: undefined
-  };
-  const toRecord = (array) => {
-    const record = {};
-    for (let i = 0;i < array.length; i++) {
-      const val = array[i];
-      if (val === undefined)
-        continue;
-      let key = keys[i];
-      if (!key) {
-        key = generateKey(val);
-        keys[i] = key;
-      }
-      record[key] = val;
-    }
-    return record;
   };
   const applyChanges = (changes) => {
     let structural = false;
@@ -608,20 +597,16 @@ function createList(value, options) {
       node.flags |= FLAG_RELINK;
     return changes.changed;
   };
-  const watched = options?.watched;
-  const subscribe = watched ? () => {
-    if (activeSink) {
-      if (!node.sinks)
-        node.stop = watched();
-      link(node, activeSink);
+  const subscribe = makeSubscribe(node, options?.watched);
+  for (let i = 0;i < value.length; i++) {
+    const val = value[i];
+    if (val === undefined)
+      continue;
+    let key = keys[i];
+    if (!key) {
+      key = generateKey(val);
+      keys[i] = key;
     }
-  } : () => {
-    if (activeSink)
-      link(node, activeSink);
-  };
-  const initRecord = toRecord(value);
-  for (const key in initRecord) {
-    const val = initRecord[key];
     validateSignalValue(`${TYPE_LIST} item for key "${key}"`, val);
     signals.set(key, createState(val));
   }
@@ -732,7 +717,7 @@ function createList(value, options) {
       if (!signal)
         return;
       validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
-      if (signal.get() === value2)
+      if (untrack(() => signal.get()) === value2)
         return;
       signal.set(value2);
       node.flags |= FLAG_DIRTY;
@@ -769,19 +754,25 @@ function createList(value, options) {
         }
       }
       const newOrder = keys.slice(0, actualStart);
+      const change = {};
       for (const item of items) {
         const key = generateKey(item);
-        if (signals.has(key) && !(key in remove))
+        if (key in remove) {
+          delete remove[key];
+          change[key] = item;
+        } else if (signals.has(key)) {
           throw new DuplicateKeyError(TYPE_LIST, key, item);
+        } else {
+          add[key] = item;
+        }
         newOrder.push(key);
-        add[key] = item;
       }
       newOrder.push(...keys.slice(actualStart + actualDeleteCount));
-      const changed = !!(Object.keys(add).length || Object.keys(remove).length);
+      const changed = !!(Object.keys(add).length || Object.keys(remove).length || Object.keys(change).length);
       if (changed) {
         applyChanges({
           add,
-          change: {},
+          change,
           remove,
           changed
         });
@@ -801,7 +792,7 @@ function createList(value, options) {
   return list;
 }
 function isList(value) {
-  return isObjectOfType(value, TYPE_LIST);
+  return isSignalOfType(value, TYPE_LIST);
 }
 
 // node_modules/@zeix/cause-effect/src/nodes/memo.ts
@@ -822,20 +813,11 @@ function createMemo(fn, options) {
     stop: undefined
   };
   const watched = options?.watched;
-  const subscribe = watched ? () => {
-    if (activeSink) {
-      if (!node.sinks)
-        node.stop = watched(() => {
-          propagate(node);
-          if (batchDepth === 0)
-            flush();
-        });
-      link(node, activeSink);
-    }
-  } : () => {
-    if (activeSink)
-      link(node, activeSink);
-  };
+  const subscribe = makeSubscribe(node, watched ? () => watched(() => {
+    propagate(node);
+    if (batchDepth === 0)
+      flush();
+  }) : undefined);
   return {
     [Symbol.toStringTag]: TYPE_MEMO,
     get() {
@@ -849,7 +831,7 @@ function createMemo(fn, options) {
   };
 }
 function isMemo(value) {
-  return isObjectOfType(value, TYPE_MEMO);
+  return isSignalOfType(value, TYPE_MEMO);
 }
 
 // node_modules/@zeix/cause-effect/src/nodes/task.ts
@@ -857,6 +839,12 @@ function createTask(fn, options) {
   validateCallback(TYPE_TASK, fn, isAsyncFunction);
   if (options?.value !== undefined)
     validateSignalValue(TYPE_TASK, options.value, options?.guard);
+  const pendingNode = {
+    value: false,
+    sinks: null,
+    sinksTail: null,
+    equals: DEFAULT_EQUALITY
+  };
   const node = {
     fn,
     value: options?.value,
@@ -868,23 +856,16 @@ function createTask(fn, options) {
     equals: options?.equals ?? DEFAULT_EQUALITY,
     controller: undefined,
     error: undefined,
-    stop: undefined
+    stop: undefined,
+    pendingNode
   };
   const watched = options?.watched;
-  const subscribe = watched ? () => {
-    if (activeSink) {
-      if (!node.sinks)
-        node.stop = watched(() => {
-          propagate(node);
-          if (batchDepth === 0)
-            flush();
-        });
-      link(node, activeSink);
-    }
-  } : () => {
-    if (activeSink)
-      link(node, activeSink);
-  };
+  const subscribe = makeSubscribe(node, watched ? () => watched(() => {
+    propagate(node);
+    if (batchDepth === 0)
+      flush();
+  }) : undefined);
+  const pendingSubscribe = makeSubscribe(pendingNode);
   return {
     [Symbol.toStringTag]: TYPE_TASK,
     get() {
@@ -896,16 +877,18 @@ function createTask(fn, options) {
       return node.value;
     },
     isPending() {
-      return !!node.controller;
+      pendingSubscribe();
+      return node.pendingNode.value;
     },
     abort() {
       node.controller?.abort();
       node.controller = undefined;
+      setState(node.pendingNode, false);
     }
   };
 }
 function isTask(value) {
-  return isObjectOfType(value, TYPE_TASK);
+  return isSignalOfType(value, TYPE_TASK);
 }
 
 // node_modules/@zeix/cause-effect/src/nodes/collection.ts
@@ -1092,59 +1075,54 @@ function createCollection(watched, options) {
   }
   node.value = value;
   node.flags = FLAG_DIRTY;
-  function subscribe() {
-    if (activeSink) {
-      if (!node.sinks)
-        node.stop = watched((changes) => {
-          const { add, change, remove } = changes;
-          if (!add?.length && !change?.length && !remove?.length)
-            return;
-          let structural = false;
-          batch(() => {
-            if (add) {
-              for (const item of add) {
-                const key = generateKey(item);
-                signals.set(key, itemFactory(item));
-                itemToKey.set(item, key);
-                if (!keys.includes(key))
-                  keys.push(key);
-                structural = true;
-              }
-            }
-            if (change) {
-              for (const item of change) {
-                const key = resolveKey(item);
-                if (!key)
-                  continue;
-                const signal = signals.get(key);
-                if (signal && isState(signal)) {
-                  itemToKey.delete(signal.get());
-                  signal.set(item);
-                  itemToKey.set(item, key);
-                }
-              }
-            }
-            if (remove) {
-              for (const item of remove) {
-                const key = resolveKey(item);
-                if (!key)
-                  continue;
-                itemToKey.delete(item);
-                signals.delete(key);
-                const index = keys.indexOf(key);
-                if (index !== -1)
-                  keys.splice(index, 1);
-                structural = true;
-              }
-            }
-            node.flags = FLAG_DIRTY | (structural ? FLAG_RELINK : 0);
-            for (let e = node.sinks;e; e = e.nextSink)
-              propagate(e.sink);
-          });
-        });
-      link(node, activeSink);
-    }
-  }
+  const onChanges = (changes) => {
+    const { add, change, remove } = changes;
+    if (!add?.length && !change?.length && !remove?.length)
+      return;
+    let structural = false;
+    batch(() => {
+      if (add) {
+        for (const item of add) {
+          const key = generateKey(item);
+          signals.set(key, itemFactory(item));
+          itemToKey.set(item, key);
+          if (!keys.includes(key))
+            keys.push(key);
+          structural = true;
+        }
+      }
+      if (change) {
+        for (const item of change) {
+          const key = resolveKey(item);
+          if (!key)
+            continue;
+          const signal = signals.get(key);
+          if (signal && isState(signal)) {
+            itemToKey.delete(signal.get());
+            signal.set(item);
+            itemToKey.set(item, key);
+          }
+        }
+      }
+      if (remove) {
+        for (const item of remove) {
+          const key = resolveKey(item);
+          if (!key)
+            continue;
+          itemToKey.delete(item);
+          signals.delete(key);
+          const index = keys.indexOf(key);
+          if (index !== -1)
+            keys.splice(index, 1);
+          structural = true;
+        }
+      }
+      node.flags = FLAG_DIRTY | (structural ? FLAG_RELINK : 0);
+      for (let e = node.sinks;e; e = e.nextSink)
+        propagate(e.sink);
+    });
+  };
+  const subscribe = makeSubscribe(node, () => watched(onChanges));
   const collection = {
     [Symbol.toStringTag]: TYPE_COLLECTION,
     [Symbol.isConcatSpreadable]: true,
@@ -1205,7 +1183,7 @@ function createCollection(watched, options) {
   return collection;
 }
 function isCollection(value) {
-  return isObjectOfType(value, TYPE_COLLECTION);
+  return isSignalOfType(value, TYPE_COLLECTION);
 }
 // node_modules/@zeix/cause-effect/src/nodes/effect.ts
 function createEffect(fn) {
@@ -1229,10 +1207,14 @@ function createEffect(fn) {
   runEffect(node);
   return dispose;
 }
-function match(signals, handlers) {
+function match(signalOrSignals, handlers) {
   if (!activeOwner)
     throw new RequiredOwnerError("match");
-  const { ok, err = console.error, nil } = handlers;
+  const isSingle = !Array.isArray(signalOrSignals);
+  const signals = isSingle ? [signalOrSignals] : signalOrSignals;
+  const { nil, stale } = handlers;
+  const ok = isSingle ? (values2) => handlers.ok(values2[0]) : (values2) => handlers.ok(values2);
+  const err = isSingle && handlers.err ? (errors2) => handlers.err(errors2[0]) : handlers.err ?? console.error;
   let errors;
   let pending = false;
   const values = new Array(signals.length);
@@ -1255,10 +1237,12 @@ function match(signals, handlers) {
       out = nil?.();
     else if (errors)
       out = err(errors);
+    else if (stale && (isSingle ? isTask(signals[0]) && signals[0].isPending() : signals.some((s) => isTask(s) && s.isPending())))
+      out = stale();
     else
       out = ok(values);
   } catch (e) {
-    err([e instanceof Error ? e : new Error(String(e))]);
+    out = err([e instanceof Error ? e : new Error(String(e))]);
   }
   if (typeof out === "function")
     return out;
@@ -1304,22 +1288,10 @@ function createSensor(watched, options) {
   };
 }
 function isSensor(value) {
-  return isObjectOfType(value, TYPE_SENSOR);
+  return isSignalOfType(value, TYPE_SENSOR);
 }
 // node_modules/@zeix/cause-effect/src/nodes/store.ts
 function diffRecords(prev, next) {
-  const prevValid = isRecord(prev) || Array.isArray(prev);
-  const nextValid = isRecord(next) || Array.isArray(next);
-  if (!prevValid || !nextValid) {
-    const changed2 = !Object.is(prev, next);
-    return {
-      changed: changed2,
-      add: changed2 && nextValid ? next : {},
-      change: {},
-      remove: changed2 && prevValid ? prev : {}
-    };
-  }
-  const visited = new WeakSet;
   const add = {};
   const change = {};
   const remove = {};
@@ -1328,7 +1300,7 @@ function diffRecords(prev, next) {
   const nextKeys = Object.keys(next);
   for (const key of nextKeys) {
     if (key in prev) {
-      if (!isEqual(prev[key], next[key], visited)) {
+      if (!DEEP_EQUALITY(prev[key], next[key])) {
         change[key] = next[key];
         changed = true;
       }
@@ -1372,7 +1344,7 @@ function createStore(value, options) {
     sourcesTail: null,
     sinks: null,
     sinksTail: null,
-    equals: isEqual,
+    equals: DEEP_EQUALITY,
     error: undefined
   };
   const applyChanges = (changes) => {
@@ -1405,17 +1377,7 @@ function createStore(value, options) {
       node.flags |= FLAG_RELINK;
     return changes.changed;
   };
-  const watched = options?.watched;
-  const subscribe = watched ? () => {
-    if (activeSink) {
-      if (!node.sinks)
-        node.stop = watched();
-      link(node, activeSink);
-    }
-  } : () => {
-    if (activeSink)
-      link(node, activeSink);
-  };
+  const subscribe = makeSubscribe(node, options?.watched);
   for (const key of Object.keys(value))
     addSignal(key, value[key]);
   const store = {
@@ -1524,10 +1486,20 @@ function createStore(value, options) {
   });
 }
 function isStore(value) {
-  return isObjectOfType(value, TYPE_STORE);
+  return isSignalOfType(value, TYPE_STORE);
 }
 
 // node_modules/@zeix/cause-effect/src/signal.ts
+var SIGNAL_TYPES = new Set([
+  TYPE_STATE,
+  TYPE_MEMO,
+  TYPE_TASK,
+  TYPE_SENSOR,
+  TYPE_SLOT,
+  TYPE_LIST,
+  TYPE_COLLECTION,
+  TYPE_STORE
+]);
 function createComputed(callback, options) {
   return isAsyncFunction(callback) ? createTask(callback, options) : createMemo(callback, options);
 }
@@ -1561,18 +1533,7 @@ function isComputed(value) {
   return isMemo(value) || isTask(value);
 }
 function isSignal(value) {
-  const signalsTypes = [
-    TYPE_STATE,
-    TYPE_MEMO,
-    TYPE_TASK,
-    TYPE_SENSOR,
-    TYPE_SLOT,
-    TYPE_LIST,
-    TYPE_COLLECTION,
-    TYPE_STORE
-  ];
-  const typeStyle = Object.prototype.toString.call(value).slice(8, -1);
-  return signalsTypes.includes(typeStyle);
+  return value != null && SIGNAL_TYPES.has(value[Symbol.toStringTag]);
 }
 function isMutableSignal(value) {
   return isState(value) || isStore(value) || isList(value);
@@ -1603,6 +1564,8 @@ function createSlot(initialSignal, options) {
     return node.value;
   };
   const set = (next) => {
+    if (isSlot(delegated))
+      return delegated.set(next);
     if (!isMutableSignal(delegated))
       throw new ReadonlySignalError(TYPE_SLOT);
     validateSignalValue(TYPE_SLOT, next, guard);
@@ -1628,51 +1591,52 @@ function createSlot(initialSignal, options) {
   };
 }
 function isSlot(value) {
-  return isObjectOfType(value, TYPE_SLOT);
+  return isSignalOfType(value, TYPE_SLOT);
 }
+// src/context.ts
+var CONTEXT_REQUEST = "context-request";
+
+class ContextRequestEvent extends Event {
+  context;
+  callback;
+  subscribe;
+  constructor(context, callback, subscribe = false) {
+    super(CONTEXT_REQUEST, {
+      bubbles: true,
+      composed: true
+    });
+    this.context = context;
+    this.callback = callback;
+    this.subscribe = subscribe;
+  }
+}
+var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
+  const listener = (e) => {
+    const { context, callback } = e;
+    if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
+      e.stopImmediatePropagation();
+      callback(() => host[context]);
+    }
+  };
+  host.addEventListener(CONTEXT_REQUEST, listener);
+  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
+});
+var makeRequestContext = (host) => (context, fallback) => {
+  let consumed = () => fallback;
+  host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
+    consumed = getter;
+  }));
+  return createMemo(consumed);
+};
+
 // src/util.ts
 var DEV_MODE = typeof process !== "undefined" && true;
-var LOG_DEBUG = "debug";
 var LOG_WARN = "warn";
-var LOG_ERROR = "error";
-var RESERVED_WORDS = new Set([
-  "constructor",
-  "prototype"
-]);
-var HTML_ELEMENT_PROPS = new Set([
-  "id",
-  "class",
-  "className",
-  "title",
-  "role",
-  "style",
-  "dataset",
-  "lang",
-  "dir",
-  "hidden",
-  "children",
-  "innerHTML",
-  "outerHTML",
-  "textContent",
-  "innerText"
-]);
 var idString = (id) => id ? `#${id}` : "";
 var classString = (classList) => classList?.length ? `.${Array.from(classList).join(".")}` : "";
 var isCustomElement = (element) => element.localName.includes("-");
 var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
 var elementName = (el) => el ? `<${el.localName}${idString(el.id)}${classString(el.classList)}>` : "<unknown>";
-var log = (value, msg, level = LOG_DEBUG) => {
-  if (DEV_MODE || [LOG_ERROR, LOG_WARN].includes(level))
-    console[level](msg, value);
-  return value;
-};
-var validatePropertyName = (prop) => {
-  if (RESERVED_WORDS.has(prop))
-    return `Property name "${prop}" is a reserved word`;
-  if (HTML_ELEMENT_PROPS.has(prop))
-    return `Property name "${prop}" conflicts with inherited HTMLElement property`;
-  return null;
-};
 
 // src/errors.ts
 class InvalidComponentNameError extends TypeError {
@@ -1686,22 +1650,6 @@ class InvalidPropertyNameError extends TypeError {
   constructor(component, prop, reason) {
     super(`Invalid property name "${prop}" for component <${component}>. ${reason}`);
     this.name = "InvalidPropertyNameError";
-  }
-}
-
-class InvalidEffectsError extends TypeError {
-  constructor(host, cause) {
-    super(`Invalid effects in component ${elementName(host)}. Effects must be a record of effects for UI elements or the component, or a Promise that resolves to effects.`);
-    this.name = "InvalidEffectsError";
-    if (cause)
-      this.cause = cause;
-  }
-}
-
-class InvalidUIKeyError extends TypeError {
-  constructor(host, key, where) {
-    super(`Invalid UI key "${key}" in ${where} of component ${elementName(host)}`);
-    this.name = "InvalidUIKeyError";
   }
 }
 
@@ -1733,96 +1681,6 @@ class InvalidCustomElementError extends TypeError {
   }
 }
 
-// src/effects.ts
-var getUpdateDescription = (op, name = "") => {
-  const ops = {
-    a: "attribute ",
-    c: "class ",
-    d: "dataset ",
-    h: "inner HTML",
-    m: "method call ",
-    p: "property ",
-    s: "style property ",
-    t: "text content"
-  };
-  return ops[op] + name;
-};
-var runEffects = (ui, effects) => {
-  if (!isRecord(effects))
-    throw new InvalidEffectsError(ui.host);
-  return createScope(() => {
-    for (const key of Object.keys(effects)) {
-      const k = key;
-      if (!effects[k])
-        continue;
-      const fns = Array.isArray(effects[k]) ? effects[k] : [effects[k]];
-      if (isMemo(ui[k])) {
-        createEffect(() => {
-          for (const target of ui[k].get())
-            for (const fn of fns)
-              fn(ui.host, target);
-        });
-      } else if (ui[k]) {
-        for (const fn of fns)
-          fn(ui.host, ui[k]);
-      }
-    }
-  });
-};
-var resolveReactive = (reactive, host, target, context) => {
-  try {
-    if (typeof reactive === "string") {
-      if (DEV_MODE && !(reactive in host)) {
-        log(reactive, `resolveReactive: property '${reactive}' does not exist on ${elementName(host)}`, LOG_WARN);
-      }
-      return host[reactive];
-    }
-    return isSignal(reactive) ? reactive.get() : isFunction(reactive) ? reactive(target) : undefined;
-  } catch (error) {
-    if (context) {
-      log(error, `Failed to resolve value of ${valueString(reactive)}${context ? ` for ${context}` : ""} in ${elementName(target)}${host !== target ? ` in ${elementName(host)}` : ""}`, LOG_ERROR);
-    }
-    return;
-  }
-};
-var updateElement = (reactive, updater) => (host, target) => {
-  const { op, name = "", read, update } = updater;
-  const operationDesc = getUpdateDescription(op, name);
-  const ok = (verb) => () => {
-    if (DEV_MODE && host.debug) {
-      log(target, `${verb} ${operationDesc} of ${elementName(target)} in ${elementName(host)}`);
-    }
-    updater.resolve?.(target);
-  };
-  const err = (verb) => (error) => {
-    log(error, `Failed to ${verb} ${operationDesc} of ${elementName(target)} in ${elementName(host)}`, LOG_ERROR);
-    updater.reject?.(error);
-  };
-  const fallback = read(target);
-  return createEffect(() => {
-    const value = resolveReactive(reactive, host, target, operationDesc);
-    const resolvedValue = value === undefined ? fallback : value === null ? updater.delete ? null : fallback : value;
-    if (updater.delete && resolvedValue === null) {
-      try {
-        updater.delete(target);
-        ok("delete")();
-      } catch (error) {
-        err("delete")(error);
-      }
-    } else if (resolvedValue != null) {
-      const current = read(target);
-      if (Object.is(resolvedValue, current))
-        return;
-      try {
-        update(target, resolvedValue);
-        ok("update")();
-      } catch (error) {
-        err("update")(error);
-      }
-    }
-  });
-};
-
 // src/internal.ts
 var componentSignals = new WeakMap;
 var getSignals = (el) => {
@@ -1834,39 +1692,303 @@ var getSignals = (el) => {
   return signals;
 };
 
+// src/effects.ts
+var activateResult = (result) => {
+  for (const descriptor of result) {
+    if (Array.isArray(descriptor))
+      activateResult(descriptor);
+    else if (descriptor)
+      descriptor();
+  }
+};
+var toSignal = (host, source) => {
+  if (isFunction(source))
+    return createComputed(source);
+  if (typeof source === "string") {
+    const sig = getSignals(host)[source];
+    if (sig)
+      return sig;
+    return createMemo(() => host[source]);
+  }
+  return source;
+};
+var makeWatch = (host) => {
+  function watch(source, handlerOrHandlers) {
+    return () => {
+      if (Array.isArray(source)) {
+        const signals = source.map((s) => toSignal(host, s));
+        const handler = handlerOrHandlers;
+        return createEffect(() => match(signals, { ok: (values) => untrack(() => handler(values)) }));
+      }
+      const signal = toSignal(host, source);
+      if (typeof handlerOrHandlers === "function") {
+        return createEffect(() => match(signal, {
+          ok: (value) => untrack(() => handlerOrHandlers(value))
+        }));
+      }
+      return createEffect(() => match(signal, handlerOrHandlers));
+    };
+  }
+  return watch;
+};
+var makePass = (host) => {
+  const swapSlots = (target, props) => createScope(() => {
+    if (!isCustomElement(target))
+      throw new InvalidCustomElementError(target, `pass from ${elementName(host)}`);
+    if (!isRecord(props))
+      throw new InvalidReactivesError(host, target, props);
+    const signals = getSignals(target);
+    const targetName = elementName(target);
+    const cleanups = [];
+    for (const [prop, reactive] of Object.entries(props)) {
+      if (reactive == null)
+        continue;
+      if (!(prop in target)) {
+        if (DEV_MODE)
+          console[LOG_WARN](`pass(): property '${prop}' does not exist on ${targetName}`);
+        continue;
+      }
+      const signal = toSignal(host, reactive);
+      if (!signal)
+        continue;
+      const slot = signals[prop];
+      if (isSlot(slot)) {
+        const original = slot.current();
+        slot.replace(signal);
+        cleanups.push(() => slot.replace(original));
+        continue;
+      }
+      if (DEV_MODE)
+        console[LOG_WARN](`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`);
+    }
+    if (cleanups.length)
+      return () => {
+        for (const c of cleanups)
+          c();
+      };
+  });
+  function pass(target, props) {
+    return () => {
+      if (!target)
+        return;
+      if (isMemo(target)) {
+        createEffect(() => {
+          for (const el of target.get()) {
+            createScope(() => swapSlots(el, props));
+          }
+        });
+      } else {
+        swapSlots(target, props);
+      }
+    };
+  }
+  return pass;
+};
+function each(memo, callback) {
+  return () => {
+    createEffect(() => {
+      for (const element of memo.get()) {
+        createScope(() => {
+          const result = callback(element);
+          if (Array.isArray(result))
+            activateResult(result);
+          else if (typeof result === "function")
+            result();
+        });
+      }
+    });
+  };
+}
+
+// src/scheduler.ts
+var objects = new Set;
+var tasks = new WeakMap;
+var throttledCallbacks = new Set;
+var requestId;
+var runTasks = () => {
+  requestId = undefined;
+  const elements = Array.from(objects);
+  objects.clear();
+  for (const element of elements)
+    tasks.get(element)?.();
+  const callbacks = Array.from(throttledCallbacks);
+  throttledCallbacks.clear();
+  for (const cb of callbacks)
+    cb();
+};
+var requestTick = () => {
+  if (!requestId)
+    requestId = requestAnimationFrame(runTasks);
+};
+var schedule = (key, task) => {
+  tasks.set(key, task);
+  objects.add(key);
+  requestTick();
+};
+var throttle = (fn, signal) => {
+  let pending = false;
+  let lastArgs;
+  const flush2 = () => {
+    pending = false;
+    fn(...lastArgs);
+  };
+  const wrapped = (...args) => {
+    lastArgs = args;
+    if (pending)
+      return;
+    pending = true;
+    throttledCallbacks.add(flush2);
+    requestTick();
+  };
+  wrapped.cancel = () => {
+    if (pending) {
+      throttledCallbacks.delete(flush2);
+      pending = false;
+    }
+  };
+  signal?.addEventListener("abort", wrapped.cancel, { once: true });
+  return wrapped;
+};
+
+// src/events.ts
+var PASSIVE_EVENTS = new Set([
+  "scroll",
+  "resize",
+  "mousewheel",
+  "touchstart",
+  "touchmove",
+  "wheel"
+]);
+var NON_BUBBLING_EVENTS = new Set([
+  "focus",
+  "blur",
+  "scroll",
+  "resize",
+  "load",
+  "unload",
+  "error",
+  "toggle",
+  "mouseenter",
+  "mouseleave",
+  "pointerenter",
+  "pointerleave",
+  "abort",
+  "canplay",
+  "canplaythrough",
+  "durationchange",
+  "emptied",
+  "ended",
+  "loadeddata",
+  "loadedmetadata",
+  "loadstart",
+  "pause",
+  "play",
+  "playing",
+  "progress",
+  "ratechange",
+  "seeked",
+  "seeking",
+  "stalled",
+  "suspend",
+  "timeupdate",
+  "volumechange",
+  "waiting"
+]);
+var attachListener = (host, target, type, handler, options) => {
+  const rawListener = (e) => {
+    const result = handler(e, target);
+    if (!isRecord(result))
+      return;
+    batch(() => {
+      for (const [key, value] of Object.entries(result)) {
+        host[key] = value;
+      }
+    });
+  };
+  const listener = options.passive ? throttle(rawListener) : rawListener;
+  target.addEventListener(type, listener, options);
+  return () => {
+    target.removeEventListener(type, listener);
+    listener.cancel?.();
+  };
+};
+var makeOn = (host) => {
+  function on(target, type, handler, options = {}) {
+    return () => {
+      if (!target)
+        return;
+      if (!("passive" in options)) {
+        options = { ...options, passive: PASSIVE_EVENTS.has(type) };
+      }
+      if (isMemo(target)) {
+        if (NON_BUBBLING_EVENTS.has(type)) {
+          if (DEV_MODE) {
+            console[LOG_WARN](`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
+          }
+          return createEffect(() => {
+            for (const el of target.get()) {
+              createScope(() => {
+                return attachListener(host, el, type, handler, options);
+              });
+            }
+          });
+        }
+        const root = host.shadowRoot ?? host;
+        const rawListener = (e) => {
+          const path = e.composedPath();
+          for (const el of target.get()) {
+            if (path.includes(el)) {
+              const result = handler(e, el);
+              if (!isRecord(result))
+                break;
+              batch(() => {
+                for (const [key, value] of Object.entries(result)) {
+                  host[key] = value;
+                }
+              });
+              break;
+            }
+          }
+        };
+        const listener = options.passive ? throttle(rawListener) : rawListener;
+        root.addEventListener(type, listener, options);
+        return () => {
+          root.removeEventListener(type, listener);
+          listener.cancel?.();
+        };
+      }
+      return attachListener(host, target, type, handler, options);
+    };
+  }
+  return on;
+};
+
 // src/parsers.ts
 var PARSER_BRAND = Symbol("parser");
 var METHOD_BRAND = Symbol("method");
-var isParser = (value) => {
-  if (!isFunction(value))
-    return false;
-  if (PARSER_BRAND in value)
-    return true;
-  if (value.length >= 2) {
-    if (DEV_MODE) {
-      console.warn(`isParser: unbranded two-argument function detected. Wrap custom parsers with asParser() to avoid misclassification when using default parameters or destructuring.`, value);
-    }
-    return true;
-  }
-  return false;
-};
+var isParser = (value) => isFunction(value) && (PARSER_BRAND in value);
 var isMethodProducer = (value) => isFunction(value) && (METHOD_BRAND in value);
-var isReader = (value) => isFunction(value);
-var getFallback = (ui, fallback) => isReader(fallback) ? fallback(ui) : fallback;
 var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
-var asMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
-var read = (reader, fallback) => (ui) => {
-  const value = reader(ui);
-  return typeof value === "string" && isParser(fallback) ? fallback(ui, value) : value ?? getFallback(ui, fallback);
-};
+var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 
 // src/ui.ts
 var DEPENDENCY_TIMEOUT = 200;
 var extractAttributes = (selector) => {
   const attributes = new Set;
-  if (selector.includes("."))
+  let withoutAttrValues = "";
+  let depth = 0;
+  for (const ch of selector) {
+    if (ch === "[")
+      depth++;
+    else if (ch === "]") {
+      if (depth > 0)
+        depth--;
+    } else if (depth === 0)
+      withoutAttrValues += ch;
+  }
+  if (withoutAttrValues.includes("."))
     attributes.add("class");
-  if (selector.includes("#"))
+  if (withoutAttrValues.includes("#"))
     attributes.add("id");
   if (selector.includes("[")) {
     const parts = selector.split("[");
@@ -1874,7 +1996,7 @@ var extractAttributes = (selector) => {
       const part = parts[i];
       if (!part || !part.includes("]"))
         continue;
-      const attrName = part.split("=")[0].trim().replace(/[^a-zA-Z0-9_-]/g, "");
+      const attrName = part.split("=")[0].split("]")[0].trim().replace(/[^a-zA-Z0-9_-]/g, "");
       if (attrName)
         attributes.add(attrName);
     }
@@ -1916,7 +2038,7 @@ function createElementsMemo(parent, selector) {
     }
   });
 }
-var getHelpers = (host) => {
+var makeElementQueries = (host) => {
   const root = host.shadowRoot ?? host;
   const dependencies = new Set;
   function first(selector, required) {
@@ -1968,69 +2090,59 @@ var getHelpers = (host) => {
 };
 
 // src/component.ts
-function defineComponent(name, props = {}, select = () => ({}), setup = () => ({})) {
+function defineComponent(name, factory) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
-  for (const prop of Object.keys(props)) {
-    const error = validatePropertyName(prop);
-    if (error)
-      throw new InvalidPropertyNameError(name, prop, error);
-  }
 
   class Truc extends HTMLElement {
     debug;
-    #ui;
     #cleanup;
-    static observedAttributes = Object.entries(props)?.filter(([, initializer]) => isParser(initializer)).map(([prop]) => prop) ?? [];
     connectedCallback() {
-      const [elementQueries, resolveDependencies] = getHelpers(this);
-      const ui = {
-        ...select(elementQueries),
-        host: this
+      const [elementQueries, resolveDependencies] = makeElementQueries(this);
+      const host = this;
+      const expose = (instanceProps) => {
+        this.#initSignals(instanceProps);
       };
-      this.#ui = ui;
-      Object.freeze(this.#ui);
-      const createSignal2 = (key, initializer) => {
-        if (isParser(initializer)) {
-          const result = initializer(ui, this.getAttribute(key));
-          if (result != null)
-            this.#setAccessor(key, result);
-        } else if (isMethodProducer(initializer)) {
-          initializer(ui);
-        } else if (isFunction(initializer)) {
-          const result = initializer(ui);
-          if (result != null)
-            this.#setAccessor(key, result);
-        } else {
-          const value = initializer;
-          if (value != null)
-            this.#setAccessor(key, value);
-        }
+      const context = {
+        ...elementQueries,
+        host,
+        expose,
+        watch: makeWatch(host),
+        on: makeOn(host),
+        pass: makePass(host),
+        provideContexts: makeProvideContexts(host),
+        requestContext: makeRequestContext(host)
       };
-      for (const [prop, initializer] of Object.entries(props)) {
-        if (initializer == null || prop in this)
-          continue;
-        createSignal2(prop, initializer);
-      }
+      const result = factory(context);
+      if (!result)
+        return;
       resolveDependencies(() => {
-        this.#cleanup = unown(() => runEffects(ui, setup(ui)));
+        this.#cleanup = createScope(() => activateResult(result));
       });
     }
     disconnectedCallback() {
       if (isFunction(this.#cleanup))
         this.#cleanup();
     }
-    attributeChangedCallback(name2, oldValue, newValue) {
-      if (!this.#ui || newValue === oldValue || isComputed(getSignals(this)[name2]))
-        return;
-      const parser = props[name2];
-      if (!isParser(parser))
-        return;
-      const parsed = parser(this.#ui, newValue, oldValue);
-      if (name2 in this)
-        this[name2] = parsed;
-      else
-        this.#setAccessor(name2, parsed);
+    #initSignals(instanceProps) {
+      const createReactiveProperty = (key, initializer) => {
+        if (isParser(initializer)) {
+          const result = initializer(this.getAttribute(key));
+          if (result != null)
+            this.#setAccessor(key, result);
+        } else if (isMethodProducer(initializer)) {
+          this[key] = initializer;
+        } else {
+          const value = initializer;
+          if (value != null)
+            this.#setAccessor(key, value);
+        }
+      };
+      for (const [prop, initializer] of Object.entries(instanceProps)) {
+        if (initializer == null || prop in this)
+          continue;
+        createReactiveProperty(prop, initializer);
+      }
     }
     #setAccessor(key, value) {
       const signal = isSignal(value) ? value : isFunction(value) ? createComputed(value) : createState(value);
@@ -2055,48 +2167,15 @@ function defineComponent(name, props = {}, select = () => ({}), setup = () => ({
   customElements.define(name, Truc);
   return customElements.get(name);
 }
-// src/context.ts
-var CONTEXT_REQUEST = "context-request";
-
-class ContextRequestEvent extends Event {
-  context;
-  callback;
-  subscribe;
-  constructor(context, callback, subscribe = false) {
-    super(CONTEXT_REQUEST, {
-      bubbles: true,
-      composed: true
-    });
-    this.context = context;
-    this.callback = callback;
-    this.subscribe = subscribe;
-  }
-}
-var provideContexts = (contexts) => (host) => createScope(() => {
-  const listener = (e) => {
-    const { context, callback } = e;
-    if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
-      e.stopImmediatePropagation();
-      callback(() => host[context]);
-    }
-  };
-  host.addEventListener(CONTEXT_REQUEST, listener);
-  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
-});
-var requestContext = (context, fallback) => (ui) => {
-  let consumed = () => getFallback(ui, fallback);
-  ui.host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
-    consumed = getter;
-  }));
-  return createMemo(consumed);
-};
-// src/effects/attribute.ts
+// src/safety.ts
 var isSafeURL = (value) => {
+  if (/^(javascript|data|vbscript):/i.test(value))
+    return false;
   if (/^(mailto|tel):/i.test(value))
     return true;
   if (value.includes("://")) {
     try {
-      const url = new URL(value, window.location.origin);
+      const url = new URL(value);
       return ["http:", "https:", "ftp:"].includes(url.protocol);
     } catch {
       return false;
@@ -2112,288 +2191,105 @@ var safeSetAttribute = (element, attr, value) => {
     throw new Error(`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`);
   element.setAttribute(attr, value);
 };
-var setAttribute = (name, reactive = name) => updateElement(reactive, {
-  op: "a",
-  name,
-  read: (el) => el.getAttribute(name),
-  update: (el, value) => {
-    safeSetAttribute(el, name, value);
-  },
-  delete: (el) => {
-    el.removeAttribute(name);
-  }
-});
-var toggleAttribute = (name, reactive = name) => updateElement(reactive, {
-  op: "a",
-  name,
-  read: (el) => el.hasAttribute(name),
-  update: (el, value) => {
-    el.toggleAttribute(name, value);
-  }
-});
-// src/effects/class.ts
-var toggleClass = (token, reactive = token) => updateElement(reactive, {
-  op: "c",
-  name: token,
-  read: (el) => el.classList.contains(token),
-  update: (el, value) => {
-    el.classList.toggle(token, value);
-  }
-});
-// src/scheduler.ts
-var PASSIVE_EVENTS = new Set([
-  "scroll",
-  "resize",
-  "mousewheel",
-  "touchstart",
-  "touchmove",
-  "wheel"
-]);
-var pendingElements = new Set;
-var tasks = new WeakMap;
-var requestId;
-var runTasks = () => {
-  requestId = undefined;
-  const elements = Array.from(pendingElements);
-  pendingElements.clear();
-  for (const element of elements)
-    tasks.get(element)?.();
-};
-var requestTick = () => {
-  if (requestId)
-    cancelAnimationFrame(requestId);
-  requestId = requestAnimationFrame(runTasks);
-};
-var schedule = (element, task) => {
-  tasks.set(element, task);
-  pendingElements.add(element);
-  requestTick();
+var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+var setTextPreservingComments = (element, text) => {
+  Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => node.remove());
+  element.append(document.createTextNode(text));
 };
 
-// src/effects/event.ts
-var on = (type, handler, options = {}) => (host, target) => createScope(() => {
-  if (!("passive" in options))
-    options = { ...options, passive: PASSIVE_EVENTS.has(type) };
-  const listener = (e) => {
-    const task = () => {
-      const result = handler(e);
-      if (!isRecord(result))
+// src/helpers.ts
+var SCRIPT_ATTRS = [
+  "type",
+  "src",
+  "async",
+  "defer",
+  "nomodule",
+  "crossorigin",
+  "integrity",
+  "referrerpolicy",
+  "fetchpriority"
+];
+var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
+  element.textContent = String(value);
+};
+var bindProperty = (object, key) => (value) => {
+  object[key] = value;
+};
+var bindClass = (element, token) => (value) => {
+  element.classList.toggle(token, Boolean(value));
+};
+var bindVisible = (element) => (value) => {
+  element.hidden = !value;
+};
+var bindAttribute = (element, name, allowUnsafe = false) => ({
+  ok: (value) => {
+    if (typeof value === "boolean") {
+      element.toggleAttribute(name, value);
+    } else if (allowUnsafe) {
+      element.setAttribute(name, value);
+    } else {
+      safeSetAttribute(element, name, value);
+    }
+  },
+  nil: () => {
+    element.removeAttribute(name);
+  }
+});
+var bindStyle = (element, prop) => ({
+  ok: (value) => {
+    element.style.setProperty(prop, value);
+  },
+  nil: () => {
+    element.style.removeProperty(prop);
+  }
+});
+var dangerouslyBindInnerHTML = (element, options = {}) => {
+  const reset = () => {
+    if (element.shadowRoot)
+      element.shadowRoot.innerHTML = "<slot></slot>";
+    else
+      element.innerHTML = "";
+  };
+  return {
+    ok: (html) => {
+      if (!html) {
+        reset();
         return;
-      batch(() => {
-        for (const [key, value] of Object.entries(result)) {
-          try {
-            host[key] = value;
-          } catch (error) {
-            log(error, `Reactive property "${key}" on ${elementName(host)} from event ${type} on ${elementName(target)} could not be set, because it is read-only.`, LOG_ERROR);
-          }
+      }
+      const { shadowRootMode, allowScripts } = options;
+      if (shadowRootMode && !element.shadowRoot)
+        element.attachShadow({ mode: shadowRootMode });
+      const target = element.shadowRoot || element;
+      schedule(element, () => {
+        target.innerHTML = html;
+        if (allowScripts) {
+          target.querySelectorAll("script").forEach((script) => {
+            const newScript = document.createElement("script");
+            for (const attr of SCRIPT_ATTRS) {
+              if (script.hasAttribute(attr))
+                newScript.setAttribute(attr, script.getAttribute(attr));
+            }
+            if (!script.hasAttribute("src"))
+              newScript.appendChild(document.createTextNode(script.textContent ?? ""));
+            target.appendChild(newScript);
+            script.remove();
+          });
         }
       });
-    };
-    if (options.passive)
-      schedule(target, task);
-    else
-      task();
+    },
+    nil: reset
   };
-  target.addEventListener(type, listener, options);
-  return () => target.removeEventListener(type, listener);
-});
-// src/effects/html.ts
-var dangerouslySetInnerHTML = (reactive, options = {}) => updateElement(reactive, {
-  op: "h",
-  read: (el) => (el.shadowRoot || !options.shadowRootMode ? el : null)?.innerHTML ?? "",
-  update: (el, html) => {
-    const { shadowRootMode, allowScripts } = options;
-    if (!html) {
-      if (el.shadowRoot)
-        el.shadowRoot.innerHTML = "<slot></slot>";
-      return "";
-    }
-    if (shadowRootMode && !el.shadowRoot)
-      el.attachShadow({ mode: shadowRootMode });
-    const target = el.shadowRoot || el;
-    schedule(el, () => {
-      target.innerHTML = html;
-      if (allowScripts) {
-        const SCRIPT_ATTRS = [
-          "type",
-          "src",
-          "async",
-          "defer",
-          "nomodule",
-          "crossorigin",
-          "integrity",
-          "referrerpolicy",
-          "fetchpriority"
-        ];
-        target.querySelectorAll("script").forEach((script) => {
-          const newScript = document.createElement("script");
-          for (const attr of SCRIPT_ATTRS) {
-            if (script.hasAttribute(attr))
-              newScript.setAttribute(attr, script.getAttribute(attr));
-          }
-          if (!script.hasAttribute("src"))
-            newScript.appendChild(document.createTextNode(script.textContent ?? ""));
-          target.appendChild(newScript);
-          script.remove();
-        });
-      }
-    });
-    return allowScripts ? " with scripts" : "";
-  }
-});
-// src/effects/pass.ts
-var pass = (props) => (host, target) => createScope(() => {
-  if (!isCustomElement(target))
-    throw new InvalidCustomElementError(target, `pass from ${elementName(host)}`);
-  const reactives = isFunction(props) ? props(target) : props;
-  if (!isRecord(reactives))
-    throw new InvalidReactivesError(host, target, reactives);
-  const toSignal = (value) => {
-    if (isSignal(value))
-      return value;
-    const fn = typeof value === "string" && value in host ? () => host[value] : isFunction(value) ? value : undefined;
-    return fn ? createComputed(fn) : undefined;
-  };
-  const signals = getSignals(target);
-  const targetName = elementName(target);
-  const cleanups = [];
-  for (const [prop, reactive] of Object.entries(reactives)) {
-    if (reactive == null)
-      continue;
-    if (!(prop in target)) {
-      if (DEV_MODE)
-        console[LOG_WARN](`pass(): property '${prop}' does not exist on ${targetName}`);
-      continue;
-    }
-    const signal = toSignal(reactive);
-    if (!signal)
-      continue;
-    const slot = signals[prop];
-    if (isSlot(slot)) {
-      const original = slot.current();
-      slot.replace(signal);
-      cleanups.push(() => slot.replace(original));
-      continue;
-    }
-    if (DEV_MODE)
-      console[LOG_WARN](`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`);
-  }
-  if (cleanups.length)
-    return () => {
-      for (const c of cleanups)
-        c();
-    };
-});
-// src/effects/property.ts
-var setProperty = (key, reactive = key) => updateElement(reactive, {
-  op: "p",
-  name: key,
-  read: (el) => (key in el) ? el[key] ?? null : null,
-  update: (el, value) => {
-    el[key] = value;
-  }
-});
-var show = (reactive) => updateElement(reactive, {
-  op: "p",
-  name: "hidden",
-  read: (el) => !el.hidden,
-  update: (el, value) => {
-    el.hidden = !value;
-  }
-});
-// src/effects/style.ts
-var setStyle = (prop, reactive = prop) => updateElement(reactive, {
-  op: "s",
-  name: prop,
-  read: (el) => el.style.getPropertyValue(prop),
-  update: (el, value) => {
-    el.style.setProperty(prop, value);
-  },
-  delete: (el) => {
-    el.style.removeProperty(prop);
-  }
-});
-// src/effects/text.ts
-var setText = (reactive) => updateElement(reactive, {
-  op: "t",
-  read: (el) => el.textContent,
-  update: (el, value) => {
-    Array.from(el.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => node.remove());
-    el.append(document.createTextNode(value));
-  }
-});
-// src/events.ts
-var createEventsSensor = (init, key, events) => (ui) => {
-  const { host } = ui;
-  let value = getFallback(ui, init);
-  const memo = isMemo(ui[key]) ? ui[key] : null;
-  const single = memo ? null : ui[key];
-  const eventMap = new Map;
-  const getTarget = (eventTarget) => {
-    if (single) {
-      return single.contains(eventTarget) ? single : undefined;
-    }
-    for (const t of memo.get())
-      if (t.contains(eventTarget))
-        return t;
-  };
-  return createSensor((set) => {
-    for (const [type, handler] of Object.entries(events)) {
-      const options = { passive: PASSIVE_EVENTS.has(type) };
-      const listener = (e) => {
-        const eventTarget = e.target;
-        if (!eventTarget)
-          return;
-        const target = getTarget(eventTarget);
-        if (!target)
-          return;
-        e.stopPropagation();
-        const task = () => {
-          try {
-            const next = handler({
-              event: e,
-              ui,
-              target,
-              prev: value
-            });
-            if (next == null || next instanceof Promise)
-              return;
-            if (!Object.is(next, value)) {
-              value = next;
-              set(next);
-            }
-          } catch (error) {
-            e.stopImmediatePropagation();
-            throw error;
-          }
-        };
-        if (options.passive)
-          schedule(host, task);
-        else
-          task();
-      };
-      eventMap.set(type, listener);
-      host.addEventListener(type, listener, options);
-    }
-    return () => {
-      if (eventMap.size) {
-        for (const [type, listener] of eventMap)
-          host.removeEventListener(type, listener);
-        eventMap.clear();
-      }
-    };
-  }, { value });
 };
 // src/parsers/boolean.ts
-var asBoolean = () => asParser((_, value) => value != null && value !== "false");
+var asBoolean = () => asParser((value) => value != null && value !== "false");
 // src/parsers/json.ts
-var asJSON = (fallback) => asParser((ui, value) => {
+var asJSON = (fallback) => asParser((value) => {
   if ((value ?? fallback) == null)
     throw new TypeError("asJSON: Value and fallback are both null or undefined");
   if (value == null)
-    return getFallback(ui, fallback);
+    return fallback;
   if (value === "")
-    throw new TypeError("Empty string is not valid JSON");
+    throw new SyntaxError("Empty string is not valid JSON");
   let result;
   try {
     result = JSON.parse(value);
@@ -2402,7 +2298,7 @@ var asJSON = (fallback) => asParser((ui, value) => {
       cause: error
     });
   }
-  return result ?? getFallback(ui, fallback);
+  return result ?? fallback;
 });
 // src/parsers/number.ts
 var parseNumber = (parseFn, value) => {
@@ -2411,64 +2307,64 @@ var parseNumber = (parseFn, value) => {
   const parsed = parseFn(value);
   return Number.isFinite(parsed) ? parsed : undefined;
 };
-var asInteger = (fallback = 0) => asParser((ui, value) => {
+var asInteger = (fallback = 0) => asParser((value) => {
   if (value == null)
-    return getFallback(ui, fallback);
+    return fallback;
   const trimmed = value.trim();
   if (trimmed.toLowerCase().startsWith("0x"))
-    return parseNumber((v) => parseInt(v, 16), trimmed) ?? getFallback(ui, fallback);
+    return parseNumber((v) => parseInt(v, 16), trimmed) ?? fallback;
   const parsed = parseNumber(parseFloat, value);
-  return parsed != null ? Math.trunc(parsed) : getFallback(ui, fallback);
+  return parsed != null ? Math.trunc(parsed) : fallback;
 });
-var asNumber = (fallback = 0) => asParser((ui, value) => parseNumber(parseFloat, value) ?? getFallback(ui, fallback));
+var asNumber = (fallback = 0) => asParser((value) => parseNumber(parseFloat, value) ?? fallback);
+var asClampedInteger = (min = 0, max = Number.MAX_SAFE_INTEGER) => asParser((value) => {
+  if (value == null)
+    return min;
+  const trimmed = value.trim();
+  const raw = trimmed.toLowerCase().startsWith("0x") ? parseNumber((v) => parseInt(v, 16), trimmed) : parseNumber(parseFloat, value);
+  const parsed = raw != null ? Math.trunc(raw) : min;
+  return Math.max(min, Math.min(parsed, max));
+});
 // src/parsers/string.ts
-var asString = (fallback = "") => asParser((ui, value) => value ?? getFallback(ui, fallback));
-var asEnum = (valid) => asParser((_, value) => {
+var asString = (fallback = "") => asParser((value) => value ?? fallback);
+var asEnum = (valid) => asParser((value) => {
   if (value == null)
     return valid[0];
   const lowerValue = value.toLowerCase();
   const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
-  return matchingValid ? value : valid[0];
+  return matchingValid ?? valid[0];
 });
 export {
   valueString,
-  updateElement,
   untrack,
   unown,
-  toggleClass,
-  toggleAttribute,
-  show,
-  setText,
-  setStyle,
-  setProperty,
-  setAttribute,
+  throttle,
+  setTextPreservingComments,
   schedule,
-  requestContext,
-  read,
-  provideContexts,
-  pass,
-  on,
+  safeSetAttribute,
   match,
   isTask,
   isStore,
   isState,
   isSlot,
+  isSignalOfType,
   isSignal,
   isSensor,
   isRecord,
   isParser,
-  isObjectOfType,
   isMutableSignal,
   isMethodProducer,
   isMemo,
   isList,
   isFunction,
-  isEqual,
   isComputed,
   isCollection,
   isAsyncFunction,
+  escapeHTML,
+  each,
+  defineMethod,
   defineComponent,
-  dangerouslySetInnerHTML,
+  dangerouslyBindInnerHTML,
   createTask,
   createStore,
   createState,
@@ -2479,19 +2375,24 @@ export {
   createMutableSignal,
   createMemo,
   createList,
-  createEventsSensor,
   createElementsMemo,
   createEffect,
   createComputed,
   createCollection,
+  bindVisible,
+  bindText,
+  bindStyle,
+  bindProperty,
+  bindClass,
+  bindAttribute,
   batch,
   asString,
   asParser,
   asNumber,
-  asMethod,
   asJSON,
   asInteger,
   asEnum,
+  asClampedInteger,
   asBoolean,
   UnsetSignalValueError,
   SKIP_EQUALITY,
@@ -2499,15 +2400,15 @@ export {
   ReadonlySignalError,
   NullishSignalValueError,
   MissingElementError,
-  InvalidUIKeyError,
   InvalidSignalValueError,
   InvalidReactivesError,
   InvalidPropertyNameError,
-  InvalidEffectsError,
   InvalidCustomElementError,
   InvalidComponentNameError,
   InvalidCallbackError,
   DependencyTimeoutError,
+  DEFAULT_EQUALITY,
+  DEEP_EQUALITY,
   ContextRequestEvent,
   CircularDependencyError,
   CONTEXT_REQUEST

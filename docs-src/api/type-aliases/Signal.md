@@ -2,7 +2,7 @@
 
 > **Signal**\<`T`\> = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:47
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:48
 
 #### Type Parameters
 
@@ -16,7 +16,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:47
 
 > **get**(): `T`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:48
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:49
 
 ###### Returns
 

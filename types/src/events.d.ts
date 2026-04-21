@@ -1,53 +1,50 @@
-import { type Sensor } from '@zeix/cause-effect';
-import type { Component, ComponentProps } from './component';
-import { type ParserOrFallback } from './parsers';
-import type { ElementFromKey, UI } from './ui';
+import { type Memo } from '@zeix/cause-effect';
+import type { ComponentProps } from './component';
+import type { EffectDescriptor, Falsy } from './effects';
 type EventType<K extends string> = K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K] : Event;
 /**
- * Handler for a single event type inside `createEventsSensor`.
+ * Handler for `on()`. Receives `(event, element)`.
  *
- * Receives a context object with:
- * - `event` — the original DOM event (typed to the specific event type)
- * - `ui` — the full component UI object
- * - `target` — the matched element (properly typed, unlike `event.target`)
- * - `prev` — the current sensor value before this event
- *
- * Return the new sensor value to update it, or `void` / `Promise<void>` to
- * leave the value unchanged.
+ * Return `{ prop: value }` to batch-apply updates to host properties (sync only).
+ * Return `Promise<void>` for fire-and-forget side effects — the Promise is not awaited
+ * and its value cannot update host properties.
  */
-type SensorEventHandler<T extends {}, Evt extends Event, U extends UI, E extends Element> = (context: {
-    event: Evt;
-    ui: U;
-    target: E;
-    prev: T;
-}) => T | void | Promise<void>;
+type OnEventHandler<P extends ComponentProps, Evt extends Event, E extends Element> = (event: Evt, element: E) => {
+    [K in keyof P]?: P[K];
+} | Falsy | void | Promise<void>;
 /**
- * Map of event type names to `SensorEventHandler` functions, passed as the
- * third argument to `createEventsSensor`. Each handler derives the new sensor
- * value from the event, or returns `void` to leave it unchanged.
+ * `on` helper bound to a component host. Accepts a single element or `Memo<E[]>` target
+ * and typed event names. Returns an `EffectDescriptor`.
  */
-type EventHandlers<T extends {}, U extends UI, E extends Element> = {
-    [K in keyof HTMLElementEventMap]?: SensorEventHandler<T, EventType<K>, U, E>;
+type OnHelper<P extends ComponentProps> = {
+    <E extends Element, T extends keyof HTMLElementEventMap>(target: Memo<E[]> | Falsy, type: T, handler: OnEventHandler<P, HTMLElementEventMap[T], E>, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element>(target: Memo<E[]> | Falsy, type: string, handler: OnEventHandler<P, Event, E>, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element, T extends keyof HTMLElementEventMap>(target: E | Falsy, type: T, handler: OnEventHandler<P, HTMLElementEventMap[T], E>, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element>(target: E | Falsy, type: string, handler: OnEventHandler<P, Event, E>, options?: AddEventListenerOptions): EffectDescriptor;
 };
 /**
- * Create a `Reader` that produces a `Sensor<T>` driven by DOM events on the host.
+ * Create an `on` helper bound to a component host.
  *
- * Use this as a reactive property initializer when a single state value should be
- * derived from multiple event types (e.g. combining `click` and `keyup` into a
- * `selected` value), instead of updating host properties imperatively via `on()`.
+ * The returned `on` attaches a typed event listener to a single element or `Memo<E[]>`
+ * collection. Handlers receive `(event, element)`. Returning `{ prop: value }` synchronously
+ * batch-applies those updates to host properties; returning `Promise<void>` is valid for
+ * fire-and-forget side effects. For async state updates use a trigger-state + `Task`:
  *
- * Event listeners are attached to the host element using event delegation.
- * Each handler receives `{ event, ui, target, prev }` and returns the new value,
- * or `void`/`Promise<void>` to leave the value unchanged. Passive events are
- * deferred via `schedule()`.
+ * ```ts
+ * const trigger = createState<FormData | null>(null)
+ * return [
+ *   on(form, 'submit', e => { e.preventDefault(); trigger.set(new FormData(form)) }),
+ *   watch(createTask(async () => { ... trigger.get() ... }), { ok: ..., err: ... }),
+ * ]
+ * ```
  *
- * @since 0.16.0
- * @param {ParserOrFallback<T, U>} init - Initial value, static fallback, or reader function
- * @param {K} key - Key of the UI object whose element(s) to listen on
- * @param {EventHandlers<T, U, ElementFromKey<U, K>>} events - Map of event type to handler function
- * @returns {(ui: U & { host: Component<P> }) => Sensor<T>} Reader that creates and returns the sensor
+ * For `Memo<E[]>` targets, uses event delegation (one listener on the shadow root or host).
+ * Non-bubbling events fall back to per-element listeners; a DEV_MODE warning points toward
+ * `each()` + `on()`.
+ *
+ * @since 2.0
+ * @param {HTMLElement & P} host - The component host element
+ * @returns {OnHelper<P>} Bound `on` function for the given host
  */
-declare const createEventsSensor: <T extends {}, P extends ComponentProps, U extends UI, K extends keyof U>(init: ParserOrFallback<T, U>, key: K, events: EventHandlers<T, U, ElementFromKey<U, K>>) => ((ui: U & {
-    host: Component<P>;
-}) => Sensor<T>);
-export { createEventsSensor, type EventHandlers, type EventType, type SensorEventHandler, };
+declare const makeOn: <P extends ComponentProps>(host: HTMLElement & P) => OnHelper<P>;
+export { type EventType, makeOn, type OnEventHandler, type OnHelper };

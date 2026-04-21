@@ -7,7 +7,7 @@ description: 'Scoped styles, CSS custom properties'
 {% hero %}
 # 🎨 Styling
 
-**Keep your components' styles self-contained while supporting shared design tokens.** Le Truc offers a refreshingly simple approach to create reactive Web Components that enhance your existing HTML.
+**Keep your components' styles self-contained while supporting shared design tokens.** Scope with the custom element name, expose customization via CSS custom properties, and let Le Truc toggle classes and attributes when state changes.
 {% /hero %}
 
 {% section %}
@@ -20,7 +20,7 @@ Le Truc handles state management and reactivity — CSS handles everything visua
 {% section %}
 ## Scope Styles to Custom Element
 
-Use the **custom element name** to scope component styles if **you control the page and the components within**. This protects against component styles leaking out, while still allowing to use the CSS cascade. No need for Shadow DOM, no duplicate style rules.
+Use the **custom element name** to scope component styles if **you control the page and the components within**. This protects against component styles leaking out while preserving the CSS cascade. No need for Shadow DOM, no duplicate style rules.
 
 ```css
 my-component {
@@ -37,9 +37,7 @@ my-component {
 - By definition **unique within the document** with a descriptive name.
 - **Low specificity**, making it easy to override when you need to with a single class.
 
-{% callout .tip %}
-**When to use**
-
+{% callout .tip title="When to use" %}
 **Best when** you control the page and need styles to cascade naturally.
 **Avoid if** you expect style clashes from third-party styles.
 {% /callout %}
@@ -49,7 +47,7 @@ my-component {
 {% section %}
 ## Encapsulate Styles with Shadow DOM
 
-Use **Shadow DOM** to encapsulate styles if your component is going to be used in a pages **where you don't control the styles**. This way you make sure page styles don't leak in and component styles don't leak out.
+Use **Shadow DOM** to encapsulate styles if your component is going to be used on pages where you don't control the styles. This way you make sure page styles don't leak in and component styles don't leak out.
 
 ```html
 <my-component>
@@ -66,9 +64,7 @@ Use **Shadow DOM** to encapsulate styles if your component is going to be used i
 </my-component>
 ```
 
-{% callout .tip %}
-**When to use**
-
+{% callout .tip title="When to use" %}
 **Best when** your component is used in environments where you don’t control styles.
 **Avoid if** you need global styles to apply inside the component.
 {% /callout %}
@@ -142,7 +138,7 @@ my-button {
 {% section %}
 ## Reactive Styles
 
-CSS class variants become interactive when JavaScript toggles them in response to state. The contract is simple: **the class name in CSS must exactly match the token passed to `toggleClass()`**.
+CSS class variants become interactive when JavaScript toggles them in response to state. The contract is simple: **the class name in CSS must exactly match the token passed to `bindClass()`**.
 
 The `module-scrollarea` component demonstrates this clearly. The CSS defines what the shadow looks like when overflow is present:
 
@@ -160,14 +156,14 @@ module-scrollarea {
 }
 ```
 
-The component's setup function detects overflow state and applies the class:
+The component's factory creates a local signal and passes it to `watch()` + `bindClass()`:
 
 ```js
 const overflowEnd = createState(false)
 
-return {
-  host: toggleClass('overflow-end', overflowEnd),
-}
+return [
+  watch(overflowEnd, bindClass(host, 'overflow-end')),
+]
 ```
 
 When `overflowEnd` becomes `true`, Le Truc adds `overflow-end` to the host element. The CSS rule activates, and the shadow fades in. When it becomes `false`, the class is removed and the shadow fades out — no inline styles, no manual DOM manipulation.
@@ -176,7 +172,7 @@ The full example is a scroll container that shows fade shadows at either edge wh
 
 ### Attribute-driven Styles
 
-The same principle applies to attributes. Use `setAttribute()` to toggle an attribute that a CSS selector targets:
+The same principle applies to attributes. Use `watch()` + `bindAttribute()` to toggle an attribute that a CSS selector targets:
 
 ```css
 module-tabgroup {
@@ -188,11 +184,14 @@ module-tabgroup {
 ```
 
 ```js
-return {
-	tabs: setAttribute('aria-selected', tab =>
-	  String(host.selected === tab.getAttribute('aria-controls'))
-	),
-}
+return [
+  watch('selected', () => {
+    for (const tab of tabs.get()) {
+      tab.setAttribute('aria-selected',
+        String(host.selected === tab.getAttribute('aria-controls')))
+    }
+  }),
+]
 ```
 
 Prefer attributes over classes when the value has semantic meaning — screen readers and assistive technology understand `aria-selected`, `aria-expanded`, `disabled`, and similar attributes.
@@ -232,8 +231,8 @@ customElements.define('card-callout', class extends HTMLElement {})
 
 This tells the browser (and Le Truc) that the element is defined and ready. The registration has no runtime cost — the element simply upgrades to a plain `HTMLElement` immediately.
 
-{% callout .tip %}
-**As a rule of thumb**, every custom element tag you use in HTML should have a corresponding `customElements.define()` call. This is the web platform's contract: a hyphenated tag name is a custom element, and defining it — even with an empty class — ensures it upgrades correctly and doesn't block other components.
+{% callout .tip title="Register every custom element tag" %}
+Every custom element tag you use in HTML should have a corresponding `customElements.define()` call. This is the web platform's contract: a hyphenated tag name is a custom element, and defining it — even with an empty class — ensures it upgrades correctly and doesn't block other components.
 {% /callout %}
 
 {% /section %}

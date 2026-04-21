@@ -7,14 +7,17 @@
 
 import { describe, expect, test } from 'bun:test'
 import Markdoc, { Node, Tag } from '@markdoc/markdoc'
-import callout from '../../schema/callout.markdoc'
 import { CalloutClassAttribute } from '../../markdoc-constants'
+import callout from '../../schema/callout.markdoc'
 
 /* === Helpers === */
 
 const config = { tags: { callout } }
 
-function transformCallout(attrs: Record<string, unknown>, children: Node[] = []): Tag {
+function transformCallout(
+	attrs: Record<string, unknown>,
+	children: Node[] = [],
+): Tag {
 	const node = new Node('tag', attrs, children, 'callout')
 	return Markdoc.transform(node, config) as Tag
 }
@@ -44,6 +47,27 @@ describe('callout schema', () => {
 		])
 		const result = transformCallout({ class: 'note' }, [child])
 		expect(result.children.length).toBeGreaterThan(0)
+	})
+
+	test('renders title as <p><strong> prepended to children', () => {
+		const result = transformCallout({ class: 'info', title: 'Heads up' })
+		const first = result.children[0] as Tag
+		expect(first).toBeInstanceOf(Tag)
+		expect(first.name).toBe('p')
+		const strong = first.children[0] as Tag
+		expect(strong).toBeInstanceOf(Tag)
+		expect(strong.name).toBe('strong')
+		expect(strong.children[0]).toBe('Heads up')
+	})
+
+	test('does not pass title as attribute to card-callout', () => {
+		const result = transformCallout({ class: 'info', title: 'Heads up' })
+		expect(result.attributes.title).toBeUndefined()
+	})
+
+	test('omits title paragraph when title is absent', () => {
+		const result = transformCallout({ class: 'info' })
+		expect(result.children).toHaveLength(0)
 	})
 
 	test('accepts all valid class values without error', () => {

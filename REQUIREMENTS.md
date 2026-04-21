@@ -80,19 +80,21 @@ For the library itself:
 ### Must Have
 
 **M1. Component definition via a single function**
-`defineComponent(name, props, select, setup)` is the sole entry point for defining a component. It registers a native Custom Element with no additional boilerplate.
+`defineComponent(name, factory)` is the sole entry point for defining a component. It registers a native Custom Element with no additional boilerplate. The factory receives a `FactoryContext` with element queries, `expose()` for declaring reactive properties, and helpers for creating effects.
 
 **M2. Reactive properties backed by signals**
 Component properties are signals. Reading a property inside an effect automatically tracks it as a dependency. Writing a property triggers all dependent effects. Properties must behave like normal JS object properties from the outside (`host.count++` works).
 
-**M3. Attribute ↔ property synchronisation via parsers**
-Properties declared with a Parser function are automatically added to `observedAttributes`. When the corresponding HTML attribute changes, the parser transforms the string value into a typed JS value and updates the signal. Parsers serve dual duty: initial value from the attribute at connect time, and live sync on subsequent attribute changes.
+**M3. Attribute → property initialisation via parsers**
+Properties declared with a `Parser` function read the corresponding HTML attribute once at connect time and transform the string value into a typed JS value. Parsers are for server-side-authored initial configuration only — `observedAttributes` is always empty and `attributeChangedCallback` is never used. Post-connect state changes must go through event handlers, `watch()`, or direct property writes.
+
+> **Design note:** Live attribute sync via `observedAttributes` was intentionally dropped in v2.0. It was the primary obstacle to simplifying the `defineComponent` signature (required the `U extends UI` generic on parsers) and the mental model (authors confused "attribute as initial config" with "attribute as reactive state"). Le Truc provides real, type-safe reactivity through properties — attribute observation is an escape hatch for interop, not a first-class pattern. If live attribute sync is needed for a specific use case, it can be added as an optional third parameter to `defineComponent` in a future release.
 
 **M4. Type-safe DOM queries**
 `first(selector)` and `all(selector)` must infer the correct `HTMLElement` subtype from the CSS selector string at compile time. Required elements must throw a typed error if missing. Optional elements must return `undefined` without throwing.
 
 **M5. Fine-grained DOM effects**
-Effects are applied per-element, not per-component. Updates are targeted to the exact DOM node that needs changing. The following built-in effects are required: `setText`, `setAttribute`, `toggleAttribute`, `toggleClass`, `setProperty`, `setStyle`, `show`, `dangerouslySetInnerHTML`, `on`, `pass`.
+Effects are applied per-element, not per-component. Updates are targeted to the exact DOM node that needs changing. The `watch(source, handler)` helper drives any DOM update from an explicit reactive source. The following built-in DOM binding helpers are required: `bindText`, `bindAttribute` (covers `setAttribute` and `toggleAttribute`), `bindClass`, `bindProperty`, `bindStyle`, `bindVisible` (replaces `show`), `dangerouslyBindInnerHTML`. Event handling and inter-component binding are covered by `on()` and `pass()` respectively.
 
 **M6. Automatic dependency tracking**
 Effects must automatically re-run when their reactive dependencies change, with no manual subscription management. Effects must clean up after themselves when the component disconnects.
@@ -129,11 +131,11 @@ The library must be consumable via a `<script type="module">` tag from a CDN wit
 
 ### Should Have
 
-**S1. Parser/Reader distinction replaced by explicit API**
-The current runtime distinction between Parser (≥2 params) and Reader (1 param) via `function.length` is fragile. Replace with an explicit mechanism (e.g., a `defineParser()` wrapper) that is unambiguous and not affected by default parameters, rest params, or destructuring. Must be backward-compatible or introduced before 1.0 as a breaking change.
+**S1. Parser/Reader distinction replaced by explicit API** ✅ *Resolved in v2.0*
+`Reader<T, U>` is removed. `Parser<T>` is branded via `asParser()`, detected by `isParser()` on `PARSER_BRAND` only — no function-length fallback. Custom parsers must use `asParser()`.
 
-**S2. MethodProducer made explicit in the type system**
-The current `MethodProducer` pattern (a Reader that returns `void` for side-effect-only initializers like `provideContexts`) is invisible to the type system and relies on convention. An explicit API (e.g., `defineMethod()`) should make this pattern unambiguous.
+**S2. MethodProducer made explicit in the type system** ✅ *Resolved in v2.0*
+`MethodProducer` is branded via `defineMethod()` and detected by `isMethodProducer()` on `METHOD_BRAND` only. No implicit function-type fallback.
 
 **S3. Required element error messages are actionable**
 When a required element is missing (`MissingElementError`), the error message must identify which component, which selector failed, and include the developer-provided hint string. Errors must name the component element.
@@ -141,8 +143,13 @@ When a required element is missing (`MissingElementError`), the error message mu
 **S4. Development mode with enhanced diagnostics**
 When `DEV_MODE` is enabled: detailed error messages with component context, warnings for dependency resolution timeouts, and effect execution logging.
 
-**S5. Scheduler deduplication for high-frequency events**
-Passive events (scroll, resize, touch, wheel) and `dangerouslySetInnerHTML` updates must be deduplicated per-element via `requestAnimationFrame` to prevent frame drops.
+**S5. Scheduler deduplication for innerHTML mutations**
+`dangerouslyBindInnerHTML` updates must be deferred and deduplicated via `requestAnimationFrame`. Deduplication is per element so multiple helpers targeting the same element all run, while rapid re-fires of the same helper within one frame collapse to a single write. Passive event handlers (`on()` with scroll, resize, etc.) are separately throttled at the signal-graph input level via `throttle()` to prevent upstream churn.
+
+### Should Avoid
+
+**X1. `observedAttributes` / `attributeChangedCallback` for reactive state**
+Do not use `observedAttributes` to drive reactive property updates. Attribute observation couples component state to HTML attribute mutations, which is a weak and error-prone reactivity model compared to signal-backed properties. It was the primary obstacle to removing the `U extends UI` generic from parsers and simplifying the `defineComponent` API. Le Truc components use properties as the reactive interface; attributes are for initial server-authored configuration only (read once at connect time via parsers). If interop with attribute-mutation patterns is strictly required (e.g., for compatibility with specific CMS tooling), it may be offered as an opt-in escape hatch via an optional parameter, but it must never be the default or encouraged path.
 
 ### Nice to Have
 
@@ -235,36 +242,7 @@ Extend the CSS selector type parser to cover `SVGElementTagNameMap` and `MathMLE
 
 ---
 
-## 7. Risks & Mitigations
-
-### R1. Parser/Reader distinction via `function.length` causes silent misclassification
-
-**Risk**: A parser written with default parameters (`(ui, value = '') => ...`) has `length === 1` and is treated as a Reader, bypassing `observedAttributes` registration. The bug is silent.
-**Mitigation**: Replace with an explicit wrapper API (see S1) before 1.0. Until then, document the constraint prominently and include a test case that catches the misclassification.
-
-### R2. `cause-effect` upstream changes break Le Truc
-
-**Risk**: Le Truc depends on signal types (`Slot`, `Scope`, lazy `Memo`) that may change in future Cause & Effect versions.
-**Mitigation**: Le Truc and Cause & Effect are co-developed at Zeix AG. Version pinning and coordinated releases mitigate this. Both libraries target 1.0 together.
-
-### R3. Refactoring cost benefit is hard to measure objectively
-
-**Risk**: The primary success criterion is subjective developer experience, which is difficult to quantify. The comparison is against a hypothetical alternative, not a controlled experiment.
-**Mitigation**: Use graded-transition projects (migrating existing codebases incrementally) to give developers direct comparison points. Collect qualitative feedback systematically. Accept that proof will be emergent rather than experimental.
-
-### R4. Component portability proves harder than expected in practice
-
-**Risk**: Components built for project A may depend on application-specific context providers or DOM structures that aren't available in project B, undermining the reuse goal.
-**Mitigation**: Enforce the architecture rule that general-purpose components must not assume context or DOM structure beyond their own subtree. Reserve context and coordination patterns for explicitly "application-level" components. Document this boundary clearly.
-
-### R5. CDN / no-build usage diverges from bundled usage
-
-**Risk**: Tree-shaking, TypeScript types, and minification only benefit bundled consumers. CDN usage lacks these, and the gap may widen if the library grows.
-**Mitigation**: Keep the CDN build as a first-class output. Cap bundle size at the TCP segment limit regardless of which features are added.
-
----
-
-## 8. Out of Scope
+## 7. Out of Scope
 
 - **Client-side rendering or templating**: Le Truc will never generate initial HTML. Component authors who need client-side rendering should use a different tool or implement it themselves with template literals or `<template>` cloning.
 - **Server-side rendering**: The library is browser-only. A companion TypeScript SSR library is a separate future project, not part of Le Truc.
@@ -272,6 +250,5 @@ Extend the CSS selector type parser to cover `SVGElementTagNameMap` and `MathMLE
 - **Framework adapters**: No React wrappers, Vue plugins, Angular modules, or similar.
 - **Sibling-to-sibling state sharing**: Not a supported coordination pattern.
 - **Accessibility enforcement**: Le Truc cannot enforce WCAG compliance. It provides patterns and primitives; correctness is the component author's responsibility.
-- **Polyfills**: No legacy browser support.
-- **IE11 or non-evergreen browsers**.
+- **Polyfills**: No legacy browser support (IE11 or non-evergreen browsers).
 - **Full styled component library**: Planned as a separate project built on top of Le Truc.

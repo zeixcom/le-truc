@@ -2,7 +2,7 @@
 
 > **ComputedOptions**\<`T`\> = [`SignalOptions`](SignalOptions.md)\<`T`\> & `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:73
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:74
 
 #### Type Declaration
 

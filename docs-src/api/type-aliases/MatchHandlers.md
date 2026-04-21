@@ -18,7 +18,7 @@ Tuple of `Signal` types being matched
 
 ##### err?
 
-> `optional` **err?**: (`errors`) => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
+> `optional` **err?**: (`errors`) => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:15
 
@@ -32,13 +32,13 @@ readonly `Error`[]
 
 ###### Returns
 
-`MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
+[`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 ***
 
 ##### nil?
 
-> `optional` **nil?**: () => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
+> `optional` **nil?**: () => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:17
 
@@ -46,13 +46,13 @@ Called when one or more signals are unset (pending).
 
 ###### Returns
 
-`MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
+[`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 ***
 
 ##### ok
 
-> **ok**: (`values`) => `MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
+> **ok**: (`values`) => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:11
 
@@ -66,4 +66,18 @@ Called when all signals have a value. Receives a tuple of resolved values.
 
 ###### Returns
 
-`MaybePromise`\<[`MaybeCleanup`](MaybeCleanup.md)\>
+[`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
+
+***
+
+##### stale?
+
+> `optional` **stale?**: () => [`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:19
+
+Called when all signals have a (stale) value but one or more Task signals are re-computing. Falls back to `ok` if absent.
+
+###### Returns
+
+[`MaybePromise`](MaybePromise.md)\<[`MaybeCleanup`](MaybeCleanup.md)\>

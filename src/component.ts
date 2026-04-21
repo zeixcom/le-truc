@@ -1,8 +1,8 @@
 import {
 	createComputed,
+	createScope,
 	createSlot,
 	createState,
-	isComputed,
 	isFunction,
 	isMutableSignal,
 	isSignal,
@@ -12,15 +12,32 @@ import {
 	type Signal,
 	type State,
 	type TaskCallback,
-	unown,
 } from '@zeix/cause-effect'
-
-import { type Effects, runEffects } from './effects'
-import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
+import {
+	makeProvideContexts,
+	makeRequestContext,
+	type ProvideContextsHelper,
+	type RequestContextHelper,
+} from './context'
+import {
+	activateResult,
+	type FactoryResult,
+	type Falsy,
+	makePass,
+	makeWatch,
+	type PassHelper,
+	type WatchHelper,
+} from './effects'
+import { InvalidComponentNameError } from './errors'
+import { makeOn, type OnHelper } from './events'
 import { getSignals } from './internal'
-import { isMethodProducer, isParser, type Parser, type Reader } from './parsers'
-import { type ElementQueries, getHelpers, type UI } from './ui'
-import { validatePropertyName } from './util'
+import {
+	isMethodProducer,
+	isParser,
+	METHOD_BRAND,
+	type Parser,
+} from './parsers'
+import { type ElementQueries, makeElementQueries } from './ui'
 
 /* === Types === */
 
@@ -45,45 +62,24 @@ type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>
 /** A record of reactive property names to their value types, used to type a component's props. */
 type ComponentProps = Record<ComponentProp, NonNullable<unknown>>
 
-/** An `HTMLElement` extended with a component's reactive properties as signal-backed accessors. */
-type Component<P extends ComponentProps> = HTMLElement & P
-
-/**
- * The UI object passed to the `setup` function: the result of the `select`
- * function merged with a `host` key pointing to the component element itself.
- */
-type ComponentUI<P extends ComponentProps, U extends UI> = U & {
-	host: Component<P>
-}
-
-/**
- * The type of the `setup` function passed to `defineComponent`.
- * Receives the frozen UI object (including `host`) and returns an `Effects` record.
- */
-type ComponentSetup<P extends ComponentProps, U extends UI> = (
-	ui: ComponentUI<P, U>,
-) => Effects<P, ComponentUI<P, U>>
-
 /**
  * The `props` argument of `defineComponent` — a map from property names to their initializers.
  *
  * Each value may be:
  * - A **static value** or **`Signal`** — used directly as the initial signal value.
- * - A **`Parser`** (two-argument function branded with `asParser()`) — called with
- *   `(ui, attributeValue)` at connect time and again on every attribute change.
- * - A **`Reader`** (one-argument function) — called with `ui` at connect time; if it
- *   returns a function or `TaskCallback`, a computed/task signal is created; otherwise
- *   a mutable state signal is created.
- * - A **`MethodProducer`** (branded with `asMethod()`) — called for side effect of
- *   creating the method only; its return value is ignored.
+ * - A **`Parser`** (branded with `asParser()`) — called with the attribute value string
+ *   at connect time; for 4-param form also on every attribute change.
+ * - A **`MethodProducer`** (branded with `defineMethod()`) — assigned directly as the property
+ *   value; the function IS the method. Per-instance state lives in factory scope.
  */
-type Initializers<P extends ComponentProps, U extends UI> = {
+type Initializers<P extends ComponentProps> = {
 	[K in keyof P]?:
 		| P[K]
 		| Signal<P[K]>
-		| Parser<P[K], ComponentUI<P, U>>
-		| Reader<MaybeSignal<P[K]>, ComponentUI<P, U>>
-		| ((ui: ComponentUI<P, U>) => void)
+		| Parser<P[K]>
+		| (P[K] extends (...args: any[]) => any
+				? P[K] & { readonly [METHOD_BRAND]: true }
+				: never)
 }
 
 /**
@@ -99,86 +95,78 @@ type MaybeSignal<T extends {}> =
 	| MemoCallback<T>
 	| TaskCallback<T>
 
+/**
+ * The context object passed to the v1.1 factory function.
+ *
+ * Components destructure only what they need.
+ */
+type FactoryContext<P extends ComponentProps> = ElementQueries & {
+	host: HTMLElement & P
+	expose: (props: Initializers<P>) => void
+	watch: WatchHelper<P>
+	on: OnHelper<P>
+	pass: PassHelper<P>
+	provideContexts: ProvideContextsHelper<P>
+	requestContext: RequestContextHelper
+}
+
 /* === Exported Functions === */
 
 /**
- * Define and register a reactive custom element.
+ * Define and register a reactive custom element using the v1.1 factory form.
  *
- * Calls `customElements.define()` and returns the registered class.
- * Reactive properties are initialised in `connectedCallback` and torn down in `disconnectedCallback`.
+ * The factory receives a `FactoryContext` at connect time: query helpers (`first`, `all`),
+ * the `host` element, and `expose()` for declaring reactive properties. It returns a flat
+ * array of effect descriptors created by helpers like `watch()`, `on()`, `pass()`,
+ * `provideContexts()`, and `requestContext()`.
  *
- * @since 0.15.0
+ * Effects activate after dependency resolution — child custom elements are guaranteed to
+ * be defined before any descriptor runs.
+ *
+ * @since 2.0
  * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
- * @param {Initializers<P, U>} props - Initializers for reactive properties: static values, signals, parsers, or readers
- * @param {function} select - Receives `{ first, all }` query helpers; returns the UI object (queried DOM elements used by effects)
- * @param {function} setup - Receives the frozen UI object (plus `host`) and returns effects keyed by UI element name
+ * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
- * @throws {InvalidPropertyNameError} If a property name conflicts with reserved words or inherited HTMLElement properties
  */
-function defineComponent<P extends ComponentProps, U extends UI = {}>(
+function defineComponent<P extends ComponentProps>(
 	name: string,
-	props: Initializers<P, U> = {} as Initializers<P, U>,
-	select: (elementQueries: ElementQueries) => U = () => ({}) as U,
-	setup: (ui: ComponentUI<P, U>) => Effects<P, ComponentUI<P, U>> = () => ({}),
-): Component<P> {
+	factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void,
+): CustomElementConstructor | undefined {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
-	for (const prop of Object.keys(props)) {
-		const error = validatePropertyName(prop)
-		if (error) throw new InvalidPropertyNameError(name, prop, error)
-	}
 
 	class Truc extends HTMLElement {
 		debug?: boolean
-		#ui: ComponentUI<P, U> | undefined
 		#cleanup: MaybeCleanup
-
-		static observedAttributes =
-			Object.entries(props)
-				?.filter(([, initializer]) => isParser(initializer))
-				.map(([prop]) => prop) ?? []
 
 		/**
 		 * Native callback when the custom element is first connected to the document
 		 */
 		connectedCallback() {
-			// Initialize UI
-			const [elementQueries, resolveDependencies] = getHelpers(this)
-			const ui = {
-				...select(elementQueries),
-				host: this as unknown as Component<P>,
-			}
-			this.#ui = ui
-			Object.freeze(this.#ui)
+			const [elementQueries, resolveDependencies] = makeElementQueries(this)
+			const host = this as unknown as HTMLElement & P
 
-			// Initialize signals — dispatch order: Parser → MethodProducer → Reader → static/Signal
-			const createSignal = <K extends keyof P & string>(
-				key: K,
-				initializer: Initializers<P, U>[K],
-			) => {
-				if (isParser<P[K], ComponentUI<P, U>>(initializer)) {
-					const result = initializer(ui, this.getAttribute(key))
-					if (result != null) this.#setAccessor(key, result)
-				} else if (isMethodProducer(initializer)) {
-					initializer(ui)
-				} else if (isFunction<MaybeSignal<P[K]>>(initializer)) {
-					const result = (
-						initializer as Reader<MaybeSignal<P[K]>, ComponentUI<P, U>>
-					)(ui)
-					if (result != null) this.#setAccessor(key, result)
-				} else {
-					const value = initializer as MaybeSignal<P[K]>
-					if (value != null) this.#setAccessor(key, value)
-				}
-			}
-			for (const [prop, initializer] of Object.entries(props)) {
-				if (initializer == null || prop in this) continue
-				createSignal(prop, initializer)
+			// Create expose() helper — called inside the factory body to declare reactive properties.
+			const expose = (instanceProps: Initializers<P>) => {
+				this.#initSignals(instanceProps)
 			}
 
-			// Resolve dependencies and run setup function
+			const context: FactoryContext<P> = {
+				...elementQueries,
+				host,
+				expose,
+				watch: makeWatch(host),
+				on: makeOn(host),
+				pass: makePass(host),
+				provideContexts: makeProvideContexts(host),
+				requestContext: makeRequestContext(host),
+			}
+
+			const result = factory(context)
+			if (!result) return
+
 			resolveDependencies(() => {
-				this.#cleanup = unown(() => runEffects(ui, setup(ui)))
+				this.#cleanup = createScope(() => activateResult(result))
 			})
 		}
 
@@ -190,38 +178,36 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 		}
 
 		/**
-		 * Native callback when an observed attribute of the custom element changes
+		 * Initialize signals for each property in the given initializers map.
+		 * Dispatch order: Parser → MethodProducer → static/Signal
 		 *
-		 * @param {K} name - Name of the modified attribute
-		 * @param {string | null} oldValue - Old value of the modified attribute
-		 * @param {string | null} newValue - New value of the modified attribute
+		 * @param {Initializers<P>} instanceProps - Property initializers to process
 		 */
-		attributeChangedCallback<K extends keyof P>(
-			name: K,
-			oldValue: string | null,
-			newValue: string | null,
-		) {
-			// Not connected yet, unchanged value or controlled by computed
-			if (
-				!this.#ui ||
-				newValue === oldValue ||
-				isComputed(getSignals(this)[name as string])
-			)
-				return
-
-			// Check whether we have a parser for the attribute
-			const parser = props[name]
-			if (!isParser<P[K], ComponentUI<P, U>>(parser)) return
-
-			const parsed = parser(this.#ui, newValue, oldValue)
-			if (name in this) (this as unknown as P)[name] = parsed
-			else this.#setAccessor(name, parsed)
+		#initSignals(instanceProps: Initializers<P>): void {
+			const createReactiveProperty = <K extends keyof P & string>(
+				key: K,
+				initializer: Initializers<P>[K],
+			) => {
+				if (isParser<P[K]>(initializer)) {
+					const result = initializer(this.getAttribute(key))
+					if (result != null) this.#setAccessor(key, result)
+				} else if (isMethodProducer(initializer)) {
+					;(this as any)[key] = initializer
+				} else {
+					const value = initializer as MaybeSignal<P[K]>
+					if (value != null) this.#setAccessor(key, value)
+				}
+			}
+			for (const [prop, initializer] of Object.entries(instanceProps)) {
+				if (initializer == null || prop in this) continue
+				createReactiveProperty(prop as keyof P & string, initializer)
+			}
 		}
 
 		/**
 		 * Create or replace the Slot-backed property accessor for a reactive property.
 		 * Mutable signals are wrapped in a Slot so their backing signal can be swapped
-		 * later (e.g. by `attributeChangedCallback` or `pass()`).
+		 * later (e.g. by `pass()`).
 		 *
 		 * @since 0.15.0
 		 * @param {K} key - Reactive property name
@@ -253,16 +239,14 @@ function defineComponent<P extends ComponentProps, U extends UI = {}>(
 	}
 
 	customElements.define(name, Truc)
-	return customElements.get(name) as unknown as Component<P>
+	return customElements.get(name)
 }
 
 export {
-	type Component,
 	type ComponentProp,
 	type ComponentProps,
-	type ComponentSetup,
-	type ComponentUI,
 	defineComponent,
+	type FactoryContext,
 	type Initializers,
 	type MaybeSignal,
 	type ReservedWords,

@@ -2,7 +2,7 @@
 
 > **isRecord**\<`T`\>(`value`): `value is T`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:7
+Defined in: node\_modules/@zeix/cause-effect/types/src/util.d.ts:12
 
 #### Type Parameters
 

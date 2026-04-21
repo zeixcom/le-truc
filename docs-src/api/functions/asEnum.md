@@ -1,8 +1,8 @@
 ### Function: asEnum()
 
-> **asEnum**(`valid`): [`Parser`](../type-aliases/Parser.md)\<`string`, [`UI`](../type-aliases/UI.md)\>
+> **asEnum**(`valid`): [`Parser`](../type-aliases/Parser.md)\<`string`\>
 
-Defined in: [src/parsers/string.ts:29](https://github.com/zeixcom/le-truc/blob/be10586073df9ae2ebe5b85bd4fcca8a69e532d4/src/parsers/string.ts#L29)
+Defined in: [src/parsers/string.ts:23](https://github.com/zeixcom/le-truc/blob/c5ac50af47ae40f80c1a0a08f969acee81e2622e/src/parsers/string.ts#L23)
 
 Parser that constrains an attribute value to one of a fixed set of allowed strings.
 
@@ -19,7 +19,7 @@ Non-empty array of allowed values; first entry is the default
 
 #### Returns
 
-[`Parser`](../type-aliases/Parser.md)\<`string`, [`UI`](../type-aliases/UI.md)\>
+[`Parser`](../type-aliases/Parser.md)\<`string`\>
 
 Parser that returns a valid enum value
 

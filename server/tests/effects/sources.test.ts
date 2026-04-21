@@ -29,7 +29,10 @@ describe('generatePanels', () => {
 
 	test('selects the last panel by default when html, css, and ts are provided', async () => {
 		const html = createFile('examples/widget/widget.html', '<div>Widget</div>')
-		const css = createFile('examples/widget/widget.css', '.widget { color: red; }')
+		const css = createFile(
+			'examples/widget/widget.css',
+			'.widget { color: red; }',
+		)
 		const ts = createFile('examples/widget/widget.ts', 'export const x = 1')
 
 		const panels = await generatePanels(html, css, ts)

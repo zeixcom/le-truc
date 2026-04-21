@@ -59,7 +59,9 @@ export { processExample }
 
 export const examplesEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => { resolve = res })
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
 	const cleanup = createEffect(() => {
 		match([componentMarkdown.sources, componentMarkup.sources], {
 			ok: async ([mdFiles, htmlFiles]) => {
@@ -72,21 +74,25 @@ export const examplesEffect = (onRebuild?: () => void) => {
 					for (const md of mdFiles) {
 						const pathParts = md.path.split('/')
 
-						if (pathParts.length < 3) continue
+						if (pathParts.length < 4) continue
 
-						const componentName = pathParts[pathParts.length - 2]!
+						const typeName = pathParts[pathParts.length - 3]!
+						const dirName = pathParts[pathParts.length - 2]!
 						const fileName = pathParts[pathParts.length - 1]!.replace(
 							/\.md$/,
 							'',
 						)
 
-						// Only process markdown files that match their directory name
-						if (componentName !== fileName) continue
+						// Only process markdown files that match <type>-<name> pattern
+						if (fileName !== `${typeName}-${dirName}`) continue
+
+						const componentName = fileName
 
 						// Find corresponding HTML file
 						const htmlPath = getFilePath(
 							COMPONENTS_DIR,
-							componentName,
+							typeName,
+							dirName,
 							`${componentName}.html`,
 						)
 						const htmlFile = htmlMap.get(htmlPath)

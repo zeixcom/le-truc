@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Removing createEventsSensor – Le Truc Blog</title>
+		<meta name="description" content="We removed createEventsSensor from Le Truc 2.0. Here is what it did, why we dropped it, and how to implement the same pattern yourself with createState and on." />
+		<meta name="author" content="Esther Brunner" />
+		<meta name="article:published_time" content="2026-04-12" />
+		<meta name="article:modified_time" content="" />
+		<link
+			rel="preload"
+			href="../assets/main.css?v=bf85c13a3cf39947"
+			as="style"
+		/>
+		<link
+			rel="modulepreload"
+			href="../assets/main.js?v=3dbcefc69fbf94a1"
+		/>
+		<link
+			rel="stylesheet"
+			href="../assets/main.css?v=bf85c13a3cf39947"
+		/>
+		<script
+			type="module"
+			src="../assets/main.js?v=3dbcefc69fbf94a1"
+		></script>
+	</head>
+	<body class="blog">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">
+					<a href="../blog.html">Le Truc Blog</a>
+					<small>2.0.0</small>
+				</h1>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<main id="main" class="content-grid">
+				<section-hero>
+					<h1>🗑️ Removing createEventsSensor</h1>
+					<div class="hero-layout">
+						<div class="lead">
+							<card-blogmeta>
+								<span>
+									<img src="../assets/img/avatar/esther-brunner.jpg" alt="Avatar of Esther Brunner" />
+									<span>Esther Brunner</span>
+								</span>
+								<span>
+									<time class="published" datetime="2026-04-12">
+										2026-04-12
+									</time>
+									<span class="modified">
+										· updated on
+										<time datetime="">
+											
+										</time>
+									</span>
+								</span>
+								<span>5 min read</span>
+							</card-blogmeta>
+							<p>We removed createEventsSensor from Le Truc 2.0. Here is what it did, why we dropped it, and how to implement the same pattern yourself with createState and on.</p>
+						</div>
+					</div>
+				</section-hero>
+				<section class="" id="undefined"><p><code>createEventsSensor</code> shipped as a convenience for a specific pattern: a component property that is read-only to consumers, derived from DOM events, and never directly writable. The classic example is a text input's character count.</p><module-codeblock language="ts" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="file">form-combobox.ts</span><span class="language">ts</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">expose</span><span style="color:#F8F8F2">({</span></span>
+<span class="line"><span style="color:#F8F8F2">  value: textbox.value,</span></span>
+<span class="line"><span style="color:#F8F8F2">  length: </span><span style="color:#A6E22E">createEventsSensor</span><span style="color:#F8F8F2">(textbox, textbox.value.length, {</span></span>
+<span class="line"><span style="color:#A6E22E">    input</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> textbox.value.length,</span></span>
+<span class="line"><span style="color:#F8F8F2">  }),</span></span>
+<span class="line"><span style="color:#F8F8F2">})</span></span>
+<span class="line"></span></code></pre></module-scrollarea><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>Three lines. Declarative. It looks clean until you read the implementation.</p><h2 id="what-it-actually-does"><a name="what-it-actually-does" class="anchor" href="#what-it-actually-does"><span class="title">What it actually does</span><span class="permalink">#</span></a></h2><p><code>createEventsSensor</code> wraps <code>createSensor</code> from Cause &amp; Effect. A <code>Sensor&lt;T&gt;</code> is a reactive value that can only be set from within its own setup callback — it has no public setter. That write-protection is the whole point: consumers can read <code>host.length</code>, but they cannot assign to it.</p><p>Two implementation details shaped how <code>createEventsSensor</code> behaved in practice:</p><p><strong>Event delegation.</strong> Listeners were attached to <code>target</code>, but the handler checked <code>e.target.contains(eventTarget)</code> — so events from <em>children</em> of <code>target</code> also triggered the sensor. For an <code>&lt;input&gt;</code> element this is a no-op, since inputs have no children. For any container element it changes the behavior in a way that's easy to miss.</p><p><strong>Lazy listener setup.</strong> The <code>Sensor</code> API is lazy: the setup callback (and therefore the event listener) only runs when the sensor is first read inside a reactive context. If you <code>expose({ length: sensor })</code> but never bind <code>length</code> to the DOM, the listener is never attached. In practice components always bind their properties, so this rarely caused a bug — but it meant the listener timing was determined by the reactive graph, not by the component's <code>connectedCallback</code>, and that's not the mental model developers bring to event listeners.</p><p>Both details are correct behavior for the use cases <code>createSensor</code> was designed for. They're the wrong defaults for a simple per-element event listener inside a component factory.</p><h2 id="the-alternative"><a name="the-alternative" class="anchor" href="#the-alternative"><span class="title">The alternative</span><span class="permalink">#</span></a></h2><p>Everything <code>createEventsSensor</code> did can be done with <code>createState</code> and <code>on</code>, at the cost of a few extra lines:</p><module-codeblock language="ts" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="file">form-combobox.ts</span><span class="language">ts</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> length </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(textbox.value.length)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">expose</span><span style="color:#F8F8F2">({</span></span>
+<span class="line"><span style="color:#F8F8F2">  value: textbox.value,</span></span>
+<span class="line"><span style="color:#F8F8F2">  length: length.get,  </span><span style="color:#88846F">// expose the getter, not the state — consumers cannot set it</span></span>
+<span class="line"><span style="color:#F8F8F2">})</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">  on</span><span style="color:#F8F8F2">(textbox, </span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">    length.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(textbox.value.length)</span></span>
+<span class="line"><span style="color:#F8F8F2">  }),</span></span>
+<span class="line"><span style="color:#F8F8F2">  clearBtn </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(length, </span><span style="color:#A6E22E">bindVisible</span><span style="color:#F8F8F2">(clearBtn)),</span></span>
+<span class="line"><span style="color:#F8F8F2">]</span></span>
+<span class="line"></span></code></pre></module-scrollarea><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><p>The write protection comes from exposing <code>length.get</code> — a plain function — rather than the full <code>State&lt;number&gt;</code>. Consumers see a reactive getter with no corresponding setter. The <code>on</code> handler updates <code>length</code> directly, synchronously, with no delegation or laziness involved.</p><p>This pattern is more verbose but more obvious. The event listener attaches at connect time, like every other <code>on</code> call. The initial value is set explicitly. The reactive dependency is declared in the return array where all other effects live.</p><h2 id="why-we-removed-it"><a name="why-we-removed-it" class="anchor" href="#why-we-removed-it"><span class="title">Why we removed it</span><span class="permalink">#</span></a></h2><p><strong>The non-obvious behaviors caused real bugs.</strong> The most common one: a developer would use <code>createEventsSensor</code> on a container element, not realise events from child elements were also handled, and end up with duplicate updates or incorrect <code>prev</code> values. The fix in every case was to switch to <code>on</code> with an explicit check. We never saw a case where the delegation behavior was intentional.</p><p><strong>The alternative is not that much more code.</strong> Three lines become seven. That's a real increase, but it's lines that tell the full story: here's the state, here's its initial value, here's when it updates, here's what watches it. Nothing is hidden in an initializer signature.</p><p><strong>It conflated two concerns.</strong> The property's write-protection and its event-driven update logic are separate things. <code>createEventsSensor</code> bundled them into one call, which made both harder to understand and impossible to change independently. The <code>createState</code> pattern separates them: write-protection is about what you expose, event handling is about what you return.</p><p><strong>The escape hatch exists.</strong> If you need a sensor that is truly owned by its setup callback — because you want lazy listener setup, or you have an async value source, or you're building something more sophisticated — <code>createSensor</code> is still there, exported directly from Le Truc (re-exported from Cause &amp; Effect). You can implement <code>createEventsSensor</code> yourself in userland in about fifteen lines:</p><module-codeblock language="ts" copy-success="Copied!" copy-error="Error trying to copy to clipboard!" collapsed=""><p class="meta"><span class="file">events-sensor.ts</span><span class="language">ts</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { createSensor, </span><span style="color:#F92672">type</span><span style="color:#F8F8F2"> Sensor } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '@zeix/le-truc'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">SensorEventHandlers</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">T</span><span style="color:#F8F8F2">> </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">  [</span><span style="color:#A6E22E;text-decoration:underline">K</span><span style="color:#F92672"> in</span><span style="color:#F92672"> keyof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementEventMap</span><span style="color:#F8F8F2">]</span><span style="color:#F92672">?:</span><span style="color:#F8F8F2"> (</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">    event</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementEventMap</span><span style="color:#F8F8F2">[</span><span style="color:#A6E22E;text-decoration:underline">K</span><span style="color:#F8F8F2">],</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">    prev</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">T</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">  ) </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">T</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> void</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> function</span><span style="color:#A6E22E"> createEventsSensor</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">T</span><span style="color:#F92672"> extends</span><span style="color:#F8F8F2"> {}>(</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">  target</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Element</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">  init</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">T</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">  handlers</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">SensorEventHandlers</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">T</span><span style="color:#F8F8F2">>,</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Sensor</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">T</span><span style="color:#F8F8F2">> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">  let</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> init</span></span>
+<span class="line"><span style="color:#F92672">  return</span><span style="color:#A6E22E"> createSensor</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">T</span><span style="color:#F8F8F2">>(</span><span style="color:#FD971F;font-style:italic">set</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">    const</span><span style="color:#F8F8F2"> controller </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> AbortController</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">    for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> [type, handler] </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> Object.</span><span style="color:#A6E22E">entries</span><span style="color:#F8F8F2">(handlers)) {</span></span>
+<span class="line"><span style="color:#F8F8F2">      target.</span><span style="color:#A6E22E">addEventListener</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">        type,</span></span>
+<span class="line"><span style="color:#F8F8F2">        (</span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Event</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">          const</span><span style="color:#F8F8F2"> next </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (handler </span><span style="color:#F92672">as</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Event</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">prev</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">T</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">T</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> void</span><span style="color:#F8F8F2">)(e, value)</span></span>
+<span class="line"><span style="color:#F92672">          if</span><span style="color:#F8F8F2"> (next </span><span style="color:#F92672">!=</span><span style="color:#AE81FF"> null</span><span style="color:#F92672"> &#x26;&#x26;</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">Object.</span><span style="color:#A6E22E">is</span><span style="color:#F8F8F2">(next, value)) {</span></span>
+<span class="line"><span style="color:#F8F8F2">            value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> next</span></span>
+<span class="line"><span style="color:#A6E22E">            set</span><span style="color:#F8F8F2">(next)</span></span>
+<span class="line"><span style="color:#F8F8F2">          }</span></span>
+<span class="line"><span style="color:#F8F8F2">        },</span></span>
+<span class="line"><span style="color:#F8F8F2">        { signal: controller.signal },</span></span>
+<span class="line"><span style="color:#F8F8F2">      )</span></span>
+<span class="line"><span style="color:#F8F8F2">    }</span></span>
+<span class="line"><span style="color:#F92672">    return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> controller.</span><span style="color:#A6E22E">abort</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">  }, { value })</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span></code></pre></module-scrollarea><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button><button type="button" class="overlay" aria-expanded="false">Expand</button></module-codeblock><p>The key difference from the version we removed: no event delegation, no <code>contains</code> check. What you pass as <code>target</code> is what gets the listener.</p><h2 id="the-migration"><a name="the-migration" class="anchor" href="#the-migration"><span class="title">The migration</span><span class="permalink">#</span></a></h2><p>Search your codebase for <code>createEventsSensor</code>. For each call:</p><ol><li>Replace the initializer in <code>expose()</code> with <code>stateName.get</code>, where <code>stateName</code> is a new <code>createState(init)</code> in the factory closure.</li><li>Add an <code>on(target, 'eventType', () =&gt; { stateName.set(newValue) })</code> to the return array.</li><li>Any <code>watch('propName', ...)</code> that watched the exposed property by string can be changed to <code>watch(stateName, ...)</code> to watch the signal directly — that skips the host slot lookup and is marginally more efficient.</li></ol><p>For most components, the migration takes under five minutes.</p></section>
+			</main>
+			<!-- <div class="blog-nav">
+				<div class="content-grid">
+					<div class="content">
+						<nav class="blog-nav-links" aria-label="Blog navigation">
+							<a href="../blog/2026-04-04-four-arguments-for-four-guarantees.html" class="blog-nav-link prev">
+								<span class="blog-nav-label">← Previous</span>
+								<span class="blog-nav-title">Four Arguments for Four Guarantees</span>
+							</a>
+							<a href="../blog.html" class="blog-nav-link">
+								📋 All Posts
+							</a>
+							<a href="../blog/2026-04-21-betting-on-the-platform.html" class="blog-nav-link next">
+								<span class="blog-nav-label">Next →</span>
+								<span class="blog-nav-title">Betting on the Platform</span>
+							</a>
+						</nav>
+					</div>
+				</div>
+			</div> -->
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2026 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

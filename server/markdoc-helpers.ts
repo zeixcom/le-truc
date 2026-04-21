@@ -9,18 +9,18 @@ import { generateSlug as templateSlug } from './templates/utils'
 
 // Re-export constants and attribute classes to maintain backward compatibility
 export {
-	ClassAttribute,
-	IdAttribute,
 	CalloutClassAttribute,
+	ClassAttribute,
 	classAttribute,
-	idAttribute,
-	styleAttribute,
-	titleAttribute,
-	requiredTitleAttribute,
 	commonAttributes,
-	styledAttributes,
-	standardChildren,
+	IdAttribute,
+	idAttribute,
+	requiredTitleAttribute,
 	richChildren,
+	standardChildren,
+	styleAttribute,
+	styledAttributes,
+	titleAttribute,
 } from './markdoc-constants'
 
 /* === Types === */
@@ -108,6 +108,25 @@ export function generateSlug(text: string): string {
 		.replace(/&amp;/g, '&')
 
 	return templateSlug(decoded)
+}
+
+/* === TOC Extraction === */
+
+export type TocItem = { id: string; text: string }
+
+export function extractTocItems(ast: Node): TocItem[] {
+	const items: TocItem[] = []
+	const walk = (node: Node) => {
+		if (node.type === 'heading' && node.attributes.level === 2) {
+			const text = extractTextFromNode(node)
+			items.push({ id: generateSlug(text), text })
+		}
+		if (node.children) {
+			for (const child of node.children) walk(child)
+		}
+	}
+	walk(ast)
+	return items
 }
 
 /* === Navigation Helpers === */
@@ -318,8 +337,8 @@ const parseHTML = (html: string): ParsedElement | string => {
 	const attributesString = openTagMatch[2]!.trim()
 
 	const isSelfClosing =
-		attributesString.endsWith('/')
-		|| [
+		attributesString.endsWith('/') ||
+		[
 			'img',
 			'br',
 			'hr',

@@ -25,10 +25,12 @@ layout: 'page'
   - [Blogmeta](./examples/card-blogmeta.html)
   - [Blogpost](./examples/card-blogpost.html)
   - [Callout](./examples/card-callout.html)
+  - [Colorscale](./examples/card-colorscale.html)
 - Context
   - [Media](./examples/context-media.html)
 - Form
   - [Checkbox](./examples/form-checkbox.html)
+  - [Colorgraph](./examples/form-colorgraph.html)
   - [Combobox](./examples/form-combobox.html)
   - [Listbox](./examples/form-listbox.html)
   - [Radiogroup](./examples/form-radiogroup.html)
@@ -38,6 +40,8 @@ layout: 'page'
   - [Carousel](./examples/module-carousel.html)
   - [Catalog](./examples/module-catalog.html)
   - [Codeblock](./examples/module-codeblock.html)
+  - [Coloreditor](./examples/module-coloreditor.html)
+  - [Colorinfo](./examples/module-colorinfo.html)
   - [Dialog](./examples/module-dialog.html)
   - [Lazyload](./examples/module-lazyload.html)
   - [List](./examples/module-list.html)
@@ -45,6 +49,7 @@ layout: 'page'
   - [Pagination](./examples/module-pagination.html)
   - [Scrollarea](./examples/module-scrollarea.html)
   - [Tabgroup](./examples/module-tabgroup.html)
+  - [Ticker](./examples/module-ticker.html)
   - [Todo](./examples/module-todo.html)
 {% /listnav %}
 

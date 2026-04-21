@@ -15,7 +15,7 @@
 		"erasableSyntaxOnly": true,
 		"isolatedModules": true,
 		"resolveJsonModule": true,
-		"types": ["bun-types"],
+		"types": ["bun", "node"],
 
 		// No emit — use tsconfig.build.json for declarations
 		"noEmit": true,
