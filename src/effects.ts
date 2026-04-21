@@ -165,8 +165,7 @@ const toSignal = <T extends {}, P extends ComponentProps>(
 	host: HTMLElement & P,
 	source: Reactive<T, P>,
 ): Signal<T> => {
-	if (isFunction(source))
-		return createComputed(source as () => T | Promise<T>) as Memo<T> | Task<T>
+	if (isFunction<T>(source)) return createComputed(source)
 	if (typeof source === 'string') {
 		const sig = getSignals(host)[source]
 		if (sig) return sig
@@ -234,19 +233,18 @@ const makeWatch = <P extends ComponentProps>(
 					values: any[],
 				) => MaybePromise<MaybeCleanup>
 				return createEffect(() =>
-					match(signals, { ok: values => () => handler(values) }),
+					match(signals, { ok: values => untrack(() => handler(values)) }),
 				)
 			}
-			const signal = toSignal(host, source as Reactive<NonNullable<unknown>, P>)
+			const signal = toSignal(host, source)
 			if (typeof handlerOrHandlers === 'function') {
 				return createEffect(() =>
 					match(signal, {
-						ok: value => () => handlerOrHandlers(value),
+						ok: value => untrack(() => handlerOrHandlers(value)),
 					}),
 				)
 			}
-			const handlers = handlerOrHandlers
-			return createEffect(() => match(signal, handlers))
+			return createEffect(() => match(signal, handlerOrHandlers))
 		}
 	}
 	return watch

@@ -108,43 +108,24 @@ export default defineComponent<FormListboxProps>(
 			return markup
 		}
 
-		const content = createTask<{
-			ok: boolean
-			value: string
-			error: string
-			pending: boolean
-		}>(
-			async (_prev, abort) => {
-				const url = host.src
-				const err = !url
-					? 'No URL provided'
-					: !isValidURL(url)
-						? 'Invalid URL'
-						: isRecursiveURL(url, host)
-							? 'Recursive URL detected'
-							: ''
-				if (err) return { ok: false, value: '', error: err, pending: false }
-
-				try {
-					const { content: fetched } = await fetchWithCache(
-						url,
-						abort,
-						response => response.json(),
-					)
-					return {
-						ok: true,
-						value: Array.isArray(fetched)
-							? renderOptions(fetched)
-							: renderGroups(fetched),
-						error: '',
-						pending: false,
-					}
-				} catch (err) {
-					return { ok: false, value: '', error: String(err), pending: false }
-				}
-			},
-			{ value: { ok: false, value: '', error: '', pending: true } },
-		)
+		const content = createTask<string>(async (_prev, abort) => {
+			const url = host.src
+			if (!url) throw new Error('No URL provided')
+			if (!isValidURL(url)) throw new Error('Invalid URL')
+			if (isRecursiveURL(url, host)) throw new Error('Recursive URL detected')
+			try {
+				const { content: fetched } = await fetchWithCache(
+					url,
+					abort,
+					response => response.json(),
+				)
+				return Array.isArray(fetched)
+					? renderOptions(fetched)
+					: renderGroups(fetched)
+			} catch (e) {
+				throw new Error(`Failed to fetch content for "${url}": ${String(e)}`)
+			}
+		})
 
 		const lowerFilter = createMemo(() => host.filter.toLowerCase())
 
@@ -210,21 +191,45 @@ export default defineComponent<FormListboxProps>(
 				input.value = value
 			}),
 			host.src && [
-				watch(content, ({ ok, error, pending, value }) => {
-					if (callout) {
-						callout.hidden = ok
-						callout.classList.toggle('danger', !!error)
-					}
-					if (loading) loading.hidden = !pending
-					if (errorEl) {
-						errorEl.hidden = !error
-						errorEl.textContent = error
-					}
-					listbox.hidden = !ok
-					if (ok)
+				watch(content, {
+					nil: () => {
+						if (callout) callout.hidden = false
+						if (loading) {
+							loading.hidden = false
+							return () => {
+								loading.hidden = false
+							}
+						}
+					},
+					ok: html => {
+						if (callout) callout.hidden = true
+						if (loading) loading.hidden = true
+						if (errorEl) errorEl.hidden = true
+						listbox.hidden = false
 						schedule(listbox, () => {
-							listbox.innerHTML = value
+							listbox.innerHTML = html
 						})
+						return () => {
+							listbox.hidden = true
+						}
+					},
+					err: error => {
+						if (callout) {
+							callout.hidden = false
+							callout.classList.add('danger')
+						}
+						if (errorEl) {
+							errorEl.hidden = false
+							errorEl.textContent = error.message
+						}
+						return () => {
+							if (callout) callout.classList.remove('danger')
+							if (errorEl) {
+								errorEl.hidden = true
+								errorEl.textContent = ''
+							}
+						}
+					},
 				}),
 			],
 

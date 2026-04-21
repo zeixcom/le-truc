@@ -2,7 +2,7 @@
 
 > **Cleanup** = () => `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:53
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:54
 
 A cleanup function that can be called to dispose of resources.
 

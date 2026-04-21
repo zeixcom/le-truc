@@ -317,18 +317,20 @@ function recomputeTask(node) {
     activeSink = prevWatcher;
     trimSources(node);
   }
+  setState(node.pendingNode, true);
   promise.then((next) => {
     if (controller.signal.aborted)
       return;
     node.controller = undefined;
-    if (node.error || !node.equals(next, node.value)) {
-      node.value = next;
-      node.error = undefined;
-      for (let e = node.sinks;e; e = e.nextSink)
-        propagate(e.sink);
-      if (batchDepth === 0)
-        flush();
-    }
+    batch(() => {
+      if (node.error || !node.equals(next, node.value)) {
+        node.value = next;
+        node.error = undefined;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+      }
+      setState(node.pendingNode, false);
+    });
   }, (err) => {
     if (controller.signal.aborted)
       return;
@@ -836,6 +838,12 @@ function createTask(fn, options) {
   validateCallback(TYPE_TASK, fn, isAsyncFunction);
   if (options?.value !== undefined)
     validateSignalValue(TYPE_TASK, options.value, options?.guard);
+  const pendingNode = {
+    value: false,
+    sinks: null,
+    sinksTail: null,
+    equals: DEFAULT_EQUALITY
+  };
   const node = {
     fn,
     value: options?.value,
@@ -847,7 +855,8 @@ function createTask(fn, options) {
     equals: options?.equals ?? DEFAULT_EQUALITY,
     controller: undefined,
     error: undefined,
-    stop: undefined
+    stop: undefined,
+    pendingNode
   };
   const watched = options?.watched;
   const subscribe = makeSubscribe(node, watched ? () => watched(() => {
@@ -855,6 +864,7 @@ function createTask(fn, options) {
     if (batchDepth === 0)
       flush();
   }) : undefined);
+  const pendingSubscribe = makeSubscribe(pendingNode);
   return {
     [Symbol.toStringTag]: TYPE_TASK,
     get() {
@@ -866,11 +876,13 @@ function createTask(fn, options) {
       return node.value;
     },
     isPending() {
-      return !!node.controller;
+      pendingSubscribe();
+      return node.pendingNode.value;
     },
     abort() {
       node.controller?.abort();
       node.controller = undefined;
+      setState(node.pendingNode, false);
     }
   };
 }

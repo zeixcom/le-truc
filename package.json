@@ -53,7 +53,7 @@
 		"test:server:watch": "bun test server/tests --watch"
 	},
 	"dependencies": {
-		"@zeix/cause-effect": "^1.2.0"
+		"@zeix/cause-effect": "^1.2.1"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.12",

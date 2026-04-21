@@ -412,43 +412,24 @@
 <span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> markup</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> content </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createTask</span><span style="color:#F8F8F2">&#x3C;{</span></span>
-<span class="line"><span style="color:#F8F8F2">			ok</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
-<span class="line"><span style="color:#F8F8F2">			value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
-<span class="line"><span style="color:#F8F8F2">			error</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
-<span class="line"><span style="color:#F8F8F2">			pending</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
-<span class="line"><span style="color:#F8F8F2">		}>(</span></span>
-<span class="line"><span style="color:#F92672">			async</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">_prev</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">abort</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> url </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.src</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> err </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">url</span></span>
-<span class="line"><span style="color:#F92672">					?</span><span style="color:#E6DB74"> 'No URL provided'</span></span>
-<span class="line"><span style="color:#F92672">					:</span><span style="color:#F92672"> !</span><span style="color:#A6E22E">isValidURL</span><span style="color:#F8F8F2">(url)</span></span>
-<span class="line"><span style="color:#F92672">						?</span><span style="color:#E6DB74"> 'Invalid URL'</span></span>
-<span class="line"><span style="color:#F92672">						:</span><span style="color:#A6E22E"> isRecursiveURL</span><span style="color:#F8F8F2">(url, host)</span></span>
-<span class="line"><span style="color:#F92672">							?</span><span style="color:#E6DB74"> 'Recursive URL detected'</span></span>
-<span class="line"><span style="color:#F92672">							:</span><span style="color:#E6DB74"> ''</span></span>
-<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (err) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> { ok: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">, value: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, error: err, pending: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2"> }</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F92672">				try</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> { content: fetched } </span><span style="color:#F92672">=</span><span style="color:#F92672"> await</span><span style="color:#A6E22E"> fetchWithCache</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#F8F8F2">						url,</span></span>
-<span class="line"><span style="color:#F8F8F2">						abort,</span></span>
-<span class="line"><span style="color:#FD971F;font-style:italic">						response</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> response.</span><span style="color:#A6E22E">json</span><span style="color:#F8F8F2">(),</span></span>
-<span class="line"><span style="color:#F8F8F2">					)</span></span>
-<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">						ok: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">						value: Array.</span><span style="color:#A6E22E">isArray</span><span style="color:#F8F8F2">(fetched)</span></span>
-<span class="line"><span style="color:#F92672">							?</span><span style="color:#A6E22E"> renderOptions</span><span style="color:#F8F8F2">(fetched)</span></span>
-<span class="line"><span style="color:#F92672">							:</span><span style="color:#A6E22E"> renderGroups</span><span style="color:#F8F8F2">(fetched),</span></span>
-<span class="line"><span style="color:#F8F8F2">						error: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">						pending: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">					}</span></span>
-<span class="line"><span style="color:#F8F8F2">				} </span><span style="color:#F92672">catch</span><span style="color:#F8F8F2"> (err) {</span></span>
-<span class="line"><span style="color:#F92672">					return</span><span style="color:#F8F8F2"> { ok: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">, value: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, error: </span><span style="color:#A6E22E">String</span><span style="color:#F8F8F2">(err), pending: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2"> }</span></span>
-<span class="line"><span style="color:#F8F8F2">				}</span></span>
-<span class="line"><span style="color:#F8F8F2">			},</span></span>
-<span class="line"><span style="color:#F8F8F2">			{ value: { ok: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">, value: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, error: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">, pending: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> } },</span></span>
-<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> content </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createTask</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#66D9EF;font-style:italic">string</span><span style="color:#F8F8F2">>(</span><span style="color:#F92672">async</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">_prev</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">abort</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> url </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.src</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">url) </span><span style="color:#F92672">throw</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> Error</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'No URL provided'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#A6E22E">isValidURL</span><span style="color:#F8F8F2">(url)) </span><span style="color:#F92672">throw</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> Error</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'Invalid URL'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#A6E22E">isRecursiveURL</span><span style="color:#F8F8F2">(url, host)) </span><span style="color:#F92672">throw</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> Error</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'Recursive URL detected'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">			try</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> { content: fetched } </span><span style="color:#F92672">=</span><span style="color:#F92672"> await</span><span style="color:#A6E22E"> fetchWithCache</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">					url,</span></span>
+<span class="line"><span style="color:#F8F8F2">					abort,</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">					response</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> response.</span><span style="color:#A6E22E">json</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">				)</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> Array.</span><span style="color:#A6E22E">isArray</span><span style="color:#F8F8F2">(fetched)</span></span>
+<span class="line"><span style="color:#F92672">					?</span><span style="color:#A6E22E"> renderOptions</span><span style="color:#F8F8F2">(fetched)</span></span>
+<span class="line"><span style="color:#F92672">					:</span><span style="color:#A6E22E"> renderGroups</span><span style="color:#F8F8F2">(fetched)</span></span>
+<span class="line"><span style="color:#F8F8F2">			} </span><span style="color:#F92672">catch</span><span style="color:#F8F8F2"> (e) {</span></span>
+<span class="line"><span style="color:#F92672">				throw</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> Error</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`Failed to fetch content for "</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">url</span><span style="color:#F92672">}</span><span style="color:#E6DB74">": </span><span style="color:#F92672">${</span><span style="color:#A6E22E">String</span><span style="color:#F8F8F2">(e)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		})</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> lowerFilter </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createMemo</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.filter.</span><span style="color:#A6E22E">toLowerCase</span><span style="color:#F8F8F2">())</span></span>
 <span class="line"></span>
@@ -514,21 +495,45 @@
 <span class="line"><span style="color:#F8F8F2">				input.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#F8F8F2">			host.src </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">				watch</span><span style="color:#F8F8F2">(content, ({ </span><span style="color:#FD971F;font-style:italic">ok</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">error</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pending</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (callout) {</span></span>
-<span class="line"><span style="color:#F8F8F2">						callout.hidden </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> ok</span></span>
-<span class="line"><span style="color:#F8F8F2">						callout.classList.</span><span style="color:#A6E22E">toggle</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'danger'</span><span style="color:#F8F8F2">, </span><span style="color:#F92672">!!</span><span style="color:#F8F8F2">error)</span></span>
-<span class="line"><span style="color:#F8F8F2">					}</span></span>
-<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (loading) loading.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">pending</span></span>
-<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (errorEl) {</span></span>
-<span class="line"><span style="color:#F8F8F2">						errorEl.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">error</span></span>
-<span class="line"><span style="color:#F8F8F2">						errorEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> error</span></span>
-<span class="line"><span style="color:#F8F8F2">					}</span></span>
-<span class="line"><span style="color:#F8F8F2">					listbox.hidden </span><span style="color:#F92672">=</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">ok</span></span>
-<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (ok)</span></span>
+<span class="line"><span style="color:#A6E22E">				watch</span><span style="color:#F8F8F2">(content, {</span></span>
+<span class="line"><span style="color:#A6E22E">					nil</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (callout) callout.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (loading) {</span></span>
+<span class="line"><span style="color:#F8F8F2">							loading.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F92672">							return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">								loading.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">							}</span></span>
+<span class="line"><span style="color:#F8F8F2">						}</span></span>
+<span class="line"><span style="color:#F8F8F2">					},</span></span>
+<span class="line"><span style="color:#A6E22E">					ok</span><span style="color:#F8F8F2">: </span><span style="color:#FD971F;font-style:italic">html</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (callout) callout.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (loading) loading.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (errorEl) errorEl.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F8F8F2">						listbox.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"><span style="color:#A6E22E">						schedule</span><span style="color:#F8F8F2">(listbox, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">							listbox.innerHTML </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
+<span class="line"><span style="color:#F8F8F2">							listbox.innerHTML </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> html</span></span>
 <span class="line"><span style="color:#F8F8F2">						})</span></span>
+<span class="line"><span style="color:#F92672">						return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">							listbox.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F8F8F2">						}</span></span>
+<span class="line"><span style="color:#F8F8F2">					},</span></span>
+<span class="line"><span style="color:#A6E22E">					err</span><span style="color:#F8F8F2">: </span><span style="color:#FD971F;font-style:italic">error</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (callout) {</span></span>
+<span class="line"><span style="color:#F8F8F2">							callout.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">							callout.classList.</span><span style="color:#A6E22E">add</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'danger'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">						}</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (errorEl) {</span></span>
+<span class="line"><span style="color:#F8F8F2">							errorEl.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">							errorEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> error.message</span></span>
+<span class="line"><span style="color:#F8F8F2">						}</span></span>
+<span class="line"><span style="color:#F92672">						return</span><span style="color:#F8F8F2"> () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">							if</span><span style="color:#F8F8F2"> (callout) callout.classList.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'danger'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">							if</span><span style="color:#F8F8F2"> (errorEl) {</span></span>
+<span class="line"><span style="color:#F8F8F2">								errorEl.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F8F8F2">								errorEl.textContent </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#F8F8F2">							}</span></span>
+<span class="line"><span style="color:#F8F8F2">						}</span></span>
+<span class="line"><span style="color:#F8F8F2">					},</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
 <span class="line"><span style="color:#F8F8F2">			],</span></span>
 <span class="line"></span>

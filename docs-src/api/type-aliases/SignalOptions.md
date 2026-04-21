@@ -2,7 +2,7 @@
 
 > **SignalOptions**\<`T`\> = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:60
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:61
 
 Options for configuring signal behavior.
 
@@ -20,7 +20,7 @@ The type of value in the signal
 
 > `optional` **equals?**: (`a`, `b`) => `boolean`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:71
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:72
 
 Optional custom equality function.
 Used to determine if a new value is different from the old value.
@@ -46,7 +46,7 @@ Defaults to reference equality (===).
 
 > `optional` **guard?**: [`Guard`](Guard.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:65
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:66
 
 Optional type guard to validate values.
 If provided, will throw an error if an invalid value is set.

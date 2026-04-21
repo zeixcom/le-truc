@@ -2,7 +2,7 @@
 
 > **batch**(`fn`): `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:181
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:197
 
 Batches multiple signal updates together.
 Effects will not run until the batch completes.

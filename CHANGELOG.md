@@ -38,8 +38,7 @@
 - **`provideContexts()` and `requestContext()` are now `FactoryContext` methods**: Instantiated via `makeProvideContexts()` / `makeRequestContext()` bound to the host element. `provideContexts([...])` returns an `EffectDescriptor` to include in the return array.
 - **`getHelpers()` replaced by `makeElementQueries()`**: Returns a tuple `[ElementQueries, (run: () => void) => void]`; the `UI` type is no longer exported.
 - **`METHOD_BRAND` constant now exported**: Enables explicit branding checks for method producers; `isMethodProducer()` no longer falls back to `isFunction()`.
-- **`@zeix/cause-effect` upgraded to `^1.1.1`**: Adds the `SingleMatchHandlers<T>` type and a single-signal `match(signal, handlers)` overload where `ok` receives the value directly and `err` receives a single `Error` (not an array). Async handlers (`MaybePromise<MaybeCleanup>`) are now supported across all branches; rejections are routed to `err` if provided, otherwise fall back to `console.error`.
-- **`@zeix/cause-effect` upgraded to `^1.2.0`**: Adds `stale` to `SingleMatchHandlers<T>` and `MatchHandlers<T>`. Also exports `isSignalOfType<T>()` (replaces deprecated `isObjectOfType()`), `DEEP_EQUALITY`, and `DEFAULT_EQUALITY`; all re-exported from `index.ts`.
+- **`@zeix/cause-effect` upgraded to `^1.2.1`**: Adds the `SingleMatchHandlers<T>` type and a single-signal `match(signal, handlers)` overload where `ok` receives the value directly and `err` receives a single `Error` (not an array). Async handlers (`MaybePromise<MaybeCleanup>`) are now supported across all branches; rejections are routed to `err` if provided, otherwise fall back to `console.error`. Adds `stale` to `SingleMatchHandlers<T>` and `MatchHandlers<T>`. Also exports `isSignalOfType<T>()` (replaces deprecated `isObjectOfType()`), `DEEP_EQUALITY`, and `DEFAULT_EQUALITY`; all re-exported from `index.ts`.
 
 ### Removed
 
