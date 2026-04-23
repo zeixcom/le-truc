@@ -56,7 +56,12 @@ A dynamic list that clones items from a `<template>` element. Demonstrates the M
 * `first('template')`
 * `HTMLTemplateElement`
 * **required**
-* Template used as source for added items
+* Template used as source for added items; each item's template should include a `.drag-handle` button for reordering
+---
+* `first('[role="status"]')`
+* `HTMLElement`
+* **required**
+* Live region for screen reader announcements during keyboard reorder
 ---
 * `first('form')`
 * `HTMLFormElement`
@@ -73,3 +78,10 @@ A dynamic list that clones items from a `<template>` element. Demonstrates the M
 * optional
 * Optional add button receiving disabled state via `pass()`
 {% /table %}
+
+#### Reordering
+
+Items can be reordered by dragging or by keyboard:
+
+- **Drag**: grab the drag handle (⠿) of any item and drag it up or down; a dashed insertion marker shows where the item will land on release.
+- **Keyboard**: click (or press Space/Enter on) a drag handle to select the item (`aria-pressed="true"`); use Up/Down arrow keys to move it one position at a time; press Escape or click the handle again to deselect.

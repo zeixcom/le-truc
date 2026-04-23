@@ -3,6 +3,18 @@ module-list {
 	flex-direction: column;
 	gap: var(--space-l);
 
+	& .visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+
 	& form {
 		display: flex;
 		flex-direction: column;
@@ -30,6 +42,57 @@ module-list {
 		padding: var(--space-s) 0;
 		border-bottom: 1px solid var(--color-border-soft);
 		justify-content: space-between;
+
+		&.selected {
+			outline: 2px solid var(--color-selection);
+			outline-offset: 2px;
+			border-radius: var(--space-xs);
+		}
+
+		&.dragging {
+			position: fixed;
+			z-index: 100;
+			box-sizing: border-box;
+			background-color: var(--color-background);
+			opacity: var(--opacity-dimmed);
+			box-shadow: 0 4px 12px var(--color-shadow);
+			padding-inline: var(--space-s);
+			cursor: grabbing;
+		}
+
+		&.drop-marker {
+			border: 2px dashed var(--color-selection);
+			border-radius: var(--space-xs);
+			background-color: var(--color-selection-hover);
+		}
+	}
+
+	& .drag-handle {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: none;
+		border: none;
+		border-radius: var(--space-xs);
+		padding: var(--space-xs);
+		color: var(--color-border);
+		cursor: grab;
+		touch-action: none;
+
+		&:hover {
+			color: var(--color-text-soft);
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--color-selection);
+			outline-offset: 2px;
+			color: var(--color-text-soft);
+		}
+	}
+
+	& li.dragging .drag-handle {
+		cursor: grabbing;
 	}
 }
 

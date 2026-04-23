@@ -1,7 +1,29 @@
 <module-list>
-	<ul data-container></ul>
+	<span role="status" class="visually-hidden"></span>
+	<ul data-container aria-label="Items"></ul>
 	<template>
 		<li>
+			<button
+				type="button"
+				class="drag-handle"
+				aria-label="Drag to reorder"
+				aria-pressed="false"
+			>
+				<svg
+					width="16"
+					height="16"
+					aria-hidden="true"
+					focusable="false"
+					fill="currentColor"
+				>
+					<circle cx="5" cy="4" r="1.5" />
+					<circle cx="11" cy="4" r="1.5" />
+					<circle cx="5" cy="8" r="1.5" />
+					<circle cx="11" cy="8" r="1.5" />
+					<circle cx="5" cy="12" r="1.5" />
+					<circle cx="11" cy="12" r="1.5" />
+				</svg>
+			</button>
 			<span><slot></slot></span>
 			<basic-button class="delete">
 				<button type="button" class="tertiary destructive small">Remove</button>
