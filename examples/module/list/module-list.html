@@ -5,28 +5,20 @@
 		<li>
 			<button
 				type="button"
-				class="drag-handle"
+				class="reorder"
 				aria-label="Drag to reorder"
 				aria-pressed="false"
 			>
-				<svg
-					width="16"
-					height="16"
-					aria-hidden="true"
-					focusable="false"
-					fill="currentColor"
-				>
-					<circle cx="5" cy="4" r="1.5" />
-					<circle cx="11" cy="4" r="1.5" />
-					<circle cx="5" cy="8" r="1.5" />
-					<circle cx="11" cy="8" r="1.5" />
-					<circle cx="5" cy="12" r="1.5" />
-					<circle cx="11" cy="12" r="1.5" />
-				</svg>
+				≡
 			</button>
 			<span><slot></slot></span>
-			<basic-button class="delete">
-				<button type="button" class="tertiary destructive small">Remove</button>
+			<basic-button class="edit">
+				<button type="button" class="tertiary" aria-label="Edit">✎</button>
+			</basic-button>
+			<basic-button class="remove">
+				<button type="button" class="tertiary destructive" aria-label="Remove">
+					×
+				</button>
 			</basic-button>
 		</li>
 	</template>

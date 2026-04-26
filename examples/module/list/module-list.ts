@@ -1,11 +1,14 @@
 import {
 	asInteger,
+	bindText,
+	createState,
 	defineComponent,
 	defineMethod,
 	MissingElementError,
 } from '../../..'
 
 export type ModuleListProps = {
+	max: number
 	add: (process?: (item: HTMLElement) => void) => void
 	delete: (key: string) => void
 }
@@ -18,10 +21,13 @@ declare global {
 
 const MAX_ITEMS = 1000
 const DRAG_THRESHOLD = 5
+const REORDER_CLASS = 'reorder'
+const REORDER_SELECTOR = `.${REORDER_CLASS}`
+const DRAGGING_CLASS = 'dragging'
 
 export default defineComponent<ModuleListProps>(
 	'module-list',
-	({ expose, first, host, on, pass }) => {
+	({ expose, first, host, on, pass, watch }) => {
 		const container = first(
 			'[data-container]',
 			'Add a container element for items.',
@@ -30,9 +36,12 @@ export default defineComponent<ModuleListProps>(
 		const form = first('form')
 		const textbox = first('form-textbox')
 		const add = first('basic-button.add')
-		const liveRegion = first('[role="status"]')
+		const liveRegion = first(
+			'[role="status"]',
+			'Add a live region for status messages.',
+		)
 
-		const max = asInteger(MAX_ITEMS)(host.getAttribute('max'))
+		const status = createState(liveRegion.textContent)
 
 		let addKey = 0
 		let selectedItem: HTMLElement | null = null
@@ -44,37 +53,23 @@ export default defineComponent<ModuleListProps>(
 		let pointerStartX = 0
 		let suppressNextClick = false
 
-		function announce(msg: string) {
-			if (liveRegion) liveRegion.textContent = msg
-		}
-
 		function getItemText(item: HTMLElement): string {
 			return item.querySelector('span')?.textContent?.trim() ?? 'item'
 		}
 
 		function selectItem(item: HTMLElement | null) {
-			if (selectedItem) {
-				selectedItem.classList.remove('selected')
-				selectedItem
-					.querySelector('.drag-handle')
-					?.setAttribute('aria-pressed', 'false')
-			}
 			selectedItem = item
 			if (item) {
-				item.classList.add('selected')
-				item.querySelector('.drag-handle')?.setAttribute('aria-pressed', 'true')
 				const items = Array.from(container.children)
-				const idx = items.indexOf(item) + 1
-				const total = items.length
-				announce(
-					`${getItemText(item)} selected, position ${idx} of ${total}. ` +
-						`Press Up or Down arrow to move, Escape to cancel.`,
+				status.set(
+					`${getItemText(item)} selected, position ${items.indexOf(item) + 1} of ${items.length}. `
+						+ `Press Up or Down arrow to move, Escape to cancel.`,
 				)
 			}
 		}
 
 		function moveItem(item: HTMLElement, direction: -1 | 1) {
-			const items = Array.from(container.children) as HTMLElement[]
+			const items = Array.from(container.children)
 			const idx = items.indexOf(item)
 			const newIdx = idx + direction
 			if (newIdx < 0 || newIdx >= items.length) return
@@ -82,10 +77,10 @@ export default defineComponent<ModuleListProps>(
 			if (direction === 1) sibling.after(item)
 			else sibling.before(item)
 			const newPos = Array.from(container.children).indexOf(item) + 1
-			announce(
-				`${getItemText(item)} moved to position ${newPos} of ${container.children.length}.`,
+			status.set(
+				`${getItemText(item)} moved to position ${newPos} of ${items.length}.`,
 			)
-			item.querySelector<HTMLElement>('.drag-handle')?.focus()
+			item.querySelector<HTMLElement>(REORDER_SELECTOR)?.focus()
 		}
 
 		function updateMarkerPosition(clientY: number) {
@@ -106,6 +101,7 @@ export default defineComponent<ModuleListProps>(
 		}
 
 		expose({
+			max: asInteger(MAX_ITEMS),
 			add: defineMethod((process?: (item: HTMLElement) => void) => {
 				const item = (template.content.cloneNode(true) as DocumentFragment)
 					.firstElementChild
@@ -133,7 +129,7 @@ export default defineComponent<ModuleListProps>(
 		return [
 			pass(add, {
 				disabled: () =>
-					(textbox && !textbox.length) || container.children.length >= max,
+					(textbox && !textbox.length) || container.children.length >= host.max,
 			}),
 
 			on(form, 'submit', e => {
@@ -153,40 +149,32 @@ export default defineComponent<ModuleListProps>(
 					return
 				}
 				const target = e.target as HTMLElement
+				const item = target.closest('[data-key]')
+				if (!(item instanceof HTMLElement)) return
 
-				if (target.closest('basic-button.delete')) {
+				if (target.closest('basic-button.remove')) {
 					e.stopPropagation()
-					const item = target.closest('[data-key]')
-					if (item instanceof HTMLElement) {
-						if (item === selectedItem) selectItem(null)
-						item.remove()
-					}
-					return
-				}
-
-				const handle = target.closest('.drag-handle')
-				if (handle instanceof HTMLElement) {
-					const item = handle.closest('[data-key]')
-					if (item instanceof HTMLElement) {
-						selectItem(selectedItem === item ? null : item)
-					}
+					if (item === selectedItem) selectItem(null)
+					item.remove()
+				} else if (target.closest('basic-button.edit')) {
+					e.stopPropagation()
+				} else if (target.closest(REORDER_SELECTOR)) {
+					selectItem(item)
 				}
 			}),
 
 			on(host, 'keydown', e => {
 				if (!selectedItem) return
 				const target = e.target as HTMLElement
-				if (!target.classList.contains('drag-handle')) return
-				if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown' && e.key !== 'Escape')
-					return
+				if (!target.classList.contains(REORDER_CLASS)) return
+				if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
 				e.preventDefault()
 				if (e.key === 'ArrowUp') moveItem(selectedItem, -1)
-				else if (e.key === 'ArrowDown') moveItem(selectedItem, 1)
-				else selectItem(null)
+				else moveItem(selectedItem, 1)
 			}),
 
 			on(host, 'pointerdown', e => {
-				const handle = (e.target as HTMLElement).closest('.drag-handle')
+				const handle = (e.target as HTMLElement).closest(REORDER_SELECTOR)
 				if (!(handle instanceof HTMLElement)) return
 				const item = handle.closest('[data-key]')
 				if (!(item instanceof HTMLElement)) return
@@ -196,6 +184,7 @@ export default defineComponent<ModuleListProps>(
 				pointerStartX = e.clientX
 				suppressNextClick = false
 				handle.setPointerCapture(e.pointerId)
+				handle.focus()
 			}),
 
 			on(host, 'pointermove', e => {
@@ -213,16 +202,13 @@ export default defineComponent<ModuleListProps>(
 
 					marker = document.createElement('li')
 					marker.className = 'drop-marker'
-					marker.style.height = `${rect.height}px`
-					marker.setAttribute('aria-hidden', 'true')
+					marker.style.height = `${rect.height - 4}px` // subtract 4px to account for border padding
 					container.insertBefore(marker, item)
 
 					item.style.top = `${rect.top}px`
 					item.style.left = `${rect.left}px`
 					item.style.width = `${rect.width}px`
-					item.classList.add('dragging')
-
-					if (selectedItem) selectItem(null)
+					item.classList.add(DRAGGING_CLASS)
 				}
 
 				if (dragItem) {
@@ -235,7 +221,7 @@ export default defineComponent<ModuleListProps>(
 				if (dragItem && marker) {
 					marker.replaceWith(dragItem)
 					dragItem.style.cssText = ''
-					dragItem.classList.remove('dragging')
+					dragItem.classList.remove(DRAGGING_CLASS)
 					dragItem = null
 					marker = null
 					suppressNextClick = true
@@ -247,13 +233,15 @@ export default defineComponent<ModuleListProps>(
 				if (dragItem && marker) {
 					marker.remove()
 					dragItem.style.cssText = ''
-					dragItem.classList.remove('dragging')
+					dragItem.classList.remove(DRAGGING_CLASS)
 					dragItem = null
 					marker = null
 				}
 				pendingDragHandle = null
 				suppressNextClick = false
 			}),
+
+			watch(status, bindText(liveRegion)),
 		]
 	},
 )
