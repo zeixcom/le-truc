@@ -32,6 +32,7 @@ layout: 'page'
   - [Checkbox](./examples/form-checkbox.html)
   - [Colorgraph](./examples/form-colorgraph.html)
   - [Combobox](./examples/form-combobox.html)
+  - [Inplace Edit](./examples/form-inplace-edit.html)
   - [Listbox](./examples/form-listbox.html)
   - [Radiogroup](./examples/form-radiogroup.html)
   - [Spinbutton](./examples/form-spinbutton.html)

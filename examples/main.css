@@ -9,6 +9,7 @@
 @import './form/checkbox/form-checkbox.css';
 @import './form/colorgraph/form-colorgraph.css';
 @import './form/combobox/form-combobox.css';
+@import './form/inplace-edit/form-inplace-edit.css';
 @import './form/listbox/form-listbox.css';
 @import './form/radiogroup/form-radiogroup.css';
 @import './form/spinbutton/form-spinbutton.css';
