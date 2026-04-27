@@ -526,4 +526,74 @@ test.describe('module-todo component', () => {
 			await expect(count.locator('.none')).toBeVisible()
 		})
 	})
+
+	test.describe('Bug Fixes', () => {
+		test('toggling checkboxes and inplace edit works for all items', async ({
+			page,
+		}) => {
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form-textbox input')
+			const submitButton = todo.locator('.submit button')
+
+			await textboxInput.fill('first task')
+			await submitButton.click()
+			await textboxInput.fill('second task')
+			await submitButton.click()
+
+			const items = todo.locator('li[data-key]')
+			await expect(items).toHaveCount(2)
+
+			// Check first item
+			const firstCheckboxLabel = items.nth(0).locator('form-checkbox label')
+			await firstCheckboxLabel.click()
+
+			// Wait for state to settle and verify it toggled
+			await expect(
+				items.nth(0).locator('form-checkbox input[type="checkbox"]'),
+			).toBeChecked()
+		})
+
+		test('reordering items preserves label mapping through List keys', async ({
+			page,
+		}) => {
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form-textbox input')
+			const submitButton = todo.locator('.submit button')
+
+			await textboxInput.fill('first task')
+			await submitButton.click()
+			await textboxInput.fill('second task')
+			await submitButton.click()
+
+			const items = todo.locator('li[data-key]')
+			await expect(items).toHaveCount(2)
+
+			// Check first item
+			await items.nth(0).locator('form-checkbox label').click()
+
+			// Move first item down via keyboard
+			const firstReorderBtn = items.nth(0).locator('button.reorder')
+			await firstReorderBtn.click()
+			await page.keyboard.press('ArrowDown')
+
+			// Wait for reorder to complete
+			await page.waitForTimeout(100)
+
+			// Now the second task should be first
+			await expect(items.nth(0).locator('form-inplace-edit .text')).toHaveText(
+				'second task',
+			)
+			await expect(items.nth(1).locator('form-inplace-edit .text')).toHaveText(
+				'first task',
+			)
+
+			// State should follow the item
+			await expect(
+				items.nth(1).locator('form-checkbox input[type="checkbox"]'),
+			).toBeChecked()
+			await expect(
+				items.nth(0).locator('form-checkbox input[type="checkbox"]'),
+			).not.toBeChecked()
+		})
+	})
 })

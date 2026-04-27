@@ -1,6 +1,6 @@
 ### Module Todo
 
-A self-contained todo component that owns the data, manages the list DOM directly, and handles all interactions — adding, deleting, reordering (keyboard and drag), editing labels, and toggling completion — without a separate list component boundary. Demonstrates using `createList()` to manage keyed data, inlining DOM reconciliation and reorder logic into the factory, using `pass()` to push derived state (counts, disabled flags, badge text) into child Le Truc components, calling child component methods (`list.add`, `textbox.clear`) directly inside an `on('submit')` handler, and composing multiple effects per element (e.g. `clearCompleted` receives both `pass()` and `on('click')`).
+A todo component that owns the data, manages the list DOM directly, and handles all interactions — adding, deleting, reordering (keyboard and drag), editing labels, and toggling completion. Demonstrates using `createList()` to manage keyed data, inlining DOM reconciliation and reorder logic into the factory, using `pass()` to push derived state (counts, disabled flags, badge text) into child Le Truc components, calling child component methods (`list.add`, `textbox.clear`) directly inside an `on('submit')` handler, and composing multiple effects per element (e.g. `clearCompleted` receives both `pass()` and `on('click')`).
 
 #### Preview
 

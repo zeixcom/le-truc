@@ -13,6 +13,7 @@ import {
 } from '../../..'
 
 export type TodoItem = {
+	id: string
 	label: string
 	createdAt: Date
 	completed: boolean
@@ -28,6 +29,8 @@ const DRAG_THRESHOLD = 5
 const REORDER_CLASS = 'reorder'
 const REORDER_SELECTOR = `button.${REORDER_CLASS}`
 const DRAGGING_CLASS = 'dragging'
+
+let idCounter = 0
 
 export default defineComponent(
 	'module-todo',
@@ -67,29 +70,17 @@ export default defineComponent(
 		const editComponents = all('form-inplace-edit')
 
 		const list = createList<TodoItem>([], {
-			keyConfig: 'todo',
-			createItem: v => createStore(v),
+			keyConfig: item => item.id,
+			createItem: createStore,
 		}) as unknown as Omit<List<TodoItem>, 'byKey' | typeof Symbol.iterator> & {
 			byKey(key: string): Store<TodoItem> | undefined
 			[Symbol.iterator](): IterableIterator<Store<TodoItem>>
 		}
 
-		const activeCount = createMemo(() => {
-			list.keys()
-			let count = 0
-			for (const item of list) {
-				if (!item.completed.get()) count++
-			}
-			return count
-		})
-		const completedCount = createMemo(() => {
-			list.keys()
-			let count = 0
-			for (const item of list) {
-				if (item.completed.get()) count++
-			}
-			return count
-		})
+		const completedCount = createMemo(
+			() => list.get().filter(item => item.completed).length,
+		)
+		const activeCount = createMemo(() => list.length - completedCount.get())
 		const status = createState(liveRegion.textContent)
 
 		let selectedItem: HTMLElement | null = null
@@ -175,34 +166,29 @@ export default defineComponent(
 
 			each(checkboxComponents, checkbox => {
 				const key = checkbox.closest<HTMLElement>('[data-key]')?.dataset.key
-				if (!key) return
-				const item = list.byKey(key)
-				if (!item || !checkbox.isConnected) return
+				if (!key || !checkbox.isConnected) return
 				return pass(checkbox, {
 					checked: {
-						get: () => item.completed.get(),
-						set: (checked: boolean) => item.completed.set(checked),
+						get: () => list.byKey(key)?.completed.get() ?? false,
+						set: (checked: boolean) => list.byKey(key)?.completed.set(checked),
 					},
 				})
 			}),
 
 			each(editComponents, editEl => {
 				const key = editEl.closest<HTMLElement>('[data-key]')?.dataset.key
-				if (!key) return
-				const item = list.byKey(key)
-				if (!item || !editEl.isConnected) return
+				if (!key || !editEl.isConnected) return
 				return pass(editEl, {
 					value: {
-						get: () => item.label.get(),
-						set: (value: string) => item.label.set(value),
+						get: () => list.byKey(key)?.label.get() ?? '',
+						set: (value: string) => list.byKey(key)?.label.set(value),
 					},
 				})
 			}),
 
 			watch(
 				() => Array.from(list.keys()),
-				() => {
-					const keys = Array.from(list.keys())
+				keys => {
 					const current = new Map<string, HTMLElement>()
 					for (const child of container.children) {
 						const el = child as HTMLElement
@@ -246,7 +232,12 @@ export default defineComponent(
 				e.preventDefault()
 				const label = textbox.value.trim()
 				if (!label) return
-				list.add({ label, createdAt: new Date(), completed: false })
+				list.add({
+					id: `todo${++idCounter}`,
+					label,
+					createdAt: new Date(),
+					completed: false,
+				})
 				textbox.clear()
 			}),
 
