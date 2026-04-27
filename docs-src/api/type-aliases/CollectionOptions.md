@@ -36,6 +36,30 @@ Factory for per-item signals. Defaults to `createState`.
 
 ***
 
+##### itemEquals?
+
+> `optional` **itemEquals?**: (`a`, `b`) => `boolean`
+
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:59
+
+Equality function for default item state signals. Defaults to deep equality. Ignored if `createItem` is provided.
+
+###### Parameters
+
+##### a
+
+`T`
+
+##### b
+
+`T`
+
+###### Returns
+
+`boolean`
+
+***
+
 ##### keyConfig?
 
 > `optional` **keyConfig?**: `KeyConfig`\<`T`\>

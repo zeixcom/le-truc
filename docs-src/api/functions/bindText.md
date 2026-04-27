@@ -2,7 +2,7 @@
 
 > **bindText**(`element`, `preserveComments?`): (`value`) => `void`
 
-Defined in: [src/helpers.ts:40](https://github.com/zeixcom/le-truc/blob/9f8170c07a1296b5e43a3511bac7e4da12ade6c7/src/helpers.ts#L40)
+Defined in: [src/helpers.ts:40](https://github.com/zeixcom/le-truc/blob/2ce8af0df8684849175ad49e893db5eedb5a8c04/src/helpers.ts#L40)
 
 Returns a function that sets the text content of an element.
 

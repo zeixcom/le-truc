@@ -32,6 +32,11 @@ module-list {
 		justify-content: space-between;
 
 		> span {
+			line-height: var(--line-height-s);
+		}
+
+		> span,
+		> form-textbox {
 			flex: 1;
 		}
 

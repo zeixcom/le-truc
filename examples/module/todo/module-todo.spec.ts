@@ -22,7 +22,7 @@ import { expect, test } from '@playwright/test'
  * - ✅ Component integration with dependencies
  *
  * Architecture Notes:
- * - Uses module-list for dynamic item management
+ * - Manages its own list state and DOM reconciliation internally
  * - Integrates with form-textbox for input handling
  * - Uses form-checkbox components for item state
  * - Implements collections to track active/completed items
@@ -45,7 +45,7 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textbox = todo.locator('form-textbox')
 			const submitButton = todo.locator('basic-button.submit button')
-			const list = todo.locator('module-list')
+			const list = todo.locator('[data-container]')
 			const count = todo.locator('basic-pluralize')
 			const filter = todo.locator('form-radiogroup')
 			const clearButton = todo.locator('basic-button.clear-completed')
@@ -55,7 +55,7 @@ test.describe('module-todo component', () => {
 			await expect(submitButton).toBeDisabled()
 
 			// Should have empty list
-			await expect(list.locator('[data-container] li')).toHaveCount(0)
+			await expect(list.locator('li')).toHaveCount(0)
 
 			// Should show "all done" message
 			await expect(count.locator('.none')).toBeVisible()
@@ -92,7 +92,7 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
-			const list = todo.locator('module-list [data-container]')
+			const list = todo.locator('[data-container]')
 
 			// Add first todo
 			await textboxInput.fill('Buy groceries')
@@ -118,7 +118,7 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
-			const list = todo.locator('module-list [data-container]')
+			const list = todo.locator('[data-container]')
 
 			const todoTexts = ['Buy groceries', 'Walk the dog', 'Finish project']
 
@@ -147,7 +147,7 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
-			const list = todo.locator('module-list [data-container]')
+			const list = todo.locator('[data-container]')
 
 			// Add a todo
 			await textboxInput.fill('Test task')
@@ -175,7 +175,7 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
-			const list = todo.locator('module-list [data-container]')
+			const list = todo.locator('[data-container]')
 
 			// Add a todo
 			await textboxInput.fill('Test task')
@@ -238,7 +238,7 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
-			const list = todo.locator('module-list [data-container]')
+			const list = todo.locator('[data-container]')
 			const count = todo.locator('basic-pluralize')
 
 			// Add two todos
@@ -281,7 +281,7 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
-			const list = todo.locator('module-list [data-container]')
+			const list = todo.locator('[data-container]')
 			const count = todo.locator('basic-pluralize')
 
 			// Add and complete a todo
@@ -314,7 +314,7 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
-			const list = todo.locator('module-list [data-container]')
+			const list = todo.locator('[data-container]')
 			const clearButton = todo.locator('basic-button.clear-completed')
 
 			// Initially disabled with no badge
@@ -356,7 +356,7 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
-			const list = todo.locator('module-list [data-container]')
+			const list = todo.locator('[data-container]')
 			const clearButton = todo.locator('basic-button.clear-completed button')
 
 			// Add three todos
@@ -387,7 +387,7 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
-			const list = todo.locator('module-list')
+			const list = todo.locator('[data-container]')
 			const filter = todo.locator('form-radiogroup')
 
 			// Add and complete some todos
@@ -408,15 +408,15 @@ test.describe('module-todo component', () => {
 
 			// Switch to "Active" filter
 			await filter.locator('label').filter({ hasText: 'Active' }).click()
-			await expect(list).toHaveAttribute('filter', 'active')
+			await expect(todo).toHaveAttribute('filter', 'active')
 
 			// Switch to "Completed" filter
 			await filter.locator('label').filter({ hasText: 'Completed' }).click()
-			await expect(list).toHaveAttribute('filter', 'completed')
+			await expect(todo).toHaveAttribute('filter', 'completed')
 
 			// Switch back to "All"
 			await filter.locator('label').filter({ hasText: 'All' }).click()
-			await expect(list).toHaveAttribute('filter', 'all')
+			await expect(todo).toHaveAttribute('filter', 'all')
 		})
 	})
 
@@ -427,7 +427,8 @@ test.describe('module-todo component', () => {
 			// Check all required sub-components exist
 			await expect(todo.locator('form-textbox')).toBeAttached()
 			await expect(todo.locator('basic-button.submit')).toBeAttached()
-			await expect(todo.locator('module-list')).toBeAttached()
+			await expect(todo.locator('[data-container]')).toBeAttached()
+			await expect(todo.locator('template')).toBeAttached()
 			await expect(todo.locator('basic-pluralize')).toBeAttached()
 			await expect(todo.locator('form-radiogroup')).toBeAttached()
 			await expect(todo.locator('basic-button.clear-completed')).toBeAttached()
@@ -442,7 +443,7 @@ test.describe('module-todo component', () => {
 			await textboxInput.press('Enter')
 
 			// Should add item without page reload
-			await expect(todo.locator('module-list li')).toHaveCount(1)
+			await expect(todo.locator('[data-container] li')).toHaveCount(1)
 		})
 	})
 
@@ -466,7 +467,7 @@ test.describe('module-todo component', () => {
 
 			// Check first item
 			const firstCheckboxLabel = todo
-				.locator('module-list li')
+				.locator('[data-container] li')
 				.first()
 				.locator('form-checkbox label')
 			await firstCheckboxLabel.click()
@@ -481,7 +482,7 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
-			const list = todo.locator('module-list [data-container]')
+			const list = todo.locator('[data-container]')
 
 			// Try to submit empty input (button should be disabled)
 			await expect(submitButton).toBeDisabled()
@@ -505,11 +506,11 @@ test.describe('module-todo component', () => {
 			await submitButton.click()
 
 			const checkbox = todo
-				.locator('module-list li')
+				.locator('[data-container] li')
 				.first()
 				.locator('form-checkbox input')
 			const checkboxLabel = todo
-				.locator('module-list li')
+				.locator('[data-container] li')
 				.first()
 				.locator('form-checkbox label')
 

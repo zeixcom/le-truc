@@ -13,7 +13,7 @@ import {
 	match,
 	type Signal,
 	type SingleMatchHandlers,
-	type Task,
+	type SlotDescriptor,
 	untrack,
 } from '@zeix/cause-effect'
 import type { ComponentProps } from './component'
@@ -66,7 +66,7 @@ type Reactive<T, P extends ComponentProps> =
  * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
  */
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
-	[K in keyof Q & string]?: Reactive<Q[K], P>
+	[K in keyof Q & string]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>
 }
 
 /**
@@ -154,22 +154,30 @@ const activateResult = (result: FactoryResult): void => {
  * - Thunk `() => T | Promise<T> | null | undefined`: wrapped in `createComputed`
  *   so all signals read inside are tracked in the pure phase. Async thunks become
  *   Task signals.
- * - Signal/Memo: use directly.
+ * - Signal: use directly.
  *
  * @since 2.0
  * @param {HTMLElement & P} host - The component host element
- * @param {Reactive<T, P>} source - Property name string, signal, or thunk to resolve
+ * @param {Reactive<T, P> | { get: () => T; set?: (value: T) => void }} source - Property name string, signal, thunk, or descriptor to resolve
  * @returns {Signal<T>} Resolved signal ready for use with `match()`
  */
 const toSignal = <T extends {}, P extends ComponentProps>(
 	host: HTMLElement & P,
-	source: Reactive<T, P>,
-): Signal<T> => {
+	source: Reactive<T, P> | SlotDescriptor<T>,
+): Signal<T> | SlotDescriptor<T> => {
 	if (isFunction<T>(source)) return createComputed(source)
 	if (typeof source === 'string') {
 		const sig = getSignals(host)[source]
 		if (sig) return sig
 		return createMemo(() => (host as any)[source])
+	}
+	if (
+		source &&
+		typeof source === 'object' &&
+		'get' in source &&
+		!(Symbol.toStringTag in source)
+	) {
+		return source as SlotDescriptor<T>
 	}
 	return source as Signal<T>
 }

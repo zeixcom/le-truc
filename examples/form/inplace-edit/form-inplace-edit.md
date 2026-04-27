@@ -17,49 +17,49 @@ A self-contained inline label editor. Wraps a `<span>` (label display) and an ed
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `editing`
-* `boolean`
-* Attribute `editing`
-* Whether edit mode is currently activated
+- `editing`
+- `boolean`
+- Attribute `editing`
+- Whether edit mode is currently activated
 ---
-* `value`
-* `string`
-* Text content of `.text`
-* Current label value; reactive — set via `pass()` to keep display in sync with external data
+- `value`
+- `string`
+- Text content of `.text`
+- Current label value; reactive — set via `pass()` to keep display in sync with external data
 {% /table %}
 
 #### Events
 
 {% table %}
-* Name
-* Detail
-* When
+- Name
+- Detail
+- When
 ---
-* `commit`
-* `{ value: string }`
-* User accepts the edit (✓ button click or Enter key); not fired on cancel
+- `commit`
+- `{ value: string }`
+- User accepts the edit (✓ button click or Enter key); not fired on cancel
 {% /table %}
 
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('.text')`
-* `HTMLElement`
-* **required**
-* Label display element; hidden during editing
+- `first('.text')`
+- `HTMLElement`
+- **required**
+- Label display element; hidden during editing
 ---
-* `first('button')`
-* `HTMLButtonElement`
-* optional
-* Toggle button: ✎ (view mode) / ✓ (edit mode)
+- `first('button')`
+- `HTMLButtonElement`
+- optional
+- Toggle button: ✎ (view mode) / ✓ (edit mode)
 {% /table %}

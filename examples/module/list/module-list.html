@@ -11,10 +11,10 @@
 			>
 				≡
 			</button>
-			<span><slot></slot></span>
-			<basic-button class="edit">
-				<button type="button" class="tertiary" aria-label="Edit">✎</button>
-			</basic-button>
+			<form-inplace-edit>
+				<span></span>
+				<button type="button" aria-label="Edit">✎</button>
+			</form-inplace-edit>
 			<basic-button class="remove">
 				<button type="button" class="tertiary destructive" aria-label="Remove">
 					×
@@ -22,23 +22,4 @@
 			</basic-button>
 		</li>
 	</template>
-	<form>
-		<form-textbox clearable>
-			<label for="new-item-input">New item</label>
-			<div class="input">
-				<input
-					type="text"
-					id="new-item-input"
-					name="new-item"
-					autocomplete="off"
-				/>
-				<button type="button" class="clear" aria-label="Clear input" hidden>
-					✕
-				</button>
-			</div>
-		</form-textbox>
-		<basic-button class="add">
-			<button type="submit" class="constructive">Add</button>
-		</basic-button>
-	</form>
 </module-list>

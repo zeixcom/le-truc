@@ -21,18 +21,18 @@ None. This component coordinates child component properties and URL hash side ef
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('form-listbox')`
-* `Component<FormListboxProps>`
-* **required**
-* Source navigation list; selected `value` drives loaded content
+- `first('form-listbox')`
+- `Component<FormListboxProps>`
+- **required**
+- Source navigation list; selected `value` drives loaded content
 ---
-* `first('module-lazyload')`
-* `Component<ModuleLazyloadProps>`
-* **required**
-* Content target; receives `src` from listbox `value`
+- `first('module-lazyload')`
+- `Component<ModuleLazyloadProps>`
+- **required**
+- Content target; receives `src` from listbox `value`
 {% /table %}

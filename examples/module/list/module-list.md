@@ -17,66 +17,66 @@ A dynamic list that clones items from a `<template>` element. Demonstrates the M
 #### Methods
 
 {% table %}
-* Name
-* Type
-* Description
+- Name
+- Type
+- Description
 ---
-* `add`
-* `(process?: (item: HTMLElement) => void) => void`
-* Method to append a new item, optionally post-processed before insert
+- `add`
+- `(process?: (item: HTMLElement) => void) => void`
+- Method to append a new item, optionally post-processed before insert
 ---
-* `delete`
-* `(key: string) => void`
-* Method to remove an item by key
+- `delete`
+- `(key: string) => void`
+- Method to remove an item by key
 {% /table %}
 
 #### Attributes
 
 {% table %}
-* Name
-* Description
+- Name
+- Description
 ---
-* `max`
-* Maximum number of items allowed when using the optional add form (`1000` default)
+- `max`
+- Maximum number of items allowed when using the optional add form (`1000` default)
 {% /table %}
 
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('[data-container]')`
-* `HTMLElement`
-* **required**
-* Container where cloned items are inserted
+- `first('[data-container]')`
+- `HTMLElement`
+- **required**
+- Container where cloned items are inserted
 ---
-* `first('template')`
-* `HTMLTemplateElement`
-* **required**
-* Template used as source for added items; each item's template should include a `.drag-handle` button for reordering
+- `first('template')`
+- `HTMLTemplateElement`
+- **required**
+- Template used as source for added items; each item's template should include a `.drag-handle` button for reordering
 ---
-* `first('[role="status"]')`
-* `HTMLElement`
-* **required**
-* Live region for screen reader announcements during keyboard reorder
+- `first('[role="status"]')`
+- `HTMLElement`
+- **required**
+- Live region for screen reader announcements during keyboard reorder
 ---
-* `first('form')`
-* `HTMLFormElement`
-* optional
-* Optional form for submit-to-add behavior
+- `first('form')`
+- `HTMLFormElement`
+- optional
+- Optional form for submit-to-add behavior
 ---
-* `first('form-textbox')`
-* `Component<FormTextboxProps>`
-* optional
-* Optional textbox used by form submission flow
+- `first('form-textbox')`
+- `Component<FormTextboxProps>`
+- optional
+- Optional textbox used by form submission flow
 ---
-* `first('basic-button.add')`
-* `Component<BasicButtonProps>`
-* optional
-* Optional add button receiving disabled state via `pass()`
+- `first('basic-button.add')`
+- `Component<BasicButtonProps>`
+- optional
+- Optional add button receiving disabled state via `pass()`
 {% /table %}
 
 #### Reordering

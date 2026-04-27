@@ -17,28 +17,28 @@ A locale-aware number display component that uses `Intl.NumberFormat` for decima
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `value`
-* `number` (float)
-* `0`
-* Number to format
+- `value`
+- `number` (float)
+- `0`
+- Number to format
 {% /table %}
 
 #### Attributes
 
 {% table %}
-* Name
-* Description
+- Name
+- Description
 ---
-* `lang`
-* Language code to use as locale; if omitted, inherited from ancestor elements
+- `lang`
+- Language code to use as locale; if omitted, inherited from ancestor elements
 ---
-* `options`
-* Options for `Intl.NumberFormat` as JSON
+- `options`
+- Options for `Intl.NumberFormat` as JSON
 {% /table %}
 
 #### Descendant Elements

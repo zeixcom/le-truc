@@ -148,6 +148,7 @@ layout: 'page'
   - [SignalOptions](./api/type-aliases/SignalOptions.html)
   - [SingleMatchHandlers](./api/type-aliases/SingleMatchHandlers.html)
   - [Slot](./api/type-aliases/Slot.html)
+  - [SlotDescriptor](./api/type-aliases/SlotDescriptor.html)
   - [SplitByComma](./api/type-aliases/SplitByComma.html)
   - [State](./api/type-aliases/State.html)
   - [Store](./api/type-aliases/Store.html)

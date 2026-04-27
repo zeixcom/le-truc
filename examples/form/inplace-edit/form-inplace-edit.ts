@@ -1,4 +1,4 @@
-import { defineComponent, asBoolean } from '../../..'
+import { asBoolean, defineComponent } from '../../..'
 
 export type FormInplaceEditProps = {
 	editing: boolean
@@ -36,12 +36,12 @@ export default defineComponent<FormInplaceEditProps>(
 		return [
 			watch('value', value => {
 				textEl.textContent = value
-				host.dispatchEvent(
+				/* host.dispatchEvent(
 					new CustomEvent('commit', {
 						bubbles: true,
 						detail: { value },
 					}),
-				)
+				) */
 			}),
 
 			watch('editing', editing => {

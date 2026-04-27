@@ -226,8 +226,8 @@ export default defineComponent<FormColorgraphProps>(
 			each(allInputs, input => {
 				const axis = getAxis(input)
 				return [
-					axis
-						&& watch(errors[axis], error => {
+					axis &&
+						watch(errors[axis], error => {
 							input.ariaInvalid = String(!!error)
 							if (error && input.id)
 								input.setAttribute('aria-errormessage', `${input.id}-error`)
@@ -447,9 +447,9 @@ export default defineComponent<FormColorgraphProps>(
 				const { key, shiftKey } = event as KeyboardEvent
 				const target = (event as KeyboardEvent).target as HTMLElement | null
 				if (
-					!target
-					|| (target.localName === 'input'
-						&& (key === 'ArrowLeft' || key === 'ArrowRight'))
+					!target ||
+					(target.localName === 'input' &&
+						(key === 'ArrowLeft' || key === 'ArrowRight'))
 				)
 					return
 				if (key.substring(0, 5) === 'Arrow' || ['+', '-'].includes(key)) {

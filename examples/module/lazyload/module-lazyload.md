@@ -17,52 +17,52 @@ The advanced async example from the documentation. Demonstrates `createTask()` â
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `src`
-* `string`
-* `''`
-* URL to fetch HTML content from
+- `src`
+- `string`
+- `''`
+- URL to fetch HTML content from
 {% /table %}
 
 #### Attributes
 
 {% table %}
-* Name
-* Description
+- Name
+- Description
 ---
-* `allow-scripts`
-* If present, scripts in fetched HTML are allowed when rendering `.content`
+- `allow-scripts`
+- If present, scripts in fetched HTML are allowed when rendering `.content`
 {% /table %}
 
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('card-callout')`
-* `HTMLElement`
-* **required**
-* Callout wrapper for loading/error states
+- `first('card-callout')`
+- `HTMLElement`
+- **required**
+- Callout wrapper for loading/error states
 ---
-* `first('.loading')`
-* `HTMLElement`
-* **required**
-* Loading state element
+- `first('.loading')`
+- `HTMLElement`
+- **required**
+- Loading state element
 ---
-* `first('.error')`
-* `HTMLElement`
-* **required**
-* Error message element
+- `first('.error')`
+- `HTMLElement`
+- **required**
+- Error message element
 ---
-* `first('.content')`
-* `HTMLElement`
-* **required**
-* Content container for fetched HTML
+- `first('.content')`
+- `HTMLElement`
+- **required**
+- Content container for fetched HTML
 {% /table %}

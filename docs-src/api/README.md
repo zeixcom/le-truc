@@ -72,6 +72,7 @@
 - [SignalOptions](type-aliases/SignalOptions.md)
 - [SingleMatchHandlers](type-aliases/SingleMatchHandlers.md)
 - [Slot](type-aliases/Slot.md)
+- [SlotDescriptor](type-aliases/SlotDescriptor.md)
 - [SplitByComma](type-aliases/SplitByComma.md)
 - [State](type-aliases/State.md)
 - [Store](type-aliases/Store.md)

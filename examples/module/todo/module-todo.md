@@ -1,6 +1,6 @@
 ### Module Todo
 
-A coordinator component that wires together an entire todo app from reusable child components without declaring any reactive properties of its own. Demonstrates using `createElementsMemo()` inside the setup function to derive live `active` and `completed` element lists, using `pass()` to push derived state (counts, disabled flags, badge text) into multiple child Le Truc components, using `setAttribute()` to sync filter state to the list, calling child component methods (`list.add`, `textbox.clear`) directly inside an `on('submit')` handler, and composing multiple effects per element (e.g. `clearCompleted` receives both `pass()` and `on('click')`).
+A self-contained todo component that owns the data, manages the list DOM directly, and handles all interactions — adding, deleting, reordering (keyboard and drag), editing labels, and toggling completion — without a separate list component boundary. Demonstrates using `createList()` to manage keyed data, inlining DOM reconciliation and reorder logic into the factory, using `pass()` to push derived state (counts, disabled flags, badge text) into child Le Truc components, calling child component methods (`list.add`, `textbox.clear`) directly inside an `on('submit')` handler, and composing multiple effects per element (e.g. `clearCompleted` receives both `pass()` and `on('click')`).
 
 #### Preview
 
@@ -21,43 +21,53 @@ None. This component orchestrates behavior by passing state and events between d
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('form')`
-* `HTMLFormElement`
-* **required**
-* Submission entry point for adding todos
+- `first('form')`
+- `HTMLFormElement`
+- **required**
+- Submission entry point for adding todos
 ---
-* `first('form-textbox')`
-* `Component<FormTextboxProps>`
-* **required**
-* Input component for new todo text
+- `first('form-textbox')`
+- `Component<FormTextboxProps>`
+- **required**
+- Input component for new todo text
 ---
-* `first('basic-button.submit')`
-* `Component<BasicButtonProps>`
-* **required**
-* Submit button; disabled when textbox is empty
+- `first('basic-button.submit')`
+- `Component<BasicButtonProps>`
+- **required**
+- Submit button; disabled when textbox is empty
 ---
-* `first('module-list')`
-* `Component<ModuleListProps>`
-* **required**
-* Todo list container and add/delete functionality
+- `first('[data-container]')`
+- `HTMLElement`
+- **required**
+- Container where cloned list items are inserted
 ---
-* `first('basic-pluralize')`
-* `Component<BasicPluralizeProps>`
-* **required**
-* Remaining active-item counter
+- `first('template')`
+- `HTMLTemplateElement`
+- **required**
+- Template cloned for each todo item; root element receives `data-key`
 ---
-* `first('form-radiogroup')`
-* `Component<FormRadiogroupProps>`
-* **required**
-* Filter selector (`all`, `active`, `completed`)
+- `first('[role="status"]')`
+- `HTMLElement`
+- **required**
+- Live region for screen reader reorder announcements
 ---
-* `first('basic-button.clear-completed')`
-* `Component<BasicButtonProps>`
-* **required**
-* Clears completed items; badge shows completed count
+- `first('basic-pluralize')`
+- `Component<BasicPluralizeProps>`
+- **required**
+- Remaining active-item counter
+---
+- `first('form-radiogroup')`
+- `Component<FormRadiogroupProps>`
+- **required**
+- Filter selector (`all`, `active`, `completed`)
+---
+- `first('basic-button.clear-completed')`
+- `Component<BasicButtonProps>`
+- **required**
+- Clears completed items; badge shows completed count
 {% /table %}

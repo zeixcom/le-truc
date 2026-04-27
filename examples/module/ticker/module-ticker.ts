@@ -19,9 +19,9 @@ function nextSymbol(): string {
 	while (true) {
 		const n = _symIdx++
 		const sym =
-			(ALPHA[Math.floor(n / 676) % 26] ?? 'A')
-			+ (ALPHA[Math.floor(n / 26) % 26] ?? 'A')
-			+ (ALPHA[n % 26] ?? 'A')
+			(ALPHA[Math.floor(n / 676) % 26] ?? 'A') +
+			(ALPHA[Math.floor(n / 26) % 26] ?? 'A') +
+			(ALPHA[n % 26] ?? 'A')
 		if (!_usedSymbols.has(sym)) {
 			_usedSymbols.add(sym)
 			return sym

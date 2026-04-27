@@ -2,7 +2,7 @@
 
 > **isList**\<`T`\>(`value`): `value is List<T>`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:83
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:87
 
 Checks if a value is a List signal.
 

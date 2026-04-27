@@ -58,8 +58,8 @@ export default defineComponent<BasicPluralizeProps>(
 			...categories.map(category => {
 				const el = categoryElements[category]
 				return (
-					el
-					&& watch(
+					el &&
+					watch(
 						() => pluralizer.select(host.count) === category,
 						bindVisible(el),
 					)

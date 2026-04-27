@@ -4,26 +4,20 @@ module-todo {
 	gap: var(--space-l);
 	container-type: inline-size;
 
+	&[filter="completed"] [data-container] li:not(:has([checked])) {
+		display: none;
+	}
+
+	&[filter="active"] [data-container] li:has([checked]) {
+		display: none;
+	}
+
 	> form {
 		display: flex;
 		flex-direction: column;
 		align-items: flex-start;
 		gap: var(--space-m);
 		justify-content: space-between;
-	}
-
-	> module-list {
-		&[filter="completed"] li:not(:has([checked])) {
-			display: none;
-		}
-
-		&[filter="active"] li:has([checked]) {
-			display: none;
-		}
-
-		& li {
-			border-bottom: 0;
-		}
 	}
 
 	& ol {
@@ -34,12 +28,67 @@ module-todo {
 		margin: 0;
 		padding: 0;
 
+		&:empty {
+			display: none;
+		}
+
 		& li {
 			display: flex;
+			align-items: center;
 			justify-content: space-between;
 			gap: var(--space-m);
 			margin: 0;
 			padding: 0;
+
+			&.dragging {
+				position: fixed;
+				z-index: 100;
+				box-sizing: border-box;
+				background-color: var(--color-background);
+				opacity: var(--opacity-dimmed);
+				box-shadow: 0 var(--space-xxs) var(--space-s) var(--color-shadow);
+				padding-inline: var(--space-s);
+
+				& button.reorder:not(:disabled) {
+					cursor: grabbing;
+				}
+			}
+
+			&.drop-marker {
+				border: 2px dashed var(--color-selection);
+				border-radius: var(--space-xs);
+				background-color: var(--color-selection-hover);
+				padding: 0;
+			}
+		}
+	}
+
+	& button.reorder {
+		height: var(--input-height);
+		min-inline-size: var(--input-height);
+		border-radius: var(--space-xs);
+		background: none;
+		border: none;
+		padding: 0;
+
+		&:disabled {
+			opacity: var(--opacity-translucent);
+		}
+
+		&:not(:disabled) {
+			cursor: grab;
+			opacity: var(--opacity-solid);
+			color: var(--color-border);
+
+			&:hover {
+				background-color: var(--color-overlay-hover);
+				color: var(--color-text-soft);
+			}
+
+			&:active {
+				background-color: var(--color-overlay-active);
+				color: var(--color-text-soft);
+			}
 		}
 	}
 

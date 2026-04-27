@@ -23,12 +23,12 @@ export default defineComponent<ModuleCodeblockProps>(
 
 		return [
 			on(overlay, 'click', () => ({ collapsed: false })),
-			copy
-				&& copyToClipboard(code, copy as HTMLElement & BasicButtonProps, {
+			copy &&
+				copyToClipboard(code, copy as HTMLElement & BasicButtonProps, {
 					success: copy.getAttribute('copy-success') || 'Copied!',
 					error:
-						copy.getAttribute('copy-error')
-						|| 'Error trying to copy to clipboard!',
+						copy.getAttribute('copy-error') ||
+						'Error trying to copy to clipboard!',
 				}),
 
 			watch('collapsed', bindAttribute(host, 'collapsed')),

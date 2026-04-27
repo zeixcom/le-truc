@@ -2,10 +2,10 @@
 
 > **List**\<`T`\> = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:36
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:40
 
 A reactive ordered array with stable keys and per-item reactivity.
-Each item is a `State<T>` signal; structural changes (add/remove/sort) propagate reactively.
+Each item is a `MutableSignal<T>`; structural changes (add/remove/sort) propagate reactively.
 
 #### Type Parameters
 
@@ -21,7 +21,7 @@ The type of items in the list
 
 > `readonly` **\[isConcatSpreadable\]**: `true`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:38
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:42
 
 ***
 
@@ -29,7 +29,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:38
 
 > `readonly` **\[toStringTag\]**: `"List"`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:37
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:41
 
 ***
 
@@ -37,19 +37,19 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:37
 
 > `readonly` **length**: `number`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:40
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:44
 
 #### Methods
 
 ##### \[iterator\]()
 
-> **\[iterator\]**(): `IterableIterator`\<[`State`](State.md)\<`T`\>\>
+> **\[iterator\]**(): `IterableIterator`\<`MutableSignal`\<`T`\>\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:39
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:43
 
 ###### Returns
 
-`IterableIterator`\<[`State`](State.md)\<`T`\>\>
+`IterableIterator`\<`MutableSignal`\<`T`\>\>
 
 ***
 
@@ -57,7 +57,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:39
 
 > **add**(`value`): `string`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:49
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:53
 
 ###### Parameters
 
@@ -73,9 +73,9 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:49
 
 ##### at()
 
-> **at**(`index`): [`State`](State.md)\<`T`\> \| `undefined`
+> **at**(`index`): `MutableSignal`\<`T`\> \| `undefined`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:44
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:48
 
 ###### Parameters
 
@@ -85,15 +85,15 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:44
 
 ###### Returns
 
-[`State`](State.md)\<`T`\> \| `undefined`
+`MutableSignal`\<`T`\> \| `undefined`
 
 ***
 
 ##### byKey()
 
-> **byKey**(`key`): [`State`](State.md)\<`T`\> \| `undefined`
+> **byKey**(`key`): `MutableSignal`\<`T`\> \| `undefined`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:46
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:50
 
 ###### Parameters
 
@@ -103,7 +103,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:46
 
 ###### Returns
 
-[`State`](State.md)\<`T`\> \| `undefined`
+`MutableSignal`\<`T`\> \| `undefined`
 
 ***
 
@@ -113,7 +113,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:46
 
 > **deriveCollection**\<`R`\>(`callback`): [`Collection`](Collection.md)\<`R`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:60
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:64
 
 ##### Type Parameters
 
@@ -135,7 +135,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:60
 
 > **deriveCollection**\<`R`\>(`callback`): [`Collection`](Collection.md)\<`R`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:61
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:65
 
 ##### Type Parameters
 
@@ -159,7 +159,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:61
 
 > **get**(): `T`[]
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:41
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:45
 
 ###### Returns
 
@@ -171,7 +171,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:41
 
 > **indexOfKey**(`key`): `number`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:48
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:52
 
 ###### Parameters
 
@@ -189,7 +189,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:48
 
 > **keyAt**(`index`): `string` \| `undefined`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:47
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:51
 
 ###### Parameters
 
@@ -207,7 +207,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:47
 
 > **keys**(): `IterableIterator`\<`string`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:45
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:49
 
 ###### Returns
 
@@ -219,7 +219,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:45
 
 > **remove**(`keyOrIndex`): `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:50
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:54
 
 ###### Parameters
 
@@ -237,7 +237,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:50
 
 > **replace**(`key`, `value`): `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:57
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:61
 
 Updates an existing item by key, propagating to all subscribers.
 No-op if the key does not exist or the value is reference-equal to the current value.
@@ -266,7 +266,7 @@ New value for the item
 
 > **set**(`next`): `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:42
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:46
 
 ###### Parameters
 
@@ -284,7 +284,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:42
 
 > **sort**(`compareFn?`): `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:58
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:62
 
 ###### Parameters
 
@@ -302,7 +302,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:58
 
 > **splice**(`start`, `deleteCount?`, ...`items`): `T`[]
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:59
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:63
 
 ###### Parameters
 
@@ -328,7 +328,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:59
 
 > **update**(`fn`): `void`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:43
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:47
 
 ###### Parameters
 

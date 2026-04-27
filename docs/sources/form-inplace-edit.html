@@ -149,7 +149,7 @@
 				<span class="language">ts</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { defineComponent, asBoolean } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asBoolean, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormInplaceEditProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	editing</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
@@ -187,12 +187,12 @@
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">				textEl.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
-<span class="line"><span style="color:#F8F8F2">				host.</span><span style="color:#A6E22E">dispatchEvent</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#F92672">					new</span><span style="color:#A6E22E"> CustomEvent</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'commit'</span><span style="color:#F8F8F2">, {</span></span>
-<span class="line"><span style="color:#F8F8F2">						bubbles: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">						detail: { value },</span></span>
-<span class="line"><span style="color:#F8F8F2">					}),</span></span>
-<span class="line"><span style="color:#F8F8F2">				)</span></span>
+<span class="line"><span style="color:#88846F">				/* host.dispatchEvent(</span></span>
+<span class="line"><span style="color:#88846F">					new CustomEvent('commit', {</span></span>
+<span class="line"><span style="color:#88846F">						bubbles: true,</span></span>
+<span class="line"><span style="color:#88846F">						detail: { value },</span></span>
+<span class="line"><span style="color:#88846F">					}),</span></span>
+<span class="line"><span style="color:#88846F">				) */</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'editing'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">editing</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
@@ -249,13 +249,15 @@
 <span class="line"><span style="color:#F92672">				else</span><span style="color:#F8F8F2"> host.editing </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(editBtn, </span><span style="color:#E6DB74">'mousedown'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				e.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'focusout'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">host.editing) </span><span style="color:#F92672">return</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> target </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> e.target </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
-<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (target.tagName </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> 'INPUT'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">return</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> relatedTarget </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (e </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FocusEvent</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#F8F8F2">					.relatedTarget </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> null</span></span>
-<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (relatedTarget </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> editBtn) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (relatedTarget </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> host.</span><span style="color:#A6E22E">contains</span><span style="color:#F8F8F2">(relatedTarget)) </span><span style="color:#F92672">return</span></span>
 <span class="line"><span style="color:#F8F8F2">				host.editing </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#F8F8F2">		]</span></span>

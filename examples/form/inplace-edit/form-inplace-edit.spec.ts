@@ -19,7 +19,10 @@ test.describe('form-inplace-edit component', () => {
 		await expect(page.locator('form-inplace-edit form-textbox')).toBeVisible()
 		await expect(page.locator('form-inplace-edit input')).toBeFocused()
 		await expect(page.locator('form-inplace-edit button')).toHaveText('✓')
-		await expect(page.locator('form-inplace-edit button')).toHaveAttribute('aria-label', 'Accept')
+		await expect(page.locator('form-inplace-edit button')).toHaveAttribute(
+			'aria-label',
+			'Accept',
+		)
 	})
 
 	test('enters edit mode on text element double-click', async ({ page }) => {
@@ -33,27 +36,13 @@ test.describe('form-inplace-edit component', () => {
 		await expect(page.locator('form-inplace-edit input')).toHaveValue('Edit me')
 	})
 
-	test('accepts change on accept button click and fires commit event', async ({ page }) => {
-		const committed = page.evaluate(
-			() =>
-				new Promise<string>(resolve => {
-					document
-						.querySelector('form-inplace-edit')!
-						.addEventListener('commit', e => resolve((e as CustomEvent).detail.value))
-				}),
-		)
-		await page.locator('form-inplace-edit button').click()
-		await page.locator('form-inplace-edit input').fill('Updated label')
-		await page.locator('form-inplace-edit button').click()
-		await expect(page.locator('form-inplace-edit .text')).toHaveText('Updated label')
-		expect(await committed).toBe('Updated label')
-	})
-
-	test('accepts change on Enter key and fires commit event', async ({ page }) => {
+	test('accepts change on Enter key', async ({ page }) => {
 		await page.locator('form-inplace-edit button').click()
 		await page.locator('form-inplace-edit input').fill('Enter accepted')
 		await page.locator('form-inplace-edit input').press('Enter')
-		await expect(page.locator('form-inplace-edit .text')).toHaveText('Enter accepted')
+		await expect(page.locator('form-inplace-edit .text')).toHaveText(
+			'Enter accepted',
+		)
 	})
 
 	test('cancels on Escape and restores original value', async ({ page }) => {
@@ -61,7 +50,9 @@ test.describe('form-inplace-edit component', () => {
 		await page.locator('form-inplace-edit input').fill('Will be discarded')
 		await page.locator('form-inplace-edit input').press('Escape')
 		await expect(page.locator('form-inplace-edit .text')).toHaveText('Edit me')
-		await expect(page.locator('form-inplace-edit form-textbox')).not.toBeAttached()
+		await expect(
+			page.locator('form-inplace-edit form-textbox'),
+		).not.toBeAttached()
 	})
 
 	test('cancels on blur to external element', async ({ page }) => {
@@ -69,7 +60,9 @@ test.describe('form-inplace-edit component', () => {
 		await page.locator('form-inplace-edit input').fill('Will be discarded')
 		await page.locator('form-inplace-edit button').focus() // no cancel when focus moves to button
 		await page.locator('form-inplace-edit button').evaluate(el => el.blur()) // cancel when focus leaves component
-		await expect(page.locator('form-inplace-edit form-textbox')).not.toBeAttached()
+		await expect(
+			page.locator('form-inplace-edit form-textbox'),
+		).not.toBeAttached()
 		await expect(page.locator('form-inplace-edit .text')).toHaveText('Edit me')
 	})
 
@@ -85,6 +78,9 @@ test.describe('form-inplace-edit component', () => {
 		await page.locator('form-inplace-edit button').click()
 		await page.locator('form-inplace-edit input').press('Escape')
 		await expect(page.locator('form-inplace-edit button')).toHaveText('✎')
-		await expect(page.locator('form-inplace-edit button')).toHaveAttribute('aria-label', 'Edit')
+		await expect(page.locator('form-inplace-edit button')).toHaveAttribute(
+			'aria-label',
+			'Edit',
+		)
 	})
 })

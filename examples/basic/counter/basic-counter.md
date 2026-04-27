@@ -17,32 +17,32 @@ The canonical introductory example for Le Truc. Demonstrates `read()` combined w
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `count`
-* `number` (integer)
-* `0`
-* Current count
+- `count`
+- `number` (integer)
+- `0`
+- Current count
 {% /table %}
 
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('button')`
-* `HTMLButtonElement`
-* **required**
-* Increments the count
+- `first('button')`
+- `HTMLButtonElement`
+- **required**
+- Increments the count
 ---
-* `first('span')`
-* `HTMLSpanElement`
-* **required**
-* Displays the current count
+- `first('span')`
+- `HTMLSpanElement`
+- **required**
+- Displays the current count
 {% /table %}

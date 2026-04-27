@@ -61,6 +61,7 @@ export {
 	type SingleMatchHandlers,
 	SKIP_EQUALITY,
 	type Slot,
+	type SlotDescriptor,
 	type State,
 	type Store,
 	type StoreOptions,
