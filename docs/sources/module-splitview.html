@@ -1,0 +1,291 @@
+<module-tabgroup>
+		<div role="tablist" aria-label="Tabs">
+		<button
+		type="button"
+		role="tab"
+		id="trigger_module-splitview_html"
+		aria-controls="panel_module-splitview_html"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		HTML
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_module-splitview_css"
+		aria-controls="panel_module-splitview_css"
+		aria-selected="false"
+		tabindex="-1"
+	>
+		CSS
+	</button><button
+		type="button"
+		role="tab"
+		id="trigger_module-splitview_ts"
+		aria-controls="panel_module-splitview_ts"
+		aria-selected="true"
+		tabindex="0"
+	>
+		TypeScript
+	</button>
+	</div> <div
+		role="tabpanel"
+		id="panel_module-splitview_html"
+		aria-labelledby="trigger_module-splitview_html"
+		 hidden
+	>
+		<module-codeblock
+			language="html"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">module-splitview.html</span>
+				<span class="language">html</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#88846F">&#x3C;!-- Horizontal split (default) --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-splitview</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"horizontal-splitview"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Left panel&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Drag the handle or focus it and use arrow keys to resize.&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">		type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">		class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"divider"</span></span>
+<span class="line"><span style="color:#A6E22E">		role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"separator"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Resize panels"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-orientation</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"horizontal"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-valuenow</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"50"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-valuemin</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"10"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-valuemax</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"90"</span></span>
+<span class="line"><span style="color:#F8F8F2">	>&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Right panel&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>The proportions are kept when the container is resized.&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-splitview</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Pre-set split position via attribute --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-splitview</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"preset-splitview"</span><span style="color:#A6E22E"> split</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"0.3"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Narrow panel (30%)&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">		type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">		class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"divider"</span></span>
+<span class="line"><span style="color:#A6E22E">		role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"separator"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Resize panels"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-orientation</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"horizontal"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-valuenow</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"30"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-valuemin</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"10"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-valuemax</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"90"</span></span>
+<span class="line"><span style="color:#F8F8F2">	>&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Wide panel (70%)&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-splitview</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hr</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#88846F">&#x3C;!-- Vertical split --></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-splitview</span><span style="color:#A6E22E"> id</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"vertical-splitview"</span><span style="color:#A6E22E"> orientation</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"vertical"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Top panel&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">		type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">		class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"divider"</span></span>
+<span class="line"><span style="color:#A6E22E">		role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"separator"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Resize panels"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-orientation</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"vertical"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-valuenow</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"50"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-valuemin</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"10"</span></span>
+<span class="line"><span style="color:#A6E22E">		aria-valuemax</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"90"</span></span>
+<span class="line"><span style="color:#F8F8F2">	>&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">div</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"panel"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Bottom panel&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">div</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">module-splitview</span><span style="color:#F8F8F2">></span></span>
+<span class="line"></span></code></pre>
+			</module-scrollarea>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_module-splitview_css"
+		aria-labelledby="trigger_module-splitview_css"
+		 hidden
+	>
+		<module-codeblock
+			language="css"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">module-splitview.css</span>
+				<span class="language">css</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">module-splitview</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">grid</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	grid-template-columns</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--split, </span><span style="color:#AE81FF">50</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs) </span><span style="color:#AE81FF">1</span><span style="color:#F92672">fr</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	overflow</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">hidden</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	&#x26; .panel {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		overflow</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">auto</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		min-width</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		min-height</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	&#x26; </span><span style="color:#A6E22E">.divider</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">flex</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		align-items</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">center</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		justify-content</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">center</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		padding</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		border</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-border-soft);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		cursor</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">col-resize</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		touch-action</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		transition</span><span style="color:#F8F8F2">: background-color </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--transition-short) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--easing-inout);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;::after {</span></span>
+<span class="line"><span style="color:#66D9EF">			content</span><span style="color:#F8F8F2">: </span><span style="color:#E6DB74">''</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">block</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			width</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">2</span><span style="color:#F92672">px</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-l);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			border-radius</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">px</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-translucent);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">:hover</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-border);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">:focus-visible</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			outline</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">2</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> solid</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-selection);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			outline-offset</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">-2</span><span style="color:#F92672">px</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	&#x26;[</span><span style="color:#A6E22E">orientation</span><span style="color:#F92672">=</span><span style="color:#E6DB74">'vertical'</span><span style="color:#F8F8F2">] {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		grid-template-columns</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">1</span><span style="color:#F92672">fr</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		grid-template-rows</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--split, </span><span style="color:#AE81FF">50</span><span style="color:#F92672">%</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs) </span><span style="color:#AE81FF">1</span><span style="color:#F92672">fr</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26; .divider {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			cursor</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">row-resize</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;::after {</span></span>
+<span class="line"><span style="color:#F8F8F2">				width: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-l);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				height</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">2</span><span style="color:#F92672">px</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span></code></pre>
+			</module-scrollarea>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+<div
+		role="tabpanel"
+		id="panel_module-splitview_ts"
+		aria-labelledby="trigger_module-splitview_ts"
+		
+	>
+		<module-codeblock
+			language="ts"
+			copy-success="Copied!"
+			copy-error="Error trying to copy to clipboard!"
+		>
+			<p class="meta">
+				<span class="file">module-splitview.ts</span>
+				<span class="language">ts</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asNumber, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleSplitviewProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	split</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#E6DB74">		'module-splitview'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> &#x26;</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleSplitviewProps</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> MIN_SPLIT </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0.1</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> MAX_SPLIT </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0.9</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> STEP </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0.05</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleSplitviewProps</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#E6DB74">	'module-splitview'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> divider </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'button.divider'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a button.divider resize handle.'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> isVertical </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.</span><span style="color:#A6E22E">getAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'orientation'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'vertical'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> dragging </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({ split: </span><span style="color:#A6E22E">asNumber</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">0.5</span><span style="color:#F8F8F2">) })</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(divider, </span><span style="color:#E6DB74">'pointerdown'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">event</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				dragging </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#F8F8F2">				;(event.target </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Element</span><span style="color:#F8F8F2">).</span><span style="color:#A6E22E">setPointerCapture</span><span style="color:#F8F8F2">(event.pointerId)</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(divider, </span><span style="color:#E6DB74">'pointermove'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">event</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">dragging) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> rect </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> host.</span><span style="color:#A6E22E">getBoundingClientRect</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> ratio </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> isVertical</span></span>
+<span class="line"><span style="color:#F92672">					?</span><span style="color:#F8F8F2"> (event.clientY </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> rect.top) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> rect.height</span></span>
+<span class="line"><span style="color:#F92672">					:</span><span style="color:#F8F8F2"> (event.clientX </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> rect.left) </span><span style="color:#F92672">/</span><span style="color:#F8F8F2"> rect.width</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> { split: Math.</span><span style="color:#A6E22E">max</span><span style="color:#F8F8F2">(MIN_SPLIT, Math.</span><span style="color:#A6E22E">min</span><span style="color:#F8F8F2">(MAX_SPLIT, ratio)) }</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(divider, </span><span style="color:#E6DB74">'pointerup'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				dragging </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(divider, </span><span style="color:#E6DB74">'lostpointercapture'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				dragging </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(divider, </span><span style="color:#E6DB74">'keydown'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">event</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> { key } </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> event</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> decrement </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> isVertical </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowUp'</span><span style="color:#F92672"> :</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowLeft'</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> increment </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> isVertical </span><span style="color:#F92672">?</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowDown'</span><span style="color:#F92672"> :</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowRight'</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (decrement </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> increment </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'Home'</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'End'</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#F8F8F2">					event.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (decrement) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> { split: Math.</span><span style="color:#A6E22E">max</span><span style="color:#F8F8F2">(MIN_SPLIT, host.split </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> STEP) }</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (increment) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> { split: Math.</span><span style="color:#A6E22E">min</span><span style="color:#F8F8F2">(MAX_SPLIT, host.split </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> STEP) }</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'Home'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> { split: MIN_SPLIT }</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'End'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">return</span><span style="color:#F8F8F2"> { split: MAX_SPLIT }</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'split'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">split</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				host.style.</span><span style="color:#A6E22E">setProperty</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'--split'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">`</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">(split </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 100</span><span style="color:#F8F8F2">).</span><span style="color:#A6E22E">toFixed</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">2</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">%`</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">				divider.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'aria-valuenow'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">String</span><span style="color:#F8F8F2">(Math.</span><span style="color:#A6E22E">round</span><span style="color:#F8F8F2">(split </span><span style="color:#F92672">*</span><span style="color:#AE81FF"> 100</span><span style="color:#F8F8F2">)))</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"><span style="color:#F8F8F2">		]</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
+<span class="line"></span></code></pre>
+			</module-scrollarea>
+			<basic-button class="copy">
+				<button type="button" class="secondary small">
+					<span class="label">Copy</span>
+				</button>
+			</basic-button>
+		</module-codeblock>
+	</div>
+	</module-tabgroup>

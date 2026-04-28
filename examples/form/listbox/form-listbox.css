@@ -6,7 +6,7 @@ form-listbox {
 		position: relative;
 		margin-bottom: var(--space-m);
 
-		input.filter {
+		& input.filter {
 			display: inline-block;
 			box-sizing: border-box;
 			background: var(--color-input);
@@ -25,7 +25,7 @@ form-listbox {
 			}
 		}
 
-		button.clear {
+		& button.clear {
 			position: absolute;
 			bottom: 0;
 			right: 0;
@@ -46,7 +46,7 @@ form-listbox {
 		}
 	}
 
-	module-scrollarea {
+	& module-scrollarea {
 		max-height: 40rem;
 		background-color: var(--color-background);
 

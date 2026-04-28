@@ -17,46 +17,46 @@ An interactive OKLCH color picker combining a 2D lightness/chroma graph, a hue s
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `color`
-* `Oklch`
-* `asOklch()` — parsed from `color` attribute
-* The selected color in OKLCH space
+- `color`
+- `Oklch`
+- `asOklch()` — parsed from `color` attribute
+- The selected color in OKLCH space
 ---
-* `lightness`
-* `number` (readonly)
-* Derived from `color.l`
-* Lightness component (0–1)
+- `lightness`
+- `number` (readonly)
+- Derived from `color.l`
+- Lightness component (0–1)
 ---
-* `chroma`
-* `number` (readonly)
-* Derived from `color.c`
-* Chroma component (0–0.4)
+- `chroma`
+- `number` (readonly)
+- Derived from `color.c`
+- Chroma component (0–0.4)
 ---
-* `hue`
-* `number` (readonly)
-* Derived from `color.h`
-* Hue angle in degrees (0–360)
+- `hue`
+- `number` (readonly)
+- Derived from `color.h`
+- Hue angle in degrees (0–360)
 {% /table %}
 
 #### Methods
 
 {% table %}
-* Name
-* Type
-* Description
+- Name
+- Type
+- Description
 ---
-* `stepDown`
-* `(axis: 'l' \| 'c' \| 'h', bigStep?: boolean) => void`
-* Decrements the given axis by one step (or a large step when `bigStep` is `true` or Shift is held)
+- `stepDown`
+- `(axis: 'l' \| 'c' \| 'h', bigStep?: boolean) => void`
+- Decrements the given axis by one step (or a large step when `bigStep` is `true` or Shift is held)
 ---
-* `stepUp`
-* `(axis: 'l' \| 'c' \| 'h', bigStep?: boolean) => void`
-* Increments the given axis by one step (or a large step when `bigStep` is `true` or Shift is held)
+- `stepUp`
+- `(axis: 'l' \| 'c' \| 'h', bigStep?: boolean) => void`
+- Increments the given axis by one step (or a large step when `bigStep` is `true` or Shift is held)
 {% /table %}
 
 #### Keyboard Interaction
@@ -66,68 +66,68 @@ Arrow keys navigate the focused axis. When the graph area is focused: `ArrowUp`/
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('.graph')`
-* `HTMLElement`
-* **required**
-* Container for the lightness/chroma canvas; observed by `ResizeObserver`
+- `first('.graph')`
+- `HTMLElement`
+- **required**
+- Container for the lightness/chroma canvas; observed by `ResizeObserver`
 ---
-* `first('.graph canvas')`
-* `HTMLCanvasElement`
-* **required**
-* Renders the 2D lightness/chroma color gamut; redrawn on hue or size change
+- `first('.graph canvas')`
+- `HTMLCanvasElement`
+- **required**
+- Renders the 2D lightness/chroma color gamut; redrawn on hue or size change
 ---
-* `first('.slider')`
-* `HTMLElement`
-* **required**
-* Hue slider container; acts as ARIA `role="slider"`
+- `first('.slider')`
+- `HTMLElement`
+- **required**
+- Hue slider container; acts as ARIA `role="slider"`
 ---
-* `first('.slider canvas')`
-* `HTMLCanvasElement`
-* **required**
-* Renders the hue track gradient
+- `first('.slider canvas')`
+- `HTMLCanvasElement`
+- **required**
+- Renders the hue track gradient
 ---
-* `first('.knob')`
-* `HTMLElement`
-* **required**
-* Draggable knob controlling lightness and chroma
+- `first('.knob')`
+- `HTMLElement`
+- **required**
+- Draggable knob controlling lightness and chroma
 ---
-* `first('.thumb')`
-* `HTMLElement`
-* **required**
-* Draggable thumb controlling hue
+- `first('.thumb')`
+- `HTMLElement`
+- **required**
+- Draggable thumb controlling hue
 ---
-* `first('input[name="lightness"]')`
-* `HTMLInputElement`
-* **required**
-* Numeric input for lightness (0–100)
+- `first('input[name="lightness"]')`
+- `HTMLInputElement`
+- **required**
+- Numeric input for lightness (0–100)
 ---
-* `first('input[name="chroma"]')`
-* `HTMLInputElement`
-* **required**
-* Numeric input for chroma (0–0.4)
+- `first('input[name="chroma"]')`
+- `HTMLInputElement`
+- **required**
+- Numeric input for chroma (0–0.4)
 ---
-* `first('input[name="hue"]')`
-* `HTMLInputElement`
-* **required**
-* Numeric input for hue angle (0–360)
+- `first('input[name="hue"]')`
+- `HTMLInputElement`
+- **required**
+- Numeric input for hue angle (0–360)
 ---
-* `all('button.decrement')`
-* `HTMLButtonElement[]`
-* optional
-* Decrement buttons; nearest `.lightness`/`.chroma`/`.hue` ancestor determines axis
+- `all('button.decrement')`
+- `HTMLButtonElement[]`
+- optional
+- Decrement buttons; nearest `.lightness`/`.chroma`/`.hue` ancestor determines axis
 ---
-* `all('button.increment')`
-* `HTMLButtonElement[]`
-* optional
-* Increment buttons; nearest `.lightness`/`.chroma`/`.hue` ancestor determines axis
+- `all('button.increment')`
+- `HTMLButtonElement[]`
+- optional
+- Increment buttons; nearest `.lightness`/`.chroma`/`.hue` ancestor determines axis
 ---
-* `all('.error')`
-* `HTMLElement[]`
-* optional
-* Validation error targets; nearest axis ancestor determines which error state they display
+- `all('.error')`
+- `HTMLElement[]`
+- optional
+- Validation error targets; nearest axis ancestor determines which error state they display
 {% /table %}

@@ -1,5 +1,5 @@
 // node_modules/@zeix/cause-effect/src/util.ts
-var ASYNC_FUNCTION_PROTO = Object.getPrototypeOf(async function() {});
+var ASYNC_FUNCTION_PROTO = Object.getPrototypeOf(async () => {});
 function isFunction(fn) {
   return typeof fn === "function";
 }
@@ -208,6 +208,7 @@ function unlink(edge) {
       const sinkNode = source;
       sinkNode.sourcesTail = null;
       trimSources(sinkNode);
+      sinkNode.flags |= FLAG_DIRTY;
     }
   }
   return nextSource;
@@ -422,7 +423,7 @@ function untrack(fn) {
     activeSink = prev;
   }
 }
-function createScope(fn) {
+function createScope(fn, options) {
   const prevOwner = activeOwner;
   const scope = { cleanup: null };
   activeOwner = scope;
@@ -434,7 +435,7 @@ function createScope(fn) {
     return dispose;
   } finally {
     activeOwner = prevOwner;
-    if (prevOwner)
+    if (!options?.root && prevOwner)
       registerCleanup(prevOwner, dispose);
   }
 }
@@ -509,7 +510,7 @@ function getKeyGenerator(keyConfig) {
     contentBased
   ];
 }
-function diffArrays(prev, next, prevKeys, generateKey, contentBased) {
+function diffArrays(prev, next, prevKeys, generateKey, contentBased, itemEquals) {
   const add = {};
   const change = {};
   const remove = {};
@@ -535,7 +536,7 @@ function diffArrays(prev, next, prevKeys, generateKey, contentBased) {
     if (!prevByKey.has(key)) {
       add[key] = val;
       changed = true;
-    } else if (!DEEP_EQUALITY(prevByKey.get(key), val)) {
+    } else if (!itemEquals(prevByKey.get(key), val)) {
       change[key] = val;
       changed = true;
     }
@@ -555,6 +556,8 @@ function createList(value, options) {
   const signals = new Map;
   let keys = [];
   const [generateKey, contentBased] = getKeyGenerator(options?.keyConfig);
+  const itemEquals = options?.itemEquals ?? DEEP_EQUALITY;
+  const itemFactory = options?.createItem ?? ((item) => createState(item, { equals: itemEquals }));
   const buildValue = () => keys.map((key) => signals.get(key)?.get()).filter((v) => v !== undefined);
   const node = {
     fn: buildValue,
@@ -572,7 +575,7 @@ function createList(value, options) {
     for (const key in changes.add) {
       const val = changes.add[key];
       validateSignalValue(`${TYPE_LIST} item for key "${key}"`, val);
-      signals.set(key, createState(val));
+      signals.set(key, itemFactory(val));
       structural = true;
     }
     if (Object.keys(changes.change).length) {
@@ -608,7 +611,7 @@ function createList(value, options) {
       keys[i] = key;
     }
     validateSignalValue(`${TYPE_LIST} item for key "${key}"`, val);
-    signals.set(key, createState(val));
+    signals.set(key, itemFactory(val));
   }
   node.value = value;
   node.flags = 0;
@@ -650,7 +653,7 @@ function createList(value, options) {
     },
     set(next) {
       const prev = node.flags & FLAG_DIRTY ? buildValue() : node.value;
-      const changes = diffArrays(prev, next, keys, generateKey, contentBased);
+      const changes = diffArrays(prev, next, keys, generateKey, contentBased, itemEquals);
       if (changes.changed) {
         keys = changes.newKeys;
         applyChanges(changes);
@@ -688,7 +691,7 @@ function createList(value, options) {
       if (!keys.includes(key))
         keys.push(key);
       validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
-      signals.set(key, createState(value2));
+      signals.set(key, itemFactory(value2));
       node.flags |= FLAG_DIRTY | FLAG_RELINK;
       for (let e = node.sinks;e; e = e.nextSink)
         propagate(e.sink);
@@ -717,7 +720,7 @@ function createList(value, options) {
       if (!signal)
         return;
       validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
-      if (untrack(() => signal.get()) === value2)
+      if (itemEquals(untrack(() => signal.get()), value2))
         return;
       signal.set(value2);
       node.flags |= FLAG_DIRTY;
@@ -1041,7 +1044,9 @@ function createCollection(watched, options) {
   const itemToKey = new Map;
   const [generateKey, contentBased] = getKeyGenerator(options?.keyConfig);
   const resolveKey = (item) => itemToKey.get(item) ?? (contentBased ? generateKey(item) : undefined);
-  const itemFactory = options?.createItem ?? createState;
+  const itemFactory = options?.createItem ?? ((item) => createState(item, {
+    equals: options?.itemEquals ?? DEEP_EQUALITY
+  }));
   function buildValue() {
     const result = [];
     for (const key of keys) {
@@ -1540,8 +1545,13 @@ function isMutableSignal(value) {
 }
 
 // node_modules/@zeix/cause-effect/src/nodes/slot.ts
+function isSignalOrDescriptor(value) {
+  if (isSignal(value))
+    return true;
+  return value !== null && typeof value === "object" && "get" in value && typeof value.get === "function";
+}
 function createSlot(initialSignal, options) {
-  validateSignalValue(TYPE_SLOT, initialSignal, isSignal);
+  validateSignalValue(TYPE_SLOT, initialSignal, isSignalOrDescriptor);
   let delegated = initialSignal;
   const guard = options?.guard;
   const node = {
@@ -1566,13 +1576,15 @@ function createSlot(initialSignal, options) {
   const set = (next) => {
     if (isSlot(delegated))
       return delegated.set(next);
-    if (!isMutableSignal(delegated))
+    if ("set" in delegated && typeof delegated.set === "function") {
+      validateSignalValue(TYPE_SLOT, next, guard);
+      delegated.set(next);
+    } else {
       throw new ReadonlySignalError(TYPE_SLOT);
-    validateSignalValue(TYPE_SLOT, next, guard);
-    delegated.set(next);
+    }
   };
   const replace = (next) => {
-    validateSignalValue(TYPE_SLOT, next, isSignal);
+    validateSignalValue(TYPE_SLOT, next, isSignalOrDescriptor);
     delegated = next;
     node.flags |= FLAG_DIRTY;
     for (let e = node.sinks;e; e = e.nextSink)
@@ -1709,6 +1721,9 @@ var toSignal = (host, source) => {
     if (sig)
       return sig;
     return createMemo(() => host[source]);
+  }
+  if (source && typeof source === "object" && "get" in source && !(Symbol.toStringTag in source)) {
+    return source;
   }
   return source;
 };
@@ -1951,13 +1966,16 @@ var makeOn = (host) => {
           }
         };
         const listener = options.passive ? throttle(rawListener) : rawListener;
-        root.addEventListener(type, listener, options);
-        return () => {
-          root.removeEventListener(type, listener);
-          listener.cancel?.();
-        };
+        createScope(() => {
+          root.addEventListener(type, listener, options);
+          return () => {
+            root.removeEventListener(type, listener);
+            listener.cancel?.();
+          };
+        });
+        return;
       }
-      return attachListener(host, target, type, handler, options);
+      createScope(() => attachListener(host, target, type, handler, options));
     };
   }
   return on;
@@ -2096,29 +2114,38 @@ function defineComponent(name, factory) {
 
   class Truc extends HTMLElement {
     debug;
+    #initialized = false;
+    #setup = [];
     #cleanup;
     connectedCallback() {
-      const [elementQueries, resolveDependencies] = makeElementQueries(this);
-      const host = this;
-      const expose = (instanceProps) => {
-        this.#initSignals(instanceProps);
+      const runSetup = () => {
+        this.#cleanup = createScope(() => activateResult(this.#setup), {
+          root: true
+        });
       };
-      const context = {
-        ...elementQueries,
-        host,
-        expose,
-        watch: makeWatch(host),
-        on: makeOn(host),
-        pass: makePass(host),
-        provideContexts: makeProvideContexts(host),
-        requestContext: makeRequestContext(host)
-      };
-      const result = factory(context);
-      if (!result)
-        return;
-      resolveDependencies(() => {
-        this.#cleanup = createScope(() => activateResult(result));
-      });
+      if (this.#initialized) {
+        runSetup();
+      } else {
+        const host = this;
+        const [elementQueries, resolveDependencies] = makeElementQueries(this);
+        const context = {
+          expose: this.#initSignals.bind(this),
+          host,
+          ...elementQueries,
+          watch: makeWatch(host),
+          on: makeOn(host),
+          pass: makePass(host),
+          provideContexts: makeProvideContexts(host),
+          requestContext: makeRequestContext(host)
+        };
+        const result = factory(context);
+        if (result)
+          this.#setup = result;
+        this.#initialized = true;
+        if (!this.#setup.length)
+          return;
+        resolveDependencies(runSetup);
+      }
     }
     disconnectedCallback() {
       if (isFunction(this.#cleanup))

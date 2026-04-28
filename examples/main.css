@@ -9,6 +9,7 @@
 @import './form/checkbox/form-checkbox.css';
 @import './form/colorgraph/form-colorgraph.css';
 @import './form/combobox/form-combobox.css';
+@import './form/inplace-edit/form-inplace-edit.css';
 @import './form/listbox/form-listbox.css';
 @import './form/radiogroup/form-radiogroup.css';
 @import './form/spinbutton/form-spinbutton.css';
@@ -20,10 +21,10 @@
 @import './module/colorinfo/module-colorinfo.css';
 @import './module/demo/module-demo.css';
 @import './module/dialog/module-dialog.css';
-@import './module/list/module-list.css';
 @import './module/listnav/module-listnav.css';
 @import './module/pagination/module-pagination.css';
 @import './module/scrollarea/module-scrollarea.css';
+@import './module/splitview/module-splitview.css';
 @import './module/tabgroup/module-tabgroup.css';
 @import './module/ticker/module-ticker.css';
 @import './module/todo/module-todo.css';

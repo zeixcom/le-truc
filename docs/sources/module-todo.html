@@ -44,7 +44,7 @@
 				<span class="language">html</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-todo</span><span style="color:#F8F8F2">></span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">module-todo</span><span style="color:#A6E22E"> filter</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"all"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">form</span><span style="color:#A6E22E"> action</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"#"</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">form-textbox</span><span style="color:#A6E22E"> clearable</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> for</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"add-todo"</span><span style="color:#F8F8F2">>What needs to be done?&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
@@ -61,30 +61,36 @@
 <span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">basic-button</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">form</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">module-list</span><span style="color:#A6E22E"> filter</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"all"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">ol</span><span style="color:#A6E22E"> data-container</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">ol</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">template</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">form-checkbox</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"todo"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"checkbox"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"visually-hidden"</span><span style="color:#F8F8F2"> /></span></span>
-<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">							&#x3C;</span><span style="color:#F92672">slot</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">slot</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">						&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">form-checkbox</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">basic-button</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"delete"</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">button</span></span>
-<span class="line"><span style="color:#A6E22E">						type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
-<span class="line"><span style="color:#A6E22E">						class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tertiary destructive small"</span></span>
-<span class="line"><span style="color:#A6E22E">						aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Delete"</span></span>
-<span class="line"><span style="color:#F8F8F2">					></span></span>
-<span class="line"><span style="color:#F8F8F2">						&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">>✕&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">					&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">basic-button</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">template</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">module-list</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> role</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"status"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"visually-hidden"</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">ol</span><span style="color:#A6E22E"> data-container</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">ol</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">template</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">				type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">				class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"reorder"</span></span>
+<span class="line"><span style="color:#A6E22E">				aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Drag to reorder"</span></span>
+<span class="line"><span style="color:#A6E22E">				aria-pressed</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"false"</span></span>
+<span class="line"><span style="color:#F8F8F2">			></span></span>
+<span class="line"><span style="color:#F8F8F2">				≡</span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">form-checkbox</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"todo"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">input</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"checkbox"</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"visually-hidden"</span><span style="color:#F8F8F2"> /></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">form-inplace-edit</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">label</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label text"</span><span style="color:#F8F8F2">>&#x3C;</span><span style="color:#F92672">slot</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">slot</span><span style="color:#F8F8F2">>&#x3C;/</span><span style="color:#F92672">label</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">button</span><span style="color:#A6E22E"> type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span><span style="color:#A6E22E"> aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Edit"</span><span style="color:#F8F8F2">>✎&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">form-inplace-edit</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">form-checkbox</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">basic-button</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"remove"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;</span><span style="color:#F92672">button</span></span>
+<span class="line"><span style="color:#A6E22E">					type</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"button"</span></span>
+<span class="line"><span style="color:#A6E22E">					class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"tertiary destructive small"</span></span>
+<span class="line"><span style="color:#A6E22E">					aria-label</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"Remove"</span></span>
+<span class="line"><span style="color:#F8F8F2">				></span></span>
+<span class="line"><span style="color:#F8F8F2">					&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"label"</span><span style="color:#F8F8F2">>✕&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">				&#x3C;/</span><span style="color:#F92672">button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			&#x3C;/</span><span style="color:#F92672">basic-button</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">li</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">template</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">footer</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">basic-pluralize</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">			&#x3C;</span><span style="color:#F92672">p</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"none"</span><span style="color:#F8F8F2">>Well done, all done!&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
@@ -167,26 +173,20 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">	gap</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-l);</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	container-type</span><span style="color:#F8F8F2">: inline-size;</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">	> form {</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x26;[</span><span style="color:#66D9EF;font-style:italic">filter</span><span style="color:#F8F8F2">="completed"] [data-container] li:not(:has([checked])) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	&#x26;[</span><span style="color:#A6E22E">filter</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"active"</span><span style="color:#F8F8F2">] [</span><span style="color:#A6E22E">data-container</span><span style="color:#F8F8F2">] </span><span style="color:#F92672">li</span><span style="color:#A6E22E">:has</span><span style="color:#F8F8F2">([</span><span style="color:#A6E22E">checked</span><span style="color:#F8F8F2">]) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">	></span><span style="color:#F92672"> form</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">flex</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		flex-direction</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">column</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		align-items</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">flex-start</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		gap</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m);</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		justify-content</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">space-between</span><span style="color:#F8F8F2">;</span></span>
-<span class="line"><span style="color:#F8F8F2">	}</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F92672">	></span><span style="color:#F92672"> module-list</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">		&#x26;[</span><span style="color:#66D9EF;font-style:italic">filter</span><span style="color:#F8F8F2">="completed"] li:not(:has([checked])) {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">		&#x26;[</span><span style="color:#A6E22E">filter</span><span style="color:#F92672">=</span><span style="color:#E6DB74">"active"</span><span style="color:#F8F8F2">] </span><span style="color:#F92672">li</span><span style="color:#A6E22E">:has</span><span style="color:#F8F8F2">([</span><span style="color:#A6E22E">checked</span><span style="color:#F8F8F2">]) {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">		&#x26; </span><span style="color:#F92672">li</span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			border-bottom</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
-<span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F8F8F2">	&#x26; </span><span style="color:#F92672">ol</span><span style="color:#F8F8F2"> {</span></span>
@@ -197,12 +197,67 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">		margin</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		padding</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">		&#x26; li {</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;:empty {</span></span>
+<span class="line"><span style="color:#F8F8F2">			display: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26; </span><span style="color:#F92672">li</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">flex</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			align-items</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">center</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			justify-content</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">space-between</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			gap</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m);</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			margin</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			padding</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;.dragging {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">fixed</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				z-index</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">100</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				box-sizing</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">border-box</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-background);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-dimmed);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				box-shadow</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--space-xxs) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-s) </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-shadow);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				padding-inline</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-s);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">				&#x26; button.reorder:not(:</span><span style="color:#66D9EF">disabled</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					cursor</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">grabbing</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;</span><span style="color:#A6E22E">.drop-marker</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				border</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">2</span><span style="color:#F92672">px</span><span style="color:#66D9EF"> dashed</span><span style="color:#66D9EF"> var</span><span style="color:#F8F8F2">(--color-selection);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				border-radius</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-selection-hover);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				padding</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"><span style="color:#F8F8F2">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">	&#x26; </span><span style="color:#F92672">button</span><span style="color:#A6E22E">.reorder</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		height</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		min-inline-size</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--input-height);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		border-radius</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-xs);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		border</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">none</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		padding</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;:</span><span style="color:#66D9EF">disabled</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			opacity: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-translucent);</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26;</span><span style="color:#A6E22E">:not</span><span style="color:#F8F8F2">(</span><span style="color:#A6E22E">:disabled</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			cursor</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">grab</span><span style="color:#F8F8F2">;</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			opacity</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--opacity-solid);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-border);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;:hover {</span></span>
+<span class="line"><span style="color:#F8F8F2">				background-color: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-overlay-hover);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text-soft);</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">			&#x26;</span><span style="color:#A6E22E">:active</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-overlay-active);</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-text-soft);</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"></span>
@@ -274,7 +329,26 @@
 				<span class="language">ts</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { bindAttribute, createElementsMemo, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	bindAttribute,</span></span>
+<span class="line"><span style="color:#F8F8F2">	bindProperty,</span></span>
+<span class="line"><span style="color:#F8F8F2">	bindText,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createList,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createMemo,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createState,</span></span>
+<span class="line"><span style="color:#F8F8F2">	createStore,</span></span>
+<span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F8F8F2">	each,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> Store,</span></span>
+<span class="line"><span style="color:#F92672">	type</span><span style="color:#F8F8F2"> List,</span></span>
+<span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">TodoItem</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	id</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">	label</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#F8F8F2">	createdAt</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Date</span></span>
+<span class="line"><span style="color:#F8F8F2">	completed</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span></span>
+<span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	interface</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElementTagNameMap</span><span style="color:#F8F8F2"> {</span></span>
@@ -282,63 +356,335 @@
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'module-todo'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> form </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'form'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a form element to enter a new todo item.'</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> textbox </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">		'form-textbox'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">		'Add &#x3C;form-textbox> component to enter a new todo item.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> submit </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">		'basic-button.submit'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">		'Add &#x3C;basic-button.submit> component to submit the form.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> list </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">		'module-list'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">		'Add &#x3C;module-list> component to display a list of todo items.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> count </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">		'basic-pluralize'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">		'Add &#x3C;basic-pluralize> component to display the number of todo items.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> filter </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">		'form-radiogroup'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">		'Add &#x3C;form-radiogroup> component to filter todo items.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> clearCompleted </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
-<span class="line"><span style="color:#E6DB74">		'basic-button.clear-completed'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#E6DB74">		'Add &#x3C;basic-button.clear-completed> component to clear completed todo items.'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> DRAG_THRESHOLD </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 5</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> REORDER_CLASS </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'reorder'</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> REORDER_SELECTOR </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> `button.</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">REORDER_CLASS</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> DRAGGING_CLASS </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'dragging'</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> active </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createElementsMemo</span><span style="color:#F8F8F2">(list, </span><span style="color:#E6DB74">'form-checkbox:not([checked])'</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> completed </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createElementsMemo</span><span style="color:#F8F8F2">(list, </span><span style="color:#E6DB74">'form-checkbox[checked]'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">let</span><span style="color:#F8F8F2"> idCounter </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">	return</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">		pass</span><span style="color:#F8F8F2">(submit, { </span><span style="color:#A6E22E">disabled</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">textbox.length }),</span></span>
-<span class="line"><span style="color:#A6E22E">		pass</span><span style="color:#F8F8F2">(count, { </span><span style="color:#A6E22E">count</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> active.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length }),</span></span>
-<span class="line"><span style="color:#A6E22E">		pass</span><span style="color:#F8F8F2">(clearCompleted, {</span></span>
-<span class="line"><span style="color:#A6E22E">			disabled</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length,</span></span>
-<span class="line"><span style="color:#A6E22E">			badge</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span></span>
-<span class="line"><span style="color:#F8F8F2">				completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length </span><span style="color:#F92672">?</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().length) </span><span style="color:#F92672">:</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">		}),</span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">	'module-todo'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> form </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'form'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a form element to enter a new todo item.'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> textbox </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'form-textbox'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add &#x3C;form-textbox> component to enter a new todo item.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> submit </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'basic-button.submit'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add &#x3C;basic-button.submit> component to submit the form.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> container </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'[data-container]'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add a container element for items.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> template </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'template'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Add a template element for items.'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> liveRegion </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'[role="status"]'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add a live region for status messages.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> count </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'basic-pluralize'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add &#x3C;basic-pluralize> component to display the number of todo items.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> filter </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'form-radiogroup'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add &#x3C;form-radiogroup> component to filter todo items.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> clearCompleted </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">			'basic-button.clear-completed'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#E6DB74">			'Add &#x3C;basic-button.clear-completed> component to clear completed todo items.'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> reorderButtons </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> all</span><span style="color:#F8F8F2">(REORDER_SELECTOR)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> checkboxComponents </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'form-checkbox'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> editComponents </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> all</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'form-inplace-edit'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#A6E22E">		on</span><span style="color:#F8F8F2">(form, </span><span style="color:#E6DB74">'submit'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">			e.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> textbox.value.</span><span style="color:#A6E22E">trim</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">value) </span><span style="color:#F92672">return</span></span>
-<span class="line"><span style="color:#F8F8F2">			list.</span><span style="color:#A6E22E">add</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#F8F8F2">				item.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'slot'</span><span style="color:#F8F8F2">)?.</span><span style="color:#A6E22E">replaceWith</span><span style="color:#F8F8F2">(value)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> list </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createList</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">TodoItem</span><span style="color:#F8F8F2">>([], {</span></span>
+<span class="line"><span style="color:#A6E22E">			keyConfig</span><span style="color:#F8F8F2">: </span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> item.id,</span></span>
+<span class="line"><span style="color:#F8F8F2">			createItem: createStore,</span></span>
+<span class="line"><span style="color:#F8F8F2">		}) </span><span style="color:#F92672">as</span><span style="color:#66D9EF;font-style:italic"> unknown</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Omit</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">List</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">TodoItem</span><span style="color:#F8F8F2">>, </span><span style="color:#E6DB74">'byKey'</span><span style="color:#F92672"> |</span><span style="color:#F92672"> typeof</span><span style="color:#F8F8F2"> Symbol.iterator> </span><span style="color:#F92672">&#x26;</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#A6E22E">			byKey</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">key</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Store</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">TodoItem</span><span style="color:#F8F8F2">> </span><span style="color:#F92672">|</span><span style="color:#66D9EF;font-style:italic"> undefined</span></span>
+<span class="line"><span style="color:#F8F8F2">			[Symbol.iterator]()</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">IterableIterator</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">Store</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">TodoItem</span><span style="color:#F8F8F2">>></span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> completedCount </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createMemo</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">			() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> list.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">().</span><span style="color:#A6E22E">filter</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> item.completed).length,</span></span>
+<span class="line"><span style="color:#F8F8F2">		)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> activeCount </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createMemo</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> list.length </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> completedCount.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">())</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> status </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createState</span><span style="color:#F8F8F2">(liveRegion.textContent)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> selectedItem</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> null</span><span style="color:#F92672"> =</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> dragItem</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> null</span><span style="color:#F92672"> =</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> marker</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> null</span><span style="color:#F92672"> =</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> dragOffsetY </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> pendingDragHandle</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> null</span><span style="color:#F92672"> =</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> pointerStartY </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> pointerStartX </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> suppressNextClick </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		function</span><span style="color:#A6E22E"> getItemText</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">			return</span><span style="color:#F8F8F2"> (</span></span>
+<span class="line"><span style="color:#F8F8F2">				item.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'label.text, span'</span><span style="color:#F8F8F2">)?.textContent?.</span><span style="color:#A6E22E">trim</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> 'item'</span></span>
+<span class="line"><span style="color:#F8F8F2">			)</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		function</span><span style="color:#A6E22E"> selectItem</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> null</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#F8F8F2">			selectedItem </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> item</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (item) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> items </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Array.</span><span style="color:#A6E22E">from</span><span style="color:#F8F8F2">(container.children)</span></span>
+<span class="line"><span style="color:#F8F8F2">				status.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">					`</span><span style="color:#F92672">${</span><span style="color:#A6E22E">getItemText</span><span style="color:#F8F8F2">(item)</span><span style="color:#F92672">}</span><span style="color:#E6DB74"> selected, position </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">items.</span><span style="color:#A6E22E">indexOf</span><span style="color:#F8F8F2">(item) </span><span style="color:#F92672">+</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672">}</span><span style="color:#E6DB74"> of </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">list.length</span><span style="color:#F92672">}</span><span style="color:#E6DB74">. `</span></span>
+<span class="line"><span style="color:#F92672">						+</span><span style="color:#E6DB74"> `Press Up or Down arrow to move.`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">				)</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		function</span><span style="color:#A6E22E"> moveItem</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">direction</span><span style="color:#F92672">:</span><span style="color:#F8F8F2"> -</span><span style="color:#AE81FF">1</span><span style="color:#F92672"> |</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> items </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Array.</span><span style="color:#A6E22E">from</span><span style="color:#F8F8F2">(container.children)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> idx </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> items.</span><span style="color:#A6E22E">indexOf</span><span style="color:#F8F8F2">(item)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> newIdx </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> idx </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> direction</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (newIdx </span><span style="color:#F92672">&#x3C;</span><span style="color:#AE81FF"> 0</span><span style="color:#F92672"> ||</span><span style="color:#F8F8F2"> newIdx </span><span style="color:#F92672">>=</span><span style="color:#F8F8F2"> items.length) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> sibling </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> items[newIdx]</span><span style="color:#F92672">!</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (direction </span><span style="color:#F92672">===</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">) sibling.</span><span style="color:#A6E22E">after</span><span style="color:#F8F8F2">(item)</span></span>
+<span class="line"><span style="color:#F92672">			else</span><span style="color:#F8F8F2"> sibling.</span><span style="color:#A6E22E">before</span><span style="color:#F8F8F2">(item)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> newPos </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Array.</span><span style="color:#A6E22E">from</span><span style="color:#F8F8F2">(container.children).</span><span style="color:#A6E22E">indexOf</span><span style="color:#F8F8F2">(item) </span><span style="color:#F92672">+</span><span style="color:#AE81FF"> 1</span></span>
+<span class="line"><span style="color:#F8F8F2">			status.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#E6DB74">				`</span><span style="color:#F92672">${</span><span style="color:#A6E22E">getItemText</span><span style="color:#F8F8F2">(item)</span><span style="color:#F92672">}</span><span style="color:#E6DB74"> moved to position </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">newPos</span><span style="color:#F92672">}</span><span style="color:#E6DB74"> of </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">list.length</span><span style="color:#F92672">}</span><span style="color:#E6DB74">.`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">			)</span></span>
+<span class="line"><span style="color:#F8F8F2">			item.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">>(REORDER_SELECTOR)?.</span><span style="color:#A6E22E">focus</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#A6E22E">			reorderList</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		function</span><span style="color:#A6E22E"> updateMarkerPosition</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">clientY</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">marker </span><span style="color:#F92672">||</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">dragItem) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> items </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Array.</span><span style="color:#A6E22E">from</span><span style="color:#F8F8F2">(container.children).</span><span style="color:#A6E22E">filter</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">				c</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> c </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> marker </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> c </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> dragItem,</span></span>
+<span class="line"><span style="color:#F8F8F2">			) </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">[]</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			let</span><span style="color:#F8F8F2"> insertBefore</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Element</span><span style="color:#F92672"> |</span><span style="color:#66D9EF;font-style:italic"> null</span><span style="color:#F92672"> =</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#F92672">			for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> child </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> items) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> rect </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> child.</span><span style="color:#A6E22E">getBoundingClientRect</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (clientY </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> rect.top </span><span style="color:#F92672">+</span><span style="color:#F8F8F2"> rect.height </span><span style="color:#F92672">/</span><span style="color:#AE81FF"> 2</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#F8F8F2">					insertBefore </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> child</span></span>
+<span class="line"><span style="color:#F92672">					break</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}</span></span>
+<span class="line"><span style="color:#F92672">			if</span><span style="color:#F8F8F2"> (insertBefore) container.</span><span style="color:#A6E22E">insertBefore</span><span style="color:#F8F8F2">(marker, insertBefore)</span></span>
+<span class="line"><span style="color:#F92672">			else</span><span style="color:#F8F8F2"> container.</span><span style="color:#A6E22E">appendChild</span><span style="color:#F8F8F2">(marker)</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		function</span><span style="color:#A6E22E"> reorderList</span><span style="color:#F8F8F2">() {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> keys </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Array.</span><span style="color:#A6E22E">from</span><span style="color:#F8F8F2">(container.children)</span></span>
+<span class="line"><span style="color:#F8F8F2">				.</span><span style="color:#A6E22E">filter</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">el</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> el </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F92672"> &#x26;&#x26;</span><span style="color:#F8F8F2"> el.dataset.key)</span></span>
+<span class="line"><span style="color:#F8F8F2">				.</span><span style="color:#A6E22E">map</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">el</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> (el </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">).dataset.key</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			list.</span><span style="color:#A6E22E">update</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">prev</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> byKey </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> Map</span><span style="color:#F8F8F2">(prev.</span><span style="color:#A6E22E">map</span><span style="color:#F8F8F2">((</span><span style="color:#FD971F;font-style:italic">item</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">i</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> [list.</span><span style="color:#A6E22E">keyAt</span><span style="color:#F8F8F2">(i)</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">, item]))</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#F8F8F2"> keys.</span><span style="color:#A6E22E">map</span><span style="color:#F8F8F2">(</span><span style="color:#FD971F;font-style:italic">k</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> byKey.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(k)</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">).</span><span style="color:#A6E22E">filter</span><span style="color:#F8F8F2">(Boolean) </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">TodoItem</span><span style="color:#F8F8F2">[]</span></span>
 <span class="line"><span style="color:#F8F8F2">			})</span></span>
-<span class="line"><span style="color:#F8F8F2">			textbox.</span><span style="color:#A6E22E">clear</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F8F8F2">		}),</span></span>
-<span class="line"><span style="color:#A6E22E">		on</span><span style="color:#F8F8F2">(clearCompleted, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">			const</span><span style="color:#F8F8F2"> items </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F92672">			for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">let</span><span style="color:#F8F8F2"> i </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> items.length </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">; i </span><span style="color:#F92672">>=</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">; i</span><span style="color:#F92672">--</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F8F8F2">				items[i]</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'li'</span><span style="color:#F8F8F2">)?.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">()</span></span>
-<span class="line"><span style="color:#F8F8F2">		}),</span></span>
+<span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#A6E22E">		watch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> filter.value </span><span style="color:#F92672">||</span><span style="color:#E6DB74"> 'all'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindAttribute</span><span style="color:#F8F8F2">(list, </span><span style="color:#E6DB74">'filter'</span><span style="color:#F8F8F2">)),</span></span>
-<span class="line"><span style="color:#F8F8F2">	]</span></span>
-<span class="line"><span style="color:#F8F8F2">})</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
+<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(submit, { </span><span style="color:#A6E22E">disabled</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">textbox.length }),</span></span>
+<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(count, { </span><span style="color:#A6E22E">count</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> activeCount.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() }),</span></span>
+<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(clearCompleted, {</span></span>
+<span class="line"><span style="color:#A6E22E">				disabled</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">completedCount.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#A6E22E">				badge</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (completedCount.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">?</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(completedCount.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()) </span><span style="color:#F92672">:</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			each</span><span style="color:#F8F8F2">(reorderButtons, </span><span style="color:#FD971F;font-style:italic">button</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> list.length </span><span style="color:#F92672">===</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindProperty</span><span style="color:#F8F8F2">(button, </span><span style="color:#E6DB74">'disabled'</span><span style="color:#F8F8F2">))</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			each</span><span style="color:#F8F8F2">(checkboxComponents, </span><span style="color:#FD971F;font-style:italic">checkbox</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> checkbox.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">>(</span><span style="color:#E6DB74">'[data-key]'</span><span style="color:#F8F8F2">)?.dataset.key</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">key </span><span style="color:#F92672">||</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">checkbox.isConnected) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#A6E22E"> pass</span><span style="color:#F8F8F2">(checkbox, {</span></span>
+<span class="line"><span style="color:#F8F8F2">					checked: {</span></span>
+<span class="line"><span style="color:#A6E22E">						get</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> list.</span><span style="color:#A6E22E">byKey</span><span style="color:#F8F8F2">(key)?.completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">??</span><span style="color:#AE81FF"> false</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#A6E22E">						set</span><span style="color:#F8F8F2">: (</span><span style="color:#FD971F;font-style:italic">checked</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> boolean</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> list.</span><span style="color:#A6E22E">byKey</span><span style="color:#F8F8F2">(key)?.completed.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(checked),</span></span>
+<span class="line"><span style="color:#F8F8F2">					},</span></span>
+<span class="line"><span style="color:#F8F8F2">				})</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			each</span><span style="color:#F8F8F2">(editComponents, </span><span style="color:#FD971F;font-style:italic">editEl</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> editEl.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">>(</span><span style="color:#E6DB74">'[data-key]'</span><span style="color:#F8F8F2">)?.dataset.key</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">key </span><span style="color:#F92672">||</span><span style="color:#F92672"> !</span><span style="color:#F8F8F2">editEl.isConnected) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#F92672">				return</span><span style="color:#A6E22E"> pass</span><span style="color:#F8F8F2">(editEl, {</span></span>
+<span class="line"><span style="color:#F8F8F2">					value: {</span></span>
+<span class="line"><span style="color:#A6E22E">						get</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> list.</span><span style="color:#A6E22E">byKey</span><span style="color:#F8F8F2">(key)?.label.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#A6E22E">						set</span><span style="color:#F8F8F2">: (</span><span style="color:#FD971F;font-style:italic">value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> list.</span><span style="color:#A6E22E">byKey</span><span style="color:#F8F8F2">(key)?.label.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(value),</span></span>
+<span class="line"><span style="color:#F8F8F2">					},</span></span>
+<span class="line"><span style="color:#F8F8F2">				})</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">				() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> Array.</span><span style="color:#A6E22E">from</span><span style="color:#F8F8F2">(list.</span><span style="color:#A6E22E">keys</span><span style="color:#F8F8F2">()),</span></span>
+<span class="line"><span style="color:#FD971F;font-style:italic">				keys</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> current </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> Map</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#66D9EF;font-style:italic">string</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">>()</span></span>
+<span class="line"><span style="color:#F92672">					for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> child </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> container.children) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> el </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> child </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (el.dataset.key) current.</span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">(el.dataset.key, el)</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> keysSet </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> Set</span><span style="color:#F8F8F2">(keys)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">					for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> [key, el] </span><span style="color:#F92672">of</span><span style="color:#F8F8F2"> current) {</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">keysSet.</span><span style="color:#A6E22E">has</span><span style="color:#F8F8F2">(key)) el.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">					for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">let</span><span style="color:#F8F8F2"> i </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">; i </span><span style="color:#F92672">&#x3C;</span><span style="color:#F8F8F2"> keys.length; i</span><span style="color:#F92672">++</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> keys[i]</span><span style="color:#F92672">!</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						let</span><span style="color:#F8F8F2"> el </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> current.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">(key)</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">el) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">							const</span><span style="color:#F8F8F2"> fragment </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> template.content.</span><span style="color:#A6E22E">cloneNode</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#AE81FF">								true</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">							) </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">DocumentFragment</span></span>
+<span class="line"><span style="color:#F8F8F2">							el </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> fragment.firstElementChild </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
+<span class="line"><span style="color:#F8F8F2">							el.dataset.key </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> key</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">							const</span><span style="color:#F8F8F2"> id </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">key</span><span style="color:#F92672">}</span><span style="color:#E6DB74">-checkbox`</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">							const</span><span style="color:#F8F8F2"> checkbox </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> el.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'input'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">							if</span><span style="color:#F8F8F2"> (checkbox) checkbox.id </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> id</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">							const</span><span style="color:#F8F8F2"> label </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> el.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'label'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">							if</span><span style="color:#F8F8F2"> (label) label.htmlFor </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> id</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">							const</span><span style="color:#F8F8F2"> text </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> el.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'slot'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">							if</span><span style="color:#F8F8F2"> (text)</span></span>
+<span class="line"><span style="color:#F8F8F2">								text.</span><span style="color:#A6E22E">replaceWith</span><span style="color:#F8F8F2">(</span></span>
+<span class="line"><span style="color:#F8F8F2">									document.</span><span style="color:#A6E22E">createTextNode</span><span style="color:#F8F8F2">(list.</span><span style="color:#A6E22E">byKey</span><span style="color:#F8F8F2">(key)?.label.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">() </span><span style="color:#F92672">??</span><span style="color:#E6DB74"> ''</span><span style="color:#F8F8F2">),</span></span>
+<span class="line"><span style="color:#F8F8F2">								)</span></span>
+<span class="line"><span style="color:#F8F8F2">						}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">						const</span><span style="color:#F8F8F2"> currentAtI </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> container.children[i]</span></span>
+<span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (currentAtI </span><span style="color:#F92672">!==</span><span style="color:#F8F8F2"> el)</span></span>
+<span class="line"><span style="color:#F8F8F2">							container.</span><span style="color:#A6E22E">insertBefore</span><span style="color:#F8F8F2">(el, currentAtI </span><span style="color:#F92672">??</span><span style="color:#AE81FF"> null</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">				},</span></span>
+<span class="line"><span style="color:#F8F8F2">			),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(form, </span><span style="color:#E6DB74">'submit'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">				e.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> label </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> textbox.value.</span><span style="color:#A6E22E">trim</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">label) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#F8F8F2">				list.</span><span style="color:#A6E22E">add</span><span style="color:#F8F8F2">({</span></span>
+<span class="line"><span style="color:#F8F8F2">					id: </span><span style="color:#E6DB74">`todo</span><span style="color:#F92672">${</span><span style="color:#F92672">++</span><span style="color:#F8F8F2">idCounter</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					label,</span></span>
+<span class="line"><span style="color:#F8F8F2">					createdAt: </span><span style="color:#F92672">new</span><span style="color:#A6E22E"> Date</span><span style="color:#F8F8F2">(),</span></span>
+<span class="line"><span style="color:#F8F8F2">					completed: </span><span style="color:#AE81FF">false</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">				})</span></span>
+<span class="line"><span style="color:#F8F8F2">				textbox.</span><span style="color:#A6E22E">clear</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (suppressNextClick) {</span></span>
+<span class="line"><span style="color:#F8F8F2">					suppressNextClick </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F92672">					return</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> target </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> e.target </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> item </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> target.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'[data-key]'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">(item </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">)) </span><span style="color:#F92672">return</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (target.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'basic-button.remove'</span><span style="color:#F8F8F2">)) {</span></span>
+<span class="line"><span style="color:#F8F8F2">					e.</span><span style="color:#A6E22E">stopPropagation</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (item </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> selectedItem) </span><span style="color:#A6E22E">selectItem</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">null</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					list.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">(item.dataset.key</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">				} </span><span style="color:#F92672">else</span><span style="color:#F92672"> if</span><span style="color:#F8F8F2"> (target.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(REORDER_SELECTOR)) {</span></span>
+<span class="line"><span style="color:#A6E22E">					selectItem</span><span style="color:#F8F8F2">(item)</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'keydown'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">selectedItem) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> target </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> e.target </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">target.classList.</span><span style="color:#A6E22E">contains</span><span style="color:#F8F8F2">(REORDER_CLASS)) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (e.key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'Escape'</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#A6E22E">					selectItem</span><span style="color:#F8F8F2">(</span><span style="color:#AE81FF">null</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">					return</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (e.key </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> 'ArrowUp'</span><span style="color:#F92672"> &#x26;&#x26;</span><span style="color:#F8F8F2"> e.key </span><span style="color:#F92672">!==</span><span style="color:#E6DB74"> 'ArrowDown'</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#F8F8F2">				e.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (e.key </span><span style="color:#F92672">===</span><span style="color:#E6DB74"> 'ArrowUp'</span><span style="color:#F8F8F2">) </span><span style="color:#A6E22E">moveItem</span><span style="color:#F8F8F2">(selectedItem, </span><span style="color:#F92672">-</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">				else</span><span style="color:#A6E22E"> moveItem</span><span style="color:#F8F8F2">(selectedItem, </span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'pointerdown'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> handle </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> (e.target </span><span style="color:#F92672">as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">).</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(REORDER_SELECTOR)</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">(handle </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">)) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> item </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> handle.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'[data-key]'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">(item </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">)) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#F8F8F2">				e.</span><span style="color:#A6E22E">preventDefault</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">				pendingDragHandle </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> handle</span></span>
+<span class="line"><span style="color:#F8F8F2">				pointerStartY </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> e.clientY</span></span>
+<span class="line"><span style="color:#F8F8F2">				pointerStartX </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> e.clientX</span></span>
+<span class="line"><span style="color:#F8F8F2">				suppressNextClick </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">				handle.</span><span style="color:#A6E22E">setPointerCapture</span><span style="color:#F8F8F2">(e.pointerId)</span></span>
+<span class="line"><span style="color:#F8F8F2">				handle.</span><span style="color:#A6E22E">focus</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'pointermove'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">pendingDragHandle) </span><span style="color:#F92672">return</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> dy </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Math.</span><span style="color:#A6E22E">abs</span><span style="color:#F8F8F2">(e.clientY </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> pointerStartY)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> dx </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> Math.</span><span style="color:#A6E22E">abs</span><span style="color:#F8F8F2">(e.clientX </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> pointerStartX)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">dragItem </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> (dy </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> DRAG_THRESHOLD </span><span style="color:#F92672">||</span><span style="color:#F8F8F2"> dx </span><span style="color:#F92672">></span><span style="color:#F8F8F2"> DRAG_THRESHOLD)) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> item </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> pendingDragHandle.</span><span style="color:#A6E22E">closest</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'[data-key]'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (</span><span style="color:#F92672">!</span><span style="color:#F8F8F2">(item </span><span style="color:#F92672">instanceof</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2">)) </span><span style="color:#F92672">return</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">					dragItem </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> item</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> rect </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> item.</span><span style="color:#A6E22E">getBoundingClientRect</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">					dragOffsetY </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> pointerStartY </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> rect.top</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">					marker </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> document.</span><span style="color:#A6E22E">createElement</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'li'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">					marker.className </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'drop-marker'</span></span>
+<span class="line"><span style="color:#F8F8F2">					marker.style.height </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">rect.height </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 4</span><span style="color:#F92672">}</span><span style="color:#E6DB74">px`</span></span>
+<span class="line"><span style="color:#F8F8F2">					container.</span><span style="color:#A6E22E">insertBefore</span><span style="color:#F8F8F2">(marker, item)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F8F8F2">					item.style.top </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">rect.top</span><span style="color:#F92672">}</span><span style="color:#E6DB74">px`</span></span>
+<span class="line"><span style="color:#F8F8F2">					item.style.left </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">rect.left</span><span style="color:#F92672">}</span><span style="color:#E6DB74">px`</span></span>
+<span class="line"><span style="color:#F8F8F2">					item.style.width </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">rect.width</span><span style="color:#F92672">}</span><span style="color:#E6DB74">px`</span></span>
+<span class="line"><span style="color:#F8F8F2">					item.classList.</span><span style="color:#A6E22E">add</span><span style="color:#F8F8F2">(DRAGGING_CLASS)</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (dragItem) {</span></span>
+<span class="line"><span style="color:#F8F8F2">					dragItem.style.top </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">e.clientY </span><span style="color:#F92672">-</span><span style="color:#F8F8F2"> dragOffsetY</span><span style="color:#F92672">}</span><span style="color:#E6DB74">px`</span></span>
+<span class="line"><span style="color:#A6E22E">					updateMarkerPosition</span><span style="color:#F8F8F2">(e.clientY)</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'pointerup'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (dragItem </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> marker) {</span></span>
+<span class="line"><span style="color:#F8F8F2">					marker.</span><span style="color:#A6E22E">replaceWith</span><span style="color:#F8F8F2">(dragItem)</span></span>
+<span class="line"><span style="color:#F8F8F2">					dragItem.style.cssText </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#F8F8F2">					dragItem.classList.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">(DRAGGING_CLASS)</span></span>
+<span class="line"><span style="color:#F8F8F2">					dragItem </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#F8F8F2">					marker </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#F8F8F2">					suppressNextClick </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
+<span class="line"><span style="color:#A6E22E">					reorderList</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">				pendingDragHandle </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'pointercancel'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				if</span><span style="color:#F8F8F2"> (dragItem </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> marker) {</span></span>
+<span class="line"><span style="color:#F8F8F2">					marker.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F8F8F2">					dragItem.style.cssText </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> ''</span></span>
+<span class="line"><span style="color:#F8F8F2">					dragItem.classList.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">(DRAGGING_CLASS)</span></span>
+<span class="line"><span style="color:#F8F8F2">					dragItem </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#F8F8F2">					marker </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">				pendingDragHandle </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> null</span></span>
+<span class="line"><span style="color:#F8F8F2">				suppressNextClick </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(clearCompleted, </span><span style="color:#E6DB74">'click'</span><span style="color:#F8F8F2">, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F92672">				for</span><span style="color:#F8F8F2"> (</span><span style="color:#66D9EF;font-style:italic">let</span><span style="color:#F8F8F2"> i </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> list.length </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">; i </span><span style="color:#F92672">>=</span><span style="color:#AE81FF"> 0</span><span style="color:#F8F8F2">; i</span><span style="color:#F92672">--</span><span style="color:#F8F8F2">) {</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> key </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> list.</span><span style="color:#A6E22E">keyAt</span><span style="color:#F8F8F2">(i)</span></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> list.</span><span style="color:#A6E22E">byKey</span><span style="color:#F8F8F2">(key)?.completed.</span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">()) list.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">(key)</span></span>
+<span class="line"><span style="color:#F8F8F2">				}</span></span>
+<span class="line"><span style="color:#F8F8F2">			}),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> filter.value </span><span style="color:#F92672">||</span><span style="color:#E6DB74"> 'all'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindAttribute</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'filter'</span><span style="color:#F8F8F2">)),</span></span>
+<span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(status, </span><span style="color:#A6E22E">bindText</span><span style="color:#F8F8F2">(liveRegion)),</span></span>
+<span class="line"><span style="color:#F8F8F2">		]</span></span>
+<span class="line"><span style="color:#F8F8F2">	},</span></span>
+<span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre>
 			</module-scrollarea>
 			<basic-button class="copy">

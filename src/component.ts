@@ -134,40 +134,44 @@ function defineComponent<P extends ComponentProps>(
 ): CustomElementConstructor | undefined {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
-
 	class Truc extends HTMLElement {
 		debug?: boolean
+		#initialized = false
+		#setup: FactoryResult = []
 		#cleanup: MaybeCleanup
 
 		/**
 		 * Native callback when the custom element is first connected to the document
 		 */
 		connectedCallback() {
-			const [elementQueries, resolveDependencies] = makeElementQueries(this)
-			const host = this as unknown as HTMLElement & P
-
-			// Create expose() helper — called inside the factory body to declare reactive properties.
-			const expose = (instanceProps: Initializers<P>) => {
-				this.#initSignals(instanceProps)
+			const runSetup = () => {
+				this.#cleanup = createScope(() => activateResult(this.#setup), {
+					root: true,
+				})
 			}
 
-			const context: FactoryContext<P> = {
-				...elementQueries,
-				host,
-				expose,
-				watch: makeWatch(host),
-				on: makeOn(host),
-				pass: makePass(host),
-				provideContexts: makeProvideContexts(host),
-				requestContext: makeRequestContext(host),
+			if (this.#initialized) {
+				runSetup()
+			} else {
+				const host = this as unknown as HTMLElement & P
+				const [elementQueries, resolveDependencies] = makeElementQueries(this)
+				const context: FactoryContext<P> = {
+					expose: this.#initSignals.bind(this),
+					host,
+					...elementQueries,
+					watch: makeWatch(host),
+					on: makeOn(host),
+					pass: makePass(host),
+					provideContexts: makeProvideContexts(host),
+					requestContext: makeRequestContext(host),
+				}
+
+				const result = factory(context)
+				if (result) this.#setup = result
+				this.#initialized = true
+				if (!this.#setup.length) return
+				resolveDependencies(runSetup)
 			}
-
-			const result = factory(context)
-			if (!result) return
-
-			resolveDependencies(() => {
-				this.#cleanup = createScope(() => activateResult(result))
-			})
 		}
 
 		/**
@@ -198,6 +202,7 @@ function defineComponent<P extends ComponentProps>(
 					if (value != null) this.#setAccessor(key, value)
 				}
 			}
+
 			for (const [prop, initializer] of Object.entries(instanceProps)) {
 				if (initializer == null || prop in this) continue
 				createReactiveProperty(prop as keyof P & string, initializer)

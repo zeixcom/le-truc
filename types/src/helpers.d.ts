@@ -1,5 +1,5 @@
 import type { SingleMatchHandlers } from '@zeix/cause-effect';
-type DangerouslySetInnerHTMLOptions = {
+type DangerouslyBindInnerHTMLOptions = {
     shadowRootMode?: ShadowRootMode;
     allowScripts?: boolean;
 };
@@ -93,5 +93,5 @@ declare const bindStyle: (element: HTMLElement | SVGElement | MathMLElement, pro
  * @param [options] - Shadow DOM mode and script execution options
  * @returns Match handlers that schedule the innerHTML mutation
  */
-declare const dangerouslyBindInnerHTML: (element: Element, options?: DangerouslySetInnerHTMLOptions) => SingleMatchHandlers<string>;
-export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, type DangerouslySetInnerHTMLOptions, dangerouslyBindInnerHTML, };
+declare const dangerouslyBindInnerHTML: (element: Element, options?: DangerouslyBindInnerHTMLOptions) => SingleMatchHandlers<string>;
+export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, };

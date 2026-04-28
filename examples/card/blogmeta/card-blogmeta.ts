@@ -17,11 +17,11 @@ function formatLocalDate(
 ): string {
 	const [year, month, day] = isoDate.split('-').map(Number)
 	if (
-		!year
-		|| Number.isNaN(year)
-		|| !month
-		|| Number.isNaN(month)
-		|| Number.isNaN(day)
+		!year ||
+		Number.isNaN(year) ||
+		!month ||
+		Number.isNaN(month) ||
+		Number.isNaN(day)
 	)
 		return INVALID_DATE
 	const date = new Date(year, month - 1, day) // avoid UTC offset shifting the day

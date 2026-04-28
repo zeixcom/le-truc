@@ -53,10 +53,10 @@ export default defineComponent<FormRadiogroupProps>(
 				else if (key === LAST_KEY) focusIndex = elements.length - 1
 				else
 					focusIndex =
-						(focusIndex
-							+ (INCREMENT_KEYS.includes(key) ? 1 : -1)
-							+ elements.length)
-						% elements.length
+						(focusIndex +
+							(INCREMENT_KEYS.includes(key) ? 1 : -1) +
+							elements.length) %
+						elements.length
 				elements[focusIndex]?.focus()
 			}),
 			on(host, 'keyup', ({ key }) => {
