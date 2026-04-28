@@ -17,37 +17,37 @@ A progressively enhanced code block that can collapse, expand, and copy its cont
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `collapsed`
-* `boolean`
-* `false`
-* Whether the code block is collapsed (`collapsed` attribute on host)
+- `collapsed`
+- `boolean`
+- `false`
+- Whether the code block is collapsed (`collapsed` attribute on host)
 {% /table %}
 
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('code')`
-* `HTMLElement`
-* **required**
-* Source container used for copy-to-clipboard
+- `first('code')`
+- `HTMLElement`
+- **required**
+- Source container used for copy-to-clipboard
 ---
-* `first('button.overlay')`
-* `HTMLButtonElement`
-* optional
-* Expands the block by setting `collapsed = false`
+- `first('button.overlay')`
+- `HTMLButtonElement`
+- optional
+- Expands the block by setting `collapsed = false`
 ---
-* `first('basic-button.copy')`
-* `Component<BasicButtonProps>`
-* optional
-* Copy trigger; reads `copy-success` and `copy-error` messages
+- `first('basic-button.copy')`
+- `Component<BasicButtonProps>`
+- optional
+- Copy trigger; reads `copy-success` and `copy-error` messages
 {% /table %}

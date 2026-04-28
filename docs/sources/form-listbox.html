@@ -170,7 +170,7 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">		position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">relative</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		margin-bottom</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--space-m);</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F8F8F2">		input.</span><span style="color:#66D9EF;font-style:italic">filter</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26; input.</span><span style="color:#66D9EF;font-style:italic">filter</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			display</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">inline-block</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			box-sizing</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">border-box</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			background</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-input);</span></span>
@@ -189,7 +189,7 @@
 <span class="line"><span style="color:#F8F8F2">			}</span></span>
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">		button</span><span style="color:#A6E22E">.clear</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x26; </span><span style="color:#F92672">button</span><span style="color:#A6E22E">.clear</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			position</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">absolute</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			bottom</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">			right</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">0</span><span style="color:#F8F8F2">;</span></span>
@@ -210,7 +210,7 @@
 <span class="line"><span style="color:#F8F8F2">		}</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">	module-scrollarea</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	&#x26; </span><span style="color:#F92672">module-scrollarea</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		max-height</span><span style="color:#F8F8F2">: </span><span style="color:#AE81FF">40</span><span style="color:#F92672">rem</span><span style="color:#F8F8F2">;</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		background-color</span><span style="color:#F8F8F2">: </span><span style="color:#66D9EF">var</span><span style="color:#F8F8F2">(--color-background);</span></span>
 <span class="line"></span>
@@ -479,10 +479,10 @@
 <span class="line"><span style="color:#F92672">				else</span><span style="color:#F92672"> if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> LAST_KEY) focusIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> elements.length </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span></span>
 <span class="line"><span style="color:#F92672">				else</span></span>
 <span class="line"><span style="color:#F8F8F2">					focusIndex </span><span style="color:#F92672">=</span></span>
-<span class="line"><span style="color:#F8F8F2">						(focusIndex</span></span>
-<span class="line"><span style="color:#F92672">							+</span><span style="color:#F8F8F2"> (INCREMENT_KEYS.</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(key) </span><span style="color:#F92672">?</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672"> :</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">)</span></span>
-<span class="line"><span style="color:#F92672">							+</span><span style="color:#F8F8F2"> elements.length)</span></span>
-<span class="line"><span style="color:#F92672">						%</span><span style="color:#F8F8F2"> elements.length</span></span>
+<span class="line"><span style="color:#F8F8F2">						(focusIndex </span><span style="color:#F92672">+</span></span>
+<span class="line"><span style="color:#F8F8F2">							(INCREMENT_KEYS.</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(key) </span><span style="color:#F92672">?</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672"> :</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">+</span></span>
+<span class="line"><span style="color:#F8F8F2">							elements.length) </span><span style="color:#F92672">%</span></span>
+<span class="line"><span style="color:#F8F8F2">						elements.length</span></span>
 <span class="line"><span style="color:#F8F8F2">				elements[focusIndex]?.</span><span style="color:#A6E22E">focus</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(listbox, </span><span style="color:#E6DB74">'keyup'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">key</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

@@ -10,10 +10,10 @@ form-checkbox {
 	& label {
 		font-size: var(--font-size-s);
 		border-radius: var(--space-xs);
+	}
 
-		&:has(:focus-visible) {
-			box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
-		}
+	&:has(input:focus-visible) label {
+		box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
 	}
 
 	&.checkbox label {
@@ -26,7 +26,7 @@ form-checkbox {
 		&::before {
 			display: inline-block;
 			box-sizing: border-box;
-			content: " ";
+			content: ' ';
 			text-align: center;
 			width: var(--space-l);
 			height: var(--space-l);
@@ -52,7 +52,7 @@ form-checkbox {
 			background-color: var(--color-selection-selected);
 			border-color: var(--color-selection-active);
 			text-shadow: 0 0 var(--space-xs) var(--color-success-active);
-			content: "✔︎";
+			content: '✔︎';
 		}
 
 		&:hover::before {
@@ -74,7 +74,7 @@ form-checkbox {
 		&::before {
 			display: inline-block;
 			box-sizing: border-box;
-			content: " ";
+			content: ' ';
 			text-align: center;
 			width: var(--space-l);
 			height: var(--space-l);
@@ -106,7 +106,7 @@ form-checkbox {
 			background-color: var(--color-success);
 			border-color: var(--color-success-active);
 			text-shadow: 0 0 var(--space-xs) var(--color-success-active);
-			content: "✔︎";
+			content: '✔︎';
 		}
 
 		&:hover::before {
@@ -131,7 +131,7 @@ form-checkbox {
 			display: inline-block;
 			flex-shrink: 0;
 			box-sizing: border-box;
-			content: " ";
+			content: ' ';
 			width: calc(var(--space-l) * 2);
 			height: var(--space-l);
 			line-height: 1.5;
@@ -166,7 +166,7 @@ form-checkbox {
 		&::before {
 			background-color: var(--color-selection-selected);
 			border-color: var(--color-selection-active);
-			content: "✔︎";
+			content: '✔︎';
 			text-shadow: 0 0 var(--space-xs) var(--color-success-active);
 			padding-left: var(--space-s);
 			background-position: left calc(0.5 * var(--space-l)) center;

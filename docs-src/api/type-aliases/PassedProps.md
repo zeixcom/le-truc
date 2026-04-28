@@ -1,8 +1,8 @@
 ### Type Alias: PassedProps\<P, Q\>
 
-> **PassedProps**\<`P`, `Q`\> = `{ [K in keyof Q & string]?: Reactive<Q[K], P> }`
+> **PassedProps**\<`P`, `Q`\> = \{ \[K in keyof Q & string\]?: Reactive\<Q\[K\], P\> \| SlotDescriptor\<Q\[K\] & \{\}\> \}
 
-Defined in: [src/effects.ts:68](https://github.com/zeixcom/le-truc/blob/61224a1a87e995ff3784a4e2a215a09a403e4e85/src/effects.ts#L68)
+Defined in: [src/effects.ts:68](https://github.com/zeixcom/le-truc/blob/787595f49d798a36c251c9a03383a3033b77ac2b/src/effects.ts#L68)
 
 A map of child component property names to the reactive values to inject into them.
 Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.

@@ -16,24 +16,36 @@ The **factory form** `(name, factory)`: the factory receives a `FactoryContext` 
 connectedCallback()
   │
   ├─ 1. getHelpers(this)  →  [{ first, all }, resolveDependencies]
-  │     Determines query root (shadowRoot ?? this).
-  │     Tracks custom element dependencies found during queries.
   │
-  ├─ 2. context = { first, all, host, expose, watch, on, pass, ... }
-  │     descriptors = factory(context)   ← expose() called inside; signals created
+  ├─ 2. Create factory context with helpers bound to this instance
+  │     (expose, watch, each, on, pass, provideContexts, requestContext)
   │
-  │     #initSignals dispatches per initializer:
-  │       ├─ Parser (PARSER_BRAND)?          →  parser(this.getAttribute(key))
-  │       ├─ MethodProducer (METHOD_BRAND)?  →  assign directly to host
-  │       └─ Otherwise                       →  convert to signal
-  │       Each non-null result is passed to #setAccessor(key, value).
+  ├─ 3. Run factory:
+  │       descriptors = factory(context)
+  │       ├── first(), all() execute → queries run, dependencies collected
+  │       ├── expose() executes → #initSignals() creates signals immediately
+  │       └── watch(), on(), etc. execute → return effect descriptors (thunks)
   │
-  └─ 3. resolveDependencies(() => {
-           this.#cleanup = createScope(() => descriptors.filter(Boolean).forEach(d => d()))
+  └─ 4. resolveDependencies(() => {
+           this.#cleanup = createScope(() => activateResult(descriptors), {
+             root: true
+           })
          })
          Waits for child custom elements to be defined (200ms timeout),
-         then activates effects.
+         then activates effects inside an unowned scope.
+         { root: true } prevents the component scope from being registered as
+         a child of whatever createEffect happens to be running when
+         connectedCallback fires (e.g. a list-sync watch that inserted the
+         element). Without it, the parent effect's next re-run would dispose
+         the component scope and kill all its reactive effects.
+         disconnectedCallback remains the sole lifecycle authority.
 ```
+
+**Critical timing detail**: `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` return **effect descriptors** — functions that, when called inside a scope, create the actual effect. They do NOT create effects immediately when called in the factory body. This preserves the v1.0 timing guarantee: effects activate only after dependency resolution (child custom elements are defined).
+
+From the user's perspective this is transparent — they call `watch(...)`, get back an opaque value, put it in the return array. The engine handles activation timing. The same pattern already exists in v1.0: `on('click', handler)` returns a curried `(host, target) => Cleanup`, not a live effect.
+
+**Why this matters**: `pass()` needs the target component's signals to exist. Those signals are created in the target's `connectedCallback`, which requires `customElements.define()` to have run. `resolveDependencies` waits for that. If effects activated immediately, `pass` would find an empty signal map and silently fail.
 
 ### #setAccessor — signal creation
 
@@ -426,36 +438,6 @@ expose({
 ```
 
 The signature changes slightly: `requestContext` is provided as a factory helper that captures `host`, so the user no longer needs to pass it. Internally dispatches the event from `host` and returns a `Memo<T>`.
-
-### Component Lifecycle (v2)
-
-```
-connectedCallback()
-  │
-  ├─ 1. getHelpers(this)  →  [{ first, all }, resolveDependencies]
-  │
-  ├─ 2. Create factory context with helpers bound to this instance
-  │     (expose, watch, each, on, pass, provideContexts, requestContext)
-  │
-  ├─ 3. Run factory:
-  │       descriptors = factory(context)
-  │       ├── first(), all() execute → queries run, dependencies collected
-  │       ├── expose() executes → #initSignals() creates signals immediately
-  │       └── watch(), on(), etc. execute → return effect descriptors (thunks)
-  │
-  └─ 4. resolveDependencies(() => {
-           this.#cleanup = createScope(() => {
-               for (const descriptor of descriptors.filter(Boolean))
-                   descriptor()  // activate effect, registers in scope
-           })
-         })
-```
-
-**Critical timing detail**: `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` return **effect descriptors** — functions that, when called inside a scope, create the actual effect. They do NOT create effects immediately when called in the factory body. This preserves the v1.0 timing guarantee: effects activate only after dependency resolution (child custom elements are defined).
-
-From the user's perspective this is transparent — they call `watch(...)`, get back an opaque value, put it in the return array. The engine handles activation timing. The same pattern already exists in v1.0: `on('click', handler)` returns a curried `(host, target) => Cleanup`, not a live effect.
-
-**Why this matters**: `pass()` needs the target component's signals to exist. Those signals are created in the target's `connectedCallback`, which requires `customElements.define()` to have run. `resolveDependencies` waits for that. If effects activated immediately, `pass` would find an empty signal map and silently fail.
 
 ### Safety Utilities
 

@@ -2,7 +2,7 @@
 
 > **MemoCallback**\<`T`\> = (`prev`) => `T`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:98
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:112
 
 A callback function for memos that computes a value based on the previous value.
 

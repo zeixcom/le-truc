@@ -17,71 +17,71 @@ A color scale card that displays a 9-step tonal palette derived from a single ba
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `name`
-* `string`
-* Text content of `.label strong`
-* Display name of the color
+- `name`
+- `string`
+- Text content of `.label strong`
+- Display name of the color
 ---
-* `color`
-* `Oklch`
-* `asOklch()` — parsed from `color` attribute
-* Base color; drives all CSS custom properties and the hex label
+- `color`
+- `Oklch`
+- `asOklch()` — parsed from `color` attribute
+- Base color; drives all CSS custom properties and the hex label
 {% /table %}
 
 #### Classes
 
 {% table %}
-* Class
-* Description
+- Class
+- Description
 ---
-* `tiny`
-* Smallest swatch size
+- `tiny`
+- Smallest swatch size
 ---
-* `small`
-* Small swatch size
+- `small`
+- Small swatch size
 ---
-* `medium`
-* Medium swatch size
+- `medium`
+- Medium swatch size
 ---
-* `large`
-* Largest swatch size
+- `large`
+- Largest swatch size
 {% /table %}
 
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('.label strong')`
-* `HTMLElement`
-* **required**
-* Displays the color name; bound to `name`
+- `first('.label strong')`
+- `HTMLElement`
+- **required**
+- Displays the color name; bound to `name`
 ---
-* `first('.label small')`
-* `HTMLElement`
-* **required**
-* Displays the hex color value; updated on `color` change
+- `first('.label small')`
+- `HTMLElement`
+- **required**
+- Displays the hex color value; updated on `color` change
 ---
-* `li.lighten80` … `li.lighten20`
-* `HTMLLIElement`
-* optional
-* Lightened tonal steps; background set via `--color-lighten*`
+- `li.lighten80` … `li.lighten20`
+- `HTMLLIElement`
+- optional
+- Lightened tonal steps; background set via `--color-lighten*`
 ---
-* `li.base`
-* `HTMLLIElement`
-* optional
-* Base color step; background set via `--color-base`
+- `li.base`
+- `HTMLLIElement`
+- optional
+- Base color step; background set via `--color-base`
 ---
-* `li.darken20` … `li.darken80`
-* `HTMLLIElement`
-* optional
-* Darkened tonal steps; background set via `--color-darken*`
+- `li.darken20` … `li.darken80`
+- `HTMLLIElement`
+- optional
+- Darkened tonal steps; background set via `--color-darken*`
 {% /table %}

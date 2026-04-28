@@ -17,32 +17,32 @@ The Hello World example from the Quick Start guide. Shows the minimal Le Truc pa
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `name`
-* `string`
-* `''`
-* Name of the person to greet
+- `name`
+- `string`
+- `''`
+- Name of the person to greet
 {% /table %}
 
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('input')`
-* `HTMLInputElement`
-* **required**
-* Text field to enter the name
+- `first('input')`
+- `HTMLInputElement`
+- **required**
+- Text field to enter the name
 ---
-* `first('output')`
-* `HTMLOutputElement`
-* **required**
-* Display the name
+- `first('output')`
+- `HTMLOutputElement`
+- **required**
+- Display the name
 {% /table %}

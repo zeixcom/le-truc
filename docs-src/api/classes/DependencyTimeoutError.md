@@ -1,6 +1,6 @@
 ### Class: DependencyTimeoutError
 
-Defined in: [src/errors.ts:66](https://github.com/zeixcom/le-truc/blob/61224a1a87e995ff3784a4e2a215a09a403e4e85/src/errors.ts#L66)
+Defined in: [src/errors.ts:66](https://github.com/zeixcom/le-truc/blob/787595f49d798a36c251c9a03383a3033b77ac2b/src/errors.ts#L66)
 
 Error when a component's dependencies are not met within a specified timeout
 
@@ -18,7 +18,7 @@ Error when a component's dependencies are not met within a specified timeout
 
 > **new DependencyTimeoutError**(`host`, `missing`): `DependencyTimeoutError`
 
-Defined in: [src/errors.ts:71](https://github.com/zeixcom/le-truc/blob/61224a1a87e995ff3784a4e2a215a09a403e4e85/src/errors.ts#L71)
+Defined in: [src/errors.ts:71](https://github.com/zeixcom/le-truc/blob/787595f49d798a36c251c9a03383a3033b77ac2b/src/errors.ts#L71)
 
 ###### Parameters
 

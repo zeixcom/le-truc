@@ -15,21 +15,21 @@ A CSS-only component that displays a callout message.
 Use `class` attribute to get a different style for the callout.
 
 {% table %}
-* Class
-* Description
+- Class
+- Description
 ---
-* `info`
-* For an informational message
+- `info`
+- For an informational message
 ---
-* `tip`
-* For a helpful tip
+- `tip`
+- For a helpful tip
 ---
-* `caution`
-* For a warning message
+- `caution`
+- For a warning message
 ---
-* `danger`
-* For a critical message
+- `danger`
+- For a critical message
 ---
-* `note`
-* For a side note
+- `note`
+- For a side note
 {% /table %}

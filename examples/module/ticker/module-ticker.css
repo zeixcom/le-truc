@@ -22,7 +22,7 @@ module-ticker {
 		text-align: end;
 	}
 
-	& th[scope='col'] {
+	& th[scope="col"] {
 		text-align: end;
 		font-weight: normal;
 		color: var(--color-text-soft, inherit);
@@ -32,22 +32,22 @@ module-ticker {
 		}
 	}
 
-	& th[scope='row'] {
+	& th[scope="row"] {
 		text-align: start;
 		font-family: var(--font-mono, monospace);
 		font-weight: bold;
 	}
 
 	/* Direction indicators on the change cell */
-	& tr[data-direction='up'] .change {
+	& tr[data-direction="up"] .change {
 		color: var(--color-positive, var(--color-green-60));
 	}
 
-	& tr[data-direction='down'] .change {
+	& tr[data-direction="down"] .change {
 		color: var(--color-negative, var(--color-pink-60));
 	}
 
-	& tr[data-direction='flat'] .change {
+	& tr[data-direction="flat"] .change {
 		color: var(--color-text-soft, inherit);
 	}
 }

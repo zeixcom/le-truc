@@ -2,7 +2,7 @@
 
 > **createSlot**\<`T`\>(`initialSignal`, `options?`): [`Slot`](../type-aliases/Slot.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:48
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/slot.d.ts:59
 
 Creates a slot signal that delegates its value to a swappable backing signal.
 
@@ -24,7 +24,7 @@ The type of value held by the delegated signal.
 
 ##### initialSignal
 
-[`Signal`](../type-aliases/Signal.md)\<`T`\>
+[`Signal`](../type-aliases/Signal.md)\<`T`\> \| [`SlotDescriptor`](../type-aliases/SlotDescriptor.md)\<`T`\>
 
 The initial signal to delegate to.
 

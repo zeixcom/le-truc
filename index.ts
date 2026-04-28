@@ -54,6 +54,7 @@ export {
 	NullishSignalValueError,
 	ReadonlySignalError,
 	RequiredOwnerError,
+	type ScopeOptions,
 	type Sensor,
 	type SensorOptions,
 	type Signal,
@@ -61,6 +62,7 @@ export {
 	type SingleMatchHandlers,
 	SKIP_EQUALITY,
 	type Slot,
+	type SlotDescriptor,
 	type State,
 	type Store,
 	type StoreOptions,
@@ -121,7 +123,7 @@ export {
 	bindStyle,
 	bindText,
 	bindVisible,
-	type DangerouslySetInnerHTMLOptions,
+	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
 } from './src/helpers'
 export {

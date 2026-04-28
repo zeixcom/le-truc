@@ -1,6 +1,6 @@
-### Type Alias: Collection\<T\>
+### Type Alias: Collection\<T, S\>
 
-> **Collection**\<`T`\> = `object`
+> **Collection**\<`T`, `S`\> = `object`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:19
 
@@ -14,6 +14,10 @@ Created by `createCollection` (externally driven) or via `.deriveCollection()` o
 `T` *extends* `object`
 
 The type of items in the collection
+
+##### S
+
+`S` *extends* [`Signal`](Signal.md)\<`T`\> = [`Signal`](Signal.md)\<`T`\>
 
 #### Properties
 
@@ -43,19 +47,19 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:31
 
 ##### \[iterator\]()
 
-> **\[iterator\]**(): `IterableIterator`\<[`Signal`](Signal.md)\<`T`\>\>
+> **\[iterator\]**(): `IterableIterator`\<`S`\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:22
 
 ###### Returns
 
-`IterableIterator`\<[`Signal`](Signal.md)\<`T`\>\>
+`IterableIterator`\<`S`\>
 
 ***
 
 ##### at()
 
-> **at**(`index`): [`Signal`](Signal.md)\<`T`\> \| `undefined`
+> **at**(`index`): `S` \| `undefined`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:25
 
@@ -67,13 +71,13 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:25
 
 ###### Returns
 
-[`Signal`](Signal.md)\<`T`\> \| `undefined`
+`S` \| `undefined`
 
 ***
 
 ##### byKey()
 
-> **byKey**(`key`): [`Signal`](Signal.md)\<`T`\> \| `undefined`
+> **byKey**(`key`): `S` \| `undefined`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:26
 
@@ -85,7 +89,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:26
 
 ###### Returns
 
-[`Signal`](Signal.md)\<`T`\> \| `undefined`
+`S` \| `undefined`
 
 ***
 

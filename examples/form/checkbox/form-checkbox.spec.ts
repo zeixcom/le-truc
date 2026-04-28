@@ -92,7 +92,7 @@ test.describe('form-checkbox component', () => {
 
 	test('reads initial label from DOM content', async ({ page }) => {
 		const todoCheckbox = page.locator('form-checkbox.todo')
-		const label = todoCheckbox.locator('.label')
+		const label = todoCheckbox.locator('label')
 
 		// Should display the label text from the DOM
 		await expect(label).toHaveText('Task')
@@ -101,11 +101,11 @@ test.describe('form-checkbox component', () => {
 	test('handles multiple checkboxes independently', async ({ page }) => {
 		const firstCheckbox = page.locator('form-checkbox').first()
 		const firstInput = firstCheckbox.locator('input[type="checkbox"]')
-		const firstLabel = firstCheckbox.locator('.label')
+		const firstLabel = firstCheckbox.locator('label')
 
 		const secondCheckbox = page.locator('form-checkbox.todo')
 		const secondInput = secondCheckbox.locator('input[type="checkbox"]')
-		const secondLabel = secondCheckbox.locator('.label')
+		const secondLabel = secondCheckbox.locator('label')
 
 		// Verify different initial states
 		await expect(firstLabel).toHaveText('Checkbox')
