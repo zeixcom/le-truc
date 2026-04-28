@@ -2,9 +2,21 @@
 
 ## 2.0.1
 
+### Added
+
+- **`ScopeOptions` and `SlotDescriptor` types re-exported from `@zeix/cause-effect`**: `ScopeOptions` is the options argument to `createScope()` (e.g. `{ root: true }` to create an unowned root scope). `SlotDescriptor<T>` is the `{ get: () => T; set?: (value: T) => void }` shape exposed by Slot signals and now accepted directly by `pass()`.
+
+### Changed
+
+- **`@zeix/cause-effect` upgraded to `^1.3.2`** from `^1.2.1`: adds `ScopeOptions` for root-scope creation, `SlotDescriptor<T>` for the Slot getter/setter descriptor shape, and fixes stale reactive properties after a component reconnects to the DOM.
+- **`DangerouslySetInnerHTMLOptions` renamed to `DangerouslyBindInnerHTMLOptions`**: The old name is no longer exported. Update all import sites that reference the type by name. The rename aligns with the `dangerouslyBindInnerHTML` function name and the broader `bind*` helper naming convention. **Breaking change for TypeScript consumers who import the type explicitly.**
+- **`PassedProps<P, Q>` accepts `SlotDescriptor<Q[K] & {}>` values**: In addition to `Reactive<Q[K], P>`, each entry in the map passed to `pass()` may now be a raw `SlotDescriptor` — a `{ get, set? }` object. `toSignal()` detects descriptor objects (present `get`, absent `Symbol.toStringTag`) and passes them through without wrapping, so callers can forward a Slot signal's own descriptor directly.
+
 ### Fixed
 
 - **Scope disposal bug when `connectedCallback` fires inside a re-runnable effect (regression from v0.16.3)**: The v2.0 rewrite dropped the `unown()` guard that had been present since v0.16.3. As a result, `createScope(() => activateResult(result))` in `connectedCallback` registered the component scope as a child of whatever `createEffect` was running when the element was inserted into the DOM — typically a `watch(list.keys(), …)` DOM-reconciliation effect. When that effect re-ran (e.g. because a second item was added to the list), `runCleanup` disposed all owned scopes, silently killing every `createEffect`-backed `watch` inside the newly-connected component. Event listeners added by `on()` survived (their cleanup is not auto-registered via `createEffect`), which masked the bug: clicks could still update list state through the slot setter, but the component's own reactive effects no longer responded to signal changes. Fixed by restoring `createScope(…, { root: true })` so the component scope is never owned by an outer reactive context and `disconnectedCallback` remains the sole lifecycle authority.
+- **Double initialization guard in `connectedCallback`**: The factory function is now called only once per element instance. A private `#initialized` flag and `#setup` cache are set after the first `connectedCallback` run. Subsequent calls (DOM re-insertion) skip the factory entirely and re-activate the cached `FactoryResult` directly, preventing duplicate `expose()` calls and redundant reactive-property and accessor creation on reconnect.
+- **`on()` event listeners now owned by a child `createScope()`**: Previously, `on()` returned a raw cleanup function from the `EffectDescriptor` thunk; cleanup was composed into the surrounding reactive scope only if the descriptor was not inside a conditional expression. Both delegation-style (`Memo<E[]>`) and direct single-element `on()` calls now wrap listener registration in `createScope()`, so the listener's cleanup is registered in the reactive ownership graph unconditionally. Listeners are guaranteed to be removed when the component's root scope disposes on `disconnectedCallback`.
 
 ## 2.0.0
 
