@@ -208,6 +208,7 @@ function unlink(edge) {
       const sinkNode = source;
       sinkNode.sourcesTail = null;
       trimSources(sinkNode);
+      sinkNode.flags |= FLAG_DIRTY;
     }
   }
   return nextSource;
@@ -1965,13 +1966,16 @@ var makeOn = (host) => {
           }
         };
         const listener = options.passive ? throttle(rawListener) : rawListener;
-        root.addEventListener(type, listener, options);
-        return () => {
-          root.removeEventListener(type, listener);
-          listener.cancel?.();
-        };
+        createScope(() => {
+          root.addEventListener(type, listener, options);
+          return () => {
+            root.removeEventListener(type, listener);
+            listener.cancel?.();
+          };
+        });
+        return;
       }
-      return attachListener(host, target, type, handler, options);
+      createScope(() => attachListener(host, target, type, handler, options));
     };
   }
   return on;
@@ -2114,7 +2118,6 @@ function defineComponent(name, factory) {
     #setup = [];
     #cleanup;
     connectedCallback() {
-      const [elementQueries, resolveDependencies] = makeElementQueries(this);
       const runSetup = () => {
         this.#cleanup = createScope(() => activateResult(this.#setup), {
           root: true
@@ -2124,6 +2127,7 @@ function defineComponent(name, factory) {
         runSetup();
       } else {
         const host = this;
+        const [elementQueries, resolveDependencies] = makeElementQueries(this);
         const context = {
           expose: this.#initSignals.bind(this),
           host,
@@ -2138,6 +2142,8 @@ function defineComponent(name, factory) {
         if (result)
           this.#setup = result;
         this.#initialized = true;
+        if (!this.#setup.length)
+          return;
         resolveDependencies(runSetup);
       }
     }

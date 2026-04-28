@@ -43,9 +43,7 @@ export default defineComponent<FormInplaceEditProps>(
 					}
 				else host.editing = !host.editing
 			}),
-			on(textEl, 'dblclick', () => {
-				host.editing = true
-			}),
+			on(textEl, 'dblclick', () => ({ editing: true })),
 			on(host, 'keydown', e => {
 				if (!host.editing) return
 				if (e.key !== 'Escape' && e.key !== 'Enter') return
