@@ -142,6 +142,7 @@ layout: 'page'
   - [Reactive](./api/type-aliases/Reactive.html)
   - [RequestContextHelper](./api/type-aliases/RequestContextHelper.html)
   - [ReservedWords](./api/type-aliases/ReservedWords.html)
+  - [ScopeOptions](./api/type-aliases/ScopeOptions.html)
   - [Sensor](./api/type-aliases/Sensor.html)
   - [SensorOptions](./api/type-aliases/SensorOptions.html)
   - [Signal](./api/type-aliases/Signal.html)

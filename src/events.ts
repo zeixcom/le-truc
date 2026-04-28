@@ -246,15 +246,18 @@ const makeOn = <P extends ComponentProps>(
 					}
 				}
 				const listener = options.passive ? throttle(rawListener) : rawListener
-				root.addEventListener(type, listener, options)
-				return () => {
-					root.removeEventListener(type, listener)
-					;(listener as any).cancel?.()
-				}
+				createScope(() => {
+					root.addEventListener(type, listener, options)
+					return () => {
+						root.removeEventListener(type, listener)
+						;(listener as any).cancel?.()
+					}
+				})
+				return
 			}
 
 			// Single Element target
-			return attachListener(host, target, type, handler, options)
+			createScope(() => attachListener(host, target, type, handler, options))
 		}
 	}
 	return on

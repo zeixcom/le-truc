@@ -54,6 +54,7 @@ export {
 	NullishSignalValueError,
 	ReadonlySignalError,
 	RequiredOwnerError,
+	type ScopeOptions,
 	type Sensor,
 	type SensorOptions,
 	type Signal,

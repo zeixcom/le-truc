@@ -66,6 +66,7 @@
 - [Reactive](type-aliases/Reactive.md)
 - [RequestContextHelper](type-aliases/RequestContextHelper.md)
 - [ReservedWords](type-aliases/ReservedWords.md)
+- [ScopeOptions](type-aliases/ScopeOptions.md)
 - [Sensor](type-aliases/Sensor.md)
 - [SensorOptions](type-aliases/SensorOptions.md)
 - [Signal](type-aliases/Signal.md)

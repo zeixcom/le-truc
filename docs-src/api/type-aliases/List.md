@@ -1,6 +1,6 @@
-### Type Alias: List\<T\>
+### Type Alias: List\<T, S\>
 
-> **List**\<`T`\> = `object`
+> **List**\<`T`, `S`\> = `object`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:40
 
@@ -14,6 +14,10 @@ Each item is a `MutableSignal<T>`; structural changes (add/remove/sort) propagat
 `T` *extends* `object`
 
 The type of items in the list
+
+##### S
+
+`S` *extends* `MutableSignal`\<`T`\> = `MutableSignal`\<`T`\>
 
 #### Properties
 
@@ -43,13 +47,13 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:44
 
 ##### \[iterator\]()
 
-> **\[iterator\]**(): `IterableIterator`\<`MutableSignal`\<`T`\>\>
+> **\[iterator\]**(): `IterableIterator`\<`S`\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:43
 
 ###### Returns
 
-`IterableIterator`\<`MutableSignal`\<`T`\>\>
+`IterableIterator`\<`S`\>
 
 ***
 
@@ -73,7 +77,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:53
 
 ##### at()
 
-> **at**(`index`): `MutableSignal`\<`T`\> \| `undefined`
+> **at**(`index`): `S` \| `undefined`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:48
 
@@ -85,13 +89,13 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:48
 
 ###### Returns
 
-`MutableSignal`\<`T`\> \| `undefined`
+`S` \| `undefined`
 
 ***
 
 ##### byKey()
 
-> **byKey**(`key`): `MutableSignal`\<`T`\> \| `undefined`
+> **byKey**(`key`): `S` \| `undefined`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:50
 
@@ -103,7 +107,7 @@ Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:50
 
 ###### Returns
 
-`MutableSignal`\<`T`\> \| `undefined`
+`S` \| `undefined`
 
 ***
 

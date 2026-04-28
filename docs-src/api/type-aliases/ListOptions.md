@@ -1,6 +1,6 @@
-### Type Alias: ListOptions\<T\>
+### Type Alias: ListOptions\<T, S\>
 
-> **ListOptions**\<`T`\> = `object`
+> **ListOptions**\<`T`, `S`\> = `object`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:24
 
@@ -14,11 +14,15 @@ Configuration options for `createList`.
 
 The type of items in the list
 
+##### S
+
+`S` *extends* `MutableSignal`\<`T`\> = `MutableSignal`\<`T`\>
+
 #### Properties
 
 ##### createItem?
 
-> `optional` **createItem?**: (`value`) => `MutableSignal`\<`T`\>
+> `optional` **createItem?**: (`value`) => `S`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:32
 
@@ -32,7 +36,7 @@ Factory for per-item signals. Defaults to `createState`.
 
 ###### Returns
 
-`MutableSignal`\<`T`\>
+`S`
 
 ***
 

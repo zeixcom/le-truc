@@ -1,4 +1,4 @@
-import { asBoolean, defineComponent } from '../../..'
+import { asBoolean, bindText, defineComponent } from '../../..'
 
 export type FormInplaceEditProps = {
 	editing: boolean
@@ -11,7 +11,7 @@ declare global {
 	}
 }
 
-let _idCounter = 0
+let idCounter = 0
 
 export default defineComponent<FormInplaceEditProps>(
 	'form-inplace-edit',
@@ -25,7 +25,7 @@ export default defineComponent<FormInplaceEditProps>(
 			'Add a <button> element for edit mode toggle.',
 		)
 
-		const editInputId = `form-inplace-edit-input-${++_idCounter}`
+		const editInputId = `form-inplace-edit-input${++idCounter}`
 		let input: HTMLInputElement | null = null
 
 		expose({
@@ -34,16 +34,40 @@ export default defineComponent<FormInplaceEditProps>(
 		})
 
 		return [
-			watch('value', value => {
-				textEl.textContent = value
-				/* host.dispatchEvent(
-					new CustomEvent('commit', {
-						bubbles: true,
-						detail: { value },
-					}),
-				) */
+			on(editBtn, 'click', e => {
+				e.stopPropagation()
+				if (host.editing && input)
+					return {
+						editing: false,
+						value: input.value,
+					}
+				else host.editing = !host.editing
+			}),
+			on(textEl, 'dblclick', () => {
+				host.editing = true
+			}),
+			on(host, 'keydown', e => {
+				if (!host.editing) return
+				if (e.key !== 'Escape' && e.key !== 'Enter') return
+				e.preventDefault()
+				if (input && e.key === 'Enter')
+					return {
+						editing: false,
+						value: input.value,
+					}
+				else host.editing = false
+			}),
+			on(editBtn, 'mousedown', e => {
+				e.preventDefault()
+			}),
+			on(host, 'focusout', e => {
+				if (!host.editing) return
+				const relatedTarget = e.relatedTarget as Element | null
+				if (relatedTarget && host.contains(relatedTarget)) return
+				host.editing = false
 			}),
 
+			watch('value', bindText(textEl)),
 			watch('editing', editing => {
 				host.toggleAttribute('editing', editing)
 				if (editing) {
@@ -70,44 +94,6 @@ export default defineComponent<FormInplaceEditProps>(
 					editBtn.textContent = '✎'
 					editBtn.setAttribute('aria-label', 'Edit')
 				}
-			}),
-
-			on(editBtn, 'click', e => {
-				e.stopPropagation()
-				if (host.editing && input)
-					return {
-						editing: false,
-						value: input.value,
-					}
-				else host.editing = !host.editing
-			}),
-
-			on(textEl, 'dblclick', () => {
-				host.editing = true
-			}),
-
-			on(host, 'keydown', e => {
-				if (!host.editing) return
-				if (e.key !== 'Escape' && e.key !== 'Enter') return
-				e.preventDefault()
-				if (input && e.key === 'Enter')
-					return {
-						editing: false,
-						value: input.value,
-					}
-				else host.editing = false
-			}),
-
-			on(editBtn, 'mousedown', e => {
-				e.preventDefault()
-			}),
-
-			on(host, 'focusout', e => {
-				if (!host.editing) return
-				const relatedTarget = (e as FocusEvent)
-					.relatedTarget as HTMLElement | null
-				if (relatedTarget && host.contains(relatedTarget)) return
-				host.editing = false
 			}),
 		]
 	},

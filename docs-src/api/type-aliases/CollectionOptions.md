@@ -1,6 +1,6 @@
-### Type Alias: CollectionOptions\<T\>
+### Type Alias: CollectionOptions\<T, S\>
 
-> **CollectionOptions**\<`T`\> = `object`
+> **CollectionOptions**\<`T`, `S`\> = `object`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:51
 
@@ -14,11 +14,15 @@ Configuration options for `createCollection`.
 
 The type of items in the collection
 
+##### S
+
+`S` *extends* [`Signal`](Signal.md)\<`T`\> = [`Signal`](Signal.md)\<`T`\>
+
 #### Properties
 
 ##### createItem?
 
-> `optional` **createItem?**: (`value`) => [`Signal`](Signal.md)\<`T`\>
+> `optional` **createItem?**: (`value`) => `S`
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:57
 
@@ -32,7 +36,7 @@ Factory for per-item signals. Defaults to `createState`.
 
 ###### Returns
 
-[`Signal`](Signal.md)\<`T`\>
+`S`
 
 ***
 

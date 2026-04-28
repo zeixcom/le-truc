@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1
+
+### Fixed
+
+- **Scope disposal bug when `connectedCallback` fires inside a re-runnable effect (regression from v0.16.3)**: The v2.0 rewrite dropped the `unown()` guard that had been present since v0.16.3. As a result, `createScope(() => activateResult(result))` in `connectedCallback` registered the component scope as a child of whatever `createEffect` was running when the element was inserted into the DOM — typically a `watch(list.keys(), …)` DOM-reconciliation effect. When that effect re-ran (e.g. because a second item was added to the list), `runCleanup` disposed all owned scopes, silently killing every `createEffect`-backed `watch` inside the newly-connected component. Event listeners added by `on()` survived (their cleanup is not auto-registered via `createEffect`), which masked the bug: clicks could still update list state through the slot setter, but the component's own reactive effects no longer responded to signal changes. Fixed by restoring `createScope(…, { root: true })` so the component scope is never owned by an outer reactive context and `disconnectedCallback` remains the sole lifecycle authority.
+
 ## 2.0.0
 
 ### Added

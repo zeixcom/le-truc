@@ -528,72 +528,239 @@ test.describe('module-todo component', () => {
 	})
 
 	test.describe('Bug Fixes', () => {
-		test('toggling checkboxes and inplace edit works for all items', async ({
+		// ── Isolation tests ────────────────────────────────────────────────────
+		// Each test targets one specific link in the reactivity chain so that
+		// failures point at the exact broken behaviour.
+
+		test('B1 baseline: checking the only item decreases active count', async ({
 			page,
 		}) => {
+			// Verifies the full chain for a single item:
+			// label click → checkbox.change → slot setter → list.completed.set
+			// → completedCount memo → activeCount → pass(count) → basic-pluralize
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
 			const submitButton = todo.locator('.submit button')
+			const count = todo.locator('basic-pluralize')
 
-			await textboxInput.fill('first task')
+			await textboxInput.fill('only task')
 			await submitButton.click()
-			await textboxInput.fill('second task')
-			await submitButton.click()
+			await expect(count.locator('.count')).toHaveText('1')
 
-			const items = todo.locator('li[data-key]')
-			await expect(items).toHaveCount(2)
-
-			// Check first item
-			const firstCheckboxLabel = items.nth(0).locator('form-checkbox label')
-			await firstCheckboxLabel.click()
-
-			// Wait for state to settle and verify it toggled
-			await expect(
-				items.nth(0).locator('form-checkbox input[type="checkbox"]'),
-			).toBeChecked()
+			await todo.locator('li[data-key]').first().locator('form-checkbox label').click()
+			await expect(count.locator('.none')).toBeVisible()
 		})
 
-		test('reordering items preserves label mapping through List keys', async ({
+		test('B2: checking the SECOND item (after two are added) decreases count', async ({
 			page,
 		}) => {
+			// The second item is added after each() already ran once for the first.
+			// If each() re-run does not wire the new item, clicking its label will
+			// not update list state and count stays at 2.
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
 			const submitButton = todo.locator('.submit button')
+			const items = todo.locator('li[data-key]')
+			const count = todo.locator('basic-pluralize')
 
 			await textboxInput.fill('first task')
 			await submitButton.click()
 			await textboxInput.fill('second task')
 			await submitButton.click()
+			await expect(items).toHaveCount(2)
+			await expect(count.locator('.count')).toHaveText('2')
 
+			await items.nth(1).locator('form-checkbox label').click()
+			await expect(count.locator('.count')).toHaveText('1')
+		})
+
+		test('B3: checking the FIRST item still works after a second item is added', async ({
+			page,
+		}) => {
+			// When a second item is added, each() re-runs. If the re-run breaks
+			// previously-wired slots for existing items, count stays at 2.
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form-textbox input')
+			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
+			const count = todo.locator('basic-pluralize')
+
+			await textboxInput.fill('first task')
+			await submitButton.click()
+			await textboxInput.fill('second task')
+			await submitButton.click()
+			await expect(items).toHaveCount(2)
+			await expect(count.locator('.count')).toHaveText('2')
+
+			await items.nth(0).locator('form-checkbox label').click()
+			await expect(count.locator('.count')).toHaveText('1')
+		})
+
+		test('B4: form-checkbox gets checked attribute when item is marked complete', async ({
+			page,
+		}) => {
+			// Verifies the watch('checked', ...) effect inside form-checkbox runs
+			// after pass() wires the slot — i.e. the child component's inner effects work.
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form-textbox input')
+			const submitButton = todo.locator('.submit button')
+			const items = todo.locator('li[data-key]')
+
+			await textboxInput.fill('first task')
+			await submitButton.click()
+			await textboxInput.fill('second task')
+			await submitButton.click()
 			await expect(items).toHaveCount(2)
 
-			// Check first item
+			// Check item 2 — verifies both the setter (updates list) and the getter
+			// (watch inside form-checkbox sets the attribute).
+			await items.nth(1).locator('form-checkbox label').click()
+			await expect(items.nth(1).locator('form-checkbox')).toHaveAttribute('checked')
+			await expect(items.nth(0).locator('form-checkbox')).not.toHaveAttribute('checked')
+		})
+
+		test('B5: state is isolated — checking item 1 does not affect item 2', async ({
+			page,
+		}) => {
+			// Verifies that pass() wires DIFFERENT signals to DIFFERENT elements.
+			// If both checkboxes share the same slot backing, checking one would
+			// check both.
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form-textbox input')
+			const submitButton = todo.locator('.submit button')
+			const items = todo.locator('li[data-key]')
+			const count = todo.locator('basic-pluralize')
+
+			await textboxInput.fill('first task')
+			await submitButton.click()
+			await textboxInput.fill('second task')
+			await submitButton.click()
+			await expect(items).toHaveCount(2)
+
 			await items.nth(0).locator('form-checkbox label').click()
+			await expect(count.locator('.count')).toHaveText('1')
+			await expect(items.nth(0).locator('form-checkbox')).toHaveAttribute('checked')
+			await expect(items.nth(1).locator('form-checkbox')).not.toHaveAttribute('checked')
+		})
 
-			// Move first item down via keyboard
-			const firstReorderBtn = items.nth(0).locator('button.reorder')
-			await firstReorderBtn.click()
-			await page.keyboard.press('ArrowDown')
+		test('B6: inplace-edit value is isolated per item', async ({ page }) => {
+			// Verifies that pass() for form-inplace-edit wires the correct label
+			// signal for each item. If signals are crossed, editing one item's label
+			// would change the other's display.
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form-textbox input')
+			const submitButton = todo.locator('.submit button')
+			const items = todo.locator('li[data-key]')
 
-			// Wait for reorder to complete
+			await textboxInput.fill('alpha')
+			await submitButton.click()
+			await textboxInput.fill('beta')
+			await submitButton.click()
+			await expect(items).toHaveCount(2)
+
+			await expect(items.nth(0).locator('form-inplace-edit .text')).toHaveText('alpha')
+			await expect(items.nth(1).locator('form-inplace-edit .text')).toHaveText('beta')
+		})
+
+		test('B7: after reorder each() re-run fixes any broken wiring', async ({
+			page,
+		}) => {
+			// Reproduces the partial-recovery symptom: if checkboxes don't work
+			// before a reorder but do after, it shows each() re-run repairs slots.
+			// Fails before-reorder assertions demonstrate the bug; pass-after shows recovery.
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form-textbox input')
+			const submitButton = todo.locator('.submit button')
+			const items = todo.locator('li[data-key]')
+			const count = todo.locator('basic-pluralize')
+
+			await textboxInput.fill('first task')
+			await submitButton.click()
+			await textboxInput.fill('second task')
+			await submitButton.click()
+			await expect(items).toHaveCount(2)
+			await expect(count.locator('.count')).toHaveText('2')
+
+			// Check second item BEFORE any reorder — should work
+			await items.nth(1).locator('form-checkbox label').click()
+			await expect(count.locator('.count')).toHaveText('1')
+
+			// Reorder: move second item to top
+			const reorderBtn = items.nth(1).locator('button.reorder')
+			await reorderBtn.click()
+			await page.keyboard.press('ArrowUp')
 			await page.waitForTimeout(100)
 
-			// Now the second task should be first
-			await expect(items.nth(0).locator('form-inplace-edit .text')).toHaveText(
-				'second task',
-			)
-			await expect(items.nth(1).locator('form-inplace-edit .text')).toHaveText(
-				'first task',
-			)
+			// After reorder, the item that was second is now first; it should still be checked
+			await expect(count.locator('.count')).toHaveText('1')
+			await expect(items.nth(0).locator('form-checkbox')).toHaveAttribute('checked')
+		})
 
-			// State should follow the item
-			await expect(
-				items.nth(1).locator('form-checkbox input[type="checkbox"]'),
-			).toBeChecked()
-			await expect(
-				items.nth(0).locator('form-checkbox input[type="checkbox"]'),
-			).not.toBeChecked()
+		test('B9: inplace-edit opens after reorder', async ({ page }) => {
+			// Reproduces: after moving an item via keyboard reorder, dblclick on its
+			// label should still open the inplace editor. Without the fix, the dblclick
+			// listener is lost on disconnect/reconnect, so only the two click events fire
+			// (toggling the linked checkbox twice, net no-op) and the editor stays closed.
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form-textbox input')
+			const submitButton = todo.locator('.submit button')
+			const items = todo.locator('li[data-key]')
+
+			for (const label of ['task A', 'task B', 'task C']) {
+				await textboxInput.fill(label)
+				await submitButton.click()
+			}
+			await expect(items).toHaveCount(3)
+
+			// Verify dblclick works before any reorder
+			const thirdEdit = items.nth(2).locator('form-inplace-edit')
+			await thirdEdit.locator('.text').dblclick()
+			await expect(thirdEdit).toHaveAttribute('editing')
+			await page.keyboard.press('Escape')
+			await expect(thirdEdit).not.toHaveAttribute('editing')
+
+			// Move the third item to first position via keyboard (2× ArrowUp)
+			const reorderBtn = items.nth(2).locator('button.reorder')
+			await reorderBtn.click()
+			await page.keyboard.press('ArrowUp')
+			await page.waitForTimeout(50)
+			await page.keyboard.press('ArrowUp')
+			await page.waitForTimeout(100)
+
+			// Confirm the moved item is now first
+			const firstEdit = items.nth(0).locator('form-inplace-edit')
+			await expect(firstEdit.locator('.text')).toHaveText('task C')
+
+			// dblclick should open the editor on the moved item too
+			await firstEdit.locator('.text').dblclick()
+			await expect(firstEdit).toHaveAttribute('editing')
+		})
+
+		test('B8: three items — all checkboxes wire up independently', async ({
+			page,
+		}) => {
+			// Stress-tests that each() correctly wires N items as the list grows.
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form-textbox input')
+			const submitButton = todo.locator('.submit button')
+			const items = todo.locator('li[data-key]')
+			const count = todo.locator('basic-pluralize')
+
+			for (const label of ['task A', 'task B', 'task C']) {
+				await textboxInput.fill(label)
+				await submitButton.click()
+			}
+			await expect(items).toHaveCount(3)
+			await expect(count.locator('.count')).toHaveText('3')
+
+			await items.nth(2).locator('form-checkbox label').click()
+			await expect(count.locator('.count')).toHaveText('2')
+
+			await items.nth(0).locator('form-checkbox label').click()
+			await expect(count.locator('.count')).toHaveText('1')
+
+			await items.nth(1).locator('form-checkbox label').click()
+			await expect(count.locator('.none')).toBeVisible()
 		})
 	})
 })

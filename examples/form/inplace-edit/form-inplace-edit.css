@@ -11,7 +11,7 @@ form-inplace-edit {
 		flex: 0;
 		height: var(--input-height);
 		min-inline-size: var(--input-height);
-		border-radius: 0 var(--space-xs) var(--space-xs) 0;
+		border-radius: var(--space-xs);
 		line-height: var(--line-height-s);
 		background: transparent;
 		border: none;
@@ -38,6 +38,7 @@ form-inplace-edit {
 			color: var(--color-primary-text);
 			background-color: var(--color-primary);
 			border-color: var(--color-primary-active);
+			border-radius: 0 var(--space-xs) var(--space-xs) 0;
 
 			&:hover {
 				background-color: var(--color-primary-hover);
