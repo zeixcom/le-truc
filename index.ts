@@ -123,7 +123,7 @@ export {
 	bindStyle,
 	bindText,
 	bindVisible,
-	type DangerouslySetInnerHTMLOptions,
+	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
 } from './src/helpers'
 export {

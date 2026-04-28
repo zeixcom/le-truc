@@ -106,7 +106,7 @@ layout: 'page'
   - [Context](./api/type-aliases/Context.html)
   - [ContextCallback](./api/type-aliases/ContextCallback.html)
   - [ContextType](./api/type-aliases/ContextType.html)
-  - [DangerouslySetInnerHTMLOptions](./api/type-aliases/DangerouslySetInnerHTMLOptions.html)
+  - [DangerouslyBindInnerHTMLOptions](./api/type-aliases/DangerouslyBindInnerHTMLOptions.html)
   - [EffectCallback](./api/type-aliases/EffectCallback.html)
   - [EffectDescriptor](./api/type-aliases/EffectDescriptor.html)
   - [ElementFromSelector](./api/type-aliases/ElementFromSelector.html)

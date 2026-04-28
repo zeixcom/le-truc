@@ -4,7 +4,7 @@ export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEven
 export { type EffectDescriptor, each, type FactoryResult, type Falsy, type PassedProps, type PassHelper, type Reactive, type WatchHelper, } from './src/effects';
 export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPropertyNameError, InvalidReactivesError, MissingElementError, } from './src/errors';
 export { type EventType, type OnEventHandler, type OnHelper, } from './src/events';
-export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, type DangerouslySetInnerHTMLOptions, dangerouslyBindInnerHTML, } from './src/helpers';
+export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, } from './src/helpers';
 export { asParser, defineMethod, isMethodProducer, isParser, type MethodProducer, type Parser, } from './src/parsers';
 export { asBoolean } from './src/parsers/boolean';
 export { asJSON } from './src/parsers/json';

@@ -30,7 +30,7 @@
 - [Context](type-aliases/Context.md)
 - [ContextCallback](type-aliases/ContextCallback.md)
 - [ContextType](type-aliases/ContextType.md)
-- [DangerouslySetInnerHTMLOptions](type-aliases/DangerouslySetInnerHTMLOptions.md)
+- [DangerouslyBindInnerHTMLOptions](type-aliases/DangerouslyBindInnerHTMLOptions.md)
 - [EffectCallback](type-aliases/EffectCallback.md)
 - [EffectDescriptor](type-aliases/EffectDescriptor.md)
 - [ElementFromSelector](type-aliases/ElementFromSelector.md)

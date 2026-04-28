@@ -4,7 +4,7 @@ import { schedule } from './scheduler'
 
 /* === Types === */
 
-type DangerouslySetInnerHTMLOptions = {
+type DangerouslyBindInnerHTMLOptions = {
 	shadowRootMode?: ShadowRootMode
 	allowScripts?: boolean
 }
@@ -174,7 +174,7 @@ const bindStyle = (
  */
 const dangerouslyBindInnerHTML = (
 	element: Element,
-	options: DangerouslySetInnerHTMLOptions = {},
+	options: DangerouslyBindInnerHTMLOptions = {},
 ): SingleMatchHandlers<string> => {
 	const reset = () => {
 		if (element.shadowRoot) element.shadowRoot.innerHTML = '<slot></slot>'
@@ -220,6 +220,6 @@ export {
 	bindStyle,
 	bindText,
 	bindVisible,
-	type DangerouslySetInnerHTMLOptions,
+	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
 }
