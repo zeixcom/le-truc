@@ -1,0 +1,4 @@
+# Auto-generated docs contain commit hashes that differ between branches.
+# Always keep our version to avoid spurious merge conflicts.
+docs/**         merge=ours
+docs-src/api/** merge=ours
