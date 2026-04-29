@@ -269,6 +269,7 @@ const applyTemplate = async (
 			'js-hash': assetHashes.js,
 			'performance-hints': performanceHintsHtml,
 			'additional-preloads': additionalPreloads.join('\n\t\t'),
+			'alternate-link': `<link rel="alternate" type="text/markdown" title="Agent-readable content" href="./${processedFile.relativePath}" />`,
 			// Convert metadata values to strings
 			...Object.fromEntries(
 				Object.entries(processedFile.metadata).map(([key, value]) => [

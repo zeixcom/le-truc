@@ -1,0 +1,20 @@
+# Le Truc Documentation
+> High-performance, signal-based web components.
+
+## Core Reference
+- [Introduction](./index.md)
+- [Getting Started](./getting-started.md)
+- [Components](./components.md)
+- [Styling](./styling.md)
+- [Data Flow](./data-flow.md)
+- [Examples](./examples.md)
+- [API](./api.md)
+- [Blog](./blog.md)
+- [About](./about.md)
+
+## Blog
+- [Betting on the Platform](./blog/2026-04-21-betting-on-the-platform.md)
+- [Four Arguments for Four Guarantees](./blog/2026-04-04-four-arguments-for-four-guarantees.md)
+- [Introducing Le Truc](./blog/2026-03-09-introducing-le-truc.md)
+- [Le Truc vs the Alternatives](./blog/2026-03-30-le-truc-vs-the-alternatives.md)
+- [Removing createEventsSensor](./blog/2026-04-12-removing-createeventssensor.md)
