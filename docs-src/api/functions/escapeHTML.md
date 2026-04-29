@@ -2,7 +2,7 @@
 
 > **escapeHTML**(`text`): `string`
 
-Defined in: [src/safety.ts:66](https://github.com/zeixcom/le-truc/blob/e413fd39461fd5b549a5a02c7d0ccde7cbd1822c/src/safety.ts#L66)
+Defined in: [src/safety.ts:66](https://github.com/zeixcom/le-truc/blob/1593853d36d29d2c0d05d7f59bc1290143a887f7/src/safety.ts#L66)
 
 Escape HTML entities to prevent XSS when inserting user-supplied text as HTML.
 

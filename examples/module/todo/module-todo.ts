@@ -9,7 +9,6 @@ import {
 	defineComponent,
 	each,
 	type Store,
-	type List,
 } from '../../..'
 
 export type TodoItem = {
@@ -69,13 +68,10 @@ export default defineComponent(
 		const checkboxComponents = all('form-checkbox')
 		const editComponents = all('form-inplace-edit')
 
-		const list = createList<TodoItem>([], {
+		const list = createList<TodoItem, Store<TodoItem>>([], {
 			keyConfig: item => item.id,
 			createItem: createStore,
-		}) as unknown as Omit<List<TodoItem>, 'byKey' | typeof Symbol.iterator> & {
-			byKey(key: string): Store<TodoItem> | undefined
-			[Symbol.iterator](): IterableIterator<Store<TodoItem>>
-		}
+		})
 
 		const completedCount = createMemo(
 			() => list.get().filter(item => item.completed).length,
