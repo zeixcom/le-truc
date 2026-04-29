@@ -1,56 +1,33 @@
-# TODO — v1.1 Polish & Stabilization
+# Agent-Oriented Design Tasks
 
-Reference: `API_DX_REVIEW.md`, `ARCHITECTURE.md` §v1.1 Specification
+- [ ] LT-101: Create md-mirror.ts effect for Clean Markdown generation
+  **Skill:** docs-server-dev
+  **Context:** Implement new effect that transforms processed Markdoc AST back to clean Markdown. Strip custom tags ({% tabs %}, {% tab %}, {% callout %}, {% hero %}, {% section %}, {% carousel %}, {% slide %}, {% demo %}). Transform tabs into ### headings, callouts into blockquotes (> Info: ...). Output to docs/ alongside HTML files. Use existing file-signals.ts pattern.
 
-All phases from the v1.1 refactoring are complete. The tasks below cover the remaining polish work needed before the v1.1 API is considered stable.
+- [ ] LT-102: Modify pages.ts to inject alternate link in head
+  **Skill:** docs-server-dev
+  **Context:** In applyTemplate() function, add `<link rel="alternate" type="text/markdown" title="Agent-readable content" href="./{relativePath}.md">` to the generated HTML head. The relativePath already exists in processedFile. Need to inject before `{{ content }}` replacement or modify layouts to include it.
 
-## Phase 11: Type Cleanup — Rename `EventHandlers`/`SensorEventHandler` v1/v2 naming
+- [ ] LT-103: Create llms-manifest.ts effect for root discovery
+  **Skill:** docs-server-dev
+  **Context:** New effect that generates docs/llms.txt with markdown links to all documentation pages. Use the same pageInfo data from docsMarkdown.pageInfos that menuEffect uses. Format: # title, > description, ## sections with bullet lists of [text](path) links. Reference AGENT-ORIENTED_DESIGN.md for exact format.
 
-> The `src/events.ts` exports `EventHandlers`, `SensorEventHandler` (v1.0 form) alongside `EventHandlersV2`, `SensorEventHandlerV2` (v1.1 form). The V2 suffix is an internal migration marker, not a good public name. Resolve before stabilization.
+- [ ] LT-104: Register new effects in build.ts
+  **Skill:** docs-server-dev
+  **Context:** Import and initialize mdMirrorEffect, linkDiscovery already handled in pages.ts, and llmsManifestEffect in build.ts. Add them to the effects array with proper dependency ordering (mdMirror should run after docsMarkdown.fullyProcessed, llmsManifest after menuEffect or pageInfos).
 
-- [ ] **11.1** Decide on final public names: e.g. deprecate `EventHandlers`/`SensorEventHandler` (v1.0) and rename `EventHandlersV2`/`SensorEventHandlerV2` to simply `EventHandlers`/`SensorEventHandler`, or keep both with clearer documentation.
-- [ ] **11.2** If renaming: update `src/events.ts`, add `@deprecated` JSDoc to old types, update `index.ts` exports.
-- [ ] **11.3** Run `bun run build`; run `bunx tsc --noEmit`.
+- [ ] LT-105: Create test for md-mirror transformation
+  **Skill:** docs-server-dev
+  **Context:** Test in server/tests/effects/md-mirror.test.ts. Verify custom tags are stripped, tabs converted to headings, callouts to blockquotes, and output files are created alongside HTML files.
 
----
+- [ ] LT-106: Create test for llms.txt generation
+  **Skill:** docs-server-dev
+  **Context:** Test in server/tests/effects/llms-manifest.test.ts. Verify docs/llms.txt is generated with correct format, all pages are listed, paths are correct.
 
-## Phase 12: Public API Audit — Unexported internals and over-exported utilities
+- [ ] LT-107: Verify static hosting compatibility
+  **Skill:** docs-server-dev
+  **Context:** Run `bun run build:docs` and verify: (1) docs/*.md files exist alongside *.html, (2) each HTML file has the alternate link tag, (3) docs/llms.txt exists and is valid markdown, (4) all paths in llms.txt are relative and correct.
 
-> A review of `index.ts` shows some exports that may not belong on the public surface, and some types that could be clarified or consolidated.
-
-- [ ] **12.1** Audit `index.ts`: check whether `resolveReactive`, `runEffects`, `updateElement`, `Effects`, `ElementEffects`, `ElementUpdater`, `Reactive`, `UpdateOperation` should remain public — these are v1.0 effect-building primitives. Consider marking them `@deprecated` or moving to a separate `legacy` re-export path.
-- [ ] **12.2** Audit whether `ComponentFactory`, `ComponentFactoryResult`, `ComponentSetup`, `ComponentUI` still need to be public in v1.1, or if they should be `@deprecated` in the type surface.
-- [ ] **12.3** Check that all `FactoryContext` helper types (`WatchHelper`, `FactoryEachHelper`, `OnHelper`, `PassHelper`, `ProvideContextsHelper`, `RequestContextHelper`) are exported and documented — component authors may need them for type-annotated helper functions.
-- [ ] **12.4** Update `index.ts` version comment from `// Le Truc 1.0.1` to reflect the current version.
-- [ ] **12.5** Run `bun run build`; run `bunx tsc --noEmit`.
-
----
-
-## Phase 13: Canonical Examples and Docs
-
-> The API_DX_REVIEW recommends one minimal, authoritative example per helper. These serve as the primary onboarding material.
-
-- [ ] **13.1** Write or update `docs-src/api/functions/defineComponent.md` — feature the v1.1 factory form as the canonical example; relegate v1.0/4-param to a "legacy" section.
-- [ ] **13.2** Write a canonical `watch` example in `docs-src/api/functions/` (after rename from `run`).
-- [ ] **13.3** Write a canonical `each` example in `docs-src/api/functions/`.
-- [ ] **13.4** Write a canonical `pass` example in `docs-src/api/functions/`.
-- [ ] **13.5** Write a canonical context provider/consumer example in `docs-src/api/functions/provideContexts.md` and `requestContext.md`.
-- [ ] **13.6** Write a canonical `expose` (or `exposeAPI`) example in `docs-src/api/functions/` — covering values, sensors, methods, and context-backed properties.
-- [ ] **13.7** Audit `docs-src/pages/getting-started.md` and `docs-src/pages/data-flow.md` — update any code examples that use the old v1.0 or 4-param form.
-- [ ] **13.8** Mark any remaining v1.0 example components in `examples/` as legacy (comment or README note) so they do not weaken the v1.1 narrative.
-
----
-
-## Phase 14: Migration Guide
-
-> The API_DX_REVIEW recommends a concise guide showing how v1.0 components map to v1.1.
-
-- [ ] **14.1** Write `docs-src/pages/migration.md` covering:
-  - how prop declarations move from the 4-param `props` map into `expose()`
-  - how the UI `select` function collapses into direct `first()`/`all()` calls in the factory closure
-  - how the `effects` record maps to the returned `FactoryResult` array
-  - how `run('prop', handler)` (now `watch`) replaces effect-map entries
-  - how `on(type, handler)` (target-less) maps to `on(element, type, handler)`
-  - how `pass(props)` (target-less) maps to `pass(element, props)`
-  - why `observedAttributes` is empty in the factory form, and when to keep the 4-param form
-- [ ] **14.2** Add a link to the migration guide from `docs-src/pages/getting-started.md`.
+- [ ] LT-108: Document agent-oriented design in SERVER.md
+  **Skill:** tech-writer
+  **Context:** Add new section to server/SERVER.md describing the agent-oriented design implementation: md-mirror effect, link discovery, llms.txt manifest. Include diagram of the enhanced build pipeline. Reference AGENT-ORIENTED_DESIGN.md for requirements.
