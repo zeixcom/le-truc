@@ -1,4 +1,4 @@
-import { createMemo, createState, defineComponent } from '../../..'
+import { createState, defineComponent } from '../../..'
 
 export type ModuleTabgroupProps = {
 	readonly selected: string

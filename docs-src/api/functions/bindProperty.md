@@ -1,19 +1,19 @@
 ### Function: bindProperty()
 
-> **bindProperty**\<`E`, `K`\>(`element`, `key`): (`value`) => `void`
+> **bindProperty**\<`O`, `K`\>(`object`, `key`): (`value`) => `void`
 
-Defined in: [src/helpers.ts:42](https://github.com/zeixcom/le-truc/blob/715e9bd5c4e382082b6ddd7a0cf9768da5f33744/src/helpers.ts#L42)
+Defined in: [src/helpers.ts:63](https://github.com/zeixcom/le-truc/blob/e413fd39461fd5b549a5a02c7d0ccde7cbd1822c/src/helpers.ts#L63)
 
 Returns a function that sets a DOM property directly on an element.
 
-TypeScript infers `E[K]` from the element type and key, so no explicit type
+TypeScript infers `O[K]` from the object type and key, so no explicit type
 parameters are needed at call sites.
 
 #### Type Parameters
 
-##### E
+##### O
 
-`E` *extends* `Element`
+`O` *extends* `object`
 
 ##### K
 
@@ -21,11 +21,11 @@ parameters are needed at call sites.
 
 #### Parameters
 
-##### element
+##### object
 
-`E`
+`O`
 
-Target element
+Target object
 
 ##### key
 
@@ -35,7 +35,7 @@ Property key to set
 
 #### Returns
 
-Function that sets the property
+Function that sets a property
 
 (`value`) => `void`
 

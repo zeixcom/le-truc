@@ -2,12 +2,11 @@
 
 > **bindVisible**\<`T`\>(`element`): (`value`) => `void`
 
-Defined in: [src/helpers.ts:77](https://github.com/zeixcom/le-truc/blob/715e9bd5c4e382082b6ddd7a0cf9768da5f33744/src/helpers.ts#L77)
+Defined in: [src/helpers.ts:97](https://github.com/zeixcom/le-truc/blob/e413fd39461fd5b549a5a02c7d0ccde7cbd1822c/src/helpers.ts#L97)
 
 Returns a function that controls element visibility via `el.hidden = !value`.
 
 `value=true` makes the element visible; `value=false` hides it.
-Matches the direction of the v1.0 `show()` effect.
 
 #### Type Parameters
 
@@ -25,7 +24,7 @@ Target element
 
 #### Returns
 
-Function that sets element visibility
+Function that schedules the visibility update
 
 (`value`) => `void`
 

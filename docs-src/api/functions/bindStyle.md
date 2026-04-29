@@ -2,12 +2,12 @@
 
 > **bindStyle**(`element`, `prop`): [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string`\>
 
-Defined in: [src/helpers.ts:127](https://github.com/zeixcom/le-truc/blob/715e9bd5c4e382082b6ddd7a0cf9768da5f33744/src/helpers.ts#L127)
+Defined in: [src/helpers.ts:147](https://github.com/zeixcom/le-truc/blob/e413fd39461fd5b549a5a02c7d0ccde7cbd1822c/src/helpers.ts#L147)
 
-Returns `RunHandlers` that set or remove an inline style property.
+Returns `SingleMatchHandlers<string>` that set or remove an inline style property.
 
-- `ok(string)` → `el.style.setProperty(prop, value)`
-- `nil` → `el.style.removeProperty(prop)`, restoring the CSS cascade value
+- `ok(string)` → schedules `el.style.setProperty(prop, value)`
+- `nil` → schedules `el.style.removeProperty(prop)`, restoring the CSS cascade value
 
 #### Parameters
 
@@ -27,7 +27,7 @@ CSS property name (e.g. `'color'`, `'--my-var'`)
 
 [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string`\>
 
-Watch handlers for the style property
+Match handlers for the style mutation
 
 #### Since
 

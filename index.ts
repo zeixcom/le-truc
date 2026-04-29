@@ -1,4 +1,4 @@
-// Le Truc 2.0.0-next
+// Le Truc 2.0.1
 
 // From Cause & Effect
 export {
@@ -22,6 +22,8 @@ export {
 	createState,
 	createStore,
 	createTask,
+	DEEP_EQUALITY,
+	DEFAULT_EQUALITY,
 	type EffectCallback,
 	type Guard,
 	InvalidCallbackError,
@@ -29,12 +31,11 @@ export {
 	isAsyncFunction,
 	isCollection,
 	isComputed,
-	isEqual,
 	isFunction,
 	isList,
 	isMemo,
 	isMutableSignal,
-	isObjectOfType,
+	isSignalOfType,
 	isRecord,
 	isSensor,
 	isSignal,
@@ -53,6 +54,7 @@ export {
 	NullishSignalValueError,
 	ReadonlySignalError,
 	RequiredOwnerError,
+	type ScopeOptions,
 	type Sensor,
 	type SensorOptions,
 	type Signal,
@@ -60,6 +62,7 @@ export {
 	type SingleMatchHandlers,
 	SKIP_EQUALITY,
 	type Slot,
+	type SlotDescriptor,
 	type State,
 	type Store,
 	type StoreOptions,
@@ -120,7 +123,7 @@ export {
 	bindStyle,
 	bindText,
 	bindVisible,
-	type DangerouslySetInnerHTMLOptions,
+	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
 } from './src/helpers'
 export {
@@ -132,7 +135,7 @@ export {
 	type Parser,
 } from './src/parsers'
 export { asBoolean } from './src/parsers/boolean'
-export { asDate } from './src/parsers/date'
+
 export { asJSON } from './src/parsers/json'
 export { asClampedInteger, asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'

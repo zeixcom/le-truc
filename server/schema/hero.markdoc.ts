@@ -6,37 +6,19 @@ import Markdoc, {
 	Tag,
 } from '@markdoc/markdoc'
 import { commonAttributes, standardChildren } from '../markdoc-constants'
-import { type TocItem } from '../markdoc-helpers'
-
-const MIN_TOC_HEADINGS = 3
 
 const hero: Schema = {
 	render: 'section-hero',
 	children: standardChildren,
 	attributes: commonAttributes,
 	transform(node: Node, config: Config) {
-		// Build TOC nav from H2 headings passed as variable (requires ≥ MIN_TOC_HEADINGS)
-		const tocItems = (config.variables?.toc ?? []) as TocItem[]
-		const tocNav =
-			tocItems.length >= MIN_TOC_HEADINGS
-				? new Tag('module-toc', {}, [
-						new Tag('nav', {}, [
-							new Tag('h2', {}, ['In This Page']),
-							new Tag(
-								'ol',
-								{},
-								tocItems.map(
-									({ id, text }) =>
-										new Tag('li', {}, [
-											new Tag('a', { href: `#${id}` }, [text]),
-										]),
-								),
-							),
-						]),
-					])
-				: null
+		const tocPlaceholder = new Tag(
+			'div',
+			{ class: 'toc-placeholder', 'data-toc': 'true' },
+			[],
+		)
 
-		// Separate title from other content
+		// Separate title from lead paragraphs
 		let title: RenderableTreeNode | null = null
 		const leadContent: RenderableTreeNode[] = []
 
@@ -52,16 +34,20 @@ const hero: Schema = {
 		// Create the structured layout
 		const children: RenderableTreeNode[] = []
 
-		// Add title (full width)
+		// Title spans full width
 		if (title) children.push(title)
 
-		// Create two-column layout with lead content and TOC nav
-		if (leadContent.length > 0 || tocNav) {
-			const layoutChildren: RenderableTreeNode[] = []
-			if (leadContent.length > 0)
-				layoutChildren.push(new Tag('div', { class: 'lead' }, leadContent))
-			if (tocNav) layoutChildren.push(tocNav)
-			children.push(new Tag('div', { class: 'hero-layout' }, layoutChildren))
+		if (leadContent.length > 0) {
+			// Two-column layout: lead text + toc placeholder
+			children.push(
+				new Tag('div', { class: 'hero-layout' }, [
+					new Tag('div', { class: 'lead' }, leadContent),
+					tocPlaceholder,
+				]),
+			)
+		} else {
+			// No lead content: toc placeholder sits directly under the hero
+			children.push(tocPlaceholder)
 		}
 
 		return new Tag('section-hero', node.attributes, children)

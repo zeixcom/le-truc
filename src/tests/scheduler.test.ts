@@ -140,7 +140,7 @@ describe('schedule', () => {
 		expect(calls).toEqual(['ran'])
 	})
 
-	test('multiple calls for the same element — only latest task runs', () => {
+	test('same key — only latest task runs', () => {
 		const el = {} as Element
 		const calls: string[] = []
 		schedule(el, () => calls.push('first'))
@@ -150,7 +150,7 @@ describe('schedule', () => {
 		expect(calls).toEqual(['third'])
 	})
 
-	test('multiple calls for the same element request only one RAF', () => {
+	test('same key — multiple calls request only one RAF', () => {
 		const el = {} as Element
 		schedule(el, () => {})
 		schedule(el, () => {})

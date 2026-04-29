@@ -2,7 +2,7 @@
 
 > **EffectCallback** = () => [`MaybeCleanup`](MaybeCleanup.md)
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:112
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:127
 
 A callback function for effects that can perform side effects.
 

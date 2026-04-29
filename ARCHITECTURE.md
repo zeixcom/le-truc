@@ -2,58 +2,6 @@
 
 Le Truc is a reactive custom elements library. This document describes how the pieces in `src/` fit together.
 
-## File Map
-
-```
-src/
-  component.ts        The heart: defineComponent() and the Truc class
-  effects.ts          Effect primitives: EffectDescriptor, FactoryResult, each()
-  ui.ts               DOM queries (first/all), dependency resolution, selector type inference
-  parsers.ts          Parser/Reader type system and branding utilities
-  events.ts           Event binding helpers (makeOn, OnHelper)
-  context.ts          Context protocol (provide/request) for dependency injection
-  helpers.ts          bind* convenience WatchHandlers for use with watch()
-  scheduler.ts        rAF-based task deduplication
-  errors.ts           Domain-specific error classes
-  internal.ts         Internal signal map (getSignals) — shared by component.ts and factory.ts
-  util.ts             Logging, element introspection, property validation
-
-  parsers/
-    boolean.ts        asBoolean
-    json.ts           asJSON
-    number.ts         asInteger, asNumber, asClampedInteger
-    string.ts         asString, asEnum
-    date.ts           asDate
-```
-
-## Dependency Graph
-
-Arrows mean "imports from". The graph flows bottom-up from leaf utilities to `component.ts`.
-
-```
-util.ts ─────────────────────────────────────────────┐
-errors.ts ──────── util.ts                           │
-scheduler.ts ──── (leaf, no internal imports)        │
-parsers.ts ─────── (leaf, no internal imports)       │
-parsers/* ──────── parsers.ts                        │
-                                                     │
-internal.ts ────── (leaf, signal storage)            │
-ui.ts ──────────── errors.ts, util.ts                │
-effects.ts ─────── (leaf: cause-effect only)         │
-                                                     │
-events.ts ──────── scheduler.ts                      │
-                                                     │
-context.ts ─────── (leaf: protocol types only)       │
-                                                     │
-factory.ts ─────── component.ts (types), context.ts, │
-                   effects.ts, errors.ts, internal.ts,│
-                   scheduler.ts, util.ts             │
-                                                     │
-component.ts ───── effects.ts, errors.ts, factory.ts,│
-                   internal.ts, parsers.ts, ui.ts,   │
-                   util.ts                           │
-```
-
 The single external dependency is `@zeix/cause-effect`, which provides the reactive primitives used by Le Truc: `createState`, `createComputed`, `createEffect`, `createMemo`, `createScope`, `createSensor`, `createSlot`, `createTask`, `createStore`, `createList`, `createCollection`, `Signal`, `Memo`, `Sensor`, `Slot`, `batch`, `match`, `unown`, `untrack`, and various type guards and utility functions. See `index.ts` for the full re-export surface.
 
 ## The Component Lifecycle
@@ -68,25 +16,36 @@ The **factory form** `(name, factory)`: the factory receives a `FactoryContext` 
 connectedCallback()
   │
   ├─ 1. getHelpers(this)  →  [{ first, all }, resolveDependencies]
-  │     Determines query root (shadowRoot ?? this).
-  │     Tracks custom element dependencies found during queries.
   │
-  ├─ 2. context = { first, all, host, expose, watch, on, pass, ... }
-  │     descriptors = factory(context)   ← expose() called inside; signals created
+  ├─ 2. Create factory context with helpers bound to this instance
+  │     (expose, watch, each, on, pass, provideContexts, requestContext)
   │
-  │     #initSignals dispatches per initializer:
-  │       ├─ Parser (PARSER_BRAND)?      →  parser(this.getAttribute(key))
-  │       ├─ MethodProducer (METHOD_BRAND)?  →  assign directly to host
-  │       ├─ Function (Reader)?          →  reader(host)
-  │       └─ Otherwise                  →  use value directly (static or Signal)
-  │       Each non-null result is passed to #setAccessor(key, value).
+  ├─ 3. Run factory:
+  │       descriptors = factory(context)
+  │       ├── first(), all() execute → queries run, dependencies collected
+  │       ├── expose() executes → #initSignals() creates signals immediately
+  │       └── watch(), on(), etc. execute → return effect descriptors (thunks)
   │
-  └─ 3. resolveDependencies(() => {
-           this.#cleanup = createScope(() => descriptors.filter(Boolean).forEach(d => d()))
+  └─ 4. resolveDependencies(() => {
+           this.#cleanup = createScope(() => activateResult(descriptors), {
+             root: true
+           })
          })
          Waits for child custom elements to be defined (200ms timeout),
-         then activates effects.
+         then activates effects inside an unowned scope.
+         { root: true } prevents the component scope from being registered as
+         a child of whatever createEffect happens to be running when
+         connectedCallback fires (e.g. a list-sync watch that inserted the
+         element). Without it, the parent effect's next re-run would dispose
+         the component scope and kill all its reactive effects.
+         disconnectedCallback remains the sole lifecycle authority.
 ```
+
+**Critical timing detail**: `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` return **effect descriptors** — functions that, when called inside a scope, create the actual effect. They do NOT create effects immediately when called in the factory body. This preserves the v1.0 timing guarantee: effects activate only after dependency resolution (child custom elements are defined).
+
+From the user's perspective this is transparent — they call `watch(...)`, get back an opaque value, put it in the return array. The engine handles activation timing. The same pattern already exists in v1.0: `on('click', handler)` returns a curried `(host, target) => Cleanup`, not a live effect.
+
+**Why this matters**: `pass()` needs the target component's signals to exist. Those signals are created in the target's `connectedCallback`, which requires `customElements.define()` to have run. `resolveDependencies` waits for that. If effects activated immediately, `pass` would find an empty signal map and silently fail.
 
 ### #setAccessor — signal creation
 
@@ -102,7 +61,7 @@ The Slot enables signal swapping: `pass()` calls `slot.replace(newSignal)` to in
 
 ### disconnectedCallback — cleanup
 
-Calls the cleanup function returned by `runEffects()`, which tears down all effects and event listeners.
+Calls the cleanup function stored from `createScope()`, which tears down all effects and event listeners.
 
 ## The Effect System
 
@@ -144,7 +103,7 @@ Calls `root.querySelector()`. If the matched element is an undefined custom elem
 
 ### all(selector, required?)
 
-Returns a `Memo<E[]>` created by `createElementsMemo()`. This sets up a `MutationObserver` (lazily, via the `watched` option on `createMemo`) that watches for `childList`, `subtree`, and relevant attribute changes. The memo always contains the current matching elements; added/removed diffs are derived downstream by the owning `createEffect` in `runEffects`.
+Returns a `Memo<E[]>` created by `createElementsMemo()`. This sets up a `MutationObserver` (lazily, via the `watched` option on `createMemo`) that watches for `childList`, `subtree`, and relevant attribute changes. The memo always contains the current matching elements; added/removed diffs are derived downstream by the owning `createEffect`.
 
 The `MutationObserver` config is smart about which attributes to watch: `extractAttributes(selector)` parses the CSS selector to find attribute names implied by `.class`, `#id`, and `[attr]` patterns.
 
@@ -287,8 +246,8 @@ Le Truc uses four prefix families, each mapping to a distinct layer of the stack
 |--------|-------|---------|-----------------|
 | `define*` | DOM / component | `defineComponent`, `defineMethod` | Things with a DOM identity — custom elements, methods that live on elements |
 | `bind*` | DOM update handlers | `bindText`, `bindAttribute`, `bindClass`, `bindVisible`, `bindStyle`, `bindProperty`, `dangerouslyBindInnerHTML` | Handler factories that apply a value to a DOM node; always used as the second argument to `watch()` |
-| `as*` | Parsers / type coercion | `asBoolean`, `asInteger`, `asNumber`, `asString`, `asEnum`, `asDate`, `asJSON`, `asClampedInteger`, `asParser` | Branded parser factories that coerce an attribute string to a typed value; pure data-level, no DOM involvement |
-| `create*` | Data flow / signals | `createState`, `createEffect`, `createScope`, `createSensor`, `createEventsSensor`, `createElementsMemo` | Reactive primitives from `@zeix/cause-effect` or Le Truc's signal-layer utilities |
+| `as*` | Parsers / type coercion | `asBoolean`, `asInteger`, `asNumber`, `asString`, `asEnum`, `asJSON`, `asClampedInteger`, `asParser` | Branded parser factories that coerce an attribute string to a typed value; pure data-level, no DOM involvement |
+| `create*` | Data flow / signals | `createState`, `createEffect`, `createScope`, `createSensor`, `createElementsMemo` | Reactive primitives from `@zeix/cause-effect` or Le Truc's signal-layer utilities |
 
 The `define*` / `bind*` split within the DOM layer reflects direction of coupling: `define*` brings a DOM concept into existence (register, install); `bind*` connects a data value to an existing DOM node (update, sync).
 
@@ -320,12 +279,14 @@ label: asString(label?.textContent ?? first('label')?.textContent ?? '')
 **Methods**: `expose()` handles methods via `defineMethod()`, keeping all public API declaration in one place.
 
 ```ts
+const length = createState(textbox.value.length)
+
 expose({
-    checked: checkbox.checked,                    // static → createState
-    label: asString(label?.textContent ?? ''),     // parser → reads attribute, falls back
-    clear: clearMethod,                            // defineMethod → installs host.clear
-    length: createEventsSensor(textbox, 0, { ... }), // sensor → see §createEventsSensor
-    theme: requestContext('theme', 'light'),        // context → see §requestContext
+    checked: checkbox.checked,                 // static → createState
+    label: asString(label?.textContent ?? ''), // parser → reads attribute, falls back
+    clear: clearMethod,                        // defineMethod → installs host.clear
+    length: length.get,                        // getter only → read-only to consumers
+    theme: requestContext('theme', 'light'),   // context → see §requestContext
 })
 ```
 
@@ -350,11 +311,12 @@ watch(['value', 'filter'], ([value, filter]) => {
     // re-runs when either host.value or host.filter changes
 })
 
-// MatchHandlers form — ok/nil/err paths:
+// MatchHandlers form — ok/nil/err/stale paths (precedence: nil > err > stale > ok):
 watch('src', {
     ok: src => { renderContent(src) },
     nil: () => { resetToEmpty() },
     err: error => { showError(error) },
+    stale: () => { showRefreshIndicator() },
 })
 ```
 
@@ -477,150 +439,15 @@ expose({
 
 The signature changes slightly: `requestContext` is provided as a factory helper that captures `host`, so the user no longer needs to pass it. Internally dispatches the event from `host` and returns a `Memo<T>`.
 
-### Component Lifecycle (v1.1)
-
-```
-connectedCallback()
-  │
-  ├─ 1. getHelpers(this)  →  [{ first, all }, resolveDependencies]
-  │
-  ├─ 2. Create factory context with helpers bound to this instance
-  │     (expose, watch, each, on, pass, provideContexts, requestContext)
-  │
-  ├─ 3. Run factory:
-  │       descriptors = factory(context)
-  │       ├── first(), all() execute → queries run, dependencies collected
-  │       ├── expose() executes → #initSignals() creates signals immediately
-  │       └── watch(), on(), etc. execute → return effect descriptors (thunks)
-  │
-  └─ 4. resolveDependencies(() => {
-           this.#cleanup = createScope(() => {
-               for (const descriptor of descriptors.filter(Boolean))
-                   descriptor()  // activate effect, registers in scope
-           })
-         })
-```
-
-**Critical timing detail**: `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` return **effect descriptors** — functions that, when called inside a scope, create the actual effect. They do NOT create effects immediately when called in the factory body. This preserves the v1.0 timing guarantee: effects activate only after dependency resolution (child custom elements are defined).
-
-From the user's perspective this is transparent — they call `watch(...)`, get back an opaque value, put it in the return array. The engine handles activation timing. The same pattern already exists in v1.0: `on('click', handler)` returns a curried `(host, target) => Cleanup`, not a live effect.
-
-**Why this matters**: `pass()` needs the target component's signals to exist. Those signals are created in the target's `connectedCallback`, which requires `customElements.define()` to have run. `resolveDependencies` waits for that. If effects activated immediately, `pass` would find an empty signal map and silently fail.
-
 ### Safety Utilities
 
 With built-in effects (`setAttribute`, `toggleAttribute`, etc.) no longer wrapping DOM operations, their safety features need to be available as importable utilities:
 
 - **`safeSetAttribute(element, name, value)`** — validates URL protocols, blocks `on*` handlers
 - **`escapeHTML(text)`** — already exists in examples; promote to library export
-- **`setTextPreservingComments(element, text)`** — replaces non-comment child nodes (what `setText` does internally)
+- **`setTextPreservingComments(element, text)`** — replaces non-comment child nodes (what `bindText` does internally)
 
 These are opt-in imports, not factory helpers. Authors who use native DOM methods directly accept responsibility for validation.
-
-### Worked Example: `form-combobox`
-
-The combobox is one of the most complex components (6 UI targets, 12 effects, private state, `pass`, memos). Here's how it looks:
-
-```ts
-export default defineComponent<FormComboboxProps, FormComboboxUI>(
-    'form-combobox',
-    ({ all, expose, first, host, on, pass, watch }) => {
-        const textbox = first('input', 'Needed to enter value.')
-        const listbox = first('form-listbox', 'Needed to display options.')
-        const clear = first('button.clear')
-        const error = first('form-combobox > .error')
-        const description = first('.description')
-
-        const errorId = error?.id
-        const descriptionId = description?.id
-
-        const showPopup = createState(false)
-        const isExpanded = createMemo(
-            () => showPopup.get() && listbox.options.length > 0,
-        )
-        const length = createState(textbox.value.length)
-
-        expose({
-            value: '',
-            length: length.get,
-            error: '',
-            description: description?.textContent ?? '',
-            clear: clearMethod,
-        })
-
-        return [
-            // Host effects
-            watch('value', value => {
-                host.setAttribute('value', value)
-            }),
-            on(host, 'keyup', ({ key }) => {
-                if (key === 'Escape') {
-                    showPopup.set(false)
-                    textbox.focus()
-                }
-                if (key === 'Delete') host.clear()
-            }),
-
-            // Textbox effects
-            watch(['error', 'description'], ([err, desc]) => {
-                textbox.ariaInvalid = String(!!err)
-                textbox.setAttribute('aria-errormessage',
-                    err && errorId ? errorId : '')
-                textbox.setAttribute('aria-describedby',
-                    desc && descriptionId ? descriptionId : '')
-            }),
-            watch(isExpanded, expanded => {
-                textbox.ariaExpanded = String(expanded)
-            }),
-            on(textbox, 'input', (_event, el) => {
-                length.set(el.value.length)
-                el.checkValidity()
-                batch(() => {
-                    host.value = el.value
-                    host.error = el.validationMessage ?? ''
-                    showPopup.set(true)
-                })
-            }),
-            on(textbox, 'keydown', (event) => {
-                const { key, altKey } = event
-                if (key === 'ArrowDown') {
-                    if (altKey) showPopup.set(true)
-                    if (isExpanded.get()) listbox.options[0]?.focus()
-                }
-            }),
-
-            // Listbox effects
-            watch(isExpanded, expanded => { listbox.hidden = !expanded }),
-            pass(listbox, { filter: () => host.value }),
-            on(listbox, 'change', (event) => {
-                const input = event.target
-                if (input instanceof HTMLInputElement) {
-                    textbox.value = input.value
-                    textbox.checkValidity()
-                    batch(() => {
-                        host.value = input.value
-                        host.error = textbox.validationMessage ?? ''
-                        showPopup.set(false)
-                        textbox.focus()
-                    })
-                }
-            }),
-
-            // Clear button
-            clear && watch(length, l => { clear.hidden = !l }),
-            clear && on(clear, 'click', () => { host.clear() }),
-
-            // Text displays
-            error && watch('error', text => { error.textContent = text }),
-            description && watch('description', text => {
-                description.textContent = text
-            }),
-        ]
-    },
-)
-```
-
-**What changed**: 13 imports → 4 (`asString`, `batch`, `createMemo`, `createState`; the rest come from the factory context). No `ui` returned. No `effects` keyed by element name. Effects are grouped logically (by concern) rather than structurally (by target element). Optional elements use `&&` guards in the flat array.
 
 ### Key Decisions
 
@@ -638,27 +465,3 @@ export default defineComponent<FormComboboxProps, FormComboboxUI>(
 | `expose` handles methods | `defineMethod()` stays, used inside `expose()` | Direct assignment on host, drop `defineMethod` | Keeps all public API declaration in one place; `#initSignals` dispatch logic unchanged |
 | Parsers unchanged | `Fallback<T, U>` already accepts plain values | Separate value-transformer API | No breaking change; reader-function fallbacks still valid for 4-param form |
 | Safety as importable utilities | `safeSetAttribute`, `escapeHTML`, etc. | Built into `watch`/factory helpers | Opt-in is appropriate; most DOM updates don't need validation |
-
-### Implementation Plan
-
-1. **Phase 1: Engine** — Modify `connectedCallback` to support the new factory return shape (flat array of effect descriptors). Implement `expose()` calling `#initSignals`. Keep v1.0 `{ ui, props, effects }` return working alongside — detect which form by checking `Array.isArray(result)` vs `isRecord(result)`.
-
-2. **Phase 2: Core helpers** — Implement `watch()` (wrapping `match`), `each()` (collection lifecycle), new `on(target, type, handler)` with Memo delegation overload, new `pass(target, props)` with Memo overload. Wire them into the factory context.
-
-3. **Phase 3: Context & sensors** — Refactor `provideContexts` and `requestContext` as factory-context-bound helpers. Refactor `createEventsSensor` to accept target element directly, drop `ui` from handler context.
-
-4. **Phase 4: Safety utilities** — Extract `safeSetAttribute`, promote `escapeHTML`, implement `setTextPreservingComments`. Export from library.
-
-5. **Phase 5: Migration** — Convert example components to the new form. Use the test suite (~1150 tests, 3 browsers) as correctness backstop. Prioritize: simple components first (basic-*), then form components, then complex modules.
-
-6. **Phase 6: Deprecation** — Mark `read()`, built-in effects (`setText`, `setAttribute`, etc.), and the `{ ui, props, effects }` return shape as `@deprecated` with JSDoc pointing to v1.1 equivalents. Mark 4-param `defineComponent` overload as `@deprecated`. Update type declarations in `types/`. Update `CLAUDE.md` surprising behaviors. Removal deferred to v2.0.
-
-### Resolved Decisions
-
-- **4-param form**: Supported in v1.1 but marked `@deprecated`. Built-in effects (`setText`, etc.) remain available for its `setup` function. Removal decision deferred to v2.0.
-- **`each` single-descriptor shortcut**: `each(slides, slide => watch('index', ...))` (without brackets) accepted as overload.
-- **Non-bubbling events**: Exhaustive list maintained. DEV_MODE warns and falls back to per-element; production silently falls back. No throws.
-
-### Remaining Open Questions
-
-1. **`watch` with MatchHandlers and arrays**: The exact TypeScript overload signatures need design. `watch(source, callback)` vs `watch(source, { ok, nil, err })` vs `watch([s1, s2], ([v1, v2]) => ...)` — three overloads with tuple typing for the array form. Consider whether this complexity belongs in Le Truc or should be upstreamed to Cause & Effect first (as mentioned in VERSION_1.1_GOALS.md). To be resolved during Phase 2 implementation.

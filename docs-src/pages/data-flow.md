@@ -7,7 +7,7 @@ description: 'Passing state, events, context'
 {% hero %}
 # 🔄 Data Flow
 
-**Learn how Le Truc components can work together seamlessly.** Start with simple parent-child relationships, then explore advanced patterns like custom events and shared state. Build modular, loosely coupled components that communicate efficiently.
+**Learn how Le Truc components coordinate state.** Pass reactive signals from parent to child with `pass()`, expose callable methods with `defineMethod()`, and share values across the component tree with context.
 {% /hero %}
 
 {% section %}
@@ -68,9 +68,9 @@ defineComponent('basic-button', ({ expose, first, watch }) => {
   const badge = first('span.badge')
 
   expose({
-    disabled: asBoolean(),
-    label: asString(label?.textContent ?? button.textContent ?? ''),
-    badge: asString(badge?.textContent ?? ''),
+    disabled: button.disabled,
+    label: label?.textContent ?? button.textContent ?? '',
+    badge: badge?.textContent ?? '',
   })
 
   return [
@@ -100,9 +100,6 @@ defineComponent('form-spinbutton', ({ all, expose, first, host, on, watch }) => 
 
   const nonZero = createMemo(() => host.value !== 0)
   const incrementLabel = increment.ariaLabel || 'Increment'
-  const ariaLabel = createMemo(() =>
-    nonZero.get() || !zero ? incrementLabel : zero.textContent,
-  )
 
   expose({
     value: Number.parseInt(input.value) || 0,
@@ -145,14 +142,14 @@ defineComponent('form-spinbutton', ({ all, expose, first, host, on, watch }) => 
       input.hidden = !nz
       decrement.hidden = !nz
     }),
-    watch('value', v => { input.value = String(v) }),
-    watch('max', m => { input.max = String(m) }),
-    watch(['value', 'max'], () => {
-      increment.disabled = host.value >= host.max
+    zero && watch(nonZero, nz => {
+      zero.hidden = nz
+      increment.ariaLabel = nz ? incrementLabel : zero.textContent
     }),
-    watch(ariaLabel, label => { increment.ariaLabel = label || null }),
-    zero && watch(nonZero, bindVisible(zero, nz => !nz)),
     other && watch(nonZero, bindVisible(other)),
+    watch(() => String(host.value), bindProperty(input, 'value')),
+    watch(() => String(host.max), bindProperty(input, 'max')),
+    watch(() => host.value >= host.max, bindProperty(increment, 'disabled')),
   ]
 })
 ```
@@ -298,10 +295,8 @@ defineComponent('module-list', ({ expose, first }) => {
 
 The function passed to `defineMethod()` IS the callable method — `host.add` and `host.delete` will be that function. The `container`, `template`, and `addKey` references come from the factory closure. After connect, callers can use `host.add()` and `host.delete(key)` imperatively.
 
-{% callout .tip %}
-**Always use `defineMethod()`, never a plain function**
-
-Le Truc identifies method producers by a brand (`METHOD_BRAND`) attached by `defineMethod()`. An unbranded function passed to `expose()` is treated as a thunk and wrapped in `createComputed`. Wrapping with `defineMethod()` is the required contract — the same way `asParser()` is required for custom parsers.
+{% callout .tip title="Always use defineMethod(), never a plain function" %}
+Le Truc identifies method producers by a brand symbol attached by `defineMethod()`. An unbranded function passed to `expose()` is treated as a thunk instead. The same rule applies to custom parsers: always use `asParser()`.
 {% /callout %}
 
 ### HTML Structure
@@ -443,7 +438,7 @@ export const MEDIA_THEME = 'media-theme' as Context<
 
 ### Provider Component
 
-The **provider component** creates the shared state inside `expose()` and calls `provideContexts()` in the returned effect array:
+The **provider component** creates the shared state inside `expose()` and calls `provideContexts()` in the returned effect array. The example below is a simplified excerpt showing two of the four media contexts — see the full source for the complete implementation:
 
 ```ts#context-media.ts
 export type ContextMediaProps = {
@@ -524,15 +519,21 @@ export default defineComponent(
   ({ expose, first, requestContext, watch }) => {
     const motionEl = first('.motion')
     const themeEl = first('.theme')
+    const viewportEl = first('.viewport')
+    const orientationEl = first('.orientation')
 
     expose({
       motion: requestContext(MEDIA_MOTION, 'unknown'),
       theme: requestContext(MEDIA_THEME, 'unknown'),
+      viewport: requestContext(MEDIA_VIEWPORT, 'unknown'),
+      orientation: requestContext(MEDIA_ORIENTATION, 'unknown'),
     })
 
     return [
       motionEl && watch('motion', bindText(motionEl)),
       themeEl && watch('theme', bindText(themeEl)),
+      viewportEl && watch('viewport', bindText(viewportEl)),
+      orientationEl && watch('orientation', bindText(orientationEl)),
     ]
   },
 )

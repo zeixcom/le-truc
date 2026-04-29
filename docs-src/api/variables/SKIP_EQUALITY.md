@@ -2,7 +2,7 @@
 
 > `const` **SKIP\_EQUALITY**: (`_a?`, `_b?`) => `boolean`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:145
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:164
 
 Equality function that always returns false, causing propagation on every update.
 Use with `createSensor` for observing mutable objects where the reference stays the same

@@ -1,14 +1,14 @@
 /* === Internal === */
 
-const pendingElements = new Set<Element>()
-const tasks = new WeakMap<Element, () => void>()
+const objects = new Set<object>()
+const tasks = new WeakMap<object, () => void>()
 const throttledCallbacks = new Set<() => void>()
 let requestId: number | undefined
 
 const runTasks = () => {
 	requestId = undefined
-	const elements = Array.from(pendingElements)
-	pendingElements.clear()
+	const elements = Array.from(objects)
+	objects.clear()
 	for (const element of elements) tasks.get(element)?.()
 	const callbacks = Array.from(throttledCallbacks)
 	throttledCallbacks.clear()
@@ -24,17 +24,17 @@ const requestTick = () => {
 /**
  * Schedule a task to be executed on the next animation frame, with automatic
  * deduplication per element. If the same element schedules multiple tasks
- * before the next frame, only the latest task will be executed.
+ * before the next frame, only the latest task executes.
  *
  * Used internally by `dangerouslyBindInnerHTML`.
  *
  * @since 0.11.0
- * @param {Element} element - Element used as the deduplication key
- * @param {() => void} task - Function to execute on the next animation frame
+ * @param key - Deduplication key; typically the target Element
+ * @param task - Function to execute on the next animation frame
  */
-const schedule = (element: Element, task: () => void) => {
-	tasks.set(element, task)
-	pendingElements.add(element)
+const schedule = (key: object, task: () => void) => {
+	tasks.set(key, task)
+	objects.add(key)
 	requestTick()
 }
 

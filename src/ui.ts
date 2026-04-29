@@ -122,7 +122,15 @@ const extractAttributes = (selector: string): string[] => {
 	const attributes = new Set<string>()
 	// Strip attribute selector content before checking for class/id shorthand,
 	// so that #/. inside [attr^="#anchor"] don't produce false positives.
-	const withoutAttrValues = selector.replace(/\[[^\]]*\]/g, '')
+	// Linear scan instead of regex to avoid O(n²) backtracking on inputs like `[[[[`.
+	let withoutAttrValues = ''
+	let depth = 0
+	for (const ch of selector) {
+		if (ch === '[') depth++
+		else if (ch === ']') {
+			if (depth > 0) depth--
+		} else if (depth === 0) withoutAttrValues += ch
+	}
 	if (withoutAttrValues.includes('.')) attributes.add('class')
 	if (withoutAttrValues.includes('#')) attributes.add('id')
 	if (selector.includes('[')) {
@@ -132,6 +140,7 @@ const extractAttributes = (selector: string): string[] => {
 			if (!part || !part.includes(']')) continue
 			const attrName = part
 				.split('=')[0]!
+				.split(']')[0]!
 				.trim()
 				.replace(/[^a-zA-Z0-9_-]/g, '')
 			if (attrName) attributes.add(attrName)
@@ -360,6 +369,7 @@ export {
 	type ExtractRightmostSelector,
 	type ExtractTag,
 	type ExtractTagFromSimpleSelector,
+	extractAttributes,
 	type FirstElement,
 	type KnownTag,
 	makeElementQueries,

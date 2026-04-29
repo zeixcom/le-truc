@@ -1,8 +1,8 @@
 ### Function: createList()
 
-> **createList**\<`T`\>(`value`, `options?`): [`List`](../type-aliases/List.md)\<`T`\>
+> **createList**\<`T`, `S`\>(`value`, `options?`): [`List`](../type-aliases/List.md)\<`T`, `S`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:85
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:79
 
 Creates a reactive list with stable keys and per-item reactivity.
 
@@ -11,6 +11,10 @@ Creates a reactive list with stable keys and per-item reactivity.
 ##### T
 
 `T` *extends* `object`
+
+##### S
+
+`S` *extends* `MutableSignal`\<`T`\> = `MutableSignal`\<`T`\>
 
 #### Parameters
 
@@ -22,13 +26,13 @@ Initial array of items
 
 ##### options?
 
-[`ListOptions`](../type-aliases/ListOptions.md)\<`T`\>
+[`ListOptions`](../type-aliases/ListOptions.md)\<`T`, `S`\>
 
 #### Returns
 
-[`List`](../type-aliases/List.md)\<`T`\>
+[`List`](../type-aliases/List.md)\<`T`, `S`\>
 
-A `List` signal with reactive per-item `State` signals
+A `List` signal with reactive per-item `MutableSignal`s
 
 #### Since
 

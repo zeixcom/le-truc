@@ -80,8 +80,8 @@ export default defineComponent<FormSpinbuttonProps>(
 				input.hidden = !nz
 				decrement.hidden = !nz
 			}),
-			zero
-				&& watch(nonZero, nz => {
+			zero &&
+				watch(nonZero, nz => {
 					zero.hidden = nz
 					increment.ariaLabel = nz ? incrementLabel : zero.textContent
 				}),

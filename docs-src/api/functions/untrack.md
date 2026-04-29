@@ -2,7 +2,7 @@
 
 > **untrack**\<`T`\>(`fn`): `T`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:196
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:231
 
 Runs a callback without tracking dependencies.
 Any signal reads inside the callback will not create edges to the current active sink.

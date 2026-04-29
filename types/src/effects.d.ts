@@ -1,4 +1,4 @@
-import { type MaybeCleanup, type MaybePromise, type Memo, type Signal, type SingleMatchHandlers } from '@zeix/cause-effect';
+import { type MaybeCleanup, type MaybePromise, type Memo, type Signal, type SingleMatchHandlers, type SlotDescriptor } from '@zeix/cause-effect';
 import type { ComponentProps } from './component';
 type Falsy = false | null | undefined | '' | 0 | 0n;
 /**
@@ -36,7 +36,7 @@ type Reactive<T, P extends ComponentProps> = keyof P | Signal<T & {}> | (() => T
  * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
  */
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
-    [K in keyof Q & string]?: Reactive<Q[K], P>;
+    [K in keyof Q & string]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>;
 };
 /**
  * The `watch` helper type in `FactoryContext`.
@@ -117,6 +117,5 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => Pas
  *
  * @since 2.0
  */
-declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult): EffectDescriptor;
-declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => EffectDescriptor | Falsy): EffectDescriptor;
+declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult | EffectDescriptor | Falsy | void): EffectDescriptor;
 export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, type WatchHelper, };

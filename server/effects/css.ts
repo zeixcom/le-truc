@@ -4,7 +4,9 @@ import { componentStyles, docsStyles } from '../file-signals'
 
 export const cssEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => { resolve = res })
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
 	const cleanup = createEffect(() => {
 		match([componentStyles.sources, docsStyles.sources], {
 			ok: async () => {
@@ -13,10 +15,15 @@ export const cssEffect = (onRebuild?: () => void) => {
 					console.log('🎨 Rebuilding CSS assets...')
 					const proc = Bun.spawn(
 						[
-							'bunx', 'lightningcss',
-							'--minify', '--bundle',
-							'--targets', '>= 0.25%',
-							CSS_FILE, '-o', `${ASSETS_DIR}/main.css`,
+							'bunx',
+							'lightningcss',
+							'--minify',
+							'--bundle',
+							'--targets',
+							'>= 0.25%',
+							CSS_FILE,
+							'-o',
+							`${ASSETS_DIR}/main.css`,
 						],
 						{ stdout: 'inherit', stderr: 'inherit' },
 					)

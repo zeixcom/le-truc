@@ -143,8 +143,8 @@ When a required element is missing (`MissingElementError`), the error message mu
 **S4. Development mode with enhanced diagnostics**
 When `DEV_MODE` is enabled: detailed error messages with component context, warnings for dependency resolution timeouts, and effect execution logging.
 
-**S5. Scheduler deduplication for high-frequency events**
-Passive events (scroll, resize, touch, wheel) and `dangerouslyBindInnerHTML` updates must be deduplicated per-element via `requestAnimationFrame` to prevent frame drops.
+**S5. Scheduler deduplication for innerHTML mutations**
+`dangerouslyBindInnerHTML` updates must be deferred and deduplicated via `requestAnimationFrame`. Deduplication is per element so multiple helpers targeting the same element all run, while rapid re-fires of the same helper within one frame collapse to a single write. Passive event handlers (`on()` with scroll, resize, etc.) are separately throttled at the signal-graph input level via `throttle()` to prevent upstream churn.
 
 ### Should Avoid
 
@@ -242,36 +242,7 @@ Extend the CSS selector type parser to cover `SVGElementTagNameMap` and `MathMLE
 
 ---
 
-## 7. Risks & Mitigations
-
-### R1. Parser/Reader distinction via `function.length` causes silent misclassification
-
-**Risk**: A parser written with default parameters (`(ui, value = '') => ...`) has `length === 1` and is treated as a Reader, bypassing `observedAttributes` registration. The bug is silent.
-**Mitigation**: Replace with an explicit wrapper API (see S1) before 1.0. Until then, document the constraint prominently and include a test case that catches the misclassification.
-
-### R2. `cause-effect` upstream changes break Le Truc
-
-**Risk**: Le Truc depends on signal types (`Slot`, `Scope`, lazy `Memo`) that may change in future Cause & Effect versions.
-**Mitigation**: Le Truc and Cause & Effect are co-developed at Zeix AG. Version pinning and coordinated releases mitigate this. Both libraries target 1.0 together.
-
-### R3. Refactoring cost benefit is hard to measure objectively
-
-**Risk**: The primary success criterion is subjective developer experience, which is difficult to quantify. The comparison is against a hypothetical alternative, not a controlled experiment.
-**Mitigation**: Use graded-transition projects (migrating existing codebases incrementally) to give developers direct comparison points. Collect qualitative feedback systematically. Accept that proof will be emergent rather than experimental.
-
-### R4. Component portability proves harder than expected in practice
-
-**Risk**: Components built for project A may depend on application-specific context providers or DOM structures that aren't available in project B, undermining the reuse goal.
-**Mitigation**: Enforce the architecture rule that general-purpose components must not assume context or DOM structure beyond their own subtree. Reserve context and coordination patterns for explicitly "application-level" components. Document this boundary clearly.
-
-### R5. CDN / no-build usage diverges from bundled usage
-
-**Risk**: Tree-shaking, TypeScript types, and minification only benefit bundled consumers. CDN usage lacks these, and the gap may widen if the library grows.
-**Mitigation**: Keep the CDN build as a first-class output. Cap bundle size at the TCP segment limit regardless of which features are added.
-
----
-
-## 8. Out of Scope
+## 7. Out of Scope
 
 - **Client-side rendering or templating**: Le Truc will never generate initial HTML. Component authors who need client-side rendering should use a different tool or implement it themselves with template literals or `<template>` cloning.
 - **Server-side rendering**: The library is browser-only. A companion TypeScript SSR library is a separate future project, not part of Le Truc.

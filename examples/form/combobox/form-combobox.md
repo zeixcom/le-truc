@@ -17,74 +17,74 @@ An advanced form component that coordinates a text input with a popup `form-list
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `value`
-* `string`
-* `''`
-* Current input value
+- `value`
+- `string`
+- `''`
+- Current input value
 ---
-* `length`
-* `number` (readonly)
-* `0`
-* Length of current input value
+- `length`
+- `number` (readonly)
+- `0`
+- Length of current input value
 ---
-* `error`
-* `string`
-* `''`
-* Validation error text shown in `.error`
+- `error`
+- `string`
+- `''`
+- Validation error text shown in `.error`
 ---
-* `description`
-* `string`
-* Text content of `.description`
-* Assistive/help text shown in `.description`
+- `description`
+- `string`
+- Text content of `.description`
+- Assistive/help text shown in `.description`
 {% /table %}
 
 #### Methods
 
 {% table %}
-* Name
-* Type
-* Description
+- Name
+- Type
+- Description
 ---
-* `clear`
-* `() => void`
-* Method to clear the textbox and emit input/change events
+- `clear`
+- `() => void`
+- Method to clear the textbox and emit input/change events
 {% /table %}
 
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('input')`
-* `HTMLInputElement`
-* **required**
-* Textbox for combobox input
+- `first('input')`
+- `HTMLInputElement`
+- **required**
+- Textbox for combobox input
 ---
-* `first('form-listbox')`
-* `Component<FormListboxProps>`
-* **required**
-* Popup listbox used for option filtering/selection
+- `first('form-listbox')`
+- `Component<FormListboxProps>`
+- **required**
+- Popup listbox used for option filtering/selection
 ---
-* `first('button.clear')`
-* `HTMLButtonElement`
-* optional
-* Clear action button; hidden when value is empty
+- `first('button.clear')`
+- `HTMLButtonElement`
+- optional
+- Clear action button; hidden when value is empty
 ---
-* `first('form-combobox > .error')`
-* `HTMLElement`
-* optional
-* Validation message target linked by `aria-errormessage`
+- `first('form-combobox > .error')`
+- `HTMLElement`
+- optional
+- Validation message target linked by `aria-errormessage`
 ---
-* `first('.description')`
-* `HTMLElement`
-* optional
-* Description target linked by `aria-describedby`
+- `first('.description')`
+- `HTMLElement`
+- optional
+- Description target linked by `aria-describedby`
 {% /table %}

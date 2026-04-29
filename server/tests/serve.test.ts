@@ -8,7 +8,13 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { ASSETS_DIR, BLOG_OUTPUT_DIR, EXAMPLES_DIR, OUTPUT_DIR, SOURCES_DIR } from '../config'
+import {
+	ASSETS_DIR,
+	BLOG_OUTPUT_DIR,
+	EXAMPLES_DIR,
+	OUTPUT_DIR,
+	SOURCES_DIR,
+} from '../config'
 import { fileExists, getFilePath } from '../io'
 import { getLayoutForPath } from '../serve'
 import { hmrScriptTag } from '../templates/hmr'
@@ -132,9 +138,7 @@ function startTestServer(opts: { development?: boolean } = {}): TestServer {
 				const slug = req.params.slug.replace(/\.html$/, '')
 				const filePath = getFilePath(BLOG_OUTPUT_DIR, `${slug}.html`)
 				// Guard against path traversal
-				const rel = filePath.startsWith(BLOG_OUTPUT_DIR)
-					? filePath
-					: null
+				const rel = filePath.startsWith(BLOG_OUTPUT_DIR) ? filePath : null
 				return rel ? serveFile(rel) : new Response('Not Found', { status: 404 })
 			},
 

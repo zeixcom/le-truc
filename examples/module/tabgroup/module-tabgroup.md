@@ -17,32 +17,32 @@ A keyboard-accessible tab group. Demonstrates `createState()` with `on()` for th
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `selected`
-* `string` (readonly)
-* `''`
-* Id of the selected tab panel (`aria-controls` of active tab)
+- `selected`
+- `string` (readonly)
+- `''`
+- Id of the selected tab panel (`aria-controls` of active tab)
 {% /table %}
 
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `all('button[role="tab"]')`
-* `Memo<HTMLButtonElement[]>`
-* **required**
-* Tab buttons with unique `aria-controls` references
+- `all('button[role="tab"]')`
+- `Memo<HTMLButtonElement[]>`
+- **required**
+- Tab buttons with unique `aria-controls` references
 ---
-* `all('[role="tabpanel"]')`
-* `Memo<HTMLElement[]>`
-* **required**
-* Tab panels with unique ids controlled by selected tab
+- `all('[role="tabpanel"]')`
+- `Memo<HTMLElement[]>`
+- **required**
+- Tab panels with unique ids controlled by selected tab
 {% /table %}

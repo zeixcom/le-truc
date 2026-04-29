@@ -17,77 +17,77 @@ A full-featured listbox with client-side filtering and optional remote option lo
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `value`
-* `string`
-* `''`
-* Selected option value (`button[role="option"][aria-selected="true"]`)
+- `value`
+- `string`
+- `''`
+- Selected option value (`button[role="option"][aria-selected="true"]`)
 ---
-* `options`
-* `HTMLButtonElement[]`
-* Visible `button[role="option"]` elements
-* Live collection of selectable options
+- `options`
+- `HTMLButtonElement[]`
+- Visible `button[role="option"]` elements
+- Live collection of selectable options
 ---
-* `filter`
-* `string`
-* `''`
-* Filter text used to hide/show options
+- `filter`
+- `string`
+- `''`
+- Filter text used to hide/show options
 ---
-* `src`
-* `string`
-* `''`
-* URL for loading options JSON (flat or grouped)
+- `src`
+- `string`
+- `''`
+- URL for loading options JSON (flat or grouped)
 {% /table %}
 
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('input[type="hidden"]')`
-* `HTMLInputElement`
-* **required**
-* Hidden form input synchronized with selected `value`
+- `first('input[type="hidden"]')`
+- `HTMLInputElement`
+- **required**
+- Hidden form input synchronized with selected `value`
 ---
-* `first('[role="listbox"]')`
-* `HTMLElement`
-* **required**
-* Container for option buttons
+- `first('[role="listbox"]')`
+- `HTMLElement`
+- **required**
+- Container for option buttons
 ---
-* `first('input.filter')`
-* `HTMLInputElement`
-* optional
-* Text input for client-side filtering
+- `first('input.filter')`
+- `HTMLInputElement`
+- optional
+- Text input for client-side filtering
 ---
-* `first('button.clear')`
-* `HTMLButtonElement`
-* optional
-* Clears current filter text
+- `first('button.clear')`
+- `HTMLButtonElement`
+- optional
+- Clears current filter text
 ---
-* `first('card-callout')`
-* `HTMLElement`
-* optional
-* Callout container for loading/error states when `src` is used
+- `first('card-callout')`
+- `HTMLElement`
+- optional
+- Callout container for loading/error states when `src` is used
 ---
-* `first('.loading')`
-* `HTMLElement`
-* optional
-* Loading state element
+- `first('.loading')`
+- `HTMLElement`
+- optional
+- Loading state element
 ---
-* `first('.error')`
-* `HTMLElement`
-* optional
-* Error message element
+- `first('.error')`
+- `HTMLElement`
+- optional
+- Error message element
 ---
-* `all('button[role="option"]')`
-* `Memo<HTMLButtonElement[]>`
-* optional
-* Option buttons (inline and/or rendered from `src`)
+- `all('button[role="option"]')`
+- `Memo<HTMLButtonElement[]>`
+- optional
+- Option buttons (inline and/or rendered from `src`)
 {% /table %}

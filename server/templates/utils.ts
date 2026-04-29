@@ -337,8 +337,10 @@ export function debugTemplate(name: string, template: string): string {
 	if (DEVELOPMENT_CONFIG.ENABLE_LOGGING) {
 		console.log(
 			`Template [${name}]:`,
-			template.substring(0, DEVELOPMENT_CONFIG.MAX_TEMPLATE_LENGTH_FOR_LOGGING)
-				+ '...',
+			template.substring(
+				0,
+				DEVELOPMENT_CONFIG.MAX_TEMPLATE_LENGTH_FOR_LOGGING,
+			) + '...',
 		)
 	}
 	return template

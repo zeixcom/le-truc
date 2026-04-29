@@ -1,4 +1,8 @@
 import type { SingleMatchHandlers } from '@zeix/cause-effect';
+type DangerouslyBindInnerHTMLOptions = {
+    shadowRootMode?: ShadowRootMode;
+    allowScripts?: boolean;
+};
 /**
  * Returns a function that sets the text content of an element.
  *
@@ -7,93 +11,87 @@ import type { SingleMatchHandlers } from '@zeix/cause-effect';
  * Numbers are coerced to strings via `String()`.
  *
  * @since 2.0
- * @param {Element} element - Target element
- * @param {boolean} [preserveComments=false] - Whether to preserve HTML comment nodes
- * @returns {(value: string | number) => void} Function that sets the text content
+ * @param element - Target element
+ * @param [preserveComments=false] - Whether to preserve HTML comment nodes
+ * @returns Function that sets a text content
  */
 declare const bindText: (element: Element, preserveComments?: boolean) => ((value: string | number) => void);
 /**
  * Returns a function that sets a DOM property directly on an element.
  *
- * TypeScript infers `E[K]` from the element type and key, so no explicit type
+ * TypeScript infers `O[K]` from the object type and key, so no explicit type
  * parameters are needed at call sites.
  *
  * @since 2.0
- * @param {E} element - Target element
- * @param {K} key - Property key to set
- * @returns {(value: E[K]) => void} Function that sets the property
+ * @param object - Target object
+ * @param key - Property key to set
+ * @returns Function that sets a property
  */
-declare const bindProperty: <E extends Element, K extends keyof E & string>(element: E, key: K) => ((value: E[K]) => void);
+declare const bindProperty: <O extends object, K extends keyof O & string>(object: O, key: K) => ((value: O[K]) => void);
 /**
  * Returns a function that toggles a CSS class token on an element.
  *
  * `value=true` adds the token; `value=false` removes it.
  *
  * @since 2.0
- * @param {Element} element - Target element
- * @param {string} token - CSS class token to toggle
- * @returns {(value: T) => void} Function that toggles the class
+ * @param element - Target element
+ * @param token - CSS class token to toggle
+ * @returns Function that toggles the class token
  */
 declare const bindClass: <T = boolean>(element: Element, token: string) => ((value: T) => void);
 /**
  * Returns a function that controls element visibility via `el.hidden = !value`.
  *
  * `value=true` makes the element visible; `value=false` hides it.
- * Matches the direction of the v1.0 `show()` effect.
  *
  * @since 2.0
- * @param {HTMLElement} element - Target element
- * @returns {(value: T) => void} Function that sets element visibility
+ * @param element - Target element
+ * @returns Function that schedules the visibility update
  */
 declare const bindVisible: <T = boolean>(element: HTMLElement) => ((value: T) => void);
 /**
- * Returns `RunHandlers` that set or toggle an attribute with security validation.
+ * Returns `SingleMatchHandlers` that set or toggle an attribute with security validation.
  *
- * - `ok(string)` → `safeSetAttribute(el, name, value)` (or `el.setAttribute` if `allowUnsafe`)
- * - `ok(boolean)` → `el.toggleAttribute(name, value)` — adds (without value) when `true`, removes when `false`
- * - `nil` → `el.removeAttribute(name)`
+ * - `ok(string)` → schedules `safeSetAttribute(el, name, value)` (or `el.setAttribute` if `allowUnsafe`)
+ * - `ok(boolean)` → schedules `el.toggleAttribute(name, value)` — adds when `true`, removes when `false`
+ * - `nil` → schedules `el.removeAttribute(name)`
  *
  * Pass `allowUnsafe: true` only when the value has been validated upstream.
  *
  * @since 2.0
- * @param {Element} element - Target element
- * @param {string} name - Attribute name
- * @param {boolean} [allowUnsafe=false] - Skip security validation for string values
- * @returns {SingleMatchHandlers<string | boolean>} Watch handlers for the attribute
+ * @param element - Target element
+ * @param name - Attribute name
+ * @param [allowUnsafe=false] - Skip security validation for string values
+ * @returns Match handlers for the attribute mutation
  */
 declare const bindAttribute: (element: Element, name: string, allowUnsafe?: boolean) => SingleMatchHandlers<string | boolean>;
 /**
- * Returns `RunHandlers` that set or remove an inline style property.
+ * Returns `SingleMatchHandlers<string>` that set or remove an inline style property.
  *
- * - `ok(string)` → `el.style.setProperty(prop, value)`
- * - `nil` → `el.style.removeProperty(prop)`, restoring the CSS cascade value
+ * - `ok(string)` → schedules `el.style.setProperty(prop, value)`
+ * - `nil` → schedules `el.style.removeProperty(prop)`, restoring the CSS cascade value
  *
  * @since 2.0
- * @param {HTMLElement | SVGElement | MathMLElement} element - Target element
- * @param {string} prop - CSS property name (e.g. `'color'`, `'--my-var'`)
- * @returns {SingleMatchHandlers<string>} Watch handlers for the style property
+ * @param element - Target element
+ * @param prop - CSS property name (e.g. `'color'`, `'--my-var'`)
+ * @returns Match handlers for the style mutation
  */
 declare const bindStyle: (element: HTMLElement | SVGElement | MathMLElement, prop: string) => SingleMatchHandlers<string>;
-type DangerouslySetInnerHTMLOptions = {
-    shadowRootMode?: ShadowRootMode;
-    allowScripts?: boolean;
-};
 /**
  * Returns `SingleMatchHandlers<string>` that sets the inner HTML of an element,
  * with optional Shadow DOM and script re-execution support.
  *
  * - `ok(html)` → schedules `element.innerHTML = html` (or `shadowRoot.innerHTML`);
  *   if `allowScripts` is true, re-executes `<script>` elements after injection.
- * - `nil` → sets `innerHTML = ''` (or restores `<slot></slot>` in shadow root).
+ * - `nil` → resets `innerHTML = ''` (or `<slot></slot>` in shadow root).
  *
- * **Security note:** Setting innerHTML bypasses XSS protections. Only use with
- * trusted or sanitized content. Pass `allowScripts: true` only when the content
- * source is trusted upstream.
+ * **Security note:** Only use with trusted or sanitized content. Pass `allowScripts: true`
+ * only when the content source is trusted upstream.
  *
  * @since 2.0
- * @param {Element} element - Target element
- * @param {DangerouslySetInnerHTMLOptions} [options] - Shadow DOM mode and script execution options
- * @returns {SingleMatchHandlers<string>} Watch handlers that set the element's inner HTML
+ * @param element - Target element
+ * @param [options] - Shadow DOM mode and script execution options
+ * @returns Match handlers that schedule the innerHTML mutation
  */
-declare const dangerouslyBindInnerHTML: (element: Element, options?: DangerouslySetInnerHTMLOptions) => SingleMatchHandlers<string>;
-export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, type DangerouslySetInnerHTMLOptions, dangerouslyBindInnerHTML, };
+declare const dangerouslyBindInnerHTML: (element: Element, options?: DangerouslyBindInnerHTMLOptions) => SingleMatchHandlers<string>;
+export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, };

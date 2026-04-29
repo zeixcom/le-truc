@@ -17,69 +17,69 @@ A general-purpose text field wrapper for `input` or `textarea` elements. Demonst
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `value`
-* `string`
-* `''`
-* Current textbox value
+- `value`
+- `string`
+- `''`
+- Current textbox value
 ---
-* `length`
-* `number` (readonly)
-* `0`
-* Length of current textbox value
+- `length`
+- `number` (readonly)
+- `0`
+- Length of current textbox value
 ---
-* `error`
-* `string`
-* `''`
-* Validation error text shown in `.error`
+- `error`
+- `string`
+- `''`
+- Validation error text shown in `.error`
 ---
-* `description`
-* `string`
-* Text content of `.description`
-* Description/help text (or remaining characters when `data-remaining` is set)
+- `description`
+- `string`
+- Text content of `.description`
+- Description/help text (or remaining characters when `data-remaining` is set)
 {% /table %}
 
 #### Methods
 
 {% table %}
-* Name
-* Type
-* Description
+- Name
+- Type
+- Description
 ---
-* `clear`
-* `() => void`
-* Method to clear the textbox and emit input/change events
+- `clear`
+- `() => void`
+- Method to clear the textbox and emit input/change events
 {% /table %}
 
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('input, textarea')`
-* `HTMLInputElement | HTMLTextAreaElement`
-* **required**
-* Native text field bound to `value`
+- `first('input, textarea')`
+- `HTMLInputElement | HTMLTextAreaElement`
+- **required**
+- Native text field bound to `value`
 ---
-* `first('button.clear')`
-* `HTMLButtonElement`
-* optional
-* Clear action button; shown when `length > 0`
+- `first('button.clear')`
+- `HTMLButtonElement`
+- optional
+- Clear action button; shown when `length > 0`
 ---
-* `first('.error')`
-* `HTMLElement`
-* optional
-* Validation message target linked by `aria-errormessage`
+- `first('.error')`
+- `HTMLElement`
+- optional
+- Validation message target linked by `aria-errormessage`
 ---
-* `first('.description')`
-* `HTMLElement`
-* optional
-* Description target linked by `aria-describedby`
+- `first('.description')`
+- `HTMLElement`
+- optional
+- Description target linked by `aria-describedby`
 {% /table %}

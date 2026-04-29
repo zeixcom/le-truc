@@ -216,9 +216,7 @@ export const apiEffect = (onRebuild?: () => void) => {
 							console.warn('⚠️ No API categories found in README.md')
 						}
 					} else {
-						console.warn(
-							'⚠️ README.md not found, skipping API index generation',
-						)
+						console.warn('⚠️ README.md not found, skipping API index generation')
 					}
 
 					if (!firstRun) onRebuild?.()

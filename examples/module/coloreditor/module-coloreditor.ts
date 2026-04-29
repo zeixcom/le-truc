@@ -51,15 +51,15 @@ export default defineComponent<ModuleColoreditorProps>(
 				if (target instanceof HTMLInputElement && target.name === 'name')
 					return { name: target.value }
 			}),
-			textbox
-				&& pass(textbox, {
+			textbox &&
+				pass(textbox, {
 					value: 'name',
 					description: () => `Nearest named CSS color: ${host.nearest}`,
 				}),
 			colorgraph && pass(colorgraph, { color: 'color' }),
 			colorscale && pass(colorscale, { color: 'color', name: 'name' }),
-			colorinfoBase
-				&& pass(colorinfoBase, {
+			colorinfoBase &&
+				pass(colorinfoBase, {
 					color: 'color',
 					name: () => `${host.name} 500`,
 				}),

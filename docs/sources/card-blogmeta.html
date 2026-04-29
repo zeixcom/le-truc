@@ -68,7 +68,9 @@
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">time</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"published"</span><span style="color:#A6E22E"> datetime</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"2026-04-04"</span><span style="color:#F8F8F2">>2026-04-04&#x3C;/</span><span style="color:#F92672">time</span><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F8F8F2">		· updated on &#x3C;</span><span style="color:#F92672">time</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"modified"</span><span style="color:#A6E22E"> datetime</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"2026-04-08"</span><span style="color:#F8F8F2">>2026-04-08&#x3C;/</span><span style="color:#F92672">time</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;</span><span style="color:#F92672">span</span><span style="color:#A6E22E"> class</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"modified"</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">			· updated on &#x3C;</span><span style="color:#F92672">time</span><span style="color:#A6E22E"> datetime</span><span style="color:#F8F8F2">=</span><span style="color:#E6DB74">"2026-04-08"</span><span style="color:#F8F8F2">>2026-04-08&#x3C;/</span><span style="color:#F92672">time</span><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F8F8F2">		&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">	&#x3C;</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">>7 min read&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">card-blogmeta</span><span style="color:#F8F8F2">></span></span>
@@ -158,6 +160,9 @@
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> INVALID_DATE </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'invalid date'</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> UNKNOWN_DATE </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'unknown date'</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">function</span><span style="color:#A6E22E"> formatLocalDate</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#FD971F;font-style:italic">	locale</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#FD971F;font-style:italic">	isoDate</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">,</span></span>
@@ -171,7 +176,7 @@
 <span class="line"><span style="color:#F8F8F2">		Number.</span><span style="color:#A6E22E">isNaN</span><span style="color:#F8F8F2">(month) </span><span style="color:#F92672">||</span></span>
 <span class="line"><span style="color:#F8F8F2">		Number.</span><span style="color:#A6E22E">isNaN</span><span style="color:#F8F8F2">(day)</span></span>
 <span class="line"><span style="color:#F8F8F2">	)</span></span>
-<span class="line"><span style="color:#F92672">		return</span><span style="color:#E6DB74"> 'invalid date'</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> INVALID_DATE</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> date </span><span style="color:#F92672">=</span><span style="color:#F92672"> new</span><span style="color:#A6E22E"> Date</span><span style="color:#F8F8F2">(year, month </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span><span style="color:#F8F8F2">, day) </span><span style="color:#88846F">// avoid UTC offset shifting the day</span></span>
 <span class="line"><span style="color:#F92672">	return</span><span style="color:#F92672"> new</span><span style="color:#F8F8F2"> Intl.</span><span style="color:#A6E22E">DateTimeFormat</span><span style="color:#F8F8F2">(locale, { dateStyle }).</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(date)</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
@@ -181,17 +186,20 @@
 <span class="line"><span style="color:#E6DB74">		'time.published'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#E6DB74">		'Add a &#x3C;time> element to display the publication date.'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	)</span></span>
-<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> modified </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'time.modified'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> modifiedSpan </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'span.modified'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> modified </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'.modified time'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> locale </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> getLocale</span><span style="color:#F8F8F2">(host)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F8F8F2">	published.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> published.dateTime</span></span>
 <span class="line"><span style="color:#F92672">		?</span><span style="color:#A6E22E"> formatLocalDate</span><span style="color:#F8F8F2">(locale, published.dateTime)</span></span>
-<span class="line"><span style="color:#F92672">		:</span><span style="color:#E6DB74"> 'unknown date'</span></span>
+<span class="line"><span style="color:#F92672">		:</span><span style="color:#F8F8F2"> UNKNOWN_DATE</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">	if</span><span style="color:#F8F8F2"> (modified) {</span></span>
-<span class="line"><span style="color:#F8F8F2">		modified.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> modified.dateTime</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> modifiedDate </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> modified.dateTime</span></span>
 <span class="line"><span style="color:#F92672">			?</span><span style="color:#A6E22E"> formatLocalDate</span><span style="color:#F8F8F2">(locale, modified.dateTime)</span></span>
-<span class="line"><span style="color:#F92672">			:</span><span style="color:#E6DB74"> 'unknown date'</span></span>
+<span class="line"><span style="color:#F92672">			:</span><span style="color:#F8F8F2"> INVALID_DATE</span></span>
+<span class="line"><span style="color:#F92672">		if</span><span style="color:#F8F8F2"> (modifiedSpan </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> modifiedDate </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> INVALID_DATE) modifiedSpan.</span><span style="color:#A6E22E">remove</span><span style="color:#F8F8F2">()</span></span>
+<span class="line"><span style="color:#F92672">		else</span><span style="color:#F8F8F2"> modified.textContent </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> modifiedDate</span></span>
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">})</span></span>
 <span class="line"></span></code></pre>

@@ -73,6 +73,14 @@ bun install
 
 (Le Truc uses Bun as its package manager and runtime.)
 
+**Configure the merge driver for auto-generated docs (once per clone):**
+
+```sh
+git config merge.ours.driver true
+```
+
+The `docs/` and `docs-src/api/` directories are auto-generated and contain commit hashes that differ between branches. This tells Git to always keep your version, avoiding spurious merge conflicts in those files.
+
 **Run tests in watch mode:**
 
 ```sh

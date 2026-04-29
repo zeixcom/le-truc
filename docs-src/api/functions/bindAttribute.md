@@ -2,13 +2,13 @@
 
 > **bindAttribute**(`element`, `name`, `allowUnsafe?`): [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string` \| `boolean`\>
 
-Defined in: [src/helpers.ts:97](https://github.com/zeixcom/le-truc/blob/715e9bd5c4e382082b6ddd7a0cf9768da5f33744/src/helpers.ts#L97)
+Defined in: [src/helpers.ts:117](https://github.com/zeixcom/le-truc/blob/e413fd39461fd5b549a5a02c7d0ccde7cbd1822c/src/helpers.ts#L117)
 
-Returns `RunHandlers` that set or toggle an attribute with security validation.
+Returns `SingleMatchHandlers` that set or toggle an attribute with security validation.
 
-- `ok(string)` → `safeSetAttribute(el, name, value)` (or `el.setAttribute` if `allowUnsafe`)
-- `ok(boolean)` → `el.toggleAttribute(name, value)` — adds (without value) when `true`, removes when `false`
-- `nil` → `el.removeAttribute(name)`
+- `ok(string)` → schedules `safeSetAttribute(el, name, value)` (or `el.setAttribute` if `allowUnsafe`)
+- `ok(boolean)` → schedules `el.toggleAttribute(name, value)` — adds when `true`, removes when `false`
+- `nil` → schedules `el.removeAttribute(name)`
 
 Pass `allowUnsafe: true` only when the value has been validated upstream.
 
@@ -36,7 +36,7 @@ Skip security validation for string values
 
 [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string` \| `boolean`\>
 
-Watch handlers for the attribute
+Match handlers for the attribute mutation
 
 #### Since
 

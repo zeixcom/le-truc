@@ -5,20 +5,20 @@
  * and exported constants (standardChildren, richChildren, attribute definitions).
  */
 
-import { describe, test, expect } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import {
-	ClassAttribute,
-	IdAttribute,
 	CalloutClassAttribute,
+	ClassAttribute,
 	classAttribute,
-	idAttribute,
-	styleAttribute,
-	titleAttribute,
-	requiredTitleAttribute,
 	commonAttributes,
-	styledAttributes,
-	standardChildren,
+	IdAttribute,
+	idAttribute,
+	requiredTitleAttribute,
 	richChildren,
+	standardChildren,
+	styleAttribute,
+	styledAttributes,
+	titleAttribute,
 } from '../markdoc-constants'
 
 /* === Attribute Classes === */

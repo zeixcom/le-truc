@@ -2,7 +2,7 @@
 
 > **TaskCallback**\<`T`\> = (`prev`, `signal`) => `Promise`\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:106
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:121
 
 A callback function for tasks that asynchronously computes a value.
 

@@ -1,4 +1,4 @@
-import { type Config, type Node, type Schema, Tag } from '@markdoc/markdoc'
+import { type Node, type Schema, Tag } from '@markdoc/markdoc'
 
 const blogmeta: Schema = {
 	render: 'card-blogmeta',
@@ -9,7 +9,7 @@ const blogmeta: Schema = {
 		avatar: { type: String },
 		'reading-time': { type: String },
 	},
-	transform(node: Node, config: Config) {
+	transform(node: Node) {
 		const date = String(node.attributes['date'] ?? '')
 		const author = String(node.attributes['author'] ?? '')
 		const avatar = String(node.attributes['avatar'] ?? '')

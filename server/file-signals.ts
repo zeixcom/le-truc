@@ -19,11 +19,12 @@ import { watchFiles } from './file-watcher'
 import {
 	highlightCodeBlocks,
 	injectModuleDemoPreview,
+	injectTableOfContents,
 	resolveInternalLinks,
 } from './html-shaping'
-import { extractTocItems } from './markdoc-helpers'
 import { getRelativePath } from './io'
 import markdocConfig from './markdoc.config'
+import { extractTocItems } from './markdoc-helpers'
 
 /* === Types === */
 
@@ -248,6 +249,7 @@ const docsMarkdown: {
 				htmlContent = await highlightCodeBlocks(htmlContent)
 				htmlContent = injectModuleDemoPreview(htmlContent)
 				htmlContent = resolveInternalLinks(htmlContent, basePath)
+				htmlContent = injectTableOfContents(htmlContent, toc)
 
 				// Extract title
 				let title = frontmatter.title

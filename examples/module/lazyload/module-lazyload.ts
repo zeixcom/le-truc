@@ -29,57 +29,60 @@ export default defineComponent<ModuleLazyloadProps>(
 		)
 		const loading = first('.loading', 'Needed to display loading state.')
 		const errorEl = first('.error', 'Needed to display error messages.')
-		const content = first('.content', 'Needed to display content.')
+		const contentEl = first('.content', 'Needed to display content.')
 
-		const result = createTask<{
-			ok: boolean
-			value: string
-			error: string
-			pending: boolean
-		}>(
-			async (_prev, abort) => {
-				const url = host.src
-				const err = !url
-					? 'No URL provided'
-					: !isValidURL(url)
-						? 'Invalid URL'
-						: isRecursiveURL(url, host)
-							? 'Recursive URL detected'
-							: ''
-				if (err) return { ok: false, value: '', error: err, pending: false }
+		const content = createTask<string>(async (_prev, abort) => {
+			const url = host.src
+			if (!url) throw new Error('No URL provided')
+			if (!isValidURL(url)) throw new Error('Invalid URL')
+			if (isRecursiveURL(url, host)) throw new Error('Recursive URL detected')
+			try {
+				const { content: fetched } = await fetchWithCache(url, abort)
+				return fetched
+			} catch (e) {
+				throw new Error(`Failed to fetch content for "${url}": ${String(e)}`)
+			}
+		})
 
-				try {
-					const { content: fetched } = await fetchWithCache(url, abort)
-					return { ok: true, value: fetched, error: '', pending: false }
-				} catch (err) {
-					return {
-						ok: false,
-						value: '',
-						error: `Failed to fetch content for "${url}": ${String(err)}`,
-						pending: false,
-					}
-				}
-			},
-			{ value: { ok: false, value: '', error: '', pending: true } },
-		)
+		const { ok: setHTML } = dangerouslyBindInnerHTML(contentEl, {
+			allowScripts: host.hasAttribute('allow-scripts'),
+		})
 
 		expose({ src: asString() })
 
 		return [
-			watch(result, ({ ok, pending, error }) => {
-				callout.hidden = ok
-				callout.classList.toggle('danger', !!error)
-				loading.hidden = !pending
-				errorEl.hidden = !error
-				errorEl.textContent = error ?? ''
-				content.hidden = !ok
+			watch(content, {
+				ok: content => {
+					callout.hidden = true
+					loading.hidden = true
+					contentEl.hidden = false
+					setHTML(content)
+				},
+				nil: () => {
+					callout.hidden = false
+					loading.hidden = false
+					contentEl.hidden = true
+				},
+				stale: () => {
+					contentEl.style.setProperty('opacity', 'var(--opacity-dimmed)')
+					return () => {
+						contentEl.style.removeProperty('opacity')
+					}
+				},
+				err: error => {
+					callout.hidden = false
+					callout.classList.add('danger')
+					loading.hidden = true
+					errorEl.hidden = false
+					errorEl.textContent = error.message
+					contentEl.hidden = true
+					return () => {
+						callout.classList.remove('danger')
+						errorEl.hidden = true
+						errorEl.textContent = ''
+					}
+				},
 			}),
-			watch(
-				() => result.get().value ?? '',
-				dangerouslyBindInnerHTML(content, {
-					allowScripts: host.hasAttribute('allow-scripts'),
-				}),
-			),
 		]
 	},
 )

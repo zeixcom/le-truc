@@ -6,11 +6,11 @@
 
 import { describe, expect, test } from 'bun:test'
 import {
-	tabButton,
-	tabPanel,
-	tabGroup,
-	validatePanels,
 	type PanelType,
+	tabButton,
+	tabGroup,
+	tabPanel,
+	validatePanels,
 } from '../../templates/fragments'
 
 /* === Helpers === */
@@ -35,32 +35,50 @@ describe('tabButton', () => {
 	})
 
 	test('sets correct aria-controls', () => {
-		const result = tabButton({ name: 'widget', panel: mockPanel({ type: 'ts' }) })
+		const result = tabButton({
+			name: 'widget',
+			panel: mockPanel({ type: 'ts' }),
+		})
 		expect(result).toContain('aria-controls="panel_widget_ts"')
 	})
 
 	test('sets aria-selected="true" for selected panel', () => {
-		const result = tabButton({ name: 'widget', panel: mockPanel({ selected: true }) })
+		const result = tabButton({
+			name: 'widget',
+			panel: mockPanel({ selected: true }),
+		})
 		expect(result).toContain('aria-selected="true"')
 	})
 
 	test('sets aria-selected="false" for unselected panel', () => {
-		const result = tabButton({ name: 'widget', panel: mockPanel({ selected: false }) })
+		const result = tabButton({
+			name: 'widget',
+			panel: mockPanel({ selected: false }),
+		})
 		expect(result).toContain('aria-selected="false"')
 	})
 
 	test('sets tabindex="-1" for unselected panel', () => {
-		const result = tabButton({ name: 'widget', panel: mockPanel({ selected: false }) })
+		const result = tabButton({
+			name: 'widget',
+			panel: mockPanel({ selected: false }),
+		})
 		expect(result).toContain('tabindex="-1"')
 	})
 
 	test('sets tabindex="0" for selected panel', () => {
-		const result = tabButton({ name: 'widget', panel: mockPanel({ selected: true }) })
+		const result = tabButton({
+			name: 'widget',
+			panel: mockPanel({ selected: true }),
+		})
 		expect(result).toContain('tabindex="0"')
 	})
 
 	test('includes panel label text', () => {
-		const result = tabButton({ name: 'widget', panel: mockPanel({ label: 'TypeScript' }) })
+		const result = tabButton({
+			name: 'widget',
+			panel: mockPanel({ label: 'TypeScript' }),
+		})
 		expect(result).toContain('TypeScript')
 	})
 })
@@ -80,22 +98,33 @@ describe('tabPanel', () => {
 		})
 		const result = tabPanel({ name: 'widget', panel })
 		expect(result).toContain('<module-scrollarea orientation="horizontal">')
-		expect(result).toContain('<pre class="shiki"><code>export const x = 1</code></pre>')
+		expect(result).toContain(
+			'<pre class="shiki"><code>export const x = 1</code></pre>',
+		)
 	})
 
 	test('adds hidden attribute for non-selected panel', () => {
-		const result = tabPanel({ name: 'widget', panel: mockPanel({ selected: false }) })
+		const result = tabPanel({
+			name: 'widget',
+			panel: mockPanel({ selected: false }),
+		})
 		expect(result).toContain('hidden')
 	})
 
 	test('does not add hidden attribute for selected panel', () => {
-		const result = tabPanel({ name: 'widget', panel: mockPanel({ selected: true }) })
+		const result = tabPanel({
+			name: 'widget',
+			panel: mockPanel({ selected: true }),
+		})
 		// hidden should NOT appear as an attribute on the panel div
 		expect(result).not.toMatch(/\shidden(\s|>)/)
 	})
 
 	test('sets correct id on panel div', () => {
-		const result = tabPanel({ name: 'widget', panel: mockPanel({ type: 'css' }) })
+		const result = tabPanel({
+			name: 'widget',
+			panel: mockPanel({ type: 'css' }),
+		})
 		expect(result).toContain('id="panel_widget_css"')
 	})
 })
@@ -125,7 +154,8 @@ describe('tabGroup', () => {
 				type: 'html',
 				label: 'HTML',
 				filePath: 'examples/widget/widget.html',
-				content: '<pre class="shiki"><code>&lt;div&gt;Widget&lt;/div&gt;</code></pre>',
+				content:
+					'<pre class="shiki"><code>&lt;div&gt;Widget&lt;/div&gt;</code></pre>',
 				selected: true,
 			},
 		]
@@ -138,7 +168,12 @@ describe('tabGroup', () => {
 	test('renders one tabpanel per panel', () => {
 		const panels = [
 			mockPanel({ type: 'html', selected: true }),
-			mockPanel({ type: 'css', label: 'CSS', filePath: 'w.css', selected: false }),
+			mockPanel({
+				type: 'css',
+				label: 'CSS',
+				filePath: 'w.css',
+				selected: false,
+			}),
 		]
 		const result = tabGroup('widget', panels)
 		const count = (result.match(/role="tabpanel"/g) || []).length
@@ -169,20 +204,34 @@ describe('validatePanels', () => {
 	test('rejects multiple selected panels', () => {
 		const panels = [
 			mockPanel({ type: 'html', selected: true }),
-			mockPanel({ type: 'css', label: 'CSS', filePath: 'w.css', selected: true }),
+			mockPanel({
+				type: 'css',
+				label: 'CSS',
+				filePath: 'w.css',
+				selected: true,
+			}),
 		]
 		const result = validatePanels(panels)
 		expect(result.valid).toBe(false)
-		expect(result.errors.some(e => e.includes('Multiple panels are selected'))).toBe(true)
+		expect(
+			result.errors.some(e => e.includes('Multiple panels are selected')),
+		).toBe(true)
 	})
 
 	test('rejects duplicate panel types', () => {
 		const panels = [
 			mockPanel({ type: 'html', selected: true }),
-			mockPanel({ type: 'html', label: 'HTML2', filePath: 'w2.html', selected: false }),
+			mockPanel({
+				type: 'html',
+				label: 'HTML2',
+				filePath: 'w2.html',
+				selected: false,
+			}),
 		]
 		const result = validatePanels(panels)
 		expect(result.valid).toBe(false)
-		expect(result.errors.some(e => e.includes('Duplicate panel type'))).toBe(true)
+		expect(result.errors.some(e => e.includes('Duplicate panel type'))).toBe(
+			true,
+		)
 	})
 })

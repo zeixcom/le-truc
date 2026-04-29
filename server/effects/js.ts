@@ -4,7 +4,9 @@ import { componentScripts, docsScripts, libraryScripts } from '../file-signals'
 
 export const jsEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => { resolve = res })
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
 	const cleanup = createEffect(() => {
 		match(
 			[docsScripts.sources, libraryScripts.sources, componentScripts.sources],
@@ -15,10 +17,14 @@ export const jsEffect = (onRebuild?: () => void) => {
 						console.log('🔧 Rebuilding JS assets...')
 						const proc = Bun.spawn(
 							[
-								'bun', 'build', TS_FILE,
-								'--outdir', `${ASSETS_DIR}/`,
+								'bun',
+								'build',
+								TS_FILE,
+								'--outdir',
+								`${ASSETS_DIR}/`,
 								'--minify',
-								'--define', 'process.env.DEV_MODE=false',
+								'--define',
+								'process.env.DEV_MODE=false',
 								'--sourcemap=external',
 							],
 							{ stdout: 'inherit', stderr: 'inherit' },

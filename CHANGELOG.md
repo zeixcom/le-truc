@@ -1,57 +1,75 @@
 # Changelog
 
-## 2.0.0-next
+## 2.0.1
 
 ### Added
 
-- **`FactoryContext<P>` type**: New context object passed to the factory function, containing element query helpers (`first`, `all`), the `host` element, and factory helpers (`expose`, `watch`, `on`, `pass`, `provideContexts`, `requestContext`).
-- **`EffectDescriptor` type**: Deferred effect — a thunk `() => MaybeCleanup` that runs inside a reactive scope after all dependencies are resolved. Replaces the old `Effect<P, E>` type.
-- **`FactoryResult` type**: Return type of the factory function — a flat array of `EffectDescriptor | false | undefined`, enabling the `element && descriptor()` pattern for conditional effects.
-- **`SingleMatchHandlers<T>` type** (re-exported from `@zeix/cause-effect`): Match-branch handlers with `ok`, `err`, and `nil` properties, accepted by `watch()` and DOM binding helpers. `ok` receives the resolved value directly; `err` receives a single `Error`. All handler return types are `MaybePromise<MaybeCleanup>`, enabling async handlers for fire-and-forget side effects such as fetch calls or analytics.
-- **`MaybePromise<T>` type** (re-exported from `@zeix/cause-effect`): `T | Promise<T>` — the return type of async-capable handlers in `SingleMatchHandlers<T>`.
-- **`PassedProps<P, Q>` type**: Props object for `pass()` — maps child component property names to `Reactive<Q[K], P>` values.
-- **DOM binding helpers** in a new `src/helpers.ts` module, each usable as a `watch()` handler:
-  - `bindText(element, preserveComments?)` — sets text content
-  - `bindProperty(element, key)` — sets a DOM property
-  - `bindClass<T = boolean>(element, token)` — toggles a class; generic `T` allows non-boolean reactive values without a transform function
-  - `bindVisible<T = boolean>(element)` — controls visibility via `el.hidden = !value`; generic `T` allows non-boolean reactive values
-  - `bindAttribute(element, name, allowUnsafe?)` — returns `WatchHandlers<string | boolean>` for attribute management; boolean values use `toggleAttribute`
-  - `bindStyle(element, prop)` — returns `WatchHandlers<string>` for inline style; nil value calls `removeProperty`, restoring the CSS cascade
-  - `dangerouslyBindInnerHTML(element, options?)` — returns `WatchHandlers<string>` for innerHTML with optional shadow DOM and script re-execution
-- **`each(memo, callback)` helper**: Creates per-element reactive effects from a `Memo<E[]>`. When elements enter the collection their effects are activated inside a per-element `createScope`; when they leave the scope is disposed. The callback receives a single element and returns a `FactoryResult` array or a single `EffectDescriptor`. Returned as an `EffectDescriptor` for inclusion in the factory return array.
-- **`OnEventHandler<P, Evt, E>` type** exported from `src/events.ts`: Handler signature for `on()` — receives `(event, element)` and may return `{ prop: value }` to batch-update host properties, `Promise<void>` for fire-and-forget side effects, or `void`.
-- **`asDate(fallback?)` parser**: New `Parser<string>` factory with a simplified signature — no longer requires a UI context parameter.
-- **`asClampedInteger(min?, max?)` parser**: Parser for clamped integer values; returns `min` (default `0`) when the attribute is absent or the parsed value is out of range.
-- **`throttle(fn, signal?)` utility**: New exported function in `src/scheduler.ts`. Wraps any function to execute at most once per animation frame, always using the latest arguments. Shares the same RAF tick as `schedule()`. The returned function has a `.cancel()` method that discards any pending invocation. Accepts an optional `AbortSignal` — when the signal fires, the pending invocation is cancelled automatically.
+- **`ScopeOptions` and `SlotDescriptor` types re-exported from `@zeix/cause-effect`**: `ScopeOptions` is the options argument to `createScope()` (e.g. `{ root: true }` to create an unowned root scope). `SlotDescriptor<T>` is the `{ get: () => T; set?: (value: T) => void }` shape exposed by Slot signals and now accepted directly by `pass()`.
 
 ### Changed
 
-- **Passive event listeners throttled at the input level**: `on()` now wraps passive event listeners (scroll, resize, wheel, touch events) with `throttle()` rather than deferring the signal update with `schedule()`. The handler runs at most once per animation frame with the latest event, preventing unnecessary churn in the signal graph between frames.
-- **`on()` handler may return `Promise<void>`**: Returning a Promise from an `on()` handler is now explicitly supported for fire-and-forget side effects (analytics, fetch-and-forget, etc.). The Promise is not awaited and its resolved value cannot update host properties. For async state updates, use a trigger-state + `Task`.
-- **`defineComponent()` API redesigned with a factory form**: The signature changed from `defineComponent<P, U>(name, props, select, setup)` to `defineComponent<P>(name, factory)`. This is a **breaking change** — the only way to define components is now the factory form. The factory receives a `FactoryContext<P>` and returns a flat `FactoryResult` array of `EffectDescriptor`s.
-- **Reactive properties declared via `expose()` inside the factory**: The `props` parameter and the `select` query builder are removed. Components call `context.expose(props)` at connect time to declare reactive properties, enabling per-instance initialization.
-- **`Parser<T>` signature simplified**: Parsers no longer receive the element or UI object. The signature is now `(value: string | null | undefined) => T`. Existing parsers using the old two-argument form must be migrated to `asParser()`.
-- **`Reactive<T>` type simplified**: Removed the element type parameter; thunks are now `() => T | Promise<T> | null | undefined` instead of `(target: E) => T | null | undefined`.
-- **Effect factories replaced by `watch()`, `on()`, `pass()` helpers**: The individual effect factory functions (`setAttribute`, `toggleClass`, `setProperty`, `setText`, etc.) are replaced by the general-purpose `watch(source, handler)` helper combined with the DOM binding helpers above.
-- **`on()` redesigned as a factory helper**: Accepts a single element or `Memo<E[]>` target and typed event names. Handlers receive `(event, element)` and may return `{ prop: value }` to batch-update host properties, `Promise<void>` for fire-and-forget side effects, or `void`. For `Memo<E[]>` targets, uses event delegation (one listener on the shadow root or host); non-bubbling events (`focus`, `blur`, `scroll`, `mouseenter`, `mouseleave`, etc.) fall back to per-element listeners with per-element lifecycle — a DEV_MODE warning is logged pointing toward `each()` + `on()`.
-- **`pass()` redesigned as a factory helper**: `pass(target, props)` returns an `EffectDescriptor` and works for both single elements and `Memo<E[]>` targets.
-- **`provideContexts()` and `requestContext()` are now `FactoryContext` methods**: Instantiated via `makeProvideContexts()` / `makeRequestContext()` bound to the host element. `provideContexts([...])` returns an `EffectDescriptor` to include in the return array.
-- **`getHelpers()` replaced by `makeElementQueries()`**: Returns a tuple `[ElementQueries, (run: () => void) => void]`; the `UI` type is no longer exported.
-- **`METHOD_BRAND` constant now exported**: Enables explicit branding checks for method producers; `isMethodProducer()` no longer falls back to `isFunction()`.
-- **`@zeix/cause-effect` upgraded to `^1.1.1`**: Adds the `SingleMatchHandlers<T>` type and a single-signal `match(signal, handlers)` overload where `ok` receives the value directly and `err` receives a single `Error` (not an array). Async handlers (`MaybePromise<MaybeCleanup>`) are now supported across all branches; rejections are routed to `err` if provided, otherwise fall back to `console.error`.
+- **`@zeix/cause-effect` upgraded to `^1.3.2`** from `^1.2.1`: adds `ScopeOptions` for root-scope creation, `SlotDescriptor<T>` for the Slot getter/setter descriptor shape, and fixes stale reactive properties after a component reconnects to the DOM.
+- **`DangerouslySetInnerHTMLOptions` renamed to `DangerouslyBindInnerHTMLOptions`**: The old name is no longer exported. Update all import sites that reference the type by name. The rename aligns with the `dangerouslyBindInnerHTML` function name and the broader `bind*` helper naming convention. **Breaking change for TypeScript consumers who import the type explicitly.**
+- **`PassedProps<P, Q>` accepts `SlotDescriptor<Q[K] & {}>` values**: In addition to `Reactive<Q[K], P>`, each entry in the map passed to `pass()` may now be a raw `SlotDescriptor` — a `{ get, set? }` object. `toSignal()` detects descriptor objects (present `get`, absent `Symbol.toStringTag`) and passes them through without wrapping, so callers can forward a Slot signal's own descriptor directly.
+
+### Fixed
+
+- **Scope disposal bug when `connectedCallback` fires inside a re-runnable effect (regression from v0.16.3)**: The v2.0 rewrite dropped the `unown()` guard that had been present since v0.16.3. As a result, `createScope(() => activateResult(result))` in `connectedCallback` registered the component scope as a child of whatever `createEffect` was running when the element was inserted into the DOM — typically a `watch(list.keys(), …)` DOM-reconciliation effect. When that effect re-ran (e.g. because a second item was added to the list), `runCleanup` disposed all owned scopes, silently killing every `createEffect`-backed `watch` inside the newly-connected component. Event listeners added by `on()` survived (their cleanup is not auto-registered via `createEffect`), which masked the bug: clicks could still update list state through the slot setter, but the component's own reactive effects no longer responded to signal changes. Fixed by restoring `createScope(…, { root: true })` so the component scope is never owned by an outer reactive context and `disconnectedCallback` remains the sole lifecycle authority.
+- **Double initialization guard in `connectedCallback`**: The factory function is now called only once per element instance. A private `#initialized` flag and `#setup` cache are set after the first `connectedCallback` run. Subsequent calls (DOM re-insertion) skip the factory entirely and re-activate the cached `FactoryResult` directly, preventing duplicate `expose()` calls and redundant reactive-property and accessor creation on reconnect.
+- **`on()` event listeners now owned by a child `createScope()`**: Previously, `on()` returned a raw cleanup function from the `EffectDescriptor` thunk; cleanup was composed into the surrounding reactive scope only if the descriptor was not inside a conditional expression. Both delegation-style (`Memo<E[]>`) and direct single-element `on()` calls now wrap listener registration in `createScope()`, so the listener's cleanup is registered in the reactive ownership graph unconditionally. Listeners are guaranteed to be removed when the component's root scope disposes on `disconnectedCallback`.
+
+## 2.0.0
+
+### Added
+
+- **`FactoryContext<P>` type**: Context object passed to the factory function. Contains element query helpers (`first`, `all`), the `host` element, and effect helpers (`expose`, `watch`, `on`, `pass`, `provideContexts`, `requestContext`).
+- **`EffectDescriptor` type**: Deferred effect — a thunk `() => MaybeCleanup` activated inside a reactive scope after dependency resolution. Replaces `Effect<P, E>`.
+- **`FactoryResult` type**: Return type of the factory function — a (possibly nested) array of `EffectDescriptor` values and falsy guards, enabling the `element && [watch(...)]` conditional pattern.
+- **`PassedProps<P, Q>` type**: Second argument to `pass()` — maps child component property names to reactive values from the parent.
+- **`SingleMatchHandlers<T>` type** (re-exported from `@zeix/cause-effect`): Match-branch handlers accepted by `watch()` and the `bindAttribute`, `bindStyle`, and `dangerouslyBindInnerHTML` helpers. `ok` receives the resolved value; `err` receives a single `Error`; `stale` fires when a `Task` is re-executing with a retained value (omitting it falls back to `ok`). Routing precedence: `nil` > `err` > `stale` > `ok`. All handler return types are `MaybePromise<MaybeCleanup>`.
+- **`MaybePromise<T>` type** (re-exported from `@zeix/cause-effect`): `T | Promise<T>`.
+- **DOM binding helpers**, each used as the second argument to `watch()`:
+  - `bindText(element, preserveComments?)` — sets text content
+  - `bindProperty(element, key)` — sets a DOM property
+  - `bindClass<T = boolean>(element, token)` — toggles a CSS class token; generic `T` allows non-boolean reactive values without a transform
+  - `bindVisible<T = boolean>(element)` — controls visibility via `el.hidden = !value`; `true` = visible
+  - `bindAttribute(element, name, allowUnsafe?)` — returns `SingleMatchHandlers<string | boolean>`; boolean values use `toggleAttribute`; nil removes the attribute
+  - `bindStyle(element, prop)` — returns `SingleMatchHandlers<string>`; nil removes the inline style, restoring the CSS cascade
+  - `dangerouslyBindInnerHTML(element, options?)` — returns `SingleMatchHandlers<string>` for innerHTML with optional shadow DOM and script re-execution
+- **`each(memo, callback)` function**: Creates per-element reactive effects from a `Memo<E[]>`. Effects for entering elements are activated in a per-element scope; leaving elements dispose their scope. The callback receives a single element and returns a `FactoryResult` or a single `EffectDescriptor`. Not part of `FactoryContext` — import directly alongside `defineComponent`.
+- **`OnEventHandler<P, Evt, E>` type**: Handler signature for `on()` — receives `(event, element)` and may return `{ prop: value }` to batch-update host properties, `Promise<void>` for fire-and-forget side effects, or `void`.
+- **`asClampedInteger(min?, max?)` parser**: Clamps a parsed integer to `[min, max]`; returns `min` (default `0`) when the attribute is absent or the value is out of range.
+- **`throttle(fn, signal?)` utility**: Wraps any function to execute at most once per animation frame, always using the latest arguments. The returned function has a `.cancel()` method. Accepts an optional `AbortSignal` — when it fires, any pending invocation is cancelled.
+- **`escapeHTML(text)`, `safeSetAttribute(element, name, value)`, `setTextPreservingComments(element, text)` utilities**: Exported for use in component code that manipulates the DOM directly. `safeSetAttribute` validates URL protocols and blocks `on*` attribute names.
+
+### Changed
+
+- **`defineComponent()` signature changed to a 2-parameter factory form**: The old 4-parameter signature `(name, props, select, setup)` is removed. The only form is now `defineComponent<P>(name, factory)`, where the factory receives a `FactoryContext<P>` and returns a `FactoryResult` array of `EffectDescriptor`s. **Breaking change** — all components must be rewritten.
+- **Reactive properties declared via `expose()` inside the factory**: `expose(props)` is called once inside the factory at connect time to initialize reactive properties. Replaces the `props` parameter and `select` query builder from the old form.
+- **`Parser<T>` signature simplified**: Parsers no longer receive the element or UI object. The signature is now `(value: string | null | undefined) => T`. Migrate existing 2-argument parsers to the new signature and brand with `asParser()`.
+- **`Reactive<T>` type simplified**: Element type parameter removed; thunks are now `() => T | Promise<T> | null | undefined` instead of `(target: E) => T | null | undefined`.
+- **Effect factory functions replaced by `watch()` + binding helpers**: `setAttribute`, `toggleClass`, `setProperty`, `setText`, and other v1 effect factories are removed. Use `watch(source, bindText(el))`, `watch(source, bindAttribute(el, 'name'))`, etc. instead.
+- **`on()` redesigned as a factory context helper**: Takes an explicit single element or `Memo<E[]>` as the first argument. Handlers receive `(event, element)` — typed to the matched element, eliminating `event.target` casting. Returning `{ prop: value }` batch-applies updates to host properties synchronously; `Promise<void>` is supported for fire-and-forget side effects. For `Memo<E[]>` targets, uses event delegation; non-bubbling events (`focus`, `blur`, `scroll`, `mouseenter`, `mouseleave`, etc.) fall back to per-element listeners with a DEV_MODE warning pointing toward `each()` + `on()`. Passive events (`scroll`, `resize`, `wheel`, `touchstart`, `touchmove`) are throttled to one call per animation frame.
+- **`pass()` redesigned as a factory context helper**: `pass(target, props)` accepts a single element or `Memo<E[]>` and returns an `EffectDescriptor`. For `Memo<E[]>` targets, manages per-element signal swap lifecycle automatically.
+- **`provideContexts()` and `requestContext()` are factory context helpers**: Both are bound to the host element and called directly from the factory. `provideContexts([...])` returns an `EffectDescriptor` to include in the return array.
+- **`@zeix/cause-effect` upgraded to `^1.2.1`**: Adds `SingleMatchHandlers<T>` with a single-signal `match(signal, handlers)` overload (`ok` receives the value directly, `err` a single `Error`), async handlers (`MaybePromise<MaybeCleanup>`) across all branches, and the `stale` branch for `Task` signals. Also exports `isSignalOfType<T>()` (replaces deprecated `isObjectOfType()`), `DEEP_EQUALITY`, and `DEFAULT_EQUALITY`; all re-exported from Le Truc's `index.ts`.
+
+### Fixed
+
+- **`extractAttributes` ReDoS**: Replaced `/\[[^\]]*\]/g` with a linear O(n) depth-counter scan, eliminating O(n²) backtracking on selectors containing many `[` without a closing `]`. Also fixed attribute name extraction to split on `]` before stripping non-alphanumeric characters, preventing characters after `]` (e.g. `#id` in `.nav[aria-expanded]#id`) from leaking into the extracted name.
 
 ### Removed
 
-- **Old 4-parameter `defineComponent()` form** `(name, props, select, setup)`: fully replaced by the 2-parameter factory form.
-- **`Effects<P, U>` return type and effect-object pattern**: Setup no longer returns a record keyed by UI element names.
-- **Effect factory modules** (`src/effects/attribute.ts`, `class.ts`, `event.ts`, `html.ts`, `property.ts`, `style.ts`, `text.ts`, `pass.ts`): all removed; functionality is provided by `watch()` + binding helpers.
-- **`Effect<P, E>`, `ElementEffects<P, E>`, `ElementUpdater<E, T>` types**: replaced by `EffectDescriptor`.
-- **`Reader<T, H>`, `LooseReader<T>`, `Fallback<T>`, `ParserOrFallback<T>` types and `isReader()`, `read()` functions**: removed from parsers API.
-- **`ComponentSetup<P, U>`, `ComponentUI<P, U>`, `Component<P>` types**: no longer needed with the factory form.
-- **`InvalidEffectsError`, `InvalidUIKeyError`, `InvalidPropertyNameError` error classes**: removed.
-- **`UI` type and `runEffects()` public export**: effects are now activated via descriptors inside a scope created during dependency resolution.
-- **`createEventsSensor(element, init, events)` function**: removed. Use `createState(init)` + `expose({ prop: state.get })` + `on(element, 'eventType', () => { state.set(newValue) })` instead. For advanced use cases requiring `Sensor` semantics, `createSensor` is still re-exported from `@zeix/cause-effect`.
-- **`SensorEventHandler<T, Evt, E>` and `EventHandlers<T, E>` types**: removed along with `createEventsSensor`.
+- **Old 4-parameter `defineComponent()` form** `(name, props, select, setup)` — fully replaced by the factory form.
+- **`Effects<P, U>` return type and the effect-object pattern** — setup no longer returns a record keyed by UI element names.
+- **Effect factory functions** (`setAttribute`, `toggleClass`, `setProperty`, `setText`, etc.) — replaced by `watch()` + `bind*` helpers.
+- **`Effect<P, E>`, `ElementEffects<P, E>`, `ElementUpdater<E, T>` types** — replaced by `EffectDescriptor`.
+- **`Reader<T, H>`, `LooseReader<T>`, `Fallback<T>`, `ParserOrFallback<T>` types and `isReader()`, `read()` functions** — removed from the parsers API.
+- **`ComponentSetup<P, U>`, `ComponentUI<P, U>`, `Component<P>` types** — no longer needed with the factory form.
+- **`InvalidEffectsError` and `InvalidUIKeyError` error classes** — removed.
+- **`UI` type and `runEffects()` export** — removed.
+- **`createEventsSensor(element, init, events)` function**: Use `createState(init)` + `expose({ prop: state.get })` + `on(element, 'eventType', () => { state.set(newValue) })` instead. `createSensor` is still re-exported from `@zeix/cause-effect` for advanced use cases.
+- **`SensorEventHandler<T, Evt, E>` and `EventHandlers<T, E>` types** — removed along with `createEventsSensor`.
 
 ## 1.0.1
 

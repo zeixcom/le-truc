@@ -4,7 +4,7 @@
 
 > **match**\<`T`\>(`signal`, `handlers`): [`MaybeCleanup`](../type-aliases/MaybeCleanup.md)
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:72
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:76
 
 Reads one or more signals and dispatches to the appropriate handler based on their state.
 Must be called within an active owner (effect or scope) so async cleanup can be registered.
@@ -27,7 +27,7 @@ A single signal to read.
 
 [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`T`\>
 
-Object with an `ok` branch (receives the value directly) and optional `err` and `nil` branches.
+Object with an `ok` branch (receives the value directly) and optional `err`, `nil`, and `stale` branches.
 
 ##### Returns
 
@@ -47,7 +47,7 @@ RequiredOwnerError If called without an active owner.
 
 > **match**\<`T`\>(`signals`, `handlers`): [`MaybeCleanup`](../type-aliases/MaybeCleanup.md)
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:94
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/effect.d.ts:98
 
 Reads one or more signals and dispatches to the appropriate handler based on their state.
 Must be called within an active owner (effect or scope) so async cleanup can be registered.
@@ -70,7 +70,7 @@ Tuple of signals to read; all must have a value for `ok` to run.
 
 [`MatchHandlers`](../type-aliases/MatchHandlers.md)\<`T`\>
 
-Object with an `ok` branch and optional `err` and `nil` branches.
+Object with an `ok` branch and optional `err`, `nil`, and `stale` branches. Routing precedence: `nil` > `err` > `stale` > `ok`.
 
 ##### Returns
 

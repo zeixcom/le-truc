@@ -14,30 +14,30 @@ A context provider that exposes live media query state to descendant components 
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `motion`
-* `'no-preference' | 'reduce'`
-* `'no-preference'`
-* Motion preference for `prefers-reduced-motion`
+- `motion`
+- `'no-preference' | 'reduce'`
+- `'no-preference'`
+- Motion preference for `prefers-reduced-motion`
 ---
-* `theme`
-* `'light' | 'dark'`
-* `'light'`
-* Theme preference for `prefers-color-scheme`
+- `theme`
+- `'light' | 'dark'`
+- `'light'`
+- Theme preference for `prefers-color-scheme`
 ---
-* `viewport`
-* `'xs' | 'sm' | 'md' | 'lg' | 'xl'`
-* `'xs'`
-* Media query for `min-width` according to viewport definitions from attributes
+- `viewport`
+- `'xs' | 'sm' | 'md' | 'lg' | 'xl'`
+- `'xs'`
+- Media query for `min-width` according to viewport definitions from attributes
 ---
-* `orientation`
-* `'portrait' | 'landscape'`
-* `'portrait'`
-* Media query for `orientation`
+- `orientation`
+- `'portrait' | 'landscape'`
+- `'portrait'`
+- Media query for `orientation`
 {% /table %}
 
 #### Attributes
@@ -54,30 +54,30 @@ The following attributes are parsed to define `min-width`s of viewport sizes:
 #### Provided Contexts
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `MEDIA_MOTION`
-* `'no-preference' | 'reduce'`
-* `'no-preference'`
-* Motion preference for `prefers-reduced-motion`
+- `MEDIA_MOTION`
+- `'no-preference' | 'reduce'`
+- `'no-preference'`
+- Motion preference for `prefers-reduced-motion`
 ---
-* `MEDIA_THEME`
-* `'light' | 'dark'`
-* `'light'`
-* Theme preference for `prefers-color-scheme`
+- `MEDIA_THEME`
+- `'light' | 'dark'`
+- `'light'`
+- Theme preference for `prefers-color-scheme`
 ---
-* `MEDIA_VIEWPORT`
-* `'xs' | 'sm' | 'md' | 'lg' | 'xl'`
-* `'xs'`
-* Media query for `min-width` according to viewport definitions from attributes
+- `MEDIA_VIEWPORT`
+- `'xs' | 'sm' | 'md' | 'lg' | 'xl'`
+- `'xs'`
+- Media query for `min-width` according to viewport definitions from attributes
 ---
-* `MEDIA_ORIENTATION`
-* `'portrait' | 'landscape'`
-* `'portrait'`
-* Media query for `orientation`
+- `MEDIA_ORIENTATION`
+- `'portrait' | 'landscape'`
+- `'portrait'`
+- Media query for `orientation`
 {% /table %}
 
 #### Descendant Elements

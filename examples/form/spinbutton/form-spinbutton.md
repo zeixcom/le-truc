@@ -17,57 +17,57 @@ A quantity spinbutton with increment/decrement buttons, clamped values, and keyb
 #### Reactive Properties
 
 {% table %}
-* Name
-* Type
-* Default
-* Description
+- Name
+- Type
+- Default
+- Description
 ---
-* `value`
-* `number` (integer)
-* Parsed from `input.value` (`0` if invalid/missing)
-* Current clamped value in range `0..max`; settable for controlled use
+- `value`
+- `number` (integer)
+- Parsed from `input.value` (`0` if invalid/missing)
+- Current clamped value in range `0..max`; settable for controlled use
 ---
-* `max`
-* `number` (integer)
-* `10`
-* Maximum allowed value (read from `input.max`)
+- `max`
+- `number` (integer)
+- `10`
+- Maximum allowed value (read from `input.max`)
 {% /table %}
 
 #### Descendant Elements
 
 {% table %}
-* Selector
-* Type
-* Required
-* Description
+- Selector
+- Type
+- Required
+- Description
 ---
-* `first('button.increment')`
-* `HTMLButtonElement`
-* **required**
-* Increments `value` and becomes disabled at `max`
+- `first('button.increment')`
+- `HTMLButtonElement`
+- **required**
+- Increments `value` and becomes disabled at `max`
 ---
-* `first('button.decrement')`
-* `HTMLButtonElement`
-* **required**
-* Decrements `value` until `0`
+- `first('button.decrement')`
+- `HTMLButtonElement`
+- **required**
+- Decrements `value` until `0`
 ---
-* `first('input.value')`
-* `HTMLInputElement`
-* **required**
-* Numeric value source and sync target
+- `first('input.value')`
+- `HTMLInputElement`
+- **required**
+- Numeric value source and sync target
 ---
-* `all('button, input:not([disabled])')`
-* `Memo<(HTMLButtonElement | HTMLInputElement)[]>`
-* **required**
-* Interactive controls tracked for event-based updates
+- `all('button, input:not([disabled])')`
+- `Memo<(HTMLButtonElement | HTMLInputElement)[]>`
+- **required**
+- Interactive controls tracked for event-based updates
 ---
-* `first('.zero')`
-* `HTMLElement`
-* optional
-* Shown when `value === 0`
+- `first('.zero')`
+- `HTMLElement`
+- optional
+- Shown when `value === 0`
 ---
-* `first('.other')`
-* `HTMLElement`
-* optional
-* Shown when `value !== 0`
+- `first('.other')`
+- `HTMLElement`
+- optional
+- Shown when `value !== 0`
 {% /table %}

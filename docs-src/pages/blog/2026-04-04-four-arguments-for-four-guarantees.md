@@ -4,7 +4,7 @@ description: We tried to reduce defineComponent to fewer parameters. Here is wha
 emoji: 🔬
 layout: blog
 date: 2026-04-04
-modified-date: 2026-04-09
+modified-date: 2026-04-21
 author: Esther Brunner
 tags: architecture, design
 ---
@@ -136,7 +136,7 @@ The four arguments to `defineComponent` each eliminate a failure mode:
 3. **`resolveDependencies`** (implicit, between `select` and `setup`) — effects never run on elements whose class hasn't been registered yet.
 4. **`setup`** — effects are declarative, track their own dependencies, and are scoped to the component's lifetime. Cleanup is automatic on disconnect.
 
-The four-parameter shape is the API making explicit which things need to happen when. It looks like more than it needs to be until you've debugged a custom element where one of these guarantees was missing.
+The four-parameter form makes explicit what needs to happen when. It looks like more than it needs to be until you've debugged a custom element where one of these guarantees was missing.
 
 ## The factory form for version 2.0
 
@@ -155,7 +155,7 @@ defineComponent<FormCheckboxProps>(
 
     expose({
       checked: checkbox.checked,
-      label: asString(label?.textContent ?? first('label')?.textContent ?? ''),
+      label: label?.textContent ?? first('label')?.textContent ?? '',
     })
 
     return [

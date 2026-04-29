@@ -8,6 +8,13 @@ import { getFilePath, writeFileSafe } from '../io'
 
 export const getMockOutputPath = (filePath: string): string => {
 	const rel = relative(COMPONENTS_DIR, filePath)
+	const parts = rel.split('/')
+	// Convert <type>/<name>/mocks/... to <type>-<name>/mocks/... to match HTML src and URL pattern.
+	if (parts.length >= 4 && parts[2] === 'mocks') {
+		const componentName = `${parts[0]}-${parts[1]}`
+		const mockRelPath = parts.slice(2).join('/')
+		return getFilePath(TEST_DIR, componentName, mockRelPath)
+	}
 	return getFilePath(TEST_DIR, rel)
 }
 
@@ -15,7 +22,9 @@ export const getMockOutputPath = (filePath: string): string => {
 
 export const mocksEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => { resolve = res })
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
 	const cleanup = createEffect(() => {
 		match([componentMocks.sources], {
 			ok: async ([mockFiles]) => {
@@ -25,7 +34,9 @@ export const mocksEffect = (onRebuild?: () => void) => {
 					for (const file of mockFiles) {
 						await writeFileSafe(getMockOutputPath(file.path), file.content)
 					}
-					console.log(`✅ Copied ${mockFiles.length} mock file(s) to docs/test/`)
+					console.log(
+						`✅ Copied ${mockFiles.length} mock file(s) to docs/test/`,
+					)
 					if (!firstRun) onRebuild?.()
 				} finally {
 					resolve?.()

@@ -32,6 +32,7 @@ layout: 'page'
   - [Checkbox](./examples/form-checkbox.html)
   - [Colorgraph](./examples/form-colorgraph.html)
   - [Combobox](./examples/form-combobox.html)
+  - [Inplace Edit](./examples/form-inplace-edit.html)
   - [Listbox](./examples/form-listbox.html)
   - [Radiogroup](./examples/form-radiogroup.html)
   - [Spinbutton](./examples/form-spinbutton.html)
@@ -44,11 +45,12 @@ layout: 'page'
   - [Colorinfo](./examples/module-colorinfo.html)
   - [Dialog](./examples/module-dialog.html)
   - [Lazyload](./examples/module-lazyload.html)
-  - [List](./examples/module-list.html)
   - [Listnav](./examples/module-listnav.html)
   - [Pagination](./examples/module-pagination.html)
   - [Scrollarea](./examples/module-scrollarea.html)
+  - [Splitview](./examples/module-splitview.html)
   - [Tabgroup](./examples/module-tabgroup.html)
+  - [Ticker](./examples/module-ticker.html)
   - [Todo](./examples/module-todo.html)
 {% /listnav %}
 

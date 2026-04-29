@@ -59,7 +59,9 @@ export { processExample }
 
 export const examplesEffect = (onRebuild?: () => void) => {
 	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => { resolve = res })
+	const ready = new Promise<void>(res => {
+		resolve = res
+	})
 	const cleanup = createEffect(() => {
 		match([componentMarkdown.sources, componentMarkup.sources], {
 			ok: async ([mdFiles, htmlFiles]) => {
