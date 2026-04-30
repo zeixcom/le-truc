@@ -17,7 +17,7 @@ Use references/source-map.md to locate the file(s) involved. Read them fully bef
 ## Step 3: Understand the existing pattern
 
 Identify how similar features are implemented:
-- DOM helpers in `src/helpers.ts` return typed handler functions or `WatchHandlers` objects for use with `watch()`
+- DOM helpers in `src/helpers.ts` return typed handler functions or `SingleMatchHandlers` objects for use with `watch()`
 - Parsers use `asParser()` branding (see `src/parsers.ts`)
 - Method producers use `defineMethod()` branding
 - Context uses the W3C Community Protocol (see `src/context.ts`)

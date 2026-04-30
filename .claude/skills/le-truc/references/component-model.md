@@ -39,7 +39,7 @@ defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) =>
     label: asString(label?.textContent ?? button.textContent ?? ''),
   })
 
-  // 3. Return flat array of effect descriptors
+  // 3. Return effect descriptors (nested arrays ok, falsy guards filtered)
   return [
     on(button, 'click', () => { /* ... */ }),
     watch('disabled', bindProperty(button, 'disabled')),
@@ -51,7 +51,7 @@ defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) =>
 **Key constraints:**
 - `expose()` must be called before any signal access that reads `host.propName`
 - Components always have `static observedAttributes = []`. Parsers in `expose()` are called **once at connect time** — HTML authors configure via attributes in server-rendered markup, but attribute changes after connect are not re-parsed. Reactive state flows through the property interface only.
-- The factory result type is `Array<EffectDescriptor | false | undefined>`. Falsy values are filtered before activation — enabling the `element && watch(...)` conditional pattern.
+- The factory result type is `FactoryResult` = `Array<EffectDescriptor | FactoryResult | Falsy>`. Nested arrays are flattened. Falsy values (`false`, `null`, `undefined`, `''`, `0`) are filtered before activation — enabling the `element && watch(...)` conditional pattern.
 
 ## Props initializers in `expose()`
 
@@ -92,23 +92,24 @@ watch(myMemo, bindText(el))
 // Thunk source — all signals read inside are tracked (pure phase)
 watch(() => host.count * 2, bindText(el))
 
-// WatchHandlers for nil/err branches
-watch('href', bindAttribute(link, 'href'))  // bindAttribute returns WatchHandlers<string | boolean>
+// SingleMatchHandlers for nil/err/stale branches
+watch('href', bindAttribute(link, 'href'))  // bindAttribute returns SingleMatchHandlers<string | boolean>
 
 // Multiple sources (array) — handler receives array of values
 watch(['a', 'b'], ([a, b]) => { /* ... */ })
 ```
 
-`WatchHandlers<T>` is accepted as the second argument in place of a plain function:
+`SingleMatchHandlers<T>` (from `@zeix/cause-effect`) is accepted as the second argument in place of a plain function:
 ```typescript
-type WatchHandlers<T> = {
+type SingleMatchHandlers<T> = {
   ok: (value: T) => MaybeCleanup
   err?: (error: Error) => MaybeCleanup
   nil?: () => MaybeCleanup
+  stale?: () => MaybeCleanup  // Task only: signal re-computing with retained value
 }
 ```
 
-`bindAttribute`, `bindStyle`, and `dangerouslyBindInnerHTML` return `WatchHandlers` — use them directly as the second argument to `watch`.
+`bindAttribute`, `bindStyle`, and `dangerouslyBindInnerHTML` return `SingleMatchHandlers` — use them directly as the second argument to `watch`.
 
 ## `on(target, type, handler, options?)` — event listeners
 

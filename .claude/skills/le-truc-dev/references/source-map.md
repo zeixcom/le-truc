@@ -18,7 +18,7 @@ Core files in `src/`:
 | File | Contents |
 |---|---|
 | `component.ts` | `defineComponent`, `Truc` class, component lifecycle, `#setAccessor`, `FactoryContext` |
-| `effects.ts` | `makeWatch`, `makePass`, `each`, `EffectDescriptor`, `FactoryResult`, `Reactive`, `WatchHandlers` |
+| `effects.ts` | `makeWatch`, `makePass`, `each`, `EffectDescriptor`, `FactoryResult`, `Reactive`, `WatchHelper`, `PassHelper` |
 | `events.ts` | `makeOn`, `OnHelper` |
 | `helpers.ts` | `bindText`, `bindProperty`, `bindClass`, `bindVisible`, `bindAttribute`, `bindStyle`, `dangerouslyBindInnerHTML` |
 | `ui.ts` | `first`, `all`, `makeElementQueries`, `createElementsMemo`, selector type inference |

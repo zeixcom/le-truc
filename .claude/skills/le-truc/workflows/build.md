@@ -62,7 +62,7 @@ export default defineComponent<MyComponentProps>(
       label: asString(label?.textContent ?? button.textContent ?? ''),
     })
 
-    // Return flat array of effect descriptors
+    // Return effect descriptors (nested arrays ok, falsy guards filtered)
     return [
       watch('disabled', bindProperty(button, 'disabled')),
       label && watch('label', bindText(label)),

@@ -8,7 +8,7 @@ The single external dependency is `@zeix/cause-effect`, which provides the react
 
 `defineComponent` creates a class `Truc extends HTMLElement`, registers it via `customElements.define()`, and returns the class.
 
-The **factory form** `(name, factory)`: the factory receives a `FactoryContext` with `{ all, expose, first, host, on, pass, provideContexts, requestContext, watch }`. It calls `expose({ ... })` for reactive props and returns a flat `FactoryResult` array of effect descriptors. `static observedAttributes = []` — parsers in `expose()` are called once at connect time with the current attribute value.
+The **factory form** `(name, factory)`: the factory receives a `FactoryContext` with `{ all, expose, first, host, on, pass, provideContexts, requestContext, watch }`. It calls `expose({ ... })` for reactive props and returns a `FactoryResult` — an array of effect descriptors (nested arrays are flattened; falsy values are filtered). `static observedAttributes = []` — parsers in `expose()` are called once at connect time with the current attribute value.
 
 ### connectedCallback — initialization
 
@@ -65,21 +65,21 @@ Calls the cleanup function stored from `createScope()`, which tears down all eff
 
 ## The Effect System
 
-Effects in Le Truc are **effect descriptors** — thunks `() => MaybeCleanup`. The factory function returns a flat array of them (`FactoryResult`). After dependency resolution, each descriptor is activated inside a `createScope()`.
+Effects in Le Truc are **effect descriptors** — thunks `() => MaybeCleanup`. The factory function returns a `FactoryResult` array of them (nested arrays are flattened; falsy values are filtered). After dependency resolution, each descriptor is activated inside a `createScope()`.
 
 ### bind* helpers — DOM update handlers
 
-`src/helpers.ts` provides `WatchHandlers<T>` objects and plain handler functions for use with `watch()`:
+`src/helpers.ts` provides `SingleMatchHandlers<T>` objects and plain handler functions for use with `watch()`:
 
 | Helper | Returns | What it does |
 |---|---|---|
-| `bindAttribute(el, name)` | `WatchHandlers<string \| boolean>` | Sets/removes an attribute; boolean uses `toggleAttribute` |
+| `bindAttribute(el, name)` | `SingleMatchHandlers<string \| boolean>` | Sets/removes an attribute; boolean uses `toggleAttribute` |
 | `bindClass(el, token)` | `(value: boolean) => void` | Adds/removes a CSS class |
 | `bindText(el)` | `(value: string) => void` | Sets text content |
 | `bindProperty(el, key)` | `(value: T) => void` | Sets a DOM property directly |
-| `bindStyle(el, prop)` | `WatchHandlers<string>` | Sets/removes an inline style |
+| `bindStyle(el, prop)` | `SingleMatchHandlers<string>` | Sets/removes an inline style |
 | `bindVisible(el)` | `(value: boolean) => void` | Controls `el.hidden = !value` |
-| `dangerouslyBindInnerHTML(el, opts?)` | `WatchHandlers<string>` | Sets innerHTML, optionally in a shadow root |
+| `dangerouslyBindInnerHTML(el, opts?)` | `SingleMatchHandlers<string>` | Sets innerHTML, optionally in a shadow root |
 
 ### on() — event binding
 
@@ -197,7 +197,7 @@ Dispatches a `ContextRequestEvent` that bubbles up the DOM during `connectedCall
 | Branded parsers and methods | Symbol-based branding (`PARSER_BRAND`, `METHOD_BRAND`) | Structural typing, class instances | `fn.length` is unreliable with default params/rest/destructuring; symbols are unforgeable |
 | Lazy `MutationObserver` for `all()` | Observer activates on first read via `watched` option | Always-on observer, polling | Avoids overhead for collections not read in effects; auto-disconnects when unwatched |
 | Bind helper naming | `bind*` prefix | `sync*`, `update*` | `sync` implies bidirectionality; `bind` clearly conveys one-directional declarative DOM binding |
-| Bind helpers return plain function or WatchHandlers | `bindText`/`bindProperty`/`bindClass`/`bindVisible` → `(value) => void`; `bindAttribute`/`bindStyle` → `WatchHandlers<T>` | All return plain functions, all return WatchHandlers | `bindAttribute`/`bindStyle` have a meaningful nil path (remove attr/style) and `bindAttribute` has a boolean toggle branch; the others don't benefit from WatchHandlers |
+| Bind helpers return plain function or SingleMatchHandlers | `bindText`/`bindProperty`/`bindClass`/`bindVisible` → `(value) => void`; `bindAttribute`/`bindStyle`/`dangerouslyBindInnerHTML` → `SingleMatchHandlers<T>` | All return plain functions, all return SingleMatchHandlers | `bindAttribute`/`bindStyle` have a meaningful nil path (remove attr/style) and `bindAttribute` has a boolean toggle branch; the others don't benefit from SingleMatchHandlers |
 | `bindAttribute` boolean dispatch | `toggleAttribute(name, value)` | Stringify boolean, throw on boolean | Maps naturally to the native boolean-attribute API; avoids invalid string values like `'true'`/`'false'` for presence-only attributes |
 | `bindVisible` direction | `el.hidden = !value` (value=true → element visible) | `el.hidden = value` (named `bindHidden`) | `bindVisible(el)` reads as English — "bind visibility to value" |
 

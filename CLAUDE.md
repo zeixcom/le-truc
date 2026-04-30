@@ -4,7 +4,7 @@
 
 ## Factory Form
 
-The factory form is the only way to define components. The factory receives a `FactoryContext` with helpers `{ all, expose, first, host, on, pass, provideContexts, requestContext, watch }`, calls `expose({ ... })` for reactive props, and returns a flat `FactoryResult` array of effect descriptors:
+The factory form is the only way to define components. The factory receives a `FactoryContext` with helpers `{ all, expose, first, host, on, pass, provideContexts, requestContext, watch }`, calls `expose({ ... })` for reactive props, and returns a `FactoryResult` — an array of effect descriptors (nested arrays are flattened; falsy values are filtered):
 
 ```ts
 defineComponent<MyProps>('my-element', ({ expose, first, host, on, watch }) => {
@@ -49,7 +49,7 @@ defineComponent<MyProps>('my-element', ({ expose, first, host, on, watch }) => {
 
 - **`bindVisible` is the inverse of `el.hidden`**: `bindVisible(el)` sets `el.hidden = !value`. A value of `true` makes the element visible.
 
-- **`bindAttribute` returns `WatchHandlers`, not a function**: Use as `watch('prop', bindAttribute(el, 'name'))` — `watch` accepts both forms.
+- **`bindAttribute` returns `SingleMatchHandlers`, not a function**: Use as `watch('prop', bindAttribute(el, 'name'))` — `watch` accepts both a plain function and a `SingleMatchHandlers` object.
 
 - **`bindAttribute` boolean dispatch**: When the reactive value is boolean, `toggleAttribute` is called — the attribute is added (without value) when `true` and removed when `false`. Do not pass boolean for attributes that require a string value.
 
