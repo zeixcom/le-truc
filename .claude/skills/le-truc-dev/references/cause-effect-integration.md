@@ -31,7 +31,7 @@ The cleanup in `pass()` restores the original signal (`slot.replace(original)`) 
 
 ## Memo — `all()` element collection
 
-`all(selector)` returns a `Memo<E[]>` created by `createElementsMemo()` in `src/ui.ts`. The `Memo` uses the `watched` option to set up a `MutationObserver` lazily — the observer only activates when the Memo has an active reactive reader.
+`all(selector, required?)` returns a `Memo<E[]>` created by `createElementsMemo()` in `src/ui.ts`. If `required` is a non-empty string and no elements match at query time, a `MissingElementError` is thrown before the Memo is returned. The `Memo` uses the `watched` option to set up a `MutationObserver` lazily — the observer only activates when the Memo has an active reactive reader.
 
 The `equals` option uses element-identity comparison (`a.length === b.length && a.every((el, i) => el === b[i])`). Since cause-effect 0.18.4, `equals` is fully respected by `invalidate()` — effects skip re-runs when the matched element set has not changed.
 

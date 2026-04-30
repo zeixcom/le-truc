@@ -12,9 +12,9 @@ watch(source, handler)
 ```
 
 - `source` — a prop name string, a `Signal`, or a thunk `() => T`
-- `handler` — either `(value: T) => void` (plain function) or `WatchHandlers<T>` (object with `ok`, `nil?`, `err?` branches)
+- `handler` — either `(value: T) => void` (plain function) or `SingleMatchHandlers<T>` (object with `ok`, `nil?`, `err?`, `stale?` branches)
 
-The `bind*` helpers create typed handler functions or `WatchHandlers` objects and can be passed directly to `watch`. They are **optional shortcuts** — plain handler functions that update the DOM directly are equally valid and often cleaner when multiple DOM updates belong together.
+The `bind*` helpers create typed handler functions or `SingleMatchHandlers` objects and can be passed directly to `watch`. They are **optional shortcuts** — plain handler functions that update the DOM directly are equally valid and often cleaner when multiple DOM updates belong together.
 
 ### Thunk sources enable bind helpers with transformations
 
@@ -41,9 +41,9 @@ Without thunks, these would require a custom handler. Thunks let you keep the in
 | Set a DOM property | `bindProperty(el, key)` | `(value: E[K]) => void` |
 | Show or hide an element | `bindVisible(el, transform?)` | `(value: T) => void` |
 | Toggle a CSS class | `bindClass(el, token, transform?)` | `(value: T) => void` |
-| Set/remove an attribute | `bindAttribute(el, name, allowUnsafe?)` | `WatchHandlers<string \| boolean>` |
-| Set an inline style | `bindStyle(el, prop)` | `WatchHandlers<string>` |
-| Set innerHTML | `dangerouslyBindInnerHTML(el, options?)` | `WatchHandlers<string>` |
+| Set/remove an attribute | `bindAttribute(el, name, allowUnsafe?)` | `SingleMatchHandlers<string \| boolean>` |
+| Set an inline style | `bindStyle(el, prop)` | `SingleMatchHandlers<string>` |
+| Set innerHTML | `dangerouslyBindInnerHTML(el, options?)` | `SingleMatchHandlers<string>` |
 | Attach an event listener | `on(target, type, handler, options?)` | returns `EffectDescriptor` |
 | Bind a Le Truc child's prop | `pass(target, props)` | returns `EffectDescriptor` |
 | Per-element effects on a Memo | `each(memo, callback)` | returns `EffectDescriptor` |
@@ -95,7 +95,7 @@ watch('state', bindClass(el, 'is-open', v => v === 'open'))
 
 ### `bindAttribute(element, name, allowUnsafe?)`
 
-Returns `WatchHandlers<string | boolean>`. Pass directly to `watch`.
+Returns `SingleMatchHandlers<string | boolean>`. Pass directly to `watch`.
 
 - `ok(string)` → `safeSetAttribute(el, name, value)` (security validated)
 - `ok(boolean)` → `el.toggleAttribute(name, value)` — adds (no value) when `true`, removes when `false`
@@ -111,7 +111,7 @@ watch('src', bindAttribute(img, 'src', true))
 
 ### `bindStyle(element, prop)`
 
-Returns `WatchHandlers<string>`. Pass directly to `watch`.
+Returns `SingleMatchHandlers<string>`. Pass directly to `watch`.
 
 - `ok(string)` → `el.style.setProperty(prop, value)`
 - `nil` → `el.style.removeProperty(prop)` — restores the CSS cascade value
@@ -123,7 +123,7 @@ watch('accentColor', bindStyle(card, '--highlight-color'))
 
 ### `dangerouslyBindInnerHTML(element, options?)`
 
-Returns `WatchHandlers<string>`. Pass directly to `watch`. Only use on trusted or sanitized content.
+Returns `SingleMatchHandlers<string>`. Pass directly to `watch`. Only use on trusted or sanitized content.
 
 ```typescript
 watch('highlightedHtml', dangerouslyBindInnerHTML(codeBlock))
@@ -163,6 +163,14 @@ const child = first('child-component') as HTMLElement & ChildProps
 pass(child, { disabled: 'disabled' })   // string prop name
 pass(child, { value: mySignal })         // Signal
 pass(child, { label: () => host.label }) // thunk
+// SlotDescriptor — inline bi-directional adapter; use when you need a type conversion
+// or derived mapping that a plain signal or thunk can't express (thunks are read-only):
+pass(child, {
+  progress: {
+    get: () => host.value / host.max,             // normalize to 0–1
+    set: (v: number) => { host.value = v * host.max },
+  },
+})
 ```
 
 **Use `bindProperty()` inside `watch()` for non-Le Truc elements** (Lit, Stencil, plain custom elements).

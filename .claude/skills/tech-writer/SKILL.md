@@ -2,21 +2,22 @@
 name: tech-writer
 description: >
   Keep le-truc developer-facing documents up to date with the source code and examples:
-  docs-src/pages/, README.md, ARCHITECTURE.md, CLAUDE.md, and JSDoc in src/.
-  Use after code changes, to verify consistency, or to update a specific document.
+  docs-src/pages/, README.md, ARCHITECTURE.md, CLAUDE.md, JSDoc in src/, and skill
+  files in .claude/skills/. Use after code changes, to verify consistency, or to update
+  a specific document.
 user_invocable: false
 ---
 
 <scope>
-This skill maintains the **authored documentation** for the @zeix/le-truc library.
+This skill maintains the **authored documentation** for the @zeix/le-truc library and the **AI skill files** that agents use to work with the codebase.
 
-**In scope:** `docs-src/pages/`, `README.md`, `ARCHITECTURE.md`, `CLAUDE.md`, JSDoc in `src/`.
+**In scope:** `docs-src/pages/`, `README.md`, `ARCHITECTURE.md`, `CLAUDE.md`, JSDoc in `src/`, all files under `.claude/skills/` (SKILL.md, references/, workflows/), and `server/SERVER.md`.
 
 **Out of scope — do not edit:**
 - `docs-src/api/` — TypeDoc-generated from source; regenerate with `bun run build:docs` instead
 - `examples/*/` — component source files; use the `le-truc` or `le-truc-dev` skill instead
 - `CHANGELOG.md` — use the `changelog-keeper` skill instead
-- Build scripts, server code, or test infrastructure
+- Build scripts, server code, or test infrastructure (other than `server/SERVER.md`)
 </scope>
 
 <essential_principles>
@@ -40,6 +41,7 @@ What do you need to do?
 2. **Review consistency** — check that all documents reflect the current source
 3. **Update a specific document** — you know exactly which one
 4. **Write a blog post** — draft a new post for `docs-src/pages/blog/`
+5. **Update a skill file** — a skill description, reference, or workflow under `.claude/skills/` is inaccurate or incomplete
 
 **Wait for response before proceeding.**
 </intake>
@@ -51,6 +53,7 @@ What do you need to do?
 | 2, "review", "consistency", "check", "audit", "verify" | workflows/consistency-review.md |
 | 3, "specific", or names a document | See document routing below |
 | 4, "write a blog post", "new blog post", "blog" | workflows/write-blog-post.md |
+| 5, "skill file", "skill doc", "update skill", names a skill | workflows/update-skills.md |
 
 **Document-specific routing (option 3):**
 
@@ -61,6 +64,8 @@ What do you need to do?
 | `ARCHITECTURE.md` | workflows/update-architecture.md |
 | `CLAUDE.md` | workflows/update-agent-docs.md |
 | JSDoc / `src/` | workflows/update-jsdoc.md |
+| Any file under `.claude/skills/` | workflows/update-skills.md |
+| `server/SERVER.md` | workflows/update-server-md.md |
 
 **Intent-based routing (clear intent without selecting a number):**
 - "update the components page" / "add example to the data-flow page" → workflows/update-pages.md
@@ -70,6 +75,8 @@ What do you need to do?
 - "update JSDoc" / "inline docs" → workflows/update-jsdoc.md
 - "review all docs" / "check consistency" → workflows/consistency-review.md
 - "write a blog post" / "new blog post" / "draft a post" → workflows/write-blog-post.md
+- "update skill" / "skill file is wrong" / "fix skill reference" → workflows/update-skills.md
+- "update SERVER.md" / "server docs" / "build pipeline changed" / "new effect" → workflows/update-server-md.md
 
 **After identifying the workflow, read it and follow it exactly.**
 </routing>
@@ -95,6 +102,8 @@ All in `workflows/`:
 | update-architecture.md | Update `ARCHITECTURE.md` |
 | update-agent-docs.md | Update `CLAUDE.md` |
 | update-jsdoc.md | Update JSDoc comments in `src/` |
+| update-skills.md | Fix inaccurate or incomplete skill files under `.claude/skills/` |
+| update-server-md.md | Update `server/SERVER.md` after dev server or build pipeline changes |
 | consistency-review.md | Review all documents for consistency with current source |
 | write-blog-post.md | Draft a new blog post in `docs-src/pages/blog/` |
 </workflows_index>

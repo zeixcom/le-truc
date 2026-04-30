@@ -27,7 +27,7 @@ defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) =>
 })
 ```
 
-The factory receives a `FactoryContext` at connect time. Call `expose({ ... })` to declare reactive props. Return a flat array of effect descriptors created by `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()`. Falsy guards (`element && watch(...)`) are filtered out — use this for optional descendants.
+The factory receives a `FactoryContext` at connect time. Call `expose({ ... })` to declare reactive props. Return an array of effect descriptors created by `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()`. Nested arrays are flattened. Falsy guards (`element && watch(...)`) are filtered out — use this for optional descendants.
 
 **`host` is the only external interface.** Components read and write state through `host.propName`. No querying outside the host's subtree, no direct property access on child components.
 
