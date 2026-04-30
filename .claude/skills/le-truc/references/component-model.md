@@ -18,7 +18,7 @@ The factory receives a `FactoryContext<P>` with these helpers:
 | Helper | Purpose |
 |---|---|
 | `first(selector, required?)` | Query a single descendant; throws `MissingElementError` if `required` string is given and no match |
-| `all(selector)` | Return a `Memo<E[]>` backed by a lazy `MutationObserver` |
+| `all(selector, required?)` | Return a `Memo<E[]>` backed by a lazy `MutationObserver`; throws `MissingElementError` if `required` string is given and no elements match |
 | `host` | The component host element, typed as `HTMLElement & P` |
 | `expose(props)` | Declare reactive properties — call once, imperatively, inside the factory body |
 | `watch(source, handler)` | Create a reactive effect descriptor driven by a prop name, signal, or thunk |

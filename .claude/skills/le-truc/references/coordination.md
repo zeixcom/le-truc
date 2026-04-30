@@ -9,7 +9,7 @@ How Le Truc components communicate. Choose one mechanism per relationship.
 | Parent owns a named Le Truc child, shares a signal directly | `pass(target, props)` |
 | Ancestor provides shared state to a subtree of unknown depth | `provideContexts` / `requestContext` |
 | Parent receives events that bubble from any child | `on(host, type, handler)` |
-| Parent drives effects on all current and future matching descendants | `all(selector)` + `each()` |
+| Parent drives effects on all current and future matching descendants | `all(selector, required?)` + `each()` |
 | Two siblings need to share state | **Not possible directly** — lift state to a common ancestor |
 
 ## `pass(target, props)` — parent controls a Le Truc child
@@ -91,9 +91,9 @@ defineComponent<Props>('parent-el', ({ expose, host, on }) => {
 
 Use when: a parent needs to respond to any child of a particular type without knowing exactly which child fired.
 
-## `all(selector)` + `each()` — drive effects on a dynamic set of descendants
+## `all(selector, required?)` + `each()` — drive effects on a dynamic set of descendants
 
-`all(selector)` returns a `Memo<E[]>` backed by a lazy `MutationObserver`. Use with `each()` for per-element effects, or with `on()` for delegated event listeners.
+`all(selector, required?)` returns a `Memo<E[]>` backed by a lazy `MutationObserver`. If `required` is a non-empty string and no elements match at query time, it throws `MissingElementError`. Use with `each()` for per-element effects, or with `on()` for delegated event listeners.
 
 ```typescript
 defineComponent<Props>('list-el', ({ all, expose, host, on, watch }) => {
