@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **`WatchHandlers` corrected to `SingleMatchHandlers` throughout documentation**: `CLAUDE.md`, `ARCHITECTURE.md`, and all `.claude/skills/` references used `WatchHandlers` — a name from an earlier draft. The type exported from `@zeix/cause-effect` and re-exported by Le Truc is `SingleMatchHandlers<T>`. The documentation now also correctly lists the `stale?` branch, which fires when a `Task` signal is re-computing with a retained value (omitting it falls back to `ok`). Affected files: `CLAUDE.md`, `ARCHITECTURE.md`, `le-truc/references/effects.md`, `le-truc/references/component-model.md`, `le-truc-dev/workflows/implement-feature.md`.
+- **`FactoryResult` incorrectly described as "flat array" throughout documentation**: `CLAUDE.md`, `ARCHITECTURE.md`, `le-truc/SKILL.md`, `le-truc/workflows/build.md`, and `le-truc/references/component-model.md` all described the factory return value as a "flat array of effect descriptors". The actual type is `Array<EffectDescriptor | FactoryResult | Falsy>` — nested arrays are recursively flattened by `activateResult()`, and falsy values (`false`, `null`, `undefined`, `''`, `0`) are filtered before activation. The `element && [watch(...)]` pattern depends on this: the inner `[watch(...)]` is a nested `FactoryResult`, not an `EffectDescriptor`. The code has always worked this way; only the documentation was wrong.
+- **`SlotDescriptor` added as allowed in `PassedProps`**: `le-truc/references/coordination.md`, `le-truc/references/effects.md` updated to clarify its purpose as bi-directional adapters.
+- **`le-truc-dev` `source-map` `effects.ts` exports corrected**: Listed `WatchHandlers` as an export of `src/effects.ts`. The actual exported type names are `WatchHelper` (the bound `watch` function type) and `PassHelper` (the bound `pass` function type).
+
+### Changed
+
+- **`changelog-keeper` `adding_entries`**: The git diff command now includes `.claude/skills/` alongside `src/` and `index.ts`. Changes to skills are treated as significant as source code changes — skills govern how code is generated and reviewed. The `entry_style` section now includes guidance on classifying and writing entries for skill changes (Changed/Added/Removed, bold skill name + affected file, describe behavioral difference).
+
 ## 2.0.1
 
 ### Added

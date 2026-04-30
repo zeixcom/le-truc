@@ -25,6 +25,11 @@ defineComponent<ParentProps>('parent-el', ({ expose, first, pass }) => {
       disabled: 'disabled',            // string prop name → reads host.disabled
       label: () => host.label,         // thunk
       value: mySignal,                 // Signal
+      // SlotDescriptor — inline bi-directional adapter (e.g. type conversion):
+      progress: {
+        get: () => host.value / host.max,             // normalize to 0–1
+        set: (v: number) => { host.value = v * host.max },
+      },
     }),
   ]
 })

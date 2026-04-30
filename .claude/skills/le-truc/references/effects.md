@@ -163,6 +163,14 @@ const child = first('child-component') as HTMLElement & ChildProps
 pass(child, { disabled: 'disabled' })   // string prop name
 pass(child, { value: mySignal })         // Signal
 pass(child, { label: () => host.label }) // thunk
+// SlotDescriptor — inline bi-directional adapter; use when you need a type conversion
+// or derived mapping that a plain signal or thunk can't express (thunks are read-only):
+pass(child, {
+  progress: {
+    get: () => host.value / host.max,             // normalize to 0–1
+    set: (v: number) => { host.value = v * host.max },
+  },
+})
 ```
 
 **Use `bindProperty()` inside `watch()` for non-Le Truc elements** (Lit, Stencil, plain custom elements).
