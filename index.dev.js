@@ -2220,7 +2220,9 @@ var safeSetAttribute = (element, attr, value) => {
 };
 var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 var setTextPreservingComments = (element, text) => {
-  Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => node.remove());
+  Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => {
+    node.remove();
+  });
   element.append(document.createTextNode(text));
 };
 
@@ -2293,8 +2295,9 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
           target.querySelectorAll("script").forEach((script) => {
             const newScript = document.createElement("script");
             for (const attr of SCRIPT_ATTRS) {
-              if (script.hasAttribute(attr))
-                newScript.setAttribute(attr, script.getAttribute(attr));
+              const attrValue = script.getAttribute(attr);
+              if (attrValue !== null)
+                newScript.setAttribute(attr, attrValue);
             }
             if (!script.hasAttribute("src"))
               newScript.appendChild(document.createTextNode(script.textContent ?? ""));

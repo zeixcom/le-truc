@@ -117,5 +117,5 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => Pas
  *
  * @since 2.0
  */
-declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult | EffectDescriptor | Falsy | void): EffectDescriptor;
+declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult | EffectDescriptor | Falsy): EffectDescriptor;
 export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, type WatchHelper, };

@@ -84,7 +84,9 @@ const escapeHTML = (text: string): string =>
 const setTextPreservingComments = (element: Element, text: string): void => {
 	Array.from(element.childNodes)
 		.filter(node => node.nodeType !== Node.COMMENT_NODE)
-		.forEach(node => node.remove())
+		.forEach(node => {
+			node.remove()
+		})
 	element.append(document.createTextNode(text))
 }
 

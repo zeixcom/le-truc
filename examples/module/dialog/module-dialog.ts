@@ -14,7 +14,7 @@ const SCROLL_LOCK_CLASS = 'scroll-lock'
 
 export default defineComponent<ModuleDialogProps>(
 	'module-dialog',
-	({ expose, first, host, on, watch }) => {
+	({ expose, first, on, watch }) => {
 		const openButton = first(
 			'button[aria-haspopup="dialog"]',
 			'Add a button to open the dialog.',
@@ -33,7 +33,11 @@ export default defineComponent<ModuleDialogProps>(
 			on(openButton, 'click', () => ({ open: true })),
 			on(closeButton, 'click', () => ({ open: false })),
 			on(dialog, 'click', ({ target }) => target === dialog && { open: false }),
-			on(dialog, 'keydown', ({ key }) => key === 'Escape' && { open: false }),
+			on(dialog, 'keydown', e => {
+				if (e.key !== 'Escape') return
+				e.preventDefault()
+				return { open: false }
+			}),
 
 			watch('open', open => {
 				if (open) {

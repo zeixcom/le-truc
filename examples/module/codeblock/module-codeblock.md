@@ -47,7 +47,7 @@ A progressively enhanced code block that can collapse, expand, and copy its cont
 - Expands the block by setting `collapsed = false`
 ---
 - `first('basic-button.copy')`
-- `Component<BasicButtonProps>`
+- `HTMLElement & BasicButtonProps`
 - optional
 - Copy trigger; reads `copy-success` and `copy-error` messages
 {% /table %}

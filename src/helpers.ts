@@ -196,8 +196,8 @@ const dangerouslyBindInnerHTML = (
 					target.querySelectorAll('script').forEach(script => {
 						const newScript = document.createElement('script')
 						for (const attr of SCRIPT_ATTRS) {
-							if (script.hasAttribute(attr))
-								newScript.setAttribute(attr, script.getAttribute(attr)!)
+							const attrValue = script.getAttribute(attr)
+							if (attrValue !== null) newScript.setAttribute(attr, attrValue)
 						}
 						if (!script.hasAttribute('src'))
 							newScript.appendChild(

@@ -87,7 +87,7 @@ Effects in Le Truc are **effect descriptors** — thunks `() => MaybeCleanup`. T
 
 ### pass() — inter-component binding
 
-`pass(target, props)` from `FactoryContext` — takes an explicit element or `Memo<Component<Q>[]>`, returns an `EffectDescriptor`. Directly swaps the backing signal of a descendant Le Truc component's Slot, creating a zero-overhead live binding. Uses `getSignals(target)` to access the child's internal signal map, captures `slot.current()` before replacing, then calls `slot.replace(signal)`. Cleanup restores the original signal when the parent disconnects.
+`pass(target, props)` from `FactoryContext` — takes an explicit element or `Memo<(HTMLElement & Q)[]>`, returns an `EffectDescriptor`. Directly swaps the backing signal of a descendant Le Truc component's Slot, creating a zero-overhead live binding. Uses `getSignals(target)` to access the child's internal signal map, captures `slot.current()` before replacing, then calls `slot.replace(signal)`. Cleanup restores the original signal when the parent disconnects.
 
 This is more efficient than `setProperty()` for Le Truc targets: it eliminates the intermediate `createEffect` and property-assignment overhead on every reactive update. The parent and child share the exact same underlying signal node.
 
@@ -221,7 +221,7 @@ type FactoryContext<P extends ComponentProps> = {
     // Queries (unchanged from v1.0)
     first: FirstElement
     all: AllElements
-    host: Component<P>
+    host: HTMLElement & P
 
     // Property declaration
     expose: (props: Initializers<P>) => void

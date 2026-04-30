@@ -168,7 +168,7 @@ const toSignal = <T extends {}, P extends ComponentProps>(
 	if (isFunction<T>(source)) return createComputed(source)
 	if (typeof source === 'string') {
 		const sig = getSignals(host)[source]
-		if (sig) return sig
+		if (sig) return sig as Signal<T>
 		return createMemo(() => (host as any)[source])
 	}
 	if (
@@ -373,7 +373,7 @@ const makePass = <P extends ComponentProps>(
  */
 function each<E extends Element>(
 	memo: Memo<E[]>,
-	callback: (element: E) => FactoryResult | EffectDescriptor | Falsy | void,
+	callback: (element: E) => FactoryResult | EffectDescriptor | Falsy,
 ): EffectDescriptor {
 	return () => {
 		createEffect(() => {
