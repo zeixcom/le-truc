@@ -2,7 +2,7 @@
 
 > **defineComponent**\<`P`\>(`name`, `factory`): `CustomElementConstructor` \| `undefined`
 
-Defined in: [src/component.ts:131](https://github.com/zeixcom/le-truc/blob/bc1e32256363451374968e851cb2302740e32636/src/component.ts#L131)
+Defined in: [src/component.ts:185](https://github.com/zeixcom/le-truc/blob/35d57009d1327aac11f959b9973f8f0448704e84/src/component.ts#L185)
 
 Define and register a reactive custom element using the v1.1 factory form.
 

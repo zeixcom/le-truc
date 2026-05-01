@@ -2,7 +2,9 @@
 
 > **Parser**\<`T`\> = (`value`) => `T`
 
-Defined in: [src/parsers.ts:5](https://github.com/zeixcom/le-truc/blob/bc1e32256363451374968e851cb2302740e32636/src/parsers.ts#L5)
+Defined in: [src/component.ts:45](https://github.com/zeixcom/le-truc/blob/35d57009d1327aac11f959b9973f8f0448704e84/src/component.ts#L45)
+
+A branded parser function (transforms HTML attribute strings to typed values).
 
 #### Type Parameters
 

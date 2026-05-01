@@ -2,7 +2,7 @@
 
 > **MethodProducer** = (...`args`) => `void` & `object`
 
-Defined in: [src/parsers.ts:8](https://github.com/zeixcom/le-truc/blob/bc1e32256363451374968e851cb2302740e32636/src/parsers.ts#L8)
+Defined in: [src/component.ts:48](https://github.com/zeixcom/le-truc/blob/35d57009d1327aac11f959b9973f8f0448704e84/src/component.ts#L48)
 
 A branded method-producer function (side-effect initializer, returns void).
 

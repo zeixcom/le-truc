@@ -133,9 +133,8 @@ export {
 	isParser,
 	type MethodProducer,
 	type Parser,
-} from './src/parsers'
+} from './src/component'
 export { asBoolean } from './src/parsers/boolean'
-
 export { asJSON } from './src/parsers/json'
 export { asClampedInteger, asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'

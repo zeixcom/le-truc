@@ -1,4 +1,4 @@
-import { type Parser } from '../parsers';
+import { type Parser } from '../component';
 /**
  * Parse a string as a JSON serialized object with a fallback
  *

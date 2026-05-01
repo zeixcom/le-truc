@@ -1,15 +1,15 @@
 ### Type Alias: Initializers\<P\>
 
-> **Initializers**\<`P`\> = \{ \[K in keyof P\]?: P\[K\] \| Signal\<P\[K\]\> \| Parser\<P\[K\]\> \| (P\[K\] extends (args: any\[\]) =\> any ? P\[K\] & \{ \[METHOD\_BRAND\]: true \} : never) \}
+> **Initializers**\<`P`\> = \{ \[K in keyof P\]?: P\[K\] \| Signal\<P\[K\]\> \| Parser\<P\[K\]\> \| MethodProducer \}
 
-Defined in: [src/component.ts:75](https://github.com/zeixcom/le-truc/blob/bc1e32256363451374968e851cb2302740e32636/src/component.ts#L75)
+Defined in: [src/component.ts:83](https://github.com/zeixcom/le-truc/blob/35d57009d1327aac11f959b9973f8f0448704e84/src/component.ts#L83)
 
 The `props` argument of `defineComponent` — a map from property names to their initializers.
 
 Each value may be:
 - A **static value** or **`Signal`** — used directly as the initial signal value.
 - A **`Parser`** (branded with `asParser()`) — called with the attribute value string
-  at connect time; for 4-param form also on every attribute change.
+  at connect time.
 - A **`MethodProducer`** (branded with `defineMethod()`) — assigned directly as the property
   value; the function IS the method. Per-instance state lives in factory scope.
 

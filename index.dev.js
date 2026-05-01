@@ -1981,14 +1981,6 @@ var makeOn = (host) => {
   return on;
 };
 
-// src/parsers.ts
-var PARSER_BRAND = Symbol("parser");
-var METHOD_BRAND = Symbol("method");
-var isParser = (value) => isFunction(value) && (PARSER_BRAND in value);
-var isMethodProducer = (value) => isFunction(value) && (METHOD_BRAND in value);
-var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
-var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
-
 // src/ui.ts
 var DEPENDENCY_TIMEOUT = 200;
 var extractAttributes = (selector) => {
@@ -2108,6 +2100,12 @@ var makeElementQueries = (host) => {
 };
 
 // src/component.ts
+var PARSER_BRAND = Symbol("parser");
+var METHOD_BRAND = Symbol("method");
+var isParser = (value) => isFunction(value) && (PARSER_BRAND in value);
+var isMethodProducer = (value) => isFunction(value) && (METHOD_BRAND in value);
+var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
+var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 function defineComponent(name, factory) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);

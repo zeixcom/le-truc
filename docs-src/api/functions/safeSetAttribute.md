@@ -2,7 +2,7 @@
 
 > **safeSetAttribute**(`element`, `attr`, `value`): `void`
 
-Defined in: [src/safety.ts:40](https://github.com/zeixcom/le-truc/blob/bc1e32256363451374968e851cb2302740e32636/src/safety.ts#L40)
+Defined in: [src/safety.ts:40](https://github.com/zeixcom/le-truc/blob/35d57009d1327aac11f959b9973f8f0448704e84/src/safety.ts#L40)
 
 Set an attribute on an element with security validation.
 
