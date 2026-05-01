@@ -2,8 +2,9 @@
 ## Step 1: Read the inputs
 
 1. Read `REQUIREMENTS.md` fully — goals, constraints, personas, non-negotiables
-2. Read the relevant sections of `ARCHITECTURE.md` — understand the current system before proposing changes
-3. Check `adr/` directory for existing ADRs on related topics
+2. Read `CONTEXT.md` — understand the domain vocabulary and challenge any conflicting terminology
+3. Read the relevant sections of `ARCHITECTURE.md` — understand the current system before proposing changes
+4. Check `adr/` directory for existing ADRs on related topics
 
 ## Step 2: Explore the codebase
 
@@ -19,6 +20,7 @@ Before designing, clarify anything not resolved by the inputs:
 - Which existing patterns the solution should follow or intentionally break from, and why
 - Testing strategy for new or changed behavior
 - Rollout considerations (breaking change vs. additive)
+- Ambiguous terms that need definition in CONTEXT.md
 
 **Wait for answers before proceeding.**
 
@@ -30,6 +32,8 @@ Propose a solution. For each major decision:
 - Make tradeoffs explicit — ergonomics vs. complexity, flexibility vs. explicitness
 
 If a proposal feels over-engineered, say so and propose a simpler alternative. Prefer extending existing patterns over introducing new abstractions.
+
+When terms are clarified during discussion, update CONTEXT.md inline — don't batch these up.
 
 Show the design to the user and wait for confirmation or objections before writing documents.
 

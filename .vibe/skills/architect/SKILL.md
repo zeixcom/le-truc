@@ -22,6 +22,8 @@ For documentation updates, use the `tech-writer` skill.
 
 **REQUIREMENTS.md is the source of truth.** Every design decision and task should trace back to it. If a proposal doesn't, either update REQUIREMENTS.md or reject the proposal.
 
+**CONTEXT.md is the vocabulary source of truth.** All domain-specific terms must be defined here. Challenge any term that conflicts with the glossary. Update CONTEXT.md inline as terms are resolved.
+
 **ARCHITECTURE.md is owned by this skill.** Only the Architect updates the architecture document — developers propose changes via NOTES.md, not by editing ARCHITECTURE.md directly.
 
 **TODO.md is the task queue.** Write new tasks there; do not assign work verbally. Keep task IDs sequential (`LT-NNN`).
@@ -118,6 +120,7 @@ Key files to read as needed:
 | File | Contents |
 |---|---|
 | `REQUIREMENTS.md` | Project goals, personas, functional requirements, constraints |
+| `CONTEXT.md` | Domain-specific vocabulary, term definitions, and relationships |
 | `ARCHITECTURE.md` | Current system design and key decisions |
 | `TODO.md` | Active task queue (create if absent) |
 | `NOTES.md` | Developer-written blockers and questions (resolve and delete entries) |

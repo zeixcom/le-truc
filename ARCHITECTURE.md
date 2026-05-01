@@ -6,7 +6,7 @@ The single external dependency is `@zeix/cause-effect`, which provides the react
 
 ## Component Model
 
-Components are defined using the factory form (see [ADR 0002](adr/0002-factory-form-over-builder-pattern.md)):
+**Component** instances are defined using the factory form (see [ADR 0002](adr/0002-factory-form-over-builder-pattern.md)):
 
 ```ts
 defineComponent('my-element', ({ expose, first, watch }) => {
@@ -82,16 +82,16 @@ Implements the [W3C Community Protocol for Context](https://github.com/webcompon
 - `provideContexts([...])`: Provider side, installs `context-request` listener
 - `requestContext(context, fallback)`: Consumer side, dispatches `ContextRequestEvent`, returns `Memo<T>`
 
-### Inter-Component Binding
+### Inter-Component Signal Sharing (Pass)
 
-`pass(target, props)` swaps Slot-backed signals for zero-overhead live binding between Le Truc components.
+`pass(target, props)` swaps Slot-backed signals for zero-overhead live **Signal** sharing between Le Truc **Component** instances.
 
 ## Naming Conventions
 
 | Prefix | Layer | Examples |
 |--------|-------|----------|
-| `define*` | DOM/component | `defineComponent`, `defineMethod` |
-| `bind*` | DOM update | `bindText`, `bindAttribute`, `bindClass` |
+| `define*` | Component definition | `defineComponent`, `defineMethod` |
+| `bind*` | DOM binding | `bindText`, `bindAttribute`, `bindClass` |
 | `as*` | Parsers | `asBoolean`, `asInteger`, `asString` |
 | `create*` | Signals | `createState`, `createEffect`, `createScope` |
 

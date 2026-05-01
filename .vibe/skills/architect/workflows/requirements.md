@@ -1,7 +1,8 @@
 <process>
-## Step 1: Read existing requirements
+## Step 1: Read existing requirements and context
 
 Read `REQUIREMENTS.md` if it exists. Understand what is already established before asking questions.
+Read `CONTEXT.md` if it exists. Note any terms that need clarification or conflict with the user's language.
 
 ## Step 2: Interview
 
@@ -20,11 +21,13 @@ Push back on:
 - Vague requirements ("fast", "user-friendly") — demand measurable criteria
 - Solution-first thinking — understand the problem before accepting proposed solutions
 - Scope creep — challenge features that don't trace to a core problem
+- Ambiguous or conflicting terminology — demand clarification and update CONTEXT.md
 
 Identify and surface:
 - Unstated requirements and missing edge cases
 - Conflicts between stated requirements
 - Assumptions that could prove wrong
+- Terms that need precise definitions in CONTEXT.md
 
 Prioritize as Must Have / Should Have / Nice to Have. Escalate conflicts to the user — do not resolve them silently.
 
