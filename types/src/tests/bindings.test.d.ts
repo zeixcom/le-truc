@@ -1,5 +1,5 @@
 /**
- * Unit tests for src/parsers/*.ts
+ * Unit tests for src/bindings.ts
  *
  * Pure functions only — no DOM required.
  */

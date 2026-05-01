@@ -2192,7 +2192,18 @@ function defineComponent(name, factory) {
   customElements.define(name, Truc);
   return customElements.get(name);
 }
-// src/safety.ts
+// src/bindings.ts
+var SCRIPT_ATTRS = [
+  "type",
+  "src",
+  "async",
+  "defer",
+  "nomodule",
+  "crossorigin",
+  "integrity",
+  "referrerpolicy",
+  "fetchpriority"
+];
 var isSafeURL = (value) => {
   if (/^(javascript|data|vbscript):/i.test(value))
     return false;
@@ -2223,19 +2234,6 @@ var setTextPreservingComments = (element, text) => {
   });
   element.append(document.createTextNode(text));
 };
-
-// src/helpers.ts
-var SCRIPT_ATTRS = [
-  "type",
-  "src",
-  "async",
-  "defer",
-  "nomodule",
-  "crossorigin",
-  "integrity",
-  "referrerpolicy",
-  "fetchpriority"
-];
 var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
   element.textContent = String(value);
 };

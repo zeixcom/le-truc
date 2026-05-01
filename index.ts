@@ -125,7 +125,10 @@ export {
 	bindVisible,
 	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
-} from './src/helpers'
+	escapeHTML,
+	safeSetAttribute,
+	setTextPreservingComments,
+} from './src/bindings'
 export {
 	asParser,
 	defineMethod,
@@ -138,11 +141,6 @@ export { asBoolean } from './src/parsers/boolean'
 export { asJSON } from './src/parsers/json'
 export { asClampedInteger, asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'
-export {
-	escapeHTML,
-	safeSetAttribute,
-	setTextPreservingComments,
-} from './src/safety'
 export { schedule, throttle } from './src/scheduler'
 export {
 	type AllElements,

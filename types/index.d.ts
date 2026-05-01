@@ -4,12 +4,11 @@ export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEven
 export { type EffectDescriptor, each, type FactoryResult, type Falsy, type PassedProps, type PassHelper, type Reactive, type WatchHelper, } from './src/effects';
 export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPropertyNameError, InvalidReactivesError, MissingElementError, } from './src/errors';
 export { type EventType, type OnEventHandler, type OnHelper, } from './src/events';
-export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, } from './src/helpers';
+export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, safeSetAttribute, setTextPreservingComments, } from './src/bindings';
 export { asParser, defineMethod, isMethodProducer, isParser, type MethodProducer, type Parser, } from './src/component';
 export { asBoolean } from './src/parsers/boolean';
 export { asJSON } from './src/parsers/json';
 export { asClampedInteger, asInteger, asNumber } from './src/parsers/number';
 export { asEnum, asString } from './src/parsers/string';
-export { escapeHTML, safeSetAttribute, setTextPreservingComments, } from './src/safety';
 export { schedule, throttle } from './src/scheduler';
 export { type AllElements, createElementsMemo, type ElementFromSelector, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, type FirstElement, type KnownTag, type SplitByComma, type TrimWhitespace, } from './src/ui';
