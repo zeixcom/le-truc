@@ -91,6 +91,7 @@ What kind of task is this?
 3. **Design** — design a solution and plan developer tasks
 4. **Review** — review an API change from a developer handoff
 5. **Record ADR** — document an architectural decision
+6. **Improve Architecture** — identify deepening opportunities in existing codebase
 
 **Wait for response before proceeding. If the user provides clear context, route by intent.**
 </intake>
@@ -103,6 +104,7 @@ What kind of task is this?
 | 3, "design", "architect", "plan", "tasks", "ARCHITECTURE" | workflows/architecture.md |
 | 4, "review", "API review", "handoff", "check LT-NNN" | workflows/review-api.md |
 | 5, "ADR", "record decision", "document decision" | workflows/record-adr.md |
+| 6, "improve", "refactor", "architecture review", "deepening" | workflows/improve-architecture.md |
 
 **Intent-based routing:**
 - Pastes or links a GitHub issue → workflows/triage.md
