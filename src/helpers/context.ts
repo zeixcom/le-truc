@@ -6,8 +6,7 @@ import {
 	isFunction,
 	type Memo,
 } from '@zeix/cause-effect'
-import type { ComponentProps } from './component'
-import type { EffectDescriptor } from './effects'
+import type { ComponentProps, EffectDescriptor } from '../types'
 
 /* === Types === */
 

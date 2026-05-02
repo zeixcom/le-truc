@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { extractAttributes } from '../ui'
+import { extractAttributes } from '../helpers/dom'
 
 describe('extractAttributes', () => {
 	test('detects class shorthand', () => {

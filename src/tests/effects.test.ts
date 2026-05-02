@@ -11,8 +11,8 @@
 
 import { describe, expect, test } from 'bun:test'
 import { createScope, createState, createTask } from '@zeix/cause-effect'
-import type { ComponentProps } from '../component'
-import { makeWatch } from '../effects'
+import { makeWatch } from '../helpers/reactive'
+import type { ComponentProps } from '../types'
 
 /* === Helpers === */
 

@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { makeOn } from '../events'
+import { makeOn } from '../helpers/events'
 
 /* === RAF Mock === */
 

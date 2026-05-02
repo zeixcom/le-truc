@@ -1,7 +1,6 @@
 /** @see https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md */
 import { type Memo } from '@zeix/cause-effect';
-import type { ComponentProps } from './component';
-import type { EffectDescriptor } from './effects';
+import type { ComponentProps, EffectDescriptor } from '../types';
 /**
  * A context key.
  *

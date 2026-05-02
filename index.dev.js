@@ -1605,42 +1605,6 @@ function createSlot(initialSignal, options) {
 function isSlot(value) {
   return isSignalOfType(value, TYPE_SLOT);
 }
-// src/context.ts
-var CONTEXT_REQUEST = "context-request";
-
-class ContextRequestEvent extends Event {
-  context;
-  callback;
-  subscribe;
-  constructor(context, callback, subscribe = false) {
-    super(CONTEXT_REQUEST, {
-      bubbles: true,
-      composed: true
-    });
-    this.context = context;
-    this.callback = callback;
-    this.subscribe = subscribe;
-  }
-}
-var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
-  const listener = (e) => {
-    const { context, callback } = e;
-    if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
-      e.stopImmediatePropagation();
-      callback(() => host[context]);
-    }
-  };
-  host.addEventListener(CONTEXT_REQUEST, listener);
-  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
-});
-var makeRequestContext = (host) => (context, fallback) => {
-  let consumed = () => fallback;
-  host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
-    consumed = getter;
-  }));
-  return createMemo(consumed);
-};
-
 // src/util.ts
 var DEV_MODE = typeof process !== "undefined" && true;
 var LOG_WARN = "warn";
@@ -1693,294 +1657,43 @@ class InvalidCustomElementError extends TypeError {
   }
 }
 
-// src/internal.ts
-var componentSignals = new WeakMap;
-var getSignals = (el) => {
-  let signals = componentSignals.get(el);
-  if (!signals) {
-    signals = {};
-    componentSignals.set(el, signals);
-  }
-  return signals;
-};
+// src/helpers/context.ts
+var CONTEXT_REQUEST = "context-request";
 
-// src/effects.ts
-var activateResult = (result) => {
-  for (const descriptor of result) {
-    if (Array.isArray(descriptor))
-      activateResult(descriptor);
-    else if (descriptor)
-      descriptor();
-  }
-};
-var toSignal = (host, source) => {
-  if (isFunction(source))
-    return createComputed(source);
-  if (typeof source === "string") {
-    const sig = getSignals(host)[source];
-    if (sig)
-      return sig;
-    return createMemo(() => host[source]);
-  }
-  if (source && typeof source === "object" && "get" in source && !(Symbol.toStringTag in source)) {
-    return source;
-  }
-  return source;
-};
-var makeWatch = (host) => {
-  function watch(source, handlerOrHandlers) {
-    return () => {
-      if (Array.isArray(source)) {
-        const signals = source.map((s) => toSignal(host, s));
-        const handler = handlerOrHandlers;
-        return createEffect(() => match(signals, { ok: (values) => untrack(() => handler(values)) }));
-      }
-      const signal = toSignal(host, source);
-      if (typeof handlerOrHandlers === "function") {
-        return createEffect(() => match(signal, {
-          ok: (value) => untrack(() => handlerOrHandlers(value))
-        }));
-      }
-      return createEffect(() => match(signal, handlerOrHandlers));
-    };
-  }
-  return watch;
-};
-var makePass = (host) => {
-  const swapSlots = (target, props) => createScope(() => {
-    if (!isCustomElement(target))
-      throw new InvalidCustomElementError(target, `pass from ${elementName(host)}`);
-    if (!isRecord(props))
-      throw new InvalidReactivesError(host, target, props);
-    const signals = getSignals(target);
-    const targetName = elementName(target);
-    const cleanups = [];
-    for (const [prop, reactive] of Object.entries(props)) {
-      if (reactive == null)
-        continue;
-      if (!(prop in target)) {
-        if (DEV_MODE)
-          console[LOG_WARN](`pass(): property '${prop}' does not exist on ${targetName}`);
-        continue;
-      }
-      const signal = toSignal(host, reactive);
-      if (!signal)
-        continue;
-      const slot = signals[prop];
-      if (isSlot(slot)) {
-        const original = slot.current();
-        slot.replace(signal);
-        cleanups.push(() => slot.replace(original));
-        continue;
-      }
-      if (DEV_MODE)
-        console[LOG_WARN](`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`);
-    }
-    if (cleanups.length)
-      return () => {
-        for (const c of cleanups)
-          c();
-      };
-  });
-  function pass(target, props) {
-    return () => {
-      if (!target)
-        return;
-      if (isMemo(target)) {
-        createEffect(() => {
-          for (const el of target.get())
-            createScope(() => swapSlots(el, props));
-        });
-      } else {
-        swapSlots(target, props);
-      }
-    };
-  }
-  return pass;
-};
-function each(memo, callback) {
-  return () => {
-    createEffect(() => {
-      for (const element of memo.get()) {
-        createScope(() => {
-          const result = callback(element);
-          if (Array.isArray(result))
-            activateResult(result);
-          else if (typeof result === "function")
-            result();
-        });
-      }
+class ContextRequestEvent extends Event {
+  context;
+  callback;
+  subscribe;
+  constructor(context, callback, subscribe = false) {
+    super(CONTEXT_REQUEST, {
+      bubbles: true,
+      composed: true
     });
-  };
+    this.context = context;
+    this.callback = callback;
+    this.subscribe = subscribe;
+  }
 }
-
-// src/scheduler.ts
-var objects = new Set;
-var tasks = new WeakMap;
-var throttledCallbacks = new Set;
-var requestId;
-var runTasks = () => {
-  requestId = undefined;
-  const elements = Array.from(objects);
-  objects.clear();
-  for (const element of elements)
-    tasks.get(element)?.();
-  const callbacks = Array.from(throttledCallbacks);
-  throttledCallbacks.clear();
-  for (const cb of callbacks)
-    cb();
-};
-var requestTick = () => {
-  if (!requestId)
-    requestId = requestAnimationFrame(runTasks);
-};
-var schedule = (key, task) => {
-  tasks.set(key, task);
-  objects.add(key);
-  requestTick();
-};
-var throttle = (fn, signal) => {
-  let pending = false;
-  let lastArgs;
-  const flush2 = () => {
-    pending = false;
-    fn(...lastArgs);
-  };
-  const wrapped = (...args) => {
-    lastArgs = args;
-    if (pending)
-      return;
-    pending = true;
-    throttledCallbacks.add(flush2);
-    requestTick();
-  };
-  wrapped.cancel = () => {
-    if (pending) {
-      throttledCallbacks.delete(flush2);
-      pending = false;
+var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
+  const listener = (e) => {
+    const { context, callback } = e;
+    if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
+      e.stopImmediatePropagation();
+      callback(() => host[context]);
     }
   };
-  signal?.addEventListener("abort", wrapped.cancel, { once: true });
-  return wrapped;
+  host.addEventListener(CONTEXT_REQUEST, listener);
+  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
+});
+var makeRequestContext = (host) => (context, fallback) => {
+  let consumed = () => fallback;
+  host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
+    consumed = getter;
+  }));
+  return createMemo(consumed);
 };
 
-// src/events.ts
-var PASSIVE_EVENTS = new Set([
-  "scroll",
-  "resize",
-  "mousewheel",
-  "touchstart",
-  "touchmove",
-  "wheel"
-]);
-var NON_BUBBLING_EVENTS = new Set([
-  "focus",
-  "blur",
-  "scroll",
-  "resize",
-  "load",
-  "unload",
-  "error",
-  "toggle",
-  "mouseenter",
-  "mouseleave",
-  "pointerenter",
-  "pointerleave",
-  "abort",
-  "canplay",
-  "canplaythrough",
-  "durationchange",
-  "emptied",
-  "ended",
-  "loadeddata",
-  "loadedmetadata",
-  "loadstart",
-  "pause",
-  "play",
-  "playing",
-  "progress",
-  "ratechange",
-  "seeked",
-  "seeking",
-  "stalled",
-  "suspend",
-  "timeupdate",
-  "volumechange",
-  "waiting"
-]);
-var attachListener = (host, target, type, handler, options) => {
-  const rawListener = (e) => {
-    const result = handler(e, target);
-    if (!isRecord(result))
-      return;
-    batch(() => {
-      for (const [key, value] of Object.entries(result)) {
-        host[key] = value;
-      }
-    });
-  };
-  const listener = options.passive ? throttle(rawListener) : rawListener;
-  target.addEventListener(type, listener, options);
-  return () => {
-    target.removeEventListener(type, listener);
-    listener.cancel?.();
-  };
-};
-var makeOn = (host) => {
-  function on(target, type, handler, options = {}) {
-    return () => {
-      if (!target)
-        return;
-      if (!("passive" in options)) {
-        options = { ...options, passive: PASSIVE_EVENTS.has(type) };
-      }
-      if (isMemo(target)) {
-        if (NON_BUBBLING_EVENTS.has(type)) {
-          if (DEV_MODE) {
-            console[LOG_WARN](`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
-          }
-          return createEffect(() => {
-            for (const el of target.get()) {
-              createScope(() => {
-                return attachListener(host, el, type, handler, options);
-              });
-            }
-          });
-        }
-        const root = host.shadowRoot ?? host;
-        const rawListener = (e) => {
-          const path = e.composedPath();
-          for (const el of target.get()) {
-            if (path.includes(el)) {
-              const result = handler(e, el);
-              if (!isRecord(result))
-                break;
-              batch(() => {
-                for (const [key, value] of Object.entries(result)) {
-                  host[key] = value;
-                }
-              });
-              break;
-            }
-          }
-        };
-        const listener = options.passive ? throttle(rawListener) : rawListener;
-        createScope(() => {
-          root.addEventListener(type, listener, options);
-          return () => {
-            root.removeEventListener(type, listener);
-            listener.cancel?.();
-          };
-        });
-        return;
-      }
-      createScope(() => attachListener(host, target, type, handler, options));
-    };
-  }
-  return on;
-};
-
-// src/ui.ts
+// src/helpers/dom.ts
 var DEPENDENCY_TIMEOUT = 200;
 var extractAttributes = (selector) => {
   const attributes = new Set;
@@ -2098,13 +1811,302 @@ var makeElementQueries = (host) => {
   return [{ first, all }, resolveDependencies];
 };
 
-// src/component.ts
+// src/scheduler.ts
+var objects = new Set;
+var tasks = new WeakMap;
+var throttledCallbacks = new Set;
+var requestId;
+var runTasks = () => {
+  requestId = undefined;
+  const elements = Array.from(objects);
+  objects.clear();
+  for (const element of elements)
+    tasks.get(element)?.();
+  const callbacks = Array.from(throttledCallbacks);
+  throttledCallbacks.clear();
+  for (const cb of callbacks)
+    cb();
+};
+var requestTick = () => {
+  if (!requestId)
+    requestId = requestAnimationFrame(runTasks);
+};
+var schedule = (key, task) => {
+  tasks.set(key, task);
+  objects.add(key);
+  requestTick();
+};
+var throttle = (fn, signal) => {
+  let pending = false;
+  let lastArgs;
+  const flush2 = () => {
+    pending = false;
+    fn(...lastArgs);
+  };
+  const wrapped = (...args) => {
+    lastArgs = args;
+    if (pending)
+      return;
+    pending = true;
+    throttledCallbacks.add(flush2);
+    requestTick();
+  };
+  wrapped.cancel = () => {
+    if (pending) {
+      throttledCallbacks.delete(flush2);
+      pending = false;
+    }
+  };
+  signal?.addEventListener("abort", wrapped.cancel, { once: true });
+  return wrapped;
+};
+
+// src/helpers/events.ts
+var PASSIVE_EVENTS = new Set([
+  "scroll",
+  "resize",
+  "mousewheel",
+  "touchstart",
+  "touchmove",
+  "wheel"
+]);
+var NON_BUBBLING_EVENTS = new Set([
+  "focus",
+  "blur",
+  "scroll",
+  "resize",
+  "load",
+  "unload",
+  "error",
+  "toggle",
+  "mouseenter",
+  "mouseleave",
+  "pointerenter",
+  "pointerleave",
+  "abort",
+  "canplay",
+  "canplaythrough",
+  "durationchange",
+  "emptied",
+  "ended",
+  "loadeddata",
+  "loadedmetadata",
+  "loadstart",
+  "pause",
+  "play",
+  "playing",
+  "progress",
+  "ratechange",
+  "seeked",
+  "seeking",
+  "stalled",
+  "suspend",
+  "timeupdate",
+  "volumechange",
+  "waiting"
+]);
+var attachListener = (host, target, type, handler, options) => {
+  const rawListener = (e) => {
+    const result = handler(e, target);
+    if (!isRecord(result))
+      return;
+    batch(() => {
+      for (const [key, value] of Object.entries(result)) {
+        host[key] = value;
+      }
+    });
+  };
+  const listener = options.passive ? throttle(rawListener) : rawListener;
+  target.addEventListener(type, listener, options);
+  return () => {
+    target.removeEventListener(type, listener);
+    listener.cancel?.();
+  };
+};
+var makeOn = (host) => {
+  function on(target, type, handler, options = {}) {
+    return () => {
+      if (!target)
+        return;
+      if (!("passive" in options)) {
+        options = { ...options, passive: PASSIVE_EVENTS.has(type) };
+      }
+      if (isMemo(target)) {
+        if (NON_BUBBLING_EVENTS.has(type)) {
+          if (DEV_MODE) {
+            console[LOG_WARN](`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
+          }
+          return createEffect(() => {
+            for (const el of target.get()) {
+              createScope(() => {
+                return attachListener(host, el, type, handler, options);
+              });
+            }
+          });
+        }
+        const root = host.shadowRoot ?? host;
+        const rawListener = (e) => {
+          const path = e.composedPath();
+          for (const el of target.get()) {
+            if (path.includes(el)) {
+              const result = handler(e, el);
+              if (!isRecord(result))
+                break;
+              batch(() => {
+                for (const [key, value] of Object.entries(result)) {
+                  host[key] = value;
+                }
+              });
+              break;
+            }
+          }
+        };
+        const listener = options.passive ? throttle(rawListener) : rawListener;
+        createScope(() => {
+          root.addEventListener(type, listener, options);
+          return () => {
+            root.removeEventListener(type, listener);
+            listener.cancel?.();
+          };
+        });
+        return;
+      }
+      createScope(() => attachListener(host, target, type, handler, options));
+    };
+  }
+  return on;
+};
+
+// src/internal.ts
+var componentSignals = new WeakMap;
+var getSignals = (el) => {
+  let signals = componentSignals.get(el);
+  if (!signals) {
+    signals = {};
+    componentSignals.set(el, signals);
+  }
+  return signals;
+};
+
+// src/helpers/reactive.ts
+var activateResult = (result) => {
+  for (const descriptor of result) {
+    if (Array.isArray(descriptor))
+      activateResult(descriptor);
+    else if (descriptor)
+      descriptor();
+  }
+};
+var toSignal = (host, source) => {
+  if (isFunction(source))
+    return createComputed(source);
+  if (typeof source === "string") {
+    const sig = getSignals(host)[source];
+    if (sig)
+      return sig;
+    return createMemo(() => host[source]);
+  }
+  if (source && typeof source === "object" && "get" in source && !(Symbol.toStringTag in source)) {
+    return source;
+  }
+  return source;
+};
+var makeWatch = (host) => {
+  function watch(source, handlerOrHandlers) {
+    return () => {
+      if (Array.isArray(source)) {
+        const signals = source.map((s) => toSignal(host, s));
+        const handler = handlerOrHandlers;
+        return createEffect(() => match(signals, { ok: (values) => untrack(() => handler(values)) }));
+      }
+      const signal = toSignal(host, source);
+      if (typeof handlerOrHandlers === "function") {
+        return createEffect(() => match(signal, {
+          ok: (value) => untrack(() => handlerOrHandlers(value))
+        }));
+      }
+      return createEffect(() => match(signal, handlerOrHandlers));
+    };
+  }
+  return watch;
+};
+var makePass = (host) => {
+  const swapSlots = (target, props) => createScope(() => {
+    if (!isCustomElement(target))
+      throw new InvalidCustomElementError(target, `pass from ${elementName(host)}`);
+    if (!isRecord(props))
+      throw new InvalidReactivesError(host, target, props);
+    const signals = getSignals(target);
+    const targetName = elementName(target);
+    const cleanups = [];
+    for (const [prop, reactive] of Object.entries(props)) {
+      if (reactive == null)
+        continue;
+      if (!(prop in target)) {
+        if (DEV_MODE)
+          console[LOG_WARN](`pass(): property '${prop}' does not exist on ${targetName}`);
+        continue;
+      }
+      const signal = toSignal(host, reactive);
+      if (!signal)
+        continue;
+      const slot = signals[prop];
+      if (isSlot(slot)) {
+        const original = slot.current();
+        slot.replace(signal);
+        cleanups.push(() => slot.replace(original));
+        continue;
+      }
+      if (DEV_MODE)
+        console[LOG_WARN](`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`);
+    }
+    if (cleanups.length)
+      return () => {
+        for (const c of cleanups)
+          c();
+      };
+  });
+  function pass(target, props) {
+    return () => {
+      if (!target)
+        return;
+      if (isMemo(target)) {
+        createEffect(() => {
+          for (const el of target.get())
+            createScope(() => swapSlots(el, props));
+        });
+      } else {
+        swapSlots(target, props);
+      }
+    };
+  }
+  return pass;
+};
+function each(memo, callback) {
+  return () => {
+    createEffect(() => {
+      for (const element of memo.get()) {
+        createScope(() => {
+          const result = callback(element);
+          if (Array.isArray(result))
+            activateResult(result);
+          else if (typeof result === "function")
+            result();
+        });
+      }
+    });
+  };
+}
+
+// src/types.ts
 var PARSER_BRAND = Symbol("parser");
 var METHOD_BRAND = Symbol("method");
-var isParser = (value) => isFunction(value) && (PARSER_BRAND in value);
-var isMethodProducer = (value) => isFunction(value) && (METHOD_BRAND in value);
+var isParser = (value) => typeof value === "function" && (PARSER_BRAND in value);
+var isMethodProducer = (value) => typeof value === "function" && (METHOD_BRAND in value);
 var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
 var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
+
+// src/component.ts
 function defineComponent(name, factory) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
@@ -2116,7 +2118,9 @@ function defineComponent(name, factory) {
     #cleanup;
     connectedCallback() {
       const runSetup = () => {
-        this.#cleanup = createScope(() => activateResult(this.#setup), {
+        this.#cleanup = createScope(() => {
+          activateResult(this.#setup);
+        }, {
           root: true
         });
       };
@@ -2124,7 +2128,7 @@ function defineComponent(name, factory) {
         runSetup();
       } else {
         const host = this;
-        const [elementQueries, resolveDependencies] = makeElementQueries(this);
+        const [elementQueries, resolveDependencies] = makeElementQueries(host);
         const context = {
           expose: this.#initSignals.bind(this),
           host,
