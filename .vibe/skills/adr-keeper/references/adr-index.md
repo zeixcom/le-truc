@@ -16,6 +16,3 @@ This file is auto-generated. Do not edit manually.
 | [0009](0009-security-validation-in-bindattribute.md) | Security Validation in bindAttribute | ✅ Accepted | M16 |
 
 ---
-
-*Last updated: 2025-01-08*
-*Total ADRs: 9*

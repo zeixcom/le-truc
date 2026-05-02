@@ -86,6 +86,7 @@ export {
 	type ContextCallback,
 	ContextRequestEvent,
 	type ContextType,
+	createContext,
 	type ProvideContextsHelper,
 	type RequestContextHelper,
 	type UnknownContext,

@@ -2,7 +2,7 @@
 
 > **each**\<`E`\>(`memo`, `callback`): [`EffectDescriptor`](../type-aliases/EffectDescriptor.md)
 
-Defined in: [src/effects.ts:372](https://github.com/zeixcom/le-truc/blob/c0c7a519683b9de6742fb7ca8d71487ad2dadceb/src/effects.ts#L372)
+Defined in: [src/helpers/reactive.ts:355](https://github.com/zeixcom/le-truc/blob/157db2ea6a0d3aea197ee178eec89f5cb4064479/src/helpers/reactive.ts#L355)
 
 Create per-element reactive effects from a `Memo<Element[]>`.
 

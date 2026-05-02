@@ -1674,6 +1674,7 @@ class ContextRequestEvent extends Event {
     this.subscribe = subscribe;
   }
 }
+var createContext = (key) => key;
 var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
   const listener = (e) => {
     const { context, callback } = e;
@@ -2406,6 +2407,7 @@ export {
   createList,
   createElementsMemo,
   createEffect,
+  createContext,
   createComputed,
   createCollection,
   bindVisible,

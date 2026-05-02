@@ -1,5 +1,5 @@
 /**
- * Unit tests for extractAttributes in src/ui.ts
+ * Unit tests for extractAttributes in src/helpers/dom.ts
  */
 
 import { describe, expect, test } from 'bun:test'

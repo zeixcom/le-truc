@@ -1,5 +1,5 @@
 /**
- * Unit tests for makeWatch in src/effects.ts
+ * Unit tests for makeWatch in src/helpers/reactive.ts
  *
  * Tests that SingleMatchHandlers branches (ok, nil, stale) are correctly forwarded
  * to match(). Uses createTask with a seeded value to trigger the stale path: on the

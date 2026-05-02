@@ -26,7 +26,7 @@ Need to watch for DOM changes to matched elements from `all(selector)`, but avoi
 - Auto-disconnects when unwatched (no memory leaks)
 - Smart attribute watching: `extractAttributes(selector)` parses the CSS selector to find attribute names implied by `.class`, `#id`, and `[attr]` patterns
 - Custom `equals` function `(a, b) => a.length === b.length && a.every((el, i) => el === b[i])` compares arrays by element identity, preventing spurious invalidations
-- Mutation filtering via `couldMatch` helper prevents invalidations from mutations *inside* matched elements
+- Mutation filtering via `couldMatch` helper prevents invalidations from mutations _inside_ matched elements
 
 **Bad:**
 - Slight delay on first read (observer setup is deferred)

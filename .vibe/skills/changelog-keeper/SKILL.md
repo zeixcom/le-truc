@@ -5,7 +5,7 @@ user_invocable: true
 ---
 
 ## Objective
-Maintain `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com) conventions, adapted to this project's style: technically precise, developer-focused entries that include implementation detail when it explains *why* behavior changed or *how* to migrate.
+Maintain `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com) conventions, adapted to this project's style: technically precise, developer-focused entries that include implementation detail when it explains _why_ behavior changed or _how_ to migrate.
 
 ## Structure
 The changelog uses this heading hierarchy:
@@ -49,7 +49,7 @@ When asked to release a version:
 - **One behavior change per bullet.**
 - **Bold the API name or short summary** at the start, followed by a colon:
   `- **\`createMemo\` \`watched\` option**: description…`
-- **Include implementation details** when they explain *why* the behavior changed, *how* the fix works, or *what internal invariant* is preserved. This changelog is read by developers and AI agents integrating or contributing to the library — precision is expected.
+- **Include implementation details** when they explain _why_ the behavior changed, _how_ the fix works, or _what internal invariant_ is preserved. This changelog is read by developers and AI agents integrating or contributing to the library — precision is expected.
 - **Use before/after framing for Fixed entries**: "Previously, X. Now, Y."
 - **Include migration notes** under Changed or Removed when behavior breaks compatibility. State clearly what consumers must change and why.
 - Use backticks for all public API names, internal types, flags, and file names.

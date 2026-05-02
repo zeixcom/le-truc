@@ -72,7 +72,7 @@ type RequestContextHelper = <T extends {}>(
 
 const CONTEXT_REQUEST = 'context-request'
 
-/* === Exported class === */
+/* === Exported Class and Functions === */
 
 /**
  * Class for context-request events
@@ -112,6 +112,26 @@ class ContextRequestEvent<T extends UnknownContext> extends Event {
 		this.subscribe = subscribe
 	}
 }
+
+/**
+ * Create a typed context key.
+ *
+ * The Context type brands the key type with the `__context__` property that
+ * carries the type of the value the context references. This helper function
+ * creates a properly typed context key from a plain value.
+ *
+ * @since 2.0.2
+ * @param {string} key - The context key (typically a string)
+ * @returns {Context<string, V>} A typed context key
+ *
+ * @example
+ * ```ts
+ * const themeContext = createContext<() => string>('theme')
+ * const countContext = createContext<() => number>('count')
+ * ```
+ */
+const createContext = <V>(key: string): Context<string, V> =>
+	key as Context<string, V>
 
 /**
  * Create a `provideContexts` helper bound to a specific component host.
@@ -173,6 +193,7 @@ export {
 	type ContextCallback,
 	ContextRequestEvent,
 	type ContextType,
+	createContext,
 	makeProvideContexts,
 	makeRequestContext,
 	type ProvideContextsHelper,
