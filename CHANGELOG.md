@@ -1,6 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## 2.0.2
+
+### Added
+
+- **`createContext` helper function exported**: New public API function for creating typed context keys that can be provided and requested across the component tree.
 
 ### Fixed
 
