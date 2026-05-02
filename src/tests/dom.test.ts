@@ -1,9 +1,9 @@
 /**
- * Unit tests for extractAttributes in src/ui.ts
+ * Unit tests for extractAttributes in src/helpers/dom.ts
  */
 
 import { describe, expect, test } from 'bun:test'
-import { extractAttributes } from '../ui'
+import { extractAttributes } from '../helpers/dom'
 
 describe('extractAttributes', () => {
 	test('detects class shorthand', () => {

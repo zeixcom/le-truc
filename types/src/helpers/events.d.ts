@@ -1,6 +1,5 @@
 import { type Memo } from '@zeix/cause-effect';
-import type { ComponentProps } from './component';
-import type { EffectDescriptor, Falsy } from './effects';
+import type { ComponentProps, EffectDescriptor, Falsy } from '../types';
 type EventType<K extends string> = K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K] : Event;
 /**
  * Handler for `on()`. Receives `(event, element)`.

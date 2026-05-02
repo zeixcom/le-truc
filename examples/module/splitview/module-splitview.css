@@ -21,7 +21,7 @@ module-splitview {
 		transition: background-color var(--transition-short) var(--easing-inout);
 
 		&::after {
-			content: '';
+			content: "";
 			display: block;
 			width: 2px;
 			height: var(--space-l);
@@ -40,7 +40,7 @@ module-splitview {
 		}
 	}
 
-	&[orientation='vertical'] {
+	&[orientation="vertical"] {
 		grid-template-columns: 1fr;
 		grid-template-rows: var(--split, 50%) var(--space-xs) 1fr;
 

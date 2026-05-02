@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { safeSetAttribute } from '../bindings'
+import { escapeHTML, safeSetAttribute } from '../bindings'
 
 describe('safeSetAttribute', () => {
 	const makeEl = () => {
@@ -58,5 +58,45 @@ describe('safeSetAttribute', () => {
 	test('allows relative paths', () => {
 		const el = makeEl()
 		expect(() => safeSetAttribute(el, 'href', '/page')).not.toThrow()
+	})
+})
+
+describe('escapeHTML', () => {
+	test('escapes ampersand', () => {
+		expect(escapeHTML('foo & bar')).toBe('foo &amp; bar')
+	})
+
+	test('escapes less than', () => {
+		expect(escapeHTML('foo < bar')).toBe('foo &lt; bar')
+	})
+
+	test('escapes greater than', () => {
+		expect(escapeHTML('foo > bar')).toBe('foo &gt; bar')
+	})
+
+	test('escapes double quotes', () => {
+		expect(escapeHTML('foo "bar"')).toBe('foo &quot;bar&quot;')
+	})
+
+	test('escapes single quotes', () => {
+		expect(escapeHTML("foo 'bar'")).toBe('foo &#39;bar&#39;')
+	})
+
+	test('escapes multiple special characters', () => {
+		expect(escapeHTML('<script>alert("XSS")</script>')).toBe(
+			'&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;',
+		)
+	})
+
+	test('returns empty string for empty input', () => {
+		expect(escapeHTML('')).toBe('')
+	})
+
+	test('returns same string when no special characters', () => {
+		expect(escapeHTML('hello world')).toBe('hello world')
+	})
+
+	test('escapes all special characters together', () => {
+		expect(escapeHTML('&<>"\'')).toBe('&amp;&lt;&gt;&quot;&#39;')
 	})
 })

@@ -547,7 +547,11 @@ test.describe('module-todo component', () => {
 			await submitButton.click()
 			await expect(count.locator('.count')).toHaveText('1')
 
-			await todo.locator('li[data-key]').first().locator('form-checkbox label').click()
+			await todo
+				.locator('li[data-key]')
+				.first()
+				.locator('form-checkbox label')
+				.click()
 			await expect(count.locator('.none')).toBeVisible()
 		})
 
@@ -615,8 +619,12 @@ test.describe('module-todo component', () => {
 			// Check item 2 — verifies both the setter (updates list) and the getter
 			// (watch inside form-checkbox sets the attribute).
 			await items.nth(1).locator('form-checkbox label').click()
-			await expect(items.nth(1).locator('form-checkbox')).toHaveAttribute('checked')
-			await expect(items.nth(0).locator('form-checkbox')).not.toHaveAttribute('checked')
+			await expect(items.nth(1).locator('form-checkbox')).toHaveAttribute(
+				'checked',
+			)
+			await expect(items.nth(0).locator('form-checkbox')).not.toHaveAttribute(
+				'checked',
+			)
 		})
 
 		test('B5: state is isolated — checking item 1 does not affect item 2', async ({
@@ -639,8 +647,12 @@ test.describe('module-todo component', () => {
 
 			await items.nth(0).locator('form-checkbox label').click()
 			await expect(count.locator('.count')).toHaveText('1')
-			await expect(items.nth(0).locator('form-checkbox')).toHaveAttribute('checked')
-			await expect(items.nth(1).locator('form-checkbox')).not.toHaveAttribute('checked')
+			await expect(items.nth(0).locator('form-checkbox')).toHaveAttribute(
+				'checked',
+			)
+			await expect(items.nth(1).locator('form-checkbox')).not.toHaveAttribute(
+				'checked',
+			)
 		})
 
 		test('B6: inplace-edit value is isolated per item', async ({ page }) => {
@@ -658,8 +670,12 @@ test.describe('module-todo component', () => {
 			await submitButton.click()
 			await expect(items).toHaveCount(2)
 
-			await expect(items.nth(0).locator('form-inplace-edit .text')).toHaveText('alpha')
-			await expect(items.nth(1).locator('form-inplace-edit .text')).toHaveText('beta')
+			await expect(items.nth(0).locator('form-inplace-edit .text')).toHaveText(
+				'alpha',
+			)
+			await expect(items.nth(1).locator('form-inplace-edit .text')).toHaveText(
+				'beta',
+			)
 		})
 
 		test('B7: after reorder each() re-run fixes any broken wiring', async ({
@@ -693,7 +709,9 @@ test.describe('module-todo component', () => {
 
 			// After reorder, the item that was second is now first; it should still be checked
 			await expect(count.locator('.count')).toHaveText('1')
-			await expect(items.nth(0).locator('form-checkbox')).toHaveAttribute('checked')
+			await expect(items.nth(0).locator('form-checkbox')).toHaveAttribute(
+				'checked',
+			)
 		})
 
 		test('B9: inplace-edit opens after reorder', async ({ page }) => {

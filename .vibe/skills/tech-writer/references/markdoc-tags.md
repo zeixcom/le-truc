@@ -70,7 +70,7 @@ Use sparingly: one per major section at most. Do not use for content that belong
 
 Renders an interactive demo with the HTML markup inside and optional source links below.
 
-```markdoc
+````markdoc
 {% demo %}
 ```html
 <my-component>
@@ -80,7 +80,7 @@ Renders an interactive demo with the HTML markup inside and optional source link
 
 {% sources title="MyComponent source code" src="./sources/my-component.html" /%}
 {% /demo %}
-```
+````
 
 - The fenced code block inside `{% demo %}` is both displayed as source and rendered live.
 - `{% sources /%}` is a self-closing tag that adds a link to the component's source file.

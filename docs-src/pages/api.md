@@ -32,6 +32,7 @@ layout: 'page'
   - [bindVisible](./api/functions/bindVisible.html)
   - [createCollection](./api/functions/createCollection.html)
   - [createComputed](./api/functions/createComputed.html)
+  - [createContext](./api/functions/createContext.html)
   - [createEffect](./api/functions/createEffect.html)
   - [createElementsMemo](./api/functions/createElementsMemo.html)
   - [createList](./api/functions/createList.html)

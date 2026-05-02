@@ -99,8 +99,8 @@ export default defineComponent(
 			if (item) {
 				const items = Array.from(container.children)
 				status.set(
-					`${getItemText(item)} selected, position ${items.indexOf(item) + 1} of ${list.length}. `
-						+ `Press Up or Down arrow to move.`,
+					`${getItemText(item)} selected, position ${items.indexOf(item) + 1} of ${list.length}. ` +
+						`Press Up or Down arrow to move.`,
 				)
 			}
 		}

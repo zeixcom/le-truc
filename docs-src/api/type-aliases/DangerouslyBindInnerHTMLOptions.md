@@ -2,7 +2,7 @@
 
 > **DangerouslyBindInnerHTMLOptions** = `object`
 
-Defined in: [src/bindings.ts:6](https://github.com/zeixcom/le-truc/blob/c0c7a519683b9de6742fb7ca8d71487ad2dadceb/src/bindings.ts#L6)
+Defined in: [src/bindings.ts:6](https://github.com/zeixcom/le-truc/blob/157db2ea6a0d3aea197ee178eec89f5cb4064479/src/bindings.ts#L6)
 
 #### Properties
 
@@ -10,7 +10,7 @@ Defined in: [src/bindings.ts:6](https://github.com/zeixcom/le-truc/blob/c0c7a519
 
 > `optional` **allowScripts?**: `boolean`
 
-Defined in: [src/bindings.ts:8](https://github.com/zeixcom/le-truc/blob/c0c7a519683b9de6742fb7ca8d71487ad2dadceb/src/bindings.ts#L8)
+Defined in: [src/bindings.ts:8](https://github.com/zeixcom/le-truc/blob/157db2ea6a0d3aea197ee178eec89f5cb4064479/src/bindings.ts#L8)
 
 ***
 
@@ -18,4 +18,4 @@ Defined in: [src/bindings.ts:8](https://github.com/zeixcom/le-truc/blob/c0c7a519
 
 > `optional` **shadowRootMode?**: `ShadowRootMode`
 
-Defined in: [src/bindings.ts:7](https://github.com/zeixcom/le-truc/blob/c0c7a519683b9de6742fb7ca8d71487ad2dadceb/src/bindings.ts#L7)
+Defined in: [src/bindings.ts:7](https://github.com/zeixcom/le-truc/blob/157db2ea6a0d3aea197ee178eec89f5cb4064479/src/bindings.ts#L7)

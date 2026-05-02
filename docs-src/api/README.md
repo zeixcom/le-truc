@@ -110,6 +110,7 @@
 - [bindVisible](functions/bindVisible.md)
 - [createCollection](functions/createCollection.md)
 - [createComputed](functions/createComputed.md)
+- [createContext](functions/createContext.md)
 - [createEffect](functions/createEffect.md)
 - [createElementsMemo](functions/createElementsMemo.md)
 - [createList](functions/createList.md)

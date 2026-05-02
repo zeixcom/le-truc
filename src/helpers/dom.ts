@@ -1,6 +1,6 @@
 import { createMemo, type Memo } from '@zeix/cause-effect'
-import { DependencyTimeoutError, MissingElementError } from './errors'
-import { DEV_MODE, isNotYetDefinedComponent, LOG_WARN } from './util'
+import { DependencyTimeoutError, MissingElementError } from '../errors'
+import { DEV_MODE, isNotYetDefinedComponent, LOG_WARN } from '../util'
 
 /* === Types === */
 

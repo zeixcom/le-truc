@@ -1,24 +1,5 @@
 import { type MaybeCleanup, type MaybePromise, type Memo, type Signal, type SingleMatchHandlers, type SlotDescriptor } from '@zeix/cause-effect';
-import type { ComponentProps } from './component';
-type Falsy = false | null | undefined | '' | 0 | 0n;
-/**
- * A deferred effect: a thunk that, when called inside a reactive scope, creates
- * a reactive effect and returns an optional cleanup function.
- *
- * Effect descriptors are returned by `watch()`, `on()`, `each()`, `pass()`, and
- * `provideContexts()`. They are activated after dependency resolution, not
- * immediately when the factory function runs.
- */
-type EffectDescriptor = () => MaybeCleanup;
-/**
- * The return value of the factory function.
- *
- * An array of effect descriptors (and optional falsy guards for conditional
- * effects). Nested arrays are automatically flattened. Falsy values (`false`,
- * `undefined`, `null`, `""`, `0`) are filtered out before activation, enabling the
- * `element && [watch(...)]` conditional pattern.
- */
-type FactoryResult = Array<EffectDescriptor | FactoryResult | Falsy>;
+import type { ComponentProps, EffectDescriptor, FactoryResult, Falsy } from '../types';
 /**
  * A reactive value that drives a DOM update or a slot injection.
  *

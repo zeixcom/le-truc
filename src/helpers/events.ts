@@ -6,10 +6,9 @@ import {
 	isRecord,
 	type Memo,
 } from '@zeix/cause-effect'
-import type { ComponentProps } from './component'
-import type { EffectDescriptor, Falsy } from './effects'
-import { throttle } from './scheduler'
-import { DEV_MODE, elementName, LOG_WARN } from './util'
+import { throttle } from '../scheduler'
+import type { ComponentProps, EffectDescriptor, Falsy } from '../types'
+import { DEV_MODE, elementName, LOG_WARN } from '../util'
 
 /* === Types === */
 

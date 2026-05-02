@@ -1,12 +1,12 @@
 /**
- * Unit tests for src/events.ts
+ * Unit tests for src/helpers/events.ts
  *
  * requestAnimationFrame is mocked so timing is deterministic.
  * The element is a plain object stub — no real DOM required.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { makeOn } from '../events'
+import { makeOn } from '../helpers/events'
 
 /* === RAF Mock === */
 

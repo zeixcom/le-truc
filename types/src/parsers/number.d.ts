@@ -1,4 +1,4 @@
-import { type Parser } from '../component';
+import { type Parser } from '../types';
 /**
  * Parse a string as a number forced to integer with a fallback
  *

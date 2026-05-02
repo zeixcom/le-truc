@@ -17,6 +17,7 @@
 > **Attribute semantics:** Attributes are for server-side configuration by HTML authors. Parsers in `expose()` called **once at connect time** — they read current attribute value from server-rendered markup. Attribute changes on live document do NOT trigger re-parsing.
 
 > **Reading initial DOM values:** Read element state directly before calling `expose()`, then pass result as static value or wrap in parser:
+>
 > ```typescript
 > expose({
 >   count: asInteger(parseInt(countEl.textContent || '0') || 0),

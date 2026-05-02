@@ -1,27 +1,17 @@
 import { type MemoCallback, type Signal, type TaskCallback } from '@zeix/cause-effect';
-import { type ProvideContextsHelper, type RequestContextHelper } from './context';
-import { type FactoryResult, type Falsy, type PassHelper, type WatchHelper } from './effects';
-import { type OnHelper } from './events';
-import { type ElementQueries } from './ui';
-/** Symbol brand applied to all Parser functions. */
-declare const PARSER_BRAND: unique symbol;
-/** Symbol brand applied to all MethodProducer functions. */
-declare const METHOD_BRAND: unique symbol;
-/** A branded parser function (transforms HTML attribute strings to typed values). */
-type Parser<T extends {}> = (value: string | null | undefined) => T;
-/** A branded method-producer function (side-effect initializer, returns void). */
-type MethodProducer = ((...args: any[]) => void) & {
-    readonly [METHOD_BRAND]: true;
-};
+import { type ProvideContextsHelper, type RequestContextHelper } from './helpers/context';
+import { type ElementQueries } from './helpers/dom';
+import { type OnHelper } from './helpers/events';
+import { type FactoryResult, type Falsy, type PassHelper, type WatchHelper } from './helpers/reactive';
+import { type ComponentProps, type MethodProducer, type Parser } from './types';
 /**
- * Property names that must not be used as reactive component properties
- * because they are fundamental JavaScript / `Object` builtins.
+ * Any value that `#setAccessor` can turn into a signal:
+ * - `T` — wrapped in `createState()`
+ * - `Signal<T>` — used directly
+ * - `MemoCallback<T>` — wrapped in `createComputed()`
+ * - `TaskCallback<T>` — wrapped in `createTask()`
  */
-type ReservedWords = 'constructor' | 'prototype' | '__proto__' | 'toString' | 'valueOf' | 'hasOwnProperty' | 'isPrototypeOf' | 'propertyIsEnumerable' | 'toLocaleString';
-/** A valid reactive property name — any string that is not an `HTMLElement` or `ReservedWords` key. */
-type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>;
-/** A record of reactive property names to their value types, used to type a component's props. */
-type ComponentProps = Record<ComponentProp, NonNullable<unknown>>;
+type MaybeSignal<T extends {}> = T | Signal<T> | MemoCallback<T> | TaskCallback<T>;
 /**
  * The `props` argument of `defineComponent` — a map from property names to their initializers.
  *
@@ -36,14 +26,6 @@ type Initializers<P extends ComponentProps> = {
     [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K]> | MethodProducer;
 };
 /**
- * Any value that `#setAccessor` can turn into a signal:
- * - `T` — wrapped in `createState()`
- * - `Signal<T>` — used directly
- * - `MemoCallback<T>` — wrapped in `createComputed()`
- * - `TaskCallback<T>` — wrapped in `createTask()`
- */
-type MaybeSignal<T extends {}> = T | Signal<T> | MemoCallback<T> | TaskCallback<T>;
-/**
  * The context object passed to the v1.1 factory function.
  *
  * Components destructure only what they need.
@@ -56,48 +38,6 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
     pass: PassHelper<P>;
     provideContexts: ProvideContextsHelper<P>;
     requestContext: RequestContextHelper;
-};
-/**
- * Check if a value is a parser
- *
- * Checks for the `PARSER_BRAND` symbol. Unbranded functions are NOT treated as
- * parsers — always use `asParser()` to brand custom parsers.
- *
- * @since 0.14.0
- * @param {unknown} value - Value to check if it is a parser
- * @returns {boolean} True if the value is a parser, false otherwise
- */
-declare const isParser: <T extends {}>(value: unknown) => value is Parser<T>;
-/**
- * Check if a value is a MethodProducer (branded side-effect initializer)
- *
- * @since 0.16.2
- * @param {unknown} value - Value to check
- * @returns {boolean} True if the value is a MethodProducer
- */
-declare const isMethodProducer: (value: unknown) => value is MethodProducer;
-/**
- * Brand a custom parser function with the `PARSER_BRAND` symbol.
- *
- * Use this to wrap any custom parser so `isParser()` can identify it reliably.
- *
- * @since 0.16.2
- * @param {Parser<T>} fn - Custom parser function to brand
- * @returns {Parser<T>} The same function, branded
- */
-declare const asParser: <T extends {}>(fn: Parser<T>) => Parser<T>;
-/**
- * Brand a custom method-producer function with the `METHOD_BRAND` symbol.
- *
- * Use this to wrap any side-effect initializer so `isMethodProducer()` can
- * identify it explicitly rather than relying on the absence of a return value.
- *
- * @since 0.16.2
- * @param {T} fn - Side-effect initializer to brand
- * @returns {T & { readonly [METHOD_BRAND]: true }} The same function, branded as a `MethodProducer`
- */
-declare const defineMethod: <T extends (...args: any[]) => void>(fn: T) => T & {
-    readonly [METHOD_BRAND]: true;
 };
 /**
  * Define and register a reactive custom element using the v1.1 factory form.
@@ -116,4 +56,4 @@ declare const defineMethod: <T extends (...args: any[]) => void>(fn: T) => T & {
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
 declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void): CustomElementConstructor | undefined;
-export { asParser, type ComponentProp, type ComponentProps, defineComponent, defineMethod, type FactoryContext, type Initializers, isMethodProducer, isParser, type MaybeSignal, METHOD_BRAND, type MethodProducer, PARSER_BRAND, type Parser, type ReservedWords, };
+export { defineComponent, type FactoryContext, type Initializers, type MaybeSignal, };

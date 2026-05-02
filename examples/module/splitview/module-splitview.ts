@@ -17,7 +17,10 @@ const STEP = 0.05
 export default defineComponent<ModuleSplitviewProps>(
 	'module-splitview',
 	({ expose, first, host, on, watch }) => {
-		const divider = first('button.divider', 'Add a button.divider resize handle.')
+		const divider = first(
+			'button.divider',
+			'Add a button.divider resize handle.',
+		)
 		const isVertical = host.getAttribute('orientation') === 'vertical'
 
 		let dragging = false
@@ -46,7 +49,9 @@ export default defineComponent<ModuleSplitviewProps>(
 			on(divider, 'keydown', event => {
 				const { key } = event
 				const decrement = isVertical ? key === 'ArrowUp' : key === 'ArrowLeft'
-				const increment = isVertical ? key === 'ArrowDown' : key === 'ArrowRight'
+				const increment = isVertical
+					? key === 'ArrowDown'
+					: key === 'ArrowRight'
 				if (decrement || increment || key === 'Home' || key === 'End') {
 					event.preventDefault()
 				}

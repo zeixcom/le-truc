@@ -1,7 +1,6 @@
 /** @see https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md */
 import { type Memo } from '@zeix/cause-effect';
-import type { ComponentProps } from './component';
-import type { EffectDescriptor } from './effects';
+import type { ComponentProps, EffectDescriptor } from '../types';
 /**
  * A context key.
  *
@@ -76,6 +75,24 @@ declare class ContextRequestEvent<T extends UnknownContext> extends Event {
     constructor(context: T, callback: ContextCallback<ContextType<T>>, subscribe?: boolean);
 }
 /**
+ * Create a typed context key.
+ *
+ * The Context type brands the key type with the `__context__` property that
+ * carries the type of the value the context references. This helper function
+ * creates a properly typed context key from a plain value.
+ *
+ * @since 2.0.2
+ * @param {string} key - The context key (typically a string)
+ * @returns {Context<string, V>} A typed context key
+ *
+ * @example
+ * ```ts
+ * const themeContext = createContext<() => string>('theme')
+ * const countContext = createContext<() => number>('count')
+ * ```
+ */
+declare const createContext: <V>(key: string) => Context<string, V>;
+/**
  * Create a `provideContexts` helper bound to a specific component host.
  *
  * Returns a function that takes a `contexts` array and returns an `EffectDescriptor`.
@@ -99,4 +116,4 @@ declare const makeProvideContexts: <P extends ComponentProps>(host: HTMLElement 
  * @returns {RequestContextHelper} Bound `requestContext` function for the given host
  */
 declare const makeRequestContext: <P extends ComponentProps>(host: HTMLElement & P) => RequestContextHelper;
-export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, makeProvideContexts, makeRequestContext, type ProvideContextsHelper, type RequestContextHelper, type UnknownContext, };
+export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, createContext, makeProvideContexts, makeRequestContext, type ProvideContextsHelper, type RequestContextHelper, type UnknownContext, };
