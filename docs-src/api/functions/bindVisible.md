@@ -2,7 +2,7 @@
 
 > **bindVisible**\<`T`\>(`element`): (`value`) => `void`
 
-Defined in: [src/helpers.ts:97](https://github.com/zeixcom/le-truc/blob/bc1e32256363451374968e851cb2302740e32636/src/helpers.ts#L97)
+Defined in: [src/bindings.ts:186](https://github.com/zeixcom/le-truc/blob/c0c7a519683b9de6742fb7ca8d71487ad2dadceb/src/bindings.ts#L186)
 
 Returns a function that controls element visibility via `el.hidden = !value`.
 

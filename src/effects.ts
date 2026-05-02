@@ -346,9 +346,7 @@ const makePass = <P extends ComponentProps>(
 			if (isMemo<(HTMLElement & Q)[]>(target)) {
 				// Memo target: per-element lifecycle via createEffect
 				createEffect(() => {
-					for (const el of target.get()) {
-						createScope(() => swapSlots(el, props))
-					}
+					for (const el of target.get()) createScope(() => swapSlots(el, props))
 				})
 			} else {
 				// Single element: swap slots directly in current scope

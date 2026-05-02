@@ -31,15 +31,23 @@ import {
 import { InvalidComponentNameError } from './errors'
 import { makeOn, type OnHelper } from './events'
 import { getSignals } from './internal'
-import {
-	isMethodProducer,
-	isParser,
-	METHOD_BRAND,
-	type Parser,
-} from './parsers'
 import { type ElementQueries, makeElementQueries } from './ui'
 
 /* === Types === */
+
+/** Symbol brand applied to all Parser functions. */
+const PARSER_BRAND: unique symbol = Symbol('parser')
+
+/** Symbol brand applied to all MethodProducer functions. */
+const METHOD_BRAND: unique symbol = Symbol('method')
+
+/** A branded parser function (transforms HTML attribute strings to typed values). */
+type Parser<T extends {}> = (value: string | null | undefined) => T
+
+/** A branded method-producer function (side-effect initializer, returns void). */
+type MethodProducer = ((...args: any[]) => void) & {
+	readonly [METHOD_BRAND]: true
+}
 
 /**
  * Property names that must not be used as reactive component properties
@@ -68,18 +76,12 @@ type ComponentProps = Record<ComponentProp, NonNullable<unknown>>
  * Each value may be:
  * - A **static value** or **`Signal`** — used directly as the initial signal value.
  * - A **`Parser`** (branded with `asParser()`) — called with the attribute value string
- *   at connect time; for 4-param form also on every attribute change.
+ *   at connect time.
  * - A **`MethodProducer`** (branded with `defineMethod()`) — assigned directly as the property
  *   value; the function IS the method. Per-instance state lives in factory scope.
  */
 type Initializers<P extends ComponentProps> = {
-	[K in keyof P]?:
-		| P[K]
-		| Signal<P[K]>
-		| Parser<P[K]>
-		| (P[K] extends (...args: any[]) => any
-				? P[K] & { readonly [METHOD_BRAND]: true }
-				: never)
+	[K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K]> | MethodProducer
 }
 
 /**
@@ -109,6 +111,58 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 	provideContexts: ProvideContextsHelper<P>
 	requestContext: RequestContextHelper
 }
+
+/* === Branded Type Utilities === */
+
+/**
+ * Check if a value is a parser
+ *
+ * Checks for the `PARSER_BRAND` symbol. Unbranded functions are NOT treated as
+ * parsers — always use `asParser()` to brand custom parsers.
+ *
+ * @since 0.14.0
+ * @param {unknown} value - Value to check if it is a parser
+ * @returns {boolean} True if the value is a parser, false otherwise
+ */
+const isParser = <T extends {}>(value: unknown): value is Parser<T> =>
+	isFunction(value) && PARSER_BRAND in value
+
+/**
+ * Check if a value is a MethodProducer (branded side-effect initializer)
+ *
+ * @since 0.16.2
+ * @param {unknown} value - Value to check
+ * @returns {boolean} True if the value is a MethodProducer
+ */
+const isMethodProducer = (value: unknown): value is MethodProducer =>
+	isFunction(value) && METHOD_BRAND in value
+
+/**
+ * Brand a custom parser function with the `PARSER_BRAND` symbol.
+ *
+ * Use this to wrap any custom parser so `isParser()` can identify it reliably.
+ *
+ * @since 0.16.2
+ * @param {Parser<T>} fn - Custom parser function to brand
+ * @returns {Parser<T>} The same function, branded
+ */
+const asParser = <T extends {}>(fn: Parser<T>): Parser<T> =>
+	Object.assign(fn, { [PARSER_BRAND]: true as const })
+
+/**
+ * Brand a custom method-producer function with the `METHOD_BRAND` symbol.
+ *
+ * Use this to wrap any side-effect initializer so `isMethodProducer()` can
+ * identify it explicitly rather than relying on the absence of a return value.
+ *
+ * @since 0.16.2
+ * @param {T} fn - Side-effect initializer to brand
+ * @returns {T & { readonly [METHOD_BRAND]: true }} The same function, branded as a `MethodProducer`
+ */
+const defineMethod = <T extends (...args: any[]) => void>(
+	fn: T,
+): T & { readonly [METHOD_BRAND]: true } =>
+	Object.assign(fn, { [METHOD_BRAND]: true as const })
 
 /* === Exported Functions === */
 
@@ -248,11 +302,19 @@ function defineComponent<P extends ComponentProps>(
 }
 
 export {
+	asParser,
 	type ComponentProp,
 	type ComponentProps,
 	defineComponent,
+	defineMethod,
 	type FactoryContext,
 	type Initializers,
+	isMethodProducer,
+	isParser,
 	type MaybeSignal,
+	METHOD_BRAND,
+	type MethodProducer,
+	PARSER_BRAND,
+	type Parser,
 	type ReservedWords,
 }
