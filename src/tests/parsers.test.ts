@@ -5,9 +5,61 @@
  */
 
 import { describe, expect, test } from 'bun:test'
+import { asBoolean } from '../parsers/boolean'
 import { asJSON } from '../parsers/json'
 import { asClampedInteger, asInteger, asNumber } from '../parsers/number'
 import { asEnum, asString } from '../parsers/string'
+
+/* === parsers/boolean.ts === */
+
+describe('asBoolean', () => {
+	test('returns true when attribute is present with empty string', () => {
+		const parser = asBoolean()
+		expect(parser('')).toBe(true)
+	})
+
+	test('returns true when attribute is present with any value except "false"', () => {
+		const parser = asBoolean()
+		expect(parser('true')).toBe(true)
+		expect(parser('yes')).toBe(true)
+		expect(parser('1')).toBe(true)
+		expect(parser('random')).toBe(true)
+	})
+
+	test('returns false when attribute value is "false"', () => {
+		const parser = asBoolean()
+		expect(parser('false')).toBe(false)
+	})
+
+	test('returns true when attribute value is "FALSE" (case sensitive)', () => {
+		const parser = asBoolean()
+		// The implementation only checks for exact string 'false'
+		expect(parser('FALSE')).toBe(true)
+		expect(parser('False')).toBe(true)
+	})
+
+	test('returns false when attribute is null', () => {
+		const parser = asBoolean()
+		expect(parser(null)).toBe(false)
+	})
+
+	test('returns false when attribute is undefined', () => {
+		const parser = asBoolean()
+		expect(parser(undefined)).toBe(false)
+	})
+
+	test('returns true for whitespace-only values', () => {
+		const parser = asBoolean()
+		expect(parser('   ')).toBe(true)
+	})
+
+	test('returns false only for exact string "false" (case-insensitive)', () => {
+		const parser = asBoolean()
+		expect(parser('false ')).toBe(true) // has trailing space
+		expect(parser(' false')).toBe(true) // has leading space
+		expect(parser('not-false')).toBe(true)
+	})
+})
 
 /* === parsers/string.ts === */
 
