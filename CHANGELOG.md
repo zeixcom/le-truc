@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.0.2
+
+### Added
+
+- **`createContext` helper function exported**: New public API function for creating typed context keys that can be provided and requested across the component tree.
+
+### Fixed
+
+- **`WatchHandlers` corrected to `SingleMatchHandlers` throughout documentation**: `CLAUDE.md`, `ARCHITECTURE.md`, and all skill references used `WatchHandlers` — a name from an earlier draft. The type exported from `@zeix/cause-effect` and re-exported by Le Truc is `SingleMatchHandlers<T>`. The documentation now also correctly lists the `stale?` branch, which fires when a `Task` signal is re-computing with a retained value (omitting it falls back to `ok`). Affected files: `CLAUDE.md`, `ARCHITECTURE.md`, `le-truc/references/effects.md`, `le-truc/references/component-model.md`, `le-truc-dev/workflows/implement-feature.md`.
+- **`FactoryResult` incorrectly described as "flat array" throughout documentation**: `CLAUDE.md`, `ARCHITECTURE.md`, `le-truc/SKILL.md`, `le-truc/workflows/build.md`, and `le-truc/references/component-model.md` all described the factory return value as a "flat array of effect descriptors". The actual type is `Array<EffectDescriptor | FactoryResult | Falsy>` — nested arrays are recursively flattened by `activateResult()`, and falsy values (`false`, `null`, `undefined`, `''`, `0`) are filtered before activation. The `element && [watch(...)]` pattern depends on this: the inner `[watch(...)]` is a nested `FactoryResult`, not an `EffectDescriptor`. The code has always worked this way; only the documentation was wrong.
+- **`SlotDescriptor` added as allowed in `PassedProps`**: `le-truc/references/coordination.md`, `le-truc/references/effects.md` updated to clarify its purpose as bi-directional adapters.
+- **`le-truc-dev` `source-map` `effects.ts` exports corrected**: Listed `WatchHandlers` as an export of `src/effects.ts`. The actual exported type names are `WatchHelper` (the bound `watch` function type) and `PassHelper` (the bound `pass` function type).
+- **`all()` documented as single-argument in skill files**: `le-truc/references/component-model.md`, `le-truc/references/coordination.md`, and `le-truc-dev/references/cause-effect-integration.md` all showed `all(selector)` with one argument, omitting the optional `required?` second parameter. When `required` is a non-empty string and no elements match the selector at query time, `all()` throws `MissingElementError` — the same guard `first(selector, required?)` already supported and documented. The signatures now correctly read `all(selector, required?)`.
+- **`docs-server-dev` `architecture` effects table stale**: `mdMirrorEffect` (outputs `docs/**/*.md` — one parallel Markdown mirror per HTML page) and `llmsManifestEffect` (outputs `docs/llms.txt` — the AI crawler manifest) were missing from the effects table; build orchestration count read 11 instead of 13. The stale claim that "all HTML routes support `Accept: text/markdown`" — a dynamic header approach superseded by the parallel static file system — has been replaced: `mdMirrorEffect` generates static `.md` files served directly at the same path with a `.md` extension, no special route handling needed.
+
+### Changed
+
+- **`changelog-keeper` `adding_entries`**: The git diff command now includes `.vibe/skills/` alongside `src/` and `index.ts`. Changes to skills are treated as significant as source code changes — skills govern how code is generated and reviewed. The `entry_style` section now includes guidance on classifying and writing entries for skill changes (Changed/Added/Removed, bold skill name + affected file, describe behavioral difference).
+- **`tech-writer` scope extended to skills and `server/SERVER.md`**: The skill previously covered only `docs-src/pages/`, `README.md`, `ARCHITECTURE.md`, `CLAUDE.md`, and JSDoc in `src/`. It now also owns all skill files (SKILL.md, references/, workflows/) and `server/SERVER.md`. Two new workflows added: `update-skills.md` (fix inaccurate API signatures, behavior descriptions, or process steps across any skill's reference or workflow files, with explicit cross-skill propagation check) and `update-server-md.md` (update `server/SERVER.md` after dev server or build pipeline changes, with a change-type → section mapping table).
+
 ## 2.0.1
 
 ### Added
@@ -137,7 +157,7 @@
 
 ### Changed
 
-- **`createElementsMemo` mutation filtering**: The `MutationObserver` callback now uses a `couldMatch` helper to filter mutations, only invalidating when added/removed nodes match or contain matches for the selector. This prevents spurious effect re-runs caused by mutations *inside* matched elements (e.g., `innerHTML` changes on option buttons).
+- **`createElementsMemo` mutation filtering**: The `MutationObserver` callback now uses a `couldMatch` helper to filter mutations, only invalidating when added/removed nodes match or contain matches for the selector. This prevents spurious effect re-runs caused by mutations _inside_ matched elements (e.g., `innerHTML` changes on option buttons).
 - **`createElementsMemo` custom `equals`**: The memo now compares arrays by element identity (`length` + `every`).
 - **Effect system simplified**: `runEffects` now uses `createScope()` to own all child effects. Dynamic collections are handled by a single `createEffect()` whose ownership graph automatically disposes per-element effects on re-run. The former `runElementsEffects` and `runElementEffects` helpers have been inlined.
 

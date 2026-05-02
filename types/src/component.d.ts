@@ -1,33 +1,9 @@
 import { type MemoCallback, type Signal, type TaskCallback } from '@zeix/cause-effect';
-import { type ProvideContextsHelper, type RequestContextHelper } from './context';
-import { type FactoryResult, type Falsy, type PassHelper, type WatchHelper } from './effects';
-import { type OnHelper } from './events';
-import { METHOD_BRAND, type Parser } from './parsers';
-import { type ElementQueries } from './ui';
-/**
- * Property names that must not be used as reactive component properties
- * because they are fundamental JavaScript / `Object` builtins.
- */
-type ReservedWords = 'constructor' | 'prototype' | '__proto__' | 'toString' | 'valueOf' | 'hasOwnProperty' | 'isPrototypeOf' | 'propertyIsEnumerable' | 'toLocaleString';
-/** A valid reactive property name — any string that is not an `HTMLElement` or `ReservedWords` key. */
-type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>;
-/** A record of reactive property names to their value types, used to type a component's props. */
-type ComponentProps = Record<ComponentProp, NonNullable<unknown>>;
-/**
- * The `props` argument of `defineComponent` — a map from property names to their initializers.
- *
- * Each value may be:
- * - A **static value** or **`Signal`** — used directly as the initial signal value.
- * - A **`Parser`** (branded with `asParser()`) — called with the attribute value string
- *   at connect time; for 4-param form also on every attribute change.
- * - A **`MethodProducer`** (branded with `defineMethod()`) — assigned directly as the property
- *   value; the function IS the method. Per-instance state lives in factory scope.
- */
-type Initializers<P extends ComponentProps> = {
-    [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K]> | (P[K] extends (...args: any[]) => any ? P[K] & {
-        readonly [METHOD_BRAND]: true;
-    } : never);
-};
+import { type ProvideContextsHelper, type RequestContextHelper } from './helpers/context';
+import { type ElementQueries } from './helpers/dom';
+import { type OnHelper } from './helpers/events';
+import { type FactoryResult, type Falsy, type PassHelper, type WatchHelper } from './helpers/reactive';
+import { type ComponentProps, type MethodProducer, type Parser } from './types';
 /**
  * Any value that `#setAccessor` can turn into a signal:
  * - `T` — wrapped in `createState()`
@@ -36,6 +12,19 @@ type Initializers<P extends ComponentProps> = {
  * - `TaskCallback<T>` — wrapped in `createTask()`
  */
 type MaybeSignal<T extends {}> = T | Signal<T> | MemoCallback<T> | TaskCallback<T>;
+/**
+ * The `props` argument of `defineComponent` — a map from property names to their initializers.
+ *
+ * Each value may be:
+ * - A **static value** or **`Signal`** — used directly as the initial signal value.
+ * - A **`Parser`** (branded with `asParser()`) — called with the attribute value string
+ *   at connect time.
+ * - A **`MethodProducer`** (branded with `defineMethod()`) — assigned directly as the property
+ *   value; the function IS the method. Per-instance state lives in factory scope.
+ */
+type Initializers<P extends ComponentProps> = {
+    [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K]> | MethodProducer;
+};
 /**
  * The context object passed to the v1.1 factory function.
  *
@@ -67,4 +56,4 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
 declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void): CustomElementConstructor | undefined;
-export { type ComponentProp, type ComponentProps, defineComponent, type FactoryContext, type Initializers, type MaybeSignal, type ReservedWords, };
+export { defineComponent, type FactoryContext, type Initializers, type MaybeSignal, };

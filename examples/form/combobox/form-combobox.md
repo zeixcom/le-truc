@@ -69,7 +69,7 @@ An advanced form component that coordinates a text input with a popup `form-list
 - Textbox for combobox input
 ---
 - `first('form-listbox')`
-- `Component<FormListboxProps>`
+- `HTMLElement & FormListboxProps`
 - **required**
 - Popup listbox used for option filtering/selection
 ---

@@ -1,6 +1,6 @@
 # Le Truc — Requirements
 
-> This document is the north star for Le Truc's design and development. It captures the problem, the users, the constraints, and the success criteria from which all architectural decisions should be derived. It is not a changelog or a roadmap — it describes *what* and *why*, not *when*.
+> This document is the north star for Le Truc's design and development. It captures the problem, the users, the constraints, and the success criteria from which all architectural decisions should be derived. It is not a changelog or a roadmap — it describes _what_ and _why_, not _when_.
 
 ---
 
@@ -14,13 +14,13 @@ The natural response — adopting a JavaScript SPA framework — solves the coup
 
 - **Client-side rendering** (React, Vue, Svelte) means JavaScript must generate the initial HTML. For content-rich sites this hurts performance, requires hydration, and duplicates rendering logic that the backend already handles.
 - **Fullstack JS frameworks** (Next.js, Nuxt, SvelteKit) solve the SSR problem but require a JavaScript layer on the backend. Most agency clients run existing CMS solutions (Java, PHP, Python, C#) that cannot and should not be replaced by a Node.js server.
-- **Double data / double templates**: Any SSR-capable JS framework must ship component templates to the client *and* render them on the server, and often serialize state as JSON to hydrate from. This is wasteful and creates synchronization complexity.
+- **Double data / double templates**: Any SSR-capable JS framework must ship component templates to the client _and_ render them on the server, and often serialize state as JSON to hydrate from. This is wasteful and creates synchronization complexity.
 - **HTML-first libraries** (HTMX, Alpine.js) work with server-rendered markup but lack strong component boundaries and type guarantees, reproducing the same long-term maintenance problems in a different form.
 - **Lit** offers web components with reactivity but is committed to client-side rendering. It re-renders component subtrees rather than applying pinpoint DOM updates.
 
 ### The core insight
 
-Rendering HTML is a solved problem on the backend. What's missing is a *thin reactive layer in the browser* that:
+Rendering HTML is a solved problem on the backend. What's missing is a _thin reactive layer in the browser_ that:
 
 1. Accepts server-rendered HTML as the initial view
 2. Defines component boundaries using the native Custom Elements API
@@ -100,7 +100,7 @@ Effects are applied per-element, not per-component. Updates are targeted to the 
 Effects must automatically re-run when their reactive dependencies change, with no manual subscription management. Effects must clean up after themselves when the component disconnects.
 
 **M7. Dynamic element collections via `all()`**
-`all()` must return a live `Memo<Element[]>` backed by a `MutationObserver`. When elements are added or removed from the DOM, the memo updates and dependent effects re-run. Spurious invalidations from mutations *inside* matched elements must be filtered out.
+`all()` must return a live `Memo<Element[]>` backed by a `MutationObserver`. When elements are added or removed from the DOM, the memo updates and dependent effects re-run. Spurious invalidations from mutations _inside_ matched elements must be filtered out.
 
 **M8. Dependency resolution for nested custom elements**
 If a component queries child custom elements that are not yet defined, initialization must wait for their definition before running effects. Timeout must be graceful: log the error and proceed rather than blocking indefinitely.
@@ -131,10 +131,10 @@ The library must be consumable via a `<script type="module">` tag from a CDN wit
 
 ### Should Have
 
-**S1. Parser/Reader distinction replaced by explicit API** ✅ *Resolved in v2.0*
+**S1. Parser/Reader distinction replaced by explicit API** ✅ _Resolved in v2.0_
 `Reader<T, U>` is removed. `Parser<T>` is branded via `asParser()`, detected by `isParser()` on `PARSER_BRAND` only — no function-length fallback. Custom parsers must use `asParser()`.
 
-**S2. MethodProducer made explicit in the type system** ✅ *Resolved in v2.0*
+**S2. MethodProducer made explicit in the type system** ✅ _Resolved in v2.0_
 `MethodProducer` is branded via `defineMethod()` and detected by `isMethodProducer()` on `METHOD_BRAND` only. No implicit function-type fallback.
 
 **S3. Required element error messages are actionable**
@@ -232,7 +232,7 @@ Extend the CSS selector type parser to cover `SVGElementTagNameMap` and `MathMLE
 - Developers using Le Truc are comfortable with TypeScript and use a bundler in most projects.
 - Custom Elements v1 and associated Web Platform APIs are available in all target environments without polyfills.
 - Sibling-to-sibling component communication is a design smell. Components should coordinate only through their hierarchy (parent→child via `pass()`, ancestor→descendant via context) or through application-level state. Tight sibling coupling is explicitly not a supported pattern.
-- The initial server-rendered HTML is the correct initial UI state. Le Truc does not need to "reconcile" its state with the server — the HTML *is* the truth at load time.
+- The initial server-rendered HTML is the correct initial UI state. Le Truc does not need to "reconcile" its state with the server — the HTML _is_ the truth at load time.
 
 ### Dependencies
 

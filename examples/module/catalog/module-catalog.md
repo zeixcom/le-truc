@@ -27,12 +27,12 @@ None. This component coordinates child component properties through effects.
 - Description
 ---
 - `first('basic-button')`
-- `Component<BasicButtonProps>`
+- `HTMLElement & BasicButtonProps`
 - **required**
 - Shopping cart button receiving `disabled` and `badge` via `pass()`
 ---
 - `all('form-spinbutton')`
-- `Memo<Component<FormSpinbuttonProps>[]>`
+- `Memo<(HTMLElement & FormSpinbuttonProps)[]>`
 - **required**
 - Spinbuttons whose `value` properties are summed to compute cart total
 {% /table %}

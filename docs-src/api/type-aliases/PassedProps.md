@@ -2,7 +2,7 @@
 
 > **PassedProps**\<`P`, `Q`\> = \{ \[K in keyof Q & string\]?: Reactive\<Q\[K\], P\> \| SlotDescriptor\<Q\[K\] & \{\}\> \}
 
-Defined in: [src/effects.ts:68](https://github.com/zeixcom/le-truc/blob/1593853d36d29d2c0d05d7f59bc1290143a887f7/src/effects.ts#L68)
+Defined in: [src/helpers/reactive.ts:51](https://github.com/zeixcom/le-truc/blob/3f0de1fb7379c829fde242331bee0885b56a8cd8/src/helpers/reactive.ts#L51)
 
 A map of child component property names to the reactive values to inject into them.
 Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.

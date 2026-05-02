@@ -479,10 +479,10 @@
 <span class="line"><span style="color:#F92672">				else</span><span style="color:#F92672"> if</span><span style="color:#F8F8F2"> (key </span><span style="color:#F92672">===</span><span style="color:#F8F8F2"> LAST_KEY) focusIndex </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> elements.length </span><span style="color:#F92672">-</span><span style="color:#AE81FF"> 1</span></span>
 <span class="line"><span style="color:#F92672">				else</span></span>
 <span class="line"><span style="color:#F8F8F2">					focusIndex </span><span style="color:#F92672">=</span></span>
-<span class="line"><span style="color:#F8F8F2">						(focusIndex </span><span style="color:#F92672">+</span></span>
-<span class="line"><span style="color:#F8F8F2">							(INCREMENT_KEYS.</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(key) </span><span style="color:#F92672">?</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672"> :</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">) </span><span style="color:#F92672">+</span></span>
-<span class="line"><span style="color:#F8F8F2">							elements.length) </span><span style="color:#F92672">%</span></span>
-<span class="line"><span style="color:#F8F8F2">						elements.length</span></span>
+<span class="line"><span style="color:#F8F8F2">						(focusIndex</span></span>
+<span class="line"><span style="color:#F92672">							+</span><span style="color:#F8F8F2"> (INCREMENT_KEYS.</span><span style="color:#A6E22E">includes</span><span style="color:#F8F8F2">(key) </span><span style="color:#F92672">?</span><span style="color:#AE81FF"> 1</span><span style="color:#F92672"> :</span><span style="color:#F92672"> -</span><span style="color:#AE81FF">1</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">							+</span><span style="color:#F8F8F2"> elements.length)</span></span>
+<span class="line"><span style="color:#F92672">						%</span><span style="color:#F8F8F2"> elements.length</span></span>
 <span class="line"><span style="color:#F8F8F2">				elements[focusIndex]?.</span><span style="color:#A6E22E">focus</span><span style="color:#F8F8F2">()</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#A6E22E">			on</span><span style="color:#F8F8F2">(listbox, </span><span style="color:#E6DB74">'keyup'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">key</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
@@ -494,8 +494,8 @@
 <span class="line"><span style="color:#F8F8F2">				host.</span><span style="color:#A6E22E">setAttribute</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'value'</span><span style="color:#F8F8F2">, value)</span></span>
 <span class="line"><span style="color:#F8F8F2">				input.value </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> value</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			host.src </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">				watch</span><span style="color:#F8F8F2">(content, {</span></span>
+<span class="line"><span style="color:#F8F8F2">			host.src</span></span>
+<span class="line"><span style="color:#F92672">				&#x26;&#x26;</span><span style="color:#A6E22E"> watch</span><span style="color:#F8F8F2">(content, {</span></span>
 <span class="line"><span style="color:#A6E22E">					nil</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (callout) callout.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"><span style="color:#F92672">						if</span><span style="color:#F8F8F2"> (loading) {</span></span>
@@ -535,7 +535,6 @@
 <span class="line"><span style="color:#F8F8F2">						}</span></span>
 <span class="line"><span style="color:#F8F8F2">					},</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			],</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">			// Per-option reactive effects</span></span>
 <span class="line"><span style="color:#A6E22E">			each</span><span style="color:#F8F8F2">(options, </span><span style="color:#FD971F;font-style:italic">option</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>

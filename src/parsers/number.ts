@@ -1,4 +1,4 @@
-import { asParser, type Parser } from '../parsers'
+import { asParser, type Parser } from '../types'
 
 /* === Internal Functions === */
 

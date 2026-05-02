@@ -27,12 +27,12 @@ None. This component coordinates child component properties and URL hash side ef
 - Description
 ---
 - `first('form-listbox')`
-- `Component<FormListboxProps>`
+- `HTMLElement & FormListboxProps`
 - **required**
 - Source navigation list; selected `value` drives loaded content
 ---
 - `first('module-lazyload')`
-- `Component<ModuleLazyloadProps>`
+- `HTMLElement & ModuleLazyloadProps`
 - **required**
 - Content target; receives `src` from listbox `value`
 {% /table %}

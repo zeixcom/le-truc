@@ -19,5 +19,8 @@
 				"source.organizeImports.biome": true,
 			},
 		},
+		"Markdown": {
+			"language_servers": ["!biome", "..."],
+		},
 	},
 }

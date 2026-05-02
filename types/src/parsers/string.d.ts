@@ -1,4 +1,4 @@
-import { type Parser } from '../parsers';
+import { type Parser } from '../types';
 /**
  * Parser that returns the attribute value as a string, or a fallback when absent.
  *

@@ -10,7 +10,7 @@ The result is SolidJS-style reactivity packaged as standard Custom Elements: com
 
 Digital agencies building content-rich sites face a recurring choice: imperative JavaScript that becomes unmaintainable as complexity grows, or a SPA framework that takes over rendering and requires a JavaScript backend. Neither is a good fit when the backend is a CMS and the initial HTML is already correct.
 
-Le Truc solves the specific problem of *stateful interactivity on server-rendered pages*:
+Le Truc solves the specific problem of _stateful interactivity on server-rendered pages_:
 
 - The server renders HTML — Le Truc never re-renders it
 - Reactive properties update only the DOM nodes that actually changed

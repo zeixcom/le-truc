@@ -2,7 +2,7 @@
 
 > **each**\<`E`\>(`memo`, `callback`): [`EffectDescriptor`](../type-aliases/EffectDescriptor.md)
 
-Defined in: [src/effects.ts:374](https://github.com/zeixcom/le-truc/blob/1593853d36d29d2c0d05d7f59bc1290143a887f7/src/effects.ts#L374)
+Defined in: [src/helpers/reactive.ts:355](https://github.com/zeixcom/le-truc/blob/3f0de1fb7379c829fde242331bee0885b56a8cd8/src/helpers/reactive.ts#L355)
 
 Create per-element reactive effects from a `Memo<Element[]>`.
 
@@ -27,7 +27,7 @@ Falsy values can also be returned to skip conditionally.
 
 ##### callback
 
-(`element`) => `void` \| [`Falsy`](../type-aliases/Falsy.md) \| [`EffectDescriptor`](../type-aliases/EffectDescriptor.md) \| [`FactoryResult`](../type-aliases/FactoryResult.md)
+(`element`) => [`Falsy`](../type-aliases/Falsy.md) \| [`EffectDescriptor`](../type-aliases/EffectDescriptor.md) \| [`FactoryResult`](../type-aliases/FactoryResult.md)
 
 #### Returns
 

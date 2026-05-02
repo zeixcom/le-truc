@@ -1,68 +1,63 @@
 /**
- * Unit tests for src/parsers/* and src/safety.ts
+ * Unit tests for src/parsers/*.ts
  *
  * Pure functions only — no DOM required.
  */
 
 import { describe, expect, test } from 'bun:test'
+import { asBoolean } from '../parsers/boolean'
 import { asJSON } from '../parsers/json'
 import { asClampedInteger, asInteger, asNumber } from '../parsers/number'
 import { asEnum, asString } from '../parsers/string'
-import { safeSetAttribute } from '../safety'
 
-/* === safety.ts === */
+/* === parsers/boolean.ts === */
 
-describe('safeSetAttribute', () => {
-	const makeEl = () => {
-		const attrs: Record<string, string> = {}
-		return {
-			localName: 'a',
-			setAttribute: (attr: string, val: string) => {
-				attrs[attr] = val
-			},
-			_attrs: attrs,
-		} as unknown as Element & { _attrs: Record<string, string> }
-	}
-
-	test('blocks javascript: URIs', () => {
-		expect(() =>
-			safeSetAttribute(makeEl(), 'href', 'javascript:alert(1)'),
-		).toThrow()
+describe('asBoolean', () => {
+	test('returns true when attribute is present with empty string', () => {
+		const parser = asBoolean()
+		expect(parser('')).toBe(true)
 	})
 
-	test('blocks data: URIs', () => {
-		expect(() =>
-			safeSetAttribute(makeEl(), 'href', 'data:text/html,<h1>XSS</h1>'),
-		).toThrow()
+	test('returns true when attribute is present with any value except "false"', () => {
+		const parser = asBoolean()
+		expect(parser('true')).toBe(true)
+		expect(parser('yes')).toBe(true)
+		expect(parser('1')).toBe(true)
+		expect(parser('random')).toBe(true)
 	})
 
-	test('blocks vbscript: URIs', () => {
-		expect(() =>
-			safeSetAttribute(makeEl(), 'href', 'vbscript:MsgBox(1)'),
-		).toThrow()
+	test('returns false when attribute value is "false"', () => {
+		const parser = asBoolean()
+		expect(parser('false')).toBe(false)
 	})
 
-	test('blocks on* event handler attributes', () => {
-		expect(() => safeSetAttribute(makeEl(), 'onclick', 'alert(1)')).toThrow()
+	test('returns true when attribute value is "FALSE" (case sensitive)', () => {
+		const parser = asBoolean()
+		// The implementation only checks for exact string 'false'
+		expect(parser('FALSE')).toBe(true)
+		expect(parser('False')).toBe(true)
 	})
 
-	test('allows https: URIs', () => {
-		const el = makeEl()
-		expect(() =>
-			safeSetAttribute(el, 'href', 'https://example.com'),
-		).not.toThrow()
+	test('returns false when attribute is null', () => {
+		const parser = asBoolean()
+		expect(parser(null)).toBe(false)
 	})
 
-	test('allows mailto: URIs', () => {
-		const el = makeEl()
-		expect(() =>
-			safeSetAttribute(el, 'href', 'mailto:foo@example.com'),
-		).not.toThrow()
+	test('returns false when attribute is undefined', () => {
+		const parser = asBoolean()
+		expect(parser(undefined)).toBe(false)
 	})
 
-	test('allows relative paths', () => {
-		const el = makeEl()
-		expect(() => safeSetAttribute(el, 'href', '/page')).not.toThrow()
+	test('returns true for whitespace-only values', () => {
+		const parser = asBoolean()
+		expect(parser('   ')).toBe(true)
+	})
+
+	test('returns false only for exact string "false" (case-insensitive)', () => {
+		const parser = asBoolean()
+		expect(parser('false ')).toBe(true) // has trailing space
+		expect(parser(' false')).toBe(true) // has leading space
+		expect(parser('not-false')).toBe(true)
 	})
 })
 

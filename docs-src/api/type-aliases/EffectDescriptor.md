@@ -2,7 +2,7 @@
 
 > **EffectDescriptor** = () => [`MaybeCleanup`](MaybeCleanup.md)
 
-Defined in: [src/effects.ts:36](https://github.com/zeixcom/le-truc/blob/1593853d36d29d2c0d05d7f59bc1290143a887f7/src/effects.ts#L36)
+Defined in: [src/types.ts:57](https://github.com/zeixcom/le-truc/blob/3f0de1fb7379c829fde242331bee0885b56a8cd8/src/types.ts#L57)
 
 A deferred effect: a thunk that, when called inside a reactive scope, creates
 a reactive effect and returns an optional cleanup function.

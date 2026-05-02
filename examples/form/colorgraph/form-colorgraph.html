@@ -1,7 +1,7 @@
 <form-colorgraph color="oklch(.48 .23 263)">
 	<div class="graph">
 		<canvas width="400" height="400"></canvas>
-		<button class="knob">
+		<button type="button" class="knob">
 			<span class="visually-hidden">Drag</span>
 		</button>
 		<ol role="presentation">
@@ -19,6 +19,9 @@
 		class="slider"
 		role="slider"
 		tabindex="0"
+		aria-valuenow="0"
+		aria-valuemin="0"
+		aria-valuemax="360"
 		aria-controls="hue"
 		aria-labelledby="hue-label"
 	>

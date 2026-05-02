@@ -1,4 +1,4 @@
-import { asParser, type Parser } from '../parsers'
+import { asParser, type Parser } from '../types'
 
 /**
  * Parser that converts a boolean HTML attribute to an actual boolean.

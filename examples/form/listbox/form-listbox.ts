@@ -175,10 +175,10 @@ export default defineComponent<FormListboxProps>(
 				else if (key === LAST_KEY) focusIndex = elements.length - 1
 				else
 					focusIndex =
-						(focusIndex +
-							(INCREMENT_KEYS.includes(key) ? 1 : -1) +
-							elements.length) %
-						elements.length
+						(focusIndex
+							+ (INCREMENT_KEYS.includes(key) ? 1 : -1)
+							+ elements.length)
+						% elements.length
 				elements[focusIndex]?.focus()
 			}),
 			on(listbox, 'keyup', ({ key }) => {
@@ -190,8 +190,8 @@ export default defineComponent<FormListboxProps>(
 				host.setAttribute('value', value)
 				input.value = value
 			}),
-			host.src && [
-				watch(content, {
+			host.src
+				&& watch(content, {
 					nil: () => {
 						if (callout) callout.hidden = false
 						if (loading) {
@@ -231,7 +231,6 @@ export default defineComponent<FormListboxProps>(
 						}
 					},
 				}),
-			],
 
 			// Per-option reactive effects
 			each(options, option => {

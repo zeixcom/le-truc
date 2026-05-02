@@ -1,4 +1,4 @@
-// Le Truc 2.0.1
+// Le Truc 2.0.2
 
 // From Cause & Effect
 export {
@@ -35,10 +35,10 @@ export {
 	isList,
 	isMemo,
 	isMutableSignal,
-	isSignalOfType,
 	isRecord,
 	isSensor,
 	isSignal,
+	isSignalOfType,
 	isSlot,
 	isState,
 	isStore,
@@ -75,13 +75,10 @@ export {
 } from '@zeix/cause-effect'
 
 export {
-	type ComponentProp,
-	type ComponentProps,
 	defineComponent,
 	type FactoryContext,
 	type Initializers,
 	type MaybeSignal,
-	type ReservedWords,
 } from './src/component'
 export {
 	CONTEXT_REQUEST,
@@ -89,20 +86,18 @@ export {
 	type ContextCallback,
 	ContextRequestEvent,
 	type ContextType,
+	createContext,
 	type ProvideContextsHelper,
 	type RequestContextHelper,
 	type UnknownContext,
-} from './src/context'
+} from './src/helpers/context'
 export {
-	type EffectDescriptor,
 	each,
-	type FactoryResult,
-	type Falsy,
 	type PassedProps,
 	type PassHelper,
 	type Reactive,
 	type WatchHelper,
-} from './src/effects'
+} from './src/helpers/reactive'
 export {
 	DependencyTimeoutError,
 	InvalidComponentNameError,
@@ -111,11 +106,7 @@ export {
 	InvalidReactivesError,
 	MissingElementError,
 } from './src/errors'
-export {
-	type EventType,
-	type OnEventHandler,
-	type OnHelper,
-} from './src/events'
+export type { EventType, OnEventHandler, OnHelper } from './src/helpers/events'
 export {
 	bindAttribute,
 	bindClass,
@@ -125,25 +116,28 @@ export {
 	bindVisible,
 	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
-} from './src/helpers'
+	escapeHTML,
+	safeSetAttribute,
+	setTextPreservingComments,
+} from './src/bindings'
 export {
 	asParser,
+	type ComponentProp,
+	type ComponentProps,
 	defineMethod,
+	type EffectDescriptor,
+	type FactoryResult,
+	type Falsy,
 	isMethodProducer,
 	isParser,
 	type MethodProducer,
 	type Parser,
-} from './src/parsers'
+	type ReservedWords,
+} from './src/types'
 export { asBoolean } from './src/parsers/boolean'
-
 export { asJSON } from './src/parsers/json'
 export { asClampedInteger, asInteger, asNumber } from './src/parsers/number'
 export { asEnum, asString } from './src/parsers/string'
-export {
-	escapeHTML,
-	safeSetAttribute,
-	setTextPreservingComments,
-} from './src/safety'
 export { schedule, throttle } from './src/scheduler'
 export {
 	type AllElements,
@@ -159,4 +153,4 @@ export {
 	type KnownTag,
 	type SplitByComma,
 	type TrimWhitespace,
-} from './src/ui'
+} from './src/helpers/dom'

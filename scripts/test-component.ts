@@ -48,10 +48,12 @@ function getComponentPath(componentName: string) {
 	// Try different possible paths for the component
 	// Files are named {componentName}.spec.ts inside examples/{category}/{sub}/
 	const possiblePaths = [
-		...(category && sub ? [
-			`examples/${category}/${sub}/${componentName}.spec.ts`,
-			`examples/${category}/${sub}`,
-		] : []),
+		...(category && sub
+			? [
+					`examples/${category}/${sub}/${componentName}.spec.ts`,
+					`examples/${category}/${sub}`,
+				]
+			: []),
 		`examples/${componentName}/${componentName}.spec.ts`,
 		`examples/${componentName}`,
 		`examples/${componentName}.spec.ts`,
@@ -92,7 +94,10 @@ function listAvailableComponents() {
 			for (const sub of readdirSync(itemPath)) {
 				const subPath = join(itemPath, sub)
 				const componentName = `${item}-${sub}`
-				if (statSync(subPath).isDirectory() && existsSync(join(subPath, `${componentName}.spec.ts`))) {
+				if (
+					statSync(subPath).isDirectory()
+					&& existsSync(join(subPath, `${componentName}.spec.ts`))
+				) {
 					components.push(componentName)
 				}
 			}
@@ -171,16 +176,18 @@ function main() {
 	if (!testPath) {
 		console.error(`❌ Component "${componentName}" not found`)
 		const dashIdx = componentName.indexOf('-')
-	const errCategory = dashIdx >= 0 ? componentName.slice(0, dashIdx) : null
-	const errSub = dashIdx >= 0 ? componentName.slice(dashIdx + 1) : null
-	console.error('\nLooked for:')
-	if (errCategory && errSub) {
-		console.error(`  • examples/${errCategory}/${errSub}/${componentName}.spec.ts`)
-		console.error(`  • examples/${errCategory}/${errSub}/`)
-	}
-	console.error(`  • examples/${componentName}/${componentName}.spec.ts`)
-	console.error(`  • examples/${componentName}/`)
-	console.error(`  • examples/${componentName}.spec.ts`)
+		const errCategory = dashIdx >= 0 ? componentName.slice(0, dashIdx) : null
+		const errSub = dashIdx >= 0 ? componentName.slice(dashIdx + 1) : null
+		console.error('\nLooked for:')
+		if (errCategory && errSub) {
+			console.error(
+				`  • examples/${errCategory}/${errSub}/${componentName}.spec.ts`,
+			)
+			console.error(`  • examples/${errCategory}/${errSub}/`)
+		}
+		console.error(`  • examples/${componentName}/${componentName}.spec.ts`)
+		console.error(`  • examples/${componentName}/`)
+		console.error(`  • examples/${componentName}.spec.ts`)
 
 		listAvailableComponents()
 		process.exit(1)

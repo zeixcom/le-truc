@@ -32,19 +32,19 @@ None. This component orchestrates behavior by passing state and events between d
 - Submission entry point for adding todos
 ---
 - `first('form-textbox')`
-- `Component<FormTextboxProps>`
+- `HTMLElement & FormTextboxProps`
 - **required**
 - Input component for new todo text
 ---
 - `first('basic-button.submit')`
-- `Component<BasicButtonProps>`
+- `HTMLElement & BasicButtonProps`
 - **required**
 - Submit button; disabled when textbox is empty
 ---
 - `first('[data-container]')`
 - `HTMLElement`
 - **required**
-- Container where cloned list items are inserted
+- Container element for todo item children; items are inserted, reordered, and removed here
 ---
 - `first('template')`
 - `HTMLTemplateElement`
@@ -56,18 +56,33 @@ None. This component orchestrates behavior by passing state and events between d
 - **required**
 - Live region for screen reader reorder announcements
 ---
+- `all('button.reorder')`
+- `Memo<HTMLButtonElement[]>`
+- **required**
+- Drag handle and keyboard reorder buttons; disabled via `each()` + `pass()` when only one item remains
+---
+- `all('form-checkbox')`
+- `Memo<(HTMLElement & FormCheckboxProps)[]>`
+- **required**
+- Per-item checkbox components; each receives its item's `completed` state signal directly via `pass()`
+---
+- all('form-inplace-edit')
+- Memo&lt;HTMLElement[]&gt;
+- **required**
+- Per-item inline editors; each receives its item's `label` state signal directly via `pass()`
+---
 - `first('basic-pluralize')`
-- `Component<BasicPluralizeProps>`
+- `HTMLElement & BasicPluralizeProps`
 - **required**
 - Remaining active-item counter
 ---
 - `first('form-radiogroup')`
-- `Component<FormRadiogroupProps>`
+- `HTMLElement & FormRadiogroupProps`
 - **required**
 - Filter selector (`all`, `active`, `completed`)
 ---
 - `first('basic-button.clear-completed')`
-- `Component<BasicButtonProps>`
+- `HTMLElement & BasicButtonProps`
 - **required**
 - Clears completed items; badge shows completed count
 {% /table %}

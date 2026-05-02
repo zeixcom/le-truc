@@ -99,20 +99,18 @@ export default defineComponent(
 			if (item) {
 				const items = Array.from(container.children)
 				status.set(
-					`${getItemText(item)} selected, position ${items.indexOf(item) + 1} of ${list.length}. `
-						+ `Press Up or Down arrow to move.`,
+					`${getItemText(item)} selected, position ${items.indexOf(item) + 1} of ${list.length}. ` +
+						`Press Up or Down arrow to move.`,
 				)
 			}
 		}
 
 		function moveItem(item: HTMLElement, direction: -1 | 1) {
 			const items = Array.from(container.children)
-			const idx = items.indexOf(item)
-			const newIdx = idx + direction
+			const newIdx = items.indexOf(item) + direction
 			if (newIdx < 0 || newIdx >= items.length) return
-			const sibling = items[newIdx]!
-			if (direction === 1) sibling.after(item)
-			else sibling.before(item)
+			if (direction === 1) items[newIdx]?.after(item)
+			else items[newIdx]?.before(item)
 			const newPos = Array.from(container.children).indexOf(item) + 1
 			status.set(
 				`${getItemText(item)} moved to position ${newPos} of ${list.length}.`,
@@ -141,10 +139,10 @@ export default defineComponent(
 		function reorderList() {
 			const keys = Array.from(container.children)
 				.filter(el => el instanceof HTMLElement && el.dataset.key)
-				.map(el => (el as HTMLElement).dataset.key!)
+				.map(el => (el as HTMLElement).dataset.key)
 			list.update(prev => {
-				const byKey = new Map(prev.map((item, i) => [list.keyAt(i)!, item]))
-				return keys.map(k => byKey.get(k)!).filter(Boolean) as TodoItem[]
+				const byKey = new Map(prev.map((item, i) => [list.keyAt(i), item]))
+				return keys.map(k => byKey.get(k)).filter(Boolean) as TodoItem[]
 			})
 		}
 
@@ -198,9 +196,9 @@ export default defineComponent(
 					}
 
 					for (let i = 0; i < keys.length; i++) {
-						const key = keys[i]!
-						let el = current.get(key)
-						if (!el) {
+						const key = keys[i]
+						let el = key && current.get(key)
+						if (key && !el) {
 							const fragment = template.content.cloneNode(
 								true,
 							) as DocumentFragment
@@ -218,7 +216,7 @@ export default defineComponent(
 								)
 						}
 						const currentAtI = container.children[i]
-						if (currentAtI !== el)
+						if (el && currentAtI !== el)
 							container.insertBefore(el, currentAtI ?? null)
 					}
 				},
@@ -249,7 +247,8 @@ export default defineComponent(
 				if (target.closest('basic-button.remove')) {
 					e.stopPropagation()
 					if (item === selectedItem) selectItem(null)
-					list.remove(item.dataset.key!)
+					const key = item.dataset.key
+					if (key) list.remove(key)
 				} else if (target.closest(REORDER_SELECTOR)) {
 					selectItem(item)
 				}
