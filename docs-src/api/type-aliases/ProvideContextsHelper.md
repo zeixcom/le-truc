@@ -2,7 +2,7 @@
 
 > **ProvideContextsHelper**\<`P`\> = (`contexts`) => [`EffectDescriptor`](EffectDescriptor.md)
 
-Defined in: [src/context.ts:56](https://github.com/zeixcom/le-truc/blob/35d57009d1327aac11f959b9973f8f0448704e84/src/context.ts#L56)
+Defined in: [src/context.ts:56](https://github.com/zeixcom/le-truc/blob/c0c7a519683b9de6742fb7ca8d71487ad2dadceb/src/context.ts#L56)
 
 The `provideContexts` helper type in `FactoryContext`.
 

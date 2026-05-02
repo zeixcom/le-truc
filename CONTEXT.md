@@ -73,7 +73,4 @@ _Avoid_: forward, propagate, share, bind
 
 ## Flagged Ambiguities
 
-None currently. Previously resolved:
-- "component" was used to mean both the **Module** (ESM file) and **Component** (Web Component instance) — resolved 2025-05-XX
-- "binding" was used for both DOM **Binding** and **Pass** — resolved 2025-05-XX: **Binding** is one-way signal→DOM, **Pass** is two-way signal sharing between Le Truc components
-- "Web Component" vs "custom element" — resolved 2025-05-XX: **Web Component** = **Custom Element** with JS-enhanced functionality; not all custom elements are Web Components (e.g., CSS-only)
+None currently.
