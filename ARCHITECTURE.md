@@ -38,9 +38,11 @@ Mutable signals are wrapped in a `Slot` to enable signal swapping for `pass()` (
 
 ### DOM Binding Helpers
 
+Binding helpers return either a setter function `(value) => void` or `SingleMatchHandlers<T>` for use with `watch()` — enabling the pattern `watch(reactive, bindText(element))`.
+
 | Helper | Purpose |
 |--------|---------|
-| `bindAttribute` | Sets/removes attributes with security validation (see [ADR 0009](adr/0009-security-validation-in-setattribute.md)) |
+| `bindAttribute` | Sets/removes attributes with security validation (see [ADR 0009](adr/0009-security-validation-in-bindattribute.md)) |
 | `bindClass` | Adds/removes CSS classes |
 | `bindText` | Sets text content |
 | `bindProperty` | Sets DOM properties |
@@ -77,7 +79,7 @@ Parsers transform HTML attribute strings to typed values (see [ADR 0005](adr/000
 
 ### Context Protocol
 
-Implements the [W3C Community Protocol for Context](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md) (see [ADR 0008](adr/0008-w3c-community-protocol-for-context.md)):
+Implements the [Community Protocol for Context](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md) (see [ADR 0008](adr/0008-community-protocol-for-context.md)):
 
 - `provideContexts([...])`: Provider side, installs `context-request` listener
 - `requestContext(context, fallback)`: Consumer side, dispatches `ContextRequestEvent`, returns `Memo<T>`
@@ -99,7 +101,7 @@ Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestConte
 
 ## Security
 
-`bindAttribute()` (via `safeSetAttribute()`) validates URLs and blocks `on*` handlers (see [ADR 0009](adr/0009-security-validation-in-setattribute.md)).
+`bindAttribute()` (via `safeSetAttribute()`) validates URLs and blocks `on*` handlers (see [ADR 0009](adr/0009-security-validation-in-bindattribute.md)).
 
 ## Scheduler
 

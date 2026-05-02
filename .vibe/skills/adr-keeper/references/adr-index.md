@@ -12,8 +12,8 @@ This file is auto-generated. Do not edit manually.
 | [0005](0005-branded-parsers-and-methods-with-symbol-based-branding.md) | Branded Parsers and Methods with Symbol-Based Branding | ✅ Accepted | M13, S1, S2 |
 | [0006](0006-lazy-mutationobserver-for-all-collections.md) | Lazy MutationObserver for all() Collections | ✅ Accepted | M7 |
 | [0007](0007-effect-descriptors-with-deferred-activation.md) | Effect Descriptors with Deferred Activation | ✅ Accepted | M8 |
-| [0008](0008-w3c-community-protocol-for-context.md) | W3C Community Protocol for Context | ✅ Accepted | M10 |
-| [0009](0009-security-validation-in-setattribute.md) | Security Validation in setAttribute | ✅ Accepted | M16 |
+| [0008](0008-community-protocol-for-context.md) | Community Protocol for Context | ✅ Accepted | M10 |
+| [0009](0009-security-validation-in-bindattribute.md) | Security Validation in bindAttribute | ✅ Accepted | M16 |
 
 ---
 

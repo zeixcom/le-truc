@@ -1,8 +1,6 @@
 ---
 name: adr-keeper
-description: >
-  Maintains Architectural Decision Records (ADRs) for the le-truc project.
-  Creates, updates, lists, and supersedes ADRs in the /adr/ directory.
+description: Maintains Architectural Decision Records (ADRs) for the le-truc project. Creates, updates, lists, and supersedes ADRs in the /adr/ directory.
 user_invocable: true
 ---
 

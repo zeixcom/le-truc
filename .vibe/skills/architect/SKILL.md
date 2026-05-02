@@ -1,7 +1,6 @@
 ---
 name: architect
-description: >
-  Sparring partner for design and planning. Asks critical questions, researches feasibility, weighs tradeoffs, and produces or updates REQUIREMENTS.md, ARCHITECTURE.md, and TODO.md. Also triages GitHub issues and bug reports into actionable tasks.
+description: Sparring partner for design and planning. Asks critical questions, researches feasibility, weighs tradeoffs, and produces or updates REQUIREMENTS.md, ARCHITECTURE.md, and TODO.md. Also triages GitHub issues and bug reports into actionable tasks.
 user_invocable: true
 ---
 

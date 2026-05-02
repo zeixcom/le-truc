@@ -1788,9 +1788,8 @@ var makePass = (host) => {
         return;
       if (isMemo(target)) {
         createEffect(() => {
-          for (const el of target.get()) {
+          for (const el of target.get())
             createScope(() => swapSlots(el, props));
-          }
         });
       } else {
         swapSlots(target, props);
