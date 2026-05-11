@@ -1,6 +1,7 @@
 import { asJSON, defineComponent } from '../../..'
 
 export type BasicGaugeProps = {
+	/** Current gauge value in the range [0, meter.max]. */
 	value: number
 }
 
@@ -16,6 +17,12 @@ declare global {
 	}
 }
 
+/**
+ * A gauge that displays a numeric value as a meter with color-coded thresholds.
+ * Thresholds are read from the `thresholds` attribute as a JSON array.
+ * @cssprop --basic-gauge-degree - Rotation angle of the gauge needle (set reactively).
+ * @cssprop --basic-gauge-color - Active threshold color (set reactively).
+ */
 export default defineComponent<BasicGaugeProps>(
 	'basic-gauge',
 	({ expose, first, host, pass, watch }) => {

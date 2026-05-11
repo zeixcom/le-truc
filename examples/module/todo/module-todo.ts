@@ -31,6 +31,9 @@ const DRAGGING_CLASS = 'dragging'
 
 let idCounter = 0
 
+/**
+ * A full-featured todo list with add, remove, complete, filter, and drag-and-drop reordering.
+ */
 export default defineComponent(
 	'module-todo',
 	({ all, first, host, on, pass, watch }) => {

@@ -1,7 +1,9 @@
 import { bindText, defineComponent } from '../../..'
 
 export type FormCheckboxProps = {
+	/** Whether the checkbox is checked. Synced with the native checkbox state. */
 	checked: boolean
+	/** Visible label text of the checkbox. */
 	label: string
 }
 
@@ -11,6 +13,9 @@ declare global {
 	}
 }
 
+/**
+ * A styled checkbox component that syncs its state with a native checkbox input.
+ */
 export default defineComponent<FormCheckboxProps>(
 	'form-checkbox',
 	({ expose, first, host, on, watch }) => {

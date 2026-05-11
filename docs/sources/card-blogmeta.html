@@ -181,6 +181,9 @@
 <span class="line"><span style="color:#F92672">	return</span><span style="color:#F92672"> new</span><span style="color:#F8F8F2"> Intl.</span><span style="color:#A6E22E">DateTimeFormat</span><span style="color:#F8F8F2">(locale, { dateStyle }).</span><span style="color:#A6E22E">format</span><span style="color:#F8F8F2">(date)</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * Formats and displays publication and modification dates from `&#x3C;time>` element `datetime` attributes.</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'card-blogmeta'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> published </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">		'time.published'</span><span style="color:#F8F8F2">,</span></span>

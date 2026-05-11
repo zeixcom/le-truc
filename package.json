@@ -25,6 +25,7 @@
 	"main": "index.js",
 	"module": "index.ts",
 	"types": "types/index.d.ts",
+	"customElements": "custom-elements.json",
 	"directories": {
 		"doc": "docs",
 		"example": "examples"
@@ -50,18 +51,20 @@
 		"test:server": "bun test server/tests",
 		"test:server:unit": "bun test server/tests --bail",
 		"test:server:integration": "bun test server/tests --timeout 10000",
-		"test:server:watch": "bun test server/tests --watch"
+		"test:server:watch": "bun test server/tests --watch",
+		"build:cem": "cem analyze"
 	},
 	"dependencies": {
 		"@zeix/cause-effect": "^1.3.2"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.14",
+		"@custom-elements-manifest/analyzer": "^0.11.0",
 		"@markdoc/markdoc": "^0.5.7",
 		"@playwright/test": "^1.59.1",
 		"@types/bun": "^1.3.13",
 		"@types/culori": "^4.0.1",
-		"@types/node": "^25.6.0",
+		"@types/node": "^25.6.2",
 		"culori": "^4.0.2",
 		"lightningcss-cli": "^1.32.0",
 		"shiki": "^4.0.2",

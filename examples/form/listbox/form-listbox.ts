@@ -17,14 +17,6 @@ import {
 import { highlightMatch } from '../../_common/highlightMatch'
 import { html } from '../../_common/html'
 
-/**
- * Form-aware Listbox Component
- *
- * A filterable listbox that loads options from remote JSON sources and integrates
- * seamlessly with HTML forms. Includes keyboard navigation, accessibility features,
- * and automatic form value synchronization via a built-in hidden input element.
- */
-
 export type FormListboxOption = {
 	value: string
 	label: string
@@ -39,9 +31,13 @@ export type FormListboxGroups = Record<
 >
 
 export type FormListboxProps = {
+	/** Currently selected option value. */
 	value: string
+	/** Live list of visible (non-hidden) option buttons in the listbox. */
 	options: HTMLButtonElement[]
+	/** Filter string used to narrow displayed options. */
 	filter: string
+	/** URL to fetch options from as JSON. Read from the `src` attribute at connect time. */
 	src: string
 }
 
@@ -60,6 +56,10 @@ const FIRST_KEY = 'Home'
 const LAST_KEY = 'End'
 const HANDLED_KEYS = [...DECREMENT_KEYS, ...INCREMENT_KEYS, FIRST_KEY, LAST_KEY]
 
+/**
+ * A filterable listbox that loads options from a remote JSON source and integrates with HTML forms.
+ * Supports keyboard navigation, accessibility, and automatic form value synchronization via a hidden input.
+ */
 export default defineComponent<FormListboxProps>(
 	'form-listbox',
 	({ all, expose, first, host, on, watch }) => {

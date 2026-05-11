@@ -1,6 +1,7 @@
 import { asNumber, defineComponent } from '../../..'
 
 export type ModuleSplitviewProps = {
+	/** Split ratio between 0.1 and 0.9 (e.g. 0.5 = 50/50). Read from the `split` attribute at connect time. */
 	split: number
 }
 
@@ -14,6 +15,11 @@ const MIN_SPLIT = 0.1
 const MAX_SPLIT = 0.9
 const STEP = 0.05
 
+/**
+ * A resizable split view with a draggable divider and keyboard support.
+ * Set `orientation="vertical"` for a top/bottom split.
+ * @cssprop --split - The split ratio as a CSS percentage (e.g. `50.00%`), set reactively.
+ */
 export default defineComponent<ModuleSplitviewProps>(
 	'module-splitview',
 	({ expose, first, host, on, watch }) => {

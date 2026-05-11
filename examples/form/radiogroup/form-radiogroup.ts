@@ -1,6 +1,7 @@
 import { defineComponent, each } from '../../..'
 
 export type FormRadiogroupProps = {
+	/** Value of the currently selected radio button. */
 	value: string
 }
 
@@ -22,6 +23,9 @@ const HANDLED_KEYS = [...DECREMENT_KEYS, ...INCREMENT_KEYS, FIRST_KEY, LAST_KEY]
 const getIndex = (radios: HTMLInputElement[]) =>
 	radios.findIndex(radio => radio.checked)
 
+/**
+ * A radio group with roving tabindex keyboard navigation and reactive value tracking.
+ */
 export default defineComponent<FormRadiogroupProps>(
 	'form-radiogroup',
 	({ all, expose, host, on, watch }) => {

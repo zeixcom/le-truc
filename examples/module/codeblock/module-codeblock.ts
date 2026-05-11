@@ -3,6 +3,7 @@ import type { BasicButtonProps } from '../../basic/button/basic-button'
 import { copyToClipboard } from '../../basic/button/copyToClipboard'
 
 export type ModuleCodeblockProps = {
+	/** Whether the code block is collapsed (truncated). Read from the `collapsed` attribute at connect time. */
 	collapsed: boolean
 }
 
@@ -12,6 +13,9 @@ declare global {
 	}
 }
 
+/**
+ * A syntax-highlighted code block with collapsible truncation and a copy-to-clipboard button.
+ */
 export default defineComponent<ModuleCodeblockProps>(
 	'module-codeblock',
 	({ expose, first, host, on, watch }) => {

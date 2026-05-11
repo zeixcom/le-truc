@@ -8,6 +8,7 @@ import {
 
 type CardMediaqueriesPropKeys = 'motion' | 'theme' | 'viewport' | 'orientation'
 
+/** Current values for each media query context, received from a parent `context-media` component. */
 export type CardMediaqueriesProps = Record<CardMediaqueriesPropKeys, string>
 
 declare global {
@@ -16,6 +17,9 @@ declare global {
 	}
 }
 
+/**
+ * Displays the current media query context values (motion, theme, viewport, orientation) provided by a parent `context-media`.
+ */
 export default defineComponent<CardMediaqueriesProps>(
 	'card-mediaqueries',
 	({ expose, first, requestContext, watch }) => {

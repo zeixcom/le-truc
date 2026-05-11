@@ -5,7 +5,9 @@ import { asOklch } from '../../_common/asOklch.ts'
 import { getStepColor } from '../../_common/getStepColor.ts'
 
 export type CardColorscaleProps = {
+	/** Display name of the color (e.g. "Blue"). */
 	name: string
+	/** Base color in Oklch format. Read from the `color` attribute at connect time. */
 	color: Oklch
 }
 
@@ -17,6 +19,20 @@ declare global {
 
 const CONTRAST_THRESHOLD = 0.71 // lightness
 
+/**
+ * A color scale card that displays a named Oklch color with a full set of lightness steps.
+ * @cssprop --color-base - The base color in CSS format.
+ * @cssprop --color-text - Foreground color (black or white) chosen for contrast.
+ * @cssprop --color-text-soft - Muted foreground color.
+ * @cssprop --color-lighten20 - 20% lighter step.
+ * @cssprop --color-lighten40 - 40% lighter step.
+ * @cssprop --color-lighten60 - 60% lighter step.
+ * @cssprop --color-lighten80 - 80% lighter step.
+ * @cssprop --color-darken20 - 20% darker step.
+ * @cssprop --color-darken40 - 40% darker step.
+ * @cssprop --color-darken60 - 60% darker step.
+ * @cssprop --color-darken80 - 80% darker step.
+ */
 export default defineComponent<CardColorscaleProps>(
 	'card-colorscale',
 	({ expose, first, host, watch }) => {

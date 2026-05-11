@@ -1,7 +1,9 @@
 import { asBoolean, bindText, defineComponent } from '../../..'
 
 export type FormInplaceEditProps = {
+	/** Whether the component is currently in edit mode. Read from the `editing` attribute at connect time. */
 	editing: boolean
+	/** The current text value. Initialized from the `.text` element's content. */
 	value: string
 }
 
@@ -13,6 +15,9 @@ declare global {
 
 let idCounter = 0
 
+/**
+ * An inline text field that switches between display and edit mode on click or double-click.
+ */
 export default defineComponent<FormInplaceEditProps>(
 	'form-inplace-edit',
 	({ expose, first, host, on, watch }) => {

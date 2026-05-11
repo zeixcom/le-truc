@@ -321,14 +321,6 @@
 <span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { highlightMatch } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../_common/highlightMatch'</span></span>
 <span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { html } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../_common/html'</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#88846F">/**</span></span>
-<span class="line"><span style="color:#88846F"> * Form-aware Listbox Component</span></span>
-<span class="line"><span style="color:#88846F"> *</span></span>
-<span class="line"><span style="color:#88846F"> * A filterable listbox that loads options from remote JSON sources and integrates</span></span>
-<span class="line"><span style="color:#88846F"> * seamlessly with HTML forms. Includes keyboard navigation, accessibility features,</span></span>
-<span class="line"><span style="color:#88846F"> * and automatic form value synchronization via a built-in hidden input element.</span></span>
-<span class="line"><span style="color:#88846F"> */</span></span>
-<span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormListboxOption</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
 <span class="line"><span style="color:#F8F8F2">	label</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
@@ -343,9 +335,13 @@
 <span class="line"><span style="color:#F8F8F2">></span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">FormListboxProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#88846F">	/** Currently selected option value. */</span></span>
 <span class="line"><span style="color:#F8F8F2">	value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#88846F">	/** Live list of visible (non-hidden) option buttons in the listbox. */</span></span>
 <span class="line"><span style="color:#F8F8F2">	options</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">HTMLButtonElement</span><span style="color:#F8F8F2">[]</span></span>
+<span class="line"><span style="color:#88846F">	/** Filter string used to narrow displayed options. */</span></span>
 <span class="line"><span style="color:#F8F8F2">	filter</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#88846F">	/** URL to fetch options from as JSON. Read from the `src` attribute at connect time. */</span></span>
 <span class="line"><span style="color:#F8F8F2">	src</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
@@ -364,6 +360,10 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> LAST_KEY </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'End'</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> HANDLED_KEYS </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> [</span><span style="color:#F92672">...</span><span style="color:#F8F8F2">DECREMENT_KEYS, </span><span style="color:#F92672">...</span><span style="color:#F8F8F2">INCREMENT_KEYS, FIRST_KEY, LAST_KEY]</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * A filterable listbox that loads options from a remote JSON source and integrates with HTML forms.</span></span>
+<span class="line"><span style="color:#88846F"> * Supports keyboard navigation, accessibility, and automatic form value synchronization via a hidden input.</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">FormListboxProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'form-listbox'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

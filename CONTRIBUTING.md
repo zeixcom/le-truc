@@ -73,6 +73,56 @@ bun install
 
 (Le Truc uses Bun as its package manager and runtime.)
 
+**Install the CEM dev tool globally (required):**
+
+```sh
+bun add -g @pwrs/cem
+```
+
+This installs the `cem` CLI used for editor autocomplete (`cem lsp`) and AI agent component context (`cem mcp`).
+
+**Generate the Custom Elements Manifest:**
+
+```sh
+bun run build:cem
+```
+
+This creates `custom-elements.json` (gitignored) which powers the editor and AI tooling below.
+
+**Configure editor autocomplete (cem lsp):**
+
+*VS Code*: Open this repo — the workspace settings in `.vscode/settings.json` already point the HTML Language Server at `custom-elements.json`, so autocomplete, hover, and diagnostics for Le Truc elements work automatically once the manifest is generated.
+
+*Zed*: Add the following to your project or global `settings.json`:
+
+```json
+"lsp": {
+  "html": {
+    "initialization_options": {
+      "customData": ["./custom-elements.json"]
+    }
+  }
+}
+```
+
+**Configure AI agent component context (cem mcp):**
+
+Create a local `.mcp.json` in the repo root (gitignored — do not commit):
+
+```json
+{
+  "mcpServers": {
+    "cem": {
+      "command": "/path/to/cem",
+      "args": ["mcp"],
+      "type": "stdio"
+    }
+  }
+}
+```
+
+Replace `/path/to/cem` with the output of `which cem`. This gives Claude Code and other AI agents live access to component definitions when working in this repo.
+
 **Configure the merge driver for auto-generated docs (once per clone):**
 
 ```sh

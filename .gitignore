@@ -153,3 +153,9 @@ vite.config.ts.timestamp-*
 # Claude
 .claude/settings.local.json
 .DS_Store
+
+# Generated
+custom-elements.json
+
+# Local dev tooling (not committed — each developer sets this up per CONTRIBUTING.md)
+.mcp.json

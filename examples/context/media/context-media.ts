@@ -6,9 +6,13 @@ export type ContextMediaViewport = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 export type ContextMediaOrientation = 'portrait' | 'landscape'
 
 export type ContextMediaProps = {
+	/** Current reduced-motion preference (`no-preference` | `reduce`). Read-only context provider. */
 	readonly 'media-motion': ContextMediaMotion
+	/** Current color scheme preference (`light` | `dark`). Read-only context provider. */
 	readonly 'media-theme': ContextMediaTheme
+	/** Current viewport size category (`xs` | `sm` | `md` | `lg` | `xl`). Read-only context provider. */
 	readonly 'media-viewport': ContextMediaViewport
+	/** Current screen orientation (`portrait` | `landscape`). Read-only context provider. */
 	readonly 'media-orientation': ContextMediaOrientation
 }
 
@@ -39,6 +43,10 @@ export const MEDIA_ORIENTATION = 'media-orientation' as Context<
 
 /* === Component === */
 
+/**
+ * A context provider that tracks OS-level media query preferences and exposes them as reactive contexts.
+ * Breakpoints (sm, md, lg, xl) can be overridden via attributes of the same name (e.g. `sm="600px"`).
+ */
 export default defineComponent<ContextMediaProps>(
 	'context-media',
 	({ expose, host, provideContexts }) => {

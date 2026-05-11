@@ -7,6 +7,7 @@ import {
 import { getLocale } from '../../_common/getLocale'
 
 export type BasicPluralizeProps = {
+	/** The count to pluralize. Read from the `count` attribute at connect time. Clamped to a non-negative integer. */
 	count: number
 }
 
@@ -16,6 +17,11 @@ declare global {
 	}
 }
 
+/**
+ * Shows locale-aware plural forms of content based on a count.
+ * Reveal children by class: `.none` (0), `.some` (>0), and `.zero/.one/.two/.few/.many/.other` per CLDR plural rules.
+ * Add the `ordinal` attribute to use ordinal plural rules.
+ */
 export default defineComponent<BasicPluralizeProps>(
 	'basic-pluralize',
 	({ expose, first, host, watch }) => {

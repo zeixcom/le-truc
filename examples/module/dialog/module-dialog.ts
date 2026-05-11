@@ -1,6 +1,7 @@
 import { defineComponent } from '../../..'
 
 export type ModuleDialogProps = {
+	/** Whether the dialog is currently open. */
 	open: boolean
 }
 
@@ -12,6 +13,9 @@ declare global {
 
 const SCROLL_LOCK_CLASS = 'scroll-lock'
 
+/**
+ * A modal dialog with scroll-lock, focus management, and backdrop/Escape close support.
+ */
 export default defineComponent<ModuleDialogProps>(
 	'module-dialog',
 	({ expose, first, on, watch }) => {

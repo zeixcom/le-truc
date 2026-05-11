@@ -37,6 +37,10 @@ const observeOverflow =
 		}
 	}
 
+/**
+ * Adds overflow indicator classes (`overflow`, `overflow-start`, `overflow-end`) to a scrollable container.
+ * Set the `orientation` attribute to `horizontal` for horizontal scroll detection.
+ */
 export default defineComponent('module-scrollarea', ({ host, on, watch }) => {
 	const child = host.firstElementChild
 	if (!child) return []

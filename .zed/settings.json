@@ -23,4 +23,11 @@
 			"language_servers": ["!biome", "..."],
 		},
 	},
+	"lsp": {
+		"html": {
+			"initialization_options": {
+				"customData": ["./custom-elements.json"],
+			},
+		},
+	},
 }

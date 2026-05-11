@@ -9,10 +9,15 @@ import {
 } from '../../..'
 
 export type FormTextboxProps = {
+	/** Current text value. Synced with the native input or textarea. */
 	value: string
+	/** Character length of the current value (read-only). */
 	readonly length: number
+	/** Validation error message from the native input's `validationMessage`. */
 	error: string
+	/** Helper text shown below the input. May include a remaining-characters template. */
 	description: string
+	/** Clears the input value and dispatches `input` and `change` events. */
 	clear: () => void
 }
 
@@ -22,6 +27,9 @@ declare global {
 	}
 }
 
+/**
+ * A single-line or multiline text input with validation, optional clear button, and helper text.
+ */
 export default defineComponent<FormTextboxProps>(
 	'form-textbox',
 	({ expose, first, host, on, watch }) => {

@@ -201,7 +201,9 @@
 <span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModulePaginationProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#88846F">	/** Total number of pages. Read from the `max` attribute at connect time. */</span></span>
 <span class="line"><span style="color:#F8F8F2">	max</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#88846F">	/** Current page number (1-based). Read from the `value` attribute at connect time. */</span></span>
 <span class="line"><span style="color:#F8F8F2">	value</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
@@ -211,6 +213,9 @@
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * A pagination control with prev/next buttons, a direct page input, and keyboard navigation.</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModulePaginationProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'module-pagination'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

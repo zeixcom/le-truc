@@ -1,6 +1,7 @@
 import { bindText, defineComponent } from '../../..'
 
 export type BasicCounterProps = {
+	/** Current counter value. Increments on each button click. */
 	count: number
 }
 
@@ -10,6 +11,9 @@ declare global {
 	}
 }
 
+/**
+ * A simple click counter that increments on each button press.
+ */
 export default defineComponent<BasicCounterProps>(
 	'basic-counter',
 	({ expose, first, host, on, watch }) => {

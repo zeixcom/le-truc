@@ -62,6 +62,9 @@ const valueToHash = (value: string, listbox: HTMLElement): string => {
 	return hash
 }
 
+/**
+ * Connects a listbox and a lazyload panel, syncing the selection with the URL hash for shareable navigation.
+ */
 export default defineComponent('module-listnav', ({ first, pass }) => {
 	const listbox = first('form-listbox', 'Required to select a partial to load')
 	const lazyload = first('module-lazyload', 'Required to load a partial into')

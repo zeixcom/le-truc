@@ -1,8 +1,11 @@
 import { bindProperty, bindText, defineComponent } from '../../..'
 
 export type BasicButtonProps = {
+	/** Whether the button is disabled. */
 	disabled: boolean
+	/** Visible label text of the button. */
 	label: string
+	/** Optional badge text displayed alongside the label. */
 	badge: string
 }
 
@@ -12,6 +15,9 @@ declare global {
 	}
 }
 
+/**
+ * A button that can be disabled, labelled, and badged via reactive properties.
+ */
 export default defineComponent<BasicButtonProps>(
 	'basic-button',
 	({ expose, first, watch }) => {

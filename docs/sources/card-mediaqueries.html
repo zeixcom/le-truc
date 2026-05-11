@@ -99,6 +99,7 @@
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">CardMediaqueriesPropKeys</span><span style="color:#F92672"> =</span><span style="color:#E6DB74"> 'motion'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'theme'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'viewport'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'orientation'</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">/** Current values for each media query context, received from a parent `context-media` component. */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">CardMediaqueriesProps</span><span style="color:#F92672"> =</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Record</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">CardMediaqueriesPropKeys</span><span style="color:#F8F8F2">, </span><span style="color:#66D9EF;font-style:italic">string</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
@@ -107,6 +108,9 @@
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * Displays the current media query context values (motion, theme, viewport, orientation) provided by a parent `context-media`.</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">CardMediaqueriesProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'card-mediaqueries'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">requestContext</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

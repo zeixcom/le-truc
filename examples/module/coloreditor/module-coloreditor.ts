@@ -9,11 +9,17 @@ import { asOklch } from '../../_common/asOklch'
 import { getStepColor } from '../../_common/getStepColor'
 
 export type ModuleColoreditorProps = {
+	/** Current color in Oklch format. Read from the `color` attribute at connect time. */
 	color: Oklch
+	/** Display name for the color. Read from the `name` attribute at connect time (default: "Blue"). */
 	name: string
+	/** Nearest named CSS color to the current Oklch value (read-only, computed). */
 	readonly nearest: string
+	/** Lightness channel of the current color (read-only, computed). */
 	readonly lightness: number
+	/** Chroma channel of the current color (read-only, computed). */
 	readonly chroma: number
+	/** Hue channel of the current color (read-only, computed). */
 	readonly hue: number
 }
 
@@ -28,6 +34,9 @@ const nearestNamedColor = nearest(
 	differenceCiede2000(),
 )
 
+/**
+ * An interactive color editor with Oklch input, named color lookup, and a full lightness scale preview.
+ */
 export default defineComponent<ModuleColoreditorProps>(
 	'module-coloreditor',
 	({ expose, first, host, on, pass }) => {

@@ -269,14 +269,23 @@
 <span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asOklch } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../_common/asOklch'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleColorinfoProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#88846F">	/** Display name of the color swatch (e.g. "Blue 500"). */</span></span>
 <span class="line"><span style="color:#F8F8F2">	name</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#88846F">	/** Color value in Oklch format. Read from the `color` attribute at connect time. */</span></span>
 <span class="line"><span style="color:#F8F8F2">	color</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Oklch</span></span>
+<span class="line"><span style="color:#88846F">	/** CSS color string derived from `color` (read-only, computed). */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> css</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#88846F">	/** Hex color string derived from `color` (read-only, computed). */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> hex</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#88846F">	/** RGB color string derived from `color` (read-only, computed). */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> rgb</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#88846F">	/** HSL color string derived from `color` (read-only, computed). */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> hsl</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#88846F">	/** Lightness channel of `color` (read-only, computed). */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> lightness</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#88846F">	/** Chroma channel of `color` (read-only, computed). */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> chroma</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
+<span class="line"><span style="color:#88846F">	/** Hue channel of `color` (read-only, computed). */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#F8F8F2"> hue</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
@@ -286,6 +295,11 @@
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * Displays detailed color information (CSS, HEX, RGB, HSL, Oklch channels) for a given color.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-swatch - The CSS color string, set reactively from the `css` property.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-fallback - The HEX color string, set reactively from the `hex` property.</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleColorinfoProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'module-colorinfo'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

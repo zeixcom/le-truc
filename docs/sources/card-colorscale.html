@@ -316,7 +316,9 @@
 <span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { getStepColor } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../_common/getStepColor.ts'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">CardColorscaleProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#88846F">	/** Display name of the color (e.g. "Blue"). */</span></span>
 <span class="line"><span style="color:#F8F8F2">	name</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span></span>
+<span class="line"><span style="color:#88846F">	/** Base color in Oklch format. Read from the `color` attribute at connect time. */</span></span>
 <span class="line"><span style="color:#F8F8F2">	color</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Oklch</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
@@ -328,6 +330,20 @@
 <span class="line"></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> CONTRAST_THRESHOLD </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0.71</span><span style="color:#88846F"> // lightness</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * A color scale card that displays a named Oklch color with a full set of lightness steps.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-base - The base color in CSS format.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-text - Foreground color (black or white) chosen for contrast.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-text-soft - Muted foreground color.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-lighten20 - 20% lighter step.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-lighten40 - 40% lighter step.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-lighten60 - 60% lighter step.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-lighten80 - 80% lighter step.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-darken20 - 20% darker step.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-darken40 - 40% darker step.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-darken60 - 60% darker step.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-darken80 - 80% darker step.</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">CardColorscaleProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'card-colorscale'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

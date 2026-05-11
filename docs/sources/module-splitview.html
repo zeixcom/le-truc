@@ -218,6 +218,7 @@
 				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { asNumber, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ModuleSplitviewProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#88846F">	/** Split ratio between 0.1 and 0.9 (e.g. 0.5 = 50/50). Read from the `split` attribute at connect time. */</span></span>
 <span class="line"><span style="color:#F8F8F2">	split</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> number</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
@@ -231,6 +232,11 @@
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> MAX_SPLIT </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0.9</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">const</span><span style="color:#F8F8F2"> STEP </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> 0.05</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * A resizable split view with a draggable divider and keyboard support.</span></span>
+<span class="line"><span style="color:#88846F"> * Set `orientation="vertical"` for a top/bottom split.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --split - The split ratio as a CSS percentage (e.g. `50.00%`), set reactively.</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleSplitviewProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'module-splitview'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

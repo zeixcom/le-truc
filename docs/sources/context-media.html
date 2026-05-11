@@ -84,9 +84,13 @@
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaOrientation</span><span style="color:#F92672"> =</span><span style="color:#E6DB74"> 'portrait'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'landscape'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#88846F">	/** Current reduced-motion preference (`no-preference` | `reduce`). Read-only context provider. */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#E6DB74"> 'media-motion'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaMotion</span></span>
+<span class="line"><span style="color:#88846F">	/** Current color scheme preference (`light` | `dark`). Read-only context provider. */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#E6DB74"> 'media-theme'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaTheme</span></span>
+<span class="line"><span style="color:#88846F">	/** Current viewport size category (`xs` | `sm` | `md` | `lg` | `xl`). Read-only context provider. */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#E6DB74"> 'media-viewport'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaViewport</span></span>
+<span class="line"><span style="color:#88846F">	/** Current screen orientation (`portrait` | `landscape`). Read-only context provider. */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#E6DB74"> 'media-orientation'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaOrientation</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
@@ -117,6 +121,10 @@
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">/* === Component === */</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * A context provider that tracks OS-level media query preferences and exposes them as reactive contexts.</span></span>
+<span class="line"><span style="color:#88846F"> * Breakpoints (sm, md, lg, xl) can be overridden via attributes of the same name (e.g. `sm="600px"`).</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ContextMediaProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'context-media'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">provideContexts</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

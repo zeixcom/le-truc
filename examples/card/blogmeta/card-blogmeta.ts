@@ -28,6 +28,9 @@ function formatLocalDate(
 	return new Intl.DateTimeFormat(locale, { dateStyle }).format(date)
 }
 
+/**
+ * Formats and displays publication and modification dates from `<time>` element `datetime` attributes.
+ */
 export default defineComponent('card-blogmeta', ({ host, first }) => {
 	const published = first(
 		'time.published',

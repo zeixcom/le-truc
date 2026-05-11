@@ -2,6 +2,7 @@ import { asNumber, bindText, defineComponent } from '../../..'
 import { getLocale } from '../../_common/getLocale'
 
 export type BasicNumberProps = {
+	/** Numeric value to format and display. Read from the `value` attribute at connect time. */
 	value: number
 }
 
@@ -107,6 +108,10 @@ function getNumberFormatter(
 	}
 }
 
+/**
+ * Displays a number formatted according to the locale and optional `Intl.NumberFormat` options.
+ * Format options are read from the `options` attribute as a JSON object.
+ */
 export default defineComponent<BasicNumberProps>(
 	'basic-number',
 	({ expose, host, watch }) => {

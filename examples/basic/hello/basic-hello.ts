@@ -1,6 +1,7 @@
 import { bindText, defineComponent } from '../../..'
 
 export type BasicHelloProps = {
+	/** The name to greet. Updated reactively as the user types in the input. */
 	name: string
 }
 
@@ -10,6 +11,9 @@ declare global {
 	}
 }
 
+/**
+ * A hello-world component that greets a name entered via an input field.
+ */
 export default defineComponent<BasicHelloProps>(
 	'basic-hello',
 	({ expose, first, on, watch }) => {

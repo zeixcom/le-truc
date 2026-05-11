@@ -1,6 +1,7 @@
 import { createState, defineComponent } from '../../..'
 
 export type ModuleTabgroupProps = {
+	/** The `aria-controls` value of the currently selected tab (read-only). */
 	readonly selected: string
 }
 
@@ -23,6 +24,9 @@ const getSelected = (
 	return getAriaControls(tabs[newIndex]!)
 }
 
+/**
+ * An accessible tab group with keyboard navigation (Arrow, Home, End keys) and reactive panel switching.
+ */
 export default defineComponent<ModuleTabgroupProps>(
 	'module-tabgroup',
 	({ all, expose, host, on, watch }) => {

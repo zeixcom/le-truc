@@ -252,6 +252,9 @@
 <span class="line"><span style="color:#F92672">	return</span><span style="color:#F8F8F2"> hash</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * Connects a listbox and a lazyload panel, syncing the selection with the URL hash for shareable navigation.</span></span>
+<span class="line"><span style="color:#88846F"> */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'module-listnav'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> listbox </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'form-listbox'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Required to select a partial to load'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> lazyload </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'module-lazyload'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'Required to load a partial into'</span><span style="color:#F8F8F2">)</span></span>

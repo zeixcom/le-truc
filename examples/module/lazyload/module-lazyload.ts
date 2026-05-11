@@ -11,6 +11,7 @@ import {
 } from '../../_common/fetchWithCache'
 
 export type ModuleLazyloadProps = {
+	/** URL of the HTML partial to fetch and render. Read from the `src` attribute at connect time. */
 	src: string
 }
 
@@ -20,6 +21,10 @@ declare global {
 	}
 }
 
+/**
+ * Fetches and renders an HTML partial from a URL, with loading and error states.
+ * Set `allow-scripts` attribute to permit inline scripts in the fetched content.
+ */
 export default defineComponent<ModuleLazyloadProps>(
 	'module-lazyload',
 	({ expose, first, host, watch }) => {

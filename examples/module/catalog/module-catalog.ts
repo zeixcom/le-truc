@@ -6,6 +6,9 @@ declare global {
 	}
 }
 
+/**
+ * A product catalog that aggregates spinbutton quantities and passes the total to a cart button.
+ */
 export default defineComponent('module-catalog', ({ all, first, pass }) => {
 	const button = first(
 		'basic-button',
