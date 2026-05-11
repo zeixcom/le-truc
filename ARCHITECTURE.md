@@ -106,3 +106,48 @@ Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestConte
 ## Scheduler
 
 `schedule(element, task)` deduplicates high-frequency DOM updates using `requestAnimationFrame`. Used by `on()` for passive events and `dangerouslyBindInnerHTML`.
+
+## Ecosystem Tooling
+
+### Custom Elements Manifest
+
+Le Truc example components are analysed by `@custom-elements-manifest/analyzer` using the `@zeix/cem-plugin-le-truc` plugin (see [ADR 0010](adr/0010-cem-plugin-for-le-truc-factory-pattern.md)). The plugin bridges the gap between Le Truc's factory pattern and the standard CEM ecosystem.
+
+The generated `custom-elements.json` (repo root, referenced via `"customElements"` in `package.json`) enables:
+- **`cem lsp`**: Editor autocomplete, hover docs, and diagnostics in HTML templates (VS Code, Zed)
+- **`cem mcp`**: AI-native component context for coding agents (Claude Code, etc.)
+
+#### What the plugin extracts
+
+| CEM field | Source |
+|---|---|
+| `tagName` | First string argument of `defineComponent(tagName, …)` |
+| `name` | PascalCase from tagName (`basic-counter` → `BasicCounter`) |
+| `description` | JSDoc above the `export default defineComponent(…)` |
+| `members` | Properties of `Props` type via TypeScript type checker — always the source of truth |
+| `attributes` | Properties in `expose({})` whose initializer is a call to an `as*` Parser from `@zeix/le-truc` |
+| `slots`, `events`, `cssParts`, `cssProperties` | `@slot`, `@fires`, `@csspart`, `@cssprop` JSDoc tags on the export |
+
+#### JSDoc annotation contract
+
+```typescript
+/**
+ * Component description.
+ * @slot - Default slot description
+ * @fires event-name - Fired when …
+ */
+export default defineComponent<MyProps>('my-element', …)
+```
+
+Property descriptions go on the `Props` type:
+
+```typescript
+export type MyProps = {
+  /** Property description. Read from the `value` attribute at connect time. */
+  value: string
+}
+```
+
+#### Generation
+
+Run `bun run build:cem` to generate `custom-elements.json`. The script runs `cem analyze` using `custom-elements-manifest.config.mjs` targeting `examples/**/*.ts` (test files excluded).
