@@ -37,7 +37,7 @@ It compiles `.tsrx` → target-specific output via a **two-loader Bun/Vite/Rspac
 
 Existing targets: React, Preact, Solid, Vue, Ripple. All are client-side rendering frameworks.
 
-**Critical finding**: `@tsrx/core` is described as "framework-agnostic parser/analyzer," but **no custom target API is documented**. The plugin system is bundler-centric (register loaders), not target-centric (extend codegen). This is the primary unknown (see R1) and the confirmed next step before any implementation work.
+**`@tsrx/core` exposes a full public API** — `parseModule` (→ ESTree AST), `createJsxTransform(platform)` (the extension point all five targets use), CSS pipeline, and AST utilities. The `JsxPlatform` descriptor's `hooks` object (`componentToFunction`, `transformElement`, `injectImports`, `controlFlow`) is the codegen extension mechanism. See R1 for details.
 
 ---
 
@@ -213,13 +213,75 @@ examples/module/todo/module-todo.tsrx
 
 ## Risks and Concept Mismatches
 
-### R1 — No documented custom target API in TSRX ⚠️ HIGH
-`@tsrx/core` (the parser/analyzer) is described as framework-agnostic, but there is no documented public API for adding a new codegen target. The existing five targets are first-party packages, not plugins registered via a public interface. Building a Le Truc target requires either:
-- **(a)** Discovering undocumented extension hooks in `@tsrx/core` source
-- **(b)** Forking TSRX to add a target hook API
-- **(c)** Building a standalone `.tsrx` parser for the subset of syntax needed
+### R1 — Custom target API in `@tsrx/core` ✓ RESOLVED
 
-**Action before proceeding**: Audit `@tsrx/core` source at `github.com/Ripple-TS/ripple`. If no extension API exists, option (c) — a standalone parser for the JSX + `<style>` + TypeScript passthrough subset — is likely the most pragmatic path, avoiding a hard dependency on a third-party compiler's internals.
+Source audit of `github.com/Ripple-TS/ripple` confirms a rich public API. No fork required.
+
+#### Public API surface (`packages/tsrx/src/index.js`)
+
+| Export | Purpose |
+|---|---|
+| `parseModule(source, filename, options?)` | Parses `.tsrx` source → ESTree-compatible AST |
+| `createJsxTransform(platform)` | Returns a `transform(ast, source, filename, options?)` function; used by all five existing targets |
+| `createScopes(ast)` | Scope / binding analysis |
+| `parseStyle`, `analyzeCss`, `renderStylesheets` | Full CSS pipeline |
+| `isComponentNode`, `isFunctionNode`, `getComponentFromPath`, `extractIdentifiers`, `builders`, … | AST classification and manipulation utilities |
+| `isVoidElement`, `isBooleanAttribute`, `isDomProperty`, `validateNesting` | HTML helpers |
+
+#### `createJsxTransform(platform)` — the extension point
+
+Every existing target (React, Preact, Solid, Vue, Ripple) is implemented as a `JsxPlatform` descriptor passed to `createJsxTransform`. The descriptor controls:
+
+```js
+{
+  name: string,
+  imports: { suspense: string },
+  jsx: { rewriteClassAttr: boolean },
+  validation: { requireUseServerForAwait: boolean, … },
+  hooks: {
+    initialState?:             () => object,
+    componentToFunction?:      (component, context, helperState) => FunctionDeclaration,
+    transformElement?:         (element, state, rawChildren) => JSXElement,
+    isTopLevelSetupCall?:      (node, context) => boolean,
+    injectImports?:            (program, context, suspenseSource) => void,
+    validateComponentAwait?:   (expr, component, state, …) => void,
+    controlFlow?: { forOf?: boolean },
+  }
+}
+```
+
+`createJsxTransform(platform)` returns `transform(ast, source, filename?, options?)` → `{ code, map, css }`.
+
+#### How a Le Truc target uses this API
+
+The three compilation passes map onto `@tsrx/core` APIs as follows:
+
+**JS pass** — uses `createJsxTransform` with a `le_truc_platform` descriptor:
+- `componentToFunction` emits `defineComponent('tag-name', (ctx) => { … })` instead of a React function component. The factory body is the non-JSX TypeScript statements from the component body.
+- `transformElement` suppresses JSX-to-`createElement` conversion; JSX elements in the body are excluded from the JS output (they belong to the HTML pass only).
+- `injectImports` injects the Le Truc factory context imports.
+- `controlFlow.forOf: false` disables Solid/Ripple-style `for` lowering (not needed).
+
+**HTML pass** — does not use `createJsxTransform`; uses `parseModule` + a custom AST walker:
+- Walk the `Component` body, collect JSX element nodes.
+- Convert JSX nodes to Preact `h()` calls (respecting `<template>` pass-through and TSRX `for` iteration).
+- Run `preact-render-to-string`'s `renderToStaticMarkup` in Bun.
+- Wrap output in the custom element's outer tag.
+
+**CSS pass** — uses `parseStyle` / `analyzeCss` / `renderStylesheets` from `@tsrx/core` directly, with custom-element-scoped class wrapping instead of hash scoping.
+
+#### Bun plugin pattern (from `bun-plugin-react`)
+
+```
+onLoad(.tsrx) →
+  compile(source, path) [= parseModule() + transform()] →
+  { code, css } →
+  CSS stored in virtual module cache (Map) →
+  import injected for CSS virtual module →
+  JS output returned with loader: 'js' | 'tsx'
+```
+
+The Le Truc Bun plugin registers the same two-loader structure plus a third HTML output written to disk (or returned as a virtual module for embedding).
 
 ### R2 — Server/client interpolation boundary is not yet defined △ MEDIUM (PoC-driven)
 The HTML pass and the JS pass operate on the same component body. Determining which statements belong to which pass is non-trivial when code is interleaved. A statement like `const count = items.length` could be build-time (used in an `if` driving conditional HTML) or runtime (a Le Truc reactive value in the factory).
@@ -273,9 +335,8 @@ However, implementing cross-section type inference is non-trivial and depends on
 
 ## Phased Implementation
 
-### Phase 0 — `@tsrx/core` audit (next step, before any code)
-1. Read `@tsrx/core` source at `github.com/Ripple-TS/ripple` — does it expose a codegen extension API or a parseable AST?
-2. Decision gate: extend `@tsrx/core` / use its AST, or build a standalone parser for the JSX + `<style>` + TypeScript passthrough subset
+### Phase 0 — `@tsrx/core` audit ✓ COMPLETE
+`@tsrx/core` exposes `parseModule` (→ ESTree AST), `createJsxTransform(platform)` (target extension point), and a full CSS + AST utility suite. No fork required. **Decision: build on `@tsrx/core`'s public API.**
 
 ### Phase 1 — Proof of concept (single nested component)
 The PoC targets `module-todo` and at least one of its child components (e.g., `basic-button` or `form-textbox`) to exercise all three core mechanics together:
@@ -298,7 +359,7 @@ The PoC is complete when the todo example compiles and its tests pass. The body-
 
 ## Open Questions
 
-1. **`@tsrx/core` extension API** *(Phase 0 gate)* — Does it expose AST/codegen hooks, or is a standalone parser necessary? Determines the entire compiler strategy.
+1. ~~**`@tsrx/core` extension API**~~ ✓ Resolved — `parseModule` + `createJsxTransform(platform)` + CSS/AST utilities are all public. Build on `@tsrx/core`. See R1.
 
 2. **Body split rule** *(PoC outcome)* — Which marker produces the best authoring experience: Le Truc API-reference heuristic, an explicit `factory {}` block, a `// @factory` comment boundary, or something else? To be settled by PoC iteration.
 
