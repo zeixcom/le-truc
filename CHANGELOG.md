@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.3
+
+### Changed
+
+- **`@zeix/cause-effect` upgraded to `^1.3.3`**: Minor performance optimizations for composite signals (signals composed from multiple upstream sources). No API changes.
+
 ## 2.0.2
 
 ### Added
