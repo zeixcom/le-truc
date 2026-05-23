@@ -510,7 +510,37 @@ function getKeyGenerator(keyConfig) {
     contentBased
   ];
 }
+function diffPositional(prev, next, prevKeys, generateKey, itemEquals) {
+  const add = {};
+  const change = {};
+  const remove = {};
+  const nextKeys = [];
+  let changed = false;
+  const minLen = Math.min(prev.length, next.length);
+  for (let i = 0;i < minLen; i++) {
+    const key = prevKeys[i];
+    nextKeys.push(key);
+    if (!itemEquals(prev[i], next[i])) {
+      change[key] = next[i];
+      changed = true;
+    }
+  }
+  for (let i = minLen;i < next.length; i++) {
+    const val = next[i];
+    const key = generateKey(val);
+    nextKeys.push(key);
+    add[key] = val;
+    changed = true;
+  }
+  for (let i = minLen;i < prev.length; i++) {
+    remove[prevKeys[i]] = null;
+    changed = true;
+  }
+  return { add, change, remove, newKeys: nextKeys, changed };
+}
 function diffArrays(prev, next, prevKeys, generateKey, contentBased, itemEquals) {
+  if (!contentBased)
+    return diffPositional(prev, next, prevKeys, generateKey, itemEquals);
   const add = {};
   const change = {};
   const remove = {};
@@ -528,7 +558,7 @@ function diffArrays(prev, next, prevKeys, generateKey, contentBased, itemEquals)
     const val = next[i];
     if (val === undefined)
       continue;
-    const key = contentBased ? generateKey(val) : prevKeys[i] ?? generateKey(val);
+    const key = generateKey(val);
     if (seenKeys.has(key))
       throw new DuplicateKeyError(TYPE_LIST, key, val);
     nextKeys.push(key);
@@ -558,7 +588,15 @@ function createList(value, options) {
   const [generateKey, contentBased] = getKeyGenerator(options?.keyConfig);
   const itemEquals = options?.itemEquals ?? DEEP_EQUALITY;
   const itemFactory = options?.createItem ?? ((item) => createState(item, { equals: itemEquals }));
-  const buildValue = () => keys.map((key) => signals.get(key)?.get()).filter((v) => v !== undefined);
+  const buildValue = () => {
+    const result = [];
+    for (const key of keys) {
+      const v = signals.get(key)?.get();
+      if (v !== undefined)
+        result.push(v);
+    }
+    return result;
+  };
   const node = {
     fn: buildValue,
     value,
@@ -578,7 +616,12 @@ function createList(value, options) {
       signals.set(key, itemFactory(val));
       structural = true;
     }
-    if (Object.keys(changes.change).length) {
+    let hasChange = false;
+    for (const _key in changes.change) {
+      hasChange = true;
+      break;
+    }
+    if (hasChange) {
       batch(() => {
         for (const key in changes.change) {
           const val = changes.change[key];
@@ -688,8 +731,7 @@ function createList(value, options) {
       const key = generateKey(value2);
       if (signals.has(key))
         throw new DuplicateKeyError(TYPE_LIST, key, value2);
-      if (!keys.includes(key))
-        keys.push(key);
+      keys.push(key);
       validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
       signals.set(key, itemFactory(value2));
       node.flags |= FLAG_DIRTY | FLAG_RELINK;
@@ -730,8 +772,16 @@ function createList(value, options) {
         flush();
     },
     sort(compareFn) {
-      const entries = keys.map((key) => [key, signals.get(key)?.get()]).sort(isFunction(compareFn) ? (a, b) => compareFn(a[1], b[1]) : (a, b) => String(a[1]).localeCompare(String(b[1])));
-      const newOrder = entries.map(([key]) => key);
+      const entries = [];
+      for (const key of keys) {
+        const v = signals.get(key)?.get();
+        if (v !== undefined)
+          entries.push([key, v]);
+      }
+      entries.sort(isFunction(compareFn) ? (a, b) => compareFn(a[1], b[1]) : (a, b) => String(a[1]).localeCompare(String(b[1])));
+      const newOrder = [];
+      for (const [key] of entries)
+        newOrder.push(key);
       if (!keysEqual(keys, newOrder)) {
         keys = newOrder;
         node.flags |= FLAG_DIRTY;
@@ -747,31 +797,38 @@ function createList(value, options) {
       const actualDeleteCount = Math.max(0, Math.min(deleteCount ?? Math.max(0, length - Math.max(0, actualStart)), length - actualStart));
       const add = {};
       const remove = {};
+      let hasRemove = false;
       for (let i = 0;i < actualDeleteCount; i++) {
         const index = actualStart + i;
         const key = keys[index];
         if (key) {
           const signal = signals.get(key);
-          if (signal)
+          if (signal) {
             remove[key] = signal.get();
+            hasRemove = true;
+          }
         }
       }
       const newOrder = keys.slice(0, actualStart);
       const change = {};
+      let hasAdd = false;
+      let hasChange = false;
       for (const item of items) {
         const key = generateKey(item);
         if (key in remove) {
           delete remove[key];
           change[key] = item;
+          hasChange = true;
         } else if (signals.has(key)) {
           throw new DuplicateKeyError(TYPE_LIST, key, item);
         } else {
           add[key] = item;
+          hasAdd = true;
         }
         newOrder.push(key);
       }
       newOrder.push(...keys.slice(actualStart + actualDeleteCount));
-      const changed = !!(Object.keys(add).length || Object.keys(remove).length || Object.keys(change).length);
+      const changed = hasAdd || hasRemove || hasChange;
       if (changed) {
         applyChanges({
           add,
@@ -916,13 +973,12 @@ function deriveCollection(source, callback) {
   };
   function syncKeys(nextKeys) {
     if (!keysEqual(keys, nextKeys)) {
-      const a = new Set(keys);
-      const b = new Set(nextKeys);
+      const nextSet = new Set(nextKeys);
       for (const key of keys)
-        if (!b.has(key))
+        if (!nextSet.has(key))
           signals.delete(key);
       for (const key of nextKeys)
-        if (!a.has(key))
+        if (!signals.has(key))
           addSignal(key);
       keys = nextKeys;
       node.flags |= FLAG_RELINK;
@@ -1336,9 +1392,8 @@ function createStore(value, options) {
   };
   const buildValue = () => {
     const record = {};
-    signals.forEach((signal, key) => {
+    for (const [key, signal] of signals)
       record[key] = signal.get();
-    });
     return record;
   };
   const node = {
@@ -1358,7 +1413,12 @@ function createStore(value, options) {
       addSignal(key, changes.add[key]);
       structural = true;
     }
-    if (Object.keys(changes.change).length) {
+    let hasChange = false;
+    for (const _key in changes.change) {
+      hasChange = true;
+      break;
+    }
+    if (hasChange) {
       batch(() => {
         for (const key in changes.change) {
           const val = changes.change[key];
@@ -1389,10 +1449,8 @@ function createStore(value, options) {
     [Symbol.toStringTag]: TYPE_STORE,
     [Symbol.isConcatSpreadable]: false,
     *[Symbol.iterator]() {
-      for (const key of Array.from(signals.keys())) {
-        const signal = signals.get(key);
-        if (signal)
-          yield [key, signal];
+      for (const [key, signal] of signals) {
+        yield [key, signal];
       }
     },
     keys() {
@@ -1575,7 +1633,7 @@ function createSlot(initialSignal, options) {
   };
   const set = (next) => {
     if (isSlot(delegated))
-      return delegated.set(next);
+      return void delegated.set(next);
     if ("set" in delegated && typeof delegated.set === "function") {
       validateSignalValue(TYPE_SLOT, next, guard);
       delegated.set(next);

@@ -1,0 +1,49 @@
+name: npm Publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Required for npm provenance
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install all dependencies (including devDependencies for build)
+        run: bun install
+
+      - name: Build package
+        run: bun run build
+
+      - name: Get package version and determine tag
+        id: version
+        run: |
+          VERSION=$(bun -e "console.log(require('./package.json').version)")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # Check if version is prerelease (contains -)
+          if [[ $VERSION == *-* ]]; then
+            # Extract prerelease identifier (e.g., "beta" from "1.0.0-beta.1")
+            PRERELEASE_TAG=$(echo $VERSION | grep -oP '(?<=-)[a-zA-Z0-9]+')
+            echo "tag=${PRERELEASE_TAG:-next}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js 24 for npm publish
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public --tag ${{ steps.version.outputs.tag }}
