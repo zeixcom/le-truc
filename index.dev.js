@@ -15,11 +15,17 @@ function isSignalOfType(value, type) {
 function isRecord(value) {
   return value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype;
 }
-function isUniformArray(value, guard = (item) => item != null) {
-  return Array.isArray(value) && value.every(guard);
-}
 function valueString(value) {
-  return typeof value === "string" ? `"${value}"` : !!value && typeof value === "object" ? JSON.stringify(value) : String(value);
+  if (typeof value === "string")
+    return `"${value}"`;
+  if (value != null && typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
 }
 
 // node_modules/@zeix/cause-effect/src/errors.ts
@@ -72,9 +78,16 @@ class RequiredOwnerError extends Error {
   }
 }
 
+class PromiseValueError extends TypeError {
+  constructor(where) {
+    super(`[${where}] Callback returned a Promise — use an async callback to create a Task instead`);
+    this.name = "PromiseValueError";
+  }
+}
+
 class DuplicateKeyError extends Error {
   constructor(where, key, value) {
-    super(`[${where}] Could not add key "${key}"${value ? ` with value ${JSON.stringify(value)}` : ""} because it already exists`);
+    super(`[${where}] Could not add key "${key}"${value != null ? ` with value ${JSON.stringify(value)}` : ""} because it already exists`);
     this.name = "DuplicateKeyError";
   }
 }
@@ -113,39 +126,51 @@ var batchDepth = 0;
 var flushing = false;
 var DEFAULT_EQUALITY = (a, b) => a === b;
 var SKIP_EQUALITY = (_a, _b) => false;
-var deepEqual = (a, b) => {
+var deepEqual = (a, b) => deepEqualInner(a, b, new WeakSet);
+var deepEqualInner = (a, b, seen) => {
   if (Object.is(a, b))
     return true;
   if (typeof a !== typeof b)
     return false;
   if (a == null || typeof a !== "object" || b == null || typeof b !== "object")
     return false;
-  const aIsArray = Array.isArray(a);
-  if (aIsArray !== Array.isArray(b))
-    return false;
-  if (aIsArray) {
-    const aa = a;
-    const ba = b;
-    if (aa.length !== ba.length)
-      return false;
-    for (let i = 0;i < aa.length; i++)
-      if (!deepEqual(aa[i], ba[i]))
-        return false;
+  if (seen.has(a))
     return true;
-  }
-  if (isRecord(a) && isRecord(b)) {
-    const aKeys = Object.keys(a);
-    if (aKeys.length !== Object.keys(b).length)
+  seen.add(a);
+  try {
+    const aIsArray = Array.isArray(a);
+    if (aIsArray !== Array.isArray(b))
       return false;
-    for (const key of aKeys) {
-      if (!(key in b))
+    if (aIsArray) {
+      const aa = a;
+      const ba = b;
+      if (aa.length !== ba.length)
         return false;
-      if (!deepEqual(a[key], b[key]))
-        return false;
+      for (let i = 0;i < aa.length; i++)
+        if (!deepEqualInner(aa[i], ba[i], seen))
+          return false;
+      return true;
     }
-    return true;
+    if (a instanceof Date && b instanceof Date)
+      return a.getTime() === b.getTime();
+    if (a instanceof RegExp && b instanceof RegExp)
+      return a.source === b.source && a.flags === b.flags;
+    if (isRecord(a) && isRecord(b)) {
+      const aKeys = Object.keys(a);
+      if (aKeys.length !== Object.keys(b).length)
+        return false;
+      for (const key of aKeys) {
+        if (!(key in b))
+          return false;
+        if (!deepEqualInner(a[key], b[key], seen))
+          return false;
+      }
+      return true;
+    }
+    return false;
+  } finally {
+    seen.delete(a);
   }
-  return false;
 };
 var DEEP_EQUALITY = (a, b) => deepEqual(a, b);
 function isValidEdge(checkEdge, node) {
@@ -279,6 +304,8 @@ function recomputeMemo(node) {
   let changed = false;
   try {
     const next = node.fn(node.value);
+    if (next instanceof Promise)
+      throw new PromiseValueError(TYPE_MEMO);
     if (node.error || !node.equals(next, node.value)) {
       node.value = next;
       node.error = undefined;
@@ -313,6 +340,8 @@ function recomputeTask(node) {
   } catch (err) {
     node.controller = undefined;
     node.error = err instanceof Error ? err : new Error(String(err));
+    node.flags = FLAG_CLEAN;
+    setState(node.pendingNode, false);
     return;
   } finally {
     activeSink = prevWatcher;
@@ -556,8 +585,7 @@ function diffArrays(prev, next, prevKeys, generateKey, contentBased, itemEquals)
   const seenKeys = new Set;
   for (let i = 0;i < next.length; i++) {
     const val = next[i];
-    if (val === undefined)
-      continue;
+    validateSignalValue(`${TYPE_LIST} item at index ${i}`, val);
     const key = generateKey(val);
     if (seenKeys.has(key))
       throw new DuplicateKeyError(TYPE_LIST, key, val);
@@ -646,14 +674,13 @@ function createList(value, options) {
   const subscribe = makeSubscribe(node, options?.watched);
   for (let i = 0;i < value.length; i++) {
     const val = value[i];
-    if (val === undefined)
-      continue;
+    if (val == null)
+      throw new NullishSignalValueError(`${TYPE_LIST} item ${i}`);
     let key = keys[i];
     if (!key) {
       key = generateKey(val);
       keys[i] = key;
     }
-    validateSignalValue(`${TYPE_LIST} item for key "${key}"`, val);
     signals.set(key, itemFactory(val));
   }
   node.value = value;
@@ -662,6 +689,7 @@ function createList(value, options) {
     [Symbol.toStringTag]: TYPE_LIST,
     [Symbol.isConcatSpreadable]: true,
     *[Symbol.iterator]() {
+      subscribe();
       for (const key of keys) {
         const signal = signals.get(key);
         if (signal)
@@ -711,6 +739,7 @@ function createList(value, options) {
       list.set(fn(list.get()));
     },
     at(index) {
+      subscribe();
       const key = keys[index];
       return key !== undefined ? signals.get(key) : undefined;
     },
@@ -719,12 +748,15 @@ function createList(value, options) {
       return keys.values();
     },
     byKey(key) {
+      subscribe();
       return signals.get(key);
     },
     keyAt(index) {
+      subscribe();
       return keys[index];
     },
     indexOfKey(key) {
+      subscribe();
       return keys.indexOf(key);
     },
     add(value2) {
@@ -764,10 +796,12 @@ function createList(value, options) {
       validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
       if (itemEquals(untrack(() => signal.get()), value2))
         return;
-      signal.set(value2);
-      node.flags |= FLAG_DIRTY;
-      for (let e = node.sinks;e; e = e.nextSink)
-        propagate(e.sink);
+      batch(() => {
+        signal.set(value2);
+        node.flags |= FLAG_DIRTY;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+      });
       if (batchDepth === 0)
         flush();
     },
@@ -959,12 +993,18 @@ function deriveCollection(source, callback) {
   let keys = [];
   const addSignal = (key) => {
     const signal = isAsync ? createTask(async (prev, abort) => {
-      const sourceValue = source.byKey(key)?.get();
+      const itemSignal = untrack(() => source.byKey(key));
+      if (!itemSignal)
+        return prev;
+      const sourceValue = itemSignal.get();
       if (sourceValue == null)
         return prev;
       return callback(sourceValue, abort);
     }) : createMemo(() => {
-      const sourceValue = source.byKey(key)?.get();
+      const itemSignal = untrack(() => source.byKey(key));
+      if (!itemSignal)
+        return;
+      const sourceValue = itemSignal.get();
       if (sourceValue == null)
         return;
       return callback(sourceValue);
@@ -1047,6 +1087,9 @@ function deriveCollection(source, callback) {
     [Symbol.toStringTag]: TYPE_COLLECTION,
     [Symbol.isConcatSpreadable]: true,
     *[Symbol.iterator]() {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
       for (const key of keys) {
         const signal = signals.get(key);
         if (signal)
@@ -1072,16 +1115,28 @@ function deriveCollection(source, callback) {
       return node.value;
     },
     at(index) {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
       const key = keys[index];
       return key !== undefined ? signals.get(key) : undefined;
     },
     byKey(key) {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
       return signals.get(key);
     },
     keyAt(index) {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
       return keys[index];
     },
     indexOfKey(key) {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
       return keys.indexOf(key);
     },
     deriveCollection(cb) {
@@ -1143,8 +1198,14 @@ function createCollection(watched, options) {
     let structural = false;
     batch(() => {
       if (add) {
+        const staged = new Map;
         for (const item of add) {
           const key = generateKey(item);
+          if (signals.has(key) || staged.has(key))
+            throw new DuplicateKeyError(TYPE_COLLECTION, key, item);
+          staged.set(key, item);
+        }
+        for (const [key, item] of staged) {
           signals.set(key, itemFactory(item));
           itemToKey.set(item, key);
           if (!keys.includes(key))
@@ -1188,6 +1249,7 @@ function createCollection(watched, options) {
     [Symbol.toStringTag]: TYPE_COLLECTION,
     [Symbol.isConcatSpreadable]: true,
     *[Symbol.iterator]() {
+      subscribe();
       for (const key of keys) {
         const signal = signals.get(key);
         if (signal)
@@ -1225,16 +1287,20 @@ function createCollection(watched, options) {
       return node.value;
     },
     at(index) {
+      subscribe();
       const key = keys[index];
       return key !== undefined ? signals.get(key) : undefined;
     },
     byKey(key) {
+      subscribe();
       return signals.get(key);
     },
     keyAt(index) {
+      subscribe();
       return keys[index];
     },
     indexOfKey(key) {
+      subscribe();
       return keys.indexOf(key);
     },
     deriveCollection(cb) {
@@ -1390,6 +1456,20 @@ function createStore(value, options) {
     else
       signals.set(key, createState(val));
   };
+  const shapeCategory = (val) => {
+    if (Array.isArray(val))
+      return "list";
+    if (isRecord(val))
+      return "store";
+    return "state";
+  };
+  const signalCategory = (signal) => {
+    if (isList(signal))
+      return "list";
+    if (isStore(signal))
+      return "store";
+    return "state";
+  };
   const buildValue = () => {
     const record = {};
     for (const [key, signal] of signals)
@@ -1425,7 +1505,7 @@ function createStore(value, options) {
           validateSignalValue(`${TYPE_STORE} for key "${key}"`, val);
           const signal = signals.get(key);
           if (signal) {
-            if (isRecord(val) !== isStore(signal)) {
+            if (shapeCategory(val) !== signalCategory(signal)) {
               addSignal(key, val);
               structural = true;
             } else
@@ -1449,6 +1529,7 @@ function createStore(value, options) {
     [Symbol.toStringTag]: TYPE_STORE,
     [Symbol.isConcatSpreadable]: false,
     *[Symbol.iterator]() {
+      subscribe();
       for (const [key, signal] of signals) {
         yield [key, signal];
       }
@@ -1483,7 +1564,7 @@ function createStore(value, options) {
       return node.value;
     },
     set(next) {
-      const prev = node.flags & FLAG_DIRTY ? buildValue() : node.value;
+      const prev = node.flags & FLAG_DIRTY ? untrack(buildValue) : node.value;
       const changes = diffRecords(prev, next);
       if (applyChanges(changes)) {
         node.flags |= FLAG_DIRTY;
@@ -1575,7 +1656,7 @@ function createSignal(value) {
     return createTask(value);
   if (isFunction(value))
     return createMemo(value);
-  if (isUniformArray(value))
+  if (Array.isArray(value) && value.every((item) => item != null))
     return createList(value);
   if (isRecord(value))
     return createStore(value);
@@ -1586,7 +1667,7 @@ function createMutableSignal(value) {
     return value;
   if (value == null || isFunction(value) || isSignal(value))
     throw new InvalidSignalValueError("createMutableSignal", value);
-  if (isUniformArray(value))
+  if (Array.isArray(value) && value.every((item) => item != null))
     return createList(value);
   if (isRecord(value))
     return createStore(value);
@@ -1603,6 +1684,7 @@ function isMutableSignal(value) {
 }
 
 // node_modules/@zeix/cause-effect/src/nodes/slot.ts
+var settingSlots = new WeakSet;
 function isSignalOrDescriptor(value) {
   if (isSignal(value))
     return true;
@@ -1632,13 +1714,20 @@ function createSlot(initialSignal, options) {
     return node.value;
   };
   const set = (next) => {
-    if (isSlot(delegated))
-      return void delegated.set(next);
-    if ("set" in delegated && typeof delegated.set === "function") {
-      validateSignalValue(TYPE_SLOT, next, guard);
-      delegated.set(next);
-    } else {
-      throw new ReadonlySignalError(TYPE_SLOT);
+    if (settingSlots.has(node))
+      throw new Error("[Slot] Circular delegation detected in set()");
+    settingSlots.add(node);
+    try {
+      if (isSlot(delegated))
+        return void delegated.set(next);
+      if ("set" in delegated && typeof delegated.set === "function") {
+        validateSignalValue(TYPE_SLOT, next, guard);
+        delegated.set(next);
+      } else {
+        throw new ReadonlySignalError(TYPE_SLOT);
+      }
+    } finally {
+      settingSlots.delete(node);
     }
   };
   const replace = (next) => {
