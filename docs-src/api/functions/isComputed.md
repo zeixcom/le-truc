@@ -1,6 +1,6 @@
 ### Function: isComputed()
 
-> **isComputed**\<`T`\>(`value`): `value is Memo<T>`
+> **isComputed**\<`T`\>(`value`): value is Memo\<T\> \| Task\<T\>
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/signal.d.ts:54
 
@@ -22,7 +22,7 @@ Value to check
 
 #### Returns
 
-`value is Memo<T>`
+value is Memo\<T\> \| Task\<T\>
 
 True if value is a computed signal, false otherwise
 

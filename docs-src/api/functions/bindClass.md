@@ -2,7 +2,7 @@
 
 > **bindClass**\<`T`\>(`element`, `token`): (`value`) => `void`
 
-Defined in: [src/bindings.ts:171](https://github.com/zeixcom/le-truc/blob/8b1a8f8a0600ebb21b0e3c25fa43e088d951188e/src/bindings.ts#L171)
+Defined in: [src/bindings.ts:171](https://github.com/zeixcom/le-truc/blob/f51edaae2ea1b2c30e1cd0bb4defc26c33ce055e/src/bindings.ts#L171)
 
 Returns a function that toggles a CSS class token on an element.
 

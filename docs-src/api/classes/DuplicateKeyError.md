@@ -1,52 +1,40 @@
-### Class: InvalidPropertyNameError
+### Class: DuplicateKeyError
 
-Defined in: [src/errors.ts:28](https://github.com/zeixcom/le-truc/blob/f51edaae2ea1b2c30e1cd0bb4defc26c33ce055e/src/errors.ts#L28)
-
-Error thrown when trying to assign a property name that conflicts with reserved words or inherited HTMLElement properties
-
-#### Since
-
-0.14.0
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:97
 
 #### Extends
 
-- `TypeError`
+- `Error`
 
 #### Constructors
 
 ##### Constructor
 
-> **new InvalidPropertyNameError**(`component`, `prop`, `reason`): `InvalidPropertyNameError`
+> **new DuplicateKeyError**(`where`, `key`, `value?`): `DuplicateKeyError`
 
-Defined in: [src/errors.ts:34](https://github.com/zeixcom/le-truc/blob/f51edaae2ea1b2c30e1cd0bb4defc26c33ce055e/src/errors.ts#L34)
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:98
 
 ###### Parameters
 
-##### component
+##### where
 
 `string`
 
-Component name
-
-##### prop
+##### key
 
 `string`
 
-Property name
+##### value?
 
-##### reason
-
-`string`
-
-Explanation why the property is invalid
+`unknown`
 
 ###### Returns
 
-`InvalidPropertyNameError`
+`DuplicateKeyError`
 
 ###### Overrides
 
-`TypeError.constructor`
+`Error.constructor`
 
 #### Properties
 
@@ -60,7 +48,7 @@ The cause of the error.
 
 ###### Inherited from
 
-`TypeError.cause`
+`Error.cause`
 
 ***
 
@@ -72,7 +60,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1075
 
 ###### Inherited from
 
-`TypeError.message`
+`Error.message`
 
 ***
 
@@ -84,7 +72,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1074
 
 ###### Inherited from
 
-`TypeError.name`
+`Error.name`
 
 ***
 
@@ -96,7 +84,7 @@ Defined in: node\_modules/typescript/lib/lib.es5.d.ts:1076
 
 ###### Inherited from
 
-`TypeError.stack`
+`Error.stack`
 
 ***
 
@@ -118,7 +106,7 @@ not capture any frames.
 
 ###### Inherited from
 
-`TypeError.stackTraceLimit`
+`Error.stackTraceLimit`
 
 #### Methods
 
@@ -190,7 +178,7 @@ a();
 
 ##### Inherited from
 
-`TypeError.captureStackTrace`
+`Error.captureStackTrace`
 
 ###### Call Signature
 
@@ -216,7 +204,7 @@ Create .stack property on a target object
 
 ##### Inherited from
 
-`TypeError.captureStackTrace`
+`Error.captureStackTrace`
 
 ***
 
@@ -242,7 +230,7 @@ Indicates whether the argument provided is a built-in Error instance or not.
 
 ##### Inherited from
 
-`TypeError.isError`
+`Error.isError`
 
 ###### Call Signature
 
@@ -268,7 +256,7 @@ True if the value is an instance of Error, false otherwise
 
 ##### Inherited from
 
-`TypeError.isError`
+`Error.isError`
 
 ***
 
@@ -298,4 +286,4 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 ###### Inherited from
 
-`TypeError.prepareStackTrace`
+`Error.prepareStackTrace`

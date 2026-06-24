@@ -1752,6 +1752,170 @@ function createSlot(initialSignal, options) {
 function isSlot(value) {
   return isSignalOfType(value, TYPE_SLOT);
 }
+// src/scheduler.ts
+var objects = new Set;
+var tasks = new WeakMap;
+var throttledCallbacks = new Set;
+var requestId;
+var runTasks = () => {
+  requestId = undefined;
+  const elements = Array.from(objects);
+  objects.clear();
+  for (const element of elements)
+    tasks.get(element)?.();
+  const callbacks = Array.from(throttledCallbacks);
+  throttledCallbacks.clear();
+  for (const cb of callbacks)
+    cb();
+};
+var requestTick = () => {
+  if (!requestId)
+    requestId = requestAnimationFrame(runTasks);
+};
+var schedule = (key, task) => {
+  tasks.set(key, task);
+  objects.add(key);
+  requestTick();
+};
+var throttle = (fn, signal) => {
+  let pending = false;
+  let lastArgs;
+  const flush2 = () => {
+    pending = false;
+    fn(...lastArgs);
+  };
+  const wrapped = (...args) => {
+    lastArgs = args;
+    if (pending)
+      return;
+    pending = true;
+    throttledCallbacks.add(flush2);
+    requestTick();
+  };
+  wrapped.cancel = () => {
+    if (pending) {
+      throttledCallbacks.delete(flush2);
+      pending = false;
+    }
+  };
+  signal?.addEventListener("abort", wrapped.cancel, { once: true });
+  return wrapped;
+};
+
+// src/bindings.ts
+var SCRIPT_ATTRS = [
+  "type",
+  "src",
+  "async",
+  "defer",
+  "nomodule",
+  "crossorigin",
+  "integrity",
+  "referrerpolicy",
+  "fetchpriority"
+];
+var isSafeURL = (value) => {
+  if (/^(javascript|data|vbscript):/i.test(value))
+    return false;
+  if (/^(mailto|tel):/i.test(value))
+    return true;
+  if (value.includes("://")) {
+    try {
+      const url = new URL(value);
+      return ["http:", "https:", "ftp:"].includes(url.protocol);
+    } catch {
+      return false;
+    }
+  }
+  return true;
+};
+var safeSetAttribute = (element, attr, value) => {
+  if (/^on/i.test(attr))
+    throw new Error(`setAttribute: blocked unsafe attribute name '${attr}' on ${element.localName} — event handler attributes are not allowed`);
+  value = String(value).trim();
+  if (!isSafeURL(value))
+    throw new Error(`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`);
+  element.setAttribute(attr, value);
+};
+var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+var setTextPreservingComments = (element, text) => {
+  Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => {
+    node.remove();
+  });
+  element.append(document.createTextNode(text));
+};
+var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
+  element.textContent = String(value);
+};
+var bindProperty = (object, key) => (value) => {
+  object[key] = value;
+};
+var bindClass = (element, token) => (value) => {
+  element.classList.toggle(token, Boolean(value));
+};
+var bindVisible = (element) => (value) => {
+  element.hidden = !value;
+};
+var bindAttribute = (element, name, allowUnsafe = false) => ({
+  ok: (value) => {
+    if (typeof value === "boolean") {
+      element.toggleAttribute(name, value);
+    } else if (allowUnsafe) {
+      element.setAttribute(name, value);
+    } else {
+      safeSetAttribute(element, name, value);
+    }
+  },
+  nil: () => {
+    element.removeAttribute(name);
+  }
+});
+var bindStyle = (element, prop) => ({
+  ok: (value) => {
+    element.style.setProperty(prop, value);
+  },
+  nil: () => {
+    element.style.removeProperty(prop);
+  }
+});
+var dangerouslyBindInnerHTML = (element, options = {}) => {
+  const reset = () => {
+    if (element.shadowRoot)
+      element.shadowRoot.innerHTML = "<slot></slot>";
+    else
+      element.innerHTML = "";
+  };
+  return {
+    ok: (html) => {
+      if (!html) {
+        reset();
+        return;
+      }
+      const { shadowRootMode, allowScripts } = options;
+      if (shadowRootMode && !element.shadowRoot)
+        element.attachShadow({ mode: shadowRootMode });
+      const target = element.shadowRoot || element;
+      schedule(element, () => {
+        target.innerHTML = html;
+        if (allowScripts) {
+          target.querySelectorAll("script").forEach((script) => {
+            const newScript = document.createElement("script");
+            for (const attr of SCRIPT_ATTRS) {
+              const attrValue = script.getAttribute(attr);
+              if (attrValue !== null)
+                newScript.setAttribute(attr, attrValue);
+            }
+            if (!script.hasAttribute("src"))
+              newScript.appendChild(document.createTextNode(script.textContent ?? ""));
+            target.appendChild(newScript);
+            script.remove();
+          });
+        }
+      });
+    },
+    nil: reset
+  };
+};
 // src/util.ts
 var DEV_MODE = typeof process !== "undefined" && true;
 var LOG_WARN = "warn";
@@ -1957,56 +2121,6 @@ var makeElementQueries = (host) => {
     }
   };
   return [{ first, all }, resolveDependencies];
-};
-
-// src/scheduler.ts
-var objects = new Set;
-var tasks = new WeakMap;
-var throttledCallbacks = new Set;
-var requestId;
-var runTasks = () => {
-  requestId = undefined;
-  const elements = Array.from(objects);
-  objects.clear();
-  for (const element of elements)
-    tasks.get(element)?.();
-  const callbacks = Array.from(throttledCallbacks);
-  throttledCallbacks.clear();
-  for (const cb of callbacks)
-    cb();
-};
-var requestTick = () => {
-  if (!requestId)
-    requestId = requestAnimationFrame(runTasks);
-};
-var schedule = (key, task) => {
-  tasks.set(key, task);
-  objects.add(key);
-  requestTick();
-};
-var throttle = (fn, signal) => {
-  let pending = false;
-  let lastArgs;
-  const flush2 = () => {
-    pending = false;
-    fn(...lastArgs);
-  };
-  const wrapped = (...args) => {
-    lastArgs = args;
-    if (pending)
-      return;
-    pending = true;
-    throttledCallbacks.add(flush2);
-    requestTick();
-  };
-  wrapped.cancel = () => {
-    if (pending) {
-      throttledCallbacks.delete(flush2);
-      pending = false;
-    }
-  };
-  signal?.addEventListener("abort", wrapped.cancel, { once: true });
-  return wrapped;
 };
 
 // src/helpers/events.ts
@@ -2343,120 +2457,6 @@ function defineComponent(name, factory) {
   customElements.define(name, Truc);
   return customElements.get(name);
 }
-// src/bindings.ts
-var SCRIPT_ATTRS = [
-  "type",
-  "src",
-  "async",
-  "defer",
-  "nomodule",
-  "crossorigin",
-  "integrity",
-  "referrerpolicy",
-  "fetchpriority"
-];
-var isSafeURL = (value) => {
-  if (/^(javascript|data|vbscript):/i.test(value))
-    return false;
-  if (/^(mailto|tel):/i.test(value))
-    return true;
-  if (value.includes("://")) {
-    try {
-      const url = new URL(value);
-      return ["http:", "https:", "ftp:"].includes(url.protocol);
-    } catch {
-      return false;
-    }
-  }
-  return true;
-};
-var safeSetAttribute = (element, attr, value) => {
-  if (/^on/i.test(attr))
-    throw new Error(`setAttribute: blocked unsafe attribute name '${attr}' on ${element.localName} — event handler attributes are not allowed`);
-  value = String(value).trim();
-  if (!isSafeURL(value))
-    throw new Error(`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`);
-  element.setAttribute(attr, value);
-};
-var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-var setTextPreservingComments = (element, text) => {
-  Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => {
-    node.remove();
-  });
-  element.append(document.createTextNode(text));
-};
-var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
-  element.textContent = String(value);
-};
-var bindProperty = (object, key) => (value) => {
-  object[key] = value;
-};
-var bindClass = (element, token) => (value) => {
-  element.classList.toggle(token, Boolean(value));
-};
-var bindVisible = (element) => (value) => {
-  element.hidden = !value;
-};
-var bindAttribute = (element, name, allowUnsafe = false) => ({
-  ok: (value) => {
-    if (typeof value === "boolean") {
-      element.toggleAttribute(name, value);
-    } else if (allowUnsafe) {
-      element.setAttribute(name, value);
-    } else {
-      safeSetAttribute(element, name, value);
-    }
-  },
-  nil: () => {
-    element.removeAttribute(name);
-  }
-});
-var bindStyle = (element, prop) => ({
-  ok: (value) => {
-    element.style.setProperty(prop, value);
-  },
-  nil: () => {
-    element.style.removeProperty(prop);
-  }
-});
-var dangerouslyBindInnerHTML = (element, options = {}) => {
-  const reset = () => {
-    if (element.shadowRoot)
-      element.shadowRoot.innerHTML = "<slot></slot>";
-    else
-      element.innerHTML = "";
-  };
-  return {
-    ok: (html) => {
-      if (!html) {
-        reset();
-        return;
-      }
-      const { shadowRootMode, allowScripts } = options;
-      if (shadowRootMode && !element.shadowRoot)
-        element.attachShadow({ mode: shadowRootMode });
-      const target = element.shadowRoot || element;
-      schedule(element, () => {
-        target.innerHTML = html;
-        if (allowScripts) {
-          target.querySelectorAll("script").forEach((script) => {
-            const newScript = document.createElement("script");
-            for (const attr of SCRIPT_ATTRS) {
-              const attrValue = script.getAttribute(attr);
-              if (attrValue !== null)
-                newScript.setAttribute(attr, attrValue);
-            }
-            if (!script.hasAttribute("src"))
-              newScript.appendChild(document.createTextNode(script.textContent ?? ""));
-            target.appendChild(newScript);
-            script.remove();
-          });
-        }
-      });
-    },
-    nil: reset
-  };
-};
 // src/parsers/boolean.ts
 var asBoolean = () => asParser((value) => value != null && value !== "false");
 // src/parsers/json.ts
@@ -2512,7 +2512,6 @@ var asEnum = (valid) => asParser((value) => {
   return matchingValid ?? valid[0];
 });
 export {
-  valueString,
   untrack,
   unown,
   throttle,
@@ -2576,6 +2575,7 @@ export {
   SKIP_EQUALITY,
   RequiredOwnerError,
   ReadonlySignalError,
+  PromiseValueError,
   NullishSignalValueError,
   MissingElementError,
   InvalidSignalValueError,
@@ -2584,6 +2584,7 @@ export {
   InvalidCustomElementError,
   InvalidComponentNameError,
   InvalidCallbackError,
+  DuplicateKeyError,
   DependencyTimeoutError,
   DEFAULT_EQUALITY,
   DEEP_EQUALITY,

@@ -2,7 +2,7 @@
 
 > **createSensor**\<`T`\>(`watched`, `options?`): [`Sensor`](../type-aliases/Sensor.md)\<`T`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/sensor.d.ts:78
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/sensor.d.ts:80
 
 Creates a sensor that tracks external input and updates a state value as long as it is active.
 Sensors get activated when they are first accessed by an effect and deactivated when they are
@@ -42,15 +42,21 @@ A read-only sensor signal.
 
 #### Examples
 
+**Tracking external values**
+
 ```ts
+// An initial `value` avoids UnsetSignalValueError on the first read,
+// before any mousemove event has fired.
 const mousePos = createSensor<{ x: number; y: number }>((set) => {
   const handler = (e: MouseEvent) => {
     set({ x: e.clientX, y: e.clientY });
   };
   window.addEventListener('mousemove', handler);
   return () => window.removeEventListener('mousemove', handler);
-});
+}, { value: { x: 0, y: 0 } });
 ```
+
+**Observing a mutable object**
 
 ```ts
 import { createSensor, SKIP_EQUALITY } from 'cause-effect';

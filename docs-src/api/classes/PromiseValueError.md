@@ -1,12 +1,8 @@
-### Class: InvalidPropertyNameError
+### Class: PromiseValueError
 
-Defined in: [src/errors.ts:28](https://github.com/zeixcom/le-truc/blob/f51edaae2ea1b2c30e1cd0bb4defc26c33ce055e/src/errors.ts#L28)
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:89
 
-Error thrown when trying to assign a property name that conflicts with reserved words or inherited HTMLElement properties
-
-#### Since
-
-0.14.0
+Error thrown when a synchronous Memo/Slot callback returns a Promise.
 
 #### Extends
 
@@ -16,33 +12,23 @@ Error thrown when trying to assign a property name that conflicts with reserved 
 
 ##### Constructor
 
-> **new InvalidPropertyNameError**(`component`, `prop`, `reason`): `InvalidPropertyNameError`
+> **new PromiseValueError**(`where`): `PromiseValueError`
 
-Defined in: [src/errors.ts:34](https://github.com/zeixcom/le-truc/blob/f51edaae2ea1b2c30e1cd0bb4defc26c33ce055e/src/errors.ts#L34)
+Defined in: node\_modules/@zeix/cause-effect/types/src/errors.d.ts:95
+
+Constructs a new PromiseValueError.
 
 ###### Parameters
 
-##### component
+##### where
 
 `string`
 
-Component name
-
-##### prop
-
-`string`
-
-Property name
-
-##### reason
-
-`string`
-
-Explanation why the property is invalid
+The location where the error occurred.
 
 ###### Returns
 
-`InvalidPropertyNameError`
+`PromiseValueError`
 
 ###### Overrides
 
