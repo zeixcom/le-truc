@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>A Security Audit and What It Changed – Le Truc Blog</title>
+		<meta name="description" content="Le Truc 2.1 ships the fixes from a code audit – Trusted Types support for dangerouslyBindInnerHTML, an isSafeURL bypass closed, and pass() failures that now throw instead of failing silently.">
+		<meta name="author" content="Esther Brunner">
+		<meta name="article:published_time" content="2026-06-25">
+		<meta name="article:modified_time" content="">
+		<link
+			rel="preload"
+			href="../assets/main.css?v=771c4503786a35c7"
+			as="style"
+		>
+		<link
+			rel="modulepreload"
+			href="../assets/main.js?v=698456c31453417e"
+		>
+		<link
+			rel="stylesheet"
+			href="../assets/main.css?v=771c4503786a35c7"
+		>
+		<script
+			type="module"
+			src="../assets/main.js?v=698456c31453417e"
+		></script>
+		<link rel="alternate" type="text/markdown" title="Agent-readable content" href="./blog/2026-06-25-a-security-audit-and-what-it-changed.md">
+	</head>
+	<body class="blog">
+		<context-router>
+			<header class="content-grid">
+				<a href="#main" class="skiplink visually-hidden">
+					Skip to main content
+				</a>
+				<h1 class="content">
+					<a href="../blog.html">Le Truc Blog</a>
+					<small>2.1.0</small>
+				</h1>
+				<card-callout class="content danger" hidden>
+					<p class="error" role="alert" aria-live="assertive"></p>
+				</card-callout>
+			</header>
+			<main id="main" class="content-grid">
+				<section-hero>
+					<h1>🔒 A Security Audit and What It Changed</h1>
+					<div class="hero-layout">
+						<div class="lead">
+							<card-blogmeta>
+								<span>
+									<img src="../assets/img/avatar/esther-brunner.jpg" alt="Avatar of Esther Brunner">
+									<span>Esther Brunner</span>
+								</span>
+								<span>
+									<time class="published" datetime="2026-06-25">
+										2026-06-25
+									</time>
+									<span class="modified">
+										· updated on
+										<time datetime="">
+											
+										</time>
+									</span>
+								</span>
+								<span>4 min read</span>
+							</card-blogmeta>
+							<p>Le Truc 2.1 ships the fixes from a code audit – Trusted Types support for dangerouslyBindInnerHTML, an isSafeURL bypass closed, and pass() failures that now throw instead of failing silently.</p>
+						</div>
+					</div>
+				</section-hero>
+				<section><p>We ran a code audit on Le Truc looking specifically for security vulnerabilities and bugs that silent failures could be hiding. Version 2.1 is the result: a handful of real fixes, and a more honest error contract in a few places that used to fail quietly.</p><h2 id="trustedhtml-support-for-dangerouslybindinnerhtml"><a class="anchor" href="#trustedhtml-support-for-dangerouslybindinnerhtml"><span class="title">TrustedHTML support for dangerouslyBindInnerHTML</span><span class="permalink">#</span></a></h2><p>Since <code>TrustedHTML</code> is newly supported by all major browsers (Baseline 2026) we asked a simple question: what happens on a page that enforces <code>Content-Security-Policy: require-trusted-types-for 'script'</code>? The answer was that it just broke – the DOM rejects a plain string assignment to <code>innerHTML</code> under that policy, no matter how well you sanitized it first.</p><p><code>dangerouslyBindInnerHTML</code>, Le Truc's only <code>innerHTML</code> sink, now accepts a <code>sanitize</code> hook that can return either a <code>string</code> or a <code>TrustedHTML</code>:</p><module-codeblock language="ts" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">ts</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#A6E22E">dangerouslyBindInnerHTML</span><span style="color:#F8F8F2">(element, {</span></span>
+<span class="line"><span style="color:#A6E22E">  sanitize</span><span style="color:#F8F8F2">: </span><span style="color:#FD971F;font-style:italic">html</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> DOMPurify.</span><span style="color:#A6E22E">sanitize</span><span style="color:#F8F8F2">(html, { RETURN_TRUSTED_HTML: </span><span style="color:#AE81FF">true</span><span style="color:#F8F8F2"> }),</span></span>
+<span class="line"><span style="color:#F8F8F2">})</span></span>
+<span class="line"></span></code></pre></module-scrollarea><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>Configure DOMPurify with <code>RETURN_TRUSTED_HTML: true</code>, or use <code>window.trustedTypes.createPolicy(...).createHTML(...)</code>, and the assignment succeeds even under Trusted Types enforcement. Without that hook, the call still throws on an enforcing page – correctly. Le Truc ships no sanitizer of its own; <code>sanitize</code> is the one chokepoint where you wire one in.</p><p>One more thing worth being direct about: <code>allowScripts: false</code> was never a safety switch. Setting <code>innerHTML</code> fires event-handler attributes either way – for example: <code>&lt;img onerror&gt;</code>, <code>&lt;svg onload&gt;</code>. If the content isn't trusted, sanitize it. There's no flag that makes that step optional.</p><h2 id="pass-now-throws-instead-of-failing-silently"><a class="anchor" href="#pass-now-throws-instead-of-failing-silently"><span class="title">pass() now throws instead of failing silently</span><span class="permalink">#</span></a></h2><p><code>pass()</code> binds a live signal from a parent component to a child. Until now, three ways that binding could fail – a prop that doesn't exist on the target, a value that can't resolve to a signal, a target prop that isn't Slot-backed – only logged a <code>DEV_MODE</code> warning. In previous versions if you passed a prop to a Lit component, a FAST component, or a vanilla custom element, and it silently did nothing. The same goes for a read-only or computed property on a Le Truc component.</p><p>Every prop you list in a <code>pass()</code> call is a declared intent to bind a signal. There's no good reason to list one that can never bind. So now it throws <code>InvalidPassPropertyError</code>, naming every prop that failed and why, validated before any signal is swapped – either the whole call binds, or none of it does.</p><p>If your components only ever pass props between Le Truc components, to writable properties, this changes nothing. If you were trying to pass to a non-Le-Truc element or a read-only prop, that silent no-op is now a loud failure, and you'll want to fix the call site.</p><h2 id="the-rest-of-the-audit"><a class="anchor" href="#the-rest-of-the-audit"><span class="title">The rest of the audit</span><span class="permalink">#</span></a></h2><p>A few more fixes came out of the same pass:</p><ul><li><code>isSafeURL</code> closed a bypass where a scheme with internal whitespace (<code>java\tscript:</code>) or a protocol-relative URL (<code>//evil.com</code>) slipped past the <code>javascript:</code>/<code>data:</code> checks. This is the main XSS surface in <code>bindAttribute</code>, so it mattered.</li><li>A throwing scheduled task no longer takes down the rest of the animation frame with it – each task and throttled callback now has its own error boundary.</li><li>Reconnecting a component (after a reparent or re-slot) no longer leaks the previous activation's listeners and effects.</li><li><code>asJSON</code> now strips <code>__proto__</code> and <code>constructor</code> keys at every nesting level, and reserved property names throw <code>InvalidPropertyNameError</code> at the component level too.</li></ul><p>The full list, with the reasoning behind each one, is in the <a href="https://github.com/zeixcom/le-truc/blob/main/CHANGELOG.md#210">CHANGELOG</a> and in <a href="https://github.com/zeixcom/le-truc/blob/main/adr/0010-trusted-types-support-via-sanitize-hook.md">ADR 0010</a> and <a href="https://github.com/zeixcom/le-truc/blob/main/adr/0011-throw-on-pass-binding-failure.md">ADR 0011</a>.</p><h2 id="what-this-means-for-you"><a class="anchor" href="#what-this-means-for-you"><span class="title">What this means for you</span><span class="permalink">#</span></a></h2><p>We take this seriously enough to have gone looking for problems before someone else found them for us. That's the point of an audit.</p><p>For almost every component you've written, none of this requires a migration. The core API – <code>defineComponent</code>, <code>bind*</code>, <code>pass</code>, <code>dangerouslyBindInnerHTML</code> – is unchanged. If you weren't relying on <code>pass</code> silently ignoring what never worked or on illogical <code>attr=&quot;FALSE&quot;</code> evaluating to <code>true</code>, version 2.1 is a drop-in upgrade. Run your test suite, and you'll know for sure.</p></section>
+			</main>
+			<!-- <div class="blog-nav">
+				<div class="content-grid">
+					<div class="content">
+						<nav class="blog-nav-links" aria-label="Blog navigation">
+							<a href="../blog/2026-04-21-betting-on-the-platform.html" class="blog-nav-link prev">
+								<span class="blog-nav-label">← Previous</span>
+								<span class="blog-nav-title">Betting on the Platform</span>
+							</a>
+							<a href="../blog.html" class="blog-nav-link">
+								📋 All Posts
+							</a>
+							<a href="" class="blog-nav-link next">
+								<span class="blog-nav-label">Next →</span>
+								<span class="blog-nav-title"></span>
+							</a>
+						</nav>
+					</div>
+				</div>
+			</div> -->
+			<footer class="content-grid">
+				<div class="content">
+					<h2 class="visually-hidden">Footer</h2>
+					<p>© 2024 – 2026 Zeix AG</p>
+				</div>
+			</footer>
+		</context-router>
+	</body>
+</html>

@@ -13,6 +13,7 @@
 - [About](./about.md)
 
 ## Blog
+- [A Security Audit and What It Changed](./blog/2026-06-25-a-security-audit-and-what-it-changed.md)
 - [Betting on the Platform](./blog/2026-04-21-betting-on-the-platform.md)
 - [Four Arguments for Four Guarantees](./blog/2026-04-04-four-arguments-for-four-guarantees.md)
 - [Introducing Le Truc](./blog/2026-03-09-introducing-le-truc.md)

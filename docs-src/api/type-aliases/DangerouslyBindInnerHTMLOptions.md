@@ -2,7 +2,7 @@
 
 > **DangerouslyBindInnerHTMLOptions** = `object`
 
-Defined in: [src/bindings.ts:15](https://github.com/zeixcom/le-truc/blob/2ffb1c502ebab484378e3307067208fa92666c97/src/bindings.ts#L15)
+Defined in: [src/bindings.ts:15](https://github.com/zeixcom/le-truc/blob/d9cecae8c3e9e30027448b835ac249fc4170548e/src/bindings.ts#L15)
 
 #### Properties
 
@@ -10,7 +10,7 @@ Defined in: [src/bindings.ts:15](https://github.com/zeixcom/le-truc/blob/2ffb1c5
 
 > `optional` **allowScripts?**: `boolean`
 
-Defined in: [src/bindings.ts:17](https://github.com/zeixcom/le-truc/blob/2ffb1c502ebab484378e3307067208fa92666c97/src/bindings.ts#L17)
+Defined in: [src/bindings.ts:17](https://github.com/zeixcom/le-truc/blob/d9cecae8c3e9e30027448b835ac249fc4170548e/src/bindings.ts#L17)
 
 ***
 
@@ -18,7 +18,7 @@ Defined in: [src/bindings.ts:17](https://github.com/zeixcom/le-truc/blob/2ffb1c5
 
 > `optional` **sanitize?**: (`html`) => `string` \| [`TrustedHTML`](TrustedHTML.md)
 
-Defined in: [src/bindings.ts:37](https://github.com/zeixcom/le-truc/blob/2ffb1c502ebab484378e3307067208fa92666c97/src/bindings.ts#L37)
+Defined in: [src/bindings.ts:37](https://github.com/zeixcom/le-truc/blob/d9cecae8c3e9e30027448b835ac249fc4170548e/src/bindings.ts#L37)
 
 Optional sanitizer applied to the HTML string before it is assigned to
 `innerHTML`. Use this to plug in an external sanitizer (e.g. DOMPurify)
@@ -54,4 +54,4 @@ Note: sanitizing is the *only* reliable defense against XSS here. Setting
 
 > `optional` **shadowRootMode?**: `ShadowRootMode`
 
-Defined in: [src/bindings.ts:16](https://github.com/zeixcom/le-truc/blob/2ffb1c502ebab484378e3307067208fa92666c97/src/bindings.ts#L16)
+Defined in: [src/bindings.ts:16](https://github.com/zeixcom/le-truc/blob/d9cecae8c3e9e30027448b835ac249fc4170548e/src/bindings.ts#L16)
