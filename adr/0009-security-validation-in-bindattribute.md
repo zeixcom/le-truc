@@ -2,7 +2,7 @@
 
 ## Status
 
-✅ Accepted
+✅ Accepted (partially superseded — the `dangerouslyBindInnerHTML` / `innerHTML`-sink guidance is refined by [ADR-0010](0010-trusted-types-support-via-sanitize-hook.md); the `bindAttribute` / `safeSetAttribute` URL-protocol and `on*`-attribute validation below stands unchanged)
 
 ## Context
 
@@ -60,3 +60,4 @@ These are opt-in imports. Authors who use native DOM methods directly accept res
 - Requirements: [M16](REQUIREMENTS.md#m16-security-validation-in-bindattribute)
 - Architecture: [Security](ARCHITECTURE.md#security), [bind* helpers — DOM update handlers](ARCHITECTURE.md#bind-helpers--dom-update-handlers), [Safety Utilities](ARCHITECTURE.md#safety-utilities)
 - Supersedes: None
+- Partially superseded by: [ADR-0010](0010-trusted-types-support-via-sanitize-hook.md) (`dangerouslyBindInnerHTML` / `innerHTML`-sink guidance only)

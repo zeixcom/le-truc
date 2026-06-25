@@ -13,6 +13,7 @@ This file is auto-generated. Do not edit manually.
 | [0006](0006-lazy-mutationobserver-for-all-collections.md) | Lazy MutationObserver for all() Collections | ✅ Accepted | M7 |
 | [0007](0007-effect-descriptors-with-deferred-activation.md) | Effect Descriptors with Deferred Activation | ✅ Accepted | M8 |
 | [0008](0008-community-protocol-for-context.md) | Community Protocol for Context | ✅ Accepted | M10 |
-| [0009](0009-security-validation-in-bindattribute.md) | Security Validation in bindAttribute | ✅ Accepted | M16 |
+| [0009](0009-security-validation-in-bindattribute.md) | Security Validation in bindAttribute | ✅ Accepted (partially superseded by 0010) | M16 |
+| [0010](0010-trusted-types-support-via-sanitize-hook.md) | Trusted Types Support via the sanitize Hook | ✅ Accepted | M16, §4, §7 |
 
 ---

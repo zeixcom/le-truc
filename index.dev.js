@@ -1811,17 +1811,21 @@ var SCRIPT_ATTRS = [
   "nomodule",
   "crossorigin",
   "integrity",
+  "nonce",
   "referrerpolicy",
   "fetchpriority"
 ];
 var isSafeURL = (value) => {
-  if (/^(javascript|data|vbscript):/i.test(value))
+  const stripped = String(value).replace(/[\t\n\r\f\v]/g, "").trim();
+  if (/^(javascript|data|vbscript):/i.test(stripped))
     return false;
-  if (/^(mailto|tel):/i.test(value))
+  if (/^(mailto|tel):/i.test(stripped))
     return true;
-  if (value.includes("://")) {
+  if (/^[\\/][\\/]/.test(stripped))
+    return false;
+  if (stripped.includes("://")) {
     try {
-      const url = new URL(value);
+      const url = new URL(stripped);
       return ["http:", "https:", "ftp:"].includes(url.protocol);
     } catch {
       return false;
@@ -1881,20 +1885,21 @@ var bindStyle = (element, prop) => ({
 var dangerouslyBindInnerHTML = (element, options = {}) => {
   const reset = () => {
     if (element.shadowRoot)
-      element.shadowRoot.innerHTML = "<slot></slot>";
+      element.shadowRoot.replaceChildren(document.createElement("slot"));
     else
-      element.innerHTML = "";
+      element.replaceChildren();
   };
   return {
-    ok: (html) => {
-      if (!html) {
-        reset();
+    ok: (rawHtml) => {
+      if (!rawHtml) {
+        schedule(element, reset);
         return;
       }
-      const { shadowRootMode, allowScripts } = options;
+      const { shadowRootMode, allowScripts, sanitize } = options;
       if (shadowRootMode && !element.shadowRoot)
         element.attachShadow({ mode: shadowRootMode });
       const target = element.shadowRoot || element;
+      const html = sanitize ? sanitize(rawHtml) : rawHtml;
       schedule(element, () => {
         target.innerHTML = html;
         if (allowScripts) {
@@ -1913,11 +1918,11 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
         }
       });
     },
-    nil: reset
+    nil: () => schedule(element, reset)
   };
 };
 // src/util.ts
-var DEV_MODE = typeof process !== "undefined" && true;
+var DEV_MODE = typeof process !== "undefined" && true === "true";
 var LOG_WARN = "warn";
 var idString = (id) => id ? `#${id}` : "";
 var classString = (classList) => classList?.length ? `.${Array.from(classList).join(".")}` : "";
@@ -2363,8 +2368,20 @@ function each(memo, callback) {
 // src/types.ts
 var PARSER_BRAND = Symbol("parser");
 var METHOD_BRAND = Symbol("method");
+var RESERVED_WORDS = new Set([
+  "constructor",
+  "prototype",
+  "__proto__",
+  "toString",
+  "valueOf",
+  "hasOwnProperty",
+  "isPrototypeOf",
+  "propertyIsEnumerable",
+  "toLocaleString"
+]);
 var isParser = (value) => typeof value === "function" && (PARSER_BRAND in value);
 var isMethodProducer = (value) => typeof value === "function" && (METHOD_BRAND in value);
+var isReservedWord = (name) => RESERVED_WORDS.has(name);
 var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
 var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 
@@ -2387,6 +2404,8 @@ function defineComponent(name, factory) {
         });
       };
       if (this.#initialized) {
+        if (isFunction(this.#cleanup))
+          this.#cleanup();
         runSetup();
       } else {
         const host = this;
@@ -2429,7 +2448,11 @@ function defineComponent(name, factory) {
         }
       };
       for (const [prop, initializer] of Object.entries(instanceProps)) {
-        if (initializer == null || prop in this)
+        if (initializer == null)
+          continue;
+        if (isReservedWord(prop))
+          throw new InvalidPropertyNameError(this.localName, prop, "reserved word or Object builtin — cannot be used as a reactive property");
+        if (prop in this)
           continue;
         createReactiveProperty(prop, initializer);
       }

@@ -4,7 +4,11 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
 /* === Constants === */
 
-const DEV_MODE = typeof process !== 'undefined' && process.env.DEV_MODE
+// Strict equality with 'true' ensures the string "false" (env vars are strings)
+// is falsy. Without it, `process.env.DEV_MODE && …` returns "false" (truthy) in
+// any runtime without the build-time `--define` replacement (tests, no-build CDN).
+const DEV_MODE =
+	typeof process !== 'undefined' && process.env.DEV_MODE === 'true'
 
 const LOG_WARN: LogLevel = 'warn'
 

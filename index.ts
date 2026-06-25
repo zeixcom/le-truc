@@ -87,6 +87,7 @@ export {
 	escapeHTML,
 	safeSetAttribute,
 	setTextPreservingComments,
+	type TrustedHTML,
 } from './src/bindings'
 export {
 	defineComponent,

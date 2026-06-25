@@ -38,6 +38,25 @@ type ReservedWords =
 	| 'propertyIsEnumerable'
 	| 'toLocaleString'
 
+/**
+ * Runtime mirror of the {@link ReservedWords} type. Used by `#initSignals`
+ * to reject reserved property names that defeat the type-level exclusion
+ * (e.g. via `asJSON`-parsed keys or `Record<string, …>` casts). Defining
+ * these as own properties on the host would corrupt the prototype chain or
+ * shadow builtins used internally by the reactive layer.
+ */
+const RESERVED_WORDS: ReadonlySet<string> = new Set<ReservedWords>([
+	'constructor',
+	'prototype',
+	'__proto__',
+	'toString',
+	'valueOf',
+	'hasOwnProperty',
+	'isPrototypeOf',
+	'propertyIsEnumerable',
+	'toLocaleString',
+])
+
 /** A valid reactive property name — any string that is not an `HTMLElement` or `ReservedWords` key. */
 type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>
 
@@ -92,6 +111,19 @@ const isMethodProducer = (value: unknown): value is MethodProducer =>
 	typeof value === 'function' && METHOD_BRAND in value
 
 /**
+ * Check whether a string is a reserved property name.
+ *
+ * Runtime counterpart of the {@link ReservedWords} type exclusion. `#initSignals`
+ * calls this to reject names that would corrupt the host's prototype chain or
+ * shadow `Object` builtins used by the reactive layer.
+ *
+ * @since 2.0.4
+ * @param {string} name - Property name to check
+ * @returns {boolean} True if the name is reserved and must not be used as a reactive property
+ */
+const isReservedWord = (name: string): boolean => RESERVED_WORDS.has(name)
+
+/**
  * Brand a custom parser function with the `PARSER_BRAND` symbol.
  *
  * Use this to wrap any custom parser so `isParser()` can identify it reliably.
@@ -128,7 +160,9 @@ export {
 	type Falsy,
 	isMethodProducer,
 	isParser,
+	isReservedWord,
 	type MethodProducer,
 	type Parser,
+	RESERVED_WORDS,
 	type ReservedWords,
 }

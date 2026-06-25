@@ -1,5 +1,5 @@
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-declare const DEV_MODE: string | false | undefined;
+declare const DEV_MODE: boolean;
 declare const LOG_WARN: LogLevel;
 /**
  * Check whether an element is a custom element

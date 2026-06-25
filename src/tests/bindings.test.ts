@@ -59,6 +59,81 @@ describe('safeSetAttribute', () => {
 		const el = makeEl()
 		expect(() => safeSetAttribute(el, 'href', '/page')).not.toThrow()
 	})
+
+	test('allows tel: URIs', () => {
+		const el = makeEl()
+		expect(() => safeSetAttribute(el, 'href', 'tel:+15551234')).not.toThrow()
+	})
+
+	test('allows fragment-only URLs', () => {
+		const el = makeEl()
+		expect(() => safeSetAttribute(el, 'href', '#section')).not.toThrow()
+	})
+
+	test('allows query-only URLs', () => {
+		const el = makeEl()
+		expect(() => safeSetAttribute(el, 'href', '?q=1')).not.toThrow()
+	})
+
+	test('allows same-directory page URLs', () => {
+		const el = makeEl()
+		expect(() => safeSetAttribute(el, 'href', 'page.html')).not.toThrow()
+	})
+
+	test('allows ftp: URIs', () => {
+		const el = makeEl()
+		expect(() =>
+			safeSetAttribute(el, 'href', 'ftp://example.com/file'),
+		).not.toThrow()
+	})
+
+	test('blocks javascript: with internal tab (regression: A2)', () => {
+		// Browsers strip internal tab when parsing URL schemes, so "java\tscript:"
+		// executes. Previously this slipped past the ^javascript: regex.
+		expect(() =>
+			safeSetAttribute(makeEl(), 'href', 'java\tscript:alert(1)'),
+		).toThrow()
+	})
+
+	test('blocks javascript: with internal newline (regression: A2)', () => {
+		expect(() =>
+			safeSetAttribute(makeEl(), 'href', 'java\nscript:alert(1)'),
+		).toThrow()
+	})
+
+	test('blocks javascript: with internal carriage return (regression: A2)', () => {
+		expect(() =>
+			safeSetAttribute(makeEl(), 'href', 'java\rscript:alert(1)'),
+		).toThrow()
+	})
+
+	test('blocks javascript: with leading whitespace', () => {
+		expect(() =>
+			safeSetAttribute(makeEl(), 'href', '   javascript:alert(1)'),
+		).toThrow()
+	})
+
+	test('blocks protocol-relative URL //host (regression: A2)', () => {
+		// "//evil.com" contains no "://", so it previously fell through to the
+		// allow-by-default return and resolved against the page origin.
+		expect(() => safeSetAttribute(makeEl(), 'href', '//evil.com/x')).toThrow()
+	})
+
+	test('blocks backslash-prefixed URL \\\\host', () => {
+		expect(() =>
+			safeSetAttribute(makeEl(), 'href', '\\\\evil.com\\x'),
+		).toThrow()
+	})
+
+	test('blocks mixed slash-backslash /\\host', () => {
+		expect(() => safeSetAttribute(makeEl(), 'href', '/\\evil.com')).toThrow()
+	})
+
+	test('blocks javascript: with comment/newline trick', () => {
+		expect(() =>
+			safeSetAttribute(makeEl(), 'href', 'javascript:/*\n*/alert(1)'),
+		).toThrow()
+	})
 })
 
 describe('escapeHTML', () => {
