@@ -9,6 +9,7 @@ import { describe, expect, test } from 'bun:test'
 import Markdoc from '@markdoc/markdoc'
 import {
 	convertParameterSectionsToTables,
+	makeHeadingIdsUnique,
 	mergeDefinedInIntoBlockquote,
 	stripBreadcrumbs,
 } from '../../effects/api-pages'
@@ -18,6 +19,14 @@ import markdocConfig from '../../markdoc.config'
 const renderApi = (markdown: string): string => {
 	const ast = Markdoc.parse(markdown)
 	const transformed = mergeDefinedInIntoBlockquote(
+		Markdoc.transform(ast, markdocConfig),
+	)
+	return Markdoc.renderers.html(transformed)
+}
+
+const renderApiUniqueIds = (markdown: string): string => {
+	const ast = Markdoc.parse(markdown)
+	const transformed = makeHeadingIdsUnique(
 		Markdoc.transform(ast, markdocConfig),
 	)
 	return Markdoc.renderers.html(transformed)
@@ -219,7 +228,7 @@ Defined in: [b.ts:2](https://example.com/b.ts#L2)`)
 /* === convertParameterSectionsToTables Tests === */
 
 describe('convertParameterSectionsToTables', () => {
-	test('renders Type Parameters, Parameters, and Returns as tables with a visually-hidden header', () => {
+	test('renders Type Parameters, Parameters, and Returns as tables with a header', () => {
 		const html = renderApiTables(`#### Type Parameters
 
 ##### T
@@ -247,7 +256,7 @@ The initial signal to delegate to.
 A \`Slot<T>\` object usable both as a property descriptor and as a reactive signal.`)
 
 		expect(html).toContain(
-			'<thead class="visually-hidden"><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Description</th></tr></thead>',
+			'<thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Description</th></tr></thead>',
 		)
 		expect(html).toContain(
 			'<tr><td><strong>T</strong></td><td><code>T</code> <em>extends</em> <code>object</code></td><td>The type of value held by the delegated signal.</td></tr>',
@@ -260,7 +269,7 @@ A \`Slot<T>\` object usable both as a property descriptor and as a reactive sign
 			'<tr><td><strong>options?</strong></td><td><a href="../type-aliases/SignalOptions.html"><code>SignalOptions</code></a>&lt;<code>T</code>&gt;</td><td></td></tr>',
 		)
 		expect(html).toContain(
-			'<thead class="visually-hidden"><tr><th scope="col">Type</th><th scope="col">Description</th></tr></thead>',
+			'<thead><tr><th scope="col">Type</th><th scope="col">Description</th></tr></thead>',
 		)
 		expect(html).toContain(
 			'<tr><td><a href="../type-aliases/Slot.html"><code>Slot</code></a>&lt;<code>T</code>&gt;</td><td>A <code>Slot&lt;T&gt;</code> object usable both as a property descriptor and as a reactive signal.</td></tr>',
@@ -341,6 +350,106 @@ The location where the error occurred.
 - \`Error\``)
 
 		expect(html).not.toContain('<table>')
+	})
+})
+
+/* === makeHeadingIdsUnique Tests === */
+
+describe('makeHeadingIdsUnique', () => {
+	test('prefixes a nested heading id with its ancestor heading id', () => {
+		const html = renderApiUniqueIds(`#### Properties
+
+##### cause?
+
+###### Inherited from
+
+\`Error.cause\``)
+
+		expect(html).toContain('<h4 id="properties">')
+		expect(html).toContain('<h5 id="properties-cause">')
+		expect(html).toContain('<h6 id="properties-cause-inherited-from">')
+		expect(html).toContain('href="#properties-cause-inherited-from"')
+	})
+
+	test('leaves the single top-level heading id untouched', () => {
+		const html = renderApiUniqueIds('### Class: CircularDependencyError')
+
+		expect(html).toContain('<h3 id="class-circulardependencyerror">')
+	})
+
+	test('disambiguates repeated section labels across sibling properties', () => {
+		const html = renderApiUniqueIds(`#### Properties
+
+##### cause?
+
+###### Inherited from
+
+\`Error.cause\`
+
+##### message
+
+###### Inherited from
+
+\`Error.message\``)
+
+		const ids = [...html.matchAll(/id="([^"]+)"/g)].map(m => m[1])
+		expect(ids).toEqual([
+			'properties',
+			'properties-cause',
+			'properties-cause-inherited-from',
+			'properties-message',
+			'properties-message-inherited-from',
+		])
+		expect(new Set(ids).size).toBe(ids.length)
+	})
+
+	test('falls back to an incrementing counter when prefixing still collides', () => {
+		// Mirrors TypeDoc's overload output: "Call Signature" item headings ("Parameters",
+		// "Returns") clamp back to the same depth as the method name itself, so two
+		// overloads produce identical ancestor-prefixed candidates.
+		const html = renderApiUniqueIds(`#### Methods
+
+##### captureStackTrace()
+
+###### Call Signature
+
+##### Parameters
+
+##### Returns
+
+###### Call Signature
+
+##### Parameters
+
+##### Returns`)
+
+		const ids = [...html.matchAll(/id="([^"]+)"/g)].map(m => m[1])
+		expect(new Set(ids).size).toBe(ids.length)
+		expect(ids).toContain('methods-parameters')
+		expect(ids).toContain('methods-parameters-2')
+		expect(ids).toContain('methods-returns')
+		expect(ids).toContain('methods-returns-2')
+	})
+
+	test('rewrites a same-page link to a renamed heading by its original id', () => {
+		// TypeDoc emits a self-referencing "Inherited from" link back to the member's
+		// own heading using its pre-prefix id (e.g. "bubbles"), which must follow the
+		// heading to its new, prefixed id.
+		const html = renderApiUniqueIds(`#### Properties
+
+##### bubbles
+
+\`boolean\`
+
+###### Inherited from
+
+\`ContextRequestEvent\`.[\`bubbles\`](#bubbles)`)
+
+		expect(html).toContain('<h5 id="properties-bubbles">')
+		expect(html).toContain(
+			'<a href="#properties-bubbles"><code>bubbles</code></a>',
+		)
+		expect(html).not.toContain('href="#bubbles"')
 	})
 })
 

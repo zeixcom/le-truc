@@ -45,11 +45,11 @@ const mergeDefinedInIntoBlockquote = (
 		const node = root.children[i]!
 		const next = root.children[i + 1]
 		if (
-			Tag.isTag(node)
-			&& node.name === 'blockquote'
-			&& Tag.isTag(next)
-			&& next.name === 'p'
-			&& firstTextContent(next).startsWith('Defined in:')
+			Tag.isTag(node) &&
+			node.name === 'blockquote' &&
+			Tag.isTag(next) &&
+			next.name === 'p' &&
+			firstTextContent(next).startsWith('Defined in:')
 		) {
 			children.push(
 				new Tag('blockquote', node.attributes, [
@@ -274,6 +274,107 @@ const convertParameterSectionsToTables = (
 }
 
 /**
+ * Headings built by createAccessibleHeading() carry generic labels ("Parameters",
+ * "Returns", "Inherited from", "Call Signature") that repeat across every constructor,
+ * property, and method on a generated API page, producing duplicate ids. Walk the page
+ * in document order, prefixing each heading's id with its nearest shallower-level
+ * ancestor's (already-unique) id. Falls back to an incrementing counter on any
+ * remaining clash — e.g. multiple overloads of the same method, whose item headings
+ * TypeDoc clamps back to the same depth once nesting hits the h6 ceiling (see
+ * extractNamedRows above), so prefixing alone can't tell them apart.
+ *
+ * TypeDoc also emits same-page links to a member's own heading (e.g. an "Inherited
+ * from" line linking back to `#bubbles`). A second pass rewrites those by the old,
+ * pre-prefix id so they keep pointing at the right heading.
+ */
+const makeHeadingIdsUnique = (
+	root: RenderableTreeNodes,
+): RenderableTreeNodes => {
+	const usedIds = new Set<string>()
+	const ancestors: { level: number; id: string }[] = []
+	const idsBeforePrefixing = new Map<string, string>()
+
+	const uniquify = (candidate: string): string => {
+		if (!usedIds.has(candidate)) return candidate
+		let suffix = 2
+		while (usedIds.has(`${candidate}-${suffix}`)) suffix++
+		return `${candidate}-${suffix}`
+	}
+
+	const withId = (tag: Tag, id: string): Tag => {
+		const [anchor, ...rest] = tag.children
+		const newAnchor =
+			Tag.isTag(anchor) && anchor.name === 'a'
+				? new Tag(
+						'a',
+						{ ...anchor.attributes, href: `#${id}` },
+						anchor.children,
+					)
+				: anchor
+		return new Tag(
+			tag.name,
+			{ ...tag.attributes, id },
+			newAnchor === undefined ? rest : [newAnchor, ...rest],
+		)
+	}
+
+	const renameHeadings = (node: RenderableTreeNode): RenderableTreeNode => {
+		if (!Tag.isTag(node)) return node
+		const level = headingTagLevel(node)
+		if (level === null) {
+			return new Tag(
+				node.name,
+				node.attributes,
+				node.children.map(renameHeadings),
+			)
+		}
+
+		while (
+			ancestors.length &&
+			ancestors[ancestors.length - 1]!.level >= level
+		) {
+			ancestors.pop()
+		}
+		const ownId =
+			typeof node.attributes.id === 'string' ? node.attributes.id : ''
+		const parent = ancestors[ancestors.length - 1]
+		const id = uniquify(parent ? `${parent.id}-${ownId}` : ownId)
+		usedIds.add(id)
+		ancestors.push({ level, id })
+		if (ownId && !idsBeforePrefixing.has(ownId)) {
+			idsBeforePrefixing.set(ownId, id)
+		}
+		return withId(node, id)
+	}
+
+	const rewriteSamePageLinks = (
+		node: RenderableTreeNode,
+	): RenderableTreeNode => {
+		if (!Tag.isTag(node)) return node
+		const children = node.children.map(rewriteSamePageLinks)
+		const href = node.attributes.href
+		if (node.name === 'a' && typeof href === 'string' && href.startsWith('#')) {
+			const target = idsBeforePrefixing.get(href.slice(1))
+			if (target) {
+				return new Tag(
+					node.name,
+					{ ...node.attributes, href: `#${target}` },
+					children,
+				)
+			}
+		}
+		return new Tag(node.name, node.attributes, children)
+	}
+
+	const renamed = Array.isArray(root)
+		? root.map(renameHeadings)
+		: renameHeadings(root)
+	return Array.isArray(renamed)
+		? renamed.map(rewriteSamePageLinks)
+		: rewriteSamePageLinks(renamed)
+}
+
+/**
  * Process a single API markdown file into an HTML fragment.
  *
  * Fragments are suitable for injection by module-lazyload (no doctype/head/body).
@@ -286,9 +387,9 @@ const processApiFile = async (file: FileInfo): Promise<void> => {
 	// Skip index files — only process individual API entries
 	const filename = relativePath.split('/').pop() || ''
 	if (
-		filename === 'globals.md'
-		|| filename === 'README.md'
-		|| filename.startsWith('_')
+		filename === 'globals.md' ||
+		filename === 'README.md' ||
+		filename.startsWith('_')
 	) {
 		return
 	}
@@ -303,8 +404,10 @@ const processApiFile = async (file: FileInfo): Promise<void> => {
 		console.warn(`Markdoc validation warnings for ${relativePath}:`, errors)
 	}
 
-	const transformed = convertParameterSectionsToTables(
-		mergeDefinedInIntoBlockquote(Markdoc.transform(ast, markdocConfig)),
+	const transformed = makeHeadingIdsUnique(
+		convertParameterSectionsToTables(
+			mergeDefinedInIntoBlockquote(Markdoc.transform(ast, markdocConfig)),
+		),
 	)
 	let htmlContent = Markdoc.renderers.html(transformed)
 
@@ -343,6 +446,7 @@ const processApiFile = async (file: FileInfo): Promise<void> => {
 // Exported for testing
 export {
 	convertParameterSectionsToTables,
+	makeHeadingIdsUnique,
 	mergeDefinedInIntoBlockquote,
 	stripBreadcrumbs,
 }
