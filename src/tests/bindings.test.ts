@@ -52,20 +52,31 @@ class FakeElement {
 	// Minimal "parser": pulls out <script> tags so the allowScripts
 	// re-execution path (which queries `target.querySelectorAll('script')`
 	// right after assignment) has something to find — approximates what a
-	// real innerHTML parse does, without parsing arbitrary markup.
+	// real innerHTML parse does, without parsing arbitrary markup. Uses
+	// indexOf/slice rather than a backtracking regex over the whole string,
+	// so malformed input (no closing tag, no '>') can't cause quadratic blowup.
 	set innerHTML(html: string) {
 		this._innerHTML = html
 		this.children = []
-		const scriptRe = /<script([^>]*)>([\s\S]*?)<\/script>/gi
-		let match: RegExpExecArray | null
-		while ((match = scriptRe.exec(html))) {
+		let pos = 0
+		while (true) {
+			const openStart = html.toLowerCase().indexOf('<script', pos)
+			if (openStart === -1) break
+			const openEnd = html.indexOf('>', openStart)
+			if (openEnd === -1) break
+			const closeStart = html.toLowerCase().indexOf('</script', openEnd + 1)
+			if (closeStart === -1) break
+			const closeEnd = html.indexOf('>', closeStart)
+			if (closeEnd === -1) break
+			const attrs = html.slice(openStart + '<script'.length, openEnd)
 			const script = new FakeElement('script')
 			const attrRe = /([a-zA-Z-]+)(?:="([^"]*)")?/g
 			let attrMatch: RegExpExecArray | null
-			while ((attrMatch = attrRe.exec(match[1]!)))
+			while ((attrMatch = attrRe.exec(attrs)))
 				script.setAttribute(attrMatch[1]!, attrMatch[2] ?? '')
-			script.textContent = match[2]!
+			script.textContent = html.slice(openEnd + 1, closeStart)
 			this.children.push(script)
+			pos = closeEnd + 1
 		}
 	}
 

@@ -81,9 +81,17 @@ declare global {
 }
 
 // Minimal on*-attribute stripper (the library ships no sanitizer; this stands in
-// for DOMPurify to exercise the sanitize hook contract).
-const stripEventHandlers = (html: string): string =>
-	html.replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+// for DOMPurify to exercise the sanitize hook contract). Repeats to a fixed point
+// so a partial strip can't leave behind a reformed on*-attribute.
+const stripEventHandlers = (html: string): string => {
+	let current = html
+	let previous: string
+	do {
+		previous = current
+		current = previous.replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+	} while (current !== previous)
+	return current
+}
 
 defineComponent<SanitizeProps>('audit-sanitize', ({ expose, first, watch }) => {
 	const target = first('[data-target]') as HTMLElement

@@ -1939,7 +1939,7 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
   };
 };
 // src/util.ts
-var DEV_MODE = typeof process !== "undefined" && true === "true";
+var DEV_MODE = typeof process !== "undefined" && true;
 var LOG_WARN = "warn";
 var idString = (id) => id ? `#${id}` : "";
 var classString = (classList) => classList?.length ? `.${Array.from(classList).join(".")}` : "";
