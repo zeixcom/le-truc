@@ -1911,7 +1911,14 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
       const target = element.shadowRoot || element;
       const html = sanitize ? sanitize(rawHtml) : rawHtml;
       schedule(element, () => {
-        target.innerHTML = html;
+        try {
+          target.innerHTML = html;
+        } catch (e) {
+          queueMicrotask(() => {
+            throw e;
+          });
+          return;
+        }
         if (allowScripts) {
           target.querySelectorAll("script").forEach((script) => {
             const newScript = document.createElement("script");

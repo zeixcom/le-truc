@@ -350,10 +350,24 @@ const dangerouslyBindInnerHTML = (
 			const target = element.shadowRoot || element
 			const html = sanitize ? sanitize(rawHtml) : rawHtml
 			schedule(element, () => {
-				// lib.dom.d.ts types `innerHTML` as `string` only; the DOM itself
-				// accepts `TrustedHTML` too (required under a Trusted-Types-enforcing
-				// CSP), so the cast reflects the runtime contract, not a type escape.
-				;(target as { innerHTML: string | TrustedHTML }).innerHTML = html
+				try {
+					// lib.dom.d.ts types `innerHTML` as `string` only; the DOM itself
+					// accepts `TrustedHTML` too (required under a Trusted-Types-enforcing
+					// CSP), so the cast reflects the runtime contract, not a type escape.
+					;(target as { innerHTML: string | TrustedHTML }).innerHTML = html
+				} catch (e) {
+					// A Trusted-Types-enforcing CSP throws here when `html` is a plain
+					// string. This must reach the consumer as an uncaught error (not
+					// `src/scheduler.ts`'s per-task console.error) since it signals a
+					// missing/insufficient `sanitize` hook — a configuration bug, not a
+					// recoverable condition. Re-throwing from a microtask surfaces it as
+					// an uncaught exception without re-entering the scheduler's own
+					// try/catch, so later same-frame tasks still run (see ADR-0010).
+					queueMicrotask(() => {
+						throw e
+					})
+					return
+				}
 				if (allowScripts) {
 					target.querySelectorAll('script').forEach(script => {
 						const newScript = document.createElement('script')
