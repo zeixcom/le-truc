@@ -35,7 +35,7 @@ defineComponent<MyProps>('my-element', ({ expose, first, host, on, watch }) => {
 
 - **`setAttribute` has security validation**: Blocks `on*` event handler attributes and validates URL attributes against a safe-protocol allowlist (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`). Violations throw a descriptive error logged at `LOG_ERROR` level — they are never silent.
 
-- **Dependency resolution times out at 200ms**: If a queried custom element isn't defined within 200ms, a `DependencyTimeoutError` is logged but effects proceed anyway.
+- **Dependency resolution timeout races with the child's own upgrade**: If a queried custom element isn't defined within 200ms (`DEPENDENCY_TIMEOUT`), a `DependencyTimeoutError` is logged and the parent's effects activate anyway against a child that may still be `:not(:defined)` — intentional progressive enhancement, not a bug. If a parent effect writes directly to that child's property (e.g. `watch('prop', bindProperty(child, 'prop'))`), the write lands as a plain instance property before upgrade. When the child later upgrades, `#initSignals` skips wrapping any prop already present on the instance in a reactive `Slot` ("explicit DOM value wins"), so the property never becomes reactive on the child — its own initializer is silently discarded. Don't write to a timed-out child's properties from a parent effect.
 
 - **`on()` factory handler return value updates host**: If the factory `on(target, type, handler)` handler returns `{ prop: value }`, those updates are applied to the host in a `batch()`. Returning nothing (or `undefined`) is a no-op.
 

@@ -2,6 +2,6 @@
 
 > **ComponentProps** = `Record`\<[`ComponentProp`](ComponentProp.md), `NonNullable`\<`unknown`\>\>
 
-Defined in: [src/types.ts:45](https://github.com/zeixcom/le-truc/blob/f51edaae2ea1b2c30e1cd0bb4defc26c33ce055e/src/types.ts#L45)
+Defined in: [src/types.ts:64](https://github.com/zeixcom/le-truc/blob/4745f51b23182fae3c5af6979d02c4ed2b72bcbb/src/types.ts#L64)
 
 A record of reactive property names to their value types, used to type a component's props.

@@ -59,7 +59,7 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 ### `first(selector)` / `all(selector)`
 
 - `first()`: Returns single element or throws `MissingElementError` if required
-- `all()`: Returns `Memo<Element[]>` with lazy `MutationObserver` (see [ADR 0006](adr/0006-lazy-mutationobserver-for-all-collections.md))
+- `all()`: Returns `Memo<Element[]>` with lazy `MutationObserver` (see [ADR 0006](adr/0006-lazy-mutationobserver-for-all-collections.md)); a malformed selector throws `InvalidSelectorError` immediately instead of stalling the observer
 
 Both collect undefined custom element dependencies for `resolveDependencies()`.
 
@@ -81,12 +81,12 @@ Parsers transform HTML attribute strings to typed values (see [ADR 0005](adr/000
 
 Implements the [Community Protocol for Context](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md) (see [ADR 0008](adr/0008-community-protocol-for-context.md)):
 
-- `provideContexts([...])`: Provider side, installs `context-request` listener
+- `provideContexts([...])`: Provider side, installs `context-request` listener; a throwing property getter is caught and degrades to `undefined` (logged in `DEV_MODE`) rather than throwing inside the consumer's `Memo`
 - `requestContext(context, fallback)`: Consumer side, dispatches `ContextRequestEvent`, returns `Memo<T>`
 
 ### Inter-Component Signal Sharing (Pass)
 
-`pass(target, props)` swaps Slot-backed signals for zero-overhead live **Signal** sharing between Le Truc **Component** instances.
+`pass(target, props)` swaps Slot-backed signals for zero-overhead live **Signal** sharing between Le Truc **Component** instances. Every entry in `props` is a declared intent to bind a live signal: if a prop doesn't exist on the target, can't be resolved to a signal, or isn't Slot-backed (target is a non-Le-Truc custom element, or the prop is read-only/computed), `pass()` throws `InvalidPassPropertyError` naming every failing prop — validated eagerly before any signal is swapped, so a failure never leaves a partial bind. See [ADR 0011](adr/0011-throw-on-pass-binding-failure.md).
 
 ## Naming Conventions
 

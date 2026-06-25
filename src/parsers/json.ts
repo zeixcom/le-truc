@@ -1,7 +1,13 @@
-import { asParser, type Parser } from '../types'
+import { asParser, isReservedWord, type Parser } from '../types'
 
 /**
  * Parse a string as a JSON serialized object with a fallback
+ *
+ * Reserved words (`__proto__`, `constructor`, …, see `RESERVED_WORDS`) are
+ * dropped from the parsed result at every nesting level via a `JSON.parse`
+ * reviver, so a crafted payload can't plant an own `__proto__`/`constructor`
+ * property that later corrupts a host's prototype chain (defense-in-depth
+ * alongside the runtime guard in `#initSignals`).
  *
  * @since 0.11.0
  * @param {T} fallback - Fallback value
@@ -19,7 +25,9 @@ const asJSON = <T extends {}>(fallback: T): Parser<T> =>
 		if (value === '') throw new SyntaxError('Empty string is not valid JSON')
 		let result: T | undefined
 		try {
-			result = JSON.parse(value)
+			result = JSON.parse(value, (key, parsed) =>
+				isReservedWord(key) ? undefined : parsed,
+			)
 		} catch (error) {
 			throw new SyntaxError(`Failed to parse JSON: ${String(error)}`, {
 				cause: error,

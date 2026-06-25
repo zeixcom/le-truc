@@ -2,9 +2,15 @@
 
 > **asJSON**\<`T`\>(`fallback`): [`Parser`](../type-aliases/Parser.md)\<`T`\>
 
-Defined in: [src/parsers/json.ts:12](https://github.com/zeixcom/le-truc/blob/f51edaae2ea1b2c30e1cd0bb4defc26c33ce055e/src/parsers/json.ts#L12)
+Defined in: [src/parsers/json.ts:18](https://github.com/zeixcom/le-truc/blob/4745f51b23182fae3c5af6979d02c4ed2b72bcbb/src/parsers/json.ts#L18)
 
 Parse a string as a JSON serialized object with a fallback
+
+Reserved words (`__proto__`, `constructor`, …, see `RESERVED_WORDS`) are
+dropped from the parsed result at every nesting level via a `JSON.parse`
+reviver, so a crafted payload can't plant an own `__proto__`/`constructor`
+property that later corrupts a host's prototype chain (defense-in-depth
+alongside the runtime guard in `#initSignals`).
 
 #### Type Parameters
 

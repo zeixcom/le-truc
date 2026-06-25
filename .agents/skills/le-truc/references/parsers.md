@@ -58,7 +58,7 @@ variant: asEnum(['default', 'primary', 'danger'])
 
 ### `asBoolean()`
 
-Returns `true` when attribute present and value not `"false"`. Returns `false` otherwise.
+Returns `true` when attribute present and value not `"false"` (case-insensitive — `"FALSE"`/`"False"` also opt out). Returns `false` otherwise.
 
 ```typescript
 disabled: asBoolean()

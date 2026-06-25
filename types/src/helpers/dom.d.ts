@@ -41,6 +41,7 @@ declare const extractAttributes: (selector: string) => string[];
  * @param {ParentNode} parent - The parent node to search within
  * @param {string} selector - The CSS selector to match elements
  * @returns {Memo<ElementFromSelector<S>[]>} Reactive memo of current matching elements
+ * @throws {InvalidSelectorError} If the selector is malformed
  */
 declare function createElementsMemo<S extends string>(parent: ParentNode, selector: S): Memo<ElementFromSelector<S>[]>;
 declare function createElementsMemo<E extends Element>(parent: ParentNode, selector: string): Memo<E[]>;

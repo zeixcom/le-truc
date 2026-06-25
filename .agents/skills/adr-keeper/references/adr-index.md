@@ -15,5 +15,9 @@ This file is auto-generated. Do not edit manually.
 | [0008](0008-community-protocol-for-context.md) | Community Protocol for Context | ✅ Accepted | M10 |
 | [0009](0009-security-validation-in-bindattribute.md) | Security Validation in bindAttribute | ✅ Accepted (partially superseded by 0010) | M16 |
 | [0010](0010-trusted-types-support-via-sanitize-hook.md) | Trusted Types Support via the sanitize Hook | ✅ Accepted | M16, §4, §7 |
+| [0011](0011-throw-on-pass-binding-failure.md) | Throw on pass() Binding Failure Instead of Warning | ✅ Accepted | M11, S3 |
 
 ---
+
+**Last updated:** 2026-06-25
+**Total ADRs:** 11 (excluding template)

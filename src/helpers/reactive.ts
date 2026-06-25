@@ -13,10 +13,15 @@ import {
 	match,
 	type Signal,
 	type SingleMatchHandlers,
+	type Slot,
 	type SlotDescriptor,
 	untrack,
 } from '@zeix/cause-effect'
-import { InvalidCustomElementError, InvalidReactivesError } from '../errors'
+import {
+	InvalidCustomElementError,
+	InvalidPassPropertyError,
+	InvalidReactivesError,
+} from '../errors'
 import { getSignals } from '../internal'
 import type {
 	ComponentProps,
@@ -24,7 +29,7 @@ import type {
 	FactoryResult,
 	Falsy,
 } from '../types'
-import { DEV_MODE, elementName, isCustomElement, LOG_WARN } from '../util'
+import { elementName, isCustomElement } from '../util'
 
 /* === Types === */
 
@@ -276,35 +281,47 @@ const makePass = <P extends ComponentProps>(
 
 			const signals = getSignals(target)
 			const targetName = elementName(target)
-			const cleanups: (() => void)[] = []
+
+			// Eager validate-then-commit (no mutation until every entry is known to
+			// be bindable) — a failure must never leave a partial swap. See ADR 0011.
+			const failures = new Map<string, string>()
+			const bindings: {
+				slot: Slot<unknown & {}>
+				signal: Signal<unknown & {}> | SlotDescriptor<unknown & {}>
+			}[] = []
 
 			for (const [prop, reactive] of Object.entries(props)) {
 				if (reactive == null) continue
 				if (!(prop in target)) {
-					if (DEV_MODE)
-						console[LOG_WARN](
-							`pass(): property '${prop}' does not exist on ${targetName}`,
-						)
+					failures.set(prop, `does not exist on ${targetName}`)
 					continue
 				}
 
 				const signal = toSignal(host, reactive)
-				if (!signal) continue
-
-				// Slot-backed (Le Truc component) — replace and restore on cleanup
-				const slot = signals[prop]
-				if (isSlot(slot)) {
-					const original = slot.current()
-					slot.replace(signal)
-					cleanups.push(() => slot.replace(original))
+				if (!signal) {
+					failures.set(prop, 'could not be resolved to a signal')
 					continue
 				}
 
-				if (DEV_MODE)
-					console[LOG_WARN](
-						`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`,
+				const slot = signals[prop]
+				if (!isSlot(slot)) {
+					failures.set(
+						prop,
+						`is not Slot-backed on ${targetName} (read-only property, or target is not a Le Truc component)`,
 					)
+					continue
+				}
+				bindings.push({ slot, signal })
 			}
+
+			if (failures.size)
+				throw new InvalidPassPropertyError(host, target, failures)
+
+			const cleanups = bindings.map(({ slot, signal }) => {
+				const original = slot.current()
+				slot.replace(signal)
+				return () => slot.replace(original)
+			})
 
 			if (cleanups.length)
 				return () => {

@@ -9,8 +9,10 @@
 - [InvalidCallbackError](classes/InvalidCallbackError.md)
 - [InvalidComponentNameError](classes/InvalidComponentNameError.md)
 - [InvalidCustomElementError](classes/InvalidCustomElementError.md)
+- [InvalidPassPropertyError](classes/InvalidPassPropertyError.md)
 - [InvalidPropertyNameError](classes/InvalidPropertyNameError.md)
 - [InvalidReactivesError](classes/InvalidReactivesError.md)
+- [InvalidSelectorError](classes/InvalidSelectorError.md)
 - [InvalidSignalValueError](classes/InvalidSignalValueError.md)
 - [MissingElementError](classes/MissingElementError.md)
 - [NullishSignalValueError](classes/NullishSignalValueError.md)
@@ -83,6 +85,7 @@
 - [Task](type-aliases/Task.md)
 - [TaskCallback](type-aliases/TaskCallback.md)
 - [TrimWhitespace](type-aliases/TrimWhitespace.md)
+- [TrustedHTML](type-aliases/TrustedHTML.md)
 - [UnknownContext](type-aliases/UnknownContext.md)
 - [WatchHelper](type-aliases/WatchHelper.md)
 

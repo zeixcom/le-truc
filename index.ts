@@ -99,8 +99,10 @@ export {
 	DependencyTimeoutError,
 	InvalidComponentNameError,
 	InvalidCustomElementError,
+	InvalidPassPropertyError,
 	InvalidPropertyNameError,
 	InvalidReactivesError,
+	InvalidSelectorError,
 	MissingElementError,
 } from './src/errors'
 export {

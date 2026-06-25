@@ -1,5 +1,9 @@
 import { createMemo, type Memo } from '@zeix/cause-effect'
-import { DependencyTimeoutError, MissingElementError } from '../errors'
+import {
+	DependencyTimeoutError,
+	InvalidSelectorError,
+	MissingElementError,
+} from '../errors'
 import { DEV_MODE, isNotYetDefinedComponent, LOG_WARN } from '../util'
 
 /* === Types === */
@@ -160,6 +164,7 @@ const extractAttributes = (selector: string): string[] => {
  * @param {ParentNode} parent - The parent node to search within
  * @param {string} selector - The CSS selector to match elements
  * @returns {Memo<ElementFromSelector<S>[]>} Reactive memo of current matching elements
+ * @throws {InvalidSelectorError} If the selector is malformed
  */
 function createElementsMemo<S extends string>(
 	parent: ParentNode,
@@ -174,6 +179,16 @@ function createElementsMemo<S extends string>(
 	selector: S,
 ): Memo<ElementFromSelector<S>[]> {
 	type E = ElementFromSelector<S>
+
+	// Validate the selector eagerly so a malformed selector throws here,
+	// at memo creation, instead of inside the MutationObserver callback —
+	// where a thrown SyntaxError is silently swallowed per spec, leaving
+	// the memo permanently stale.
+	try {
+		parent.querySelector(selector)
+	} catch (error) {
+		throw new InvalidSelectorError(parent, selector, error)
+	}
 
 	return createMemo(() => Array.from(parent.querySelectorAll<E>(selector)), {
 		value: [],
@@ -280,6 +295,7 @@ const makeElementQueries = (
 	 * @param {string} [required] - If provided and no elements are found at query time, throws with this message as context
 	 * @returns {Memo<ElementFromSelector<S>[]>} Reactive memo of current matching elements
 	 * @throws {MissingElementError} If `required` is set and no matching elements exist at query time
+	 * @throws {InvalidSelectorError} If the selector is malformed
 	 */
 	function all<S extends string>(
 		selector: S,

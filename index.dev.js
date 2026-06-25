@@ -1761,12 +1761,22 @@ var runTasks = () => {
   requestId = undefined;
   const elements = Array.from(objects);
   objects.clear();
-  for (const element of elements)
-    tasks.get(element)?.();
+  for (const element of elements) {
+    try {
+      tasks.get(element)?.();
+    } catch (e) {
+      console.error("[le-truc scheduler]", e);
+    }
+  }
   const callbacks = Array.from(throttledCallbacks);
   throttledCallbacks.clear();
-  for (const cb of callbacks)
-    cb();
+  for (const cb of callbacks) {
+    try {
+      cb();
+    } catch (e) {
+      console.error("[le-truc scheduler]", e);
+    }
+  }
 };
 var requestTick = () => {
   if (!requestId)
@@ -1973,6 +1983,22 @@ class InvalidCustomElementError extends TypeError {
   }
 }
 
+class InvalidPassPropertyError extends TypeError {
+  constructor(host, target, reasons) {
+    const detail = Array.from(reasons, ([prop, reason]) => `'${prop}' ${reason}`).join("; ");
+    super(`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}.`);
+    this.name = "InvalidPassPropertyError";
+  }
+}
+
+class InvalidSelectorError extends TypeError {
+  constructor(parent, selector, cause) {
+    const where = typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
+    super(`Invalid selector "${selector}" passed to all() in ${where}. ${cause instanceof Error ? cause.message : String(cause)}`);
+    this.name = "InvalidSelectorError";
+  }
+}
+
 // src/helpers/context.ts
 var CONTEXT_REQUEST = "context-request";
 
@@ -1996,7 +2022,15 @@ var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
     const { context, callback } = e;
     if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
       e.stopImmediatePropagation();
-      callback(() => host[context]);
+      callback(() => {
+        try {
+          return host[context];
+        } catch (error) {
+          if (DEV_MODE)
+            console[LOG_WARN]("provideContexts: getter threw", elementName(host), error);
+          return;
+        }
+      });
     }
   };
   host.addEventListener(CONTEXT_REQUEST, listener);
@@ -2043,6 +2077,11 @@ var extractAttributes = (selector) => {
   return [...attributes];
 };
 function createElementsMemo(parent, selector) {
+  try {
+    parent.querySelector(selector);
+  } catch (error) {
+    throw new InvalidSelectorError(parent, selector, error);
+  }
   return createMemo(() => Array.from(parent.querySelectorAll(selector)), {
     value: [],
     equals: (a, b) => a.length === b.length && a.every((el, i) => el === b[i]),
@@ -2305,28 +2344,34 @@ var makePass = (host) => {
       throw new InvalidReactivesError(host, target, props);
     const signals = getSignals(target);
     const targetName = elementName(target);
-    const cleanups = [];
+    const failures = new Map;
+    const bindings = [];
     for (const [prop, reactive] of Object.entries(props)) {
       if (reactive == null)
         continue;
       if (!(prop in target)) {
-        if (DEV_MODE)
-          console[LOG_WARN](`pass(): property '${prop}' does not exist on ${targetName}`);
+        failures.set(prop, `does not exist on ${targetName}`);
         continue;
       }
       const signal = toSignal(host, reactive);
-      if (!signal)
-        continue;
-      const slot = signals[prop];
-      if (isSlot(slot)) {
-        const original = slot.current();
-        slot.replace(signal);
-        cleanups.push(() => slot.replace(original));
+      if (!signal) {
+        failures.set(prop, "could not be resolved to a signal");
         continue;
       }
-      if (DEV_MODE)
-        console[LOG_WARN](`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`);
+      const slot = signals[prop];
+      if (!isSlot(slot)) {
+        failures.set(prop, `is not Slot-backed on ${targetName} (read-only property, or target is not a Le Truc component)`);
+        continue;
+      }
+      bindings.push({ slot, signal });
     }
+    if (failures.size)
+      throw new InvalidPassPropertyError(host, target, failures);
+    const cleanups = bindings.map(({ slot, signal }) => {
+      const original = slot.current();
+      slot.replace(signal);
+      return () => slot.replace(original);
+    });
     if (cleanups.length)
       return () => {
         for (const c of cleanups)
@@ -2481,7 +2526,7 @@ function defineComponent(name, factory) {
   return customElements.get(name);
 }
 // src/parsers/boolean.ts
-var asBoolean = () => asParser((value) => value != null && value !== "false");
+var asBoolean = () => asParser((value) => value != null && value.toLowerCase() !== "false");
 // src/parsers/json.ts
 var asJSON = (fallback) => asParser((value) => {
   if ((value ?? fallback) == null)
@@ -2492,7 +2537,7 @@ var asJSON = (fallback) => asParser((value) => {
     throw new SyntaxError("Empty string is not valid JSON");
   let result;
   try {
-    result = JSON.parse(value);
+    result = JSON.parse(value, (key, parsed) => isReservedWord(key) ? undefined : parsed);
   } catch (error) {
     throw new SyntaxError(`Failed to parse JSON: ${String(error)}`, {
       cause: error
@@ -2602,8 +2647,10 @@ export {
   NullishSignalValueError,
   MissingElementError,
   InvalidSignalValueError,
+  InvalidSelectorError,
   InvalidReactivesError,
   InvalidPropertyNameError,
+  InvalidPassPropertyError,
   InvalidCustomElementError,
   InvalidComponentNameError,
   InvalidCallbackError,

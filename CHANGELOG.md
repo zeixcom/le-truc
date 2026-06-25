@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **`asBoolean()` opt-out is now case-insensitive**: `attr="FALSE"` / `attr="False"` now evaluate to `false`, matching the previously-exact-only `attr="false"`. Brings `asBoolean` in line with standard HTML attribute case-insensitivity and the case-insensitive `asEnum`/hex-integer parsing already used elsewhere in the library, and lets ARIA-style string-boolean attributes (e.g. `aria-hidden="FALSE"`) convert to their logical boolean value as authors expect. **Breaking change**: any code relying on `attr="FALSE"`/`attr="False"` evaluating to `true` will now see `false`.
+
+### Fixed
+
+- **`pass()` now throws `InvalidPassPropertyError` instead of silently failing**: previously, passing a property that didn't exist on the target, couldn't be resolved to a signal, or wasn't Slot-backed (the target is a non-Le-Truc custom element — Lit, FAST, vanilla Web Components — or the property is read-only/computed) only logged a `DEV_MODE` warning and otherwise did nothing. Every property listed in a `pass()` call is a declared intent to bind a live signal, so a failure now throws `InvalidPassPropertyError` naming every prop that couldn't be bound and why — validated eagerly before any signal is swapped, so a failure never leaves a partial bind. See [ADR 0011](adr/0011-throw-on-pass-binding-failure.md). **Breaking change**: code that was passing properties to non-Le-Truc elements or read-only properties (previously a silent no-op) will now throw.
+
 ## 2.0.3
 
 ### Changed

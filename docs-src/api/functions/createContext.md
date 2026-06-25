@@ -2,7 +2,7 @@
 
 > **createContext**\<`V`\>(`key`): [`Context`](../type-aliases/Context.md)\<`string`, `V`\>
 
-Defined in: [src/helpers/context.ts:133](https://github.com/zeixcom/le-truc/blob/f51edaae2ea1b2c30e1cd0bb4defc26c33ce055e/src/helpers/context.ts#L133)
+Defined in: [src/helpers/context.ts:134](https://github.com/zeixcom/le-truc/blob/4745f51b23182fae3c5af6979d02c4ed2b72bcbb/src/helpers/context.ts#L134)
 
 Create a typed context key.
 

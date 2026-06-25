@@ -7,6 +7,7 @@ import {
 	type Memo,
 } from '@zeix/cause-effect'
 import type { ComponentProps, EffectDescriptor } from '../types'
+import { DEV_MODE, elementName, LOG_WARN } from '../util'
 
 /* === Types === */
 
@@ -157,7 +158,19 @@ const makeProvideContexts =
 					isFunction(callback)
 				) {
 					e.stopImmediatePropagation()
-					callback(() => host[context as keyof P])
+					callback(() => {
+						try {
+							return host[context as keyof P]
+						} catch (error) {
+							if (DEV_MODE)
+								console[LOG_WARN](
+									'provideContexts: getter threw',
+									elementName(host),
+									error,
+								)
+							return undefined
+						}
+					})
 				}
 			}
 			host.addEventListener(CONTEXT_REQUEST, listener)

@@ -1,9 +1,27 @@
 /**
- * Unit tests for extractAttributes in src/helpers/dom.ts
+ * Unit tests for src/helpers/dom.ts
+ *
+ * No real DOM is available under `bun test`, so `createElementsMemo` is
+ * exercised against a minimal `ParentNode` stub that only implements
+ * `querySelector`/`querySelectorAll` — mirroring the stub-DOM style used
+ * in events.test.ts and context.test.ts.
  */
 
 import { describe, expect, test } from 'bun:test'
-import { extractAttributes } from '../helpers/dom'
+import { InvalidSelectorError } from '../errors'
+import {
+	createElementsMemo,
+	extractAttributes,
+	makeElementQueries,
+} from '../helpers/dom'
+
+const makeParent = (
+	querySelector: (selector: string) => Element | null = () => null,
+): ParentNode =>
+	({
+		querySelector,
+		querySelectorAll: () => [] as unknown as NodeListOf<Element>,
+	}) as unknown as ParentNode
 
 describe('extractAttributes', () => {
 	test('detects class shorthand', () => {
@@ -50,4 +68,67 @@ describe('extractAttributes', () => {
 		const elapsed = performance.now() - start
 		expect(elapsed).toBeLessThan(100) // well under 100 ms
 	})
+})
+
+describe('createElementsMemo', () => {
+	test('throws InvalidSelectorError at creation for a malformed selector', () => {
+		const parent = makeParent(() => {
+			throw new DOMException("':bad[' is not a valid selector.", 'SyntaxError')
+		})
+		expect(() => createElementsMemo(parent, ':bad[')).toThrow(
+			InvalidSelectorError,
+		)
+	})
+
+	test('error message names the malformed selector', () => {
+		const parent = makeParent(() => {
+			throw new DOMException("':bad[' is not a valid selector.", 'SyntaxError')
+		})
+		expect(() => createElementsMemo(parent, ':bad[')).toThrow(/:bad\[/)
+	})
+
+	test('valid selectors are unaffected', () => {
+		const parent = makeParent(() => null)
+		expect(() => createElementsMemo(parent, 'div.foo')).not.toThrow()
+	})
+})
+
+describe('resolveDependencies timeout path', () => {
+	// `first()`/`all()` add a dependency's tag name when the matched element is
+	// an undefined custom element. `resolveDependencies` then races
+	// `customElements.whenDefined()` against a 200ms timeout; on timeout it
+	// logs (DEV_MODE only) and runs the callback anyway — a single missing
+	// dependency must never block the component indefinitely.
+	test('falls back to running the callback after the real 200ms timeout', async () => {
+		const originalCustomElements = (globalThis as any).customElements
+		;(globalThis as any).customElements = {
+			get: (_name: string) => undefined,
+			whenDefined: (_name: string) => new Promise(() => {}), // never resolves
+		}
+
+		try {
+			const fakeDep = {
+				localName: 'my-dep',
+				matches: (selector: string) => selector === ':not(:defined)',
+			} as unknown as Element
+			const host = {
+				localName: 'my-host',
+				shadowRoot: null,
+				querySelector: (_selector: string) => fakeDep,
+			} as unknown as HTMLElement
+
+			const [{ first }, resolveDependencies] = makeElementQueries(host)
+			first('my-dep')
+
+			const calls: string[] = []
+			resolveDependencies(() => calls.push('callback'))
+
+			// Real wait: DEPENDENCY_TIMEOUT (200ms) is an internal constant, not
+			// configurable from outside.
+			await new Promise(r => setTimeout(r, 260))
+			expect(calls).toEqual(['callback'])
+		} finally {
+			;(globalThis as any).customElements = originalCustomElements
+		}
+	}, 1000)
 })

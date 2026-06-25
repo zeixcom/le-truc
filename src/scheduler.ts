@@ -9,10 +9,22 @@ const runTasks = () => {
 	requestId = undefined
 	const elements = Array.from(objects)
 	objects.clear()
-	for (const element of elements) tasks.get(element)?.()
+	for (const element of elements) {
+		try {
+			tasks.get(element)?.()
+		} catch (e) {
+			console.error('[le-truc scheduler]', e)
+		}
+	}
 	const callbacks = Array.from(throttledCallbacks)
 	throttledCallbacks.clear()
-	for (const cb of callbacks) cb()
+	for (const cb of callbacks) {
+		try {
+			cb()
+		} catch (e) {
+			console.error('[le-truc scheduler]', e)
+		}
+	}
 }
 
 const requestTick = () => {
