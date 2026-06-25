@@ -27,14 +27,19 @@ export class ClassAttribute {
 		]
 	}
 
+	// Markdoc's CustomAttributeTypeInterface.transform() is typed to return
+	// Scalar, which excludes undefined — but its runtime drops the attribute
+	// only when transform() returns undefined, so we cast at the boundary.
 	transform(value: any): string {
-		if (typeof value === 'string') return value
-		if (typeof value === 'object' && value !== null) {
-			return Object.keys(value)
-				.filter(key => value[key])
-				.join(' ')
+		let result: string | undefined
+		if (typeof value === 'string') result = value || undefined
+		else if (typeof value === 'object' && value !== null) {
+			result =
+				Object.keys(value)
+					.filter(key => value[key])
+					.join(' ') || undefined
 		}
-		return ''
+		return result as unknown as string
 	}
 }
 
@@ -54,6 +59,7 @@ export class IdAttribute {
 	}
 
 	transform(value: any): string {
+		if (value === undefined) return undefined as unknown as string
 		return String(value)
 	}
 }

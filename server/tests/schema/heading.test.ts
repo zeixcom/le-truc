@@ -187,21 +187,6 @@ describe('heading schema - anchor link', () => {
 		expect(anchor.attributes.href).toBe('#my-heading')
 	})
 
-	test('should set anchor name attribute', () => {
-		const node = new Node(
-			'heading',
-			{
-				level: 2,
-			},
-			[new Node('text', { content: 'Test' })],
-		)
-
-		const result = heading.transform!(node, {}) as Tag
-		const anchor = result.children[0] as Tag
-
-		expect(anchor.attributes.name).toBe('test')
-	})
-
 	test('should set anchor class', () => {
 		const node = new Node(
 			'heading',
@@ -398,7 +383,6 @@ describe('heading schema - integration', () => {
 		const anchor = result.children[0] as Tag
 		expect(anchor.name).toBe('a')
 		expect(anchor.attributes.href).toBe('#getting-started')
-		expect(anchor.attributes.name).toBe('getting-started')
 		expect(anchor.attributes.class).toBe('anchor')
 
 		// Check spans

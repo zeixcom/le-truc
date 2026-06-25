@@ -66,7 +66,7 @@ describe('ClassAttribute', () => {
 
 	test('should handle empty object', () => {
 		const result = classAttr.transform({})
-		expect(result).toBe('')
+		expect(result).toBeUndefined()
 	})
 
 	test('should handle object with all false values', () => {
@@ -74,7 +74,17 @@ describe('ClassAttribute', () => {
 			active: false,
 			disabled: false,
 		})
-		expect(result).toBe('')
+		expect(result).toBeUndefined()
+	})
+
+	test('should drop empty string', () => {
+		const result = classAttr.transform('')
+		expect(result).toBeUndefined()
+	})
+
+	test('should drop undefined', () => {
+		const result = classAttr.transform(undefined)
+		expect(result).toBeUndefined()
 	})
 
 	test('should preserve class order from object keys', () => {
@@ -128,6 +138,10 @@ describe('IdAttribute', () => {
 
 	test('should transform null to string', () => {
 		expect(idAttr.transform(null)).toBe('null')
+	})
+
+	test('should drop undefined instead of stringifying it', () => {
+		expect(idAttr.transform(undefined)).toBeUndefined()
 	})
 })
 

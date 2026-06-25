@@ -2,7 +2,7 @@
 
 > **TrustedHTML** = `object`
 
-Defined in: [src/bindings.ts:13](https://github.com/zeixcom/le-truc/blob/4745f51b23182fae3c5af6979d02c4ed2b72bcbb/src/bindings.ts#L13)
+Defined in: [src/bindings.ts:13](https://github.com/zeixcom/le-truc/blob/9c8a9f18dddada370ee9114b563a63d53fc3734c/src/bindings.ts#L13)
 
 Structural shape of the DOM's `TrustedHTML` type (Trusted Types API).
 Declared locally because `lib.dom.d.ts` does not yet ship this type in every
@@ -16,7 +16,7 @@ configured with `RETURN_TRUSTED_HTML: true`) satisfies it.
 
 > **toJSON**(): `string`
 
-Defined in: [src/bindings.ts:13](https://github.com/zeixcom/le-truc/blob/4745f51b23182fae3c5af6979d02c4ed2b72bcbb/src/bindings.ts#L13)
+Defined in: [src/bindings.ts:13](https://github.com/zeixcom/le-truc/blob/9c8a9f18dddada370ee9114b563a63d53fc3734c/src/bindings.ts#L13)
 
 ###### Returns
 
