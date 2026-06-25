@@ -1,6 +1,6 @@
 ### Class: InvalidSelectorError
 
-Defined in: [src/errors.ts:149](https://github.com/zeixcom/le-truc/blob/9c8a9f18dddada370ee9114b563a63d53fc3734c/src/errors.ts#L149)
+Defined in: [src/errors.ts:149](https://github.com/zeixcom/le-truc/blob/fb30eb45f0c70696e40c4386c2a1ac5bb1d7b808/src/errors.ts#L149)
 
 Error thrown when a CSS selector passed to `all()` is malformed
 
@@ -18,7 +18,7 @@ Error thrown when a CSS selector passed to `all()` is malformed
 
 > **new InvalidSelectorError**(`parent`, `selector`, `cause`): `InvalidSelectorError`
 
-Defined in: [src/errors.ts:155](https://github.com/zeixcom/le-truc/blob/9c8a9f18dddada370ee9114b563a63d53fc3734c/src/errors.ts#L155)
+Defined in: [src/errors.ts:155](https://github.com/zeixcom/le-truc/blob/fb30eb45f0c70696e40c4386c2a1ac5bb1d7b808/src/errors.ts#L155)
 
 ###### Parameters
 

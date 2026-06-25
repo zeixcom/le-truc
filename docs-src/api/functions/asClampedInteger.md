@@ -2,7 +2,7 @@
 
 > **asClampedInteger**(`min?`, `max?`): [`Parser`](../type-aliases/Parser.md)\<`number`\>
 
-Defined in: [src/parsers/number.ts:68](https://github.com/zeixcom/le-truc/blob/9c8a9f18dddada370ee9114b563a63d53fc3734c/src/parsers/number.ts#L68)
+Defined in: [src/parsers/number.ts:68](https://github.com/zeixcom/le-truc/blob/fb30eb45f0c70696e40c4386c2a1ac5bb1d7b808/src/parsers/number.ts#L68)
 
 Parse a string as a clamped integer (>= min, <= max) with fallbacks
 

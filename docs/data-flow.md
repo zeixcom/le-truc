@@ -190,7 +190,7 @@ Here's how everything comes together:
           readonly
           disabled
           hidden
-        />
+        >
         <button type="button" class="increment" aria-label="Increment">
           <span class="zero">Add to Cart</span>
           <span class="other" hidden>+</span>
@@ -213,7 +213,7 @@ Here's how everything comes together:
           readonly
           disabled
           hidden
-        />
+        >
         <button type="button" class="increment" aria-label="Increment">
           <span class="zero">Add to Cart</span>
           <span class="other" hidden>+</span>
@@ -236,7 +236,7 @@ Here's how everything comes together:
           readonly
           disabled
           hidden
-        />
+        >
         <button type="button" class="increment" aria-label="Increment">
           <span class="zero">Add to Cart</span>
           <span class="other" hidden>+</span>
