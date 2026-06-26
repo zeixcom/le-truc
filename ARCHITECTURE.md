@@ -75,7 +75,7 @@ Selector strings infer correct `HTMLElement` subtypes at compile time (e.g., `fi
 
 ### Parsers
 
-Parsers transform HTML attribute strings to typed values (see [ADR 0005](adr/0005-branded-parsers-and-methods-with-symbol-based-branding.md)). They are called once at connect time with `getAttribute(key)`. `static observedAttributes = []` — attributes don't drive reactive updates (see [ADR 0003](adr/0003-attributes-drive-state-at-connect-time-only.md)).
+Parsers transform HTML attribute strings to typed values (see [ADR 0005](adr/0005-branded-parsers-and-methods-with-symbol-based-branding.md)). They are called once at connect time with `getAttribute(key)`. `observedAttributes`/`attributeChangedCallback` support was dropped entirely — attributes don't drive reactive updates (see [ADR 0003](adr/0003-attributes-drive-state-at-connect-time-only.md)).
 
 ### Context Protocol
 

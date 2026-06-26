@@ -20,23 +20,23 @@ Core files in `src/`:
 
 | File | Contents |
 |---|---|
-| `component.ts` | `defineComponent`, `Truc` class, component lifecycle, `#setAccessor`, `FactoryContext`, `asParser`, `defineMethod`, parser/method branding |
-| `effects.ts` | `makeWatch`, `makePass`, `each`, `EffectDescriptor`, `FactoryResult`, `Reactive`, `WatchHelper`, `PassHelper` |
-| `events.ts` | `makeOn`, `OnHelper`, event delegation, passive event throttling |
-| `bindings.ts` | `bindText`, `bindProperty`, `bindClass`, `bindVisible`, `bindAttribute`, `bindStyle`, `dangerouslyBindInnerHTML`, `safeSetAttribute`, `escapeHTML` |
-| `ui.ts` | `first`, `all`, `makeElementQueries`, `createElementsMemo`, selector type inference |
-| `context.ts` | `makeProvideContexts`, `makeRequestContext`, `ContextRequestEvent` |
+| `component.ts` | `defineComponent`, `Truc` class, component lifecycle, `#setAccessor`, `#initSignals`, `FactoryContext`, parser/method dispatch via `isParser`/`isMethodProducer` |
+| `types.ts` | `Parser`, `MethodProducer`, `asParser`, `defineMethod`, `isParser`, `isMethodProducer`, parser/method branding (`PARSER_BRAND`/`METHOD_BRAND`), `ComponentProps`, `EffectDescriptor`, `FactoryResult`, `Falsy`, `ReservedWords` |
+| `helpers/reactive.ts` | `makeWatch`, `makePass`, `each`, `activateResult`, `EffectDescriptor`, `FactoryResult`, `Reactive`, `WatchHelper`, `PassHelper` |
+| `helpers/events.ts` | `makeOn`, `OnHelper`, event delegation, passive event throttling |
+| `bindings.ts` | `bindText`, `bindProperty`, `bindClass`, `bindVisible`, `bindAttribute`, `bindStyle`, `dangerouslyBindInnerHTML`, `safeSetAttribute`, `escapeHTML`, `setTextPreservingComments` |
+| `helpers/dom.ts` | `first`, `all`, `makeElementQueries`, `createElementsMemo`, selector type inference |
+| `helpers/context.ts` | `makeProvideContexts`, `makeRequestContext`, `ContextRequestEvent` |
 | `scheduler.ts` | `schedule`, `throttle` — rAF-based task deduplication |
-| `errors.ts` | `MissingElementError`, `DependencyTimeoutError`, `InvalidCustomElementError`, `InvalidReactivesError`, `InvalidComponentNameError` |
-| `internal.ts` | `getSignals` — internal signal map shared by `component.ts` and `effects.ts` |
-| `util.ts` | `log`, `LOG_ERROR`, `LOG_WARN`, `elementName`, `DEV_MODE`, `isCustomElement`, `isNotYetDefinedComponent` |
+| `errors.ts` | `MissingElementError`, `DependencyTimeoutError`, `InvalidCustomElementError`, `InvalidPassPropertyError`, `InvalidPropertyNameError`, `InvalidReactivesError`, `InvalidSelectorError`, `InvalidComponentNameError` |
+| `internal.ts` | `getSignals` — internal signal map shared by `component.ts` and `helpers/reactive.ts` |
+| `util.ts` | `elementName`, `DEV_MODE`, `isCustomElement`, `isNotYetDefinedComponent` |
 
 Parser files in `src/parsers/`:
 
 | File | Exports |
 |---|---|
 | `boolean.ts` | `asBoolean` |
-| `date.ts` | `asDate` |
 | `json.ts` | `asJSON` |
 | `number.ts` | `asInteger`, `asNumber`, `asClampedInteger` |
 | `string.ts` | `asString`, `asEnum` |
@@ -44,13 +44,13 @@ Parser files in `src/parsers/`:
 ## Quick Lookup
 
 - Changing the component lifecycle → `src/component.ts` + `ARCHITECTURE.md`
-- Changing how effects run → `src/effects.ts` + `ARCHITECTURE.md`
+- Changing how effects run → `src/helpers/reactive.ts` + `ARCHITECTURE.md`
 - Adding a new `bind*` helper → `src/bindings.ts` (follow existing pattern); export from index
-- Adding a new built-in effect type → `src/effects.ts`; export from the index
-- Changing parser detection or adding a parser → `src/component.ts` + `src/parsers/`; export from the index
-- Changing context protocol → `src/context.ts` + `ARCHITECTURE.md`
-- Changing `pass()` → `src/effects.ts` + `src/internal.ts`
-- Changing event listener handling → `src/events.ts`
+- Adding a new built-in effect type → `src/helpers/reactive.ts`; export from the index
+- Changing parser detection or adding a parser → `src/types.ts` + `src/parsers/`; export from the index
+- Changing context protocol → `src/helpers/context.ts` + `ARCHITECTURE.md`
+- Changing `pass()` → `src/helpers/reactive.ts` + `src/internal.ts`
+- Changing event listener handling → `src/helpers/events.ts`
 - Changing error conditions → `src/errors.ts`
 - Changing security validation → `src/bindings.ts`
 - Changing scheduler → `src/scheduler.ts`

@@ -20,9 +20,9 @@ Use references/source-map.md to locate the file(s) involved. Read them fully bef
 
 Identify how similar features are implemented:
 - DOM helpers in `src/bindings.ts` return typed handler functions or `SingleMatchHandlers` objects for use with `watch()`
-- Parsers use `asParser()` branding (see `src/component.ts` and `src/parsers/`) 
+- Parsers use `asParser()` branding (see `src/types.ts` and `src/parsers/`)
 - Method producers use `defineMethod()` branding
-- Context uses the Web Components Community Protocol (see `src/context.ts`)
+- Context uses the Web Components Community Protocol (see `src/helpers/context.ts`)
 
 New features should follow the same internal patterns. Consistency is more important than elegance.
 

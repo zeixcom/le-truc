@@ -14,12 +14,12 @@ Use this table to find the authoritative source for the question:
 | If the question is about... | Read... |
 |---|---|
 | Component lifecycle (connectedCallback, #initSignals, disconnectedCallback) | `ARCHITECTURE.md`; `src/component.ts` |
-| Effect internals (watch, on, pass, each, EffectDescriptor) | `ARCHITECTURE.md`; `src/effects.ts`, `src/events.ts` |
+| Effect internals (watch, on, pass, each, EffectDescriptor) | `ARCHITECTURE.md`; `src/helpers/reactive.ts`, `src/helpers/events.ts` |
 | DOM helper internals (bind*, dangerouslyBindInnerHTML) | `ARCHITECTURE.md`; `src/bindings.ts` |
-| Parser/MethodProducer type system | `ARCHITECTURE.md`; `CONTEXT.md`; `src/component.ts` |
-| UI query system (first, all, dependency resolution, selector type inference) | `ARCHITECTURE.md`; `src/ui.ts` |
-| Context protocol internals | `ARCHITECTURE.md`; `src/context.ts` |
-| `pass()` internals | `ARCHITECTURE.md`; `src/effects.ts` (`makePass`) |
+| Parser/MethodProducer type system | `ARCHITECTURE.md`; `CONTEXT.md`; `src/types.ts` |
+| UI query system (first, all, dependency resolution, selector type inference) | `ARCHITECTURE.md`; `src/helpers/dom.ts` |
+| Context protocol internals | `ARCHITECTURE.md`; `src/helpers/context.ts` |
+| `pass()` internals | `ARCHITECTURE.md`; `src/helpers/reactive.ts` (`makePass`) |
 | Security (safeSetAttribute validation) | `ARCHITECTURE.md`; `src/bindings.ts` |
 | Which signal type le-truc uses internally and why | `references/cause-effect-integration.md` |
 | What belongs in le-truc vs. cause-effect | `references/library-boundaries.md` |

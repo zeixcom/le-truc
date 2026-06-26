@@ -18,7 +18,7 @@ The bar for inclusion is high: **a competent Le Truc developer would not predict
 Examples that belong here:
 - Parser branding requirement (because `fn.length` is unreliable)
 - `pass()` Le-Truc-only scope (because name implies broader applicability)
-- `undefined` from a reader restores the original DOM value (not blank)
+- `undefined` from a reactive source restores the original DOM value (not blank)
 - `all()` observer laziness (only activates when Memo has a reactive reader)
 - `setAttribute` security validation that throws (unexpected for a simple setter)
 

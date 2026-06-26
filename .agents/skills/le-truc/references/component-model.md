@@ -57,7 +57,7 @@ defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) =>
 ## Key Constraints
 
 - `expose()` **must** be called before any signal access that reads `host.propName`
-- Components always have `static observedAttributes = []`
+- `defineComponent` never registers `observedAttributes` — `attributeChangedCallback` support was dropped entirely in v2.0
 - Parsers in `expose()` called **once at connect time** — HTML authors configure via attributes in server-rendered markup
 - Attribute changes after connect **are not re-parsed** — reactive state flows through property interface only
 - Factory result type: `FactoryResult` = `Array<EffectDescriptor | FactoryResult | Falsy>`

@@ -13,9 +13,9 @@ Read references/non-obvious.md. Many apparent bugs are actually correct behavior
 
 - `isParser()` checks only for `PARSER_BRAND` — unbranded functions are NOT treated as parsers
 - `pass()` is Le Truc-only; using it on non-Le-Truc elements silently does nothing
-- `undefined` from a reader restores the original DOM value — it does not clear/null it
+- `undefined` from a reactive source restores the original DOM value — it does not clear/null it
 - `all()` MutationObserver is lazy — only active when the Memo has a reactive reader
-- `safeSetAttribute` throws (and logs) on `on*` attribute names and unsafe URLs — it is never silent
+- `safeSetAttribute` throws on `on*` attribute names and unsafe URLs — it is never silent
 
 If the symptom matches a documented behavior, explain it to the user rather than changing the code.
 
@@ -32,12 +32,12 @@ Use references/source-map.md to find the file. Read it fully before changing any
 
 ### Step 4: Trace Through the Code
 
-For effect bugs — trace through `makeWatch` / `makeOn` / `makePass` in `src/effects.ts` and `src/events.ts`:
+For effect bugs — trace through `makeWatch` / `makeOn` / `makePass` in `src/helpers/reactive.ts` and `src/helpers/events.ts`:
 - Is the `EffectDescriptor` included in the factory return array?
 - Is the source signal correctly resolved by `toSignal()`?
 - Is the `bind*` handler receiving the right element?
 
-For parser bugs — trace through `isParser` in `src/component.ts`:
+For parser bugs — trace through `isParser` in `src/types.ts`:
 - Is the parser branded with `PARSER_BRAND`?
 - Did `asParser()` get called to wrap the custom parser?
 

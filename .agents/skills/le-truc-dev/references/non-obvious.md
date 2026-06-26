@@ -4,7 +4,7 @@ Non-obvious behaviors in the le-truc source. These are the things most likely to
 
 ## Factory Form Opts Out of observedAttributes Entirely
 
-`defineComponent` sets `static observedAttributes = []` unconditionally in `src/component.ts`. This is a deliberate trade-off (see ADR 0003).
+`defineComponent` never registers `observedAttributes` — `attributeChangedCallback` support was dropped entirely in v2.0 (see ADR 0003).
 
 Consequences:
 - Parsers in `expose()` are called **once at connect time** — HTML authors can configure the component via attributes in server-rendered markup, but `attributeChangedCallback` never fires afterward
@@ -13,15 +13,15 @@ Consequences:
 
 ## Parser Branding is Required for Reliable Detection
 
-`isParser()` in `src/component.ts` checks only for `PARSER_BRAND`. Unbranded functions are NOT treated as parsers regardless of their signature.
+`isParser()` in `src/types.ts` checks only for `PARSER_BRAND`. Unbranded functions are NOT treated as parsers regardless of their signature.
 
-**Always use `asParser()` to create custom parsers.** Parser signature: `(value: string | null | undefined) => T`. Fallbacks are static values captured in the factory closure — not reader functions.
+**Always use `asParser()` to create custom parsers.** Parser signature: `(value: string | null | undefined) => T`. Fallbacks are static values captured in the factory closure.
 
 In `DEV_MODE`, using an unbranded function that resembles a parser triggers `console.warn`.
 
 ## MethodProducer is Branded, Not Structurally Distinguished
 
-`isMethodProducer()` in `src/component.ts` checks for `METHOD_BRAND` only. An unbranded `() => void` function is treated as a `MemoCallback` (wrapped in `createComputed`), not a method producer.
+`isMethodProducer()` in `src/types.ts` checks for `METHOD_BRAND` only. An unbranded `() => void` function is treated as a `MemoCallback` (wrapped in `createComputed`), not a method producer.
 
 **Always wrap method producer initializers with `defineMethod()`.** The function IS the method — it is installed directly as `host[key] = fn`.
 
@@ -29,11 +29,11 @@ In `DEV_MODE`, using an unbranded function that resembles a parser triggers `con
 
 ## `watch()` Requires `createEffect` Internally
 
-`watch()` (via `makeWatch` in `src/effects.ts`) wraps `match()` inside `createEffect()`. This is why `watch()` returns an `EffectDescriptor` — the `createEffect` only runs after dependency resolution, inside the `createScope` created in `connectedCallback`. Calling `match()` without `createEffect` would track dependencies synchronously and not re-run.
+`watch()` (via `makeWatch` in `src/helpers/reactive.ts`) wraps `match()` inside `createEffect()`. This is why `watch()` returns an `EffectDescriptor` — the `createEffect` only runs after dependency resolution, inside the `createScope` created in `connectedCallback`. Calling `match()` without `createEffect` would track dependencies synchronously and not re-run.
 
 ## `all()` MutationObserver is Lazy
 
-The observer in `src/ui.ts` only activates when the `Memo` is **read inside a reactive effect**. If no effect reads the Memo, mutations are not tracked. This is intentional (avoids unnecessary observers) but can look like a bug.
+The observer in `src/helpers/dom.ts` only activates when the `Memo` is **read inside a reactive effect**. If no effect reads the Memo, mutations are not tracked. This is intentional (avoids unnecessary observers) but can look like a bug.
 
 The observer watches only mutations implied by the CSS selector (class, ID, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the memo's `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
 
@@ -55,17 +55,17 @@ Two security checks in `src/bindings.ts` throw errors:
 
 `bindAttribute` uses `safeSetAttribute` by default. Pass `allowUnsafe: true` only when the value has been validated upstream.
 
-## `undefined` from a Reader Restores the Original DOM Value
+## `undefined` from a Reactive Source Restores the Original DOM Value
 
 When a reactive resolves to `undefined`, the component degrades gracefully to the pre-JS state. The `RESET` symbol no longer exists — `undefined` is the reset mechanism.
 
 ## Dependency Resolution Has a 200ms Timeout
 
-If a child custom element queried by `first()` or `all()` in `src/ui.ts` is not defined within 200ms, a `DependencyTimeoutError` is logged and effects proceed anyway. Effects run even if dependencies are missing — they do not block indefinitely.
+If a child custom element queried by `first()` or `all()` in `src/helpers/dom.ts` is not defined within 200ms, a `DependencyTimeoutError` is logged and effects proceed anyway. Effects run even if dependencies are missing — they do not block indefinitely.
 
 ## `on()` Handler Return Value Updates Host
 
-If an event handler in `src/events.ts` returns `{ prop: value }`, all returned entries are applied to `host` in a `batch()`. Returning `void` (or `undefined`) is a no-op — no host update occurs. The handler always receives `(event, element)` — second arg is the element, useful for Memo targets.
+If an event handler in `src/helpers/events.ts` returns `{ prop: value }`, all returned entries are applied to `host` in a `batch()`. Returning `void` (or `undefined`) is a no-op — no host update occurs. The handler always receives `(event, element)` — second arg is the element, useful for Memo targets.
 
 ## Context Protocol is the Web Components Community Protocol
 
@@ -89,8 +89,7 @@ When the reactive is nil, `el.style.removeProperty(prop)` is called, restoring w
 
 ## Debug Mode
 
-- Per-instance: `host.debug = true` — verbose per-effect logging for that instance
-- Project-wide: build with `process.env.DEV_MODE=true` — enhanced errors, unbranded parser warnings
+`DEV_MODE` is the only debug mode — build with `process.env.DEV_MODE=true` for enhanced errors and unbranded-parser warnings. There is no per-instance debug flag.
 
 ## Event-Driven Read-Only Props
 
@@ -98,4 +97,4 @@ Expose `state.get` (not the full `State`) to make a prop readable but not settab
 
 ## Testing a DEV_MODE-Gated Branch Requires `mock.module`, and a Snapshot
 
-`DEV_MODE` (`src/util.ts`) is a module-level `const` captured at import time, so setting `process.env.DEV_MODE` from a test has no effect on already-loaded consumers (`context.ts`, `events.ts`, `dom.ts`, …). `bun:test`'s `mock.module('../util', factory)` does retroactively patch the live binding in already-imported consumers — but it mutates the module's namespace object **in place**. A captured `import * as ns from '../util'` reference is therefore not a stable snapshot: after the first `mock.module` call, `ns.DEV_MODE` reflects the mock, not the original. Restoring with `mock.module('../util', () => ns)` just re-feeds the already-mutated values, permanently corrupting `DEV_MODE` for the rest of the `bun test` process (confirmed: produced a real cross-file leak into unrelated tests). Fix: spread the namespace into a plain object (`const realUtil = { ...ns }`) once, before any mocking, and restore from that snapshot — never from the live namespace. Keep the whole mock→assert→restore sequence synchronous (no `await` in between); an `await` point lets `bun:test` interleave other files' tests while the mock is still active. See `src/tests/context.test.ts` and `src/tests/events.test.ts` for the pattern.
+`DEV_MODE` (`src/util.ts`) is a module-level `const` captured at import time, so setting `process.env.DEV_MODE` from a test has no effect on already-loaded consumers (`helpers/context.ts`, `helpers/events.ts`, `helpers/dom.ts`, …). `bun:test`'s `mock.module('../util', factory)` does retroactively patch the live binding in already-imported consumers — but it mutates the module's namespace object **in place**. A captured `import * as ns from '../util'` reference is therefore not a stable snapshot: after the first `mock.module` call, `ns.DEV_MODE` reflects the mock, not the original. Restoring with `mock.module('../util', () => ns)` just re-feeds the already-mutated values, permanently corrupting `DEV_MODE` for the rest of the `bun test` process (confirmed: produced a real cross-file leak into unrelated tests). Fix: spread the namespace into a plain object (`const realUtil = { ...ns }`) once, before any mocking, and restore from that snapshot — never from the live namespace. Keep the whole mock→assert→restore sequence synchronous (no `await` in between); an `await` point lets `bun:test` interleave other files' tests while the mock is still active. See `src/tests/context.test.ts` and `src/tests/events.test.ts` for the pattern.
