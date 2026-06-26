@@ -2,7 +2,7 @@
 
 > **PassHelper**\<`P`\> = \{\<`Q`\>(`target`, `props`): [`EffectDescriptor`](EffectDescriptor.md); \<`Q`\>(`target`, `props`): [`EffectDescriptor`](EffectDescriptor.md); \}
 
-Defined in: [src/helpers/reactive.ts:108](https://github.com/zeixcom/le-truc/blob/d9cecae8c3e9e30027448b835ac249fc4170548e/src/helpers/reactive.ts#L108)
+Defined in: [src/helpers/reactive.ts:108](https://github.com/zeixcom/le-truc/blob/62831a486b22055e2f0aae8a1bc13f5e79ffdffc/src/helpers/reactive.ts#L108)
 
 The `pass` helper type in `FactoryContext`.
 

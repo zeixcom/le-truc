@@ -11,13 +11,17 @@
  *   reparenting (disconnect → reconnect) does not accumulate listeners.
  * - audit-sanitize: uses dangerouslyBindInnerHTML with a sanitize hook, to
  *   verify the hook strips a non-`<script>` XSS vector.
+ * - audit-trusted-html / audit-dompurify: verify the sanitize hook's
+ *   TrustedHTML support under Trusted-Types enforcement — the former via a
+ *   native `trustedTypes` policy, the latter via real DOMPurify, the
+ *   integration the library's own docs recommend.
  */
 
+import DOMPurify from 'dompurify'
 import {
 	type ComponentProps,
 	dangerouslyBindInnerHTML,
 	defineComponent,
-	type TrustedHTML,
 } from '../../..'
 
 /* === Reserved-word runtime guard === */
@@ -111,14 +115,20 @@ defineComponent<SanitizeProps>('audit-sanitize', ({ expose, first, watch }) => {
 // instance — a sanitize hook that returns a plain string (like the one above)
 // does not satisfy this, however thoroughly it sanitized. audit-trusted-html
 // wraps the same on*-stripper in a real TrustedHTML via a native Trusted Types
-// policy, standing in for DOMPurify configured with RETURN_TRUSTED_HTML: true.
+// policy, standing in for DOMPurify configured with RETURN_TRUSTED_TYPE: true
+// (exercised for real, with the actual library, by audit-dompurify below).
 
 type TrustedHTMLProps = {
 	content: string
 }
 
-// `trustedTypes` is not yet part of this project's `lib.dom.d.ts` (same gap
-// ADR-0010 notes for `TrustedHTML` itself); declare the minimal shape used here.
+// `trustedTypes` is not yet part of this project's `lib.dom.d.ts`; declare the
+// minimal shape used here. Kept as `object`, not a structural mirror, same as
+// Le Truc's own internal (unexported) `TrustedHTML` in src/bindings.ts — see
+// ADR-0010's amendments for why a real TrustedHTML can't be modeled as
+// `{ toJSON(): string }` (it's a nominal, members-private type by design).
+type TrustedHTML = object
+
 declare global {
 	interface HTMLElementTagNameMap {
 		'audit-trusted-html': HTMLElement & TrustedHTMLProps
@@ -152,6 +162,42 @@ defineComponent<TrustedHTMLProps>(
 			watch(
 				'content',
 				dangerouslyBindInnerHTML(target, { sanitize: sanitizeToTrustedHTML }),
+			),
+		]
+	},
+)
+
+/* === DOMPurify integration, for real === */
+//
+// The library's own JSDoc and ADR-0010 name DOMPurify configured with
+// `RETURN_TRUSTED_TYPE: true` as the canonical way to produce a TrustedHTML
+// for the sanitize hook. audit-dompurify exercises that exact, real
+// integration (not a stand-in) under Trusted-Types enforcement, so a future
+// DOMPurify release that renames/removes the option, or changes what it
+// returns, fails this test instead of silently going stale in the docs.
+
+type DOMPurifyProps = {
+	content: string
+}
+
+declare global {
+	interface HTMLElementTagNameMap {
+		'audit-dompurify': HTMLElement & DOMPurifyProps
+	}
+}
+
+defineComponent<DOMPurifyProps>(
+	'audit-dompurify',
+	({ expose, first, watch }) => {
+		const target = first('[data-target]') as HTMLElement
+		expose({ content: '' })
+		return [
+			watch(
+				'content',
+				dangerouslyBindInnerHTML(target, {
+					sanitize: (html: string) =>
+						DOMPurify.sanitize(html, { RETURN_TRUSTED_TYPE: true }),
+				}),
 			),
 		]
 	},

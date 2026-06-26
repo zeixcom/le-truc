@@ -81,7 +81,7 @@ test.describe('dangerouslyBindInnerHTML sanitize hook', () => {
 		expect(fired).toBe(true)
 	})
 
-	test('a reset cannot be clobbered by an earlier-scheduled, now-stale write (LT-017)', async ({
+	test('a reset cannot be clobbered by an earlier-scheduled, now-stale write', async ({
 		page,
 	}) => {
 		// content goes non-empty then falsy within the same synchronous tick, i.e.

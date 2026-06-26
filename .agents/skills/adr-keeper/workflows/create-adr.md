@@ -4,7 +4,7 @@
 
 1. **Check for existing ADRs on the same topic**
    - Run `grep -r "keyword" /adr/` to search existing ADRs
-   - If an Accepted ADR already covers this, ask user if they want to supersede it instead
+   - If an Accepted ADR already covers this, check whether it's published (`git show main:adr/000X-title.md`): if published, ask the user if they want to supersede it instead; if unpublished, amend it in place via update-adr.md instead of creating a new one
 
 2. **Determine the next ADR number**
    - List existing ADRs: `ls -1 /adr/*.md | grep -E '^[0-9]{4}-' | sort -n`

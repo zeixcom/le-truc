@@ -8,17 +8,20 @@ import { expect, test } from '@playwright/test'
  * instance — a plain string fails this check regardless of how thoroughly a
  * `sanitize` hook cleaned it. The CSP is injected via Playwright route
  * interception (a response header), so it applies only to this spec's page and
- * leaves the unrelated `test-sanitize` page (LT-005) unaffected.
+ * leaves the unrelated `test-sanitize` page unaffected.
  *
  * - audit-trusted-html's sanitize hook wraps the result in a real `TrustedHTML`
  *   via `window.trustedTypes.createPolicy(...).createHTML(...)` (standing in for
- *   DOMPurify's `RETURN_TRUSTED_HTML: true`) — the assignment must succeed.
+ *   DOMPurify's `RETURN_TRUSTED_TYPE: true`) — the assignment must succeed.
+ * - audit-dompurify's sanitize hook uses real DOMPurify with
+ *   `RETURN_TRUSTED_TYPE: true` — the exact integration the library's own docs
+ *   recommend, exercised for real rather than stood in for.
  * - audit-sanitize's sanitize hook (from test-sanitize.html) returns a plain
  *   string — the assignment must still throw, proving the hook's return *type*
  *   is what matters, not merely the presence of a `sanitize` option.
  * - The reset/clear path (`nil`, or setting `content` back to '') must NOT
  *   throw regardless of `sanitize`, since it never uses the `innerHTML` sink
- *   (LT-016) — covered by the last two tests below.
+ *   — covered by the last two tests below.
  */
 test.describe('dangerouslyBindInnerHTML under Trusted Types enforcement', () => {
 	test.beforeEach(async ({ page }) => {
@@ -34,6 +37,7 @@ test.describe('dangerouslyBindInnerHTML under Trusted Types enforcement', () => 
 		})
 		await page.goto('http://localhost:3000/test/test-sanitize-tt')
 		await page.waitForSelector('audit-trusted-html', { state: 'attached' })
+		await page.waitForSelector('audit-dompurify', { state: 'attached' })
 		await page.waitForSelector('audit-sanitize', { state: 'attached' })
 	})
 
@@ -68,6 +72,35 @@ test.describe('dangerouslyBindInnerHTML under Trusted Types enforcement', () => 
 				).innerHTML,
 		)
 		expect(html).toContain('<img src="x">')
+		expect(html).toContain('<p>hello</p>')
+		expect(html).not.toMatch(/onerror/i)
+		expect(
+			pageErrors,
+			`expected no errors, got: ${pageErrors.join(' | ')}`,
+		).toHaveLength(0)
+	})
+
+	test('real DOMPurify with RETURN_TRUSTED_TYPE satisfies enforcement and strips the vector', async ({
+		page,
+	}) => {
+		const pageErrors: string[] = []
+		page.on('pageerror', err => pageErrors.push(`${err.name}: ${err.message}`))
+
+		await page.evaluate(async () => {
+			const el = document.getElementById('san-dompurify') as any
+			el.content = '<img src=x onerror="window.__xssFired = true"><p>hello</p>'
+			await new Promise<void>(r => requestAnimationFrame(() => r()))
+		})
+		await page.waitForTimeout(100)
+
+		const html = await page.evaluate(
+			() =>
+				(
+					document
+						.getElementById('san-dompurify')!
+						.querySelector('[data-target]') as HTMLElement
+				).innerHTML,
+		)
 		expect(html).toContain('<p>hello</p>')
 		expect(html).not.toMatch(/onerror/i)
 		expect(
@@ -127,6 +160,7 @@ test.describe('dangerouslyBindInnerHTML under Trusted Types enforcement', () => 
 		// pageerror-only assertions in the tests above.
 		await page.goto('http://localhost:3000/test/test-sanitize-tt')
 		await page.waitForSelector('audit-trusted-html', { state: 'attached' })
+		await page.waitForSelector('audit-dompurify', { state: 'attached' })
 		await page.waitForSelector('audit-sanitize', { state: 'attached' })
 		await page.waitForTimeout(100)
 

@@ -2,7 +2,7 @@
 
 > **dangerouslyBindInnerHTML**(`element`, `options?`): [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string`\>
 
-Defined in: [src/bindings.ts:331](https://github.com/zeixcom/le-truc/blob/d9cecae8c3e9e30027448b835ac249fc4170548e/src/bindings.ts#L331)
+Defined in: [src/bindings.ts:336](https://github.com/zeixcom/le-truc/blob/62831a486b22055e2f0aae8a1bc13f5e79ffdffc/src/bindings.ts#L336)
 
 Returns `SingleMatchHandlers<string>` that sets the inner HTML of an element,
 with optional Shadow DOM, sanitization, and script re-execution support.
@@ -36,7 +36,7 @@ Therefore:
 `innerHTML` assignment throws unless `html` is a `TrustedHTML` instance — a
 `sanitize` hook that returns a plain `string` does not satisfy this, no
 matter how thorough the sanitization. Return `TrustedHTML` from `sanitize`
-(e.g. DOMPurify with `RETURN_TRUSTED_HTML: true`) to support such pages.
+(e.g. DOMPurify with `RETURN_TRUSTED_TYPE: true`) to support such pages.
 
 #### Parameters
 

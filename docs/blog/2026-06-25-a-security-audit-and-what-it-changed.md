@@ -17,11 +17,11 @@ Since `TrustedHTML` is newly supported by all major browsers (Baseline 2026) we 
 
 ```ts
 dangerouslyBindInnerHTML(element, {
-  sanitize: html => DOMPurify.sanitize(html, { RETURN_TRUSTED_HTML: true }),
+  sanitize: html => DOMPurify.sanitize(html, { RETURN_TRUSTED_TYPE: true }),
 })
 ```
 
-Configure DOMPurify with `RETURN_TRUSTED_HTML: true`, or use `window.trustedTypes.createPolicy(...).createHTML(...)`, and the assignment succeeds even under Trusted Types enforcement. Without that hook, the call still throws on an enforcing page – correctly. Le Truc ships no sanitizer of its own; `sanitize` is the one chokepoint where you wire one in.
+Configure DOMPurify with `RETURN_TRUSTED_TYPE: true`, or use `window.trustedTypes.createPolicy(...).createHTML(...)`, and the assignment succeeds even under Trusted Types enforcement. Without that hook, the call still throws on an enforcing page – correctly. Le Truc ships no sanitizer of its own; `sanitize` is the one chokepoint where you wire one in.
 
 One more thing worth being direct about: `allowScripts: false` was never a safety switch. Setting `innerHTML` fires event-handler attributes either way – for example: `<img onerror>`, `<svg onload>`. If the content isn't trusted, sanitize it. There's no flag that makes that step optional.
 

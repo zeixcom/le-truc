@@ -85,7 +85,6 @@
 - [Task](type-aliases/Task.md)
 - [TaskCallback](type-aliases/TaskCallback.md)
 - [TrimWhitespace](type-aliases/TrimWhitespace.md)
-- [TrustedHTML](type-aliases/TrustedHTML.md)
 - [UnknownContext](type-aliases/UnknownContext.md)
 - [WatchHelper](type-aliases/WatchHelper.md)
 

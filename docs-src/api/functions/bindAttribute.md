@@ -2,7 +2,7 @@
 
 > **bindAttribute**(`element`, `name`, `allowUnsafe?`): [`SingleMatchHandlers`](../type-aliases/SingleMatchHandlers.md)\<`string` \| `boolean`\>
 
-Defined in: [src/bindings.ts:249](https://github.com/zeixcom/le-truc/blob/d9cecae8c3e9e30027448b835ac249fc4170548e/src/bindings.ts#L249)
+Defined in: [src/bindings.ts:254](https://github.com/zeixcom/le-truc/blob/62831a486b22055e2f0aae8a1bc13f5e79ffdffc/src/bindings.ts#L254)
 
 Returns `SingleMatchHandlers` that set or toggle an attribute with security validation.
 

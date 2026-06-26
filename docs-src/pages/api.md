@@ -161,7 +161,6 @@ layout: 'page'
   - [Task](./api/type-aliases/Task.html)
   - [TaskCallback](./api/type-aliases/TaskCallback.html)
   - [TrimWhitespace](./api/type-aliases/TrimWhitespace.html)
-  - [TrustedHTML](./api/type-aliases/TrustedHTML.html)
   - [UnknownContext](./api/type-aliases/UnknownContext.html)
   - [WatchHelper](./api/type-aliases/WatchHelper.html)
 {% /listnav %}

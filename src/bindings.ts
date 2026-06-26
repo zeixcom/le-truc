@@ -4,13 +4,18 @@ import { schedule } from './scheduler'
 /* === Types === */
 
 /**
- * Structural shape of the DOM's `TrustedHTML` type (Trusted Types API).
- * Declared locally because `lib.dom.d.ts` does not yet ship this type in every
- * environment — structural typing means the real DOM `TrustedHTML` (e.g. from
- * `window.trustedTypes.createPolicy(...).createHTML(...)`, or a sanitizer
- * configured with `RETURN_TRUSTED_HTML: true`) satisfies it.
+ * Placeholder for the DOM's `TrustedHTML` type (Trusted Types API). Declared
+ * locally and kept unexported because `lib.dom.d.ts` does not yet ship this
+ * type. Deliberately just `object`, not a structural mirror of its shape: the
+ * real type (e.g. via `@types/trusted-types`, the source DOMPurify's own types
+ * resolve against) is a nominal class with only private members — specifically
+ * to prevent structural impersonation — so a `{ toJSON(): string }`-shaped
+ * mirror would reject genuine `TrustedHTML` values produced by DOMPurify or a
+ * native `trustedTypes` policy. `object` is the loosest type that accepts both
+ * without claiming a shape Le Truc cannot verify; this exists only to satisfy
+ * the `innerHTML` cast below. See ADR-0010's amendments.
  */
-type TrustedHTML = { toJSON(): string }
+type TrustedHTML = object
 
 type DangerouslyBindInnerHTMLOptions = {
 	shadowRootMode?: ShadowRootMode
@@ -24,7 +29,7 @@ type DangerouslyBindInnerHTMLOptions = {
 	 * `TrustedHTML` is required for the assignment to succeed on a page that
 	 * enforces `Content-Security-Policy: require-trusted-types-for 'script'` —
 	 * the DOM rejects a plain string there, no matter how thoroughly it was
-	 * sanitized. DOMPurify configured with `RETURN_TRUSTED_HTML: true` is the
+	 * sanitized. DOMPurify configured with `RETURN_TRUSTED_TYPE: true` is the
 	 * canonical way to produce one. Without a hook that returns `TrustedHTML`,
 	 * the assignment throws on such a page; that is the browser's own
 	 * enforcement working as intended — the consumer opted into this sink
@@ -321,7 +326,7 @@ const bindStyle = (
  * `innerHTML` assignment throws unless `html` is a `TrustedHTML` instance — a
  * `sanitize` hook that returns a plain `string` does not satisfy this, no
  * matter how thorough the sanitization. Return `TrustedHTML` from `sanitize`
- * (e.g. DOMPurify with `RETURN_TRUSTED_HTML: true`) to support such pages.
+ * (e.g. DOMPurify with `RETURN_TRUSTED_TYPE: true`) to support such pages.
  *
  * @since 2.0
  * @param element - Target element
@@ -401,5 +406,4 @@ export {
 	escapeHTML,
 	safeSetAttribute,
 	setTextPreservingComments,
-	type TrustedHTML,
 }

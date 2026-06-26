@@ -150,7 +150,7 @@ describe('connectedCallback / disconnectedCallback', () => {
 	})
 })
 
-/* === reconnect (LT-004 regression) === */
+/* === reconnect === */
 
 describe('reconnect', () => {
 	test('disposes the previous scope before re-activating, instead of leaking it', () => {
@@ -172,7 +172,7 @@ describe('reconnect', () => {
 		expect(cleanupCount).toBe(0)
 
 		// Reparent/reslot: connectedCallback fires again while #initialized is
-		// already true. The regression (LT-004) overwrote #cleanup without
+		// already true. The regression overwrote #cleanup without
 		// calling it first, leaking the previous effect on every reconnect.
 		instance.connectedCallback()
 		expect(cleanupCount).toBe(1)
@@ -290,7 +290,7 @@ describe('prop in this guard', () => {
 	})
 })
 
-/* === InvalidPropertyNameError (reserved words, LT-003 regression) === */
+/* === InvalidPropertyNameError (reserved words regression) === */
 
 describe('reserved word guard', () => {
 	test('throws InvalidPropertyNameError for a reserved word prop name', () => {

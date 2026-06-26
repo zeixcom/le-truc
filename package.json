@@ -63,6 +63,7 @@
 		"@types/culori": "^4.0.1",
 		"@types/node": "^25.9.4",
 		"culori": "^4.0.2",
+		"dompurify": "^3.4.11",
 		"lightningcss-cli": "^1.32.0",
 		"shiki": "^4.2.0",
 		"typedoc": "^0.28.19",

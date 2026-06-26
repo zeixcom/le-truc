@@ -8,9 +8,9 @@ user_invocable: true
 This skill manages the **Architectural Decision Record (ADR) process** for @zeix/le-truc:
 
 - Create new ADRs from templates
-- Update existing ADRs (Proposed status only)
+- Update existing ADRs — freely pre-publication, in place; via supersession once published (see immutability principle below)
 - List all ADRs with status
-- Supersede ADRs with newer decisions
+- Supersede published ADRs with newer decisions
 - Maintain the ADR index
 
 **In scope:** All files in `/adr/` directory
@@ -18,7 +18,7 @@ This skill manages the **Architectural Decision Record (ADR) process** for @zeix
 </scope>
 
 <essential_principles>
-**ADRs are immutable.** Once accepted, an ADR is never modified. Updates create new ADRs that supersede old ones.
+**Immutability starts at publication, not at Accepted.** An ADR is "published" once it has landed on `main` (i.e., it exists in `main`'s history — check with `git show main:adr/000X-....md`). Before that — including while Accepted on a feature/working branch — an ADR is still in-flight: amend it directly in place, in any section, including folding in amendments or rewriting Decision/Alternatives/Consequences. Once published, never modify it again: any change is a new ADR that supersedes it, per the supersede workflow. This distinction exists because amend-only is the right discipline for a decision other people may already be relying on, but it's pure friction for a decision still being shaped before anyone outside the branch has seen it.
 
 **Trace to requirements.** Every ADR must reference relevant sections from REQUIREMENTS.md (e.g., M1, S3, X1).
 
@@ -33,9 +33,9 @@ This skill manages the **Architectural Decision Record (ADR) process** for @zeix
 What would you like to do with ADRs?
 
 1. **Create** a new ADR
-2. **Update** an existing ADR (only for Proposed status)
+2. **Update** an existing ADR (in place if unpublished; otherwise only Proposed status — see update-adr.md)
 3. **List** all ADRs
-4. **Supersede** an existing ADR
+4. **Supersede** a published ADR
 5. **Search** ADRs by keyword
 
 Wait for response before proceeding.
@@ -73,7 +73,7 @@ All in `workflows/`:
 | Workflow | Purpose |
 |---|---|
 | create-adr.md | Create a new ADR from the template |
-| update-adr.md | Update a Proposed ADR (immutable after Accepted) |
+| update-adr.md | Update an ADR — in place if unpublished, Proposed-only if published |
 | list-adr.md | List all ADRs, optionally filtered by keyword |
 | supersede-adr.md | Create a new ADR that supersedes an existing one |
 </workflows_index>
