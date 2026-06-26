@@ -72,4 +72,33 @@ declare class InvalidCustomElementError extends TypeError {
      */
     constructor(target: HTMLElement, where: string);
 }
-export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPropertyNameError, InvalidReactivesError, MissingElementError, };
+/**
+ * Error thrown when `pass()` cannot bind one or more properties on the target —
+ * the property doesn't exist on the target, can't be resolved to a signal, or
+ * isn't Slot-backed (the target is not a Le Truc component, or the property is
+ * read-only/computed). See ADR 0011.
+ *
+ * @since 2.0.4
+ */
+declare class InvalidPassPropertyError extends TypeError {
+    /**
+     * @param {HTMLElement} host - Host component passing the properties
+     * @param {HTMLElement} target - Target component the properties were passed to
+     * @param {Map<string, string>} reasons - Map of failing property name to the reason it could not be bound
+     */
+    constructor(host: HTMLElement, target: HTMLElement, reasons: Map<string, string>);
+}
+/**
+ * Error thrown when a CSS selector passed to `all()` is malformed
+ *
+ * @since 2.0.4
+ */
+declare class InvalidSelectorError extends TypeError {
+    /**
+     * @param {ParentNode} parent - Parent node the selector was queried against
+     * @param {string} selector - The malformed selector
+     * @param {unknown} cause - The error thrown by the DOM selector engine
+     */
+    constructor(parent: ParentNode, selector: string, cause: unknown);
+}
+export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPassPropertyError, InvalidPropertyNameError, InvalidReactivesError, InvalidSelectorError, MissingElementError, };

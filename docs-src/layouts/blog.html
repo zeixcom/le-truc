@@ -1,31 +1,31 @@
 <!doctype html>
 <html lang="en">
 	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>{{ title }} – Le Truc Blog</title>
-		<meta name="description" content="{{ description }}" />
-		<meta name="author" content="{{ author }}" />
-		<meta name="article:published_time" content="{{ published-date }}" />
-		<meta name="article:modified_time" content="{{ modified-date }}" />
+		<meta name="description" content="{{ description }}">
+		<meta name="author" content="{{ author }}">
+		<meta name="article:published_time" content="{{ published-date }}">
+		<meta name="article:modified_time" content="{{ modified-date }}">
 		<link
 			rel="preload"
 			href="{{ base-path }}assets/main.css?v={{ css-hash }}"
 			as="style"
-		/>
+		>
 		<link
 			rel="modulepreload"
 			href="{{ base-path }}assets/main.js?v={{ js-hash }}"
-		/>
+		>
 		<link
 			rel="stylesheet"
 			href="{{ base-path }}assets/main.css?v={{ css-hash }}"
-		/>
+		>
 		<script
 			type="module"
 			src="{{ base-path }}assets/main.js?v={{ js-hash }}"
 		></script>
-		{{ alternate-link }}
+		<link rel="alternate" type="text/markdown" title="Agent-readable content" href="{{ alternate-link }}">
 	</head>
 	<body class="blog">
 		<context-router>
@@ -48,7 +48,7 @@
 						<div class="lead">
 							<card-blogmeta>
 								<span>
-									<img src="{{ author-avatar }}" alt="Avatar of {{ author }}" />
+									<img src="{{ author-avatar }}" alt="Avatar of {{ author }}">
 									<span>{{ author }}</span>
 								</span>
 								<span>

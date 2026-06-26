@@ -29,7 +29,7 @@ The cleanup in `pass()` restores the original signal when the parent disconnects
 
 ## Memo — `all()` Element Collection
 
-`all(selector, required?)` returns a `Memo<E[]>` created by `createElementsMemo()` in `src/ui.ts`. If `required` is a non-empty string and no elements match at query time, a `MissingElementError` is thrown before the Memo is returned.
+`all(selector, required?)` returns a `Memo<E[]>` created by `createElementsMemo()` in `src/helpers/dom.ts`. If `required` is a non-empty string and no elements match at query time, a `MissingElementError` is thrown before the Memo is returned.
 
 The `Memo` uses the `watched` option to set up a `MutationObserver` lazily — the observer only activates when the Memo has an active reactive reader.
 

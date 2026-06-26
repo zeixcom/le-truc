@@ -1,28 +1,28 @@
 <!doctype html>
 <html lang="en">
 	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>Introduction – Le Truc Docs</title>
-		<meta name="description" content="Overview and key benefits of Le Truc" />
+		<meta name="description" content="Overview and key benefits of Le Truc">
 		<link
 			rel="preload"
-			href="./assets/main.css?v=1ba37087896f1421"
+			href="./assets/main.css?v=771c4503786a35c7"
 			as="style"
-		/>
+		>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=801ce2ec6261b88d"
-		/>
+			href="./assets/main.js?v=3912562ae4d2b536"
+		>
 		<link
 			rel="stylesheet"
-			href="./assets/main.css?v=1ba37087896f1421"
-		/>
+			href="./assets/main.css?v=771c4503786a35c7"
+		>
 		<script
 			type="module"
-			src="./assets/main.js?v=801ce2ec6261b88d"
+			src="./assets/main.js?v=3912562ae4d2b536"
 		></script>
-		<link rel="alternate" type="text/markdown" title="Agent-readable content" href="./index.md" />
+		<link rel="alternate" type="text/markdown" title="Agent-readable content" href="./index.md">
 	</head>
 
 	<body class="">
@@ -31,7 +31,7 @@
 				<a href="#main" class="skiplink visually-hidden">
 					Skip to main content
 				</a>
-				<h1 class="content">Le Truc Docs <small>2.0.3</small></h1>
+				<h1 class="content">Le Truc Docs <small>2.1.0</small></h1>
 				<section-menu>
 		<nav>
 			<h2 class="visually-hidden">Main Menu</h2>
@@ -99,7 +99,7 @@
 				</card-callout>
 			</header>
 
-			<main id="main" class="content-grid"><section-hero><h1 id="-introduction"><a name="-introduction" class="anchor" href="#-introduction"><span class="title">📖 Introduction</span><span class="permalink">#</span></a></h1><div class="hero-layout"><div class="lead"><p><strong>Le Truc adds a reactive layer to server-rendered HTML.</strong> Keep your existing backend. Le Truc wires type-safe component properties to fine-grained DOM updates in the browser, without re-rendering and without a JavaScript server.</p></div></div></section-hero><section class="breakout" id="undefined"><h2 id="what-is-le-truc"><a name="what-is-le-truc" class="anchor" href="#what-is-le-truc"><span class="title">What is Le Truc?</span><span class="permalink">#</span></a></h2><module-carousel><h2 class="visually-hidden">Slides</h2><div class="slides"><div id="slide1" role="tabpanel" aria-current="true" class="purple"><h3>We Can Have Nice Things!</h3><div class="slide-content"><ul><li>Embrace the Web Platform</li><li>Use any server-side technology to render HTML</li><li>Type-safe reactive components</li><li>Fine-grained DOM updates — no VDOM, no diffing</li><li>Under 10 kB gzipped, tree-shakeable</li></ul></div></div><div id="slide2" role="tabpanel" aria-current="false" class="pink"><h3>HTML First.</h3><div class="slide-content"><p>Le Truc assumes you start with semantic HTML and want to enhance it with behavior:</p><module-codeblock language="html" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">html</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hello-world</span><span style="color:#F8F8F2">></span></span>
+			<main id="main" class="content-grid"><section-hero><h1 id="-introduction"><a class="anchor" href="#-introduction"><span class="title">📖 Introduction</span><span class="permalink">#</span></a></h1><div class="hero-layout"><div class="lead"><p><strong>Le Truc adds a reactive layer to server-rendered HTML.</strong> Keep your existing backend. Le Truc wires type-safe component properties to fine-grained DOM updates in the browser, without re-rendering and without a JavaScript server.</p></div></div></section-hero><section class="breakout"><h2 id="what-is-le-truc"><a class="anchor" href="#what-is-le-truc"><span class="title">What is Le Truc?</span><span class="permalink">#</span></a></h2><module-carousel><h2 class="visually-hidden">Slides</h2><div class="slides"><div id="slide1" role="tabpanel" aria-current="true" class="purple"><h3>We Can Have Nice Things!</h3><div class="slide-content"><ul><li>Embrace the Web Platform</li><li>Use any server-side technology to render HTML</li><li>Type-safe reactive components</li><li>Fine-grained DOM updates — no VDOM, no diffing</li><li>Under 10 kB gzipped, tree-shakeable</li></ul></div></div><div id="slide2" role="tabpanel" aria-current="false" class="pink"><h3>HTML First.</h3><div class="slide-content"><p>Le Truc assumes you start with semantic HTML and want to enhance it with behavior:</p><module-codeblock language="html" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">html</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">&#x3C;</span><span style="color:#F92672">hello-world</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">  &#x3C;</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">>Hello, &#x3C;</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">>Alice&#x3C;/</span><span style="color:#F92672">span</span><span style="color:#F8F8F2">>!&#x3C;/</span><span style="color:#F92672">p</span><span style="color:#F8F8F2">></span></span>
 <span class="line"><span style="color:#F8F8F2">&#x3C;/</span><span style="color:#F92672">hello-world</span><span style="color:#F8F8F2">></span></span>
 <span class="line"></span></code></pre></module-scrollarea><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>This means better SEO, faster initial page loads, and progressive enhancement that works even when JavaScript fails.</p></div></div><div id="slide3" role="tabpanel" aria-current="false" class="orange"><h3>Add JavaScript.</h3><div class="slide-content"><p>Progressively enhance the user experience by adding interactivity:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">js</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { bindText, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '@zeix/le-truc'</span></span>

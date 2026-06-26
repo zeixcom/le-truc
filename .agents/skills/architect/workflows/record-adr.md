@@ -41,7 +41,10 @@ Confirm with the user:
 
 Search existing ADRs to ensure this decision isn't already documented:
 - Run: `grep -r "keyword" /adr/*.md`
-- If an existing ADR covers this, ask if it should be updated (if Proposed) or superseded (if Accepted)
+- If an existing ADR covers this, check whether it's published on `main` (`git show main:adr/000X-title.md`):
+  - Not published → amend it in place (adr-keeper's update-adr.md), regardless of its status — there's no public decision yet to preserve a record of
+  - Published and Proposed → update it in place
+  - Published and Accepted/Rejected/Superseded → supersede it (adr-keeper's supersede-adr.md)
 
 ## Step 3: Gather ADR content
 

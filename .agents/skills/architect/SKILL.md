@@ -46,7 +46,7 @@ All tasks in `TODO.md` use this format:
 
 - [x] LT-002: Brief task title — done, pending review ⏳
   **Skill:** le-truc-dev
-  **Changed:** `src/effects.ts` (new `makeEach()` fn, lines 42–90)
+  **Changed:** `src/helpers/reactive.ts` (new `makeEach()` fn, lines 42–90)
   **How:** Follows the same pattern as `makeWatch()` but iterates over a `Memo<T[]>`.
   **Check:** Ergonomics of `each()` in the factory context; consistent naming with `watch()`?
 

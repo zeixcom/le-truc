@@ -11,12 +11,12 @@
 			aria-autocomplete="list"
 			autocomplete="off"
 			required
-		/>
+		>
 		<form-listbox
 			id="timezone-popup"
 			src="./test/form-listbox/mocks/timezones.json"
 		>
-			<input type="hidden" name="timezone-listbox" />
+			<input type="hidden" name="timezone-listbox">
 			<card-callout>
 				<p class="loading" role="status">Loading...</p>
 				<p class="error" role="alert" aria-live="assertive" hidden></p>
@@ -36,7 +36,7 @@
 	</p>
 </form-combobox>
 
-<hr />
+<hr>
 
 <form>
 	<form-combobox>
@@ -53,9 +53,9 @@
 				aria-controls="color-popup"
 				aria-autocomplete="list"
 				autocomplete="off"
-			/>
+			>
 			<form-listbox id="color-popup">
-				<input type="hidden" name="color-listbox" />
+				<input type="hidden" name="color-listbox">
 				<div role="listbox" aria-labelledby="color-label">
 					<button type="button" role="option" tabindex="-1" value="Red">
 						Red

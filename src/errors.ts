@@ -111,11 +111,68 @@ class InvalidCustomElementError extends TypeError {
 	}
 }
 
+/**
+ * Error thrown when `pass()` cannot bind one or more properties on the target —
+ * the property doesn't exist on the target, can't be resolved to a signal, or
+ * isn't Slot-backed (the target is not a Le Truc component, or the property is
+ * read-only/computed). See ADR 0011.
+ *
+ * @since 2.0.4
+ */
+class InvalidPassPropertyError extends TypeError {
+	/**
+	 * @param {HTMLElement} host - Host component passing the properties
+	 * @param {HTMLElement} target - Target component the properties were passed to
+	 * @param {Map<string, string>} reasons - Map of failing property name to the reason it could not be bound
+	 */
+	constructor(
+		host: HTMLElement,
+		target: HTMLElement,
+		reasons: Map<string, string>,
+	) {
+		const detail = Array.from(
+			reasons,
+			([prop, reason]) => `'${prop}' ${reason}`,
+		).join('; ')
+		super(
+			`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}.`,
+		)
+		this.name = 'InvalidPassPropertyError'
+	}
+}
+
+/**
+ * Error thrown when a CSS selector passed to `all()` is malformed
+ *
+ * @since 2.0.4
+ */
+class InvalidSelectorError extends TypeError {
+	/**
+	 * @param {ParentNode} parent - Parent node the selector was queried against
+	 * @param {string} selector - The malformed selector
+	 * @param {unknown} cause - The error thrown by the DOM selector engine
+	 */
+	constructor(parent: ParentNode, selector: string, cause: unknown) {
+		const where =
+			typeof ShadowRoot !== 'undefined' && parent instanceof ShadowRoot
+				? `${elementName(parent.host)} shadow root`
+				: typeof Element !== 'undefined' && parent instanceof Element
+					? elementName(parent)
+					: 'document'
+		super(
+			`Invalid selector "${selector}" passed to all() in ${where}. ${cause instanceof Error ? cause.message : String(cause)}`,
+		)
+		this.name = 'InvalidSelectorError'
+	}
+}
+
 export {
 	DependencyTimeoutError,
 	InvalidComponentNameError,
 	InvalidCustomElementError,
+	InvalidPassPropertyError,
 	InvalidPropertyNameError,
 	InvalidReactivesError,
+	InvalidSelectorError,
 	MissingElementError,
 }

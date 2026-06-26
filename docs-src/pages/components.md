@@ -252,7 +252,7 @@ defineComponent('module-tabgroup', ({ all, expose, on, watch }) => {
 
 Without a hint string (second argument), `first()` returns `undefined` if no match is found and effects for that key are silently skipped. With a hint string, `first()` throws a `MissingElementError` if the element is missing — use this when the element is truly required for the component to function.
 
-The `all()` function returns a `Memo<E[]>` — a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. Because it's reactive, effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM.
+The `all()` function returns a `Memo<E[]>` — a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. Because it's reactive, effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM. A malformed selector throws `InvalidSelectorError` immediately, at the `all()` call site.
 
 {% callout .tip %}
 `all()` observes structural changes and re-runs effects accordingly. Prefer `first()` when targeting a single element known to be present at connection time.

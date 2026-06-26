@@ -63,13 +63,7 @@ Check each link in order:
 
 ## Step 3: Enable Debug Logging
 
-Set `host.debug = true` on component instance from browser console or test:
-
-```javascript
-document.querySelector('my-component').debug = true
-```
-
-For project-wide enhanced error messages, build with `process.env.DEV_MODE=true`.
+Build with `process.env.DEV_MODE=true` for enhanced error messages, dependency-timeout warnings, and unbranded-parser warnings. There is no per-instance debug flag — `DEV_MODE` is a module-level flag set at build time, not a runtime property on the host element.
 
 ---
 

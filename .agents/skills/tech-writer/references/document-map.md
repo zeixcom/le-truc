@@ -52,7 +52,7 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 **Consistency checks:**
 - `defineComponent` call signature in all examples matches `src/component.ts`
 - Parser names and signatures match `src/parsers/`
-- `first()` and `all()` behavior description matches `src/ui.ts`
+- `first()` and `all()` behavior description matches `src/helpers/dom.ts`
 - `defineMethod()` description matches `src/component.ts`
 - All code examples compile against current exports in `index.ts`
 
@@ -70,7 +70,7 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 
 **Consistency checks:**
 - `pass()` callout about Le Truc-only scope is accurate
-- `provideContexts` / `requestContext` example signatures match `src/context.ts`
+- `provideContexts` / `requestContext` example signatures match `src/helpers/context.ts`
 - `defineMethod()` branding requirement is accurately stated
 - All code examples compile against current exports
 
@@ -174,14 +174,14 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 **Consistency checks:**
 - File map matches actual files in `src/` and `src/parsers/`
 - Lifecycle section matches `src/component.ts`
-- Effect system description matches `src/effects.ts`, `src/events.ts`, and `src/bindings.ts`
-- `pass()` description matches `src/effects.ts` (`makePass`)
-- Parser/MethodProducer distinction matches `src/component.ts`
+- Effect system description matches `src/helpers/reactive.ts`, `src/helpers/events.ts`, and `src/bindings.ts`
+- `pass()` description matches `src/helpers/reactive.ts` (`makePass`)
+- Parser/MethodProducer distinction matches `src/types.ts`
 
 ## AGENTS.md
 **Audience:** AI agents at inference time
 **Register:** Terse, direct, AI-optimized — every token has a cost; no explanatory padding
-**Scope:** Non-obvious behaviors that a competent Le Truc developer would not predict from the public API alone; debug mode flags
+**Scope:** Non-obvious behaviors that a competent Le Truc developer would not predict from the public API alone; the `DEV_MODE` debug flag
 
 **Update triggers:**
 - A non-obvious behavior is introduced, changed, or resolved

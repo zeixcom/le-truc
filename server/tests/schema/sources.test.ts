@@ -19,7 +19,7 @@ describe('sources schema - path normalization', () => {
 
 		const result = sources.transform!(node, {}) as Tag
 		expect(result.name).toBe('details')
-		expect(result.attributes.src).toBe('./sources/basic-counter.html')
+		expect(result.attributes.src).toBe(undefined)
 
 		const lazyload = result.children.find(
 			child => child instanceof Tag && child.name === 'module-lazyload',
@@ -36,7 +36,7 @@ describe('sources schema - path normalization', () => {
 		})
 
 		const result = sources.transform!(node, {}) as Tag
-		expect(result.attributes.src).toBe('./sources/form-spinbutton.html')
+		expect(result.attributes.src).toBe(undefined)
 
 		const lazyload = result.children.find(
 			child => child instanceof Tag && child.name === 'module-lazyload',

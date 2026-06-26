@@ -2,7 +2,7 @@
 
 > **ScopeOptions** = `object`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:94
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:95
 
 Options for configuring scope behavior.
 
@@ -12,7 +12,7 @@ Options for configuring scope behavior.
 
 > `optional` **root?**: `boolean`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:103
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:104
 
 When `true`, the scope is not registered on the current parent owner.
 The returned `dispose` function becomes the sole mechanism for tearing down the scope.

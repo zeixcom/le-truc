@@ -16,6 +16,14 @@ type MethodProducer = ((...args: any[]) => void) & {
  * because they are fundamental JavaScript / `Object` builtins.
  */
 type ReservedWords = 'constructor' | 'prototype' | '__proto__' | 'toString' | 'valueOf' | 'hasOwnProperty' | 'isPrototypeOf' | 'propertyIsEnumerable' | 'toLocaleString';
+/**
+ * Runtime mirror of the {@link ReservedWords} type. Used by `#initSignals`
+ * to reject reserved property names that defeat the type-level exclusion
+ * (e.g. via `asJSON`-parsed keys or `Record<string, …>` casts). Defining
+ * these as own properties on the host would corrupt the prototype chain or
+ * shadow builtins used internally by the reactive layer.
+ */
+declare const RESERVED_WORDS: ReadonlySet<string>;
 /** A valid reactive property name — any string that is not an `HTMLElement` or `ReservedWords` key. */
 type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>;
 /** A record of reactive property names to their value types, used to type a component's props. */
@@ -59,6 +67,18 @@ declare const isParser: <T extends {}>(value: unknown) => value is Parser<T>;
  */
 declare const isMethodProducer: (value: unknown) => value is MethodProducer;
 /**
+ * Check whether a string is a reserved property name.
+ *
+ * Runtime counterpart of the {@link ReservedWords} type exclusion. `#initSignals`
+ * calls this to reject names that would corrupt the host's prototype chain or
+ * shadow `Object` builtins used by the reactive layer.
+ *
+ * @since 2.0.4
+ * @param {string} name - Property name to check
+ * @returns {boolean} True if the name is reserved and must not be used as a reactive property
+ */
+declare const isReservedWord: (name: string) => boolean;
+/**
  * Brand a custom parser function with the `PARSER_BRAND` symbol.
  *
  * Use this to wrap any custom parser so `isParser()` can identify it reliably.
@@ -81,4 +101,4 @@ declare const asParser: <T extends {}>(fn: Parser<T>) => Parser<T>;
 declare const defineMethod: <T extends (...args: any[]) => void>(fn: T) => T & {
     readonly [METHOD_BRAND]: true;
 };
-export { asParser, type ComponentProp, type ComponentProps, defineMethod, type EffectDescriptor, type FactoryResult, type Falsy, isMethodProducer, isParser, type MethodProducer, type Parser, type ReservedWords, };
+export { asParser, type ComponentProp, type ComponentProps, defineMethod, type EffectDescriptor, type FactoryResult, type Falsy, isMethodProducer, isParser, isReservedWord, type MethodProducer, type Parser, RESERVED_WORDS, type ReservedWords, };

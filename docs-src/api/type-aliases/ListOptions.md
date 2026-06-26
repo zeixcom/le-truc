@@ -46,7 +46,7 @@ Factory for per-item signals. Defaults to `createState`.
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:30
 
-Equality function for item state signals. Defaults to reference equality (`===`).
+Equality function for item state signals. Defaults to `DEEP_EQUALITY`.
 
 ###### Parameters
 
@@ -80,7 +80,7 @@ Key generation strategy. A string prefix or a function `(item) => string | undef
 
 Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/list.d.ts:28
 
-Lifecycle callback invoked when the list gains its first downstream subscriber. Must return a cleanup function.
+Lifecycle callback invoked when the list gains its first downstream subscriber. Must return a cleanup function. Stays active through structural mutations (add/remove/sort) — only the subscriber count matters.
 
 ###### Returns
 

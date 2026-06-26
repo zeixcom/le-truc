@@ -628,7 +628,7 @@ describe('validateHtml', () => {
 	})
 
 	test('should handle self-closing tags', () => {
-		const result = validateHtml('<img src="test.jpg" /><br />')
+		const result = validateHtml('<img src="test.jpg"><br>')
 		expect(result.valid).toBe(true)
 	})
 

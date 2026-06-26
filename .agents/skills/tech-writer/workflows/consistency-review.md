@@ -36,7 +36,7 @@ ls examples/
 #### `components.md`
 - `defineComponent` call signatures in examples match `src/component.ts`
 - Parser names in examples match current exports (`asString`, `asBoolean`, etc.)
-- `first()` / `all()` descriptions match `src/ui.ts`
+- `first()` / `all()` descriptions match `src/helpers/dom.ts`
 - `defineMethod()` description matches `src/component.ts`
 - All code examples compile against current exports in `index.ts`
 
@@ -58,7 +58,7 @@ ls examples/
 
 - File map lists all files currently in `src/` and `src/parsers/` (no `src/effects/` directory in v2.0)
 - No section describes a removed function or stale behavior
-- Built-in helpers/effects table matches current exports from `src/bindings.ts`, `src/effects.ts`, `src/events.ts`
+- Built-in helpers/effects table matches current exports from `src/bindings.ts`, `src/helpers/reactive.ts`, `src/helpers/events.ts`
 
 ### Step 5: Check `AGENTS.md`
 

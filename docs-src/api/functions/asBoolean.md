@@ -2,19 +2,22 @@
 
 > **asBoolean**(): [`Parser`](../type-aliases/Parser.md)\<`boolean`\>
 
-Defined in: [src/parsers/boolean.ts:13](https://github.com/zeixcom/le-truc/blob/8b1a8f8a0600ebb21b0e3c25fa43e088d951188e/src/parsers/boolean.ts#L13)
+Defined in: [src/parsers/boolean.ts:16](https://github.com/zeixcom/le-truc/blob/62831a486b22055e2f0aae8a1bc13f5e79ffdffc/src/parsers/boolean.ts#L16)
 
 Parser that converts a boolean HTML attribute to an actual boolean.
 
 Returns `true` when the attribute is present (value is not `null`) and its value
-is not the string `'false'`. Returns `false` otherwise — matching standard HTML
-boolean attribute semantics while allowing explicit opt-out via `attr="false"`.
+is not the string `'false'`, compared case-insensitively (`'FALSE'`, `'False'`, …
+also opt out). Returns `false` otherwise — matching standard HTML boolean attribute
+semantics while allowing explicit opt-out via `attr="false"`, and also covering
+ARIA-style string-boolean attributes (e.g. `aria-hidden="true"`/`"false"`), which
+are conventionally case-insensitive.
 
 #### Returns
 
 [`Parser`](../type-aliases/Parser.md)\<`boolean`\>
 
-Parser that returns `true` if the attribute is set and not `"false"`, `false` otherwise
+Parser that returns `true` if the attribute is set and not (case-insensitively) `"false"`, `false` otherwise
 
 #### Since
 

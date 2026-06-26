@@ -4,18 +4,18 @@
 
 <!-- Default example -->
 <p>
-	Volume unit, default (English) locale:<br />
+	Volume unit, default (English) locale:<br>
 	<basic-number
 		value="25678.9"
 		options='{"style":"unit","unit":"liter","unitDisplay":"long"}'
 	></basic-number>
 </p>
 
-<hr />
+<hr>
 
 <!-- Currency examples -->
 <p>
-	Swiss Francs currency, German (Switzerland) locale:<br />
+	Swiss Francs currency, German (Switzerland) locale:<br>
 	<basic-number
 		id="german-swiss"
 		lang="de-CH"
@@ -24,10 +24,10 @@
 	></basic-number>
 </p>
 
-<hr />
+<hr>
 
 <p>
-	Swiss Francs currency, French (Switzerland) locale:<br />
+	Swiss Francs currency, French (Switzerland) locale:<br>
 	<basic-number
 		id="french-swiss"
 		lang="fr-CH"
@@ -36,11 +36,11 @@
 	></basic-number>
 </p>
 
-<hr />
+<hr>
 
 <!-- International examples -->
 <p>
-	Arabic speed unit:<br />
+	Arabic speed unit:<br>
 	<basic-number
 		id="arabic-speed"
 		lang="ar-EG"
@@ -49,9 +49,9 @@
 	></basic-number>
 </p>
 
-<hr />
+<hr>
 <p>
-	Chinese time unit:<br />
+	Chinese time unit:<br>
 	<basic-number
 		id="chinese-time"
 		lang="zh-Hans-CN-u-nu-hanidec"
@@ -60,11 +60,11 @@
 	></basic-number>
 </p>
 
-<hr />
+<hr>
 
 <!-- Decimal formatting example -->
 <p>
-	Decimal number with min 2, max 3 fraction digits:<br />
+	Decimal number with min 2, max 3 fraction digits:<br>
 	<basic-number
 		id="decimal-test"
 		value="1234.56789"
@@ -72,12 +72,12 @@
 	></basic-number>
 </p>
 
-<hr />
+<hr>
 
 <!-- Inheritance example -->
 <div lang="de-DE">
 	<p>
-		Euro currency, inherited German (Germany) locale:<br />
+		Euro currency, inherited German (Germany) locale:<br>
 		<basic-number
 			id="inherit-test"
 			value="1234.5"
@@ -86,7 +86,7 @@
 	</p>
 </div>
 
-<hr />
+<hr>
 
 <!-- Zero and negative examples -->
 <p>Zero: <basic-number id="zero-test" value="0"></basic-number></p>
@@ -95,7 +95,7 @@
 	<basic-number id="negative-test" value="-1234.5"></basic-number>
 </p>
 
-<hr />
+<hr>
 
 <!-- Invalid configuration examples - should log console errors on page load -->
 <!-- These demonstrate proper error reporting to help developers debug configuration issues -->
@@ -109,7 +109,7 @@
 
 <!-- Invalid JSON syntax - logs "Invalid JSON: SyntaxError..." -->
 <p>
-	Invalid JSON:<br />
+	Invalid JSON:<br>
 	<basic-number
 		id="invalid-json-html"
 		value="1234.5"
@@ -117,11 +117,11 @@
 	></basic-number>
 </p>
 
-<hr />
+<hr>
 
 <!-- Missing required currency for style="currency" - logs "style='currency' requires a 3-letter ISO currency..." -->
 <p>
-	Missing currency:<br />
+	Missing currency:<br>
 	<basic-number
 		id="missing-currency-html"
 		value="1000"
@@ -129,11 +129,11 @@
 	></basic-number>
 </p>
 
-<hr />
+<hr>
 
 <!-- Missing required unit for style="unit" - logs "style='unit' requires a 'unit'..." -->
 <p>
-	Missing unit:<br />
+	Missing unit:<br>
 	<basic-number
 		id="missing-unit-html"
 		value="500"

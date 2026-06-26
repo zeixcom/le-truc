@@ -2,6 +2,6 @@
 
 > **ComponentProp** = `Exclude`\<`string`, keyof `HTMLElement` \| [`ReservedWords`](ReservedWords.md)\>
 
-Defined in: [src/types.ts:42](https://github.com/zeixcom/le-truc/blob/8b1a8f8a0600ebb21b0e3c25fa43e088d951188e/src/types.ts#L42)
+Defined in: [src/types.ts:61](https://github.com/zeixcom/le-truc/blob/62831a486b22055e2f0aae8a1bc13f5e79ffdffc/src/types.ts#L61)
 
 A valid reactive property name — any string that is not an `HTMLElement` or `ReservedWords` key.

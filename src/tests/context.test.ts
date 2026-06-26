@@ -2,7 +2,7 @@
  * Unit tests for context helpers in src/helpers/context.ts
  */
 
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import {
 	CONTEXT_REQUEST,
 	ContextRequestEvent,
@@ -11,6 +11,13 @@ import {
 	makeRequestContext,
 } from '../helpers/context'
 import type { ComponentProps } from '../types'
+// `mock.module` mutates the live module namespace in place, so a captured
+// `import * as ns` reference reflects whatever the mock last set — it is NOT
+// a stable snapshot. Spread it into a plain object at file-load time, before
+// any `mock.module('../util', …)` call below, and restore from that snapshot.
+import * as realUtilNamespace from '../util'
+
+const realUtil = { ...realUtilNamespace }
 
 /* === Test Types === */
 
@@ -270,6 +277,86 @@ describe('makeProvideContexts', () => {
 		eventMap.dispatchEvent(event)
 
 		cleanup?.()
+	})
+
+	test('getter swallows a throwing property access and returns undefined', () => {
+		const throwingHost = {
+			...createTestHost(),
+			addEventListener: eventMap.addEventListener,
+			removeEventListener: eventMap.removeEventListener,
+		} as unknown as TestHost
+		Object.defineProperty(throwingHost, 'theme', {
+			get() {
+				throw new Error('boom')
+			},
+		})
+
+		const provideContexts = makeProvideContexts(throwingHost)
+		const cleanup = provideContexts(['theme'])()
+
+		let receivedGetter: (() => string) | null = null
+		const context = createContext<() => string>('theme')
+		const event = new ContextRequestEvent(context, (getter: () => string) => {
+			receivedGetter = getter
+		})
+
+		eventMap.dispatchEvent(event)
+
+		expect(receivedGetter).not.toBeNull()
+		expect(() => receivedGetter!()).not.toThrow()
+		expect(receivedGetter!()).toBeUndefined()
+
+		cleanup?.()
+	})
+
+	test('logs a DEV_MODE warning naming the host when the getter throws', () => {
+		// DEV_MODE is a module-level const captured at import time from
+		// `../util`, so flipping `process.env.DEV_MODE` here has no effect on
+		// the already-loaded binding. `mock.module` patches the live binding
+		// in place (including in already-imported consumers like context.ts),
+		// so it's the only way to exercise this branch from a unit test.
+		// Deliberately synchronous (no `await`) — bun:test can interleave other
+		// files' tests across an `await` point, which would leak this mock into
+		// unrelated tests for the window before it's restored. The restore
+		// itself uses the `realUtil` snapshot above, not a live import — see
+		// that declaration for why a live reference can't be used to restore.
+		const originalWarn = console.warn
+		const warnings: unknown[][] = []
+		console.warn = (...args: unknown[]) => warnings.push(args)
+
+		try {
+			mock.module('../util', () => ({ ...realUtil, DEV_MODE: true }))
+
+			const throwingHost = {
+				...createTestHost(),
+				addEventListener: eventMap.addEventListener,
+				removeEventListener: eventMap.removeEventListener,
+			} as unknown as TestHost
+			Object.defineProperty(throwingHost, 'theme', {
+				get() {
+					throw new Error('boom')
+				},
+			})
+
+			const provideContexts = makeProvideContexts(throwingHost)
+			const cleanup = provideContexts(['theme'])()
+
+			let receivedGetter: (() => string) | null = null
+			const context = createContext<() => string>('theme')
+			const event = new ContextRequestEvent(context, (getter: () => string) => {
+				receivedGetter = getter
+			})
+			eventMap.dispatchEvent(event)
+			receivedGetter!()
+
+			cleanup?.()
+		} finally {
+			mock.module('../util', () => realUtil)
+			console.warn = originalWarn
+		}
+
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0]).toContain('provideContexts: getter threw')
 	})
 
 	test('only matches string context keys', () => {

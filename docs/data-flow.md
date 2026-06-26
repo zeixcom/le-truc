@@ -50,7 +50,7 @@ defineComponent('module-catalog', ({ all, first, pass }) => {
 
 Whenever any `<form-spinbutton>` value changes, `total` updates and the badge reflects the new count — no event listeners or manual wiring needed.
 
-> **pass() works with Le Truc components only:** `pass()` replaces the backing signal of the child's reactive property directly — this only works for Le Truc components whose properties are Slot-backed. For non-Le Truc custom elements (Lit, Stencil, FAST, etc.) or plain HTML elements, use `watch(source, bindProperty(el, key))` instead. `bindProperty` assigns to the element's public JS setter and works correctly regardless of the child's internal framework.
+> **pass() works with Le Truc components only:** `pass()` replaces the backing signal of the child's reactive property directly — this only works for Le Truc components whose properties are Slot-backed. For non-Le Truc custom elements (Lit, Stencil, FAST, etc.) or plain HTML elements, use `watch(source, bindProperty(el, key))` instead. `bindProperty` assigns to the element's public JS setter and works correctly regardless of the child's internal framework. Passing to a prop that isn't Slot-backed throws `InvalidPassPropertyError` — it never fails silently.
 
 ### Child Component: BasicButton
 
@@ -190,7 +190,7 @@ Here's how everything comes together:
           readonly
           disabled
           hidden
-        />
+        >
         <button type="button" class="increment" aria-label="Increment">
           <span class="zero">Add to Cart</span>
           <span class="other" hidden>+</span>
@@ -213,7 +213,7 @@ Here's how everything comes together:
           readonly
           disabled
           hidden
-        />
+        >
         <button type="button" class="increment" aria-label="Increment">
           <span class="zero">Add to Cart</span>
           <span class="other" hidden>+</span>
@@ -236,7 +236,7 @@ Here's how everything comes together:
           readonly
           disabled
           hidden
-        />
+        >
         <button type="button" class="increment" aria-label="Increment">
           <span class="zero">Add to Cart</span>
           <span class="other" hidden>+</span>

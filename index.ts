@@ -1,4 +1,4 @@
-// Le Truc 2.0.2
+// Le Truc 2.1.0
 
 // From Cause & Effect
 export {
@@ -24,6 +24,7 @@ export {
 	createTask,
 	DEEP_EQUALITY,
 	DEFAULT_EQUALITY,
+	DuplicateKeyError,
 	type EffectCallback,
 	type Guard,
 	InvalidCallbackError,
@@ -52,6 +53,7 @@ export {
 	type MemoCallback,
 	match,
 	NullishSignalValueError,
+	PromiseValueError,
 	ReadonlySignalError,
 	RequiredOwnerError,
 	type ScopeOptions,
@@ -71,42 +73,8 @@ export {
 	UnsetSignalValueError,
 	unown,
 	untrack,
-	valueString,
 } from '@zeix/cause-effect'
 
-export {
-	defineComponent,
-	type FactoryContext,
-	type Initializers,
-	type MaybeSignal,
-} from './src/component'
-export {
-	CONTEXT_REQUEST,
-	type Context,
-	type ContextCallback,
-	ContextRequestEvent,
-	type ContextType,
-	createContext,
-	type ProvideContextsHelper,
-	type RequestContextHelper,
-	type UnknownContext,
-} from './src/helpers/context'
-export {
-	each,
-	type PassedProps,
-	type PassHelper,
-	type Reactive,
-	type WatchHelper,
-} from './src/helpers/reactive'
-export {
-	DependencyTimeoutError,
-	InvalidComponentNameError,
-	InvalidCustomElementError,
-	InvalidPropertyNameError,
-	InvalidReactivesError,
-	MissingElementError,
-} from './src/errors'
-export type { EventType, OnEventHandler, OnHelper } from './src/helpers/events'
 export {
 	bindAttribute,
 	bindClass,
@@ -121,24 +89,32 @@ export {
 	setTextPreservingComments,
 } from './src/bindings'
 export {
-	asParser,
-	type ComponentProp,
-	type ComponentProps,
-	defineMethod,
-	type EffectDescriptor,
-	type FactoryResult,
-	type Falsy,
-	isMethodProducer,
-	isParser,
-	type MethodProducer,
-	type Parser,
-	type ReservedWords,
-} from './src/types'
-export { asBoolean } from './src/parsers/boolean'
-export { asJSON } from './src/parsers/json'
-export { asClampedInteger, asInteger, asNumber } from './src/parsers/number'
-export { asEnum, asString } from './src/parsers/string'
-export { schedule, throttle } from './src/scheduler'
+	defineComponent,
+	type FactoryContext,
+	type Initializers,
+	type MaybeSignal,
+} from './src/component'
+export {
+	DependencyTimeoutError,
+	InvalidComponentNameError,
+	InvalidCustomElementError,
+	InvalidPassPropertyError,
+	InvalidPropertyNameError,
+	InvalidReactivesError,
+	InvalidSelectorError,
+	MissingElementError,
+} from './src/errors'
+export {
+	CONTEXT_REQUEST,
+	type Context,
+	type ContextCallback,
+	ContextRequestEvent,
+	type ContextType,
+	createContext,
+	type ProvideContextsHelper,
+	type RequestContextHelper,
+	type UnknownContext,
+} from './src/helpers/context'
 export {
 	type AllElements,
 	createElementsMemo,
@@ -154,3 +130,30 @@ export {
 	type SplitByComma,
 	type TrimWhitespace,
 } from './src/helpers/dom'
+export type { EventType, OnEventHandler, OnHelper } from './src/helpers/events'
+export {
+	each,
+	type PassedProps,
+	type PassHelper,
+	type Reactive,
+	type WatchHelper,
+} from './src/helpers/reactive'
+export { asBoolean } from './src/parsers/boolean'
+export { asJSON } from './src/parsers/json'
+export { asClampedInteger, asInteger, asNumber } from './src/parsers/number'
+export { asEnum, asString } from './src/parsers/string'
+export { schedule, throttle } from './src/scheduler'
+export {
+	asParser,
+	type ComponentProp,
+	type ComponentProps,
+	defineMethod,
+	type EffectDescriptor,
+	type FactoryResult,
+	type Falsy,
+	isMethodProducer,
+	isParser,
+	type MethodProducer,
+	type Parser,
+	type ReservedWords,
+} from './src/types'

@@ -216,7 +216,7 @@ export function createAccessibleHeading(
 	const slug = generateSlug(text)
 
 	return new Tag(`h${level}`, { id: slug, ...attributes }, [
-		new Tag('a', { name: slug, class: 'anchor', href: `#${slug}` }, [
+		new Tag('a', { class: 'anchor', href: `#${slug}` }, [
 			new Tag('span', { class: 'title' }, [text]),
 			new Tag('span', { class: 'permalink' }, ['#']),
 		]),

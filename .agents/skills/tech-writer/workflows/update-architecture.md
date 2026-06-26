@@ -22,7 +22,7 @@ Match the change type to the section:
 | `#setAccessor` signal creation | "The Component Lifecycle" → "#setAccessor" |
 | `makeWatch`, `makeOn`, `makePass`, or `each` | "The Effect System" |
 | `first()`, `all()`, or dependency resolution | "The UI Query System" |
-| Parser/Reader/MethodProducer detection | "The Parser System" |
+| Parser/MethodProducer detection | "The Parser System" |
 | Event-driven read-only props (`createState` + `on`) | "Event-Driven Sensors" |
 | `provideContexts`/`requestContext` | "The Context Protocol" |
 | `schedule()` | "The Scheduler" |
@@ -36,11 +36,11 @@ Pseudocode diagrams and inline function references are appropriate. Match actual
 
 ### Step 4: Update the helpers and effects tables if they changed
 
-The "Built-in helpers at a glance" table in "The Effect System" section must list every `bind*` helper exported from `src/bindings.ts`, and every `EffectDescriptor`-producing function from `src/effects.ts` and `src/events.ts`. If a helper was added, removed, or renamed, update the table.
+The "Built-in helpers at a glance" table in "The Effect System" section must list every `bind*` helper exported from `src/bindings.ts`, and every `EffectDescriptor`-producing function from `src/helpers/reactive.ts` and `src/helpers/events.ts`. If a helper was added, removed, or renamed, update the table.
 
 ## Success Criteria
 - File map matches actual files in `src/` and `src/parsers/`
 - Lifecycle description matches `src/component.ts`
-- Helpers and effects tables match current exports from `src/bindings.ts`, `src/effects.ts`, `src/events.ts`
+- Helpers and effects tables match current exports from `src/bindings.ts`, `src/helpers/reactive.ts`, `src/helpers/events.ts`
 - No section describes a removed function or a changed mechanism inaccurately
 - Register is technical and precise — mechanism described, not motivation
