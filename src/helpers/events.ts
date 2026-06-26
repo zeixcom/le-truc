@@ -8,7 +8,7 @@ import {
 } from '@zeix/cause-effect'
 import { throttle } from '../scheduler'
 import type { ComponentProps, EffectDescriptor, Falsy } from '../types'
-import { DEV_MODE, elementName, LOG_WARN } from '../util'
+import { DEV_MODE, elementName } from '../util'
 
 /* === Types === */
 
@@ -213,7 +213,7 @@ const makeOn = <P extends ComponentProps>(
 				// Memo target: check whether this event type bubbles
 				if (NON_BUBBLING_EVENTS.has(type)) {
 					if (DEV_MODE) {
-						console[LOG_WARN](
+						console.warn(
 							`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`,
 						)
 					}

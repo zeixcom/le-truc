@@ -4,7 +4,7 @@ import {
 	InvalidSelectorError,
 	MissingElementError,
 } from '../errors'
-import { DEV_MODE, isNotYetDefinedComponent, LOG_WARN } from '../util'
+import { DEV_MODE, isNotYetDefinedComponent } from '../util'
 
 /* === Types === */
 
@@ -363,7 +363,7 @@ const makeElementQueries = (
 				])
 					.then(callback)
 					.catch((error: unknown) => {
-						if (DEV_MODE) console[LOG_WARN](error)
+						if (DEV_MODE) console.warn(error)
 						callback()
 					})
 			})

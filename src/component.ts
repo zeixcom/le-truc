@@ -110,7 +110,6 @@ function defineComponent<P extends ComponentProps>(
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
 	class Truc extends HTMLElement {
-		debug?: boolean
 		#initialized = false
 		#setup: FactoryResult = []
 		#cleanup: MaybeCleanup

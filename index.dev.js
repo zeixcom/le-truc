@@ -1940,12 +1940,15 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
 };
 // src/util.ts
 var DEV_MODE = typeof process !== "undefined" && true;
-var LOG_WARN = "warn";
-var idString = (id) => id ? `#${id}` : "";
-var classString = (classList) => classList?.length ? `.${Array.from(classList).join(".")}` : "";
 var isCustomElement = (element) => element.localName.includes("-");
 var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
-var elementName = (el) => el ? `<${el.localName}${idString(el.id)}${classString(el.classList)}>` : "<unknown>";
+var elementName = (el) => {
+  if (!el)
+    return "<unknown>";
+  const id = el.id ? `#${el.id}` : "";
+  const classes = el.classList?.length ? `.${Array.from(el.classList).join(".")}` : "";
+  return `<${el.localName}${id}${classes}>`;
+};
 
 // src/errors.ts
 class InvalidComponentNameError extends TypeError {
@@ -2034,7 +2037,7 @@ var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
           return host[context];
         } catch (error) {
           if (DEV_MODE)
-            console[LOG_WARN]("provideContexts: getter threw", elementName(host), error);
+            console.warn("provideContexts: getter threw", elementName(host), error);
           return;
         }
       });
@@ -2163,7 +2166,7 @@ var makeElementQueries = (host) => {
           })
         ]).then(callback).catch((error) => {
           if (DEV_MODE)
-            console[LOG_WARN](error);
+            console.warn(error);
           callback();
         });
       });
@@ -2247,7 +2250,7 @@ var makeOn = (host) => {
       if (isMemo(target)) {
         if (NON_BUBBLING_EVENTS.has(type)) {
           if (DEV_MODE) {
-            console[LOG_WARN](`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
+            console.warn(`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
           }
           return createEffect(() => {
             for (const el of target.get()) {
@@ -2443,7 +2446,6 @@ function defineComponent(name, factory) {
     throw new InvalidComponentNameError(name);
 
   class Truc extends HTMLElement {
-    debug;
     #initialized = false;
     #setup = [];
     #cleanup;
