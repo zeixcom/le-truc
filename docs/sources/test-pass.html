@@ -79,7 +79,7 @@
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">/**</span></span>
-<span class="line"><span style="color:#88846F"> * Test component for the v1.1 factory `pass()` helper.</span></span>
+<span class="line"><span style="color:#88846F"> * Test component for the v2 factory `pass()` helper.</span></span>
 <span class="line"><span style="color:#88846F"> * Exercises: single-element pass, Memo pass, per-element lifecycle.</span></span>
 <span class="line"><span style="color:#88846F"> *</span></span>
 <span class="line"><span style="color:#88846F"> * The parent's `count` prop is passed to child `basic-number` elements'</span></span>
@@ -88,7 +88,7 @@
 <span class="line"><span style="color:#88846F"> */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">TestPassProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'test-pass'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> single </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">			'basic-number#single'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#E6DB74">			'Add basic-number with id="single".'</span><span style="color:#F8F8F2">,</span></span>
@@ -102,8 +102,8 @@
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'count'</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">n</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">				output.textContent </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> String</span><span style="color:#F8F8F2">(n)</span></span>
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
-<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(single, { value: </span><span style="color:#E6DB74">'count'</span><span style="color:#F8F8F2"> }),</span></span>
-<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(group, { value: </span><span style="color:#E6DB74">'count'</span><span style="color:#F8F8F2"> }),</span></span>
+<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(single, { </span><span style="color:#A6E22E">value</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.count }),</span></span>
+<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(group, { </span><span style="color:#A6E22E">value</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.count }),</span></span>
 <span class="line"><span style="color:#F8F8F2">		]</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>

@@ -7,7 +7,7 @@ description: 'Passing state, events, context'
 {% hero %}
 # 🔄 Data Flow
 
-**Learn how Le Truc components coordinate state.** Pass reactive signals from parent to child with `pass()`, expose callable methods with `defineMethod()`, and share values across the component tree with context.
+**Learn how Le Truc components coordinate state.** Pass reactive signals from parent to child with `pass()`, manage dynamic lists, and share values across the component tree with context.
 {% /hero %}
 
 {% section %}
@@ -157,7 +157,7 @@ defineComponent('form-spinbutton', ({ all, expose, first, host, on, watch }) => 
 - Whenever the user clicks a button or presses a handled key, the value property is updated.
 - The component sets hidden and disabled states of buttons and updates the text of the `input` element.
 
-### Full Example
+### Full Catalog Example
 
 Here's how everything comes together:
 
@@ -264,130 +264,110 @@ Here's how everything comes together:
 
 ## Managing Dynamic Lists
 
-The component coordination patterns above work with a fixed set of children. When your list grows and shrinks at runtime, you need a different approach: a **container** element where items live, a **`<template>`** for the item markup, and imperative **methods** on the host to add and remove items.
+The coordination patterns above assume a fixed set of children. When a list grows and shrinks at runtime, you need a different approach: a reactive **list of keyed items** holds the data, a `watch()` reconciler keeps the DOM in sync, and a **`<template>`** provides the markup for each item.
 
-### Exposing Methods
+### The Container, Template, and List
 
-Not every component property is a reactive signal. When a property represents a **command** — something you call rather than something you observe — use `defineMethod()`. Pass it directly to `expose()` with the callable function as the argument:
+The component owns a `createList()` — a reactive ordered collection where each item is a signal and items are identified by stable string keys. The HTML provides a container and an inert template:
 
-```js
-defineComponent('module-list', ({ expose, first }) => {
+```js#module-list.js
+defineComponent('module-list', ({ first, host, on, pass, watch }) => {
+  const form = first('form', 'Add a form element to enter a new list item.')
+  const textbox = first('form-textbox', 'Add <form-textbox> to enter a new item.')
+  const submit = first('basic-button.submit', 'Add <basic-button.submit> to add items.')
   const container = first('[data-container]', 'Add a container element for items.')
   const template = first('template', 'Add a template element for items.')
 
-  let addKey = 0
-  expose({
-    add: defineMethod((process) => {
-      const item = template.content.cloneNode(true).firstElementChild
-      if (item instanceof HTMLElement) {
-        item.dataset.key = String(addKey++) // stable identity for removal
-        if (process) process(item)          // optional post-processing before insert
-        container.append(item)
-      }
-    }),
-    delete: defineMethod((key) => {
-      container.querySelector(`[data-key="${key}"]`)?.remove()
-    }),
-  })
-  // ...
+  // Keyed reactive list of plain string items. The 'item' prefix feeds the
+  // auto-incrementing key generator (item0, item1, ...); stable keys let
+  // removal target the right item even as the list reorders.
+  const list = createList([], { keyConfig: 'item' })
+
+  return [
+    watch(() => Array.from(list.keys()), keys => { /* reconcile DOM */ }),
+    on(form, 'submit', e => { /* add item */ }),
+    on(host, 'click', e => { /* remove item by delegation */ }),
+    pass(submit, { disabled: () => !textbox.length }),
+  ]
 })
 ```
 
-The function passed to `defineMethod()` IS the callable method — `host.add` and `host.delete` will be that function. The `container`, `template`, and `addKey` references come from the factory closure. After connect, callers can use `host.add()` and `host.delete(key)` imperatively.
+The `keyConfig` option controls how keys are generated. A string prefix produces auto-incrementing keys (`'item'` → `item0`, `item1`, …). A function `(item) => string` derives the key from item content — required when the same item can reappear and must keep its identity. Without `keyConfig`, Le Truc falls back to position-based auto-increment.
 
-{% callout .tip title="Always use defineMethod(), never a plain function" %}
-Le Truc identifies method producers by a brand symbol attached by `defineMethod()`. An unbranded function passed to `expose()` is treated as a thunk instead. The same rule applies to custom parsers: always use `asParser()`.
-{% /callout %}
+### Reconciling the DOM with watch()
 
-### HTML Structure
-
-The component needs a container and a template:
-
-```html
-<module-list>
-  <ul data-container></ul>
-  <template>
-    <li>
-      <span><slot></slot></span>
-      <basic-button class="delete">
-        <button type="button">Remove</button>
-      </basic-button>
-    </li>
-  </template>
-</module-list>
-```
-
-Items already present in the container on first render are preserved. The `<template>` element is inert — its content is only cloned when `host.add()` is called.
-
-### Handling Deletion by Event Delegation
-
-Rather than attaching a listener to each delete button, use event delegation on the host: one `on(host, 'click', ...)` handler checks whether the click reached a delete button, then removes the closest keyed ancestor:
+The heart of the pattern is a single `watch()` that reads `list.keys()` and mirrors that order into the container. It runs once at connect and again whenever items are added or removed:
 
 ```js
-on(host, 'click', e => {
-  const target = e.target
-  if (target instanceof HTMLElement && target.closest('basic-button.delete')) {
-    e.stopPropagation()
-    target.closest('[data-key]')?.remove()
+watch(() => Array.from(list.keys()), keys => {
+  const current = new Map<string, HTMLElement>()
+  for (const child of container.children) {
+    const el = child as HTMLElement
+    if (el.dataset.key) current.set(el.dataset.key, el)
+  }
+
+  const keysSet = new Set(keys)
+
+  // Drop children whose key is no longer in the list.
+  for (const [key, el] of current) {
+    if (!keysSet.has(key)) el.remove()
+  }
+
+  // Insert new keys (cloning the template) and move every child into its
+  // target position. Existing nodes are reused, not recreated.
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]
+    let el = key && current.get(key)
+    if (key && !el) {
+      const fragment = template.content.cloneNode(true) as DocumentFragment
+      el = fragment.firstElementChild as HTMLElement
+      el.dataset.key = key
+      el.querySelector('slot')?.replaceWith(
+        document.createTextNode(list.byKey(key)?.get() ?? ''),
+      )
+    }
+    const currentAtI = container.children[i]
+    if (el && currentAtI !== el) container.insertBefore(el, currentAtI ?? null)
   }
 })
 ```
 
-This scales to any number of items and works for items added after setup — no re-binding needed.
+This reconciler handles three cases in one pass: removal (the node's key vanished), creation (a key has no node yet — clone the template and stamp it with `data-key`), and reorder (the node exists but sits at the wrong position — `insertBefore` moves it). Items already present in the container on first render are matched by their `data-key` and preserved.
 
-### Coordinating Child Components
+### Adding and Removing Items
 
-`module-list` also coordinates with a `form-textbox` and an add `basic-button`. When the form is submitted, it reads the textbox value, adds the item, then clears the input. The add button is disabled when the textbox is empty or the item limit is reached:
+Mutations go through the list — never touch the DOM directly. The reconciler reacts to the keys change and updates the container for you.
 
 ```js
-({ expose, first, host, on, pass }) => {
-  const container = first('[data-container]', 'Add a container element for items.')
-  const template = first('template', 'Add a template element for items.')
-  const form = first('form')
-  const textbox = first('form-textbox')
-  const add = first('basic-button.add')
+on(form, 'submit', e => {
+  e.preventDefault()
+  const value = textbox.value.trim()
+  if (!value) return
+  list.add(value)
+  textbox.clear() // call a method on the child component
+}),
 
-  const max = asInteger(1000)(host.getAttribute('max'))
-
-  // ... expose({ add: defineMethod(...), delete: defineMethod(...) })
-
-  return [
-    form && on(form, 'submit', e => {
-      e.preventDefault()
-      const content = textbox?.value
-      if (content) {
-        host.add(item => {
-          item.querySelector('slot')?.replaceWith(content) // fill template slot
-        })
-        textbox.clear() // call method on child component
-      }
-    }),
-    add && pass(add, {
-      disabled: () =>
-        (textbox && !textbox.length) || container.children.length >= max,
-    }),
-    on(host, 'click', e => { /* delegation for delete */ }),
-  ]
-}
+// Event delegation: one handler removes any item whose Remove button was
+// clicked, scaling to any number of items without per-item listeners.
+on(host, 'click', e => {
+  const target = e.target as HTMLElement
+  if (!target.closest('basic-button.remove')) return
+  const item = target.closest('[data-key]')
+  if (!(item instanceof HTMLElement)) return
+  e.stopPropagation()
+  const key = item.dataset.key
+  if (key) list.remove(key)
+}),
 ```
 
-`textbox.clear()` is itself a method property on `form-textbox` — the same `defineMethod()` pattern in a child component. `pass()` drives the button's `disabled` state reactively from two conditions without the button knowing anything about either.
+`list.add(value)` returns the new key; `list.remove(key)` takes one. `textbox.clear()` is a method property on the `form-textbox` child component. `pass(submit, { disabled: ... })` drives the submit button's `disabled` state reactively from the textbox length — the same `pass()` thread as the rest of this page, without the button knowing anything about the textbox.
 
-### Full Example
+### Full List Example
 
 {% demo %}
 ```html
 <module-list>
-  <ul data-container></ul>
-  <template>
-    <li>
-      <span><slot></slot></span>
-      <basic-button class="delete">
-        <button type="button" class="tertiary destructive small">Remove</button>
-      </basic-button>
-    </li>
-  </template>
-  <form>
+  <form action="#">
     <form-textbox clearable>
       <label for="new-item-input">New item</label>
       <div class="input">
@@ -396,14 +376,25 @@ This scales to any number of items and works for items added after setup — no 
           id="new-item-input"
           name="new-item"
           autocomplete="off"
-        />
+        >
         <button type="button" class="clear" aria-label="Clear input" hidden>✕</button>
       </div>
     </form-textbox>
-    <basic-button class="add">
-      <button type="submit" class="constructive">Add</button>
+    <basic-button class="submit">
+      <button type="submit" class="constructive" disabled>
+        <span class="label">Add</span>
+      </button>
     </basic-button>
   </form>
+  <ul data-container></ul>
+  <template>
+    <li>
+      <span><slot></slot></span>
+      <basic-button class="remove">
+        <button type="button" class="tertiary destructive small">Remove</button>
+      </basic-button>
+    </li>
+  </template>
 </module-list>
 ```
 
@@ -441,9 +432,11 @@ export const MEDIA_THEME = 'media-theme' as Context<
 The **provider component** creates the shared state inside `expose()` and calls `provideContexts()` in the returned effect array. The example below is a simplified excerpt showing two of the four media contexts — see the full source for the complete implementation:
 
 ```ts#context-media.ts
+import { createContext, createSensor, defineComponent } from '@zeix/le-truc'
+
 export type ContextMediaProps = {
-  readonly 'media-motion': 'no-preference' | 'reduce'
-  readonly 'media-theme': 'light' | 'dark'
+  readonly motion: 'no-preference' | 'reduce'
+  readonly theme: 'light' | 'dark'
 }
 
 declare global {
@@ -456,7 +449,7 @@ export default defineComponent<ContextMediaProps>(
   'context-media',
   ({ expose, provideContexts }) => {
     expose({
-      [MEDIA_MOTION]: createSensor(
+      motion: createSensor(
         set => {
           const mql = matchMedia('(prefers-reduced-motion: reduce)')
           const listener = (e) => set(e.matches ? 'reduce' : 'no-preference')
@@ -465,7 +458,7 @@ export default defineComponent<ContextMediaProps>(
         },
         { value: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduce' : 'no-preference' },
       ),
-      [MEDIA_THEME]: createSensor(
+      theme: createSensor(
         set => {
           const mql = matchMedia('(prefers-color-scheme: dark)')
           const listener = (e) => set(e.matches ? 'dark' : 'light')
@@ -476,7 +469,7 @@ export default defineComponent<ContextMediaProps>(
       ),
     })
 
-    return [provideContexts([MEDIA_MOTION, MEDIA_THEME])]
+    return [provideContexts(['motion', 'theme'])]
   },
 )
 ```
@@ -507,39 +500,34 @@ The provider component wraps your entire application or a section that needs sha
 
 ## Consuming Context
 
-**Consumer components** use `requestContext()` inside `expose()` to access shared state from ancestor providers. The returned `Memo<T>` is reactive — when the provider's signal updates, all consumers update automatically.
+**Consumer components** use `requestContext()` to access shared state from ancestor providers. The returned `Memo<T>` is reactive — when the provider's signal updates, all consumers update automatically.
 
 ### Consumer Component
 
 Here's a simple card that displays the current motion and theme preferences:
 
 ```js#card-mediaqueries.js
+import { bindText, defineComponent } from '@zeix/le-truc'
+import { MEDIA_MOTION, MEDIA_THEME } from '../../context/media/context-media'
+
 export default defineComponent(
   'card-mediaqueries',
-  ({ expose, first, requestContext, watch }) => {
+  ({ first, requestContext, watch }) => {
     const motionEl = first('.motion')
     const themeEl = first('.theme')
-    const viewportEl = first('.viewport')
-    const orientationEl = first('.orientation')
 
-    expose({
-      motion: requestContext(MEDIA_MOTION, 'unknown'),
-      theme: requestContext(MEDIA_THEME, 'unknown'),
-      viewport: requestContext(MEDIA_VIEWPORT, 'unknown'),
-      orientation: requestContext(MEDIA_ORIENTATION, 'unknown'),
-    })
+    const motion = requestContext(MEDIA_MOTION, 'unknown')
+    const theme = requestContext(MEDIA_THEME, 'unknown')
 
     return [
-      motionEl && watch('motion', bindText(motionEl)),
-      themeEl && watch('theme', bindText(themeEl)),
-      viewportEl && watch('viewport', bindText(viewportEl)),
-      orientationEl && watch('orientation', bindText(orientationEl)),
+      motionEl && watch(motion, bindText(motionEl)),
+      themeEl && watch(theme, bindText(themeEl)),
     ]
   },
 )
 ```
 
-### Full Example
+### Full Context Example
 
 {% demo %}
 ```html

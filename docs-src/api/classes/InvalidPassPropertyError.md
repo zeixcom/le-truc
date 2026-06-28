@@ -1,6 +1,6 @@
 ### Class: InvalidPassPropertyError
 
-Defined in: [src/errors.ts:122](https://github.com/zeixcom/le-truc/blob/62831a486b22055e2f0aae8a1bc13f5e79ffdffc/src/errors.ts#L122)
+Defined in: [src/errors.ts:122](https://github.com/zeixcom/le-truc/blob/4098d5791c279825fcbaa4a549a14c3639e84375/src/errors.ts#L122)
 
 Error thrown when `pass()` cannot bind one or more properties on the target —
 the property doesn't exist on the target, can't be resolved to a signal, or
@@ -21,7 +21,7 @@ read-only/computed). See ADR 0011.
 
 > **new InvalidPassPropertyError**(`host`, `target`, `reasons`): `InvalidPassPropertyError`
 
-Defined in: [src/errors.ts:128](https://github.com/zeixcom/le-truc/blob/62831a486b22055e2f0aae8a1bc13f5e79ffdffc/src/errors.ts#L128)
+Defined in: [src/errors.ts:128](https://github.com/zeixcom/le-truc/blob/4098d5791c279825fcbaa4a549a14c3639e84375/src/errors.ts#L128)
 
 ###### Parameters
 

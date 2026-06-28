@@ -868,14 +868,24 @@
 <span class="line"><span style="color:#F8F8F2">			}),</span></span>
 <span class="line"><span style="color:#F8F8F2">			textbox </span><span style="color:#F92672">&#x26;&#x26;</span></span>
 <span class="line"><span style="color:#A6E22E">				pass</span><span style="color:#F8F8F2">(textbox, {</span></span>
-<span class="line"><span style="color:#F8F8F2">					value: </span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#F8F8F2">					value: { </span><span style="color:#A6E22E">get</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.name, </span><span style="color:#A6E22E">set</span><span style="color:#F8F8F2">: (</span><span style="color:#FD971F;font-style:italic">v</span><span style="color:#F92672">:</span><span style="color:#66D9EF;font-style:italic"> string</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.name </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> v) },</span></span>
 <span class="line"><span style="color:#A6E22E">					description</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#E6DB74"> `Nearest named CSS color: </span><span style="color:#F92672">${</span><span style="color:#F8F8F2">host.nearest</span><span style="color:#F92672">}</span><span style="color:#E6DB74">`</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
-<span class="line"><span style="color:#F8F8F2">			colorgraph </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> pass</span><span style="color:#F8F8F2">(colorgraph, { color: </span><span style="color:#E6DB74">'color'</span><span style="color:#F8F8F2"> }),</span></span>
-<span class="line"><span style="color:#F8F8F2">			colorscale </span><span style="color:#F92672">&#x26;&#x26;</span><span style="color:#A6E22E"> pass</span><span style="color:#F8F8F2">(colorscale, { color: </span><span style="color:#E6DB74">'color'</span><span style="color:#F8F8F2">, name: </span><span style="color:#E6DB74">'name'</span><span style="color:#F8F8F2"> }),</span></span>
+<span class="line"><span style="color:#F8F8F2">			colorgraph </span><span style="color:#F92672">&#x26;&#x26;</span></span>
+<span class="line"><span style="color:#A6E22E">				pass</span><span style="color:#F8F8F2">(colorgraph, {</span></span>
+<span class="line"><span style="color:#F8F8F2">					color: {</span></span>
+<span class="line"><span style="color:#A6E22E">						get</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.color,</span></span>
+<span class="line"><span style="color:#A6E22E">						set</span><span style="color:#F8F8F2">: (</span><span style="color:#FD971F;font-style:italic">v</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Oklch</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> (host.color </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> v),</span></span>
+<span class="line"><span style="color:#F8F8F2">					},</span></span>
+<span class="line"><span style="color:#F8F8F2">				}),</span></span>
+<span class="line"><span style="color:#F8F8F2">			colorscale </span><span style="color:#F92672">&#x26;&#x26;</span></span>
+<span class="line"><span style="color:#A6E22E">				pass</span><span style="color:#F8F8F2">(colorscale, {</span></span>
+<span class="line"><span style="color:#A6E22E">					color</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.color,</span></span>
+<span class="line"><span style="color:#A6E22E">					name</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.name,</span></span>
+<span class="line"><span style="color:#F8F8F2">				}),</span></span>
 <span class="line"><span style="color:#F8F8F2">			colorinfoBase </span><span style="color:#F92672">&#x26;&#x26;</span></span>
 <span class="line"><span style="color:#A6E22E">				pass</span><span style="color:#F8F8F2">(colorinfoBase, {</span></span>
-<span class="line"><span style="color:#F8F8F2">					color: </span><span style="color:#E6DB74">'color'</span><span style="color:#F8F8F2">,</span></span>
+<span class="line"><span style="color:#A6E22E">					color</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.color,</span></span>
 <span class="line"><span style="color:#A6E22E">					name</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#E6DB74"> `</span><span style="color:#F92672">${</span><span style="color:#F8F8F2">host.name</span><span style="color:#F92672">}</span><span style="color:#E6DB74"> 500`</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">				}),</span></span>
 <span class="line"><span style="color:#F8F8F2">		]</span></span>

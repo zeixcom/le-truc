@@ -39,6 +39,7 @@ emoji: "🍽️"
   - [Colorinfo](./examples/module-colorinfo.html)
   - [Dialog](./examples/module-dialog.html)
   - [Lazyload](./examples/module-lazyload.html)
+  - [List](./examples/module-list.html)
   - [Listnav](./examples/module-listnav.html)
   - [Pagination](./examples/module-pagination.html)
   - [Scrollarea](./examples/module-scrollarea.html)

@@ -14,7 +14,7 @@ Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built
 
 > **Le Truc enhances HTML — it doesn't replace it:** A Le Truc component **wraps existing server-rendered content**. The HTML inside the custom element is the starting point — visible before JavaScript runs. See [Progressive Enhancement](getting-started.html#progressive-enhancement) for how this works.
 
-Le Truc creates components using the `defineComponent()` function:
+Components are created with the `defineComponent()` function, which takes a valid custom element tag name (two or more words joined with `-`) and a factory function:
 
 ```js
 defineComponent('my-component', ({ expose, first, all, watch, on }) => {
@@ -30,7 +30,7 @@ defineComponent('my-component', ({ expose, first, all, watch, on }) => {
 })
 ```
 
-Every Le Truc component must be registered with a valid custom element tag name (two or more words joined with `-`) as the first parameter.
+The factory receives a `FactoryContext` with helpers for querying descendant elements, declaring reactive properties, and returning effect descriptors — each covered in the sections below.
 
 ### Using the Custom Element in HTML
 
@@ -39,90 +39,6 @@ Once registered, the component can be used like any native HTML element:
 ```html
 <my-component>Content goes here</my-component>
 ```
-
-### Anatomy of a Component
-
-Let's examine a complete component example to understand how Le Truc works. The HTML it enhances looks like this:
-
-```html
-<basic-hello>
-  <label>
-    Your name<br />
-    <input name="name" type="text" autocomplete="given-name" />
-  </label>
-  <p>Hello, <output>World</output>!</p>
-</basic-hello>
-```
-
-```js
-defineComponent('basic-hello', ({ expose, first, on, watch }) => {
-  const input = first('input', 'Needed to enter the name.')
-  const output = first('output', 'Needed to display the name.')
-  const fallback = output.textContent || ''
-
-  expose({ name: output.textContent ?? '' })
-
-  return [
-    on(input, 'input', () => ({ name: input.value || fallback })),
-    watch('name', bindText(output)),
-  ]
-})
-```
-
-#### Reactive Properties
-
-```js
-expose({ name: output.textContent ?? '' })
-```
-
-This declares `name` as a reactive property:
-
-- `expose()` registers signal-backed accessors on `host`; call it before any effect references a property by name
-- `output.textContent ?? ''` initializes `name` from the DOM content at connect time — Le Truc reads `"World"` from the `<output>` element, preserving the server-rendered content
-- When `name` changes, any effects that depend on it update automatically
-
-#### Querying Elements
-
-Element queries happen inline at the top of the factory body:
-
-```js
-const input = first('input', 'Needed to enter the name.')
-const output = first('output', 'Needed to display the name.')
-```
-
-`first()` finds the first descendant matching a selector. Also available is `all()`, which returns a `Memo<E[]>` — a lazily observed collection that dynamically updates when matching elements are added or removed from the DOM. Both helpers take a selector string and an optional error message:
-
-```js
-// Optional element — returns undefined if not found; use && to skip effects conditionally
-const input = first('input')
-
-// Required element — throws MissingElementError with your message if not found
-const input = first('input', 'Needed to enter the name.')
-```
-
-If a queried element is a custom element that has not been defined yet, Le Truc waits up to 200 ms for it to be defined before running effects. This ensures child components are always ready before parent effects activate.
-
-#### Returning Effects
-
-The factory returns a flat array of **effect descriptors** — deferred thunks that activate after all child custom element dependencies are resolved:
-
-```js
-return [
-  on(input, 'input', () => ({ name: input.value || fallback })),
-  watch('name', bindText(output)),
-]
-```
-
-Effects define **component behaviors**:
-
-- `on(input, 'input', ...)` adds an event listener to the `<input>` element; the handler may return `{ prop: value }` to batch-update host properties
-- `watch('name', bindText(output))` keeps `output`'s text in sync with the `name` property
-
-Characteristics of effects:
-
-- Effects run when the component connects to the DOM (after dependency resolution)
-- Reactive effects re-run when their declared source changes
-- Effects may return a cleanup function executed when the component disconnects
 
 ## Component Lifecycle
 
@@ -238,6 +154,8 @@ Without a hint string (second argument), `first()` returns `undefined` if no mat
 
 The `all()` function returns a `Memo<E[]>` — a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. Because it's reactive, effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM. A malformed selector throws `InvalidSelectorError` immediately, at the `all()` call site.
 
+If a queried element is a custom element that has not been defined yet, Le Truc waits up to 200 ms for it to be defined before running effects. This ensures child components are always ready before parent effects activate.
+
 > **tip:** `all()` observes structural changes and re-runs effects accordingly. Prefer `first()` when targeting a single element known to be present at connection time.
 
 ## Adding Event Listeners
@@ -305,6 +223,36 @@ Exposing `state.get` rather than the full `State` is what makes the property rea
 ```js
 watch(length, bindVisible(clearBtn))
 ```
+
+### Exposing Imperative Methods
+
+Not every property is a value you read or watch. Some are **commands** — functions a consumer calls imperatively from event handlers, like `reset()`, `stepUp()` / `stepDown()`, or `clear()`. Wrap the function in `defineMethod()` and pass it to `expose()`:
+
+```js#form-textbox.js
+defineComponent('form-textbox', ({ expose, first, host, on, watch }) => {
+  const textbox = first('input', 'Add a native input or textarea as descendant.')
+
+  expose({
+    value: textbox.value,
+    clear: defineMethod(() => {
+      host.value = ''
+      textbox.value = ''
+      textbox.setCustomValidity('')
+      textbox.checkValidity()
+      textbox.focus()
+    }),
+  })
+
+  return [
+    on(textbox, 'change', () => ({ value: textbox.value })),
+    watch('value', bindProperty(textbox, 'value')),
+  ]
+})
+```
+
+`defineMethod()` brands the function so Le Truc installs it as a callable method on the host. Use methods if you need to expose a function to other components that operates on the host while hiding implementation details. You can expose both reactive values (`value`) and methods (`clear`) side by side.
+
+> **Always use defineMethod(), never a plain function:** Le Truc identifies method producers by a brand symbol attached by `defineMethod()`. An unbranded function passed to `expose()` is treated as a thunk instead, creating a computed reactive property.
 
 ## Synchronizing State with Effects
 

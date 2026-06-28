@@ -438,9 +438,9 @@ li code,
 dt code,
 dd code,
 td code {
-	background-color: var(--color-background-alt);
+	background-color: rgb(0, 0, 0, 0.1);
 	border-radius: var(--space-xxs);
-	padding: var(--space-xs) var(--space-xxs) var(--space-xxs);
+	padding: 2px var(--space-xxs);
 }
 
 a[href] {
