@@ -18,24 +18,22 @@ declare global {
 
 export default defineComponent<CardMediaqueriesProps>(
 	'card-mediaqueries',
-	({ expose, first, requestContext, watch }) => {
+	({ first, requestContext, watch }) => {
 		const motionEl = first('.motion')
 		const themeEl = first('.theme')
 		const viewportEl = first('.viewport')
 		const orientationEl = first('.orientation')
 
-		expose({
-			motion: requestContext(MEDIA_MOTION, 'unknown'),
-			theme: requestContext(MEDIA_THEME, 'unknown'),
-			viewport: requestContext(MEDIA_VIEWPORT, 'unknown'),
-			orientation: requestContext(MEDIA_ORIENTATION, 'unknown'),
-		})
+		const motion = requestContext(MEDIA_MOTION, 'unknown')
+		const theme = requestContext(MEDIA_THEME, 'unknown')
+		const viewport = requestContext(MEDIA_VIEWPORT, 'unknown')
+		const orientation = requestContext(MEDIA_ORIENTATION, 'unknown')
 
 		return [
-			motionEl && watch('motion', bindText(motionEl)),
-			themeEl && watch('theme', bindText(themeEl)),
-			viewportEl && watch('viewport', bindText(viewportEl)),
-			orientationEl && watch('orientation', bindText(orientationEl)),
+			motionEl && watch(motion, bindText(motionEl)),
+			themeEl && watch(theme, bindText(themeEl)),
+			viewportEl && watch(viewport, bindText(viewportEl)),
+			orientationEl && watch(orientation, bindText(orientationEl)),
 		]
 	},
 )

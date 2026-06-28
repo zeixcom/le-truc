@@ -106,45 +106,6 @@ test.describe('card-mediaqueries component', () => {
 		expect(orientationWithContext).not.toBe('unknown')
 	})
 
-	test('properties reflect context values', async ({ page }) => {
-		const componentWithContext = page.locator('context-media card-mediaqueries')
-
-		// Check that component properties are accessible and match displayed values
-		const [
-			displayedMotion,
-			displayedTheme,
-			displayedViewport,
-			displayedOrientation,
-		] = await Promise.all([
-			componentWithContext.locator('.motion').textContent(),
-			componentWithContext.locator('.theme').textContent(),
-			componentWithContext.locator('.viewport').textContent(),
-			componentWithContext.locator('.orientation').textContent(),
-		])
-
-		const [
-			propertyMotion,
-			propertyTheme,
-			propertyViewport,
-			propertyOrientation,
-		] = await page.evaluate(() => {
-			const element = document.querySelector(
-				'context-media card-mediaqueries',
-			) as any
-			return [
-				element.motion,
-				element.theme,
-				element.viewport,
-				element.orientation,
-			]
-		})
-
-		expect(propertyMotion).toBe(displayedMotion)
-		expect(propertyTheme).toBe(displayedTheme)
-		expect(propertyViewport).toBe(displayedViewport)
-		expect(propertyOrientation).toBe(displayedOrientation)
-	})
-
 	test('responds to media query changes', async ({ page, isMobile }) => {
 		const componentWithContext = page.locator('context-media card-mediaqueries')
 

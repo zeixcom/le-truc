@@ -1,4 +1,4 @@
-import { type Context, createSensor, defineComponent } from '../../..'
+import { createContext, createSensor, defineComponent } from '../../..'
 
 export type ContextMediaMotion = 'no-preference' | 'reduce'
 export type ContextMediaTheme = 'light' | 'dark'
@@ -6,10 +6,10 @@ export type ContextMediaViewport = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 export type ContextMediaOrientation = 'portrait' | 'landscape'
 
 export type ContextMediaProps = {
-	readonly 'media-motion': ContextMediaMotion
-	readonly 'media-theme': ContextMediaTheme
-	readonly 'media-viewport': ContextMediaViewport
-	readonly 'media-orientation': ContextMediaOrientation
+	readonly motion: ContextMediaMotion
+	readonly theme: ContextMediaTheme
+	readonly viewport: ContextMediaViewport
+	readonly orientation: ContextMediaOrientation
 }
 
 declare global {
@@ -20,22 +20,12 @@ declare global {
 
 /* === Exported Contexts === */
 
-export const MEDIA_MOTION = 'media-motion' as Context<
-	'media-motion',
-	() => ContextMediaMotion
->
-export const MEDIA_THEME = 'media-theme' as Context<
-	'media-theme',
-	() => ContextMediaTheme
->
-export const MEDIA_VIEWPORT = 'media-viewport' as Context<
-	'media-viewport',
-	() => ContextMediaViewport
->
-export const MEDIA_ORIENTATION = 'media-orientation' as Context<
-	'media-orientation',
-	() => ContextMediaOrientation
->
+export const MEDIA_MOTION = createContext<() => ContextMediaMotion>('motion')
+export const MEDIA_THEME = createContext<() => ContextMediaTheme>('theme')
+export const MEDIA_VIEWPORT =
+	createContext<() => ContextMediaViewport>('viewport')
+export const MEDIA_ORIENTATION =
+	createContext<() => ContextMediaOrientation>('orientation')
 
 /* === Component === */
 
@@ -53,7 +43,7 @@ export default defineComponent<ContextMediaProps>(
 
 		expose({
 			// Context for motion preference
-			[MEDIA_MOTION]: createSensor<ContextMediaMotion>(
+			motion: createSensor<ContextMediaMotion>(
 				set => {
 					const mql = matchMedia('(prefers-reduced-motion: reduce)')
 					const listener = (e: MediaQueryListEvent) =>
@@ -69,7 +59,7 @@ export default defineComponent<ContextMediaProps>(
 			),
 
 			// Context for preferred color scheme
-			[MEDIA_THEME]: createSensor<ContextMediaTheme>(
+			theme: createSensor<ContextMediaTheme>(
 				set => {
 					const mql = matchMedia('(prefers-color-scheme: dark)')
 					const listener = (e: MediaQueryListEvent) =>
@@ -85,7 +75,7 @@ export default defineComponent<ContextMediaProps>(
 			),
 
 			// Context for screen viewport size
-			[MEDIA_VIEWPORT]: (() => {
+			viewport: (() => {
 				const mqlSM = matchMedia(`(min-width: ${getBreakpoint('sm', '32em')})`)
 				const mqlMD = matchMedia(`(min-width: ${getBreakpoint('md', '48em')})`)
 				const mqlLG = matchMedia(`(min-width: ${getBreakpoint('lg', '72em')})`)
@@ -116,7 +106,7 @@ export default defineComponent<ContextMediaProps>(
 			})(),
 
 			// Context for screen orientation
-			[MEDIA_ORIENTATION]: createSensor<ContextMediaOrientation>(
+			orientation: createSensor<ContextMediaOrientation>(
 				set => {
 					const mql = matchMedia('(orientation: landscape)')
 					const listener = (e: MediaQueryListEvent) =>
@@ -132,13 +122,6 @@ export default defineComponent<ContextMediaProps>(
 			),
 		})
 
-		return [
-			provideContexts([
-				MEDIA_MOTION,
-				MEDIA_THEME,
-				MEDIA_VIEWPORT,
-				MEDIA_ORIENTATION,
-			]),
-		]
+		return [provideContexts(['motion', 'theme', 'viewport', 'orientation'])]
 	},
 )
