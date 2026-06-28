@@ -2,12 +2,26 @@
 
 > **PassHelper**\<`P`\> = \{\<`Q`\>(`target`, `props`): [`EffectDescriptor`](EffectDescriptor.md); \<`Q`\>(`target`, `props`): [`EffectDescriptor`](EffectDescriptor.md); \}
 
-Defined in: [src/helpers/reactive.ts:108](https://github.com/zeixcom/le-truc/blob/62831a486b22055e2f0aae8a1bc13f5e79ffdffc/src/helpers/reactive.ts#L108)
+Defined in: [src/helpers/reactive.ts:127](https://github.com/zeixcom/le-truc/blob/b0a312070e75b8c347df329a83469bb95e181c8d/src/helpers/reactive.ts#L127)
 
 The `pass` helper type in `FactoryContext`.
 
 Passes reactive values to a descendant Le Truc component's Slot-backed signals.
 Supports single-element and Memo targets (per-element lifecycle for Memo).
+
+The property-key (`'value'`) and bare-writable-signal (`someState`) forms are
+deprecated — they hand the child unrestricted `.set()` on the parent's signal
+(ADR-0012) and warn in DEV_MODE. Migrate to the behavior-preserving descriptor:
+
+```ts
+// before (deprecated) — child can write freely
+pass(child, { value: parentSignal })
+// after — child writes are mediated by the parent
+pass(child, { value: { get: parentSignal.get, set: parentSignal.set } })
+```
+
+For read-only access use the thunk: `pass(child, { value: () => host.value })`.
+Both deprecated forms are removed in the next major.
 
 #### Type Parameters
 

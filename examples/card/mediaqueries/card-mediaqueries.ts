@@ -6,17 +6,7 @@ import {
 	MEDIA_VIEWPORT,
 } from '../../context/media/context-media'
 
-type CardMediaqueriesPropKeys = 'motion' | 'theme' | 'viewport' | 'orientation'
-
-export type CardMediaqueriesProps = Record<CardMediaqueriesPropKeys, string>
-
-declare global {
-	interface HTMLElementTagNameMap {
-		'card-mediaqueries': HTMLElement & CardMediaqueriesProps
-	}
-}
-
-export default defineComponent<CardMediaqueriesProps>(
+export default defineComponent(
 	'card-mediaqueries',
 	({ first, requestContext, watch }) => {
 		const motionEl = first('.motion')

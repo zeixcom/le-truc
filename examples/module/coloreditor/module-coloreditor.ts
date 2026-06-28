@@ -53,14 +53,24 @@ export default defineComponent<ModuleColoreditorProps>(
 			}),
 			textbox &&
 				pass(textbox, {
-					value: 'name',
+					value: { get: () => host.name, set: (v: string) => (host.name = v) },
 					description: () => `Nearest named CSS color: ${host.nearest}`,
 				}),
-			colorgraph && pass(colorgraph, { color: 'color' }),
-			colorscale && pass(colorscale, { color: 'color', name: 'name' }),
+			colorgraph &&
+				pass(colorgraph, {
+					color: {
+						get: () => host.color,
+						set: (v: Oklch) => (host.color = v),
+					},
+				}),
+			colorscale &&
+				pass(colorscale, {
+					color: () => host.color,
+					name: () => host.name,
+				}),
 			colorinfoBase &&
 				pass(colorinfoBase, {
-					color: 'color',
+					color: () => host.color,
 					name: () => `${host.name} 500`,
 				}),
 		]

@@ -339,7 +339,7 @@ This scales to any number of items and works for items added after setup — no 
   // ... expose({ add: defineMethod(...), delete: defineMethod(...) })
 
   return [
-    form && on(form, 'submit', e => {
+    on(form, 'submit', e => {
       e.preventDefault()
       const content = textbox?.value
       if (content) {
@@ -349,7 +349,7 @@ This scales to any number of items and works for items added after setup — no 
         textbox.clear() // call method on child component
       }
     }),
-    add && pass(add, {
+    pass(add, {
       disabled: () =>
         (textbox && !textbox.length) || container.children.length >= max,
     }),
@@ -422,9 +422,11 @@ export const MEDIA_THEME = 'media-theme' as Context<
 The **provider component** creates the shared state inside `expose()` and calls `provideContexts()` in the returned effect array. The example below is a simplified excerpt showing two of the four media contexts — see the full source for the complete implementation:
 
 ```ts#context-media.ts
+import { createContext, createSensor, defineComponent } from '@zeix/le-truc'
+
 export type ContextMediaProps = {
-  readonly 'media-motion': 'no-preference' | 'reduce'
-  readonly 'media-theme': 'light' | 'dark'
+  readonly motion: 'no-preference' | 'reduce'
+  readonly theme: 'light' | 'dark'
 }
 
 declare global {
@@ -437,7 +439,7 @@ export default defineComponent<ContextMediaProps>(
   'context-media',
   ({ expose, provideContexts }) => {
     expose({
-      [MEDIA_MOTION]: createSensor(
+      motion: createSensor(
         set => {
           const mql = matchMedia('(prefers-reduced-motion: reduce)')
           const listener = (e) => set(e.matches ? 'reduce' : 'no-preference')
@@ -446,7 +448,7 @@ export default defineComponent<ContextMediaProps>(
         },
         { value: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduce' : 'no-preference' },
       ),
-      [MEDIA_THEME]: createSensor(
+      theme: createSensor(
         set => {
           const mql = matchMedia('(prefers-color-scheme: dark)')
           const listener = (e) => set(e.matches ? 'dark' : 'light')
@@ -457,7 +459,7 @@ export default defineComponent<ContextMediaProps>(
       ),
     })
 
-    return [provideContexts([MEDIA_MOTION, MEDIA_THEME])]
+    return [provideContexts(['motion', 'theme'])]
   },
 )
 ```
@@ -484,33 +486,28 @@ The provider component wraps your entire application or a section that needs sha
 
 ## Consuming Context
 
-**Consumer components** use `requestContext()` inside `expose()` to access shared state from ancestor providers. The returned `Memo<T>` is reactive — when the provider's signal updates, all consumers update automatically.
+**Consumer components** use `requestContext()` to access shared state from ancestor providers. The returned `Memo<T>` is reactive — when the provider's signal updates, all consumers update automatically.
 
 ### Consumer Component
 
 Here's a simple card that displays the current motion and theme preferences:
 
 ```js#card-mediaqueries.js
+import { bindText, defineComponent } from '@zeix/le-truc'
+import { MEDIA_MOTION, MEDIA_THEME } from '../../context/media/context-media'
+
 export default defineComponent(
   'card-mediaqueries',
-  ({ expose, first, requestContext, watch }) => {
+  ({ first, requestContext, watch }) => {
     const motionEl = first('.motion')
     const themeEl = first('.theme')
-    const viewportEl = first('.viewport')
-    const orientationEl = first('.orientation')
 
-    expose({
-      motion: requestContext(MEDIA_MOTION, 'unknown'),
-      theme: requestContext(MEDIA_THEME, 'unknown'),
-      viewport: requestContext(MEDIA_VIEWPORT, 'unknown'),
-      orientation: requestContext(MEDIA_ORIENTATION, 'unknown'),
-    })
+    const motion = requestContext(MEDIA_MOTION, 'unknown')
+    const theme = requestContext(MEDIA_THEME, 'unknown')
 
     return [
-      motionEl && watch('motion', bindText(motionEl)),
-      themeEl && watch('theme', bindText(themeEl)),
-      viewportEl && watch('viewport', bindText(viewportEl)),
-      orientationEl && watch('orientation', bindText(orientationEl)),
+      motionEl && watch(motion, bindText(motionEl)),
+      themeEl && watch(theme, bindText(themeEl)),
     ]
   },
 )

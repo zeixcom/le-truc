@@ -2368,6 +2368,9 @@ var makePass = (host) => {
         failures.set(prop, "could not be resolved to a signal");
         continue;
       }
+      if (DEV_MODE && !isComputed(signal) && !(signal && typeof signal === "object" && ("get" in signal) && !(Symbol.toStringTag in signal))) {
+        console.warn(`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`);
+      }
       const slot = signals[prop];
       if (!isSlot(slot)) {
         failures.set(prop, `is not Slot-backed on ${targetName} (read-only property, or target is not a Le Truc component)`);

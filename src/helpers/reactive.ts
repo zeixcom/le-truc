@@ -3,6 +3,7 @@ import {
 	createEffect,
 	createMemo,
 	createScope,
+	isComputed,
 	isFunction,
 	isMemo,
 	isRecord,
@@ -29,7 +30,7 @@ import type {
 	FactoryResult,
 	Falsy,
 } from '../types'
-import { elementName, isCustomElement } from '../util'
+import { DEV_MODE, elementName, isCustomElement } from '../util'
 
 /* === Types === */
 
@@ -52,6 +53,10 @@ type Reactive<T, P extends ComponentProps> =
 /**
  * A map of child component property names to the reactive values to inject into them.
  * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
+ *
+ * Prefer the read-only thunk (`() => host.prop`) and the mediated
+ * `{ get, set }` descriptor forms. The property-key and bare-writable-signal
+ * forms are deprecated; they warn in DEV_MODE and will be removed in the next major.
  */
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
 	[K in keyof Q & string]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>
@@ -104,6 +109,20 @@ type WatchHelper<P extends ComponentProps> = {
  *
  * Passes reactive values to a descendant Le Truc component's Slot-backed signals.
  * Supports single-element and Memo targets (per-element lifecycle for Memo).
+ *
+ * The property-key (`'value'`) and bare-writable-signal (`someState`) forms are
+ * deprecated — they hand the child unrestricted `.set()` on the parent's signal
+ * (ADR-0012) and warn in DEV_MODE. Migrate to the behavior-preserving descriptor:
+ *
+ * ```ts
+ * // before (deprecated) — child can write freely
+ * pass(child, { value: parentSignal })
+ * // after — child writes are mediated by the parent
+ * pass(child, { value: { get: parentSignal.get, set: parentSignal.set } })
+ * ```
+ *
+ * For read-only access use the thunk: `pass(child, { value: () => host.value })`.
+ * Both deprecated forms are removed in the next major.
  */
 type PassHelper<P extends ComponentProps> = {
 	<Q extends ComponentProps>(
@@ -256,6 +275,17 @@ const makeWatch = <P extends ComponentProps>(
  * For Memo targets, uses per-element lifecycle: signals are swapped when elements
  * enter the collection and restored when they leave.
  *
+ * The property-key and bare-writable-signal short forms are deprecated:
+ * They grant the child unrestricted `.set()` on the parent's signal.
+ * In DEV_MODE `pass()` emits a warning for each writable binding:
+ *
+ * > `pass() received a writable signal for '<prop>'. Use () => host.<prop> for read-only access, or { get, set } to mediate writes.`
+ *
+ * The migration is behavior-preserving:
+ * `pass(child, { value: sig })` → `pass(child, { value: { get: sig.get, set: sig.set } })`,
+ * or for read-only access `pass(child, { value: () => host.value })`. The
+ * deprecated forms are removed in the next major.
+ *
  * @since 2.0
  * @param {HTMLElement & P} host - The component host element
  * @returns {PassHelper<P>} Bound `pass` function for the given host
@@ -301,6 +331,25 @@ const makePass = <P extends ComponentProps>(
 				if (!signal) {
 					failures.set(prop, 'could not be resolved to a signal')
 					continue
+				}
+
+				// ADR-0012: the property-key and bare-writable-signal short forms
+				// hand the child unrestricted `.set()` on the parent's signal. Warn
+				// in DEV_MODE. Detection is reversed — allow what is provably
+				// read-only, warn on everything else.
+				if (
+					DEV_MODE &&
+					!isComputed(signal) &&
+					!(
+						signal &&
+						typeof signal === 'object' &&
+						'get' in signal &&
+						!(Symbol.toStringTag in signal)
+					)
+				) {
+					console.warn(
+						`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`,
+					)
 				}
 
 				const slot = signals[prop]
