@@ -1,6 +1,6 @@
 ### Class: ContextRequestEvent\<T\>
 
-Defined in: [src/helpers/context.ts:97](https://github.com/zeixcom/le-truc/blob/b0a312070e75b8c347df329a83469bb95e181c8d/src/helpers/context.ts#L97)
+Defined in: [src/helpers/context.ts:97](https://github.com/zeixcom/le-truc/blob/e4b36bb40c21ae6929a612c7380070be96eead21/src/helpers/context.ts#L97)
 
 Class for context-request events
 
@@ -31,7 +31,7 @@ function to the callback which requesters can invoke to indicate they no longer 
 
 > **new ContextRequestEvent**\<`T`\>(`context`, `callback`, `subscribe?`): `ContextRequestEvent`\<`T`\>
 
-Defined in: [src/helpers/context.ts:102](https://github.com/zeixcom/le-truc/blob/b0a312070e75b8c347df329a83469bb95e181c8d/src/helpers/context.ts#L102)
+Defined in: [src/helpers/context.ts:102](https://github.com/zeixcom/le-truc/blob/e4b36bb40c21ae6929a612c7380070be96eead21/src/helpers/context.ts#L102)
 
 ###### Parameters
 
@@ -101,7 +101,7 @@ Defined in: node\_modules/typescript/lib/lib.dom.d.ts:14274
 
 > `readonly` **callback**: [`ContextCallback`](../type-aliases/ContextCallback.md)\<[`ContextType`](../type-aliases/ContextType.md)\<`T`\>\>
 
-Defined in: [src/helpers/context.ts:99](https://github.com/zeixcom/le-truc/blob/b0a312070e75b8c347df329a83469bb95e181c8d/src/helpers/context.ts#L99)
+Defined in: [src/helpers/context.ts:99](https://github.com/zeixcom/le-truc/blob/e4b36bb40c21ae6929a612c7380070be96eead21/src/helpers/context.ts#L99)
 
 callback function for value getter and unsubscribe function
 
@@ -173,7 +173,7 @@ The read-only **`composed`** property of the Event interface returns a boolean v
 
 > `readonly` **context**: `T`
 
-Defined in: [src/helpers/context.ts:98](https://github.com/zeixcom/le-truc/blob/b0a312070e75b8c347df329a83469bb95e181c8d/src/helpers/context.ts#L98)
+Defined in: [src/helpers/context.ts:98](https://github.com/zeixcom/le-truc/blob/e4b36bb40c21ae6929a612c7380070be96eead21/src/helpers/context.ts#L98)
 
 context key
 
@@ -295,7 +295,7 @@ The deprecated **`Event.srcElement`** is an alias for the Event.target property.
 
 > `readonly` **subscribe**: `boolean`
 
-Defined in: [src/helpers/context.ts:100](https://github.com/zeixcom/le-truc/blob/b0a312070e75b8c347df329a83469bb95e181c8d/src/helpers/context.ts#L100)
+Defined in: [src/helpers/context.ts:100](https://github.com/zeixcom/le-truc/blob/e4b36bb40c21ae6929a612c7380070be96eead21/src/helpers/context.ts#L100)
 
 whether to subscribe to context changes
 

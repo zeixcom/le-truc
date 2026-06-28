@@ -59,19 +59,19 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 ### `docs-src/pages/data-flow.md`
 **Audience:** Developers building multi-component UIs
 **Register:** Tutorial — builds from a concrete scenario; assumes the reader has read components.md
-**Scope:** `pass()` for parent-to-child signal binding, `provideContexts`/`requestContext` for shared ancestor state, `defineMethod()` for imperative APIs on dynamic lists, event delegation
+**Scope:** `pass()` for parent-to-child signal binding, `provideContexts`/`requestContext` for shared ancestor state, `createList()` for dynamic lists with DOM reconciliation, event delegation
 
 **Update triggers:**
 - `pass()` behavior or scope changes (e.g., Le Truc-only restriction clarified)
 - `provideContexts` / `requestContext` API changes
-- `defineMethod()` usage changes
+- `createList()` usage or the DOM reconciliation pattern changes
 - `createMemo` or other signal API used in examples changes
 - Code examples reference a changed API
 
 **Consistency checks:**
 - `pass()` callout about Le Truc-only scope is accurate
 - `provideContexts` / `requestContext` example signatures match `src/helpers/context.ts`
-- `defineMethod()` branding requirement is accurately stated
+- `createList()` reconciler pattern matches the `module-list` example source
 - All code examples compile against current exports
 
 ### `docs-src/pages/styling.md`

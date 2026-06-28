@@ -2,7 +2,7 @@
 
 > **Initializers**\<`P`\> = \{ \[K in keyof P\]?: P\[K\] \| Signal\<P\[K\]\> \| Parser\<P\[K\]\> \| MethodProducer \}
 
-Defined in: [src/component.ts:69](https://github.com/zeixcom/le-truc/blob/b0a312070e75b8c347df329a83469bb95e181c8d/src/component.ts#L69)
+Defined in: [src/component.ts:69](https://github.com/zeixcom/le-truc/blob/e4b36bb40c21ae6929a612c7380070be96eead21/src/component.ts#L69)
 
 The `props` argument of `defineComponent` — a map from property names to their initializers.
 
