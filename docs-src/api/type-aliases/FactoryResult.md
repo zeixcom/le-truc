@@ -2,7 +2,7 @@
 
 > **FactoryResult** = ([`EffectDescriptor`](EffectDescriptor.md) \| `FactoryResult` \| [`Falsy`](Falsy.md))[]
 
-Defined in: [src/types.ts:86](https://github.com/zeixcom/le-truc/blob/ef4f71291ed328572278d97a47b2febefecb314e/src/types.ts#L86)
+Defined in: [src/types.ts:86](https://github.com/zeixcom/le-truc/blob/f973c77449aa2054ba6f6324004d6f4dfb8706d1/src/types.ts#L86)
 
 The return value of the factory function.
 

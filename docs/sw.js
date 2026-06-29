@@ -1,14 +1,14 @@
 // Le Truc Docs Service Worker
-// Generated at 2026-06-29T14:32:27.050Z
+// Generated at 2026-06-29T14:34:41.265Z
 // Auto-generated - do not edit manually
 
-const CACHE_NAME = 'le-truc-docs-7d93cbc9-daece0fd';
+const CACHE_NAME = 'le-truc-docs-cf027b4c-daece0fd';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
 	'/',
 	'/index.html',
-	'/assets/main.7d93cbc9095d3d6b.css',
+	'/assets/main.cf027b4c10d3013a.css',
 	'/assets/main.daece0fd99ba5d1e.js'
 ];
 
