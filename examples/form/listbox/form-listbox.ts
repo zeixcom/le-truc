@@ -58,7 +58,8 @@ const HANDLED_KEYS = [...DECREMENT_KEYS, ...INCREMENT_KEYS, FIRST_KEY, LAST_KEY]
 
 /**
  * A filterable listbox that loads options from a remote JSON source and integrates with HTML forms.
- * Supports keyboard navigation, accessibility, and automatic form value synchronization via a hidden input.
+ * Use it for searchable, single-select option lists — provides ARIA listbox semantics,
+ * keyboard navigation (Arrow, Home, End), accessibility, and automatic form value synchronization via a hidden input.
  */
 export default defineComponent<FormListboxProps>(
 	'form-listbox',

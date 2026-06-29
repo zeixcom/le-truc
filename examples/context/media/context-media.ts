@@ -31,6 +31,9 @@ export const MEDIA_ORIENTATION =
 
 /**
  * A context provider that tracks OS-level media query preferences and exposes them as reactive contexts.
+ * Use it for responsive or theme-aware components — descendant elements can requestContext()
+ * to react when the user changes reduced-motion, dark/light theme, or viewport breakpoint.
+ * Breakpoint attributes must be valid CSS lengths (e.g. `sm="600px"`).
  * Breakpoints (sm, md, lg, xl) can be overridden via attributes of the same name (e.g. `sm="600px"`).
  */
 export default defineComponent<ContextMediaProps>(

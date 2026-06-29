@@ -64,6 +64,10 @@ const valueToHash = (value: string, listbox: HTMLElement): string => {
 
 /**
  * Connects a listbox and a lazyload panel, syncing the selection with the URL hash for shareable navigation.
+ * Use it for master-detail navigation — the listbox provides keyboard-accessible option
+ * selection and the selection state syncs to the URL for deep linking.
+ * Listbox option values must be relative paths (starting with `./`);
+ * the lazyload panel should have an `id` matching the hash target for scroll restoration.
  */
 export default defineComponent('module-listnav', ({ first, pass }) => {
 	const listbox = first('form-listbox', 'Required to select a partial to load')

@@ -21,6 +21,9 @@ const CONTRAST_THRESHOLD = 0.71 // lightness
 
 /**
  * A color scale card that displays a named Oklch color with a full set of lightness steps.
+ * Use it for previewing a color palette — provides lightness tints and shades
+ * for when you need to evaluate contrast and accessibility of a base color.
+ * The `color` attribute must be a valid Oklch color string.
  * @cssprop --color-base - The base color in CSS format.
  * @cssprop --color-text - Foreground color (black or white) chosen for contrast.
  * @cssprop --color-text-soft - Muted foreground color.

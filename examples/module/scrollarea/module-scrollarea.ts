@@ -39,6 +39,9 @@ const observeOverflow =
 
 /**
  * Adds overflow indicator classes (`overflow`, `overflow-start`, `overflow-end`) to a scrollable container.
+ * Use it when you need to show scroll affordances — provides reactive CSS classes
+ * that update as the user scrolls, useful for custom scroll UI that should
+ * respect reduced-motion accessibility preferences.
  * Set the `orientation` attribute to `horizontal` for horizontal scroll detection.
  */
 export default defineComponent('module-scrollarea', ({ host, on, watch }) => {

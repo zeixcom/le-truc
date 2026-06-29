@@ -15,6 +15,9 @@ declare global {
 
 /**
  * A syntax-highlighted code block with collapsible truncation and a copy-to-clipboard button.
+ * Use it for displaying code samples — provides a keyboard-accessible expand/copy
+ * button and should be used when long code listings need graceful truncation.
+ * The `collapsed` attribute should be set to avoid overwhelming the page with long code.
  */
 export default defineComponent<ModuleCodeblockProps>(
 	'module-codeblock',

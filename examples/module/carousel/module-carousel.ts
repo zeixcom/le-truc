@@ -16,6 +16,8 @@ const clamp = (index: number, total: number) =>
 
 /**
  * An accessible image carousel with dot navigation, prev/next buttons, and scroll-snap support.
+ * Use it for image galleries or feature showcases — provides ARIA tabpanel semantics,
+ * keyboard navigation (Arrow keys to move between slides), and focus management.
  */
 export default defineComponent<ModuleCarouselProps>(
 	'module-carousel',

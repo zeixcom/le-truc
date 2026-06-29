@@ -19,6 +19,10 @@ declare global {
 
 /**
  * A gauge that displays a numeric value as a meter with color-coded thresholds.
+ * Use it for visualising a value within a known range — the needle rotates
+ * to reflect the current value and the color indicates which threshold applies.
+ * The `value` must be a number within the range defined by the thresholds.
+ * Thresholds should be ordered by `min` value for correct color assignment.
  * Thresholds are read from the `thresholds` attribute as a JSON array.
  * @cssprop --basic-gauge-degree - Rotation angle of the gauge needle (set reactively).
  * @cssprop --basic-gauge-color - Active threshold color (set reactively).

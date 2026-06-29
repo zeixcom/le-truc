@@ -19,6 +19,8 @@ declare global {
 
 /**
  * Shows locale-aware plural forms of content based on a count.
+ * Use it for internationalised prose where the correct plural form must be shown —
+ * accessibility tools and screen readers benefit from grammatically correct output.
  * Reveal children by class: `.none` (0), `.some` (>0), and `.zero/.one/.two/.few/.many/.other` per CLDR plural rules.
  * Add the `ordinal` attribute to use ordinal plural rules.
  */

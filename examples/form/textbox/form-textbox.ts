@@ -29,6 +29,8 @@ declare global {
 
 /**
  * A single-line or multiline text input with validation, optional clear button, and helper text.
+ * Use it when you need a styled text field — the underlying native input provides
+ * keyboard accessibility and standard ARIA textbox semantics.
  */
 export default defineComponent<FormTextboxProps>(
 	'form-textbox',

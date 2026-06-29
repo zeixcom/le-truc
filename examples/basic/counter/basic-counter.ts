@@ -13,6 +13,10 @@ declare global {
 
 /**
  * A simple click counter that increments on each button press.
+ * Use it for demonstrating reactive property updates — the count
+ * increments when the button is activated via mouse or keyboard.
+ * The host element should contain a `<button>` and a `<span>`; the button must
+ * be a real `<button>` element for keyboard activation to work.
  */
 export default defineComponent<BasicCounterProps>(
 	'basic-counter',

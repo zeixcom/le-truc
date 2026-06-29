@@ -26,6 +26,8 @@ const getSelected = (
 
 /**
  * An accessible tab group with keyboard navigation (Arrow, Home, End keys) and reactive panel switching.
+ * Use it for tabbed interfaces — provides ARIA tab/tabpanel semantics, focus management
+ * with roving tabindex, and keyboard accessibility per the WAI-ARIA tabs pattern.
  */
 export default defineComponent<ModuleTabgroupProps>(
 	'module-tabgroup',

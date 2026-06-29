@@ -20,6 +20,8 @@ declare global {
 
 /**
  * A numeric spinbutton with increment/decrement buttons and keyboard support.
+ * Use it for numeric input within a bounded range — provides ARIA spinbutton
+ * semantics and Arrow key support for incrementing and decrementing the value.
  */
 export default defineComponent<FormSpinbuttonProps>(
 	'form-spinbutton',

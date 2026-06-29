@@ -38,6 +38,9 @@ declare global {
 
 /**
  * Displays detailed color information (CSS, HEX, RGB, HSL, Oklch channels) for a given color.
+ * Use it for inspecting a color's various representations — useful when you need
+ * to evaluate contrast for accessibility or copy a specific format.
+ * The `color` attribute must be a valid Oklch color string.
  * @cssprop --color-swatch - The CSS color string, set reactively from the `css` property.
  * @cssprop --color-fallback - The HEX color string, set reactively from the `hex` property.
  */

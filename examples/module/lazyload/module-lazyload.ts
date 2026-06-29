@@ -23,6 +23,9 @@ declare global {
 
 /**
  * Fetches and renders an HTML partial from a URL, with loading and error states.
+ * Use it for lazy-loading content on demand — the `src` attribute should point to a
+ * same-origin URL; cross-origin or `javascript:` URLs are rejected for security.
+ * Untrusted HTML must be sanitised server-side; set `allow-scripts` only when required.
  * Set `allow-scripts` attribute to permit inline scripts in the fetched content.
  */
 export default defineComponent<ModuleLazyloadProps>(

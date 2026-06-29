@@ -15,6 +15,8 @@ declare global {
 
 /**
  * A styled checkbox component that syncs its state with a native checkbox input.
+ * Use it when you need a visually customisable checkbox — the underlying native
+ * input provides keyboard accessibility (Space to toggle) and ARIA semantics.
  */
 export default defineComponent<FormCheckboxProps>(
 	'form-checkbox',

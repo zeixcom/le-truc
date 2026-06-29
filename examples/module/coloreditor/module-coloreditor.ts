@@ -36,6 +36,9 @@ const nearestNamedColor = nearest(
 
 /**
  * An interactive color editor with Oklch input, named color lookup, and a full lightness scale preview.
+ * Use it for exploring and selecting colors — provides form inputs for Oklch channels
+ * and should be paired with `module-colorinfo` for full color detail display.
+ * The `color` attribute must be a valid Oklch color string; out-of-gamut values are clamped.
  */
 export default defineComponent<ModuleColoreditorProps>(
 	'module-coloreditor',

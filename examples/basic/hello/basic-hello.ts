@@ -13,6 +13,10 @@ declare global {
 
 /**
  * A hello-world component that greets a name entered via an input field.
+ * Use it as a starting point for learning Le Truc — it provides a minimal
+ * example of a reactive property updating the DOM as the user types.
+ * The host element should contain a `<label>`, `<input>`, and `<output>`; the input
+ * must have `name="name"` for the greeting to update reactively.
  */
 export default defineComponent<BasicHelloProps>(
 	'basic-hello',

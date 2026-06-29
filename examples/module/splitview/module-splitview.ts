@@ -17,6 +17,8 @@ const STEP = 0.05
 
 /**
  * A resizable split view with a draggable divider and keyboard support.
+ * Use it for two-panel layouts where the user should control the split — provides
+ * ARIA separator semantics and Arrow key support on the divider for accessibility.
  * Set `orientation="vertical"` for a top/bottom split.
  * @cssprop --split - The split ratio as a CSS percentage (e.g. `50.00%`), set reactively.
  */

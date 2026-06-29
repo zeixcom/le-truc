@@ -30,6 +30,10 @@ function formatLocalDate(
 
 /**
  * Formats and displays publication and modification dates from `<time>` element `datetime` attributes.
+ * Use it for blog post or article metadata — the displayed dates update when the
+ * underlying `datetime` attributes change.
+ * The `datetime` values must be valid date strings; missing attributes are skipped.
+ * The host element should contain `<time class="published">` and `<time class="modified">` elements.
  */
 export default defineComponent('card-blogmeta', ({ host, first }) => {
 	const published = first(
