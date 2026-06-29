@@ -309,6 +309,20 @@ describe('safeSetAttribute', () => {
 		).toThrow()
 	})
 
+	test('blocks javascript: with leading C0 control characters (regression: A2)', () => {
+		// Browsers strip leading U+0000–U+001F before parsing schemes. Tab/LF/CR
+		// are covered above; this catches the remaining C0 range (0x00–0x08,
+		// 0x0E–0x1F) that neither the old [\t\n\r\f\v] regex nor trim() removed.
+		const codes = [
+			...Array.from({ length: 9 }, (_, i) => i),
+			...Array.from({ length: 18 }, (_, i) => i + 0x0e),
+		]
+		for (const code of codes) {
+			const payload = String.fromCharCode(code) + 'javascript:alert(1)'
+			expect(() => safeSetAttribute(makeEl(), 'href', payload)).toThrow()
+		}
+	})
+
 	test('blocks protocol-relative URL //host (regression: A2)', () => {
 		// "//evil.com" contains no "://", so it previously fell through to the
 		// allow-by-default return and resolved against the page origin.
