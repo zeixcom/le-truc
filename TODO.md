@@ -28,14 +28,50 @@
 
 ## Le Truc integration
 
-- [~] LT-007: Add `custom-elements-manifest.config.mjs` and `build:cem` script to le-truc
+- [x] LT-007: Add `custom-elements-manifest.config.mjs` and `build:cem` script to le-truc — done ✓
   **Skill:** le-truc-dev
-  **Status:** Pending review — `package.json` now has `"customElements": "custom-elements.json"` and `"build:cem": "cem analyze"`. Plugin linked locally via `bun link @zeix/cem-plugin-le-truc`. `overrideModuleCreation` wired; `bun run build:cem` generates 47-component manifest. Known gap: attribute detection is empty for self-analysis because examples use relative imports (`'../../..'`) instead of `@zeix/le-truc` — see NOTES.md.
+  **Changed:** `package.json` (`"customElements": "custom-elements.json"`, `"build:cem": "cem analyze"`), `custom-elements-manifest.config.mjs`, devDependency `@custom-elements-manifest/analyzer ^0.11.0`.
+  **How:** Config uses `overrideModuleCreation` to expose the TS type checker to the plugin via a closure, globs `examples/**/*.ts` excluding tests. Plugin resolved via `bun link` pending npm publish of `@zeix/cem-plugin-le-truc` (see LT-011). `bun run build:cem` now produces a real manifest: 47 components, 82 members, 17 attributes, 16 cssProperties, 4 components with `@cssprop` tags. Attribute detection works for relative imports after the LT-010 fix.
+  **Verified:** `bun run build:cem` loads the plugin (no `ERR_MODULE_NOT_FOUND`), emits valid schemaVersion 1.0.0 manifest. Member types, JSDoc descriptions, attribute/field distinction all correct (spot-checked `module-coloreditor`).
+  **Caveat:** `bun link` resolution is local to this clone; CI and fresh clones will break until LT-011 (npm publish) lands.
 
-- [x] LT-008: Add JSDoc annotations to example components
+- [x] LT-008: Add JSDoc annotations to example components — done ✓
   **Skill:** le-truc-dev
   **Context:** Added description comments and property-level JSDoc to all example components in `examples/basic/`, `examples/form/`, `examples/card/`, `examples/context/`, and `examples/module/`. `@cssprop` tags added to `basic-gauge`, `card-colorscale`, `module-colorinfo`, and `module-splitview`. No explicit `@slot` or `@fires` tags needed (components use light DOM; no `CustomEvent` dispatches found).
 
-- [x] LT-009: Configure `cem lsp` and `cem mcp` for the le-truc dev environment
+- [~] LT-009: Configure `cem lsp` and `cem mcp` for the le-truc dev environment
   **Skill:** le-truc-dev
-  **Context:** `@pwrs/cem` installed globally and documented in `CONTRIBUTING.md`. `.vscode/settings.json` created with `html.customData` pointing at `custom-elements.json`. Zed equivalent documented in `CONTRIBUTING.md`. `.mcp.json` created (gitignored) for `cem mcp`. `CONTRIBUTING.md` updated with full setup instructions for both editor and AI tooling.
+  **Status:** Partial. **Done:** `.vscode/settings.json` (`html.customData` → `custom-elements.json`), `CONTRIBUTING.md` setup instructions for VS Code + Zed + `cem mcp`, `custom-elements.json` gitignored. **Not done / overclaimed previously:** `.mcp.json` does **not** exist — it is gitignored and CONTRIBUTING.md instructs each developer to create it manually (acceptable as an opt-in step, but it is not a committed artifact). `@pwrs/cem` (the package providing the `cem lsp` / `cem mcp` commands) is **not a project dependency** — only `@custom-elements-manifest/analyzer` is. The local `.bin/cem` resolves to the analyzer's `cem.js` (analyze-only); the `lsp`/`mcp` subcommands require a global `bun add -g @pwrs/cem` that is declared nowhere in `package.json` and must be installed per-machine per CONTRIBUTING.md.
+  **Remaining:** Decide whether `@pwrs/cem` should be a devDependency (makes `cem lsp`/`cem mcp` reproducible) or stay a documented global install (keeps it opt-in). See LT-012.
+
+## Post-audit follow-ups
+
+- [ ] LT-010: Publish `@zeix/cem-plugin-le-truc` to npm via provenance-checked release workflow
+  **Skill:** le-truc-dev
+  **Context:** The plugin is built and 22 tests pass in the `cem-plugin-le-truc` repo, but it is **not on npm** (`@zeix/cem-plugin-le-truc` → "Not found"). le-truc currently resolves it via `bun link @zeix/cem-plugin-le-truc`, which is local to this clone and breaks CI/fresh clones. The goal is a reproducible, provenance-checked publish from CI — matching le-truc's own release pipeline — then switch le-truc from the link to a real dependency.
+
+  **How le-truc publishes (reference, replicate this):** le-truc's `.github/workflows/npm-publish.yml` triggers on `release: [published]`, sets `permissions.id-token: write` (required for npm provenance), builds, then runs `npm publish --provenance --access public --tag <tag>`. It uses npm **trusted publishing (OIDC)** — there is **no `NPM_TOKEN` secret**. Authentication is established by linking the npm package to the GitHub repo/workflow. For a first publish, this link must be configured on npm *before* the workflow runs.
+
+  **Four blockers to resolve, in order:**
+
+  1. **Package contents (`package.json` `"files"` field) — HARD BLOCKER.** `dist/` is gitignored and there is **no `"files"` allowlist** in `cem-plugin-le-truc/package.json`, so `npm publish` would ship a package with no source. Add `"files": ["dist", "README.md", "LICENSE"]`. (npm respects `.gitignore` when no `.npmignore`/`files` exists, so gitignored `dist/` is excluded by default.)
+  2. **No GitHub Actions workflow.** Replicate `.github/workflows/npm-publish.yml` from le-truc into `cem-plugin-le-truc/.github/workflows/`, adapted for the plugin: trigger on `release: [published]`, `id-token: write`, `bun install`, `bun run build`, `npm publish --provenance --access public`. The existing version-tag logic (prerelease vs `latest`) can be copied verbatim.
+  3. **No test gate in the publish workflow.** Add a test step (`bun run test`) before the build step, so a failing plugin test blocks the publish. le-truc's `npm-publish.yml` has no test step, but for a brand-new package publishing for the first time, gating publish on green tests is cheap insurance.
+  4. **npm trusted-publishing link (manual, one-time).** On npmjs.com, the `@zeix/cem-plugin-le-truc` package must be configured to trust the `zeixcom/cem-plugin-le-truc` GitHub repo + the `publish` job in the `npm-publish.yml` workflow. This is a repo setting the maintainer must do in the npm UI before the first release triggers. Flag this clearly — it cannot be automated in the workflow itself.
+
+  **Then, back in le-truc:** remove the `bun link` resolution and run `bun add -D @zeix/cem-plugin-le-truc@^0.1.0` so the dependency resolves from the registry. Verify `bun run build:cem` still loads the plugin and produces the 47-component manifest. Update the ARCHITECTURE.md status note (currently says "not yet published to npm … `bun link`") to reflect the published dependency.
+
+  **Do NOT publish directly via local `npm publish`.** A local publish breaks the provenance guarantee and diverges from le-truc's release model. The publish must originate from the GitHub release → workflow path. To trigger the first release: tag `v0.1.0`, push, create a GitHub release; the workflow publishes with provenance.
+
+- [ ] LT-011: Decide on `@pwrs/cem` as a dependency vs. documented global install
+  **Skill:** architect
+  **Context:** `cem lsp` (editor autocomplete) and `cem mcp` (AI agent context) come from `@pwrs/cem`, which is neither a devDependency nor committed. CONTRIBUTING.md tells developers to `bun add -g @pwrs/cem`. Trade-off: adding it as a devDependency makes the editor/AI tooling reproducible across clones but pulls a heavier transitive graph; keeping it global is lighter but undiscoverable. Recommend a decision and align TODO.md / CONTRIBUTING.md with it. This is the only open item from LT-009.
+
+- [ ] LT-012: Add CI guard so `build:cem` fails when the plugin fails to load
+  **Skill:** le-truc-dev
+  **Context:** `cem analyze` exits 0 even when `custom-elements-manifest.config.mjs` throws `ERR_MODULE_NOT_FOUND` for the plugin — it logs the error, then proceeds *without* the plugin and writes a manifest full of garbage declarations (e.g. `name: "Truc"`, `name: "anonymous_N"`, zero members/attributes). This silently regressed undetected because `custom-elements.json` is gitignored. Add a check (e.g. post-build assertion that the manifest contains expected component count / no `anonymous_` declarations, or verify the plugin loaded) so a missing/broken plugin fails the build instead of producing a broken manifest.
+
+- [ ] LT-013: Filter structural-only stub elements out of the manifest
+  **Skill:** le-truc-dev
+  **Context:** `examples/main.ts` defines six structural-only container elements via `customElements.define('card-blogpost', class extends HTMLElement {})` (and `card-callout`, `module-demo`, `module-toc`, `section-hero`, `section-menu`). The default analyzer surfaces these as custom-element declarations with `name: "anonymous_N"` and empty members, adding noise to the manifest. Either exclude `main.ts` from the `globs` (it's an entry point, not a component definition) or filter `customElements.define` of anonymous `class extends HTMLElement {}` in the plugin/config. Low priority — cosmetic, not incorrect.
+

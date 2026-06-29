@@ -113,9 +113,11 @@ Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestConte
 
 Le Truc example components are analysed by `@custom-elements-manifest/analyzer` using the `@zeix/cem-plugin-le-truc` plugin (see [ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md)). The plugin bridges the gap between Le Truc's factory pattern and the standard CEM ecosystem.
 
-The generated `custom-elements.json` (repo root, referenced via `"customElements"` in `package.json`) enables:
-- **`cem lsp`**: Editor autocomplete, hover docs, and diagnostics in HTML templates (VS Code, Zed)
-- **`cem mcp`**: AI-native component context for coding agents (Claude Code, etc.)
+> **Status note:** The plugin is built and tested (22/22 tests in the `cem-plugin-le-truc` repo) and produces a high-quality manifest for the 47 example components (82 members, 17 attributes, 16 cssProperties). It is **not yet published to npm**; le-truc currently resolves it via a local `bun link`, so `build:cem` only works in clones where the plugin is linked. See TODO.md LT-010 for the npm-publish follow-up.
+
+The generated `custom-elements.json` (repo root, referenced via `"customElements"` in `package.json`, gitignored) enables:
+- **`cem lsp`**: Editor autocomplete, hover docs, and diagnostics in HTML templates (VS Code, Zed) — requires `@pwrs/cem` installed globally (see CONTRIBUTING.md); not a project dependency
+- **`cem mcp`**: AI-native component context for coding agents (Claude Code, etc.) — opt-in via a gitignored `.mcp.json` per the CONTRIBUTING.md instructions
 
 #### What the plugin extracts
 
@@ -125,7 +127,7 @@ The generated `custom-elements.json` (repo root, referenced via `"customElements
 | `name` | PascalCase from tagName (`basic-counter` → `BasicCounter`) |
 | `description` | JSDoc above the `export default defineComponent(…)` |
 | `members` | Properties of `Props` type via TypeScript type checker — always the source of truth |
-| `attributes` | Properties in `expose({})` whose initializer is a call to an `as*` Parser from `@zeix/le-truc` |
+| `attributes` | Properties in `expose({})` whose initializer is a call to an `as*` Parser from `@zeix/le-truc` (imported by package name **or** by relative path into the package root — resolved against the owning `package.json`) |
 | `slots`, `events`, `cssParts`, `cssProperties` | `@slot`, `@fires`, `@csspart`, `@cssprop` JSDoc tags on the export |
 
 #### JSDoc annotation contract
@@ -150,4 +152,7 @@ export type MyProps = {
 
 #### Generation
 
-Run `bun run build:cem` to generate `custom-elements.json`. The script runs `cem analyze` using `custom-elements-manifest.config.mjs` targeting `examples/**/*.ts` (test files excluded).
+Run `bun run build:cem` to generate `custom-elements.json`. The script runs `cem analyze` using `custom-elements-manifest.config.mjs` targeting `examples/**/*.ts` (test files excluded). The manifest is gitignored — it is a local build artifact, not committed.
+
+> **Footgun:** `cem analyze` exits 0 and writes a manifest *even if the plugin fails to load* (e.g. `ERR_MODULE_NOT_FOUND`). A silently-unloaded plugin produces a manifest full of garbage declarations (anonymous names, empty members). If `build:cem` ever reports no `@zeix/cem-plugin-le-truc`-driven output, the plugin did not load — see TODO.md LT-012 for the planned CI guard.
+
