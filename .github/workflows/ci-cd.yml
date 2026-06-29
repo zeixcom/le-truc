@@ -33,6 +33,12 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Generate & verify Custom Elements Manifest
+        # Guards against silent plugin-load failure: if @zeix/cem-plugin-le-truc
+        # fails to load, cem analyze still exits 0 but emits garbage declarations.
+        # verify-cem.ts asserts all declaration names are PascalCase (plugin-ran signal).
+        run: bun run build:cem
+
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps
 

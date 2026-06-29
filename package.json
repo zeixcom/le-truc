@@ -52,7 +52,8 @@
 		"test:server:unit": "bun test server/tests --bail",
 		"test:server:integration": "bun test server/tests --timeout 10000",
 		"test:server:watch": "bun test server/tests --watch",
-		"build:cem": "cem analyze"
+		"build:cem": "cem analyze && bun run verify:cem",
+		"verify:cem": "bun run scripts/verify-cem.ts"
 	},
 	"dependencies": {
 		"@zeix/cause-effect": "^1.3.4"
