@@ -283,7 +283,7 @@ describe('safeSetAttribute', () => {
 		).not.toThrow()
 	})
 
-	test('blocks javascript: with internal tab (regression: A2)', () => {
+	test('blocks javascript: with internal tab', () => {
 		// Browsers strip internal tab when parsing URL schemes, so "java\tscript:"
 		// executes. Previously this slipped past the ^javascript: regex.
 		expect(() =>
@@ -291,13 +291,13 @@ describe('safeSetAttribute', () => {
 		).toThrow()
 	})
 
-	test('blocks javascript: with internal newline (regression: A2)', () => {
+	test('blocks javascript: with internal newline', () => {
 		expect(() =>
 			safeSetAttribute(makeEl(), 'href', 'java\nscript:alert(1)'),
 		).toThrow()
 	})
 
-	test('blocks javascript: with internal carriage return (regression: A2)', () => {
+	test('blocks javascript: with internal carriage return', () => {
 		expect(() =>
 			safeSetAttribute(makeEl(), 'href', 'java\rscript:alert(1)'),
 		).toThrow()
@@ -309,7 +309,7 @@ describe('safeSetAttribute', () => {
 		).toThrow()
 	})
 
-	test('blocks javascript: with leading C0 control characters (regression: A2)', () => {
+	test('blocks javascript: with leading C0 control characters', () => {
 		// Browsers strip leading U+0000–U+001F before parsing schemes. Tab/LF/CR
 		// are covered above; this catches the remaining C0 range (0x00–0x08,
 		// 0x0E–0x1F) that neither the old [\t\n\r\f\v] regex nor trim() removed.
@@ -323,7 +323,7 @@ describe('safeSetAttribute', () => {
 		}
 	})
 
-	test('blocks protocol-relative URL //host (regression: A2)', () => {
+	test('blocks protocol-relative URL //host', () => {
 		// "//evil.com" contains no "://", so it previously fell through to the
 		// allow-by-default return and resolved against the page origin.
 		expect(() => safeSetAttribute(makeEl(), 'href', '//evil.com/x')).toThrow()

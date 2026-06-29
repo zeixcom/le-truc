@@ -2,7 +2,7 @@
 
 > **SplitByComma**\<`S`\> = `S` *extends* `` `${infer First},${infer Rest}` `` ? \[[`TrimWhitespace`](TrimWhitespace.md)\<`First`\>, `...SplitByComma<Rest>`\] : \[[`TrimWhitespace`](TrimWhitespace.md)\<`S`\>\]
 
-Defined in: [src/helpers/dom.ts:12](https://github.com/zeixcom/le-truc/blob/4098d5791c279825fcbaa4a549a14c3639e84375/src/helpers/dom.ts#L12)
+Defined in: [src/helpers/dom.ts:12](https://github.com/zeixcom/le-truc/blob/ef4f71291ed328572278d97a47b2febefecb314e/src/helpers/dom.ts#L12)
 
 #### Type Parameters
 

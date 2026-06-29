@@ -71,7 +71,7 @@ type Initializers<P extends ComponentProps> = {
 }
 
 /**
- * The context object passed to the v1.1 factory function.
+ * The context object passed to the v2.x factory function.
  *
  * Components destructure only what they need.
  */
@@ -88,7 +88,7 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 /* === Exported Functions === */
 
 /**
- * Define and register a reactive custom element using the v1.1 factory form.
+ * Define and register a reactive custom element using the v2.x factory form.
  *
  * The factory receives a `FactoryContext` at connect time: query helpers (`first`, `all`),
  * the `host` element, and `expose()` for declaring reactive properties. It returns a flat

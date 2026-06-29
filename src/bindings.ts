@@ -105,7 +105,7 @@ const isSafeURL = (value: string): boolean => {
  * a safe-protocol allowlist (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`).
  * Violations throw a descriptive error — they are never silent.
  *
- * @since 1.1
+ * @since 2.0
  * @param {Element} element - Target element
  * @param {string} attr - Attribute name to set
  * @param {string} value - Attribute value to set
@@ -132,7 +132,7 @@ const safeSetAttribute = (
  *
  * Escapes `&`, `<`, `>`, `"`, and `'`.
  *
- * @since 1.1
+ * @since 2.0
  * @param {string} text - Plain text to escape
  * @returns {string} HTML-safe string
  */
@@ -150,7 +150,7 @@ const escapeHTML = (text: string): string =>
  * Removes all child nodes except comments, then appends a new text node.
  * Useful when HTML comments are used as markers or server-rendered annotations.
  *
- * @since 1.1
+ * @since 2.0
  * @param {Element} element - Target element
  * @param {string} text - Text content to set
  */

@@ -2,7 +2,7 @@
 
 > **OnEventHandler**\<`P`, `Evt`, `E`\> = (`event`, `element`) => `{ [K in keyof P]?: P[K] }` \| [`Falsy`](Falsy.md) \| `void` \| `Promise`\<`void`\>
 
-Defined in: [src/helpers/events.ts:26](https://github.com/zeixcom/le-truc/blob/4098d5791c279825fcbaa4a549a14c3639e84375/src/helpers/events.ts#L26)
+Defined in: [src/helpers/events.ts:26](https://github.com/zeixcom/le-truc/blob/ef4f71291ed328572278d97a47b2febefecb314e/src/helpers/events.ts#L26)
 
 Handler for `on()`. Receives `(event, element)`.
 

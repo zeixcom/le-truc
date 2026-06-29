@@ -2,9 +2,9 @@
 
 > **FactoryContext**\<`P`\> = [`ElementQueries`](ElementQueries.md) & `object`
 
-Defined in: [src/component.ts:78](https://github.com/zeixcom/le-truc/blob/4098d5791c279825fcbaa4a549a14c3639e84375/src/component.ts#L78)
+Defined in: [src/component.ts:78](https://github.com/zeixcom/le-truc/blob/ef4f71291ed328572278d97a47b2febefecb314e/src/component.ts#L78)
 
-The context object passed to the v1.1 factory function.
+The context object passed to the v2.x factory function.
 
 Components destructure only what they need.
 

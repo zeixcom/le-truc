@@ -2,6 +2,10 @@
 
 ## 2.2.0 (Unreleased)
 
+### Fixed
+
+- **`isSafeURL` now strips the full C0 control range, not just tab/newline/CR/FF/VT, before the scheme check**: the prior hardening (2.1.0, below) stripped only `[\t\n\r\f\v]` (0x09–0x0D) before testing for `javascript:`/`data:`/`vbscript:`. Browsers strip the entire C0 control range (U+0000–U+001F) when parsing a URL, so a leading or embedded control byte outside that narrow set — e.g. `\x01javascript:alert(1)` — still survived the check and executed once the browser dropped the control character on activation. The strip now covers `\x00`–`\x20` (C0 controls plus space) via a single `/[\x00-\x20]/g` replace, closing the remaining gap.
+
 ### Deprecated
 
 - **`pass()` property-key and bare-writable-signal short forms**: `pass(target, props)` previously accepted four input forms per entry. The property key (`'value'`) and the bare writable signal (`someState`) both resolved to the parent's writable signal, granting the child unrestricted `.set()` access to state the parent owns — with no chokepoint at which the parent could validate, clamp, veto, log, or persist the write. The thunk (`() => host.value`, read-only) and `{ get, set }` descriptor (mediated writable) forms already keep the parent in control. The two writable short forms are now **deprecated**: in `DEV_MODE`, `pass()` emits `pass() received a writable signal for '<prop>'. Use () => host.<prop> for read-only access, or { get, set } to mediate writes.` once per offending binding. Production builds are unaffected. The migration is **behavior-preserving**: `pass(child, { value: parentSignal })` → `pass(child, { value: { get: parentSignal.get, set: parentSignal.set } })`, or for read-only access `pass(child, { value: () => host.value })`. Both deprecated forms are removed in the next major. See [ADR 0012](adr/0012-deprecate-unrestricted-write-short-forms-in-pass.md).

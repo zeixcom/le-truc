@@ -18,7 +18,7 @@ declare global {
 }
 
 /**
- * Test provider: exposes `count` as context using v1.1 `provideContexts` helper.
+ * Test provider: exposes `count` as context using v2.x `provideContexts` helper.
  */
 export const TestContextProvider = defineComponent<TestContextProviderProps>(
 	'test-context-provider',
@@ -35,7 +35,7 @@ export type TestContextConsumerProps = {
 }
 
 /**
- * Test consumer: requests `test-count` context using v1.1 `requestContext` helper.
+ * Test consumer: requests `test-count` context using v2.x `requestContext` helper.
  * Displays the resolved value in `#output`.
  */
 export const TestContextConsumer = defineComponent<TestContextConsumerProps>(

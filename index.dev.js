@@ -1826,7 +1826,7 @@ var SCRIPT_ATTRS = [
   "fetchpriority"
 ];
 var isSafeURL = (value) => {
-  const stripped = String(value).replace(/[\t\n\r\f\v]/g, "").trim();
+  const stripped = String(value).replace(/[\x00-\x20]/g, "");
   if (/^(javascript|data|vbscript):/i.test(stripped))
     return false;
   if (/^(mailto|tel):/i.test(stripped))

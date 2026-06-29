@@ -130,12 +130,12 @@ describe('isReservedWord', () => {
 		}
 	})
 
-	test('returns true for __proto__ (regression: A3)', () => {
+	test('returns true for __proto__', () => {
 		// The key vector: asJSON-parsed or Record-cast keys reaching #initSignals.
 		expect(isReservedWord('__proto__')).toBe(true)
 	})
 
-	test('returns true for constructor (regression: A3)', () => {
+	test('returns true for constructor', () => {
 		expect(isReservedWord('constructor')).toBe(true)
 	})
 
