@@ -1,4 +1,4 @@
-# ADR 0010: Custom Elements Manifest via `@custom-elements-manifest/analyzer` Plugin
+# ADR 0013: Custom Elements Manifest via `@custom-elements-manifest/analyzer` Plugin
 
 ## Status
 

@@ -111,7 +111,7 @@ Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestConte
 
 ### Custom Elements Manifest
 
-Le Truc example components are analysed by `@custom-elements-manifest/analyzer` using the `@zeix/cem-plugin-le-truc` plugin (see [ADR 0010](adr/0010-cem-plugin-for-le-truc-factory-pattern.md)). The plugin bridges the gap between Le Truc's factory pattern and the standard CEM ecosystem.
+Le Truc example components are analysed by `@custom-elements-manifest/analyzer` using the `@zeix/cem-plugin-le-truc` plugin (see [ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md)). The plugin bridges the gap between Le Truc's factory pattern and the standard CEM ecosystem.
 
 The generated `custom-elements.json` (repo root, referenced via `"customElements"` in `package.json`) enables:
 - **`cem lsp`**: Editor autocomplete, hover docs, and diagnostics in HTML templates (VS Code, Zed)
