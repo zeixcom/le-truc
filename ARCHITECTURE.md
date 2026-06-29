@@ -115,8 +115,8 @@ Le Truc example components are analysed by `@custom-elements-manifest/analyzer` 
 
 > **Status note:** The plugin is built and tested (22/22 tests in the `cem-plugin-le-truc` repo) and produces a high-quality manifest for the 47 example components (82 members, 17 attributes, 16 cssProperties). It is **not yet published to npm**; le-truc currently resolves it via a local `bun link`, so `build:cem` only works in clones where the plugin is linked. See TODO.md LT-010 for the npm-publish follow-up.
 
-The generated `custom-elements.json` (repo root, referenced via `"customElements"` in `package.json`, gitignored) enables:
-- **`cem lsp`**: Editor autocomplete, hover docs, and diagnostics in HTML templates (VS Code, Zed) — requires `@pwrs/cem` installed globally (see CONTRIBUTING.md); not a project dependency
+The generated `custom-elements.json` (repo root, referenced via `"customElements"` in `package.json`, gitignored) enables two **optional** tooling features — neither is required to build, test, or contribute to Le Truc:
+- **`cem lsp`**: Editor autocomplete, hover docs, and diagnostics in HTML templates (VS Code, Zed) — requires `@pwrs/cem` installed globally (see CONTRIBUTING.md); not a project dependency. `@pwrs/cem` ships a ~58 MB native binary, which is why it is deliberately kept out of `devDependencies`.
 - **`cem mcp`**: AI-native component context for coding agents (Claude Code, etc.) — opt-in via a gitignored `.mcp.json` per the CONTRIBUTING.md instructions
 
 #### What the plugin extracts

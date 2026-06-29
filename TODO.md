@@ -39,33 +39,22 @@
   **Skill:** le-truc-dev
   **Context:** Added description comments and property-level JSDoc to all example components in `examples/basic/`, `examples/form/`, `examples/card/`, `examples/context/`, and `examples/module/`. `@cssprop` tags added to `basic-gauge`, `card-colorscale`, `module-colorinfo`, and `module-splitview`. No explicit `@slot` or `@fires` tags needed (components use light DOM; no `CustomEvent` dispatches found).
 
-- [~] LT-009: Configure `cem lsp` and `cem mcp` for the le-truc dev environment
+- [x] LT-009: Configure `cem lsp` and `cem mcp` for the le-truc dev environment — done ✓
   **Skill:** le-truc-dev
-  **Status:** Partial. **Done:** `.vscode/settings.json` (`html.customData` → `custom-elements.json`), `CONTRIBUTING.md` setup instructions for VS Code + Zed + `cem mcp`, `custom-elements.json` gitignored. **Not done / overclaimed previously:** `.mcp.json` does **not** exist — it is gitignored and CONTRIBUTING.md instructs each developer to create it manually (acceptable as an opt-in step, but it is not a committed artifact). `@pwrs/cem` (the package providing the `cem lsp` / `cem mcp` commands) is **not a project dependency** — only `@custom-elements-manifest/analyzer` is. The local `.bin/cem` resolves to the analyzer's `cem.js` (analyze-only); the `lsp`/`mcp` subcommands require a global `bun add -g @pwrs/cem` that is declared nowhere in `package.json` and must be installed per-machine per CONTRIBUTING.md.
-  **Remaining:** Decide whether `@pwrs/cem` should be a devDependency (makes `cem lsp`/`cem mcp` reproducible) or stay a documented global install (keeps it opt-in). See LT-012.
+  **Done:** `.vscode/settings.json` (`html.customData` → `custom-elements.json`), `CONTRIBUTING.md` setup instructions for VS Code + Zed + `cem mcp`, `custom-elements.json` gitignored. `.mcp.json` is deliberately a gitignored per-developer file (opt-in), not a committed artifact.
+  **Resolved via LT-011:** `@pwrs/cem` is **not** a project dependency — by decision. CONTRIBUTING.md now documents `cem lsp`/`cem mcp` as optional editor/AI tooling (not "required"), and clarifies that `cem analyze` (used by `build:cem`) is already bundled via `@custom-elements-manifest/analyzer`. The local `.bin/cem` resolves to the analyzer's `cem.js`.
 
 ## Post-audit follow-ups
 
-- [ ] LT-010: Publish `@zeix/cem-plugin-le-truc` to npm via provenance-checked release workflow
+- [x] LT-010: Publish `@zeix/cem-plugin-le-truc` to npm via provenance-checked release workflow — done ✓
   **Skill:** le-truc-dev
-  **Context:** The plugin is built and 22 tests pass in the `cem-plugin-le-truc` repo, but it is **not on npm** (`@zeix/cem-plugin-le-truc` → "Not found"). le-truc currently resolves it via `bun link @zeix/cem-plugin-le-truc`, which is local to this clone and breaks CI/fresh clones. The goal is a reproducible, provenance-checked publish from CI — matching le-truc's own release pipeline — then switch le-truc from the link to a real dependency.
+  **Done:** `@zeix/cem-plugin-le-truc@0.1.0` published with provenance. Workflow (`.github/workflows/npm-publish.yml` in the plugin repo) created with OIDC trusted publishing + test gate; `package.json` `"files"` allowlist added so the gitignored `dist/` ships. le-truc now resolves the plugin from the npm registry (`@zeix/cem-plugin-le-truc@^0.1.0` devDependency), no longer via `bun link`. `bun run build:cem` confirmed working.
+  **Reference for future releases:** trigger on `release: [published]`; never publish locally (breaks provenance). See ADR 0013.
 
-  **How le-truc publishes (reference, replicate this):** le-truc's `.github/workflows/npm-publish.yml` triggers on `release: [published]`, sets `permissions.id-token: write` (required for npm provenance), builds, then runs `npm publish --provenance --access public --tag <tag>`. It uses npm **trusted publishing (OIDC)** — there is **no `NPM_TOKEN` secret**. Authentication is established by linking the npm package to the GitHub repo/workflow. For a first publish, this link must be configured on npm *before* the workflow runs.
-
-  **Four blockers to resolve, in order:**
-
-  1. **Package contents (`package.json` `"files"` field) — HARD BLOCKER.** `dist/` is gitignored and there is **no `"files"` allowlist** in `cem-plugin-le-truc/package.json`, so `npm publish` would ship a package with no source. Add `"files": ["dist", "README.md", "LICENSE"]`. (npm respects `.gitignore` when no `.npmignore`/`files` exists, so gitignored `dist/` is excluded by default.)
-  2. **No GitHub Actions workflow.** Replicate `.github/workflows/npm-publish.yml` from le-truc into `cem-plugin-le-truc/.github/workflows/`, adapted for the plugin: trigger on `release: [published]`, `id-token: write`, `bun install`, `bun run build`, `npm publish --provenance --access public`. The existing version-tag logic (prerelease vs `latest`) can be copied verbatim.
-  3. **No test gate in the publish workflow.** Add a test step (`bun run test`) before the build step, so a failing plugin test blocks the publish. le-truc's `npm-publish.yml` has no test step, but for a brand-new package publishing for the first time, gating publish on green tests is cheap insurance.
-  4. **npm trusted-publishing link (manual, one-time).** On npmjs.com, the `@zeix/cem-plugin-le-truc` package must be configured to trust the `zeixcom/cem-plugin-le-truc` GitHub repo + the `publish` job in the `npm-publish.yml` workflow. This is a repo setting the maintainer must do in the npm UI before the first release triggers. Flag this clearly — it cannot be automated in the workflow itself.
-
-  **Then, back in le-truc:** remove the `bun link` resolution and run `bun add -D @zeix/cem-plugin-le-truc@^0.1.0` so the dependency resolves from the registry. Verify `bun run build:cem` still loads the plugin and produces the 47-component manifest. Update the ARCHITECTURE.md status note (currently says "not yet published to npm … `bun link`") to reflect the published dependency.
-
-  **Do NOT publish directly via local `npm publish`.** A local publish breaks the provenance guarantee and diverges from le-truc's release model. The publish must originate from the GitHub release → workflow path. To trigger the first release: tag `v0.1.0`, push, create a GitHub release; the workflow publishes with provenance.
-
-- [ ] LT-011: Decide on `@pwrs/cem` as a dependency vs. documented global install
+- [x] LT-011: Decide on `@pwrs/cem` as a dependency vs. documented global install — decided ✓
   **Skill:** architect
-  **Context:** `cem lsp` (editor autocomplete) and `cem mcp` (AI agent context) come from `@pwrs/cem`, which is neither a devDependency nor committed. CONTRIBUTING.md tells developers to `bun add -g @pwrs/cem`. Trade-off: adding it as a devDependency makes the editor/AI tooling reproducible across clones but pulls a heavier transitive graph; keeping it global is lighter but undiscoverable. Recommend a decision and align TODO.md / CONTRIBUTING.md with it. This is the only open item from LT-009.
+  **Decision: keep `@pwrs/cem` a documented global install, not a devDependency (Option C).** `@pwrs/cem` is a ~58 MB native binary (platform-specific via `optionalDependencies`) that provides only the *optional* `cem lsp` (editor autocomplete) and `cem mcp` (AI agent) features. It is not needed to build, test, or contribute — `cem analyze` (used by `build:cem`) is already bundled via `@custom-elements-manifest/analyzer`. The 58 MB cost is unjustifiable in every contributor's `node_modules` for an opt-in editor feature.
+  **Done:** CONTRIBUTING.md rewritten — the misleading "(required)" label removed; `cem lsp`/`cem mcp` reframed as optional editor/AI tooling; the `analyze` (bundled) vs `lsp`/`mcp` (global install) split made explicit. ARCHITECTURE.md §Ecosystem Tooling status note aligned. Closes the only open item from LT-009.
 
 - [ ] LT-012: Add CI guard so `build:cem` fails when the plugin fails to load
   **Skill:** le-truc-dev
