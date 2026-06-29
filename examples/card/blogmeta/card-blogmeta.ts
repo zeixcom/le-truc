@@ -34,7 +34,7 @@ function formatLocalDate(
  * underlying `datetime` attributes change.
  * The `datetime` values must be valid date strings; missing attributes are skipped.
  * The host element should contain `<time class="published">` and `<time class="modified">` elements.
- */
+ * @demo {./docs/examples/card-blogmeta.html} Interactive preview and usage examples */
 export default defineComponent('card-blogmeta', ({ host, first }) => {
 	const published = first(
 		'time.published',

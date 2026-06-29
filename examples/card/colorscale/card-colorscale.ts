@@ -35,7 +35,7 @@ const CONTRAST_THRESHOLD = 0.71 // lightness
  * @cssprop --color-darken40 - 40% darker step.
  * @cssprop --color-darken60 - 60% darker step.
  * @cssprop --color-darken80 - 80% darker step.
- */
+ * @demo {./docs/examples/card-colorscale.html} Interactive preview and usage examples */
 export default defineComponent<CardColorscaleProps>(
 	'card-colorscale',
 	({ expose, first, host, watch }) => {

@@ -27,7 +27,7 @@ declare global {
  * same-origin URL; cross-origin or `javascript:` URLs are rejected for security.
  * Untrusted HTML must be sanitised server-side; set `allow-scripts` only when required.
  * Set `allow-scripts` attribute to permit inline scripts in the fetched content.
- */
+ * @demo {./docs/examples/module-lazyload.html} Interactive preview and usage examples */
 export default defineComponent<ModuleLazyloadProps>(
 	'module-lazyload',
 	({ expose, first, host, watch }) => {

@@ -22,7 +22,7 @@ declare global {
  * A pagination control with prev/next buttons, a direct page input, and keyboard navigation.
  * Use it for navigating paged data — provides ARIA navigation semantics, keyboard
  * focus management, and Enter key support on the page input field.
- */
+ * @demo {./docs/examples/module-pagination.html} Interactive preview and usage examples */
 export default defineComponent<ModulePaginationProps>(
 	'module-pagination',
 	({ expose, first, host, on, watch }) => {

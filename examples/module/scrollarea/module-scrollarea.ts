@@ -43,7 +43,7 @@ const observeOverflow =
  * that update as the user scrolls, useful for custom scroll UI that should
  * respect reduced-motion accessibility preferences.
  * Set the `orientation` attribute to `horizontal` for horizontal scroll detection.
- */
+ * @demo {./docs/examples/module-scrollarea.html} Interactive preview and usage examples */
 export default defineComponent('module-scrollarea', ({ host, on, watch }) => {
 	const child = host.firstElementChild
 	if (!child) return []

@@ -35,7 +35,7 @@ let idCounter = 0
  * A full-featured todo list with add, remove, complete, filter, and drag-and-drop reordering.
  * Use it as a reference example of a complete Le Truc application — keyboard accessible
  * controls and ARIA labelling should be considered when adapting it for production use.
- */
+ * @demo {./docs/examples/module-todo.html} Interactive preview and usage examples */
 export default defineComponent(
 	'module-todo',
 	({ all, first, host, on, pass, watch }) => {

@@ -27,7 +27,7 @@ const getIndex = (radios: HTMLInputElement[]) =>
  * A radio group with roving tabindex keyboard navigation and reactive value tracking.
  * Use it for single-choice selection — provides ARIA radiogroup semantics, Arrow/Home/End
  * key support, and focus management across the radio options.
- */
+ * @demo {./docs/examples/form-radiogroup.html} Interactive preview and usage examples */
 export default defineComponent<FormRadiogroupProps>(
 	'form-radiogroup',
 	({ all, expose, host, on, watch }) => {

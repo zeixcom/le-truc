@@ -12,7 +12,7 @@ import {
  * update when the user changes their OS or browser preferences.
  * This component should be placed inside a `<context-media>` provider ancestor;
  * without a provider, context values must fall back to `"unknown"`.
- */
+ * @demo {./docs/examples/card-mediaqueries.html} Interactive preview and usage examples */
 export default defineComponent(
 	'card-mediaqueries',
 	({ first, requestContext, watch }) => {

@@ -26,7 +26,7 @@ declare global {
  * Thresholds are read from the `thresholds` attribute as a JSON array.
  * @cssprop --basic-gauge-degree - Rotation angle of the gauge needle (set reactively).
  * @cssprop --basic-gauge-color - Active threshold color (set reactively).
- */
+ * @demo {./docs/examples/basic-gauge.html} Interactive preview and usage examples */
 export default defineComponent<BasicGaugeProps>(
 	'basic-gauge',
 	({ expose, first, host, pass, watch }) => {

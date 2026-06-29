@@ -43,7 +43,7 @@ declare global {
  * The `color` attribute must be a valid Oklch color string.
  * @cssprop --color-swatch - The CSS color string, set reactively from the `css` property.
  * @cssprop --color-fallback - The HEX color string, set reactively from the `hex` property.
- */
+ * @demo {./docs/examples/module-colorinfo.html} Interactive preview and usage examples */
 export default defineComponent<ModuleColorinfoProps>(
 	'module-colorinfo',
 	({ all, expose, first, host, pass, watch }) => {

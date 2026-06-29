@@ -12,7 +12,7 @@ declare global {
  * and removed via delegated click handling, with stable keys across reorders.
  * Each item must include a remove button with class `remove` for deletion to work;
  * the form should use a `<form-textbox>` for the new-item input.
- */
+ * @demo {./docs/examples/module-list.html} Interactive preview and usage examples */
 export default defineComponent(
 	'module-list',
 	({ first, host, on, pass, watch }) => {

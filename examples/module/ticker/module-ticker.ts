@@ -73,7 +73,7 @@ const BLOCK_SIZE = 100
  * A high-performance stock ticker with virtualized rows, random-walk price simulation, and pause/resume control.
  * Use it for demonstrating the `each()` helper with large dynamic collections — rows are
  * virtualized for performance and the data updates should be throttled to avoid jank.
- */
+ * @demo {./docs/examples/module-ticker.html} Interactive preview and usage examples */
 export default defineComponent<ModuleTickerProps>(
 	'module-ticker',
 	({ all, expose, first, host, on, pass, watch }) => {

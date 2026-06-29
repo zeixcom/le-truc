@@ -19,7 +19,7 @@ let idCounter = 0
  * An inline text field that switches between display and edit mode on click or double-click.
  * Use it for editable labels or inline content — provides ARIA-labelled toggle buttons,
  * keyboard interaction (Enter to confirm, Escape to cancel), and focus management.
- */
+ * @demo {./docs/examples/form-inplace-edit.html} Interactive preview and usage examples */
 export default defineComponent<FormInplaceEditProps>(
 	'form-inplace-edit',
 	({ expose, first, host, on, watch }) => {

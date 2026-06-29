@@ -114,7 +114,7 @@ function getNumberFormatter(
  * provided as a JSON object and the value is read once at connect time.
  * Invalid `options` JSON falls back to defaults; `style: "unit"` requires a valid `unit`.
  * Format options are read from the `options` attribute as a JSON object.
- */
+ * @demo {./docs/examples/basic-number.html} Interactive preview and usage examples */
 export default defineComponent<BasicNumberProps>(
 	'basic-number',
 	({ expose, host, watch }) => {

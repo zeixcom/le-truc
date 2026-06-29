@@ -32,7 +32,7 @@ declare global {
  * A combobox (searchable select) that combines a text input with a filterable listbox popup.
  * Use it for searchable selection — provides ARIA roles for the combobox pattern,
  * keyboard interaction (type to filter, Escape to close, Enter to select), and focus management.
- */
+ * @demo {./docs/examples/form-combobox.html} Interactive preview and usage examples */
 export default defineComponent<FormComboboxProps>(
 	'form-combobox',
 	({ expose, first, host, on, pass, watch }) => {

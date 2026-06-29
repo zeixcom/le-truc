@@ -17,7 +17,7 @@ declare global {
  * example of a reactive property updating the DOM as the user types.
  * The host element should contain a `<label>`, `<input>`, and `<output>`; the input
  * must have `name="name"` for the greeting to update reactively.
- */
+ * @demo {./docs/examples/basic-hello.html} Interactive preview and usage examples */
 export default defineComponent<BasicHelloProps>(
 	'basic-hello',
 	({ expose, first, on, watch }) => {

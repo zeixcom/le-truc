@@ -35,7 +35,7 @@ export const MEDIA_ORIENTATION =
  * to react when the user changes reduced-motion, dark/light theme, or viewport breakpoint.
  * Breakpoint attributes must be valid CSS lengths (e.g. `sm="600px"`).
  * Breakpoints (sm, md, lg, xl) can be overridden via attributes of the same name (e.g. `sm="600px"`).
- */
+ * @demo {./docs/examples/context-media.html} Interactive preview and usage examples */
 export default defineComponent<ContextMediaProps>(
 	'context-media',
 	({ expose, host, provideContexts }) => {
