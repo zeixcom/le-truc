@@ -73,20 +73,13 @@ const SCRIPT_ATTRS = [
  * @param {string} value - URL string to validate
  * @returns {boolean} `true` if the URL is considered safe, `false` otherwise
  */
-const stripC0AndSpace = (value: string): string => {
-	let out = ''
-	for (let i = 0; i < value.length; i++) {
-		if (value.charCodeAt(i) > 0x20) out += value[i]!
-	}
-	return out
-}
-
 const isSafeURL = (value: string): boolean => {
 	// Strip the full C0 control + ASCII space range (U+0000–U+0020). Browsers
 	// strip leading controls before parsing schemes; internal tab/newline/CR are
 	// also ignored — without this, "\x01javascript:" or "java\tscript:" slip past
 	// the `^javascript:` check below and execute on activation.
-	const stripped = stripC0AndSpace(String(value))
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping C0 controls is the point, not a typo
+	const stripped = String(value).replace(/[\x00-\x20]/g, '')
 	if (/^(javascript|data|vbscript):/i.test(stripped)) return false
 	if (/^(mailto|tel):/i.test(stripped)) return true
 	// Protocol-relative (//host) and backslash-prefixed (\\host) URLs resolve
