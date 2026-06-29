@@ -223,6 +223,7 @@
 <span class="line"><span style="color:#F8F8F2">	createTask,</span></span>
 <span class="line"><span style="color:#F8F8F2">	dangerouslyBindInnerHTML,</span></span>
 <span class="line"><span style="color:#F8F8F2">	defineComponent,</span></span>
+<span class="line"><span style="color:#F8F8F2">	schedule,</span></span>
 <span class="line"><span style="color:#F8F8F2">} </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">	fetchWithCache,</span></span>
@@ -270,6 +271,13 @@
 <span class="line"></span>
 <span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({ src: </span><span style="color:#A6E22E">asString</span><span style="color:#F8F8F2">() })</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">		// Skip the scroll-to-heading on the very first load, so the page</span></span>
+<span class="line"><span style="color:#88846F">		// doesn't jump on initial mount — only on subsequent src changes.</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		let</span><span style="color:#F8F8F2"> hasLoaded </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
+<span class="line"><span style="color:#88846F">		// Distinct key from `contentEl` (used by dangerouslyBindInnerHTML above)</span></span>
+<span class="line"><span style="color:#88846F">		// so this scroll task doesn't clobber the pending innerHTML write.</span></span>
+<span class="line"><span style="color:#66D9EF;font-style:italic">		const</span><span style="color:#F8F8F2"> scrollTask </span><span style="color:#F92672">=</span><span style="color:#F8F8F2"> {}</span></span>
+<span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(content, {</span></span>
 <span class="line"><span style="color:#A6E22E">				ok</span><span style="color:#F8F8F2">: </span><span style="color:#FD971F;font-style:italic">content</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
@@ -277,6 +285,15 @@
 <span class="line"><span style="color:#F8F8F2">					loading.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
 <span class="line"><span style="color:#F8F8F2">					contentEl.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>
 <span class="line"><span style="color:#A6E22E">					setHTML</span><span style="color:#F8F8F2">(content)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F92672">					if</span><span style="color:#F8F8F2"> (hasLoaded) {</span></span>
+<span class="line"><span style="color:#A6E22E">						schedule</span><span style="color:#F8F8F2">(scrollTask, () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">							contentEl</span></span>
+<span class="line"><span style="color:#F8F8F2">								.</span><span style="color:#A6E22E">querySelector</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'h1, h2, h3, h4, h5, h6'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F8F8F2">								?.</span><span style="color:#A6E22E">scrollIntoView</span><span style="color:#F8F8F2">({ behavior: </span><span style="color:#E6DB74">'smooth'</span><span style="color:#F8F8F2">, block: </span><span style="color:#E6DB74">'start'</span><span style="color:#F8F8F2"> })</span></span>
+<span class="line"><span style="color:#F8F8F2">						})</span></span>
+<span class="line"><span style="color:#F8F8F2">					}</span></span>
+<span class="line"><span style="color:#F8F8F2">					hasLoaded </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> true</span></span>
 <span class="line"><span style="color:#F8F8F2">				},</span></span>
 <span class="line"><span style="color:#A6E22E">				nil</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#F8F8F2">					callout.hidden </span><span style="color:#F92672">=</span><span style="color:#AE81FF"> false</span></span>

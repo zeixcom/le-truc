@@ -22,6 +22,34 @@ const stripBreadcrumbs = (content: string): string => {
 	return content
 }
 
+/** GitHub repo (org/name) for each @zeix dependency whose declarations show up in "Defined in:" lines. */
+const ZEIX_DEPENDENCY_REPOS: Record<string, string> = {
+	'cause-effect': 'zeixcom/cause-effect',
+}
+
+const NODE_MODULES_DEFINED_IN =
+	/Defined in: node\\?_modules\/@zeix\/([\w-]+)\/types\/(.+?)\.d\.ts:\d+/g
+
+/**
+ * TypeDoc can't generate a source link for declaration files outside this
+ * repo, so a symbol re-exported from an @zeix dependency gets a plain
+ * "Defined in: node_modules/@zeix/<pkg>/types/<path>.d.ts:<line>" path
+ * instead of a link. The rolled-up .d.ts mirrors the dependency's
+ * src/<path>.ts 1:1, so rewrite it into a link to that file on GitHub.
+ * Line numbers in the .d.ts don't correspond to the original .ts source, so
+ * the link points at the file, not a line. Unknown @zeix packages are left
+ * untouched.
+ */
+const linkExternalDefinedIn = (content: string): string =>
+	content.replace(
+		NODE_MODULES_DEFINED_IN,
+		(match, pkg: string, path: string) => {
+			const repo = ZEIX_DEPENDENCY_REPOS[pkg]
+			if (!repo) return match
+			return `Defined in: [${path}.ts](https://github.com/${repo}/blob/main/${path}.ts)`
+		},
+	)
+
 /** Recursively read the first text content of a renderable node */
 const firstTextContent = (node: RenderableTreeNode): string => {
 	if (typeof node === 'string') return node
@@ -45,11 +73,11 @@ const mergeDefinedInIntoBlockquote = (
 		const node = root.children[i]!
 		const next = root.children[i + 1]
 		if (
-			Tag.isTag(node) &&
-			node.name === 'blockquote' &&
-			Tag.isTag(next) &&
-			next.name === 'p' &&
-			firstTextContent(next).startsWith('Defined in:')
+			Tag.isTag(node)
+			&& node.name === 'blockquote'
+			&& Tag.isTag(next)
+			&& next.name === 'p'
+			&& firstTextContent(next).startsWith('Defined in:')
 		) {
 			children.push(
 				new Tag('blockquote', node.attributes, [
@@ -330,8 +358,8 @@ const makeHeadingIdsUnique = (
 		}
 
 		while (
-			ancestors.length &&
-			ancestors[ancestors.length - 1]!.level >= level
+			ancestors.length
+			&& ancestors[ancestors.length - 1]!.level >= level
 		) {
 			ancestors.pop()
 		}
@@ -387,15 +415,15 @@ const processApiFile = async (file: FileInfo): Promise<void> => {
 	// Skip index files — only process individual API entries
 	const filename = relativePath.split('/').pop() || ''
 	if (
-		filename === 'globals.md' ||
-		filename === 'README.md' ||
-		filename.startsWith('_')
+		filename === 'globals.md'
+		|| filename === 'README.md'
+		|| filename.startsWith('_')
 	) {
 		return
 	}
 
-	// Strip TypeDoc navigation breadcrumbs
-	const cleanContent = stripBreadcrumbs(file.content)
+	// Strip TypeDoc navigation breadcrumbs and link external "Defined in:" paths
+	const cleanContent = linkExternalDefinedIn(stripBreadcrumbs(file.content))
 
 	// Parse with Markdoc
 	const ast = Markdoc.parse(cleanContent)
@@ -446,6 +474,7 @@ const processApiFile = async (file: FileInfo): Promise<void> => {
 // Exported for testing
 export {
 	convertParameterSectionsToTables,
+	linkExternalDefinedIn,
 	makeHeadingIdsUnique,
 	mergeDefinedInIntoBlockquote,
 	stripBreadcrumbs,

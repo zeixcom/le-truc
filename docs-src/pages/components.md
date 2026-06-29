@@ -15,7 +15,7 @@ description: 'Anatomy, lifecycle, signals, effects'
 
 Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built-in state management and reactive updates**.
 
-{% callout .tip title="Le Truc enhances HTML — it doesn't replace it" %}
+{% callout .note title="Le Truc enhances HTML — it doesn't replace it" %}
 A Le Truc component **wraps existing server-rendered content**. The HTML inside the custom element is the starting point — visible before JavaScript runs. See [Progressive Enhancement](getting-started.html#progressive-enhancement) for how this works.
 {% /callout %}
 
@@ -92,6 +92,23 @@ console.log(el.count) // Read the signal value
 el.count = 42 // Update the signal value
 ```
 
+### Signal Types
+
+Le Truc re-exports the reactive primitives from [`@zeix/cause-effect`](https://github.com/zeixcom/cause-effect). Every signal type participates in the same dependency graph with the same propagation, batching, and cleanup semantics. Use the type that matches the data's role:
+
+| Type | Role | When to use it |
+|------|------|----------------|
+| [`State`](./api.html#functions/createState) | Mutable source | Local mutable state you read and write inside the component |
+| [`Sensor`](./api.html#functions/createSensor) | External input (lazy) | Values that arrive from outside the graph — `matchMedia`, `IntersectionObserver`, geolocation. Seeds an initial value via `{ value }` |
+| [`Memo`](./api.html#functions/createMemo) | Sync derivation | A value computed from other signals — e.g. the sum of a spinbutton collection. For cheap one-off derivations, a plain thunk passed to `watch()` is often enough |
+| [`Task`](./api.html#functions/createTask) | Async derivation | `fetch`, dynamic imports, or any async work. Auto-cancels in-flight work when its dependencies change and exposes pending / error / ok states via `match()` |
+| [`Store`](./api.html#functions/createStore) | Reactive object | An object whose individual properties are each reactive |
+| [`List`](./api.html#functions/createList) | Reactive array | A keyed collection with stable item identity across add, remove, sort, and reorder |
+| [`Collection`](./api.html#functions/createCollection) | Reactive collection | Externally-driven streams (WebSocket, SSE) or derived pipelines |
+| [`Effect`](./api.html#functions/createEffect) | Side-effect sink | Terminal consumer for work outside the graph. Inside a component, prefer the factory's `watch()` / `on()` over a bare `createEffect()` |
+
+`Slot` is an integration primitive used internally by `pass()` to swap a child's backing signal; you rarely create one directly.
+
 ### Characteristics and Special Values
 
 Signals are **statically typed** and **non-nullable** — no null-checks needed inside effects.
@@ -118,7 +135,7 @@ defineComponent('my-component', ({ expose }) => {
 })
 ```
 
-{% callout .tip title="Parsers run once at connect time" %}
+{% callout .note title="Parsers run once at connect time" %}
 The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser — use event handlers or direct property writes to update state post-connect.
 {% /callout %}
 
@@ -298,7 +315,7 @@ return [
 
 The order of descriptors does not matter.
 
-{% callout .tip title="CSS must define what the class or attribute does" %}
+{% callout .note title="CSS must define what the class or attribute does" %}
 `bindClass(el, 'even')` adds or removes the `even` class — but nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `bindAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
 
 See [Reactive Styles](styling.html#reactive-styles) for examples of how CSS and effects work together.

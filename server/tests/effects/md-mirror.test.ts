@@ -79,6 +79,23 @@ describe('stripMarkdocTags — callout', () => {
 		expect(result).toContain('> **Custom Title:** Content')
 		expect(result).not.toContain('warning')
 	})
+
+	test('puts label on its own line when body starts with a bullet list', () => {
+		const input = `{% callout .tip title="When to use" %}\n- First option.\n- Second option.\n{% /callout %}`
+		const result = stripMarkdocTags(input)
+		expect(result).toContain('> **When to use:**')
+		expect(result).toContain('> - First option.')
+		expect(result).toContain('> - Second option.')
+		expect(result).not.toContain('**When to use:** -')
+	})
+
+	test('puts label on its own line when body starts with an ordered list', () => {
+		const input = `{% callout .note title="Steps" %}\n1. Do this.\n2. Then this.\n{% /callout %}`
+		const result = stripMarkdocTags(input)
+		expect(result).toContain('> **Steps:**')
+		expect(result).toContain('> 1. Do this.')
+		expect(result).not.toContain('**Steps:** 1.')
+	})
 })
 
 describe('stripMarkdocTags — container strip tags', () => {
