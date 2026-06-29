@@ -2,9 +2,9 @@
 
 > **defineComponent**\<`P`\>(`name`, `factory`): `CustomElementConstructor` \| `undefined`
 
-Defined in: [src/component.ts:105](https://github.com/zeixcom/le-truc/blob/3f0de1fb7379c829fde242331bee0885b56a8cd8/src/component.ts#L105)
+Defined in: [src/component.ts:106](https://github.com/zeixcom/le-truc/blob/ef4f71291ed328572278d97a47b2febefecb314e/src/component.ts#L106)
 
-Define and register a reactive custom element using the v1.1 factory form.
+Define and register a reactive custom element using the v2.x factory form.
 
 The factory receives a `FactoryContext` at connect time: query helpers (`first`, `all`),
 the `host` element, and `expose()` for declaring reactive properties. It returns a flat

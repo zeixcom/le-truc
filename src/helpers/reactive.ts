@@ -3,6 +3,7 @@ import {
 	createEffect,
 	createMemo,
 	createScope,
+	isComputed,
 	isFunction,
 	isMemo,
 	isRecord,
@@ -13,10 +14,15 @@ import {
 	match,
 	type Signal,
 	type SingleMatchHandlers,
+	type Slot,
 	type SlotDescriptor,
 	untrack,
 } from '@zeix/cause-effect'
-import { InvalidCustomElementError, InvalidReactivesError } from '../errors'
+import {
+	InvalidCustomElementError,
+	InvalidPassPropertyError,
+	InvalidReactivesError,
+} from '../errors'
 import { getSignals } from '../internal'
 import type {
 	ComponentProps,
@@ -24,7 +30,7 @@ import type {
 	FactoryResult,
 	Falsy,
 } from '../types'
-import { DEV_MODE, elementName, isCustomElement, LOG_WARN } from '../util'
+import { DEV_MODE, elementName, isCustomElement } from '../util'
 
 /* === Types === */
 
@@ -47,6 +53,10 @@ type Reactive<T, P extends ComponentProps> =
 /**
  * A map of child component property names to the reactive values to inject into them.
  * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
+ *
+ * Prefer the read-only thunk (`() => host.prop`) and the mediated
+ * `{ get, set }` descriptor forms. The property-key and bare-writable-signal
+ * forms are deprecated; they warn in DEV_MODE and will be removed in the next major.
  */
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
 	[K in keyof Q & string]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>
@@ -99,6 +109,20 @@ type WatchHelper<P extends ComponentProps> = {
  *
  * Passes reactive values to a descendant Le Truc component's Slot-backed signals.
  * Supports single-element and Memo targets (per-element lifecycle for Memo).
+ *
+ * The property-key (`'value'`) and bare-writable-signal (`someState`) forms are
+ * deprecated — they hand the child unrestricted `.set()` on the parent's signal
+ * (ADR-0012) and warn in DEV_MODE. Migrate to the behavior-preserving descriptor:
+ *
+ * ```ts
+ * // before (deprecated) — child can write freely
+ * pass(child, { value: parentSignal })
+ * // after — child writes are mediated by the parent
+ * pass(child, { value: { get: parentSignal.get, set: parentSignal.set } })
+ * ```
+ *
+ * For read-only access use the thunk: `pass(child, { value: () => host.value })`.
+ * Both deprecated forms are removed in the next major.
  */
 type PassHelper<P extends ComponentProps> = {
 	<Q extends ComponentProps>(
@@ -251,6 +275,17 @@ const makeWatch = <P extends ComponentProps>(
  * For Memo targets, uses per-element lifecycle: signals are swapped when elements
  * enter the collection and restored when they leave.
  *
+ * The property-key and bare-writable-signal short forms are deprecated:
+ * They grant the child unrestricted `.set()` on the parent's signal.
+ * In DEV_MODE `pass()` emits a warning for each writable binding:
+ *
+ * > `pass() received a writable signal for '<prop>'. Use () => host.<prop> for read-only access, or { get, set } to mediate writes.`
+ *
+ * The migration is behavior-preserving:
+ * `pass(child, { value: sig })` → `pass(child, { value: { get: sig.get, set: sig.set } })`,
+ * or for read-only access `pass(child, { value: () => host.value })`. The
+ * deprecated forms are removed in the next major.
+ *
  * @since 2.0
  * @param {HTMLElement & P} host - The component host element
  * @returns {PassHelper<P>} Bound `pass` function for the given host
@@ -276,35 +311,66 @@ const makePass = <P extends ComponentProps>(
 
 			const signals = getSignals(target)
 			const targetName = elementName(target)
-			const cleanups: (() => void)[] = []
+
+			// Eager validate-then-commit (no mutation until every entry is known to
+			// be bindable) — a failure must never leave a partial swap. See ADR 0011.
+			const failures = new Map<string, string>()
+			const bindings: {
+				slot: Slot<unknown & {}>
+				signal: Signal<unknown & {}> | SlotDescriptor<unknown & {}>
+			}[] = []
 
 			for (const [prop, reactive] of Object.entries(props)) {
 				if (reactive == null) continue
 				if (!(prop in target)) {
-					if (DEV_MODE)
-						console[LOG_WARN](
-							`pass(): property '${prop}' does not exist on ${targetName}`,
-						)
+					failures.set(prop, `does not exist on ${targetName}`)
 					continue
 				}
 
 				const signal = toSignal(host, reactive)
-				if (!signal) continue
-
-				// Slot-backed (Le Truc component) — replace and restore on cleanup
-				const slot = signals[prop]
-				if (isSlot(slot)) {
-					const original = slot.current()
-					slot.replace(signal)
-					cleanups.push(() => slot.replace(original))
+				if (!signal) {
+					failures.set(prop, 'could not be resolved to a signal')
 					continue
 				}
 
-				if (DEV_MODE)
-					console[LOG_WARN](
-						`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`,
+				// ADR-0012: the property-key and bare-writable-signal short forms
+				// hand the child unrestricted `.set()` on the parent's signal. Warn
+				// in DEV_MODE. Detection is reversed — allow what is provably
+				// read-only, warn on everything else.
+				if (
+					DEV_MODE &&
+					!isComputed(signal) &&
+					!(
+						signal &&
+						typeof signal === 'object' &&
+						'get' in signal &&
+						!(Symbol.toStringTag in signal)
 					)
+				) {
+					console.warn(
+						`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`,
+					)
+				}
+
+				const slot = signals[prop]
+				if (!isSlot(slot)) {
+					failures.set(
+						prop,
+						`is not Slot-backed on ${targetName} (read-only property, or target is not a Le Truc component)`,
+					)
+					continue
+				}
+				bindings.push({ slot, signal })
 			}
+
+			if (failures.size)
+				throw new InvalidPassPropertyError(host, target, failures)
+
+			const cleanups = bindings.map(({ slot, signal }) => {
+				const original = slot.current()
+				slot.replace(signal)
+				return () => slot.replace(original)
+			})
 
 			if (cleanups.length)
 				return () => {

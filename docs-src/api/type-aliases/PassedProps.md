@@ -2,10 +2,14 @@
 
 > **PassedProps**\<`P`, `Q`\> = \{ \[K in keyof Q & string\]?: Reactive\<Q\[K\], P\> \| SlotDescriptor\<Q\[K\] & \{\}\> \}
 
-Defined in: [src/helpers/reactive.ts:51](https://github.com/zeixcom/le-truc/blob/3f0de1fb7379c829fde242331bee0885b56a8cd8/src/helpers/reactive.ts#L51)
+Defined in: [src/helpers/reactive.ts:61](https://github.com/zeixcom/le-truc/blob/ef4f71291ed328572278d97a47b2febefecb314e/src/helpers/reactive.ts#L61)
 
 A map of child component property names to the reactive values to inject into them.
 Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
+
+Prefer the read-only thunk (`() => host.prop`) and the mediated
+`{ get, set }` descriptor forms. The property-key and bare-writable-signal
+forms are deprecated; they warn in DEV_MODE and will be removed in the next major.
 
 #### Type Parameters
 

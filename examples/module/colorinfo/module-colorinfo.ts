@@ -68,9 +68,9 @@ export default defineComponent<ModuleColorinfoProps>(
 		})
 
 		return [
-			pass(lightnessEls, { value: 'lightness' }),
-			pass(chromaEls, { value: 'chroma' }),
-			pass(hueEls, { value: 'hue' }),
+			pass(lightnessEls, { value: () => host.lightness }),
+			pass(chromaEls, { value: () => host.chroma }),
+			pass(hueEls, { value: () => host.hue }),
 
 			watch('css', bindStyle(host, '--color-swatch')),
 			watch('hex', bindStyle(host, '--color-fallback')),

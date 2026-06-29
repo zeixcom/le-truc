@@ -3,9 +3,43 @@ import { schedule } from './scheduler'
 
 /* === Types === */
 
+/**
+ * Placeholder for the DOM's `TrustedHTML` type (Trusted Types API). Declared
+ * locally and kept unexported because `lib.dom.d.ts` does not yet ship this
+ * type. Deliberately just `object`, not a structural mirror of its shape: the
+ * real type (e.g. via `@types/trusted-types`, the source DOMPurify's own types
+ * resolve against) is a nominal class with only private members — specifically
+ * to prevent structural impersonation — so a `{ toJSON(): string }`-shaped
+ * mirror would reject genuine `TrustedHTML` values produced by DOMPurify or a
+ * native `trustedTypes` policy. `object` is the loosest type that accepts both
+ * without claiming a shape Le Truc cannot verify; this exists only to satisfy
+ * the `innerHTML` cast below. See ADR-0010's amendments.
+ */
+type TrustedHTML = object
+
 type DangerouslyBindInnerHTMLOptions = {
 	shadowRootMode?: ShadowRootMode
 	allowScripts?: boolean
+	/**
+	 * Optional sanitizer applied to the HTML string before it is assigned to
+	 * `innerHTML`. Use this to plug in an external sanitizer (e.g. DOMPurify)
+	 * when the content is not fully trusted. Le Truc ships no built-in sanitizer.
+	 *
+	 * May return a plain `string` or a `TrustedHTML` instance. Returning
+	 * `TrustedHTML` is required for the assignment to succeed on a page that
+	 * enforces `Content-Security-Policy: require-trusted-types-for 'script'` —
+	 * the DOM rejects a plain string there, no matter how thoroughly it was
+	 * sanitized. DOMPurify configured with `RETURN_TRUSTED_TYPE: true` is the
+	 * canonical way to produce one. Without a hook that returns `TrustedHTML`,
+	 * the assignment throws on such a page; that is the browser's own
+	 * enforcement working as intended — the consumer opted into this sink
+	 * without producing a trusted value.
+	 *
+	 * Note: sanitizing is the *only* reliable defense against XSS here. Setting
+	 * `innerHTML` fires event-handler attributes on non-`<script>` elements
+	 * (e.g. `<img onerror>`, `<svg onload>`) even when `allowScripts` is false.
+	 */
+	sanitize?: (html: string) => string | TrustedHTML
 }
 
 /* === Constants === */
@@ -18,6 +52,7 @@ const SCRIPT_ATTRS = [
 	'nomodule',
 	'crossorigin',
 	'integrity',
+	'nonce',
 	'referrerpolicy',
 	'fetchpriority',
 ]
@@ -27,18 +62,32 @@ const SCRIPT_ATTRS = [
 /**
  * Check whether a URL string is safe to use as an attribute value.
  *
- * Rejects `javascript:`, `data:`, and `vbscript:` schemes. Allows relative paths,
- * `mailto:`, `tel:`, and absolute URLs with `http:`, `https:`, or `ftp:` protocols.
+ * Rejects `javascript:`, `data:`, and `vbscript:` schemes (including variants
+ * masked by C0 control characters or whitespace, such as `\x01javascript:` or
+ * `java\tscript:`, which browsers strip/canonicalize before parsing the scheme).
+ * Rejects protocol-relative URLs (`//host`) and backslash
+ * variants (`\\host`), which resolve against the page origin. Allows relative
+ * paths, fragments, query strings, `mailto:`, `tel:`, and absolute URLs with
+ * `http:`, `https:`, or `ftp:` protocols.
  *
  * @param {string} value - URL string to validate
  * @returns {boolean} `true` if the URL is considered safe, `false` otherwise
  */
 const isSafeURL = (value: string): boolean => {
-	if (/^(javascript|data|vbscript):/i.test(value)) return false
-	if (/^(mailto|tel):/i.test(value)) return true
-	if (value.includes('://')) {
+	// Strip the full C0 control + ASCII space range (U+0000–U+0020). Browsers
+	// strip leading controls before parsing schemes; internal tab/newline/CR are
+	// also ignored — without this, "\x01javascript:" or "java\tscript:" slip past
+	// the `^javascript:` check below and execute on activation.
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping C0 controls is the point, not a typo
+	const stripped = String(value).replace(/[\x00-\x20]/g, '')
+	if (/^(javascript|data|vbscript):/i.test(stripped)) return false
+	if (/^(mailto|tel):/i.test(stripped)) return true
+	// Protocol-relative (//host) and backslash-prefixed (\\host) URLs resolve
+	// against the page origin and can route to an attacker-controlled host.
+	if (/^[\\/][\\/]/.test(stripped)) return false
+	if (stripped.includes('://')) {
 		try {
-			const url = new URL(value)
+			const url = new URL(stripped)
 			return ['http:', 'https:', 'ftp:'].includes(url.protocol)
 		} catch {
 			return false
@@ -56,7 +105,7 @@ const isSafeURL = (value: string): boolean => {
  * a safe-protocol allowlist (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`).
  * Violations throw a descriptive error — they are never silent.
  *
- * @since 1.1
+ * @since 2.0
  * @param {Element} element - Target element
  * @param {string} attr - Attribute name to set
  * @param {string} value - Attribute value to set
@@ -83,7 +132,7 @@ const safeSetAttribute = (
  *
  * Escapes `&`, `<`, `>`, `"`, and `'`.
  *
- * @since 1.1
+ * @since 2.0
  * @param {string} text - Plain text to escape
  * @returns {string} HTML-safe string
  */
@@ -101,7 +150,7 @@ const escapeHTML = (text: string): string =>
  * Removes all child nodes except comments, then appends a new text node.
  * Useful when HTML comments are used as markers or server-rendered annotations.
  *
- * @since 1.1
+ * @since 2.0
  * @param {Element} element - Target element
  * @param {string} text - Text content to set
  */
@@ -247,40 +296,84 @@ const bindStyle = (
 
 /**
  * Returns `SingleMatchHandlers<string>` that sets the inner HTML of an element,
- * with optional Shadow DOM and script re-execution support.
+ * with optional Shadow DOM, sanitization, and script re-execution support.
  *
  * - `ok(html)` → schedules `element.innerHTML = html` (or `shadowRoot.innerHTML`);
- *   if `allowScripts` is true, re-executes `<script>` elements after injection.
- * - `nil` → resets `innerHTML = ''` (or `<slot></slot>` in shadow root).
+ *   if `sanitize` is provided, it is applied first. If `allowScripts` is true,
+ *   `<script>` elements are re-executed after injection (inline `<script>` added
+ *   via `innerHTML` does not run on its own).
+ * - `nil` (or an empty/falsy `html`) → schedules a reset via
+ *   `element.replaceChildren()` (or `shadowRoot.replaceChildren(document.createElement('slot'))`).
+ *   Going through the same per-element `schedule()` dedup as the `ok` write
+ *   above means whichever of the two fires last in a frame wins — a reset
+ *   can't be clobbered by an earlier-scheduled, now-stale write, nor vice versa.
+ *   The DOM-mutation approach (rather than `innerHTML = ''`) deliberately
+ *   avoids the `innerHTML` sink: under a Trusted-Types-enforcing CSP, *any*
+ *   string assignment to `innerHTML` throws — even `''` — so reset is
+ *   unaffected by enforcement and needs no `sanitize` hook.
  *
- * **Security note:** Only use with trusted or sanitized content. Pass `allowScripts: true`
- * only when the content source is trusted upstream.
+ * **Security — read carefully.** Assigning `innerHTML` is an XSS sink. It does
+ * NOT execute inline `<script>`, but it DOES fire event-handler attributes on
+ * other elements (e.g. `<img src=x onerror=…>`, `<svg onload=…>`, `<iframe srcdoc>`).
+ * Therefore:
+ * - `allowScripts: false` (the default) does **not** make untrusted HTML safe.
+ *   It only suppresses the explicit `<script>` re-execution step.
+ * - All content passed here must be fully trusted or sanitized upstream. Pass a
+ *   `sanitize` function (e.g. DOMPurify's `sanitize`) to apply that sanitation
+ *   at the sink. Le Truc ships no built-in sanitizer.
+ *
+ * **Trusted Types.** On a page that enforces
+ * `Content-Security-Policy: require-trusted-types-for 'script'`, the
+ * `innerHTML` assignment throws unless `html` is a `TrustedHTML` instance — a
+ * `sanitize` hook that returns a plain `string` does not satisfy this, no
+ * matter how thorough the sanitization. Return `TrustedHTML` from `sanitize`
+ * (e.g. DOMPurify with `RETURN_TRUSTED_TYPE: true`) to support such pages.
  *
  * @since 2.0
  * @param element - Target element
- * @param [options] - Shadow DOM mode and script execution options
+ * @param [options] - Shadow DOM mode, sanitizer, and script execution options
  * @returns Match handlers that schedule the innerHTML mutation
  */
 const dangerouslyBindInnerHTML = (
 	element: Element,
 	options: DangerouslyBindInnerHTMLOptions = {},
 ): SingleMatchHandlers<string> => {
+	// Resets via DOM mutation rather than `innerHTML` — see Trusted Types note above.
 	const reset = () => {
-		if (element.shadowRoot) element.shadowRoot.innerHTML = '<slot></slot>'
-		else element.innerHTML = ''
+		if (element.shadowRoot)
+			element.shadowRoot.replaceChildren(document.createElement('slot'))
+		else element.replaceChildren()
 	}
 	return {
-		ok: (html: string) => {
-			if (!html) {
-				reset()
+		ok: (rawHtml: string) => {
+			if (!rawHtml) {
+				schedule(element, reset)
 				return
 			}
-			const { shadowRootMode, allowScripts } = options
+			const { shadowRootMode, allowScripts, sanitize } = options
 			if (shadowRootMode && !element.shadowRoot)
 				element.attachShadow({ mode: shadowRootMode })
 			const target = element.shadowRoot || element
+			const html = sanitize ? sanitize(rawHtml) : rawHtml
 			schedule(element, () => {
-				target.innerHTML = html
+				try {
+					// lib.dom.d.ts types `innerHTML` as `string` only; the DOM itself
+					// accepts `TrustedHTML` too (required under a Trusted-Types-enforcing
+					// CSP), so the cast reflects the runtime contract, not a type escape.
+					;(target as { innerHTML: string | TrustedHTML }).innerHTML = html
+				} catch (e) {
+					// A Trusted-Types-enforcing CSP throws here when `html` is a plain
+					// string. This must reach the consumer as an uncaught error (not
+					// `src/scheduler.ts`'s per-task console.error) since it signals a
+					// missing/insufficient `sanitize` hook — a configuration bug, not a
+					// recoverable condition. Re-throwing from a microtask surfaces it as
+					// an uncaught exception without re-entering the scheduler's own
+					// try/catch, so later same-frame tasks still run (see ADR-0010).
+					queueMicrotask(() => {
+						throw e
+					})
+					return
+				}
 				if (allowScripts) {
 					target.querySelectorAll('script').forEach(script => {
 						const newScript = document.createElement('script')
@@ -298,7 +391,7 @@ const dangerouslyBindInnerHTML = (
 				}
 			})
 		},
-		nil: reset,
+		nil: () => schedule(element, reset),
 	}
 }
 

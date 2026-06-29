@@ -152,6 +152,11 @@ vite.config.ts.timestamp-*
 
 # Claude
 .claude/settings.local.json
+
+# Mistral Vibe
+.vibe/
+
+# MacOS
 .DS_Store
 
 # Generated

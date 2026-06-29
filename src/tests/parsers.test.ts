@@ -31,11 +31,11 @@ describe('asBoolean', () => {
 		expect(parser('false')).toBe(false)
 	})
 
-	test('returns true when attribute value is "FALSE" (case sensitive)', () => {
+	test('returns false when attribute value is "false" in any case (case-insensitive)', () => {
 		const parser = asBoolean()
-		// The implementation only checks for exact string 'false'
-		expect(parser('FALSE')).toBe(true)
-		expect(parser('False')).toBe(true)
+		expect(parser('FALSE')).toBe(false)
+		expect(parser('False')).toBe(false)
+		expect(parser('fAlSe')).toBe(false)
 	})
 
 	test('returns false when attribute is null', () => {
@@ -53,7 +53,7 @@ describe('asBoolean', () => {
 		expect(parser('   ')).toBe(true)
 	})
 
-	test('returns false only for exact string "false" (case-insensitive)', () => {
+	test('returns true for "false" with surrounding whitespace or as a substring (whitespace is not trimmed)', () => {
 		const parser = asBoolean()
 		expect(parser('false ')).toBe(true) // has trailing space
 		expect(parser(' false')).toBe(true) // has leading space
@@ -125,6 +125,32 @@ describe('asJSON', () => {
 	test('throws TypeError when value and fallback are both null/undefined', () => {
 		// @ts-expect-error testing runtime guard
 		expect(() => asJSON(null)(null)).toThrow(TypeError)
+	})
+
+	test('strips a top-level __proto__ key instead of polluting the prototype', () => {
+		const result = asJSON<Record<string, unknown>>({})(
+			'{"__proto__":{"polluted":true},"a":1}',
+		)
+		expect(Object.hasOwn(result, '__proto__')).toBe(false)
+		expect(result.a).toBe(1)
+		expect((result as { polluted?: boolean }).polluted).toBeUndefined()
+	})
+
+	test('strips a nested __proto__ key', () => {
+		const result = asJSON<Record<string, unknown>>({})(
+			'{"nested":{"__proto__":{"polluted":true},"b":2}}',
+		)
+		const nested = result.nested as Record<string, unknown>
+		expect(Object.hasOwn(nested, '__proto__')).toBe(false)
+		expect(nested.b).toBe(2)
+	})
+
+	test('strips a constructor key', () => {
+		const result = asJSON<Record<string, unknown>>({})(
+			'{"constructor":{"polluted":true},"a":2}',
+		)
+		expect(Object.hasOwn(result, 'constructor')).toBe(false)
+		expect(result.a).toBe(2)
 	})
 })
 

@@ -264,7 +264,7 @@ describe('HMR injection', () => {
 	})
 })
 
-/* === §14.5 Path traversal guard (regression for S-1) === */
+/* === §14.5 Path traversal guard === */
 
 describe('path traversal', () => {
 	let server: TestServer

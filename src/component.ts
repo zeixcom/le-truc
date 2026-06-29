@@ -13,7 +13,7 @@ import {
 	type State,
 	type TaskCallback,
 } from '@zeix/cause-effect'
-import { InvalidComponentNameError } from './errors'
+import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
 import {
 	makeProvideContexts,
 	makeRequestContext,
@@ -36,6 +36,7 @@ import {
 	type ComponentProps,
 	isMethodProducer,
 	isParser,
+	isReservedWord,
 	type MethodProducer,
 	type Parser,
 } from './types'
@@ -70,7 +71,7 @@ type Initializers<P extends ComponentProps> = {
 }
 
 /**
- * The context object passed to the v1.1 factory function.
+ * The context object passed to the v2.x factory function.
  *
  * Components destructure only what they need.
  */
@@ -87,7 +88,7 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 /* === Exported Functions === */
 
 /**
- * Define and register a reactive custom element using the v1.1 factory form.
+ * Define and register a reactive custom element using the v2.x factory form.
  *
  * The factory receives a `FactoryContext` at connect time: query helpers (`first`, `all`),
  * the `host` element, and `expose()` for declaring reactive properties. It returns a flat
@@ -109,7 +110,6 @@ function defineComponent<P extends ComponentProps>(
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
 	class Truc extends HTMLElement {
-		debug?: boolean
 		#initialized = false
 		#setup: FactoryResult = []
 		#cleanup: MaybeCleanup
@@ -130,6 +130,12 @@ function defineComponent<P extends ComponentProps>(
 			}
 
 			if (this.#initialized) {
+				// Re-connect: dispose the previous activation's scope (event listeners,
+				// pass() slot restores, each() per-element scopes, provideContexts
+				// listeners) before re-activating #setup in a fresh root scope.
+				// Without this, every reparent/reslot cycle accumulates effects and
+				// listeners — the prior cleanup was overwritten without running.
+				if (isFunction(this.#cleanup)) this.#cleanup()
 				runSetup()
 			} else {
 				const host = this as unknown as HTMLElement & P
@@ -183,7 +189,22 @@ function defineComponent<P extends ComponentProps>(
 			}
 
 			for (const [prop, initializer] of Object.entries(instanceProps)) {
-				if (initializer == null || prop in this) continue
+				if (initializer == null) continue
+				// Reject reserved property names that the type-level ReservedWords
+				// exclusion can't catch at runtime (e.g. asJSON-parsed keys or
+				// Record<string, …> casts). This check must run BEFORE the
+				// `prop in this` guard below: every ReservedWord is an inherited
+				// own-property of Object (constructor, __proto__, toString, …), so
+				// `prop in this` is always true for them and would silently skip
+				// them instead of throwing a named, actionable error.
+				if (isReservedWord(prop))
+					throw new InvalidPropertyNameError(
+						this.localName,
+						prop,
+						'reserved word or Object builtin — cannot be used as a reactive property',
+					)
+				// Skip properties already set on the host (explicit DOM value wins).
+				if (prop in this) continue
 				createReactiveProperty(prop as keyof P & string, initializer)
 			}
 		}

@@ -55,10 +55,7 @@ const source: Schema = {
 		])
 
 		// Return the complete details structure
-		return new Tag('details', { ...node.attributes, src: normalizedSrc }, [
-			summary,
-			lazyload,
-		])
+		return new Tag('details', { title }, [summary, lazyload])
 	},
 }
 

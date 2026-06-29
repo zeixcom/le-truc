@@ -17,7 +17,7 @@ section-menu {
 
 	& a {
 		display: grid;
-		grid-template-areas: "icon title" "icon description";
+		grid-template-areas: 'icon title' 'icon description';
 		grid-template-columns: auto 1fr;
 		grid-template-rows: auto 1fr;
 		gap: var(--space-xs) var(--space-s);
@@ -46,7 +46,7 @@ section-menu {
 			height: var(--space-xl);
 			border-radius: 50%;
 			background-color: var(--color-background);
-			border: 1px solid var(--color-border);
+			border: 1px solid var(--color-border-soft);
 		}
 
 		& strong {

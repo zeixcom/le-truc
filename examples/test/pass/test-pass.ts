@@ -11,7 +11,7 @@ declare global {
 }
 
 /**
- * Test component for the v1.1 factory `pass()` helper.
+ * Test component for the v2 factory `pass()` helper.
  * Exercises: single-element pass, Memo pass, per-element lifecycle.
  *
  * The parent's `count` prop is passed to child `basic-number` elements'
@@ -20,7 +20,7 @@ declare global {
  */
 export default defineComponent<TestPassProps>(
 	'test-pass',
-	({ expose, first, all, watch, pass }) => {
+	({ expose, first, all, host, watch, pass }) => {
 		const single = first(
 			'basic-number#single',
 			'Add basic-number with id="single".',
@@ -34,8 +34,8 @@ export default defineComponent<TestPassProps>(
 			watch('count', n => {
 				output.textContent = String(n)
 			}),
-			pass(single, { value: 'count' }),
-			pass(group, { value: 'count' }),
+			pass(single, { value: () => host.count }),
+			pass(group, { value: () => host.count }),
 		]
 	},
 )

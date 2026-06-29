@@ -120,6 +120,28 @@ describe('throttle', () => {
 		controller.abort()
 		expect(calls).toEqual([42])
 	})
+
+	test('a throwing throttled callback does not stop later callbacks in the same frame', () => {
+		const calls: string[] = []
+		const originalError = console.error
+		const errors: unknown[][] = []
+		console.error = (...args: unknown[]) => errors.push(args)
+		try {
+			const throwing = throttle((_n: number) => {
+				calls.push('throwing')
+				throw new Error('boom')
+			})
+			const ok = throttle((_n: number) => calls.push('ok'))
+			throwing(1)
+			ok(2)
+			flushRAF()
+		} finally {
+			console.error = originalError
+		}
+		expect(calls).toEqual(['throwing', 'ok'])
+		expect(errors).toHaveLength(1)
+		expect(errors[0]!.at(0)).toBe('[le-truc scheduler]')
+	})
 })
 
 /* === schedule === */
@@ -168,6 +190,28 @@ describe('schedule', () => {
 		expect(calls).toHaveLength(2)
 		expect(calls).toContain('el1')
 		expect(calls).toContain('el2')
+	})
+
+	test('a throwing task does not stop later tasks in the same frame', () => {
+		const el1 = {} as Element
+		const el2 = {} as Element
+		const calls: string[] = []
+		const originalError = console.error
+		const errors: unknown[][] = []
+		console.error = (...args: unknown[]) => errors.push(args)
+		try {
+			schedule(el1, () => {
+				calls.push('el1')
+				throw new Error('boom')
+			})
+			schedule(el2, () => calls.push('el2'))
+			flushRAF()
+		} finally {
+			console.error = originalError
+		}
+		expect(calls).toEqual(['el1', 'el2'])
+		expect(errors).toHaveLength(1)
+		expect(errors[0]!.at(0)).toBe('[le-truc scheduler]')
 	})
 })
 

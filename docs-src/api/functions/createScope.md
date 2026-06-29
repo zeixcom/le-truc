@@ -2,7 +2,7 @@
 
 > **createScope**(`fn`, `options?`): [`Cleanup`](../type-aliases/Cleanup.md)
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:274
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:275
 
 Creates a new ownership scope for managing cleanup of nested effects and resources.
 All effects created within the scope will be automatically disposed when the scope is disposed.
@@ -36,6 +36,8 @@ A dispose function that cleans up the scope
 
 #### Examples
 
+**Standard (owned) scope:**
+
 ```ts
 const dispose = createScope(() => {
   const count = createState(0);
@@ -44,6 +46,8 @@ const dispose = createScope(() => {
 });
 dispose();
 ```
+
+**Root scope for a web component:**
 
 ```ts
 class MyElement extends HTMLElement {

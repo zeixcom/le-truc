@@ -2,4 +2,4 @@
 
 > **Falsy** = `false` \| `null` \| `undefined` \| `""` \| `0` \| `0n`
 
-Defined in: [src/types.ts:47](https://github.com/zeixcom/le-truc/blob/3f0de1fb7379c829fde242331bee0885b56a8cd8/src/types.ts#L47)
+Defined in: [src/types.ts:66](https://github.com/zeixcom/le-truc/blob/ef4f71291ed328572278d97a47b2febefecb314e/src/types.ts#L66)

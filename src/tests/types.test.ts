@@ -5,7 +5,14 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { asParser, defineMethod, isMethodProducer, isParser } from '../types'
+import {
+	asParser,
+	defineMethod,
+	isMethodProducer,
+	isParser,
+	isReservedWord,
+	RESERVED_WORDS,
+} from '../types'
 
 /* === isParser === */
 
@@ -95,5 +102,59 @@ describe('defineMethod', () => {
 		const fn = (a: number, b: number) => a + b
 		const method = defineMethod(fn)
 		expect(method(2, 3)).toBe(5)
+	})
+})
+
+/* === RESERVED_WORDS / isReservedWord === */
+
+describe('RESERVED_WORDS', () => {
+	test('contains all ReservedWords type members', () => {
+		// Must mirror the ReservedWords union exactly.
+		expect(RESERVED_WORDS.has('constructor')).toBe(true)
+		expect(RESERVED_WORDS.has('prototype')).toBe(true)
+		expect(RESERVED_WORDS.has('__proto__')).toBe(true)
+		expect(RESERVED_WORDS.has('toString')).toBe(true)
+		expect(RESERVED_WORDS.has('valueOf')).toBe(true)
+		expect(RESERVED_WORDS.has('hasOwnProperty')).toBe(true)
+		expect(RESERVED_WORDS.has('isPrototypeOf')).toBe(true)
+		expect(RESERVED_WORDS.has('propertyIsEnumerable')).toBe(true)
+		expect(RESERVED_WORDS.has('toLocaleString')).toBe(true)
+		expect(RESERVED_WORDS.size).toBe(9)
+	})
+})
+
+describe('isReservedWord', () => {
+	test('returns true for every reserved word', () => {
+		for (const word of RESERVED_WORDS) {
+			expect(isReservedWord(word)).toBe(true)
+		}
+	})
+
+	test('returns true for __proto__', () => {
+		// The key vector: asJSON-parsed or Record-cast keys reaching #initSignals.
+		expect(isReservedWord('__proto__')).toBe(true)
+	})
+
+	test('returns true for constructor', () => {
+		expect(isReservedWord('constructor')).toBe(true)
+	})
+
+	test('returns false for ordinary property names', () => {
+		expect(isReservedWord('value')).toBe(false)
+		expect(isReservedWord('count')).toBe(false)
+		expect(isReservedWord('greeting')).toBe(false)
+		expect(isReservedWord('label')).toBe(false)
+	})
+
+	test('returns false for HTMLElement-ish names that are NOT reserved', () => {
+		// The type-level guard also excludes keyof HTMLElement, but RESERVED_WORDS
+		// intentionally only mirrors the ReservedWords union (Object builtins).
+		// HTMLElement names are handled by the `prop in this` guard in #initSignals.
+		expect(isReservedWord('id')).toBe(false)
+		expect(isReservedWord('className')).toBe(false)
+	})
+
+	test('returns false for empty string', () => {
+		expect(isReservedWord('')).toBe(false)
 	})
 })

@@ -1,28 +1,28 @@
 <!doctype html>
 <html lang="en">
 	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>{{ title }} – Le Truc API</title>
-		<meta name="description" content="{{ description }}" />
+		<meta name="description" content="{{ description }}">
 		<link
 			rel="preload"
 			href="{{ base-path }}assets/main.css?v={{ css-hash }}"
 			as="style"
-		/>
+		>
 		<link
 			rel="modulepreload"
 			href="{{ base-path }}assets/main.js?v={{ js-hash }}"
-		/>
+		>
 		<link
 			rel="stylesheet"
 			href="{{ base-path }}assets/main.css?v={{ css-hash }}"
-		/>
+		>
 		<script
 			type="module"
 			src="{{ base-path }}assets/main.js?v={{ js-hash }}"
 		></script>
-		{{ alternate-link }}
+		<link rel="alternate" type="text/markdown" title="Agent-readable content" href="{{ alternate-link }}">
 	</head>
 	<body class="api">
 		<context-router>
@@ -46,7 +46,7 @@
 						</nav>
 						<h1 class="api-title">
 							{{ api-name }}
-							<span class="api-kind {{ api-kind }}">{{ api-kind }}</span>
+							<span class="{{ api-kind }}">{{ api-kind }}</span>
 						</h1>
 					</div>
 				</div>

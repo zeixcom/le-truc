@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+bun.lock
+
+# Build artifacts
+*.tsbuildinfo
+
+# Build tools configuration
+tsconfig.json
+tsconfig.build.json
+biome.json
+eslint.config.js
+context7.json
+typedoc.json
+playwright.config.ts
+.prettierrc
+.editorconfig
+.gitattributes
+
+# Development server, docs, and examples
+server/
+docs-src/
+docs/
+examples/
+scripts/
+
+# Tests and test output
+src/tests/
+types/src/tests/
+playwright-report/
+test-results/
+
+# Architecture decision records and internal docs
+adr/
+AGENTS.md
+ARCHITECTURE.md
+CHANGELOG.md
+CODE_OF_CONDUCT.md
+CONTEXT.md
+CONTRIBUTING.md
+REQUIREMENTS.md
+SECURITY.md
+SERVER_STRATEGIES.md
+
+# IDE and editor files
+.agents/
+.claude/
+.DS_Store
+.vibe/
+.zed/
+
+# GitHub
+.github/
+.gitignore
+
+# OS and temporary files
+*.log
+*.tmp

@@ -76,7 +76,7 @@
 				<span class="language">ts</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { </span><span style="color:#F92672">type</span><span style="color:#F8F8F2"> Context, createSensor, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
+				<pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F92672">import</span><span style="color:#F8F8F2"> { createContext, createSensor, defineComponent } </span><span style="color:#F92672">from</span><span style="color:#E6DB74"> '../../..'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaMotion</span><span style="color:#F92672"> =</span><span style="color:#E6DB74"> 'no-preference'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'reduce'</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaTheme</span><span style="color:#F92672"> =</span><span style="color:#E6DB74"> 'light'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'dark'</span></span>
@@ -84,6 +84,7 @@
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaOrientation</span><span style="color:#F92672"> =</span><span style="color:#E6DB74"> 'portrait'</span><span style="color:#F92672"> |</span><span style="color:#E6DB74"> 'landscape'</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> type</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaProps</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C; </span><span style="color:#A6E22E;text-decoration:underline">HEAD</span></span>
 <span class="line"><span style="color:#88846F">	/** Current reduced-motion preference (`no-preference` | `reduce`). Read-only context provider. */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#E6DB74"> 'media-motion'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaMotion</span></span>
 <span class="line"><span style="color:#88846F">	/** Current color scheme preference (`light` | `dark`). Read-only context provider. */</span></span>
@@ -92,6 +93,12 @@
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#E6DB74"> 'media-viewport'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaViewport</span></span>
 <span class="line"><span style="color:#88846F">	/** Current screen orientation (`portrait` | `landscape`). Read-only context provider. */</span></span>
 <span class="line"><span style="color:#F92672">	readonly</span><span style="color:#E6DB74"> 'media-orientation'</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaOrientation</span></span>
+<span class="line"><span style="color:#F92672">=======</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span> </span><span style="color:#A6E22E;text-decoration:underline">motion</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaMotion</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span> </span><span style="color:#A6E22E;text-decoration:underline">theme</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaTheme</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span> </span><span style="color:#A6E22E;text-decoration:underline">viewport</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaViewport</span></span>
+<span class="line"><span style="color:#F92672">	readonly</span><span> </span><span style="color:#A6E22E;text-decoration:underline">orientation</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaOrientation</span></span>
+<span class="line"><span style="color:#F8F8F2">>>>>>>> next</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">declare</span><span style="color:#F8F8F2"> global {</span></span>
@@ -102,22 +109,12 @@
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">/* === Exported Contexts === */</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> const</span><span style="color:#F8F8F2"> MEDIA_MOTION </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'media-motion'</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Context</span><span style="color:#F8F8F2">&#x3C;</span></span>
-<span class="line"><span style="color:#E6DB74">	'media-motion'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	() </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaMotion</span></span>
-<span class="line"><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> const</span><span style="color:#F8F8F2"> MEDIA_THEME </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'media-theme'</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Context</span><span style="color:#F8F8F2">&#x3C;</span></span>
-<span class="line"><span style="color:#E6DB74">	'media-theme'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	() </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaTheme</span></span>
-<span class="line"><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> const</span><span style="color:#F8F8F2"> MEDIA_VIEWPORT </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'media-viewport'</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Context</span><span style="color:#F8F8F2">&#x3C;</span></span>
-<span class="line"><span style="color:#E6DB74">	'media-viewport'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	() </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaViewport</span></span>
-<span class="line"><span style="color:#F8F8F2">></span></span>
-<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> const</span><span style="color:#F8F8F2"> MEDIA_ORIENTATION </span><span style="color:#F92672">=</span><span style="color:#E6DB74"> 'media-orientation'</span><span style="color:#F92672"> as</span><span> </span><span style="color:#A6E22E;text-decoration:underline">Context</span><span style="color:#F8F8F2">&#x3C;</span></span>
-<span class="line"><span style="color:#E6DB74">	'media-orientation'</span><span style="color:#F8F8F2">,</span></span>
-<span class="line"><span style="color:#F8F8F2">	() </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaOrientation</span></span>
-<span class="line"><span style="color:#F8F8F2">></span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> const</span><span style="color:#F8F8F2"> MEDIA_MOTION </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createContext</span><span style="color:#F8F8F2">&#x3C;() </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaMotion</span><span style="color:#F8F8F2">>(</span><span style="color:#E6DB74">'motion'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> const</span><span style="color:#F8F8F2"> MEDIA_THEME </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> createContext</span><span style="color:#F8F8F2">&#x3C;() </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaTheme</span><span style="color:#F8F8F2">>(</span><span style="color:#E6DB74">'theme'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> const</span><span style="color:#F8F8F2"> MEDIA_VIEWPORT </span><span style="color:#F92672">=</span></span>
+<span class="line"><span style="color:#A6E22E">	createContext</span><span style="color:#F8F8F2">&#x3C;() </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaViewport</span><span style="color:#F8F8F2">>(</span><span style="color:#E6DB74">'viewport'</span><span style="color:#F8F8F2">)</span></span>
+<span class="line"><span style="color:#F92672">export</span><span style="color:#66D9EF;font-style:italic"> const</span><span style="color:#F8F8F2"> MEDIA_ORIENTATION </span><span style="color:#F92672">=</span></span>
+<span class="line"><span style="color:#A6E22E">	createContext</span><span style="color:#F8F8F2">&#x3C;() </span><span style="color:#66D9EF;font-style:italic">=></span><span> </span><span style="color:#A6E22E;text-decoration:underline">ContextMediaOrientation</span><span style="color:#F8F8F2">>(</span><span style="color:#E6DB74">'orientation'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">/* === Component === */</span></span>
 <span class="line"></span>
@@ -139,7 +136,7 @@
 <span class="line"></span>
 <span class="line"><span style="color:#A6E22E">		expose</span><span style="color:#F8F8F2">({</span></span>
 <span class="line"><span style="color:#88846F">			// Context for motion preference</span></span>
-<span class="line"><span style="color:#F8F8F2">			[MEDIA_MOTION]: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ContextMediaMotion</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#F8F8F2">			motion: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ContextMediaMotion</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#FD971F;font-style:italic">				set</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> mql </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'(prefers-reduced-motion: reduce)'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#A6E22E"> listener</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">MediaQueryListEvent</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
@@ -155,7 +152,7 @@
 <span class="line"><span style="color:#F8F8F2">			),</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">			// Context for preferred color scheme</span></span>
-<span class="line"><span style="color:#F8F8F2">			[MEDIA_THEME]: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ContextMediaTheme</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#F8F8F2">			theme: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ContextMediaTheme</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#FD971F;font-style:italic">				set</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> mql </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'(prefers-color-scheme: dark)'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#A6E22E"> listener</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">MediaQueryListEvent</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
@@ -171,7 +168,7 @@
 <span class="line"><span style="color:#F8F8F2">			),</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">			// Context for screen viewport size</span></span>
-<span class="line"><span style="color:#F8F8F2">			[MEDIA_VIEWPORT]: (() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
+<span class="line"><span style="color:#F8F8F2">			viewport: (() </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> mqlSM </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`(min-width: </span><span style="color:#F92672">${</span><span style="color:#A6E22E">getBreakpoint</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'sm'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'32em'</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">)`</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> mqlMD </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`(min-width: </span><span style="color:#F92672">${</span><span style="color:#A6E22E">getBreakpoint</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'md'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'48em'</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">)`</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">				const</span><span style="color:#F8F8F2"> mqlLG </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">`(min-width: </span><span style="color:#F92672">${</span><span style="color:#A6E22E">getBreakpoint</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'lg'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'72em'</span><span style="color:#F8F8F2">)</span><span style="color:#F92672">}</span><span style="color:#E6DB74">)`</span><span style="color:#F8F8F2">)</span></span>
@@ -202,7 +199,7 @@
 <span class="line"><span style="color:#F8F8F2">			})(),</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">			// Context for screen orientation</span></span>
-<span class="line"><span style="color:#F8F8F2">			[MEDIA_ORIENTATION]: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ContextMediaOrientation</span><span style="color:#F8F8F2">>(</span></span>
+<span class="line"><span style="color:#F8F8F2">			orientation: </span><span style="color:#A6E22E">createSensor</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ContextMediaOrientation</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#FD971F;font-style:italic">				set</span><span style="color:#66D9EF;font-style:italic"> =></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#F8F8F2"> mql </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> matchMedia</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'(orientation: landscape)'</span><span style="color:#F8F8F2">)</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">					const</span><span style="color:#A6E22E"> listener</span><span style="color:#F92672"> =</span><span style="color:#F8F8F2"> (</span><span style="color:#FD971F;font-style:italic">e</span><span style="color:#F92672">:</span><span> </span><span style="color:#A6E22E;text-decoration:underline">MediaQueryListEvent</span><span style="color:#F8F8F2">) </span><span style="color:#66D9EF;font-style:italic">=></span></span>
@@ -218,14 +215,7 @@
 <span class="line"><span style="color:#F8F8F2">			),</span></span>
 <span class="line"><span style="color:#F8F8F2">		})</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">			provideContexts</span><span style="color:#F8F8F2">([</span></span>
-<span class="line"><span style="color:#F8F8F2">				MEDIA_MOTION,</span></span>
-<span class="line"><span style="color:#F8F8F2">				MEDIA_THEME,</span></span>
-<span class="line"><span style="color:#F8F8F2">				MEDIA_VIEWPORT,</span></span>
-<span class="line"><span style="color:#F8F8F2">				MEDIA_ORIENTATION,</span></span>
-<span class="line"><span style="color:#F8F8F2">			]),</span></span>
-<span class="line"><span style="color:#F8F8F2">		]</span></span>
+<span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span><span style="color:#A6E22E">provideContexts</span><span style="color:#F8F8F2">([</span><span style="color:#E6DB74">'motion'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'theme'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'viewport'</span><span style="color:#F8F8F2">, </span><span style="color:#E6DB74">'orientation'</span><span style="color:#F8F8F2">])]</span></span>
 <span class="line"><span style="color:#F8F8F2">	},</span></span>
 <span class="line"><span style="color:#F8F8F2">)</span></span>
 <span class="line"></span></code></pre>

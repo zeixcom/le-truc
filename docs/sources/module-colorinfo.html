@@ -327,9 +327,9 @@
 <span class="line"><span style="color:#F8F8F2">		})</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F92672">		return</span><span style="color:#F8F8F2"> [</span></span>
-<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(lightnessEls, { value: </span><span style="color:#E6DB74">'lightness'</span><span style="color:#F8F8F2"> }),</span></span>
-<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(chromaEls, { value: </span><span style="color:#E6DB74">'chroma'</span><span style="color:#F8F8F2"> }),</span></span>
-<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(hueEls, { value: </span><span style="color:#E6DB74">'hue'</span><span style="color:#F8F8F2"> }),</span></span>
+<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(lightnessEls, { </span><span style="color:#A6E22E">value</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.lightness }),</span></span>
+<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(chromaEls, { </span><span style="color:#A6E22E">value</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.chroma }),</span></span>
+<span class="line"><span style="color:#A6E22E">			pass</span><span style="color:#F8F8F2">(hueEls, { </span><span style="color:#A6E22E">value</span><span style="color:#F8F8F2">: () </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> host.hue }),</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'css'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindStyle</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'--color-swatch'</span><span style="color:#F8F8F2">)),</span></span>
 <span class="line"><span style="color:#A6E22E">			watch</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'hex'</span><span style="color:#F8F8F2">, </span><span style="color:#A6E22E">bindStyle</span><span style="color:#F8F8F2">(host, </span><span style="color:#E6DB74">'--color-fallback'</span><span style="color:#F8F8F2">)),</span></span>

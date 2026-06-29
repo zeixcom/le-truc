@@ -20,11 +20,12 @@ The type of value in the signal
 
 > `optional` **equals?**: (`a`, `b`) => `boolean`
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:72
+Defined in: node\_modules/@zeix/cause-effect/types/src/graph.d.ts:73
 
 Optional custom equality function.
 Used to determine if a new value is different from the old value.
-Defaults to reference equality (===).
+Defaults to reference equality (===). When equal, propagation stops for
+this signal's entire downstream subtree, not just this signal.
 
 ###### Parameters
 

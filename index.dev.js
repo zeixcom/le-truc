@@ -15,11 +15,17 @@ function isSignalOfType(value, type) {
 function isRecord(value) {
   return value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype;
 }
-function isUniformArray(value, guard = (item) => item != null) {
-  return Array.isArray(value) && value.every(guard);
-}
 function valueString(value) {
-  return typeof value === "string" ? `"${value}"` : !!value && typeof value === "object" ? JSON.stringify(value) : String(value);
+  if (typeof value === "string")
+    return `"${value}"`;
+  if (value != null && typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
 }
 
 // node_modules/@zeix/cause-effect/src/errors.ts
@@ -72,9 +78,16 @@ class RequiredOwnerError extends Error {
   }
 }
 
+class PromiseValueError extends TypeError {
+  constructor(where) {
+    super(`[${where}] Callback returned a Promise — use an async callback to create a Task instead`);
+    this.name = "PromiseValueError";
+  }
+}
+
 class DuplicateKeyError extends Error {
   constructor(where, key, value) {
-    super(`[${where}] Could not add key "${key}"${value ? ` with value ${JSON.stringify(value)}` : ""} because it already exists`);
+    super(`[${where}] Could not add key "${key}"${value != null ? ` with value ${JSON.stringify(value)}` : ""} because it already exists`);
     this.name = "DuplicateKeyError";
   }
 }
@@ -113,39 +126,51 @@ var batchDepth = 0;
 var flushing = false;
 var DEFAULT_EQUALITY = (a, b) => a === b;
 var SKIP_EQUALITY = (_a, _b) => false;
-var deepEqual = (a, b) => {
+var deepEqual = (a, b) => deepEqualInner(a, b, new WeakSet);
+var deepEqualInner = (a, b, seen) => {
   if (Object.is(a, b))
     return true;
   if (typeof a !== typeof b)
     return false;
   if (a == null || typeof a !== "object" || b == null || typeof b !== "object")
     return false;
-  const aIsArray = Array.isArray(a);
-  if (aIsArray !== Array.isArray(b))
-    return false;
-  if (aIsArray) {
-    const aa = a;
-    const ba = b;
-    if (aa.length !== ba.length)
-      return false;
-    for (let i = 0;i < aa.length; i++)
-      if (!deepEqual(aa[i], ba[i]))
-        return false;
+  if (seen.has(a))
     return true;
-  }
-  if (isRecord(a) && isRecord(b)) {
-    const aKeys = Object.keys(a);
-    if (aKeys.length !== Object.keys(b).length)
+  seen.add(a);
+  try {
+    const aIsArray = Array.isArray(a);
+    if (aIsArray !== Array.isArray(b))
       return false;
-    for (const key of aKeys) {
-      if (!(key in b))
+    if (aIsArray) {
+      const aa = a;
+      const ba = b;
+      if (aa.length !== ba.length)
         return false;
-      if (!deepEqual(a[key], b[key]))
-        return false;
+      for (let i = 0;i < aa.length; i++)
+        if (!deepEqualInner(aa[i], ba[i], seen))
+          return false;
+      return true;
     }
-    return true;
+    if (a instanceof Date && b instanceof Date)
+      return a.getTime() === b.getTime();
+    if (a instanceof RegExp && b instanceof RegExp)
+      return a.source === b.source && a.flags === b.flags;
+    if (isRecord(a) && isRecord(b)) {
+      const aKeys = Object.keys(a);
+      if (aKeys.length !== Object.keys(b).length)
+        return false;
+      for (const key of aKeys) {
+        if (!(key in b))
+          return false;
+        if (!deepEqualInner(a[key], b[key], seen))
+          return false;
+      }
+      return true;
+    }
+    return false;
+  } finally {
+    seen.delete(a);
   }
-  return false;
 };
 var DEEP_EQUALITY = (a, b) => deepEqual(a, b);
 function isValidEdge(checkEdge, node) {
@@ -279,6 +304,8 @@ function recomputeMemo(node) {
   let changed = false;
   try {
     const next = node.fn(node.value);
+    if (next instanceof Promise)
+      throw new PromiseValueError(TYPE_MEMO);
     if (node.error || !node.equals(next, node.value)) {
       node.value = next;
       node.error = undefined;
@@ -313,6 +340,8 @@ function recomputeTask(node) {
   } catch (err) {
     node.controller = undefined;
     node.error = err instanceof Error ? err : new Error(String(err));
+    node.flags = FLAG_CLEAN;
+    setState(node.pendingNode, false);
     return;
   } finally {
     activeSink = prevWatcher;
@@ -510,7 +539,37 @@ function getKeyGenerator(keyConfig) {
     contentBased
   ];
 }
+function diffPositional(prev, next, prevKeys, generateKey, itemEquals) {
+  const add = {};
+  const change = {};
+  const remove = {};
+  const nextKeys = [];
+  let changed = false;
+  const minLen = Math.min(prev.length, next.length);
+  for (let i = 0;i < minLen; i++) {
+    const key = prevKeys[i];
+    nextKeys.push(key);
+    if (!itemEquals(prev[i], next[i])) {
+      change[key] = next[i];
+      changed = true;
+    }
+  }
+  for (let i = minLen;i < next.length; i++) {
+    const val = next[i];
+    const key = generateKey(val);
+    nextKeys.push(key);
+    add[key] = val;
+    changed = true;
+  }
+  for (let i = minLen;i < prev.length; i++) {
+    remove[prevKeys[i]] = null;
+    changed = true;
+  }
+  return { add, change, remove, newKeys: nextKeys, changed };
+}
 function diffArrays(prev, next, prevKeys, generateKey, contentBased, itemEquals) {
+  if (!contentBased)
+    return diffPositional(prev, next, prevKeys, generateKey, itemEquals);
   const add = {};
   const change = {};
   const remove = {};
@@ -526,9 +585,8 @@ function diffArrays(prev, next, prevKeys, generateKey, contentBased, itemEquals)
   const seenKeys = new Set;
   for (let i = 0;i < next.length; i++) {
     const val = next[i];
-    if (val === undefined)
-      continue;
-    const key = contentBased ? generateKey(val) : prevKeys[i] ?? generateKey(val);
+    validateSignalValue(`${TYPE_LIST} item at index ${i}`, val);
+    const key = generateKey(val);
     if (seenKeys.has(key))
       throw new DuplicateKeyError(TYPE_LIST, key, val);
     nextKeys.push(key);
@@ -558,7 +616,15 @@ function createList(value, options) {
   const [generateKey, contentBased] = getKeyGenerator(options?.keyConfig);
   const itemEquals = options?.itemEquals ?? DEEP_EQUALITY;
   const itemFactory = options?.createItem ?? ((item) => createState(item, { equals: itemEquals }));
-  const buildValue = () => keys.map((key) => signals.get(key)?.get()).filter((v) => v !== undefined);
+  const buildValue = () => {
+    const result = [];
+    for (const key of keys) {
+      const v = signals.get(key)?.get();
+      if (v !== undefined)
+        result.push(v);
+    }
+    return result;
+  };
   const node = {
     fn: buildValue,
     value,
@@ -578,7 +644,12 @@ function createList(value, options) {
       signals.set(key, itemFactory(val));
       structural = true;
     }
-    if (Object.keys(changes.change).length) {
+    let hasChange = false;
+    for (const _key in changes.change) {
+      hasChange = true;
+      break;
+    }
+    if (hasChange) {
       batch(() => {
         for (const key in changes.change) {
           const val = changes.change[key];
@@ -603,14 +674,13 @@ function createList(value, options) {
   const subscribe = makeSubscribe(node, options?.watched);
   for (let i = 0;i < value.length; i++) {
     const val = value[i];
-    if (val === undefined)
-      continue;
+    if (val == null)
+      throw new NullishSignalValueError(`${TYPE_LIST} item ${i}`);
     let key = keys[i];
     if (!key) {
       key = generateKey(val);
       keys[i] = key;
     }
-    validateSignalValue(`${TYPE_LIST} item for key "${key}"`, val);
     signals.set(key, itemFactory(val));
   }
   node.value = value;
@@ -619,6 +689,7 @@ function createList(value, options) {
     [Symbol.toStringTag]: TYPE_LIST,
     [Symbol.isConcatSpreadable]: true,
     *[Symbol.iterator]() {
+      subscribe();
       for (const key of keys) {
         const signal = signals.get(key);
         if (signal)
@@ -668,6 +739,7 @@ function createList(value, options) {
       list.set(fn(list.get()));
     },
     at(index) {
+      subscribe();
       const key = keys[index];
       return key !== undefined ? signals.get(key) : undefined;
     },
@@ -676,20 +748,22 @@ function createList(value, options) {
       return keys.values();
     },
     byKey(key) {
+      subscribe();
       return signals.get(key);
     },
     keyAt(index) {
+      subscribe();
       return keys[index];
     },
     indexOfKey(key) {
+      subscribe();
       return keys.indexOf(key);
     },
     add(value2) {
       const key = generateKey(value2);
       if (signals.has(key))
         throw new DuplicateKeyError(TYPE_LIST, key, value2);
-      if (!keys.includes(key))
-        keys.push(key);
+      keys.push(key);
       validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
       signals.set(key, itemFactory(value2));
       node.flags |= FLAG_DIRTY | FLAG_RELINK;
@@ -722,16 +796,26 @@ function createList(value, options) {
       validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
       if (itemEquals(untrack(() => signal.get()), value2))
         return;
-      signal.set(value2);
-      node.flags |= FLAG_DIRTY;
-      for (let e = node.sinks;e; e = e.nextSink)
-        propagate(e.sink);
+      batch(() => {
+        signal.set(value2);
+        node.flags |= FLAG_DIRTY;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+      });
       if (batchDepth === 0)
         flush();
     },
     sort(compareFn) {
-      const entries = keys.map((key) => [key, signals.get(key)?.get()]).sort(isFunction(compareFn) ? (a, b) => compareFn(a[1], b[1]) : (a, b) => String(a[1]).localeCompare(String(b[1])));
-      const newOrder = entries.map(([key]) => key);
+      const entries = [];
+      for (const key of keys) {
+        const v = signals.get(key)?.get();
+        if (v !== undefined)
+          entries.push([key, v]);
+      }
+      entries.sort(isFunction(compareFn) ? (a, b) => compareFn(a[1], b[1]) : (a, b) => String(a[1]).localeCompare(String(b[1])));
+      const newOrder = [];
+      for (const [key] of entries)
+        newOrder.push(key);
       if (!keysEqual(keys, newOrder)) {
         keys = newOrder;
         node.flags |= FLAG_DIRTY;
@@ -747,31 +831,38 @@ function createList(value, options) {
       const actualDeleteCount = Math.max(0, Math.min(deleteCount ?? Math.max(0, length - Math.max(0, actualStart)), length - actualStart));
       const add = {};
       const remove = {};
+      let hasRemove = false;
       for (let i = 0;i < actualDeleteCount; i++) {
         const index = actualStart + i;
         const key = keys[index];
         if (key) {
           const signal = signals.get(key);
-          if (signal)
+          if (signal) {
             remove[key] = signal.get();
+            hasRemove = true;
+          }
         }
       }
       const newOrder = keys.slice(0, actualStart);
       const change = {};
+      let hasAdd = false;
+      let hasChange = false;
       for (const item of items) {
         const key = generateKey(item);
         if (key in remove) {
           delete remove[key];
           change[key] = item;
+          hasChange = true;
         } else if (signals.has(key)) {
           throw new DuplicateKeyError(TYPE_LIST, key, item);
         } else {
           add[key] = item;
+          hasAdd = true;
         }
         newOrder.push(key);
       }
       newOrder.push(...keys.slice(actualStart + actualDeleteCount));
-      const changed = !!(Object.keys(add).length || Object.keys(remove).length || Object.keys(change).length);
+      const changed = hasAdd || hasRemove || hasChange;
       if (changed) {
         applyChanges({
           add,
@@ -902,12 +993,18 @@ function deriveCollection(source, callback) {
   let keys = [];
   const addSignal = (key) => {
     const signal = isAsync ? createTask(async (prev, abort) => {
-      const sourceValue = source.byKey(key)?.get();
+      const itemSignal = untrack(() => source.byKey(key));
+      if (!itemSignal)
+        return prev;
+      const sourceValue = itemSignal.get();
       if (sourceValue == null)
         return prev;
       return callback(sourceValue, abort);
     }) : createMemo(() => {
-      const sourceValue = source.byKey(key)?.get();
+      const itemSignal = untrack(() => source.byKey(key));
+      if (!itemSignal)
+        return;
+      const sourceValue = itemSignal.get();
       if (sourceValue == null)
         return;
       return callback(sourceValue);
@@ -916,13 +1013,12 @@ function deriveCollection(source, callback) {
   };
   function syncKeys(nextKeys) {
     if (!keysEqual(keys, nextKeys)) {
-      const a = new Set(keys);
-      const b = new Set(nextKeys);
+      const nextSet = new Set(nextKeys);
       for (const key of keys)
-        if (!b.has(key))
+        if (!nextSet.has(key))
           signals.delete(key);
       for (const key of nextKeys)
-        if (!a.has(key))
+        if (!signals.has(key))
           addSignal(key);
       keys = nextKeys;
       node.flags |= FLAG_RELINK;
@@ -991,6 +1087,9 @@ function deriveCollection(source, callback) {
     [Symbol.toStringTag]: TYPE_COLLECTION,
     [Symbol.isConcatSpreadable]: true,
     *[Symbol.iterator]() {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
       for (const key of keys) {
         const signal = signals.get(key);
         if (signal)
@@ -1016,16 +1115,28 @@ function deriveCollection(source, callback) {
       return node.value;
     },
     at(index) {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
       const key = keys[index];
       return key !== undefined ? signals.get(key) : undefined;
     },
     byKey(key) {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
       return signals.get(key);
     },
     keyAt(index) {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
       return keys[index];
     },
     indexOfKey(key) {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
       return keys.indexOf(key);
     },
     deriveCollection(cb) {
@@ -1087,8 +1198,14 @@ function createCollection(watched, options) {
     let structural = false;
     batch(() => {
       if (add) {
+        const staged = new Map;
         for (const item of add) {
           const key = generateKey(item);
+          if (signals.has(key) || staged.has(key))
+            throw new DuplicateKeyError(TYPE_COLLECTION, key, item);
+          staged.set(key, item);
+        }
+        for (const [key, item] of staged) {
           signals.set(key, itemFactory(item));
           itemToKey.set(item, key);
           if (!keys.includes(key))
@@ -1132,6 +1249,7 @@ function createCollection(watched, options) {
     [Symbol.toStringTag]: TYPE_COLLECTION,
     [Symbol.isConcatSpreadable]: true,
     *[Symbol.iterator]() {
+      subscribe();
       for (const key of keys) {
         const signal = signals.get(key);
         if (signal)
@@ -1169,16 +1287,20 @@ function createCollection(watched, options) {
       return node.value;
     },
     at(index) {
+      subscribe();
       const key = keys[index];
       return key !== undefined ? signals.get(key) : undefined;
     },
     byKey(key) {
+      subscribe();
       return signals.get(key);
     },
     keyAt(index) {
+      subscribe();
       return keys[index];
     },
     indexOfKey(key) {
+      subscribe();
       return keys.indexOf(key);
     },
     deriveCollection(cb) {
@@ -1334,11 +1456,24 @@ function createStore(value, options) {
     else
       signals.set(key, createState(val));
   };
+  const shapeCategory = (val) => {
+    if (Array.isArray(val))
+      return "list";
+    if (isRecord(val))
+      return "store";
+    return "state";
+  };
+  const signalCategory = (signal) => {
+    if (isList(signal))
+      return "list";
+    if (isStore(signal))
+      return "store";
+    return "state";
+  };
   const buildValue = () => {
     const record = {};
-    signals.forEach((signal, key) => {
+    for (const [key, signal] of signals)
       record[key] = signal.get();
-    });
     return record;
   };
   const node = {
@@ -1358,14 +1493,19 @@ function createStore(value, options) {
       addSignal(key, changes.add[key]);
       structural = true;
     }
-    if (Object.keys(changes.change).length) {
+    let hasChange = false;
+    for (const _key in changes.change) {
+      hasChange = true;
+      break;
+    }
+    if (hasChange) {
       batch(() => {
         for (const key in changes.change) {
           const val = changes.change[key];
           validateSignalValue(`${TYPE_STORE} for key "${key}"`, val);
           const signal = signals.get(key);
           if (signal) {
-            if (isRecord(val) !== isStore(signal)) {
+            if (shapeCategory(val) !== signalCategory(signal)) {
               addSignal(key, val);
               structural = true;
             } else
@@ -1389,10 +1529,9 @@ function createStore(value, options) {
     [Symbol.toStringTag]: TYPE_STORE,
     [Symbol.isConcatSpreadable]: false,
     *[Symbol.iterator]() {
-      for (const key of Array.from(signals.keys())) {
-        const signal = signals.get(key);
-        if (signal)
-          yield [key, signal];
+      subscribe();
+      for (const [key, signal] of signals) {
+        yield [key, signal];
       }
     },
     keys() {
@@ -1425,7 +1564,7 @@ function createStore(value, options) {
       return node.value;
     },
     set(next) {
-      const prev = node.flags & FLAG_DIRTY ? buildValue() : node.value;
+      const prev = node.flags & FLAG_DIRTY ? untrack(buildValue) : node.value;
       const changes = diffRecords(prev, next);
       if (applyChanges(changes)) {
         node.flags |= FLAG_DIRTY;
@@ -1517,7 +1656,7 @@ function createSignal(value) {
     return createTask(value);
   if (isFunction(value))
     return createMemo(value);
-  if (isUniformArray(value))
+  if (Array.isArray(value) && value.every((item) => item != null))
     return createList(value);
   if (isRecord(value))
     return createStore(value);
@@ -1528,7 +1667,7 @@ function createMutableSignal(value) {
     return value;
   if (value == null || isFunction(value) || isSignal(value))
     throw new InvalidSignalValueError("createMutableSignal", value);
-  if (isUniformArray(value))
+  if (Array.isArray(value) && value.every((item) => item != null))
     return createList(value);
   if (isRecord(value))
     return createStore(value);
@@ -1545,6 +1684,7 @@ function isMutableSignal(value) {
 }
 
 // node_modules/@zeix/cause-effect/src/nodes/slot.ts
+var settingSlots = new WeakSet;
 function isSignalOrDescriptor(value) {
   if (isSignal(value))
     return true;
@@ -1574,13 +1714,20 @@ function createSlot(initialSignal, options) {
     return node.value;
   };
   const set = (next) => {
-    if (isSlot(delegated))
-      return delegated.set(next);
-    if ("set" in delegated && typeof delegated.set === "function") {
-      validateSignalValue(TYPE_SLOT, next, guard);
-      delegated.set(next);
-    } else {
-      throw new ReadonlySignalError(TYPE_SLOT);
+    if (settingSlots.has(node))
+      throw new Error("[Slot] Circular delegation detected in set()");
+    settingSlots.add(node);
+    try {
+      if (isSlot(delegated))
+        return void delegated.set(next);
+      if ("set" in delegated && typeof delegated.set === "function") {
+        validateSignalValue(TYPE_SLOT, next, guard);
+        delegated.set(next);
+      } else {
+        throw new ReadonlySignalError(TYPE_SLOT);
+      }
+    } finally {
+      settingSlots.delete(node);
     }
   };
   const replace = (next) => {
@@ -1605,14 +1752,203 @@ function createSlot(initialSignal, options) {
 function isSlot(value) {
   return isSignalOfType(value, TYPE_SLOT);
 }
+// src/scheduler.ts
+var objects = new Set;
+var tasks = new WeakMap;
+var throttledCallbacks = new Set;
+var requestId;
+var runTasks = () => {
+  requestId = undefined;
+  const elements = Array.from(objects);
+  objects.clear();
+  for (const element of elements) {
+    try {
+      tasks.get(element)?.();
+    } catch (e) {
+      console.error("[le-truc scheduler]", e);
+    }
+  }
+  const callbacks = Array.from(throttledCallbacks);
+  throttledCallbacks.clear();
+  for (const cb of callbacks) {
+    try {
+      cb();
+    } catch (e) {
+      console.error("[le-truc scheduler]", e);
+    }
+  }
+};
+var requestTick = () => {
+  if (!requestId)
+    requestId = requestAnimationFrame(runTasks);
+};
+var schedule = (key, task) => {
+  tasks.set(key, task);
+  objects.add(key);
+  requestTick();
+};
+var throttle = (fn, signal) => {
+  let pending = false;
+  let lastArgs;
+  const flush2 = () => {
+    pending = false;
+    fn(...lastArgs);
+  };
+  const wrapped = (...args) => {
+    lastArgs = args;
+    if (pending)
+      return;
+    pending = true;
+    throttledCallbacks.add(flush2);
+    requestTick();
+  };
+  wrapped.cancel = () => {
+    if (pending) {
+      throttledCallbacks.delete(flush2);
+      pending = false;
+    }
+  };
+  signal?.addEventListener("abort", wrapped.cancel, { once: true });
+  return wrapped;
+};
+
+// src/bindings.ts
+var SCRIPT_ATTRS = [
+  "type",
+  "src",
+  "async",
+  "defer",
+  "nomodule",
+  "crossorigin",
+  "integrity",
+  "nonce",
+  "referrerpolicy",
+  "fetchpriority"
+];
+var isSafeURL = (value) => {
+  const stripped = String(value).replace(/[\x00-\x20]/g, "");
+  if (/^(javascript|data|vbscript):/i.test(stripped))
+    return false;
+  if (/^(mailto|tel):/i.test(stripped))
+    return true;
+  if (/^[\\/][\\/]/.test(stripped))
+    return false;
+  if (stripped.includes("://")) {
+    try {
+      const url = new URL(stripped);
+      return ["http:", "https:", "ftp:"].includes(url.protocol);
+    } catch {
+      return false;
+    }
+  }
+  return true;
+};
+var safeSetAttribute = (element, attr, value) => {
+  if (/^on/i.test(attr))
+    throw new Error(`setAttribute: blocked unsafe attribute name '${attr}' on ${element.localName} — event handler attributes are not allowed`);
+  value = String(value).trim();
+  if (!isSafeURL(value))
+    throw new Error(`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`);
+  element.setAttribute(attr, value);
+};
+var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+var setTextPreservingComments = (element, text) => {
+  Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => {
+    node.remove();
+  });
+  element.append(document.createTextNode(text));
+};
+var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
+  element.textContent = String(value);
+};
+var bindProperty = (object, key) => (value) => {
+  object[key] = value;
+};
+var bindClass = (element, token) => (value) => {
+  element.classList.toggle(token, Boolean(value));
+};
+var bindVisible = (element) => (value) => {
+  element.hidden = !value;
+};
+var bindAttribute = (element, name, allowUnsafe = false) => ({
+  ok: (value) => {
+    if (typeof value === "boolean") {
+      element.toggleAttribute(name, value);
+    } else if (allowUnsafe) {
+      element.setAttribute(name, value);
+    } else {
+      safeSetAttribute(element, name, value);
+    }
+  },
+  nil: () => {
+    element.removeAttribute(name);
+  }
+});
+var bindStyle = (element, prop) => ({
+  ok: (value) => {
+    element.style.setProperty(prop, value);
+  },
+  nil: () => {
+    element.style.removeProperty(prop);
+  }
+});
+var dangerouslyBindInnerHTML = (element, options = {}) => {
+  const reset = () => {
+    if (element.shadowRoot)
+      element.shadowRoot.replaceChildren(document.createElement("slot"));
+    else
+      element.replaceChildren();
+  };
+  return {
+    ok: (rawHtml) => {
+      if (!rawHtml) {
+        schedule(element, reset);
+        return;
+      }
+      const { shadowRootMode, allowScripts, sanitize } = options;
+      if (shadowRootMode && !element.shadowRoot)
+        element.attachShadow({ mode: shadowRootMode });
+      const target = element.shadowRoot || element;
+      const html = sanitize ? sanitize(rawHtml) : rawHtml;
+      schedule(element, () => {
+        try {
+          target.innerHTML = html;
+        } catch (e) {
+          queueMicrotask(() => {
+            throw e;
+          });
+          return;
+        }
+        if (allowScripts) {
+          target.querySelectorAll("script").forEach((script) => {
+            const newScript = document.createElement("script");
+            for (const attr of SCRIPT_ATTRS) {
+              const attrValue = script.getAttribute(attr);
+              if (attrValue !== null)
+                newScript.setAttribute(attr, attrValue);
+            }
+            if (!script.hasAttribute("src"))
+              newScript.appendChild(document.createTextNode(script.textContent ?? ""));
+            target.appendChild(newScript);
+            script.remove();
+          });
+        }
+      });
+    },
+    nil: () => schedule(element, reset)
+  };
+};
 // src/util.ts
 var DEV_MODE = typeof process !== "undefined" && true;
-var LOG_WARN = "warn";
-var idString = (id) => id ? `#${id}` : "";
-var classString = (classList) => classList?.length ? `.${Array.from(classList).join(".")}` : "";
 var isCustomElement = (element) => element.localName.includes("-");
 var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
-var elementName = (el) => el ? `<${el.localName}${idString(el.id)}${classString(el.classList)}>` : "<unknown>";
+var elementName = (el) => {
+  if (!el)
+    return "<unknown>";
+  const id = el.id ? `#${el.id}` : "";
+  const classes = el.classList?.length ? `.${Array.from(el.classList).join(".")}` : "";
+  return `<${el.localName}${id}${classes}>`;
+};
 
 // src/errors.ts
 class InvalidComponentNameError extends TypeError {
@@ -1657,6 +1993,22 @@ class InvalidCustomElementError extends TypeError {
   }
 }
 
+class InvalidPassPropertyError extends TypeError {
+  constructor(host, target, reasons) {
+    const detail = Array.from(reasons, ([prop, reason]) => `'${prop}' ${reason}`).join("; ");
+    super(`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}.`);
+    this.name = "InvalidPassPropertyError";
+  }
+}
+
+class InvalidSelectorError extends TypeError {
+  constructor(parent, selector, cause) {
+    const where = typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
+    super(`Invalid selector "${selector}" passed to all() in ${where}. ${cause instanceof Error ? cause.message : String(cause)}`);
+    this.name = "InvalidSelectorError";
+  }
+}
+
 // src/helpers/context.ts
 var CONTEXT_REQUEST = "context-request";
 
@@ -1680,7 +2032,15 @@ var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
     const { context, callback } = e;
     if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
       e.stopImmediatePropagation();
-      callback(() => host[context]);
+      callback(() => {
+        try {
+          return host[context];
+        } catch (error) {
+          if (DEV_MODE)
+            console.warn("provideContexts: getter threw", elementName(host), error);
+          return;
+        }
+      });
     }
   };
   host.addEventListener(CONTEXT_REQUEST, listener);
@@ -1727,6 +2087,11 @@ var extractAttributes = (selector) => {
   return [...attributes];
 };
 function createElementsMemo(parent, selector) {
+  try {
+    parent.querySelector(selector);
+  } catch (error) {
+    throw new InvalidSelectorError(parent, selector, error);
+  }
   return createMemo(() => Array.from(parent.querySelectorAll(selector)), {
     value: [],
     equals: (a, b) => a.length === b.length && a.every((el, i) => el === b[i]),
@@ -1801,7 +2166,7 @@ var makeElementQueries = (host) => {
           })
         ]).then(callback).catch((error) => {
           if (DEV_MODE)
-            console[LOG_WARN](error);
+            console.warn(error);
           callback();
         });
       });
@@ -1810,56 +2175,6 @@ var makeElementQueries = (host) => {
     }
   };
   return [{ first, all }, resolveDependencies];
-};
-
-// src/scheduler.ts
-var objects = new Set;
-var tasks = new WeakMap;
-var throttledCallbacks = new Set;
-var requestId;
-var runTasks = () => {
-  requestId = undefined;
-  const elements = Array.from(objects);
-  objects.clear();
-  for (const element of elements)
-    tasks.get(element)?.();
-  const callbacks = Array.from(throttledCallbacks);
-  throttledCallbacks.clear();
-  for (const cb of callbacks)
-    cb();
-};
-var requestTick = () => {
-  if (!requestId)
-    requestId = requestAnimationFrame(runTasks);
-};
-var schedule = (key, task) => {
-  tasks.set(key, task);
-  objects.add(key);
-  requestTick();
-};
-var throttle = (fn, signal) => {
-  let pending = false;
-  let lastArgs;
-  const flush2 = () => {
-    pending = false;
-    fn(...lastArgs);
-  };
-  const wrapped = (...args) => {
-    lastArgs = args;
-    if (pending)
-      return;
-    pending = true;
-    throttledCallbacks.add(flush2);
-    requestTick();
-  };
-  wrapped.cancel = () => {
-    if (pending) {
-      throttledCallbacks.delete(flush2);
-      pending = false;
-    }
-  };
-  signal?.addEventListener("abort", wrapped.cancel, { once: true });
-  return wrapped;
 };
 
 // src/helpers/events.ts
@@ -1935,7 +2250,7 @@ var makeOn = (host) => {
       if (isMemo(target)) {
         if (NON_BUBBLING_EVENTS.has(type)) {
           if (DEV_MODE) {
-            console[LOG_WARN](`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
+            console.warn(`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
           }
           return createEffect(() => {
             for (const el of target.get()) {
@@ -2039,28 +2354,37 @@ var makePass = (host) => {
       throw new InvalidReactivesError(host, target, props);
     const signals = getSignals(target);
     const targetName = elementName(target);
-    const cleanups = [];
+    const failures = new Map;
+    const bindings = [];
     for (const [prop, reactive] of Object.entries(props)) {
       if (reactive == null)
         continue;
       if (!(prop in target)) {
-        if (DEV_MODE)
-          console[LOG_WARN](`pass(): property '${prop}' does not exist on ${targetName}`);
+        failures.set(prop, `does not exist on ${targetName}`);
         continue;
       }
       const signal = toSignal(host, reactive);
-      if (!signal)
-        continue;
-      const slot = signals[prop];
-      if (isSlot(slot)) {
-        const original = slot.current();
-        slot.replace(signal);
-        cleanups.push(() => slot.replace(original));
+      if (!signal) {
+        failures.set(prop, "could not be resolved to a signal");
         continue;
       }
-      if (DEV_MODE)
-        console[LOG_WARN](`pass(): property '${prop}' on ${targetName} is not Slot-backed — use setProperty() for non-Le Truc elements`);
+      if (DEV_MODE && !isComputed(signal) && !(signal && typeof signal === "object" && ("get" in signal) && !(Symbol.toStringTag in signal))) {
+        console.warn(`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`);
+      }
+      const slot = signals[prop];
+      if (!isSlot(slot)) {
+        failures.set(prop, `is not Slot-backed on ${targetName} (read-only property, or target is not a Le Truc component)`);
+        continue;
+      }
+      bindings.push({ slot, signal });
     }
+    if (failures.size)
+      throw new InvalidPassPropertyError(host, target, failures);
+    const cleanups = bindings.map(({ slot, signal }) => {
+      const original = slot.current();
+      slot.replace(signal);
+      return () => slot.replace(original);
+    });
     if (cleanups.length)
       return () => {
         for (const c of cleanups)
@@ -2102,8 +2426,20 @@ function each(memo, callback) {
 // src/types.ts
 var PARSER_BRAND = Symbol("parser");
 var METHOD_BRAND = Symbol("method");
+var RESERVED_WORDS = new Set([
+  "constructor",
+  "prototype",
+  "__proto__",
+  "toString",
+  "valueOf",
+  "hasOwnProperty",
+  "isPrototypeOf",
+  "propertyIsEnumerable",
+  "toLocaleString"
+]);
 var isParser = (value) => typeof value === "function" && (PARSER_BRAND in value);
 var isMethodProducer = (value) => typeof value === "function" && (METHOD_BRAND in value);
+var isReservedWord = (name) => RESERVED_WORDS.has(name);
 var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
 var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 
@@ -2113,7 +2449,6 @@ function defineComponent(name, factory) {
     throw new InvalidComponentNameError(name);
 
   class Truc extends HTMLElement {
-    debug;
     #initialized = false;
     #setup = [];
     #cleanup;
@@ -2126,6 +2461,8 @@ function defineComponent(name, factory) {
         });
       };
       if (this.#initialized) {
+        if (isFunction(this.#cleanup))
+          this.#cleanup();
         runSetup();
       } else {
         const host = this;
@@ -2168,7 +2505,11 @@ function defineComponent(name, factory) {
         }
       };
       for (const [prop, initializer] of Object.entries(instanceProps)) {
-        if (initializer == null || prop in this)
+        if (initializer == null)
+          continue;
+        if (isReservedWord(prop))
+          throw new InvalidPropertyNameError(this.localName, prop, "reserved word or Object builtin — cannot be used as a reactive property");
+        if (prop in this)
           continue;
         createReactiveProperty(prop, initializer);
       }
@@ -2196,122 +2537,8 @@ function defineComponent(name, factory) {
   customElements.define(name, Truc);
   return customElements.get(name);
 }
-// src/bindings.ts
-var SCRIPT_ATTRS = [
-  "type",
-  "src",
-  "async",
-  "defer",
-  "nomodule",
-  "crossorigin",
-  "integrity",
-  "referrerpolicy",
-  "fetchpriority"
-];
-var isSafeURL = (value) => {
-  if (/^(javascript|data|vbscript):/i.test(value))
-    return false;
-  if (/^(mailto|tel):/i.test(value))
-    return true;
-  if (value.includes("://")) {
-    try {
-      const url = new URL(value);
-      return ["http:", "https:", "ftp:"].includes(url.protocol);
-    } catch {
-      return false;
-    }
-  }
-  return true;
-};
-var safeSetAttribute = (element, attr, value) => {
-  if (/^on/i.test(attr))
-    throw new Error(`setAttribute: blocked unsafe attribute name '${attr}' on ${element.localName} — event handler attributes are not allowed`);
-  value = String(value).trim();
-  if (!isSafeURL(value))
-    throw new Error(`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`);
-  element.setAttribute(attr, value);
-};
-var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-var setTextPreservingComments = (element, text) => {
-  Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => {
-    node.remove();
-  });
-  element.append(document.createTextNode(text));
-};
-var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
-  element.textContent = String(value);
-};
-var bindProperty = (object, key) => (value) => {
-  object[key] = value;
-};
-var bindClass = (element, token) => (value) => {
-  element.classList.toggle(token, Boolean(value));
-};
-var bindVisible = (element) => (value) => {
-  element.hidden = !value;
-};
-var bindAttribute = (element, name, allowUnsafe = false) => ({
-  ok: (value) => {
-    if (typeof value === "boolean") {
-      element.toggleAttribute(name, value);
-    } else if (allowUnsafe) {
-      element.setAttribute(name, value);
-    } else {
-      safeSetAttribute(element, name, value);
-    }
-  },
-  nil: () => {
-    element.removeAttribute(name);
-  }
-});
-var bindStyle = (element, prop) => ({
-  ok: (value) => {
-    element.style.setProperty(prop, value);
-  },
-  nil: () => {
-    element.style.removeProperty(prop);
-  }
-});
-var dangerouslyBindInnerHTML = (element, options = {}) => {
-  const reset = () => {
-    if (element.shadowRoot)
-      element.shadowRoot.innerHTML = "<slot></slot>";
-    else
-      element.innerHTML = "";
-  };
-  return {
-    ok: (html) => {
-      if (!html) {
-        reset();
-        return;
-      }
-      const { shadowRootMode, allowScripts } = options;
-      if (shadowRootMode && !element.shadowRoot)
-        element.attachShadow({ mode: shadowRootMode });
-      const target = element.shadowRoot || element;
-      schedule(element, () => {
-        target.innerHTML = html;
-        if (allowScripts) {
-          target.querySelectorAll("script").forEach((script) => {
-            const newScript = document.createElement("script");
-            for (const attr of SCRIPT_ATTRS) {
-              const attrValue = script.getAttribute(attr);
-              if (attrValue !== null)
-                newScript.setAttribute(attr, attrValue);
-            }
-            if (!script.hasAttribute("src"))
-              newScript.appendChild(document.createTextNode(script.textContent ?? ""));
-            target.appendChild(newScript);
-            script.remove();
-          });
-        }
-      });
-    },
-    nil: reset
-  };
-};
 // src/parsers/boolean.ts
-var asBoolean = () => asParser((value) => value != null && value !== "false");
+var asBoolean = () => asParser((value) => value != null && value.toLowerCase() !== "false");
 // src/parsers/json.ts
 var asJSON = (fallback) => asParser((value) => {
   if ((value ?? fallback) == null)
@@ -2322,7 +2549,7 @@ var asJSON = (fallback) => asParser((value) => {
     throw new SyntaxError("Empty string is not valid JSON");
   let result;
   try {
-    result = JSON.parse(value);
+    result = JSON.parse(value, (key, parsed) => isReservedWord(key) ? undefined : parsed);
   } catch (error) {
     throw new SyntaxError(`Failed to parse JSON: ${String(error)}`, {
       cause: error
@@ -2365,7 +2592,6 @@ var asEnum = (valid) => asParser((value) => {
   return matchingValid ?? valid[0];
 });
 export {
-  valueString,
   untrack,
   unown,
   throttle,
@@ -2429,14 +2655,18 @@ export {
   SKIP_EQUALITY,
   RequiredOwnerError,
   ReadonlySignalError,
+  PromiseValueError,
   NullishSignalValueError,
   MissingElementError,
   InvalidSignalValueError,
+  InvalidSelectorError,
   InvalidReactivesError,
   InvalidPropertyNameError,
+  InvalidPassPropertyError,
   InvalidCustomElementError,
   InvalidComponentNameError,
   InvalidCallbackError,
+  DuplicateKeyError,
   DependencyTimeoutError,
   DEFAULT_EQUALITY,
   DEEP_EQUALITY,

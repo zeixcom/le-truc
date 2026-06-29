@@ -6,40 +6,24 @@ import {
 	MEDIA_VIEWPORT,
 } from '../../context/media/context-media'
 
-type CardMediaqueriesPropKeys = 'motion' | 'theme' | 'viewport' | 'orientation'
-
-/** Current values for each media query context, received from a parent `context-media` component. */
-export type CardMediaqueriesProps = Record<CardMediaqueriesPropKeys, string>
-
-declare global {
-	interface HTMLElementTagNameMap {
-		'card-mediaqueries': HTMLElement & CardMediaqueriesProps
-	}
-}
-
-/**
- * Displays the current media query context values (motion, theme, viewport, orientation) provided by a parent `context-media`.
- */
-export default defineComponent<CardMediaqueriesProps>(
+export default defineComponent(
 	'card-mediaqueries',
-	({ expose, first, requestContext, watch }) => {
+	({ first, requestContext, watch }) => {
 		const motionEl = first('.motion')
 		const themeEl = first('.theme')
 		const viewportEl = first('.viewport')
 		const orientationEl = first('.orientation')
 
-		expose({
-			motion: requestContext(MEDIA_MOTION, 'unknown'),
-			theme: requestContext(MEDIA_THEME, 'unknown'),
-			viewport: requestContext(MEDIA_VIEWPORT, 'unknown'),
-			orientation: requestContext(MEDIA_ORIENTATION, 'unknown'),
-		})
+		const motion = requestContext(MEDIA_MOTION, 'unknown')
+		const theme = requestContext(MEDIA_THEME, 'unknown')
+		const viewport = requestContext(MEDIA_VIEWPORT, 'unknown')
+		const orientation = requestContext(MEDIA_ORIENTATION, 'unknown')
 
 		return [
-			motionEl && watch('motion', bindText(motionEl)),
-			themeEl && watch('theme', bindText(themeEl)),
-			viewportEl && watch('viewport', bindText(viewportEl)),
-			orientationEl && watch('orientation', bindText(orientationEl)),
+			motionEl && watch(motion, bindText(motionEl)),
+			themeEl && watch(theme, bindText(themeEl)),
+			viewportEl && watch(viewport, bindText(viewportEl)),
+			orientationEl && watch(orientation, bindText(orientationEl)),
 		]
 	},
 )

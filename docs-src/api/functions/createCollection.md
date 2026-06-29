@@ -2,11 +2,13 @@
 
 > **createCollection**\<`T`, `S`\>(`watched`, `options?`): [`Collection`](../type-aliases/Collection.md)\<`T`, `S`\>
 
-Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:92
+Defined in: node\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:94
 
 Creates an externally-driven Collection with a watched lifecycle.
 Items are managed via the `applyChanges(changes)` helper passed to the watched callback.
-The collection activates when first accessed by an effect and deactivates when no longer watched.
+The collection activates when first accessed by an effect and deactivates when no longer
+watched. Structural mutations applied via `applyChanges` do not restart this lifecycle —
+only the subscriber count matters.
 
 #### Type Parameters
 

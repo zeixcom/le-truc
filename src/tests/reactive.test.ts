@@ -9,15 +9,25 @@
  * No DOM required — host is a plain stub; Task signals are passed directly.
  */
 
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, mock, test } from 'bun:test'
 import {
+	createEffect,
 	createMemo,
 	createScope,
+	createSlot,
 	createState,
 	createTask,
 } from '@zeix/cause-effect'
 import { activateResult, each, makePass, makeWatch } from '../helpers/reactive'
+import { getSignals } from '../internal'
 import type { ComponentProps } from '../types'
+// `mock.module` mutates the live module namespace in place, so a captured
+// `import * as ns` reference reflects whatever the mock last set — it is NOT
+// a stable snapshot. Spread it into a plain object at file-load time, before
+// any `mock.module('../util', …)` call below, and restore from that snapshot.
+import * as realUtilNamespace from '../util'
+
+const realUtil = { ...realUtilNamespace }
 
 /* === Helpers === */
 
@@ -263,5 +273,366 @@ describe('makePass', () => {
 		const memo = createMemo(() => [] as (HTMLElement & ComponentProps)[])
 		const descriptor = pass(memo, {})
 		expect(typeof descriptor).toBe('function')
+	})
+})
+
+describe('makePass — real slot swap and restore', () => {
+	test('swaps a Slot-backed property to the host signal, and restores the original on cleanup', () => {
+		const hostState = createState('host-value')
+		const targetState = createState('original-value')
+		const host = { greeting: hostState } as unknown as HTMLElement &
+			ComponentProps
+		// `localName` needs a hyphen — `swapSlots` rejects non-custom-elements.
+		const target = { localName: 'my-target' } as unknown as HTMLElement &
+			ComponentProps
+		const slot = createSlot(targetState)
+		getSignals(target)['greeting'] = slot
+		Object.defineProperty(target, 'greeting', slot)
+
+		const pass = makePass(host)
+		const descriptor = pass(target, { greeting: hostState })
+
+		const cleanup = createScope(() => descriptor())
+		expect((target as any).greeting).toBe('host-value')
+
+		cleanup?.()
+		expect((target as any).greeting).toBe('original-value')
+	})
+
+	test('throws InvalidPassPropertyError when the target prop is not Slot-backed', () => {
+		const hostState = createState('host-value')
+		const host = { greeting: hostState } as unknown as HTMLElement &
+			ComponentProps
+		const target = {
+			localName: 'my-target',
+			greeting: 'plain-value',
+		} as unknown as HTMLElement & ComponentProps
+
+		const pass = makePass(host)
+		const descriptor = pass(target, { greeting: hostState })
+
+		// No Slot was registered for 'greeting' — e.g. a non-Le-Truc custom element,
+		// or a read-only/computed Le Truc prop (see ADR 0011).
+		expect(() => createScope(() => descriptor())).toThrow(/'greeting'/)
+		// The plain own value is untouched — no partial swap on failure.
+		expect(target.greeting).toBe('plain-value')
+	})
+
+	test('throws InvalidPassPropertyError when the prop does not exist on target', () => {
+		const hostState = createState('host-value')
+		const host = { greeting: hostState } as unknown as HTMLElement &
+			ComponentProps
+		const target = { localName: 'my-target' } as unknown as HTMLElement &
+			ComponentProps
+
+		const pass = makePass(host)
+		const descriptor = pass(target, { greeting: hostState })
+
+		expect(() => createScope(() => descriptor())).toThrow(/'greeting'/)
+	})
+
+	test('aggregates multiple failing props into a single InvalidPassPropertyError', () => {
+		const hostState = createState('host-value')
+		const host = {
+			greeting: hostState,
+			farewell: hostState,
+		} as unknown as HTMLElement & ComponentProps
+		const target = {
+			localName: 'my-target',
+			greeting: 'plain-value',
+		} as unknown as HTMLElement & ComponentProps
+
+		const pass = makePass(host)
+		// 'greeting' is not Slot-backed; 'farewell' does not exist on target at all.
+		const descriptor = pass(target, {
+			greeting: hostState,
+			farewell: hostState,
+		})
+
+		let error: unknown
+		try {
+			createScope(() => descriptor())
+		} catch (e) {
+			error = e
+		}
+		expect(error).toBeInstanceOf(Error)
+		const message = (error as Error).message
+		expect(message).toContain('greeting')
+		expect(message).toContain('farewell')
+	})
+
+	test('does not leave a partial swap when one of several props fails', () => {
+		const hostGreeting = createState('host-greeting')
+		const hostFarewell = createState('host-farewell')
+		const targetGreetingState = createState('original-greeting')
+		const host = {
+			greeting: hostGreeting,
+			farewell: hostFarewell,
+		} as unknown as HTMLElement & ComponentProps
+		const target = {
+			localName: 'my-target',
+		} as unknown as HTMLElement & ComponentProps
+		const slot = createSlot(targetGreetingState)
+		getSignals(target)['greeting'] = slot
+		Object.defineProperty(target, 'greeting', slot)
+		// 'farewell' does not exist on target — this entry fails validation.
+
+		const pass = makePass(host)
+		const descriptor = pass(target, {
+			greeting: hostGreeting,
+			farewell: hostFarewell,
+		})
+
+		expect(() => createScope(() => descriptor())).toThrow(/'farewell'/)
+		// 'greeting' would have succeeded in isolation, but the whole call is
+		// atomic — its slot must still hold the original signal, unswapped.
+		expect(slot.current()).toBe(targetGreetingState)
+	})
+
+	test('throws InvalidCustomElementError when the target is not a custom element', () => {
+		const hostState = createState('host-value')
+		const host = {} as unknown as HTMLElement & ComponentProps
+		const target = { localName: 'div' } as unknown as HTMLElement &
+			ComponentProps
+
+		const pass = makePass(host)
+		const descriptor = pass(target, { greeting: hostState })
+		expect(() => createScope(() => descriptor())).toThrow()
+	})
+})
+
+describe('makePass — ADR-0012 DEV_MODE warning for writable short forms', () => {
+	// Shared helper: a Le-Truc-style target with one Slot-backed prop, so the
+	// warning fires before the eager slot validation rejects the binding.
+	const makeTarget = (prop: string) => {
+		const targetState = createState('original')
+		const slot = createSlot(targetState)
+		const target = { localName: 'my-target' } as unknown as HTMLElement &
+			ComponentProps
+		getSignals(target)[prop] = slot
+		Object.defineProperty(target, prop, slot)
+		return target
+	}
+
+	// Deliberately synchronous (no `await`) — see events.test.ts's DEV_MODE
+	// test for why an `await` here would risk leaking the mock into other
+	// files' tests via bun:test interleaving.
+	const captureWarnings = () => {
+		const warnings: unknown[][] = []
+		const originalWarn = console.warn
+		console.warn = (...args: unknown[]) => warnings.push(args)
+		mock.module('../util', () => ({ ...realUtil, DEV_MODE: true }))
+		return {
+			warnings,
+			restore: () => {
+				mock.module('../util', () => realUtil)
+				console.warn = originalWarn
+			},
+		}
+	}
+
+	const EXPECTED = (prop: string) =>
+		`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`
+
+	// Detection is reversed (ADR-0012): allow only what is provably read-only.
+
+	test('warns for a property key resolving to a writable host State', () => {
+		const hostState = createState('host')
+		const host = { value: hostState } as unknown as HTMLElement & ComponentProps
+		// Register the host signal like a real Le Truc component, so the
+		// property-key form resolves to the writable State (not a createMemo
+		// fallback, which is read-only and would not warn).
+		getSignals(host)['value'] = hostState
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() => makePass(host)(target, { value: 'value' })())
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0]?.[0]).toBe(EXPECTED('value'))
+	})
+
+	test('warns for a bare State passed directly', () => {
+		const hostState = createState('host')
+		const host = {} as unknown as HTMLElement & ComponentProps
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() => makePass(host)(target, { value: hostState })())
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0]?.[0]).toBe(EXPECTED('value'))
+	})
+
+	test('warns for a bare Slot passed directly (backing may swap to mutable at runtime)', () => {
+		const backingState = createState('host')
+		const slot = createSlot(backingState)
+		const host = {} as unknown as HTMLElement & ComponentProps
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() => makePass(host)(target, { value: slot })())
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0]?.[0]).toBe(EXPECTED('value'))
+	})
+
+	test('does NOT warn for a { get, set } descriptor (explicit mediated form)', () => {
+		const hostState = createState('host')
+		const host = {} as unknown as HTMLElement & ComponentProps
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() =>
+				makePass(host)(target, {
+					value: { get: hostState.get, set: hostState.set },
+				})(),
+			)
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(0)
+	})
+
+	test('does NOT warn for a thunk () => ... (toSignal wraps it as a Memo)', () => {
+		const hostState = createState('host')
+		const host = { value: hostState } as unknown as HTMLElement & ComponentProps
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() =>
+				makePass(host)(target, { value: () => hostState.get() })(),
+			)
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(0)
+	})
+
+	test('does NOT warn for a bare Memo passed directly (read-only derived)', () => {
+		const memo = createMemo(() => 'derived')
+		const host = {} as unknown as HTMLElement & ComponentProps
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() => makePass(host)(target, { value: memo })())
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(0)
+	})
+
+	test('does NOT warn for a bare Task passed directly (read-only derived)', () => {
+		const task = createTask(async () => 'resolved', { value: 'seeded' })
+		const host = {} as unknown as HTMLElement & ComponentProps
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() => makePass(host)(target, { value: task })())
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(0)
+	})
+
+	test('warns once per writable prop and aggregates across multiple props', () => {
+		const hostState = createState('host')
+		const host = { a: hostState, b: hostState } as unknown as HTMLElement &
+			ComponentProps
+		// Register the 'a' host signal so the property-key form resolves to
+		// the writable State (the 'b' entry passes the State directly).
+		getSignals(host)['a'] = hostState
+		const target = makeTarget('a')
+		// second Slot-backed prop
+		const slotB = createSlot(createState('orig-b'))
+		getSignals(target)['b'] = slotB
+		Object.defineProperty(target, 'b', slotB)
+
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() =>
+				makePass(host)(target, {
+					a: 'a',
+					b: hostState,
+				})(),
+			)
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(2)
+		const messages = warnings.map(w => w[0])
+		expect(messages).toContain(EXPECTED('a'))
+		expect(messages).toContain(EXPECTED('b'))
+	})
+})
+
+describe('each — element leave/enter disposal', () => {
+	// The callback's returned descriptor is invoked and its return value
+	// discarded (see `activateResult`) — a bare `() => cleanupFn` registers
+	// nothing. Cleanup must come from a primitive that self-registers with
+	// the active owner, e.g. `createEffect`, which is what `watch()` uses
+	// internally. That's why the descriptor here wraps `createEffect`.
+	const trackedDescriptor = (log: string[], id: string) => () =>
+		createEffect(() => {
+			log.push(`enter:${id}`)
+			return () => log.push(`leave:${id}`)
+		})
+
+	test('disposes the per-element scope when an element leaves, before creating scopes for the new set', () => {
+		const elA = { id: 'a' } as unknown as Element
+		const elB = { id: 'b' } as unknown as Element
+		const source = createState<Element[]>([elA])
+		const memo = createMemo(() => source.get())
+
+		const log: string[] = []
+		const descriptor = each(memo, (el: Element) =>
+			trackedDescriptor(log, (el as any).id),
+		)
+
+		const cleanup = createScope(() => descriptor())
+		expect(log).toEqual(['enter:a'])
+
+		source.set([elB])
+		expect(log).toEqual(['enter:a', 'leave:a', 'enter:b'])
+
+		cleanup?.()
+		expect(log).toEqual(['enter:a', 'leave:a', 'enter:b', 'leave:b'])
+	})
+
+	test("keeps an element's scope behaviorally equivalent across a re-run when it stays in the collection", () => {
+		const elA = { id: 'a' } as unknown as Element
+		const elB = { id: 'b' } as unknown as Element
+		const source = createState<Element[]>([elA])
+		const memo = createMemo(() => source.get())
+
+		const log: string[] = []
+		const descriptor = each(memo, (el: Element) =>
+			trackedDescriptor(log, (el as any).id),
+		)
+
+		const cleanup = createScope(() => descriptor())
+		expect(log).toEqual(['enter:a'])
+
+		// elA stays, elB is added — `each()` rebuilds scopes for the whole
+		// current set on every run (no diffing), so elA's scope is torn down
+		// and recreated too, not just elB's.
+		source.set([elA, elB])
+		expect(log).toEqual(['enter:a', 'leave:a', 'enter:a', 'enter:b'])
+
+		cleanup?.()
+		expect(log).toEqual([
+			'enter:a',
+			'leave:a',
+			'enter:a',
+			'enter:b',
+			'leave:a',
+			'leave:b',
+		])
 	})
 })
