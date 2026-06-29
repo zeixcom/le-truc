@@ -67,7 +67,9 @@ const formatSection = (title: string, body: string): string => {
 	let trimmed = body.trim()
 	const match = trimmed.match(/^#\s+(.+?)\s*$/m)
 	if (match) {
-		const heading = (match[1] ?? '').replace(/^[\p{Emoji}\uFE0F\s]+/u, '').trim()
+		const heading = (match[1] ?? '')
+			.replace(/^(?:\p{Emoji}\uFE0F?|\s)+/u, '')
+			.trim()
 		if (heading === title) {
 			trimmed = trimmed.slice(match[0].length).trim()
 		}
@@ -133,7 +135,10 @@ export const generateLlmsFullTxt = (params: {
 
 	// Trailing standalone docs
 	sections.push(
-		formatSection(STANDALONE_DOCS[1]!.title, standaloneContent['ARCHITECTURE']!),
+		formatSection(
+			STANDALONE_DOCS[1]!.title,
+			standaloneContent['ARCHITECTURE']!,
+		),
 	)
 	sections.push(
 		formatSection(STANDALONE_DOCS[2]!.title, standaloneContent['AGENTS']!),
@@ -167,12 +172,15 @@ export const llmsFullManifestEffect = (onRebuild?: () => void) => {
 						pages.push({ relativePath: file.filename, content: file.content })
 					}
 
-					// Read standalone docs from the repo root
-					const [readme, architecture, agents] = await Promise.all(
-						STANDALONE_DOCS.map(({ filename }) =>
-							Bun.file(`${ROOT}/${filename}`).text(),
-						),
-					)
+					// Read standalone docs from the repo root. Promise.all() over an
+					// explicit tuple (rather than .map() over STANDALONE_DOCS, which
+					// degrades to string[]) keeps each element typed as `string`
+					// under noUncheckedIndexedAccess.
+					const [readme, architecture, agents] = await Promise.all([
+						Bun.file(`${ROOT}/${STANDALONE_DOCS[0].filename}`).text(),
+						Bun.file(`${ROOT}/${STANDALONE_DOCS[1].filename}`).text(),
+						Bun.file(`${ROOT}/${STANDALONE_DOCS[2].filename}`).text(),
+					])
 
 					await writeFileSafe(
 						LLMS_FULL_TXT_FILE,

@@ -3,6 +3,7 @@ import {
 	createTask,
 	dangerouslyBindInnerHTML,
 	defineComponent,
+	schedule,
 } from '../../..'
 import {
 	fetchWithCache,
@@ -50,6 +51,13 @@ export default defineComponent<ModuleLazyloadProps>(
 
 		expose({ src: asString() })
 
+		// Skip the scroll-to-heading on the very first load, so the page
+		// doesn't jump on initial mount — only on subsequent src changes.
+		let hasLoaded = false
+		// Distinct key from `contentEl` (used by dangerouslyBindInnerHTML above)
+		// so this scroll task doesn't clobber the pending innerHTML write.
+		const scrollTask = {}
+
 		return [
 			watch(content, {
 				ok: content => {
@@ -57,6 +65,15 @@ export default defineComponent<ModuleLazyloadProps>(
 					loading.hidden = true
 					contentEl.hidden = false
 					setHTML(content)
+
+					if (hasLoaded) {
+						schedule(scrollTask, () => {
+							contentEl
+								.querySelector('h1, h2, h3, h4, h5, h6')
+								?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+						})
+					}
+					hasLoaded = true
 				},
 				nil: () => {
 					callout.hidden = false

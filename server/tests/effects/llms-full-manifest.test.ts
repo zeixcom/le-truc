@@ -3,14 +3,14 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { generateLlmsFullTxt, type PageContent } from '../../effects/llms-full-manifest'
+import {
+	generateLlmsFullTxt,
+	type PageContent,
+} from '../../effects/llms-full-manifest'
 
 /* === Helpers === */
 
-function makePage(
-	relativePath: string,
-	content: string,
-): PageContent {
+function makePage(relativePath: string, content: string): PageContent {
 	return { relativePath, content }
 }
 

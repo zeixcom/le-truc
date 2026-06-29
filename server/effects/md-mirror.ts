@@ -21,12 +21,21 @@ const extractTitle = (attrs: string): string | null => {
 	return m ? (m[1] ?? null) : null
 }
 
+/** Does this line start a list item (bullet or ordered)? */
+const isListItem = (line: string): boolean =>
+	/^\s*(?:[-*+]|\d+[.)])\s/.test(line)
+
 /** Convert a callout tag body to a labelled Markdown blockquote */
 const transformCallout = (attrs: string, body: string): string => {
 	const label = extractTitle(attrs) ?? extractClass(attrs) ?? 'Note'
 	const lines = body.trim().split('\n')
-	if (lines.length > 0) {
-		lines[0] = `**${label}:** ${lines[0] ?? ''}`
+	const firstLine = lines[0] ?? ''
+	if (isListItem(firstLine)) {
+		// Prepending text to a list-item line would turn it into a plain
+		// paragraph, breaking the list. Give the label its own line instead.
+		lines.unshift(`**${label}:**`, '')
+	} else if (lines.length > 0) {
+		lines[0] = `**${label}:** ${firstLine}`
 	}
 	return `${prefixBlockquote(lines)}\n`
 }

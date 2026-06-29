@@ -81,6 +81,23 @@ console.log(el.count) // Read the signal value
 el.count = 42 // Update the signal value
 ```
 
+### Signal Types
+
+Le Truc re-exports the reactive primitives from [`@zeix/cause-effect`](https://github.com/zeixcom/cause-effect). Every signal type participates in the same dependency graph with the same propagation, batching, and cleanup semantics. Use the type that matches the data's role:
+
+| Type | Role | When to use it |
+|------|------|----------------|
+| [`State`](./api.html#functions/createState) | Mutable source | Local mutable state you read and write inside the component |
+| [`Sensor`](./api.html#functions/createSensor) | External input (lazy) | Values that arrive from outside the graph — `matchMedia`, `IntersectionObserver`, geolocation. Seeds an initial value via `{ value }` |
+| [`Memo`](./api.html#functions/createMemo) | Sync derivation | A value computed from other signals — e.g. the sum of a spinbutton collection. For cheap one-off derivations, a plain thunk passed to `watch()` is often enough |
+| [`Task`](./api.html#functions/createTask) | Async derivation | `fetch`, dynamic imports, or any async work. Auto-cancels in-flight work when its dependencies change and exposes pending / error / ok states via `match()` |
+| [`Store`](./api.html#functions/createStore) | Reactive object | An object whose individual properties are each reactive |
+| [`List`](./api.html#functions/createList) | Reactive array | A keyed collection with stable item identity across add, remove, sort, and reorder |
+| [`Collection`](./api.html#functions/createCollection) | Reactive collection | Externally-driven streams (WebSocket, SSE) or derived pipelines |
+| [`Effect`](./api.html#functions/createEffect) | Side-effect sink | Terminal consumer for work outside the graph. Inside a component, prefer the factory's `watch()` / `on()` over a bare `createEffect()` |
+
+`Slot` is an integration primitive used internally by `pass()` to swap a child's backing signal; you rarely create one directly.
+
 ### Characteristics and Special Values
 
 Signals are **statically typed** and **non-nullable** — no null-checks needed inside effects.
@@ -349,7 +366,9 @@ defineComponent('my-component', ({ expose, first, host, watch }) => {
 })
 ```
 
-> **When to use:** - **Use a property name or a local signal** when the state is part of the component's public interface or internally reused.
+> **When to use:**
+>
+> - **Use a property name or a local signal** when the state is part of the component's public interface or internally reused.
 > - **Use a thunk** when the derived value is only needed in this one place.
 
 ### Bidirectional Binding with Native Elements

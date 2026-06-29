@@ -12,7 +12,7 @@
 		>
 		<link
 			rel="modulepreload"
-			href="./assets/main.js?v=29f872b41bdd4ec7"
+			href="./assets/main.js?v=a5d53064c5a15ba2"
 		>
 		<link
 			rel="stylesheet"
@@ -20,7 +20,7 @@
 		>
 		<script
 			type="module"
-			src="./assets/main.js?v=29f872b41bdd4ec7"
+			src="./assets/main.js?v=a5d53064c5a15ba2"
 		></script>
 		<link rel="alternate" type="text/markdown" title="Agent-readable content" href="./styling.md">
 	</head>
@@ -185,7 +185,7 @@
 <card-callout class="caution">Be careful with this operation.</card-callout>
 <card-callout class="danger">This action is irreversible!</card-callout>
 <card-callout class="note">This is just a side note.</card-callout></div><details title="Source code"><summary>Source code</summary><module-lazyload src="./sources/card-callout.html"><card-callout><p class="loading" role="status" aria-live="polite">Loading...</p><p class="error" role="alert" aria-live="assertive" hidden="true"></p></card-callout><div class="content"></div></module-lazyload></details></module-demo><h3 id="register-css-only-custom-elements"><a class="anchor" href="#register-css-only-custom-elements"><span class="title">Register CSS-only Custom Elements</span><span class="permalink">#</span></a></h3><p>If a Le Truc component queries for a CSS-only custom element (via <code>first()</code> or <code>all()</code>), it will detect the element as an unresolved dependency and wait for it to upgrade — causing an unnecessary delay before effects run.</p><p>To avoid this, register CSS-only custom elements with a trivial definition:</p><module-codeblock language="js" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><p class="meta"><span class="language">js</span></p><module-scrollarea orientation="horizontal"><pre class="shiki monokai" style="background-color:#272822;color:#F8F8F2" tabindex="0"><code><span class="line"><span style="color:#F8F8F2">customElements.</span><span style="color:#A6E22E">define</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'card-callout'</span><span style="color:#F8F8F2">, </span><span style="color:#66D9EF;font-style:italic">class</span><span style="color:#F92672"> extends</span><span> </span><span style="color:#A6E22E;font-style:italic;text-decoration:underline">HTMLElement</span><span style="color:#F8F8F2"> {})</span></span>
-<span class="line"></span></code></pre></module-scrollarea><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>This tells the browser (and Le Truc) that the element is defined and ready. The registration has no runtime cost — the element simply upgrades to a plain <code>HTMLElement</code> immediately.</p><card-callout class="tip"><p><strong>Register every custom element tag</strong></p><p>Every custom element tag you use in HTML should have a corresponding <code>customElements.define()</code> call. This is the web platform's contract: a hyphenated tag name is a custom element, and defining it — even with an empty class — ensures it upgrades correctly and doesn't block other components.</p></card-callout></section></main>
+<span class="line"></span></code></pre></module-scrollarea><basic-button class="copy" copy-success="Copied!" copy-error="Error trying to copy to clipboard!"><button type="button" class="secondary small"><span class="label">Copy</span></button></basic-button></module-codeblock><p>This tells the browser (and Le Truc) that the element is defined and ready. The registration has no runtime cost — the element simply upgrades to a plain <code>HTMLElement</code> immediately.</p><card-callout class="caution"><p><strong>Register every custom element tag</strong></p><p>Every custom element tag you use in HTML should have a corresponding <code>customElements.define()</code> call. This is the web platform's contract: a hyphenated tag name is a custom element, and defining it — even with an empty class — ensures it upgrades correctly and doesn't block other components.</p></card-callout></section></main>
 
 			<footer class="content-grid">
 				<div class="content">

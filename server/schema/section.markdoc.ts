@@ -3,7 +3,7 @@ import { commonAttributes, standardChildren } from '../markdoc-constants'
 
 const section: Schema = {
 	render: 'section',
-	children: standardChildren,
+	children: [...standardChildren, 'table'],
 	attributes: commonAttributes,
 }
 
