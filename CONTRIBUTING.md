@@ -129,6 +129,12 @@ Create a local `.mcp.json` in the repo root (gitignored — do not commit):
 
 Replace `/path/to/cem` with the output of `which cem`. This gives Claude Code and other AI agents live access to component definitions when working in this repo.
 
+**Known false positive — "is not imported" diagnostic:**
+
+`cem lsp` assumes a module-per-file architecture and emits a diagnostic like `Custom element 'basic-hello' is not imported` for every Le Truc element used in an HTML file. **This is a false positive for this project.** Le Truc's docs bundle all components into a single global `assets/main.js` (via `bun build examples/main.ts`), so components are registered on `customElements` globally — there is no per-file import in HTML.
+
+The diagnostic cannot be disabled independently: `cem-lsp` exposes no config option to turn off just the missing-import check (only `additionalPackages` and `trace` are documented). The hover docs, autocomplete, and tag validation all work correctly — only the import suggestion is noise here. Ignore it.
+
 **Configure the merge driver for auto-generated docs (once per clone):**
 
 ```sh

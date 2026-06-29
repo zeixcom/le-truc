@@ -62,9 +62,16 @@
   **How:** `verify-cem.ts` asserts every custom-element declaration name is PascalCase (`/^[A-Z][a-zA-Z0-9]+$/`) and rejects `anonymous*`, `Truc`, `J`, and empty names. The plugin always synthesises PascalCase from the tag name, so a non-PascalCase name reliably signals the plugin did not run. Wired into `build:cem` so the guard runs everywhere the manifest is generated (local + CI), and added as a CI step after `Build` so a broken plugin fails the job.
   **Verified:** Healthy plugin → `✅ 47 declarations, all PascalCase` (exit 0). Broken plugin (import renamed to `@zeix/cem-plugin-le-truc-NONEXISTENT`) → guard lists the garbage declarations and exits 1. The exact silent-failure mode that shipped the broken "47-component manifest that didn't exist" is now caught loudly.
 
-- [x] LT-013: Filter structural-only stub elements out of the manifest — done ✓
+- [x] LT-013: Filter structural-only stub elements out of the manifest — done, then superseded by LT-014a ⏻
   **Skill:** le-truc-dev
-  **Changed:** `custom-elements-manifest.config.mjs` (globs now `['examples/**/*.ts', '!examples/main.ts']`).
-  **How:** `examples/main.ts` is an entry point (imports + 6 `customElements.define('x', class extends HTMLElement {})` stubs), not a component-definition file — it contains zero `defineComponent` calls. Excluding it from the globs drops the 6 `anonymous_N` noise declarations the default analyzer was emitting.
-  **Verified:** Manifest dropped from 53 → 47 custom-element declarations, zero `anonymous_` names.
+  **Original approach (reverted):** Excluded `examples/main.ts` from the globs. This dropped the 6 `anonymous_N` noise declarations (53 → 47) but broke LSP awareness — the docs HTML uses those container elements (`<card-callout>`, `<section-hero>`, etc.), and without them in the manifest `cem lsp` reports "Unknown custom element". See LT-014a for the corrected approach.
+
+- [x] LT-014: Document structural stubs + record cem-lsp global-bundle false positive — done ✓
+  **Skill:** le-truc-dev
+  **Context:** Surfaced by actually running `cem lsp` in Zed. Two issues: (1) the 6 structural stubs showed as "Unknown custom element" after LT-013's exclusion; (2) `cem lsp` emits "is not imported" diagnostics for every Le Truc element in HTML — a false positive under the global-bundle architecture.
+  **Changed:** `examples/main.ts` (6 inline `class extends HTMLElement {}` → named class declarations with JSDoc descriptions), `custom-elements-manifest.config.mjs` (reverted the `!examples/main.ts` exclusion from LT-013), `CONTRIBUTING.md` (note explaining the "is not imported" false positive).
+  **How:**
+    - **Stubs (Issue #1):** The default CEM analyzer does NOT extract metadata from inline class expressions (tested: JSDoc on `customElements.define('x', class extends HTMLElement {})` is ignored). Converting to named declarations (`class CardCallout extends HTMLElement {}` + JSDoc) gives proper PascalCase names + descriptions. Now `cem lsp` recognizes all 6 as known elements with hover docs. Manifest back to 53 declarations, all PascalCase — `verify:cem` still passes.
+    - **"Is not imported" (Issue #2):** `cem-lsp` exposes no config option to disable just the missing-import diagnostic (only `additionalPackages` and `trace` are documented; the check is baked into `publishDiagnostics`). Documented as a known false positive in CONTRIBUTING.md with the reason (global bundle, no per-file imports). Hover/autocomplete/tag-validation all work; only the import suggestion is noise.
+  **Verified:** `bun run build:cem` → `✅ 53 declarations, all PascalCase`. `examples/main.ts` lints clean and bundles successfully.
 

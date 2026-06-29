@@ -3,7 +3,7 @@ import { leTrucPlugin } from '@zeix/cem-plugin-le-truc'
 let typeChecker
 
 export default {
-	globs: ['examples/**/*.ts', '!examples/main.ts'],
+	globs: ['examples/**/*.ts'],
 	exclude: ['**/*.spec.ts', '**/*.test.ts'],
 	outdir: '.',
 	plugins: [leTrucPlugin(() => typeChecker)],
