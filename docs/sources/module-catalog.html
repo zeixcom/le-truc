@@ -206,6 +206,13 @@
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * A product catalog that aggregates spinbutton quantities and passes the total to a cart button.</span></span>
+<span class="line"><span style="color:#88846F"> * Use it as a demo of inter-component communication via `pass()` — when spinbutton</span></span>
+<span class="line"><span style="color:#88846F"> * values change, the aggregated total updates the cart button reactively.</span></span>
+<span class="line"><span style="color:#88846F"> * Each product row should contain a `&#x3C;form-spinbutton>` for quantity input;</span></span>
+<span class="line"><span style="color:#88846F"> * the cart button must have class `cart` for the total binding to attach.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@demo</span><span style="color:#88846F"> {./docs/examples/module-catalog.html} Interactive preview and usage examples */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">(</span><span style="color:#E6DB74">'module-catalog'</span><span style="color:#F8F8F2">, ({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>
 <span class="line"><span style="color:#66D9EF;font-style:italic">	const</span><span style="color:#F8F8F2"> button </span><span style="color:#F92672">=</span><span style="color:#A6E22E"> first</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">		'basic-button'</span><span style="color:#F8F8F2">,</span></span>

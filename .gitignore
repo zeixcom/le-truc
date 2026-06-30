@@ -158,3 +158,9 @@ vite.config.ts.timestamp-*
 
 # MacOS
 .DS_Store
+
+# Generated
+custom-elements.json
+
+# Local dev tooling (not committed — each developer sets this up per CONTRIBUTING.md)
+.mcp.json

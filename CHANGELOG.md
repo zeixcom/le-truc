@@ -2,6 +2,12 @@
 
 ## 2.2.0 (Unreleased)
 
+### Added
+
+- **Custom Elements Manifest generation via `@zeix/cem-plugin-le-truc`**: Le Truc's factory pattern (`defineComponent<Props>(tagName, factory)`) is invisible to standard CEM analyzers, which expect class-based components. The new `@zeix/cem-plugin-le-truc` package (published separately to npm, added as a devDependency at `^0.1.1`) plugs into `@custom-elements-manifest/analyzer` to extract `tagName`, PascalCase `name`, `description`, `members` (from the `Props` type argument via the TypeScript type checker), `attributes` (from `as*` parser calls in `expose()`), `slots`/`events`/`cssParts`/`cssProperties` (from `@slot`/`@fires`/`@csspart`/`@cssprop` JSDoc tags), and `demos` (from `@demo {url} description` tags). Run `bun run build:cem` to generate `custom-elements.json` (gitignored). See [ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md).
+- **`verify-cem.ts`** asserts every declaration name is PascalCase and rejects known-garbage names; it is chained into `build:cem` (`cem analyze && bun run verify:cem`) and runs as a CI step in `ci-cd.yml`, so a missing or broken plugin now fails the build loudly.
+- **Optional `@pwrs/cem` tooling documented in `CONTRIBUTING.md`**: editor autocomplete (`cem lsp`) and AI agent component context (`cem mcp`) are provided by `@pwrs/cem`. `CONTRIBUTING.md` documents the optional global install and the `analyze` (bundled via `@custom-elements-manifest/analyzer`) vs `lsp`/`mcp` (global install) split.
+
 ### Fixed
 
 - **`isSafeURL` now strips the full C0 control range, not just tab/newline/CR/FF/VT, before the scheme check**: the prior hardening (2.1.0, below) stripped only `[\t\n\r\f\v]` (0x09–0x0D) before testing for `javascript:`/`data:`/`vbscript:`. Browsers strip the entire C0 control range (U+0000–U+001F) when parsing a URL, so a leading or embedded control byte outside that narrow set — e.g. `\x01javascript:alert(1)` — still survived the check and executed once the browser dropped the control character on activation. The strip now covers `\x00`–`\x20` (C0 controls plus space) via a single `/[\x00-\x20]/g` replace, closing the remaining gap.

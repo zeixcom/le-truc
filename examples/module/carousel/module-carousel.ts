@@ -1,6 +1,7 @@
 import { bindProperty, bindVisible, defineComponent, each } from '../../..'
 
 export type ModuleCarouselProps = {
+	/** Zero-based index of the currently visible slide. */
 	index: number
 }
 
@@ -13,6 +14,11 @@ declare global {
 const clamp = (index: number, total: number) =>
 	Math.max(0, Math.min(index, total - 1))
 
+/**
+ * An accessible image carousel with dot navigation, prev/next buttons, and scroll-snap support.
+ * Use it for image galleries or feature showcases — provides ARIA tabpanel semantics,
+ * keyboard navigation (Arrow keys to move between slides), and focus management.
+ * @demo {./docs/examples/module-carousel.html} Interactive preview and usage examples */
 export default defineComponent<ModuleCarouselProps>(
 	'module-carousel',
 	({ all, expose, first, host, on, watch }) => {

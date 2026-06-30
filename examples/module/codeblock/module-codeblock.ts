@@ -3,6 +3,7 @@ import type { BasicButtonProps } from '../../basic/button/basic-button'
 import { copyToClipboard } from '../../basic/button/copyToClipboard'
 
 export type ModuleCodeblockProps = {
+	/** Whether the code block is collapsed (truncated). Read from the `collapsed` attribute at connect time. */
 	collapsed: boolean
 }
 
@@ -12,6 +13,12 @@ declare global {
 	}
 }
 
+/**
+ * A syntax-highlighted code block with collapsible truncation and a copy-to-clipboard button.
+ * Use it for displaying code samples — provides a keyboard-accessible expand/copy
+ * button and should be used when long code listings need graceful truncation.
+ * The `collapsed` attribute should be set to avoid overwhelming the page with long code.
+ * @demo {./docs/examples/module-codeblock.html} Interactive preview and usage examples */
 export default defineComponent<ModuleCodeblockProps>(
 	'module-codeblock',
 	({ expose, first, host, on, watch }) => {

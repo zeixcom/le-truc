@@ -44,6 +44,13 @@ const AXIS_BIGSTEP = { l: 0.05, c: 0.02, h: 15 }
 const getStep = (axis: FormColorgraphAxis, shiftKey: boolean) =>
 	shiftKey ? AXIS_BIGSTEP[axis] : AXIS_STEP[axis]
 
+/**
+ * An interactive Oklch color editor with sliders for lightness, chroma, and hue.
+ * Use it for exploring color spaces — keyboard accessible via Arrow keys on each
+ * slider axis, with live preview of the resulting color and out-of-gamut warnings.
+ * Out-of-gamut colors should be handled with a fallback, as display coverage varies.
+ * Chroma values must stay within the Oklch gamut; extreme values are clamped automatically.
+ * @demo {./docs/examples/form-colorgraph.html} Interactive preview and usage examples */
 export default defineComponent<FormColorgraphProps>(
 	'form-colorgraph',
 	({ all, expose, first, host, on, watch }) => {

@@ -20,8 +20,8 @@ const observeOverflow =
 			([entry]) => {
 				if (!entry) return
 				if (
-					entry.intersectionRatio > MIN_INTERSECTION_RATIO &&
-					entry.intersectionRatio < MAX_INTERSECTION_RATIO
+					entry.intersectionRatio > MIN_INTERSECTION_RATIO
+					&& entry.intersectionRatio < MAX_INTERSECTION_RATIO
 				)
 					overflowCallback()
 				else batch(noOverflowCallback)
@@ -37,6 +37,13 @@ const observeOverflow =
 		}
 	}
 
+/**
+ * Adds overflow indicator classes (`overflow`, `overflow-start`, `overflow-end`) to a scrollable container.
+ * Use it when you need to show scroll affordances — provides reactive CSS classes
+ * that update as the user scrolls, useful for custom scroll UI that should
+ * respect reduced-motion accessibility preferences.
+ * Set the `orientation` attribute to `horizontal` for horizontal scroll detection.
+ * @demo {./docs/examples/module-scrollarea.html} Interactive preview and usage examples */
 export default defineComponent('module-scrollarea', ({ host, on, watch }) => {
 	const child = host.firstElementChild
 	if (!child) return []

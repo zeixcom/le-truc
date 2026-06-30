@@ -1,8 +1,11 @@
 import { bindProperty, bindText, defineComponent } from '../../..'
 
 export type BasicButtonProps = {
+	/** Whether the button is disabled. */
 	disabled: boolean
+	/** Visible label text of the button. */
 	label: string
+	/** Optional badge text displayed alongside the label. */
 	badge: string
 }
 
@@ -12,6 +15,12 @@ declare global {
 	}
 }
 
+/**
+ * A button that can be disabled, labelled, and badged via reactive properties.
+ * Use it for triggering actions — it provides a native `<button>` with
+ * ARIA-friendly labelling and activates on keyboard Space or Enter when focused.
+ * @demo {./docs/examples/basic-button.html} Interactive preview with disabled, labelled, and badged variants
+ */
 export default defineComponent<BasicButtonProps>(
 	'basic-button',
 	({ expose, first, watch }) => {

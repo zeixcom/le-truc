@@ -1,6 +1,7 @@
 import { bindText, defineComponent } from '../../..'
 
 export type BasicHelloProps = {
+	/** The name to greet. Updated reactively as the user types in the input. */
 	name: string
 }
 
@@ -10,6 +11,13 @@ declare global {
 	}
 }
 
+/**
+ * A hello-world component that greets a name entered via an input field.
+ * Use it as a starting point for learning Le Truc — it provides a minimal
+ * example of a reactive property updating the DOM as the user types.
+ * The host element should contain a `<label>`, `<input>`, and `<output>`; the input
+ * must have `name="name"` for the greeting to update reactively.
+ * @demo {./docs/examples/basic-hello.html} Interactive preview and usage examples */
 export default defineComponent<BasicHelloProps>(
 	'basic-hello',
 	({ expose, first, on, watch }) => {

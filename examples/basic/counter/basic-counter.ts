@@ -1,6 +1,7 @@
 import { bindText, defineComponent } from '../../..'
 
 export type BasicCounterProps = {
+	/** Current counter value. Increments on each button click. */
 	count: number
 }
 
@@ -10,6 +11,13 @@ declare global {
 	}
 }
 
+/**
+ * A simple click counter that increments on each button press.
+ * Use it for demonstrating reactive property updates — the count
+ * increments when the button is activated via mouse or keyboard.
+ * The host element should contain a `<button>` and a `<span>`; the button must
+ * be a real `<button>` element for keyboard activation to work.
+ * @demo {./docs/examples/basic-counter.html} Interactive preview and usage examples */
 export default defineComponent<BasicCounterProps>(
 	'basic-counter',
 	({ expose, first, host, on, watch }) => {

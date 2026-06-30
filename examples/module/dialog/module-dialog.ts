@@ -1,6 +1,7 @@
 import { defineComponent } from '../../..'
 
 export type ModuleDialogProps = {
+	/** Whether the dialog is currently open. */
 	open: boolean
 }
 
@@ -12,6 +13,11 @@ declare global {
 
 const SCROLL_LOCK_CLASS = 'scroll-lock'
 
+/**
+ * A modal dialog with scroll-lock, focus management, and backdrop/Escape close support.
+ * Use it for modal interactions — provides ARIA dialog semantics, traps keyboard focus
+ * while open, and should restore focus to the trigger element when closed via Escape.
+ * @demo {./docs/examples/module-dialog.html} Interactive preview and usage examples */
 export default defineComponent<ModuleDialogProps>(
 	'module-dialog',
 	({ expose, first, on, watch }) => {

@@ -39,7 +39,9 @@ type TickerItem = {
 }
 
 export type ModuleTickerProps = {
+	/** Whether the ticker is actively updating prices. */
 	running: boolean
+	/** Fraction of symbols updated per tick (0–1). Read from the `fraction` attribute at connect time. */
 	fraction: number
 }
 
@@ -67,6 +69,11 @@ const BLOCK_SIZE = 100
 
 /* === Component === */
 
+/**
+ * A high-performance stock ticker with virtualized rows, random-walk price simulation, and pause/resume control.
+ * Use it for demonstrating the `each()` helper with large dynamic collections — rows are
+ * virtualized for performance and the data updates should be throttled to avoid jank.
+ * @demo {./docs/examples/module-ticker.html} Interactive preview and usage examples */
 export default defineComponent<ModuleTickerProps>(
 	'module-ticker',
 	({ all, expose, first, host, on, pass, watch }) => {

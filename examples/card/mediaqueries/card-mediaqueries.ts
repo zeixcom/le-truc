@@ -6,6 +6,13 @@ import {
 	MEDIA_VIEWPORT,
 } from '../../context/media/context-media'
 
+/**
+ * Displays the current OS-level media query preferences (motion, theme, viewport, orientation).
+ * Use it to visualise the context values that `context-media` provides — the labels
+ * update when the user changes their OS or browser preferences.
+ * This component should be placed inside a `<context-media>` provider ancestor;
+ * without a provider, context values must fall back to `"unknown"`.
+ * @demo {./docs/examples/card-mediaqueries.html} Interactive preview and usage examples */
 export default defineComponent(
 	'card-mediaqueries',
 	({ first, requestContext, watch }) => {
