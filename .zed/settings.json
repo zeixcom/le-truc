@@ -23,7 +23,7 @@
 		},
 	},
 	"lsp": {
-		"html": {
+		"cem-lsp": {
 			"initialization_options": {
 				"customData": ["./custom-elements.json"],
 			},

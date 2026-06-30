@@ -45,7 +45,7 @@ The plugin is published as `@zeix/cem-plugin-le-truc` and used internally by add
 
 **Bad:**
 - `overrideModuleCreation` requires a small amount of boilerplate in the consumer's config file (5–8 lines); this cannot be hidden inside the plugin itself due to the analyzer's plugin API design
-- Parser detection relies on the `as*` naming convention and import origin heuristic; custom parsers created without `asParser()` will not be detected as attributes (but this is already a bug per AGENTS.md: "Parser branding is required for reliable detection")
+- Parser detection relies on the `as*` naming convention and import origin heuristic
 - Synthesised class names (`BasicCounter`) are not real class names and may look unusual in tooling that surfaces them
 
 ## Related
