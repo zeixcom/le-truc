@@ -1,0 +1,1765 @@
+# Le Truc — Full Documentation
+> Type-safe reactive Web Components — HTML-first, backend-agnostic.
+>
+> Auto-generated authoritative reference for AI tools. Concatenates the
+> README, core narrative pages, architecture notes, and agent context
+> (including surprising behaviors and gotchas).
+---
+
+# Le Truc
+
+**Type-safe reactive Web Components — HTML-first, backend-agnostic**
+
+Le Truc adds a thin reactive layer to server-rendered HTML. You keep your existing backend (Java, PHP, Python, C#, static site generator — anything that outputs HTML). Le Truc wires fine-grained DOM updates to reactive component properties in the browser, without re-rendering whole subtrees and without requiring JavaScript on the server.
+
+The result is SolidJS-style reactivity packaged as standard Custom Elements: components are reusable across projects, type-safe, and carry no framework lock-in.
+
+## Why
+
+Digital agencies building content-rich sites face a recurring choice: imperative JavaScript that becomes unmaintainable as complexity grows, or a SPA framework that takes over rendering and requires a JavaScript backend. Neither is a good fit when the backend is a CMS and the initial HTML is already correct.
+
+Le Truc solves the specific problem of _stateful interactivity on server-rendered pages_:
+
+- The server renders HTML — Le Truc never re-renders it
+- Reactive properties update only the DOM nodes that actually changed
+- Components are plain Custom Elements — they work in any host environment
+- TypeScript catches integration errors at compile time
+
+## Installation
+
+```bash
+npm install @zeix/le-truc
+# or
+bun add @zeix/le-truc
+```
+
+## Quick Start
+
+1. Start with your server-rendered HTML:
+
+```html
+<basic-hello>
+  <label for="name">Your name</label>
+  <input id="name" name="name" type="text" autocomplete="given-name" />
+  <p>Hello, <output for="name">World</output>!</p>
+</basic-hello>
+```
+
+2. Define the component:
+
+```js
+import { bindText, defineComponent } from '@zeix/le-truc'
+
+defineComponent(
+  'basic-hello',                     // Component name (must contain a hyphen)
+  ({ expose, first, on, watch }) => { // Factory: query DOM, declare props, return effects
+    const input = first('input', 'Needed to enter the name.')
+    const output = first('output', 'Needed to display the name.')
+    const fallback = output.textContent || ''
+
+    expose({ name: output.textContent ?? '' }) // declare reactive prop
+
+    return [
+      on(input, 'input', () => ({ name: input.value || fallback })),
+      watch('name', bindText(output)),
+    ]
+  },
+)
+```
+
+3. Import the module and watch it work.
+
+`defineComponent` registers the element via `customElements.define()`. `expose()` declares reactive properties, `watch()` wires up DOM updates that fire only when the tracked signal actually changes, `on()` binds event listeners.
+
+## Documentation
+
+Full documentation with live examples is at **[zeixcom.github.io/le-truc](https://zeixcom.github.io/le-truc)**:
+
+- [Introduction](https://zeixcom.github.io/le-truc/index.html)
+- [Getting Started](https://zeixcom.github.io/le-truc/getting-started.html)
+- [Components](https://zeixcom.github.io/le-truc/components.html)
+- [Styling](https://zeixcom.github.io/le-truc/styling.html)
+- [Data Flow](https://zeixcom.github.io/le-truc/data-flow.html)
+- [Examples](https://zeixcom.github.io/le-truc/examples.html)
+- [API](https://zeixcom.github.io/le-truc/api.html)
+- [About](https://zeixcom.github.io/le-truc/about.html)
+
+## Key Features
+
+- 🧱 **HTML-first** — enhances server-rendered markup; no Virtual DOM, no hydration
+- 🚦 **Reactive properties** — signals with automatic dependency tracking and fine-grained updates
+- ⚡️ **Pinpoint effects** — only the exact DOM nodes that changed are touched
+- 🧩 **Composable** — build behaviour from small, reusable parsers and effect functions
+- 🌐 **Context support** — share state across components without prop drilling
+- 🪶 **Tiny** — ≤10 kB gzipped, tree-shakeable
+- 🛡️ **Type-safe** — full TypeScript inference from selector strings to property types
+
+Le Truc uses [Cause & Effect](https://github.com/zeixcom/cause-effect) for its reactive primitives.
+
+## Contributing & License
+
+Contributions, bug reports, and suggestions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+License: [MIT](LICENSE) — © 2026 [Zeix AG](https://zeix.com)
+
+---
+
+# Introduction
+
+**Le Truc adds a reactive layer to server-rendered HTML.** Keep your existing backend. Le Truc wires type-safe component properties to fine-grained DOM updates in the browser, without re-rendering and without a JavaScript server.
+
+## What is Le Truc?
+
+- Embrace the Web Platform
+- Use any server-side technology to render HTML
+- Type-safe reactive components
+- Fine-grained DOM updates — no VDOM, no diffing
+- Under 10 kB gzipped, tree-shakeable
+
+Le Truc assumes you start with semantic HTML and want to enhance it with behavior:
+
+```html
+<hello-world>
+  <p>Hello, <span>Alice</span>!</p>
+</hello-world>
+```
+
+This means better SEO, faster initial page loads, and progressive enhancement that works even when JavaScript fails.
+
+Progressively enhance the user experience by adding interactivity:
+
+```js
+import { bindText, defineComponent } from '@zeix/le-truc'
+
+defineComponent('hello-world', ({ expose, first, watch }) => {
+  const span = first('span')
+  expose({ name: span.textContent ?? '' })
+  return [watch('name', bindText(span))]
+})
+```
+
+The component is a native Custom Element. Its `name` property is reactive — reading it inside an effect tracks the dependency; writing it triggers only the affected DOM update.
+
+- SPA frameworks (React, Vue, Angular, Svelte, Lit, etc.) render on the client. Le Truc **never does**. The server renders HTML; the browser shows it immediately — no hydration, no double templates, no DB → JSON → JS → HTML pipeline.
+- Hypermedia frameworks (HTMX, Datastar) avoid client rendering but fetch new HTML from the server on every state change. Le Truc updates state locally — a network request only when your logic actually needs server data.
+- Le Truc sets up event listeners and a signal graph. No layout shifts, no VDOM, no diffing. When state changes, only the affected DOM nodes update.
+
+Because we add fewer abstractions, we can keep the library small (under 10 kB gzipped, tree-shakeable).
+
+HTML, CSS, and JavaScript already solve most of the problem. Le Truc adds what's missing: component boundaries, compile-time type safety, and predictable reactive updates without tight coupling.
+
+---
+
+# Getting Started
+
+**Set up Le Truc in minutes – no build tools required**. Or use any package manager and bundler to take advantage of TypeScript support and optimize frontend assets.
+
+## How to Install Le Truc
+
+Le Truc works without build tools but also supports package managers and bundlers for projects that benefit from TypeScript and tree-shaking.
+
+### Using a CDN
+
+Include Le Truc from a CDN — no build tools needed:
+
+```html#page.html
+<script src="https://cdn.jsdelivr.net/npm/@zeix/le-truc@latest/index.js"></script>
+```
+
+### Self-Hosting Le Truc
+
+To avoid a CDN dependency, download `index.js` from the repository and host it yourself:
+
+[index.js in GitHub Repository](https://github.com/zeixcom/le-truc/blob/main/index.js)
+
+Then include it like any other script:
+
+```html#page.html
+<script src="/path/to/your/hosted/le-truc.js"></script>
+```
+
+Self-hosting gives you control over updates and avoids CDN dependencies — useful for stricter Content Security Policies.
+
+### Installing via Package Managers
+
+If you're using a bundler, install via npm or Bun:
+
+#### NPM
+
+```sh
+npm install @zeix/le-truc
+```
+
+---
+
+#### Bun
+
+```sh
+bun add @zeix/le-truc
+```
+
+Import only what you use — Le Truc is fully tree-shakeable:
+
+```js#main.js
+import { asString, bindText, defineComponent } from '@zeix/le-truc'
+```
+
+> **Enabling dev-mode warnings:** When bundling from source, `DEV_MODE` defaults to `false` and all debug output is stripped. To enable enhanced warnings during development — including alerts about unbranded parsers and API misuse — define `process.env.DEV_MODE` in your bundler config:
+>
+> **Vite** (`vite.config.js`):
+> ```js
+> define: { 'process.env.DEV_MODE': 'true' }
+> ```
+>
+> **Bun / Rollup** (CLI flag):
+> ```sh
+> --define process.env.DEV_MODE=true
+> ```
+>
+> Set the value to `false` (or omit it) for production builds to ensure dead code is eliminated.
+
+## Progressive Enhancement
+
+Le Truc is built around **progressive enhancement**: your HTML exists first, works without JavaScript, and Le Truc layers reactivity on top when it loads.
+
+This is the opposite of a framework that renders HTML from JavaScript. In Le Truc, the server provides the markup — including meaningful content and initial values — and the component enhances it in place.
+
+### The upgrade lifecycle
+
+```
+HTML is parsed → content is visible to user
+JS loads → component connects → effects run
+```
+
+Between the first and last step, your page is fully usable. Le Truc reads the existing DOM values as initial state rather than replacing them.
+
+### Wrapping existing HTML
+
+A Le Truc component is a custom element that **wraps** whatever HTML is already on the page. The children inside it are the server-rendered content — Le Truc queries them with `first()` and `all()` and applies effects on top.
+
+Take this HTML as a starting point:
+
+```html
+<label>
+  Your name<br />
+  <input name="name" type="text" autocomplete="given-name" />
+</label>
+<p>Hello, <output>World</output>!</p>
+```
+
+This renders a greeting and an input field. It is fully usable before any JavaScript loads — the user sees "Hello, World!" immediately. To make it reactive, you wrap it in a custom element:
+
+```html
+<basic-hello>
+  <label>
+    Your name<br />
+    <input name="name" type="text" autocomplete="given-name" />
+  </label>
+  <p>Hello, <output>World</output>!</p>
+</basic-hello>
+```
+
+Le Truc cannot enhance a plain `<div>` directly — custom elements require a hyphenated name. But wrapping is low-cost: one extra element, no structural changes to the children. If you have existing HTML inside a `<div>`, either rename the element in your template or add a custom element as a parent wrapper. The children stay exactly as they are; Le Truc just has a defined upgrade point.
+
+> **Naming convention:** The custom element name becomes the hook for both JavaScript (`defineComponent('basic-hello', ...)`) and CSS (`basic-hello { ... }`). Keep it descriptive and specific to the component's role.
+
+## Creating Your First Component
+
+The `<basic-hello>` HTML above is already on the page. Now add the component definition that makes it reactive — typing into the input updates the greeting.
+
+Add the following inside a `<script type="module">` tag, or in an external module file:
+
+```html#page.html
+<script type="module">
+  import {
+    bindText,
+    defineComponent,
+  } from 'https://cdn.jsdelivr.net/npm/@zeix/le-truc@latest/index.js'
+
+  defineComponent('basic-hello', ({ expose, first, on, watch }) => {
+    const input = first('input', 'Needed to enter the name.')
+    const output = first('output', 'Needed to display the name.')
+    const fallback = output.textContent || ''
+
+    expose({ name: output.textContent ?? '' })
+
+    return [
+      on(input, 'input', () => ({ name: input.value || fallback })),
+      watch('name', bindText(output)),
+    ]
+  })
+</script>
+```
+
+The [Components](components.html) guide explains each piece in depth.
+
+## Verifying Your Installation
+
+The component is working when a text input and a live greeting appear, and the greeting updates as you type:
+
+```html
+<basic-hello>
+  <label>Your name<br>
+    <input name="name" type="text" autocomplete="given-name">
+  </label>
+  <p>Hello, <output>World</output>!</p>
+</basic-hello>
+```
+
+If it doesn't work:
+
+- Check the browser console for errors (missing imports, typos).
+- Ensure the `<script>` tag uses `type="module"`.
+- If using npm, confirm Le Truc is installed in `node_modules/@zeix/le-truc`.
+
+---
+
+# Components
+
+**Create lightweight, self-contained Web Components with built-in reactivity**. Le Truc lets you define custom elements that manage state efficiently, update the DOM automatically, and enhance server-rendered pages without an SPA framework.
+
+## Defining a Component
+
+Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built-in state management and reactive updates**.
+
+> **Le Truc enhances HTML — it doesn't replace it:** A Le Truc component **wraps existing server-rendered content**. The HTML inside the custom element is the starting point — visible before JavaScript runs. See [Progressive Enhancement](getting-started.html#progressive-enhancement) for how this works.
+
+Components are created with the `defineComponent()` function, which takes a valid custom element tag name (two or more words joined with `-`) and a factory function:
+
+```js
+defineComponent('my-component', ({ expose, first, all, watch, on }) => {
+  // Query descendant elements
+  const el = first('selector')
+  // Declare reactive properties
+  expose({ /* ... */ })
+  // Return a flat array of effect descriptors
+  return [
+    watch(/* source */, /* handler */),
+    on(el, /* type */, /* handler */),
+  ]
+})
+```
+
+The factory receives a `FactoryContext` with helpers for querying descendant elements, declaring reactive properties, and returning effect descriptors — each covered in the sections below.
+
+### Using the Custom Element in HTML
+
+Once registered, the component can be used like any native HTML element:
+
+```html
+<my-component>Content goes here</my-component>
+```
+
+## Component Lifecycle
+
+Le Truc manages the **Web Component lifecycle** from creation to removal. Here's what happens.
+
+### Connected to the DOM
+
+The factory function runs inside `connectedCallback()`. Element queries, `expose()`, and the returned effect descriptors all execute at this point — the factory is the component's setup phase, not its constructor. If the component disconnects and reconnects, the factory runs again with a fresh closure. See [Managing State with Signals](#managing-state-with-signals) for the ways to initialize reactive properties.
+
+### Disconnected from the DOM
+
+In the `disconnectedCallback()` Le Truc runs all cleanup functions returned by effects during the setup phase in `connectedCallback()`. This will remove all event listeners and unsubscribe all signals the component is subscribed to, so you don't need to worry about memory leaks.
+
+If you subscribe to **external APIs** that live outside the component's reactive scope, return a cleanup function from the effect descriptor:
+
+```js
+defineComponent('my-component', ({ host }) => {
+  return [
+    () => {
+      // Setup logic
+      const observer = new IntersectionObserver(([entry]) => {
+        // Do something
+      })
+      observer.observe(host)
+
+      // Cleanup logic
+      return () => observer.disconnect()
+    },
+  ]
+})
+```
+
+## Managing State with Signals
+
+Le Truc manages state using **signals** — reactive values that propagate changes automatically. Signals are exposed as regular JavaScript properties on the component host:
+
+```js
+console.log('count' in el) // Check if the signal exists
+console.log(el.count) // Read the signal value
+el.count = 42 // Update the signal value
+```
+
+### Signal Types
+
+Le Truc re-exports the reactive primitives from [`@zeix/cause-effect`](https://github.com/zeixcom/cause-effect). Every signal type participates in the same dependency graph with the same propagation, batching, and cleanup semantics. Use the type that matches the data's role:
+
+| Type | Role | When to use it |
+|------|------|----------------|
+| [`State`](./api.html#functions/createState) | Mutable source | Local mutable state you read and write inside the component |
+| [`Sensor`](./api.html#functions/createSensor) | External input (lazy) | Values that arrive from outside the graph — `matchMedia`, `IntersectionObserver`, geolocation. Seeds an initial value via `{ value }` |
+| [`Memo`](./api.html#functions/createMemo) | Sync derivation | A value computed from other signals — e.g. the sum of a spinbutton collection. For cheap one-off derivations, a plain thunk passed to `watch()` is often enough |
+| [`Task`](./api.html#functions/createTask) | Async derivation | `fetch`, dynamic imports, or any async work. Auto-cancels in-flight work when its dependencies change and exposes pending / error / ok states via `match()` |
+| [`Store`](./api.html#functions/createStore) | Reactive object | An object whose individual properties are each reactive |
+| [`List`](./api.html#functions/createList) | Reactive array | A keyed collection with stable item identity across add, remove, sort, and reorder |
+| [`Collection`](./api.html#functions/createCollection) | Reactive collection | Externally-driven streams (WebSocket, SSE) or derived pipelines |
+| [`Effect`](./api.html#functions/createEffect) | Side-effect sink | Terminal consumer for work outside the graph. Inside a component, prefer the factory's `watch()` / `on()` over a bare `createEffect()` |
+
+`Slot` is an integration primitive used internally by `pass()` to swap a child's backing signal; you rarely create one directly.
+
+### Characteristics and Special Values
+
+Signals are **statically typed** and **non-nullable** — no null-checks needed inside effects.
+
+- With **TypeScript**, assigning `null`, `undefined`, or a wrong type to a signal property is a compile-time error.
+- With vanilla **JavaScript**, setting a signal to `null` or `undefined` throws a `NullishSignalValueError` at runtime. Type mismatches are not caught.
+
+When a `watch()` reactive source produces `null` or `undefined`, the `nil` branch of `SingleMatchHandlers` fires if present:
+
+- **`bindAttribute(el, name)`** nil branch: calls `el.removeAttribute(name)` — removes the attribute entirely
+- **`bindStyle(el, prop)`** nil branch: calls `el.style.removeProperty(prop)` — restores the CSS cascade value
+- Plain function handlers (`bindText`, `bindProperty`, `bindClass`, `bindVisible`) have no nil branch — a nil source leaves the DOM unchanged
+
+### Initializing State from Attributes
+
+The standard way to set initial state is via **server-rendered attributes** on the component element. Pass a `Parser` function to `expose()` — Le Truc calls it with the attribute value at connect time. Bundled parsers cover common types; `asParser()` wraps any custom parser function.
+
+```js
+defineComponent('my-component', ({ expose }) => {
+  expose({
+    count: asInteger(), // Bundled parser: Convert '42' -> 42
+    date: asParser(v => new Date(v ?? '')), // Custom parser: '2025-12-12' -> Date object
+  })
+})
+```
+
+> **Parsers run once at connect time:** The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser — use event handlers or direct property writes to update state post-connect.
+
+### Bundled Attribute Parsers
+
+Le Truc provides several built-in parsers for common attribute types. See the [Parsers section](api.html#parsers) in the API reference for detailed descriptions and usage examples.
+
+## Selecting Elements
+
+Use the provided selector utilities to find descendant elements within your component:
+
+### first()
+
+Selects the first matching element:
+
+```js
+defineComponent('basic-counter', ({ expose, first, host, on, watch }) => {
+  const increment = first(
+    'button',
+    'Add a native button element to increment the count.',
+  )
+  const count = first('span', 'Add a span to display the count.')
+  // ...
+})
+```
+
+### all()
+
+Selects all matching elements as a `Memo<E[]>`:
+
+```js
+defineComponent('module-tabgroup', ({ all, expose, on, watch }) => {
+  const tabs = all(
+    'button[role="tab"]',
+    'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
+  )
+  const panels = all(
+    '[role="tabpanel"]',
+    'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
+  )
+  // ...
+})
+```
+
+Without a hint string (second argument), `first()` returns `undefined` if no match is found and effects for that key are silently skipped. With a hint string, `first()` throws a `MissingElementError` if the element is missing — use this when the element is truly required for the component to function.
+
+The `all()` function returns a `Memo<E[]>` — a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. Because it's reactive, effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM. A malformed selector throws `InvalidSelectorError` immediately, at the `all()` call site.
+
+If a queried element is a custom element that has not been defined yet, Le Truc waits up to 200 ms for it to be defined before running effects. This ensures child components are always ready before parent effects activate.
+
+> **tip:** `all()` observes structural changes and re-runs effects accordingly. Prefer `first()` when targeting a single element known to be present at connection time.
+
+## Adding Event Listeners
+
+Event listeners respond to user interactions. They are the main cause for changes in component state.
+
+### on() — Event Handling
+
+`on(target, type, handler)` is called from the factory context with an explicit target element or `Memo<E[]>` collection, and returned in the effect array:
+
+```js
+defineComponent('my-component', ({ all, expose, first, host, on }) => {
+  const buttons = all('button')
+  const input = first('input')
+
+  expose({ active: 0, value: '' })
+
+  return [
+    on(buttons, 'click', (_e, target) => {
+      // Set 'active' signal to value of data-index attribute of button
+      const index = parseInt(target.dataset.index ?? '0', 10)
+      host.active = Number.isInteger(index) ? index : 0
+    }),
+    // Set 'value' signal to value of input element
+    on(input, 'change', () => ({ value: input.value })),
+  ]
+})
+```
+
+The handler receives `(event, element)` — for `Memo` targets, `element` is the matched item from the collection. The handler can also **return an object** to batch-update multiple host properties at once:
+
+```js
+on(button, 'click', () => ({
+  count: host.count + 1,
+  lastClicked: Date.now(),
+}))
+```
+
+`on()` returns an `EffectDescriptor` that is activated inside a reactive scope, so event listeners are automatically removed when the component disconnects.
+
+### Read-Only Event-Driven Properties
+
+To expose a property that consumers can read but never directly set, create a `State` in the factory closure and expose only its getter. The `on()` handler updates the value:
+
+```js#my-input.ts
+defineComponent('my-input', ({ expose, first, on }) => {
+  const textbox = first('input', 'A textbox is required.')
+  const length = createState(textbox.value.length)
+
+  expose({
+    value: textbox.value,
+    length: length.get,  // read-only — consumers can read, not set
+  })
+
+  return [
+    on(textbox, 'input', () => {
+      length.set(textbox.value.length)
+    }),
+  ]
+})
+```
+
+Exposing `state.get` rather than the full `State` is what makes the property read-only. When watching this property inside the same factory, pass the signal directly instead of a string prop name — it skips the host slot lookup:
+
+```js
+watch(length, bindVisible(clearBtn))
+```
+
+### Exposing Imperative Methods
+
+Not every property is a value you read or watch. Some are **commands** — functions a consumer calls imperatively from event handlers, like `reset()`, `stepUp()` / `stepDown()`, or `clear()`. Wrap the function in `defineMethod()` and pass it to `expose()`:
+
+```js#form-textbox.js
+defineComponent('form-textbox', ({ expose, first, host, on, watch }) => {
+  const textbox = first('input', 'Add a native input or textarea as descendant.')
+
+  expose({
+    value: textbox.value,
+    clear: defineMethod(() => {
+      host.value = ''
+      textbox.value = ''
+      textbox.setCustomValidity('')
+      textbox.checkValidity()
+      textbox.focus()
+    }),
+  })
+
+  return [
+    on(textbox, 'change', () => ({ value: textbox.value })),
+    watch('value', bindProperty(textbox, 'value')),
+  ]
+})
+```
+
+`defineMethod()` brands the function so Le Truc installs it as a callable method on the host. Use methods if you need to expose a function to other components that operates on the host while hiding implementation details. You can expose both reactive values (`value`) and methods (`clear`) side by side.
+
+> **Always use defineMethod(), never a plain function:** Le Truc identifies method producers by a brand symbol attached by `defineMethod()`. An unbranded function passed to `expose()` is treated as a thunk instead, creating a computed reactive property.
+
+## Synchronizing State with Effects
+
+Effects **automatically update the DOM** when signals change, avoiding manual DOM manipulation.
+
+### Applying Effects
+
+The factory returns a flat array of `EffectDescriptor`s. Each one is created by `watch()`, `on()`, `each()`, `pass()`, `provideContexts()`, or a plain thunk. The `watch(source, handler)` helper drives a DOM update from a declared reactive source:
+
+```js
+return [
+  watch('open', bindAttribute(host, 'open')), // set attribute from 'open' signal
+  watch('count', bindText(count)),            // update text from 'count' signal
+  watch('isEven', bindClass(count, 'even')),  // toggle class from 'isEven' signal
+]
+```
+
+The order of descriptors does not matter.
+
+> **CSS must define what the class or attribute does:** `bindClass(el, 'even')` adds or removes the `even` class — but nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `bindAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
+>
+> See [Reactive Styles](styling.html#reactive-styles) for examples of how CSS and effects work together.
+
+### Per-element Effects with each()
+
+When you have a `Memo<E[]>` collection and need different effects for each element — not just one delegated listener — use `each(memo, callback)`. It creates a per-element reactive scope: effects activate when elements enter the collection and are disposed when they leave.
+
+```js
+defineComponent('module-carousel', ({ all, expose, host, watch }) => {
+  const dots = all('button[role="tab"]')
+
+  expose({ index: 0 })
+
+  return [
+    each(dots, dot =>
+      watch(
+        () => dot.dataset.index === String(host.index),
+        selected => {
+          dot.ariaSelected = String(selected)
+          dot.tabIndex = selected ? 0 : -1
+        },
+      ),
+    ),
+  ]
+})
+```
+
+The callback receives a single element and returns either a single `EffectDescriptor` or a `FactoryResult` array. `each()` itself returns an `EffectDescriptor` to include in the factory return array.
+
+> **each() vs on() with a Memo target:** Use `on(memo, type, handler)` when a single delegated listener on the host is enough — one click handler for all tabs, for example. Use `each(memo, callback)` when you need per-element reactive effects that depend on both the element and a signal — like updating `ariaSelected` on every dot when the selected index changes.
+
+### DOM Binding Helpers
+
+Le Truc provides `bind*` helpers for common DOM update patterns. Each returns a handler (or `SingleMatchHandlers` object) to pass to `watch()`. See the [Helpers section](api.html#helpers) in the API reference for descriptions and usage examples.
+
+### Using Local Signals for Private State
+
+Local signals are useful for state that should not be exposed outside the component. Create them in the factory closure:
+
+```js
+defineComponent('my-component', ({ first, on, watch }) => {
+  const increment = first('button.increment')
+  const count = first('.count')
+  const double = first('.double')
+
+  const countState = createState(0)
+  const doubleState = createMemo(() => countState.get() * 2)
+
+  return [
+    on(increment, 'click', () => { countState.update(v => ++v) }),
+    watch(countState, bindText(count)),
+    watch(doubleState, bindText(double)),
+  ]
+})
+```
+
+Outside components cannot access the `countState` or `doubleState` signals.
+
+### Using Functions for Ad-hoc Derived State
+
+Instead of a named signal, you can **pass a thunk** as the `watch` source to derive a value inline:
+
+```js
+defineComponent('my-component', ({ expose, first, host, watch }) => {
+  const count = first('.count')
+  const double = first('.double')
+
+  expose({ count: 0 })
+
+  return [
+    watch(() => !(host.count % 2), bindClass(count, 'even')),
+    watch(() => String(host.count * 2), bindText(double)),
+  ]
+})
+```
+
+> **When to use:**
+>
+> - **Use a property name or a local signal** when the state is part of the component's public interface or internally reused.
+> - **Use a thunk** when the derived value is only needed in this one place.
+
+### Bidirectional Binding with Native Elements
+
+Some native elements — checkboxes, text inputs, selects — hold state in **JS properties** that are not reflected by HTML attributes at runtime. `input.checked` and `input.value` are the canonical examples: the attribute only sets the initial state, but the property tracks the live state. To keep a signal in sync with a native element, you need to both read from it and write back to it.
+
+The `form-checkbox` component shows this pattern in full:
+
+```js
+defineComponent('form-checkbox', ({ expose, first, host, on, watch }) => {
+  const checkbox = first('input[type="checkbox"]', 'Add a native checkbox.')
+
+  expose({
+    // Read initial checked state from the DOM property, not the attribute
+    checked: checkbox.checked,
+  })
+
+  return [
+    // Capture user interaction → update signal
+    on(checkbox, 'change', () => ({ checked: checkbox.checked })),
+    // Sync signal → drive native element property
+    watch('checked', bindProperty(checkbox, 'checked')),
+  ]
+})
+```
+
+Three pieces work together:
+
+1. **`checkbox.checked`** — initializes `checked` from the DOM property at setup time, picking up any server-rendered or pre-set state.
+2. **`on(checkbox, 'change', ...)`** — returns `{ checked: checkbox.checked }` to update the signal when the user interacts with the checkbox.
+3. **`watch('checked', ...)`** — drives `checkbox.checked = value` whenever the signal changes, including when a parent component sets `host.checked` programmatically.
+
+This creates a full cycle: DOM → signal → DOM, with the signal as the single source of truth.
+
+> **`bindProperty()` vs `bindAttribute()`:** `bindAttribute(el, 'checked')` sets the HTML attribute, which only controls the checkbox's *default* state and has no effect on the live `.checked` property once the page has loaded. `bindProperty(el, 'checked')` assigns to the element's JS property directly — the only reliable way to update native form element state at runtime.
+>
+> Use `bindProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, `ariaDisabled`.
+
+---
+
+# Styling
+
+**Keep your components' styles self-contained while supporting shared design tokens.** Scope with the custom element name, expose customization via CSS custom properties, and let Le Truc toggle classes and attributes when state changes.
+
+## Design Principles
+
+Le Truc handles state management and reactivity — CSS handles everything visual. The key principles: **scope styles to the component**, **expose customization via CSS custom properties**, and **avoid reaching inside sub-components**. A parent may style the wrapper element of a known sub-component for layout, but styling its inner elements creates tight coupling.
+
+## Scope Styles to Custom Element
+
+Use the **custom element name** to scope component styles if **you control the page and the components within**. This protects against component styles leaking out while preserving the CSS cascade. No need for Shadow DOM, no duplicate style rules.
+
+```css
+my-component {
+  & button {
+    /* Button style rules */
+  }
+
+  /* More selectors for inner elements */
+}
+```
+
+### Advantages of Custom Element Names
+
+- By definition **unique within the document** with a descriptive name.
+- **Low specificity**, making it easy to override when you need to with a single class.
+
+> **When to use:** **Best when** you control the page and need styles to cascade naturally.
+> **Avoid if** you expect style clashes from third-party styles.
+
+## Encapsulate Styles with Shadow DOM
+
+Use **Shadow DOM** to encapsulate styles if your component is going to be used on pages where you don't control the styles. This way you make sure page styles don't leak in and component styles don't leak out.
+
+```html
+<my-component>
+  <template shadowrootmode="open">
+    <style>
+      button {
+        /* Button style rules */
+      }
+
+      /* More selectors for inner elements */
+    </style>
+    <!-- Inner elements -->
+  </template>
+</my-component>
+```
+
+> **When to use:** **Best when** your component is used in environments where you don’t control styles.
+> **Avoid if** you need global styles to apply inside the component.
+
+## Shared Design Tokens with CSS Custom Properties
+
+Web Components can't inherit global styles inside **Shadow DOM**, but CSS custom properties allow components to remain **flexible and themeable**.
+
+### Defining Design Tokens
+
+Set global tokens in a stylesheet:
+
+```css
+:root {
+  --button-bg: #007bff;
+  --button-text: #fff;
+  --spacing: 1rem;
+}
+```
+
+### Using Tokens in a Component
+
+```css
+my-component {
+  padding: var(--spacing);
+
+  & button {
+    background: var(--button-bg);
+    color: var(--button-text);
+  }
+}
+```
+
+### Advantages of CSS Custom Properties
+
+- **Supports theming** – users can override styles globally.
+- **Works inside Shadow DOM** – unlike normal CSS, custom properties are inherited inside the shadow tree.
+
+## Defined Variants with Classes
+
+Use **classes** if your components can appear in a **limited set of specific manifestations**. For example, buttons could come in certain sizes and have primary, secondary and tertiary variants.
+
+```css
+my-button {
+  /* Style rules for default (medium-sized, secondary) buttons */
+
+  &.small {
+    /* Style rules for small buttons */
+  }
+
+  &.large {
+    /* Style rules for large buttons */
+  }
+
+  &.primary {
+    /* Style rules for primary buttons */
+  }
+
+  &.tertiary {
+    /* Style rules for tertiary buttons */
+  }
+}
+```
+
+## Reactive Styles
+
+CSS class variants become interactive when JavaScript toggles them in response to state. The contract is simple: **the class name in CSS must exactly match the token passed to `bindClass()`**.
+
+The `module-scrollarea` component demonstrates this clearly. The CSS defines what the shadow looks like when overflow is present:
+
+```css
+module-scrollarea {
+  &::after {
+    opacity: 0;
+    transition: opacity var(--transition-short);
+    /* gradient shadow rendered here */
+  }
+
+  &.overflow-end::after {
+    opacity: 1; /* fades in when JS adds the class */
+  }
+}
+```
+
+The component's factory creates a local signal and passes it to `watch()` + `bindClass()`:
+
+```js
+const overflowEnd = createState(false)
+
+return [
+  watch(overflowEnd, bindClass(host, 'overflow-end')),
+]
+```
+
+When `overflowEnd` becomes `true`, Le Truc adds `overflow-end` to the host element. The CSS rule activates, and the shadow fades in. When it becomes `false`, the class is removed and the shadow fades out — no inline styles, no manual DOM manipulation.
+
+The full example is a scroll container that shows fade shadows at either edge when content overflows: [Scrollarea example](./examples/module-scrollarea.html).
+
+### Attribute-driven Styles
+
+The same principle applies to attributes. Use `watch()` + `bindAttribute()` to toggle an attribute that a CSS selector targets:
+
+```css
+module-tabgroup {
+  [aria-selected="true"] {
+    font-weight: bold;
+    border-bottom: 2px solid currentColor;
+  }
+}
+```
+
+```js
+return [
+  watch('selected', () => {
+    for (const tab of tabs.get()) {
+      tab.setAttribute('aria-selected',
+        String(host.selected === tab.getAttribute('aria-controls')))
+    }
+  }),
+]
+```
+
+Prefer attributes over classes when the value has semantic meaning — screen readers and assistive technology understand `aria-selected`, `aria-expanded`, `disabled`, and similar attributes.
+
+The full example is a tab group that uses `aria-selected` to highlight the selected tab: [Tabgroup example](./examples/module-tabgroup.html).
+
+## CSS-only Components
+
+Just because Le Truc is a JavaScript library doesn't mean you have to use JavaScript in every component. It's perfectly fine to use custom elements just for styling purposes.
+
+Here's the example of the `<card-callout>` we're using in this documentation:
+
+```html
+<card-callout>This is an informational message.</card-callout>
+<card-callout class="tip">Remember to hydrate while coding!</card-callout>
+<card-callout class="caution">Be careful with this operation.</card-callout>
+<card-callout class="danger">This action is irreversible!</card-callout>
+<card-callout class="note">This is just a side note.</card-callout>
+```
+
+
+
+### Register CSS-only Custom Elements
+
+If a Le Truc component queries for a CSS-only custom element (via `first()` or `all()`), it will detect the element as an unresolved dependency and wait for it to upgrade — causing an unnecessary delay before effects run.
+
+To avoid this, register CSS-only custom elements with a trivial definition:
+
+```js
+customElements.define('card-callout', class extends HTMLElement {})
+```
+
+This tells the browser (and Le Truc) that the element is defined and ready. The registration has no runtime cost — the element simply upgrades to a plain `HTMLElement` immediately.
+
+> **Register every custom element tag:** Every custom element tag you use in HTML should have a corresponding `customElements.define()` call. This is the web platform's contract: a hyphenated tag name is a custom element, and defining it — even with an empty class — ensures it upgrades correctly and doesn't block other components.
+
+---
+
+# Data Flow
+
+**Learn how Le Truc components coordinate state.** Pass reactive signals from parent to child with `pass()`, manage dynamic lists, and share values across the component tree with context.
+
+## Component Coordination
+
+Let's consider a **product catalog** where users can add items to a shopping cart. We have **three independent components** that work together:
+
+- `ModuleCatalog` **(Parent)**:
+  - **Tracks all `SpinButton` components** in its subtree and calculates the total count of items in the shopping cart.
+  - **Passes that total** to a `BasicButton`.
+- `BasicButton` **(Child)**:
+  - Displays a **badge** in the top-right corner when the `badge` property is set.
+  - **Does not track any state** – it simply renders whatever value is passed to it.
+- `FormSpinbutton` **(Child)**:
+  - Displays an **Add to Cart** button initially.
+  - When an item is added, it transforms into a **stepper** (increment/decrement buttons).
+
+Although `BasicButton` and `FormSpinbutton` are completely independent, they need to work together. So `ModuleCatalog` **coordinates the data flow between them**.
+
+### Parent Component: ModuleCatalog
+
+The **parent component (`ModuleCatalog`) knows about its children**, meaning it can **read state from and pass state to** them. It uses `all()` to observe all `FormSpinbutton` quantities reactively, then `pass()` to drive the `BasicButton`'s `badge` and `disabled` state:
+
+```js#module-catalog.js
+defineComponent('module-catalog', ({ all, first, pass }) => {
+  const button = first('basic-button', 'Add a button to go to the Shopping Cart')
+  const spinbuttons = all(
+    'form-spinbutton',
+    'Add spinbutton components to calculate sum from.',
+  )
+  const total = createMemo(() =>
+    spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
+  )
+
+  return [
+    pass(button, {
+      disabled: () => !total.get(),
+      badge: () => (total.get() > 0 ? String(total.get()) : ''),
+    }),
+  ]
+})
+```
+
+Whenever any `<form-spinbutton>` value changes, `total` updates and the badge reflects the new count — no event listeners or manual wiring needed.
+
+> **pass() requires a Le Truc child:** `pass()` swaps the child's backing signal directly, so it only works for Le Truc components whose properties are Slot-backed. For any other custom element (Lit, Stencil, plain HTML), drive the child's property reactively with `watch(source, bindProperty(el, key))` instead.
+
+### Child Component: BasicButton
+
+The `BasicButton` component **displays a badge when needed** – it does not know about any other component nor track state itself. It exposes reactive properties `disabled`, `label`, and `badge` and has effects to keep the DOM subtree in sync with those properties.
+
+```js#basic-button.js
+defineComponent('basic-button', ({ expose, first, watch }) => {
+  const button = first('button', 'Add a native button as descendant.')
+  const label = first('span.label')
+  const badge = first('span.badge')
+
+  expose({
+    disabled: button.disabled,
+    label: label?.textContent ?? button.textContent ?? '',
+    badge: badge?.textContent ?? '',
+  })
+
+  return [
+    watch('disabled', bindProperty(button, 'disabled')),
+    label && watch('label', bindText(label)),
+    badge && watch('badge', bindText(badge)),
+  ]
+})
+```
+
+- Whenever the `disabled` property is updated by a parent component, the button is disabled or enabled.
+- Whenever the `badge` property is updated by a parent component, the badge text updates.
+- If `badge` is an empty string, the badge indicator is hidden (via CSS).
+
+### Child Component: FormSpinbutton
+
+The `FormSpinbutton` component reacts to user interactions and exposes a reactive property `value` of type `number`. It updates its own internal DOM subtree, but doesn't know about any other component nor where the value is used.
+
+```js#form-spinbutton.js
+defineComponent('form-spinbutton', ({ all, expose, first, host, on, watch }) => {
+  const controls = all('button, input:not([disabled])')
+  const increment = first('button.increment', 'Add a native button to increment the value')
+  const decrement = first('button.decrement', 'Add a native button to decrement the value')
+  const input = first('input.value', 'Add a native input to display the value')
+  const zero = first('.zero')
+  const other = first('.other')
+
+  const nonZero = createMemo(() => host.value !== 0)
+  const incrementLabel = increment.ariaLabel || 'Increment'
+
+  expose({
+    value: Number.parseInt(input.value) || 0,
+    max: Number.parseInt(input.max) || 10,
+  })
+
+  return [
+    on(controls, 'change', (_e, target) => {
+      if (!(target instanceof HTMLInputElement)) return
+      const next = Number(target.value)
+      if (!Number.isInteger(next)) {
+        target.value = String(host.value)
+        target.checkValidity()
+        return
+      }
+      const clamped = Math.min(host.max, Math.max(0, next))
+      if (next !== clamped) {
+        target.value = String(clamped)
+        target.checkValidity()
+      }
+      host.value = clamped
+    }),
+    on(controls, 'click', (_e, el) => {
+      if (el.classList.contains('decrement')) {
+        host.value = Math.max(0, host.value - 1)
+      } else if (el.classList.contains('increment')) {
+        host.value = Math.min(host.max, host.value + 1)
+      }
+    }),
+    on(controls, 'keydown', (e) => {
+      const { key } = e
+      if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
+        e.stopPropagation()
+        e.preventDefault()
+        const delta = key === 'ArrowDown' || key === '-' ? -1 : 1
+        host.value = Math.min(host.max, Math.max(0, host.value + delta))
+      }
+    }),
+    watch(nonZero, nz => {
+      input.hidden = !nz
+      decrement.hidden = !nz
+    }),
+    zero && watch(nonZero, nz => {
+      zero.hidden = nz
+      increment.ariaLabel = nz ? incrementLabel : zero.textContent
+    }),
+    other && watch(nonZero, bindVisible(other)),
+    watch(() => String(host.value), bindProperty(input, 'value')),
+    watch(() => String(host.max), bindProperty(input, 'max')),
+    watch(() => host.value >= host.max, bindProperty(increment, 'disabled')),
+  ]
+})
+```
+
+- Whenever the user clicks a button or presses a handled key, the value property is updated.
+- The component sets hidden and disabled states of buttons and updates the text of the `input` element.
+
+### Full Catalog Example
+
+Here's how everything comes together:
+
+- Each `FormSpinbutton` tracks its own value.
+- The `ModuleCatalog` sums all quantities and passes the total to `BasicButton`.
+- The `BasicButton` displays the total if it's greater than zero.
+
+**No custom events are needed – state flows naturally!**
+
+```html
+<module-catalog>
+  <header>
+    <p>Shop</p>
+    <basic-button disabled>
+      <button type="button" disabled>
+        <span class="label">🛒 Shopping Cart</span>
+        <span class="badge"></span>
+      </button>
+    </basic-button>
+  </header>
+  <ul>
+    <li>
+      <p>Product 1</p>
+      <form-spinbutton>
+        <button type="button" class="decrement" aria-label="Decrement" hidden>
+          −
+        </button>
+        <input
+          type="number"
+          class="value"
+          name="amount-product1"
+          value="0"
+          min="0"
+          max="10"
+          readonly
+          disabled
+          hidden
+        >
+        <button type="button" class="increment" aria-label="Increment">
+          <span class="zero">Add to Cart</span>
+          <span class="other" hidden>+</span>
+        </button>
+      </form-spinbutton>
+    </li>
+    <li>
+      <p>Product 2</p>
+      <form-spinbutton>
+        <button type="button" class="decrement" aria-label="Decrement" hidden>
+          −
+        </button>
+        <input
+          type="number"
+          class="value"
+          name="amount-product2"
+          value="0"
+          min="0"
+          max="5"
+          readonly
+          disabled
+          hidden
+        >
+        <button type="button" class="increment" aria-label="Increment">
+          <span class="zero">Add to Cart</span>
+          <span class="other" hidden>+</span>
+        </button>
+      </form-spinbutton>
+    </li>
+    <li>
+      <p>Product 3</p>
+      <form-spinbutton>
+        <button type="button" class="decrement" aria-label="Decrement" hidden>
+          −
+        </button>
+        <input
+          type="number"
+          class="value"
+          name="amount-product3"
+          value="0"
+          min="0"
+          max="20"
+          readonly
+          disabled
+          hidden
+        >
+        <button type="button" class="increment" aria-label="Increment">
+          <span class="zero">Add to Cart</span>
+          <span class="other" hidden>+</span>
+        </button>
+      </form-spinbutton>
+    </li>
+  </ul>
+</module-catalog>
+```
+
+
+
+
+
+## Managing Dynamic Lists
+
+The coordination patterns above assume a fixed set of children. When a list grows and shrinks at runtime, you need a different approach: a reactive **list of keyed items** holds the data, a `watch()` reconciler keeps the DOM in sync, and a **`<template>`** provides the markup for each item.
+
+### The Container, Template, and List
+
+The component owns a `createList()` — a reactive ordered collection where each item is a signal and items are identified by stable string keys. The HTML provides a container and an inert template:
+
+```js#module-list.js
+defineComponent('module-list', ({ first, host, on, pass, watch }) => {
+  const form = first('form', 'Add a form element to enter a new list item.')
+  const textbox = first('form-textbox', 'Add <form-textbox> to enter a new item.')
+  const submit = first('basic-button.submit', 'Add <basic-button.submit> to add items.')
+  const container = first('[data-container]', 'Add a container element for items.')
+  const template = first('template', 'Add a template element for items.')
+
+  // Keyed reactive list of plain string items. The 'item' prefix feeds the
+  // auto-incrementing key generator (item0, item1, ...); stable keys let
+  // removal target the right item even as the list reorders.
+  const list = createList([], { keyConfig: 'item' })
+
+  return [
+    watch(() => Array.from(list.keys()), keys => { /* reconcile DOM */ }),
+    on(form, 'submit', e => { /* add item */ }),
+    on(host, 'click', e => { /* remove item by delegation */ }),
+    pass(submit, { disabled: () => !textbox.length }),
+  ]
+})
+```
+
+The `keyConfig` option controls how keys are generated. A string prefix produces auto-incrementing keys (`'item'` → `item0`, `item1`, …). A function `(item) => string` derives the key from item content — required when the same item can reappear and must keep its identity. Without `keyConfig`, Le Truc falls back to position-based auto-increment.
+
+### Reconciling the DOM with watch()
+
+The heart of the pattern is a single `watch()` that reads `list.keys()` and mirrors that order into the container. It runs once at connect and again whenever items are added or removed:
+
+```js
+watch(() => Array.from(list.keys()), keys => {
+  const current = new Map<string, HTMLElement>()
+  for (const child of container.children) {
+    const el = child as HTMLElement
+    if (el.dataset.key) current.set(el.dataset.key, el)
+  }
+
+  const keysSet = new Set(keys)
+
+  // Drop children whose key is no longer in the list.
+  for (const [key, el] of current) {
+    if (!keysSet.has(key)) el.remove()
+  }
+
+  // Insert new keys (cloning the template) and move every child into its
+  // target position. Existing nodes are reused, not recreated.
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]
+    let el = key && current.get(key)
+    if (key && !el) {
+      const fragment = template.content.cloneNode(true) as DocumentFragment
+      el = fragment.firstElementChild as HTMLElement
+      el.dataset.key = key
+      el.querySelector('slot')?.replaceWith(
+        document.createTextNode(list.byKey(key)?.get() ?? ''),
+      )
+    }
+    const currentAtI = container.children[i]
+    if (el && currentAtI !== el) container.insertBefore(el, currentAtI ?? null)
+  }
+})
+```
+
+This reconciler handles three cases in one pass: removal (the node's key vanished), creation (a key has no node yet — clone the template and stamp it with `data-key`), and reorder (the node exists but sits at the wrong position — `insertBefore` moves it). Items already present in the container on first render are matched by their `data-key` and preserved.
+
+### Adding and Removing Items
+
+Mutations go through the list — never touch the DOM directly. The reconciler reacts to the keys change and updates the container for you.
+
+```js
+on(form, 'submit', e => {
+  e.preventDefault()
+  const value = textbox.value.trim()
+  if (!value) return
+  list.add(value)
+  textbox.clear() // call a method on the child component
+}),
+
+// Event delegation: one handler removes any item whose Remove button was
+// clicked, scaling to any number of items without per-item listeners.
+on(host, 'click', e => {
+  const target = e.target as HTMLElement
+  if (!target.closest('basic-button.remove')) return
+  const item = target.closest('[data-key]')
+  if (!(item instanceof HTMLElement)) return
+  e.stopPropagation()
+  const key = item.dataset.key
+  if (key) list.remove(key)
+}),
+```
+
+`list.add(value)` returns the new key; `list.remove(key)` takes one. `textbox.clear()` is a method property on the `form-textbox` child component. `pass(submit, { disabled: ... })` drives the submit button's `disabled` state reactively from the textbox length — the same `pass()` thread as the rest of this page, without the button knowing anything about the textbox.
+
+### Full List Example
+
+```html
+<module-list>
+  <form action="#">
+    <form-textbox clearable>
+      <label for="new-item-input">New item</label>
+      <div class="input">
+        <input
+          type="text"
+          id="new-item-input"
+          name="new-item"
+          autocomplete="off"
+        >
+        <button type="button" class="clear" aria-label="Clear input" hidden>✕</button>
+      </div>
+    </form-textbox>
+    <basic-button class="submit">
+      <button type="submit" class="constructive" disabled>
+        <span class="label">Add</span>
+      </button>
+    </basic-button>
+  </form>
+  <ul data-container></ul>
+  <template>
+    <li>
+      <span><slot></slot></span>
+      <basic-button class="remove">
+        <button type="button" class="tertiary destructive small">Remove</button>
+      </basic-button>
+    </li>
+  </template>
+</module-list>
+```
+
+
+
+
+
+## Providing Context
+
+Context allows **parent components to share state** with any descendant components in the DOM tree, **without prop drilling**. This is perfect for application-wide settings like user preferences, theme data, or authentication state.
+
+### Creating Context Keys
+
+First, define typed context keys for the values you want to share:
+
+```ts#context-media.ts
+// Define context keys with types
+export const MEDIA_MOTION = 'media-motion' as Context<
+  'media-motion',
+  () => 'no-preference' | 'reduce'
+>
+export const MEDIA_THEME = 'media-theme' as Context<
+  'media-theme',
+  () => 'light' | 'dark'
+>
+```
+
+### Provider Component
+
+The **provider component** creates the shared state inside `expose()` and calls `provideContexts()` in the returned effect array. The example below is a simplified excerpt showing two of the four media contexts — see the full source for the complete implementation:
+
+```ts#context-media.ts
+import { createContext, createSensor, defineComponent } from '@zeix/le-truc'
+
+export type ContextMediaProps = {
+  readonly motion: 'no-preference' | 'reduce'
+  readonly theme: 'light' | 'dark'
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'context-media': HTMLElement & ContextMediaProps
+  }
+}
+
+export default defineComponent<ContextMediaProps>(
+  'context-media',
+  ({ expose, provideContexts }) => {
+    expose({
+      motion: createSensor(
+        set => {
+          const mql = matchMedia('(prefers-reduced-motion: reduce)')
+          const listener = (e) => set(e.matches ? 'reduce' : 'no-preference')
+          mql.addEventListener('change', listener)
+          return () => mql.removeEventListener('change', listener)
+        },
+        { value: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduce' : 'no-preference' },
+      ),
+      theme: createSensor(
+        set => {
+          const mql = matchMedia('(prefers-color-scheme: dark)')
+          const listener = (e) => set(e.matches ? 'dark' : 'light')
+          mql.addEventListener('change', listener)
+          return () => mql.removeEventListener('change', listener)
+        },
+        { value: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' },
+      ),
+    })
+
+    return [provideContexts(['motion', 'theme'])]
+  },
+)
+```
+
+### Usage in HTML
+
+The provider component wraps your entire application or a section that needs shared state:
+
+```html#index.html
+<context-media>
+  <!-- Arbitrarily nested HTML with one or many context consumers -->
+  <main>
+    <card-mediaqueries>
+      <dl>
+        <dt>Motion Preference:</dt>
+         <dd class="motion"></dd>
+        <dt>Theme Preference:</dt>
+        <dd class="theme"></dd>
+      </dl>
+    </card-mediaqueries>
+  </main>
+</context-media>
+```
+
+## Consuming Context
+
+**Consumer components** use `requestContext()` to access shared state from ancestor providers. The returned `Memo<T>` is reactive — when the provider's signal updates, all consumers update automatically.
+
+### Consumer Component
+
+Here's a simple card that displays the current motion and theme preferences:
+
+```js#card-mediaqueries.js
+import { bindText, defineComponent } from '@zeix/le-truc'
+import { MEDIA_MOTION, MEDIA_THEME } from '../../context/media/context-media'
+
+export default defineComponent(
+  'card-mediaqueries',
+  ({ first, requestContext, watch }) => {
+    const motionEl = first('.motion')
+    const themeEl = first('.theme')
+
+    const motion = requestContext(MEDIA_MOTION, 'unknown')
+    const theme = requestContext(MEDIA_THEME, 'unknown')
+
+    return [
+      motionEl && watch(motion, bindText(motionEl)),
+      themeEl && watch(theme, bindText(themeEl)),
+    ]
+  },
+)
+```
+
+### Full Context Example
+
+```html
+<context-media>
+  <card-mediaqueries>
+    <dl>
+      <dt>Motion Preference:</dt>
+      <dd class="motion"></dd>
+      <dt>Theme Preference:</dt>
+      <dd class="theme"></dd>
+      <dt>Device Viewport:</dt>
+      <dd class="viewport"></dd>
+      <dt>Device Orientation:</dt>
+      <dd class="orientation"></dd>
+    </dl>
+  </card-mediaqueries>
+</context-media>
+```
+
+
+
+
+## Async State with Tasks
+
+When a component needs to load data — `fetch` a fragment, import a module, run any async work — model it as a [`Task`](./api.html#functions/createTask). A `Task` is an async derivation that auto-cancels in-flight work when its dependencies change and exposes four states through `match()`: `ok`, `nil`, `stale`, and `err`.
+
+Routing precedence is `nil` > `err` > `stale` > `ok`:
+
+- **`nil`** fires on the first run, before any value has resolved
+- **`err`** fires when the task rejects
+- **`stale`** fires when the task has a retained value *and* is recomputing after a dependency change — use it to keep the old content visible while refreshing
+- **`ok`** fires with the resolved value
+
+The `module-lazyload` component shows the full pattern. It `fetch`es an HTML fragment, injects it into a content element, and drives separate loading, error, and content views from a single `Task`:
+
+```js#module-lazyload.js
+defineComponent('module-lazyload', ({ expose, first, host, watch }) => {
+  const callout = first('card-callout', 'Needed to display loading state and error messages.')
+  const loading = first('.loading', 'Needed to display loading state.')
+  const errorEl = first('.error', 'Needed to display error messages.')
+  const contentEl = first('.content', 'Needed to display content.')
+
+  const content = createTask(async (_prev, abort) => {
+    const url = host.src
+    if (!url) throw new Error('No URL provided')
+    const response = await fetch(url, { signal: abort })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    return response.text()
+  })
+
+  expose({ src: asString() })
+
+  return [
+    watch(content, {
+      ok: html => {
+        loading.hidden = true
+        contentEl.hidden = false
+        contentEl.innerHTML = html
+      },
+      nil: () => {
+        loading.hidden = false
+        contentEl.hidden = true
+      },
+      stale: () => {
+        contentEl.style.setProperty('opacity', 'var(--opacity-dimmed)')
+        return () => contentEl.style.removeProperty('opacity') // reset on next dispatch
+      },
+      err: error => {
+        loading.hidden = true
+        errorEl.hidden = false
+        errorEl.textContent = error.message
+        contentEl.hidden = true
+        return () => { errorEl.hidden = true; errorEl.textContent = '' }
+      },
+    }),
+  ]
+})
+```
+
+The HTML provides all three regions up front; the `watch` handler toggles their visibility as the `Task` moves through its states:
+
+```html
+<module-lazyload src="./fragments/details.html">
+  <card-callout>
+    <p class="loading" role="status">Loading…</p>
+    <p class="error" role="alert" aria-live="assertive" hidden></p>
+  </card-callout>
+  <div class="content" hidden></div>
+</module-lazyload>
+```
+
+> **Return a cleanup from stale and err handlers:** `stale` and `err` receive no arguments, but they may return a cleanup function that runs synchronously before the next dispatch. Use it to reset the DOM state you changed — removing a dimming class, clearing the error text — so the next `ok` or `stale` run starts clean.
+
+> **The Task owns the async work:** Don't `fetch` inside a plain `watch` callback. A `Task` receives an `AbortSignal` and is auto-cancelled when its dependencies change, so switching `src` aborts the in-flight request. Its pending and error states become first-class reactive values that compose through `match()`.
+
+## Choosing a Coordination Mechanism
+
+The coordination patterns above all assume you have already split your UI into components. That decision comes first, and it is a separate question from how the resulting pieces talk to each other.
+
+### Split first, then coordinate
+
+A component should encapsulate a design decision that is likely to change on its own. If two concerns will always change together, keep them in one component — splitting them only creates coupling you then have to bridge. Split when a part could be reused independently or could evolve on a different schedule than the rest.
+
+Inside one component, shared state is just a local signal — a `State` or `Memo` created in the factory closure and read by that component's own effects. No coordination mechanism is needed because there is no boundary to cross.
+
+### Coordinating across boundaries
+
+Once a boundary exists, choose the mechanism by the shape of the relationship across it:
+
+| Mechanism | Spans | Coupling | Use when |
+|-----------|-------|----------|----------|
+| `pass()` | parent → a specific child | parent names the child | A parent drives a named property on a direct child it already knows about — e.g. summing spinbutton values into a badge on its button |
+| `provideContexts()` / `requestContext()` | ancestor → any descendant | none (decoupled) | Many consumers need the same value and you don't want to know which ones — theme, locale, auth state. Provider and consumer never reference each other by tag name |
+| `Task` + `match()` | component ↔ server / external API | none (async boundary) | The source of truth is outside the page — a `fetch`, dynamic import, or any async stream. The component coordinates with an external system, not another component |
+
+The first two move state *between* Le Truc components. A `Task` coordinates with the world outside the component tree — the server, a network endpoint, an async API. The boundary is different, but the question is the same: how does this component get a value it does not own?
+
+---
+
+# Architecture
+
+Le Truc is a reactive custom elements library. This document provides the mental model behind the architecture. For implementation details, see the source code and the referenced ADRs.
+
+The single external dependency is `@zeix/cause-effect`, which provides the reactive primitives (see [ADR 0001](adr/0001-use-cause-effect-as-reactive-primitive-layer.md)).
+
+## Component Model
+
+**Component** instances are defined using the factory form (see [ADR 0002](adr/0002-factory-form-over-builder-pattern.md)):
+
+```ts
+defineComponent('my-element', ({ expose, first, watch }) => {
+  const input = first('input')
+  expose({ value: input.value })
+  return [watch('value', v => { /* ... */ })]
+})
+```
+
+### Lifecycle
+
+- **`connectedCallback`**: Queries DOM, creates signals from parsers, collects effect descriptors, waits for child element definitions, then activates effects in a scope
+- **`disconnectedCallback`**: Tears down all effects and event listeners via the scope cleanup
+
+### Signals and Properties
+
+Properties are backed by signals from `@zeix/cause-effect`. The `#setAccessor` creates the appropriate signal based on the initializer:
+- Already a `Signal` → used directly
+- A function → wrapped in `createComputed` (read-only)
+- Anything else → wrapped in `createState` (read-write)
+
+Mutable signals are wrapped in a `Slot` to enable signal swapping for `pass()` (see [ADR 0004](adr/0004-slot-based-signal-swapping-for-inter-component-binding.md)).
+
+## Reactive System
+
+### Effect Descriptors
+
+`watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` return effect descriptors (thunks) that are activated after dependency resolution (see [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md)). This ensures child components are defined before effects run.
+
+### DOM Binding Helpers
+
+Binding helpers return either a setter function `(value) => void` or `SingleMatchHandlers<T>` for use with `watch()` — enabling the pattern `watch(reactive, bindText(element))`.
+
+| Helper | Purpose |
+|--------|---------|
+| `bindAttribute` | Sets/removes attributes with security validation (see [ADR 0009](adr/0009-security-validation-in-bindattribute.md)) |
+| `bindClass` | Adds/removes CSS classes |
+| `bindText` | Sets text content |
+| `bindProperty` | Sets DOM properties |
+| `bindStyle` | Sets/removes inline styles |
+| `bindVisible` | Controls `hidden` attribute |
+| `dangerouslyBindInnerHTML` | Sets innerHTML |
+
+### Event Binding
+
+`on(target, type, handler)` binds events with unified `(event, target)` signature. For `Memo<Element[]>` targets, uses event delegation with fallback to per-element listeners for non-bubbling events.
+
+## Query System
+
+### `first(selector)` / `all(selector)`
+
+- `first()`: Returns single element or throws `MissingElementError` if required
+- `all()`: Returns `Memo<Element[]>` with lazy `MutationObserver` (see [ADR 0006](adr/0006-lazy-mutationobserver-for-all-collections.md)); a malformed selector throws `InvalidSelectorError` immediately instead of stalling the observer
+
+Both collect undefined custom element dependencies for `resolveDependencies()`.
+
+### Dependency Resolution
+
+Waits for child custom elements to be defined via `customElements.whenDefined()` with 200ms timeout. On timeout, logs error but proceeds — effects run even if dependencies aren't ready.
+
+### Compile-Time Type Inference
+
+Selector strings infer correct `HTMLElement` subtypes at compile time (e.g., `first('input')` → `HTMLInputElement`).
+
+## Data Flow
+
+### Parsers
+
+Parsers transform HTML attribute strings to typed values (see [ADR 0005](adr/0005-branded-parsers-and-methods-with-symbol-based-branding.md)). They are called once at connect time with `getAttribute(key)`. `observedAttributes`/`attributeChangedCallback` support was dropped entirely — attributes don't drive reactive updates (see [ADR 0003](adr/0003-attributes-drive-state-at-connect-time-only.md)).
+
+### Context Protocol
+
+Implements the [Community Protocol for Context](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md) (see [ADR 0008](adr/0008-community-protocol-for-context.md)):
+
+- `provideContexts([...])`: Provider side, installs `context-request` listener; a throwing property getter is caught and degrades to `undefined` (logged in `DEV_MODE`) rather than throwing inside the consumer's `Memo`
+- `requestContext(context, fallback)`: Consumer side, dispatches `ContextRequestEvent`, returns `Memo<T>`
+
+### Inter-Component Signal Sharing (Pass)
+
+`pass(target, props)` swaps Slot-backed signals for zero-overhead live **Signal** sharing between Le Truc **Component** instances. Every entry in `props` is a declared intent to bind a live signal: if a prop doesn't exist on the target, can't be resolved to a signal, or isn't Slot-backed (target is a non-Le-Truc custom element, or the prop is read-only/computed), `pass()` throws `InvalidPassPropertyError` naming every failing prop — validated eagerly before any signal is swapped, so a failure never leaves a partial bind. See [ADR 0011](adr/0011-throw-on-pass-binding-failure.md).
+
+## Naming Conventions
+
+| Prefix | Layer | Examples |
+|--------|-------|----------|
+| `define*` | Component definition | `defineComponent`, `defineMethod` |
+| `bind*` | DOM binding | `bindText`, `bindAttribute`, `bindClass` |
+| `as*` | Parsers | `asBoolean`, `asInteger`, `asString` |
+| `create*` | Signals | `createState`, `createEffect`, `createScope` |
+
+Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestContext`, `expose`, `first`, `all`) are plain verbs with no prefix.
+
+## Security
+
+`bindAttribute()` (via `safeSetAttribute()`) validates URLs and blocks `on*` handlers (see [ADR 0009](adr/0009-security-validation-in-bindattribute.md)).
+
+## Scheduler
+
+`schedule(element, task)` deduplicates high-frequency DOM updates using `requestAnimationFrame`. Used by `on()` for passive events and `dangerouslyBindInnerHTML`.
+
+## Ecosystem Tooling
+
+### Custom Elements Manifest
+
+Le Truc example components are analysed by `@custom-elements-manifest/analyzer` using the `@zeix/cem-plugin-le-truc` plugin (see [ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md)). The plugin bridges the gap between Le Truc's factory pattern and the standard CEM ecosystem.
+
+> **Status note:** The plugin is built and tested (22/22 tests in the `cem-plugin-le-truc` repo) and produces a high-quality manifest for the 47 example components (82 members, 17 attributes, 16 cssProperties). It is **not yet published to npm**; le-truc currently resolves it via a local `bun link`, so `build:cem` only works in clones where the plugin is linked. See TODO.md LT-010 for the npm-publish follow-up.
+
+The generated `custom-elements.json` (repo root, referenced via `"customElements"` in `package.json`, gitignored) enables two **optional** tooling features — neither is required to build, test, or contribute to Le Truc:
+- **`cem lsp`**: Editor autocomplete, hover docs, and diagnostics in HTML templates (VS Code, Zed) — requires `@pwrs/cem` installed globally (see CONTRIBUTING.md); not a project dependency. `@pwrs/cem` ships a ~58 MB native binary, which is why it is deliberately kept out of `devDependencies`.
+- **`cem mcp`**: AI-native component context for coding agents (Claude Code, etc.) — opt-in via a gitignored `.mcp.json` per the CONTRIBUTING.md instructions
+
+#### What the plugin extracts
+
+| CEM field | Source |
+|---|---|
+| `tagName` | First string argument of `defineComponent(tagName, …)` |
+| `name` | PascalCase from tagName (`basic-counter` → `BasicCounter`) |
+| `description` | JSDoc above the `export default defineComponent(…)` |
+| `members` | Properties of `Props` type via TypeScript type checker — always the source of truth |
+| `attributes` | Properties in `expose({})` whose initializer is a call to an `as*` Parser from `@zeix/le-truc` (imported by package name **or** by relative path into the package root — resolved against the owning `package.json`) |
+| `slots`, `events`, `cssParts`, `cssProperties` | `@slot`, `@fires`, `@csspart`, `@cssprop` JSDoc tags on the export |
+
+#### JSDoc annotation contract
+
+```typescript
+/**
+ * Component description.
+ * @slot - Default slot description
+ * @fires event-name - Fired when …
+ */
+export default defineComponent<MyProps>('my-element', …)
+```
+
+Property descriptions go on the `Props` type:
+
+```typescript
+export type MyProps = {
+  /** Property description. Read from the `value` attribute at connect time. */
+  value: string
+}
+```
+
+#### Generation
+
+Run `bun run build:cem` to generate `custom-elements.json`. The script runs `cem analyze` using `custom-elements-manifest.config.mjs` targeting `examples/**/*.ts` (test files excluded). The manifest is gitignored — it is a local build artifact, not committed.
+
+> **Footgun:** `cem analyze` exits 0 and writes a manifest *even if the plugin fails to load* (e.g. `ERR_MODULE_NOT_FOUND`). A silently-unloaded plugin produces a manifest full of garbage declarations (anonymous names, empty members). If `build:cem` ever reports no `@zeix/cem-plugin-le-truc`-driven output, the plugin did not load — see TODO.md LT-012 for the planned CI guard.
+
+---
+
+# Agent Context — Le Truc
+
+> This file lists things an agent should know about Le Truc that may be surprising, non-obvious, or easy to get wrong. It is not a general introduction — see `ARCHITECTURE.md` for structure and `package.json` for project metadata.
+
+## Factory Form
+
+The factory form is the only way to define components. The factory receives a `FactoryContext` with helpers `{ all, expose, first, host, on, pass, provideContexts, requestContext, watch }`, calls `expose({ ... })` for reactive props, and returns a `FactoryResult` — an array of effect descriptors (nested arrays are flattened; falsy values are filtered):
+
+```ts
+defineComponent<MyProps>('my-element', ({ expose, first, host, on, watch }) => {
+  const input = first('input') as HTMLInputElement
+  expose({ value: input.value })
+  return [
+    on(input, 'input', () => ({ value: input.value })),
+    watch('value', v => { input.value = v }),
+  ]
+})
+```
+
+## Surprising Behaviors
+
+- **No `observedAttributes` support — parsers are called once, not reactively**: `defineComponent` never registers `observedAttributes`; `attributeChangedCallback` support was dropped entirely in v2.0. Parsers passed to `expose()` read the attribute value once at connect time (for server-side HTML author configuration). Attribute values drive state only at connect time. To react to attribute changes after connection, use event handlers or `watch()`.
+
+- **Parser branding is required for reliable detection**: `isParser()` checks only for `PARSER_BRAND`. Always use `asParser()` to create custom parsers — unbranded functions are NOT treated as parsers regardless of their argument count.
+
+- **`Parser<T>` takes the attribute value only**: Signature is `(value: string | null | undefined) => T`. Fallbacks are static values captured in the factory closure.
+
+- **`pass()` is Le Truc–only and replaces signals, not values**: The factory `pass(target, props)` calls `slot.replace(signal)` on the child's internal Slot map — it only works for Le Truc components whose properties are Slot-backed. For any other custom element or plain HTML element, use `watch(source, bindProperty(el, key))` instead. `bindProperty` assigns to the element's public JS setter and works correctly regardless of the child's internal framework. When `pass()` is used the original signal is captured and restored when the parent disconnects, so the child regains its own independent state after detachment.
+
+- **`MethodProducer` is branded, not structurally distinguished**: `isMethodProducer()` checks for `METHOD_BRAND`. Always wrap method producer initializers with `defineMethod()` — e.g. `clear`, `add`, `delete`. Unbranded `() => void` functions are wrapped in `createComputed()` (treated as a `MemoCallback`), not installed as method producers. `provideContexts([...])` in the factory context returns an `EffectDescriptor` — include it in the return array as `return [provideContexts([MEDIA_MOTION, ...])]`.
+
+- **`all()` MutationObserver is lazy**: The observer only activates when the `Memo` is read inside a reactive effect. The observer watches attribute changes implied by the CSS selector (classes, IDs, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the memo's `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
+
+- **`setAttribute` has security validation**: Blocks `on*` event handler attributes and validates URL attributes against a safe-protocol allowlist (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`). Violations throw a descriptive error — they are never silent.
+
+- **Dependency resolution timeout races with the child's own upgrade**: If a queried custom element isn't defined within 200ms (`DEPENDENCY_TIMEOUT`), a `DependencyTimeoutError` is logged and the parent's effects activate anyway against a child that may still be `:not(:defined)` — intentional progressive enhancement, not a bug. If a parent effect writes directly to that child's property (e.g. `watch('prop', bindProperty(child, 'prop'))`), the write lands as a plain instance property before upgrade. When the child later upgrades, `#initSignals` skips wrapping any prop already present on the instance in a reactive `Slot` ("explicit DOM value wins"), so the property never becomes reactive on the child — its own initializer is silently discarded. Don't write to a timed-out child's properties from a parent effect.
+
+- **`on()` factory handler return value updates host**: If the factory `on(target, type, handler)` handler returns `{ prop: value }`, those updates are applied to the host in a `batch()`. Returning nothing (or `undefined`) is a no-op.
+
+- **Context protocol is the Web Components Community Protocol**: `provideContexts` / `requestContext` implement the [webcomponents-cg context spec](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md), not a custom protocol. `provideContexts([...])` returns an `EffectDescriptor` used in the return array; `requestContext(context, fallback)` returns a `Memo<T>` used directly in `expose()`.
+
+- **`undefined` from a reactive source restores original DOM value**: When a reactive resolves to `undefined` (e.g. after an error in a computed thunk, or a missing property), the effect restores the DOM value captured at setup time — not a blank/null state. The `RESET` symbol no longer exists.
+
+- **Event-driven read-only props use `createState` + `on`**: Expose `state.get` (not the full `State`) to make a prop readable but not settable by consumers. Update the value in an `on()` handler. To watch the prop inside the factory, pass the signal directly: `watch(length, bindVisible(clearBtn))`.
+
+- **`DEV_MODE` enables enhanced diagnostics**: Build with `process.env.DEV_MODE=true` for detailed error messages, dependency-timeout warnings, and effect-execution logging. No per-instance debug flag exists.
+
+- **`bindVisible` is the inverse of `el.hidden`**: `bindVisible(el)` sets `el.hidden = !value`. A value of `true` makes the element visible.
+
+- **`bindAttribute` returns `SingleMatchHandlers`, not a function**: Use as `watch('prop', bindAttribute(el, 'name'))` — `watch` accepts both a plain function and a `SingleMatchHandlers` object.
+
+- **`bindAttribute` boolean dispatch**: When the reactive value is boolean, `toggleAttribute` is called — the attribute is added (without value) when `true` and removed when `false`. Do not pass boolean for attributes that require a string value.
+
+- **`bindStyle` nil path removes the inline style**: When the reactive is nil, `el.style.removeProperty(prop)` is called, restoring whatever value the CSS cascade provides. Setting the reactive back to a string re-applies the inline style.
+
+- **`stale` in `watch` only fires for `Task` signals with a seeded value**: Routing precedence is `nil` > `err` > `stale` > `ok`. `stale` fires when the signal has a retained value AND `isTask(signal) && signal.isPending()` — never for `State` or `Memo`. Without `{ value: seed }` on the task, the first read throws `UnsetSignalValueError` and routes to `nil`, not `stale`. Omitting `stale` falls back to `ok`, leaving the retained value in place while the task re-fetches.
+

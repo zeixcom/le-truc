@@ -32,6 +32,7 @@ const SOURCES_DIR = join(ROOT, 'docs/sources')
 const TEST_DIR = join(ROOT, 'docs/test')
 const SITEMAP_FILE = join(ROOT, 'docs/sitemap.xml')
 const LLMS_TXT_FILE = join(ROOT, 'docs/llms.txt')
+const LLMS_FULL_TXT_FILE = join(ROOT, 'docs/llms-full.txt')
 
 // Page ordering configuration
 const PAGE_ORDER = [
@@ -120,6 +121,7 @@ export {
 	INCLUDES_DIR,
 	INPUT_DIR,
 	LAYOUTS_DIR,
+	LLMS_FULL_TXT_FILE,
 	LLMS_TXT_FILE,
 	MENU_FILE,
 	MIME_TYPES,

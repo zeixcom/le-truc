@@ -39,7 +39,7 @@ Replace the code in the fenced block. Preserve the `#filename` annotation if pre
 
 #### Adding a new section
 
-Follow the existing structure: wrap in `{% section %}`, use `## H2` for the heading, add a `{% callout .tip %}` only if there is a non-obvious constraint worth highlighting.
+Follow the existing structure: wrap in `{% section %}`, use `## H2` for the heading, add a `{% callout %}` only if there is a non-obvious constraint worth highlighting.
 
 #### Updating `examples.md` navigation
 

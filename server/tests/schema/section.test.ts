@@ -53,4 +53,11 @@ describe('section schema', () => {
 		expect(result).toBeInstanceOf(Tag)
 		expect(result.name).toBe('section')
 	})
+
+	test('allows a table as a direct child without validation errors', () => {
+		const table = new Node('table', {}, [], 'table')
+		const node = new Node('tag', {}, [table], 'section')
+		const errors = Markdoc.validate(node, config)
+		expect(errors).toEqual([])
+	})
 })

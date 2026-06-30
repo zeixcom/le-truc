@@ -5,6 +5,7 @@ import { apiPagesEffect } from './effects/api-pages'
 import { cssEffect } from './effects/css'
 import { examplesEffect } from './effects/examples'
 import { jsEffect } from './effects/js'
+import { llmsFullManifestEffect } from './effects/llms-full-manifest'
 import { llmsManifestEffect } from './effects/llms-manifest'
 import { mdMirrorEffect } from './effects/md-mirror'
 import { menuEffect } from './effects/menu'
@@ -61,6 +62,7 @@ export async function build(
 		const sitemap = sitemapEffect(scheduleReload)
 		const mdMirror = mdMirrorEffect(scheduleReload)
 		const llmsManifest = llmsManifestEffect(scheduleReload)
+		const llmsFullManifest = llmsFullManifestEffect(scheduleReload)
 
 		// Wait for all effects to complete their first run
 		await Promise.all([
@@ -77,6 +79,7 @@ export async function build(
 			sitemap.ready,
 			mdMirror.ready,
 			llmsManifest.ready,
+			llmsFullManifest.ready,
 		])
 
 		const duration = performance.now() - startTime
@@ -103,6 +106,7 @@ export async function build(
 			sitemap.cleanup?.()
 			mdMirror.cleanup?.()
 			llmsManifest.cleanup?.()
+			llmsFullManifest.cleanup?.()
 		}
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)

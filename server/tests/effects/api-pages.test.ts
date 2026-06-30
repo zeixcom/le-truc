@@ -9,6 +9,7 @@ import { describe, expect, test } from 'bun:test'
 import Markdoc from '@markdoc/markdoc'
 import {
 	convertParameterSectionsToTables,
+	linkExternalDefinedIn,
 	makeHeadingIdsUnique,
 	mergeDefinedInIntoBlockquote,
 	stripBreadcrumbs,
@@ -141,6 +142,68 @@ Event class for context requests.`
 
 		expect(result).toStartWith('# Class: ContextRequestEvent')
 		expect(result).toContain('Event class for context requests.')
+	})
+})
+
+/* === linkExternalDefinedIn Tests === */
+
+describe('linkExternalDefinedIn', () => {
+	test('links a node_modules "Defined in:" path for a known @zeix dependency', () => {
+		const content =
+			'Defined in: node\\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:51'
+		const result = linkExternalDefinedIn(content)
+
+		expect(result).toBe(
+			'Defined in: [src/nodes/collection.ts](https://github.com/zeixcom/cause-effect/blob/main/src/nodes/collection.ts)',
+		)
+	})
+
+	test('handles the unescaped underscore form too', () => {
+		const content =
+			'Defined in: node_modules/@zeix/cause-effect/types/src/signal.d.ts:19'
+		const result = linkExternalDefinedIn(content)
+
+		expect(result).toBe(
+			'Defined in: [src/signal.ts](https://github.com/zeixcom/cause-effect/blob/main/src/signal.ts)',
+		)
+	})
+
+	test('drops the line number from both label and link', () => {
+		const content =
+			'Defined in: node\\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:51'
+		const result = linkExternalDefinedIn(content)
+
+		expect(result).not.toContain(':51')
+	})
+
+	test('leaves an unknown @zeix package untouched', () => {
+		const content =
+			'Defined in: node\\_modules/@zeix/other-lib/types/src/foo.d.ts:7'
+		expect(linkExternalDefinedIn(content)).toBe(content)
+	})
+
+	test('leaves non-@zeix node_modules paths untouched', () => {
+		const content = 'Defined in: node\\_modules/some-lib/types/src/foo.d.ts:7'
+		expect(linkExternalDefinedIn(content)).toBe(content)
+	})
+
+	test('leaves an already-linked own-repo "Defined in:" line untouched', () => {
+		const content =
+			'Defined in: [src/types.ts:61](https://github.com/zeixcom/le-truc/blob/main/src/types.ts#L61)'
+		expect(linkExternalDefinedIn(content)).toBe(content)
+	})
+
+	test('renders as a linked <cite> inside the blockquote end-to-end', () => {
+		const markdown = linkExternalDefinedIn(`### Type Alias: CollectionOptions
+
+> **CollectionOptions** = \`object\`
+
+Defined in: node\\_modules/@zeix/cause-effect/types/src/nodes/collection.d.ts:51`)
+		const html = renderApi(markdown)
+
+		expect(html).toContain(
+			'<cite>Defined in: <a href="https://github.com/zeixcom/cause-effect/blob/main/src/nodes/collection.ts">src/nodes/collection.ts</a></cite>',
+		)
 	})
 })
 
