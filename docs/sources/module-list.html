@@ -178,6 +178,13 @@
 <span class="line"><span style="color:#F8F8F2">	}</span></span>
 <span class="line"><span style="color:#F8F8F2">}</span></span>
 <span class="line"></span>
+<span class="line"><span style="color:#88846F">/**</span></span>
+<span class="line"><span style="color:#88846F"> * A dynamic list component demonstrating the `createList()` keyed reconciliation API.</span></span>
+<span class="line"><span style="color:#88846F"> * Use it for add/remove item interfaces — items are added via a form submission</span></span>
+<span class="line"><span style="color:#88846F"> * and removed via delegated click handling, with stable keys across reorders.</span></span>
+<span class="line"><span style="color:#88846F"> * Each item must include a remove button with class `remove` for deletion to work;</span></span>
+<span class="line"><span style="color:#88846F"> * the form should use a `&#x3C;form-textbox>` for the new-item input.</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@demo</span><span style="color:#88846F"> {./docs/examples/module-list.html} Interactive preview and usage examples */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">(</span></span>
 <span class="line"><span style="color:#E6DB74">	'module-list'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">on</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

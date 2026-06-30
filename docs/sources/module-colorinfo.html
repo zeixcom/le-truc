@@ -297,9 +297,12 @@
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">/**</span></span>
 <span class="line"><span style="color:#88846F"> * Displays detailed color information (CSS, HEX, RGB, HSL, Oklch channels) for a given color.</span></span>
+<span class="line"><span style="color:#88846F"> * Use it for inspecting a color's various representations — useful when you need</span></span>
+<span class="line"><span style="color:#88846F"> * to evaluate contrast for accessibility or copy a specific format.</span></span>
+<span class="line"><span style="color:#88846F"> * The `color` attribute must be a valid Oklch color string.</span></span>
 <span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-swatch - The CSS color string, set reactively from the `css` property.</span></span>
 <span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --color-fallback - The HEX color string, set reactively from the `hex` property.</span></span>
-<span class="line"><span style="color:#88846F"> */</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@demo</span><span style="color:#88846F"> {./docs/examples/module-colorinfo.html} Interactive preview and usage examples */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleColorinfoProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'module-colorinfo'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">all</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

@@ -226,10 +226,14 @@
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">/**</span></span>
 <span class="line"><span style="color:#88846F"> * A gauge that displays a numeric value as a meter with color-coded thresholds.</span></span>
+<span class="line"><span style="color:#88846F"> * Use it for visualising a value within a known range — the needle rotates</span></span>
+<span class="line"><span style="color:#88846F"> * to reflect the current value and the color indicates which threshold applies.</span></span>
+<span class="line"><span style="color:#88846F"> * The `value` must be a number within the range defined by the thresholds.</span></span>
+<span class="line"><span style="color:#88846F"> * Thresholds should be ordered by `min` value for correct color assignment.</span></span>
 <span class="line"><span style="color:#88846F"> * Thresholds are read from the `thresholds` attribute as a JSON array.</span></span>
 <span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --basic-gauge-degree - Rotation angle of the gauge needle (set reactively).</span></span>
 <span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@cssprop</span><span style="color:#88846F"> --basic-gauge-color - Active threshold color (set reactively).</span></span>
-<span class="line"><span style="color:#88846F"> */</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@demo</span><span style="color:#88846F"> {./docs/examples/basic-gauge.html} Interactive preview and usage examples */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">BasicGaugeProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'basic-gauge'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">pass</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

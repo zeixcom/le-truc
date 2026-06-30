@@ -243,8 +243,11 @@
 <span class="line"></span>
 <span class="line"><span style="color:#88846F">/**</span></span>
 <span class="line"><span style="color:#88846F"> * Fetches and renders an HTML partial from a URL, with loading and error states.</span></span>
+<span class="line"><span style="color:#88846F"> * Use it for lazy-loading content on demand — the `src` attribute should point to a</span></span>
+<span class="line"><span style="color:#88846F"> * same-origin URL; cross-origin or `javascript:` URLs are rejected for security.</span></span>
+<span class="line"><span style="color:#88846F"> * Untrusted HTML must be sanitised server-side; set `allow-scripts` only when required.</span></span>
 <span class="line"><span style="color:#88846F"> * Set `allow-scripts` attribute to permit inline scripts in the fetched content.</span></span>
-<span class="line"><span style="color:#88846F"> */</span></span>
+<span class="line"><span style="color:#88846F"> * </span><span style="color:#66D9EF;font-style:italic">@demo</span><span style="color:#88846F"> {./docs/examples/module-lazyload.html} Interactive preview and usage examples */</span></span>
 <span class="line"><span style="color:#F92672">export</span><span style="color:#F92672"> default</span><span style="color:#A6E22E"> defineComponent</span><span style="color:#F8F8F2">&#x3C;</span><span style="color:#A6E22E;text-decoration:underline">ModuleLazyloadProps</span><span style="color:#F8F8F2">>(</span></span>
 <span class="line"><span style="color:#E6DB74">	'module-lazyload'</span><span style="color:#F8F8F2">,</span></span>
 <span class="line"><span style="color:#F8F8F2">	({ </span><span style="color:#FD971F;font-style:italic">expose</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">first</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">host</span><span style="color:#F8F8F2">, </span><span style="color:#FD971F;font-style:italic">watch</span><span style="color:#F8F8F2"> }) </span><span style="color:#66D9EF;font-style:italic">=></span><span style="color:#F8F8F2"> {</span></span>

@@ -2,7 +2,7 @@
 
 > **setTextPreservingComments**(`element`, `text`): `void`
 
-Defined in: [src/bindings.ts:157](https://github.com/zeixcom/le-truc/blob/f973c77449aa2054ba6f6324004d6f4dfb8706d1/src/bindings.ts#L157)
+Defined in: [src/bindings.ts:157](https://github.com/zeixcom/le-truc/blob/2877d2afe24fa5dcc6cc8851f03777f67a181664/src/bindings.ts#L157)
 
 Set the text content of an element while preserving comment nodes.
 
