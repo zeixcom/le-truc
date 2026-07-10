@@ -162,5 +162,6 @@ vite.config.ts.timestamp-*
 # Generated
 custom-elements.json
 
-# Local dev tooling (not committed — each developer sets this up per CONTRIBUTING.md)
+# Local dev tooling
 .mcp.json
+dataset/
