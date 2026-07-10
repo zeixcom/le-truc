@@ -13,12 +13,12 @@ name: 'CodeQL Advanced'
 
 on:
   push:
-    branches: ['main']
+    branches: ['main', 'next']
     paths-ignore:
       - 'node_modules/**'
       - 'docs/**'
   pull_request:
-    branches: ['main']
+    branches: ['main', 'next']
     paths-ignore:
       - 'node_modules/**'
       - 'docs/**'

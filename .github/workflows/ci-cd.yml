@@ -2,10 +2,10 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, next]
     tags: ['v*']
   pull_request:
-    branches: [main, develop]
+    branches: [main, next]
   release:
     types: [published]
 
@@ -33,6 +33,9 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Bundle size regression
+        run: bun run check:size
+
       - name: Generate & verify Custom Elements Manifest
         # Guards against silent plugin-load failure: if @zeix/cem-plugin-le-truc
         # fails to load, cem analyze still exits 0 but emits garbage declarations.
@@ -44,6 +47,9 @@ jobs:
 
       - name: Run tests
         run: bun run test
+
+      - name: Run server tests
+        run: bun run test:server
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

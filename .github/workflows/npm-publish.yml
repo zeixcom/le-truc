@@ -25,6 +25,11 @@ jobs:
       - name: Build package
         run: bun run build
 
+      - name: Generate & verify Custom Elements Manifest
+        # custom-elements.json is gitignored but listed in the package.json
+        # "files" allowlist — it must be built before npm publish.
+        run: bun run build:cem
+
       - name: Get package version and determine tag
         id: version
         run: |
