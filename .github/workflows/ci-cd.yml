@@ -42,6 +42,11 @@ jobs:
         # verify-cem.ts asserts all declaration names are PascalCase (plugin-ran signal).
         run: bun run build:cem
 
+      - name: Build documentation site
+        # docs/ is gitignored; Playwright tests are served from it
+        # (serve:examples only rebuilds docs/assets, not the HTML pages).
+        run: bun run build:docs
+
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps
 

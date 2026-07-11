@@ -14,6 +14,7 @@ import { pagesEffect } from './effects/pages'
 import { serviceWorkerEffect } from './effects/service-worker'
 import { sitemapEffect } from './effects/sitemap'
 import { sourcesEffect } from './effects/sources'
+import { staticAssetsEffect } from './effects/static-assets'
 
 /**
  * Simple reactive build system orchestration with HMR integration
@@ -53,7 +54,10 @@ export async function build(
 		const apiPages = apiPagesEffect(scheduleReload)
 		const css = cssEffect(scheduleReload)
 		const js = jsEffect(scheduleReload)
-		const sw = serviceWorkerEffect(scheduleReload)
+		const sw = serviceWorkerEffect(
+			scheduleReload,
+			Promise.all([css.ready, js.ready]),
+		)
 		const examples = examplesEffect(scheduleReload)
 		const mocks = mocksEffect(scheduleReload)
 		const sources = sourcesEffect(scheduleReload)
@@ -63,6 +67,7 @@ export async function build(
 		const mdMirror = mdMirrorEffect(scheduleReload)
 		const llmsManifest = llmsManifestEffect(scheduleReload)
 		const llmsFullManifest = llmsFullManifestEffect(scheduleReload)
+		const staticAssets = staticAssetsEffect(scheduleReload)
 
 		// Wait for all effects to complete their first run
 		await Promise.all([
@@ -80,6 +85,7 @@ export async function build(
 			mdMirror.ready,
 			llmsManifest.ready,
 			llmsFullManifest.ready,
+			staticAssets.ready,
 		])
 
 		const duration = performance.now() - startTime
@@ -107,6 +113,7 @@ export async function build(
 			mdMirror.cleanup?.()
 			llmsManifest.cleanup?.()
 			llmsFullManifest.cleanup?.()
+			staticAssets.cleanup?.()
 		}
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)

@@ -161,6 +161,7 @@ vite.config.ts.timestamp-*
 
 # Generated
 custom-elements.json
+docs/
 
 # Local dev tooling
 .mcp.json

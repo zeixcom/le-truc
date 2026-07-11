@@ -18,7 +18,12 @@ import {
 	serviceWorker,
 } from '../templates/service-worker'
 
-export const serviceWorkerEffect = (onRebuild?: () => void) => {
+export const serviceWorkerEffect = (
+	onRebuild?: () => void,
+	// Built assets this effect hashes; on a fresh build (empty docs/) they
+	// don't exist until the CSS/JS effects complete their first run.
+	assetsReady?: Promise<unknown>,
+) => {
 	let resolve: (() => void) | undefined
 	const ready = new Promise<void>(res => {
 		resolve = res
@@ -38,6 +43,7 @@ export const serviceWorkerEffect = (onRebuild?: () => void) => {
 					try {
 						console.log('🔧 Generating service worker...')
 
+						await assetsReady
 						const [cssContent, jsContent] = await Promise.all([
 							getFileContent(getFilePath(ASSETS_DIR, 'main.css')),
 							getFileContent(getFilePath(ASSETS_DIR, 'main.js')),
