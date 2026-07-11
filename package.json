@@ -69,6 +69,7 @@
 		"test:server:unit": "bun test server/tests --bail",
 		"test:server:integration": "bun test server/tests --timeout 10000",
 		"test:server:watch": "bun test server/tests --watch",
+		"check:links": "bun scripts/check-doc-links.ts",
 		"check:size": "bun test test/regression-bundle.test.ts",
 		"build:cem": "cem analyze && bun run verify:cem",
 		"verify:cem": "bun run scripts/verify-cem.ts"

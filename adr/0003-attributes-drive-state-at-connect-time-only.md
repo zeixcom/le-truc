@@ -30,6 +30,6 @@ Attributes drive state only at connect time via parsers; `static observedAttribu
 
 ## Related
 
-- Requirements: [M3](REQUIREMENTS.md#m3-attribute--property-initialisation-via-parsers), [X1](REQUIREMENTS.md#x1-observedattributes--attributechangedcallback-for-reactive-state)
-- Architecture: [The Component Lifecycle](ARCHITECTURE.md#the-component-lifecycle)
+- Requirements: [M3](../REQUIREMENTS.md#m3-attribute--property-initialisation-via-parsers), [X1](../REQUIREMENTS.md#x1-observedattributes--attributechangedcallback-for-reactive-state)
+- Architecture: [Lifecycle](../ARCHITECTURE.md#lifecycle)
 - Supersedes: None

@@ -30,6 +30,12 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Check doc links
+        # Validates internal links and anchors in adr/*.md, ARCHITECTURE.md,
+        # REQUIREMENTS.md, AGENTS.md — catches rotted paths and stale anchors
+        # before they merge.
+        run: bun run check:links
+
       - name: Build
         run: bun run build
 

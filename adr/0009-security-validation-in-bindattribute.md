@@ -57,7 +57,7 @@ These are opt-in imports. Authors who use native DOM methods directly accept res
 
 ## Related
 
-- Requirements: [M16](REQUIREMENTS.md#m16-security-validation-in-bindattribute)
-- Architecture: [Security](ARCHITECTURE.md#security), [bind* helpers — DOM update handlers](ARCHITECTURE.md#bind-helpers--dom-update-handlers), [Safety Utilities](ARCHITECTURE.md#safety-utilities)
+- Requirements: [M16](../REQUIREMENTS.md#m16-security-validation-in-setattribute)
+- Architecture: [Security](../ARCHITECTURE.md#security), [DOM Binding Helpers](../ARCHITECTURE.md#dom-binding-helpers)
 - Supersedes: None
 - Partially superseded by: [ADR-0010](0010-trusted-types-support-via-sanitize-hook.md) (`dangerouslyBindInnerHTML` / `innerHTML`-sink guidance only)
