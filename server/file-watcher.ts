@@ -4,6 +4,16 @@ import { Glob } from 'bun'
 import type { FileInfo } from './file-signals'
 import { createFileInfo, getFilePath, isPlaywrightRunning } from './io'
 
+/* === Exported Types === */
+
+/**
+ * A watched file list with an explicit rescan escape hatch. Effects that
+ * generate files into a watched directory (e.g. TypeDoc writing docs-src/api)
+ * must call rescan() after writing: the initial scan runs before they do, and
+ * no fs watcher is attached when the directory doesn't exist at startup.
+ */
+export type WatchedFiles = List<FileInfo> & { rescan: () => Promise<void> }
+
 /* === Exported Functions === */
 
 export const watchFiles = async (
@@ -11,7 +21,7 @@ export const watchFiles = async (
 	include: string,
 	exclude?: string,
 	recursive?: boolean,
-): Promise<List<FileInfo>> => {
+): Promise<WatchedFiles> => {
 	const glob = new Glob(include)
 	const excludeGlob = exclude ? new Glob(exclude) : null
 	const playwrightDetected = isPlaywrightRunning()
@@ -127,5 +137,7 @@ export const watchFiles = async (
 		)
 	}
 
-	return fileList
+	return Object.assign(fileList, {
+		rescan: () => flushChanges(fileList),
+	})
 }
