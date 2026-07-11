@@ -81,8 +81,8 @@ Parsers transform HTML attribute strings to typed values (see [ADR 0005](adr/000
 
 Implements the [Community Protocol for Context](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md) (see [ADR 0008](adr/0008-community-protocol-for-context.md)):
 
-- `provideContexts([...])`: Provider side, installs `context-request` listener; a throwing property getter is caught and degrades to `undefined` (logged in `DEV_MODE`) rather than throwing inside the consumer's `Memo`
-- `requestContext(context, fallback)`: Consumer side, dispatches `ContextRequestEvent`, returns `Memo<T>`
+- `provideContexts([...])`: Provider side, installs `context-request` listener; a throwing property getter is caught and degrades to `undefined` (logged in `DEV_MODE`) rather than throwing inside the consumer's `Slot`
+- `requestContext(context, fallback)`: Consumer side, dispatches `ContextRequestEvent`, returns a `Signal<T>` backed by a `Slot` (the same primitive `pass()` uses for overridable backing signals). A provider that upgrades *after* the consumer's synchronous dispatch (its `customElements.define()` runs later in the bundle, or its own `provideContexts` listener hasn't activated yet) is caught by two re-dispatches — once on a microtask and once after the 200 ms dependency-resolution window — so the `Slot` swaps its delegate from the fallback `State` to a `Memo` of the provider's getter, switching the value reactively with no consumer code change
 
 ### Inter-Component Signal Sharing (Pass)
 

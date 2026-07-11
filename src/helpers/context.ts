@@ -3,8 +3,10 @@
 import {
 	createMemo,
 	createScope,
+	createSlot,
+	createState,
 	isFunction,
-	type Memo,
+	type Signal,
 } from '@zeix/cause-effect'
 import type { ComponentProps, EffectDescriptor } from '../types'
 import { DEV_MODE, elementName } from '../util'
@@ -60,18 +62,28 @@ type ProvideContextsHelper<P extends ComponentProps> = (
 /**
  * The `requestContext` helper type in `FactoryContext`.
  *
- * Dispatches a `context-request` event from the host and returns a `Memo<T>`
+ * Dispatches a `context-request` event from the host and returns a `Signal<T>`
  * that tracks the provider's value. Falls back to `fallback` if no provider responds.
  * For use inside `expose()` as a property initializer.
  */
 type RequestContextHelper = <T extends {}>(
 	context: Context<string, () => T>,
 	fallback: T,
-) => Memo<T>
+) => Signal<T>
 
 /* === Constants === */
 
 const CONTEXT_REQUEST = 'context-request'
+
+/**
+ * How long (ms) to wait before the final context-request re-dispatch.
+ *
+ * Must exceed `DEPENDENCY_TIMEOUT` (200 ms) in `src/helpers/dom.ts`, the window
+ * a parent effect spends in `customElements.whenDefined()` before activating its
+ * `provideContexts` listener. The retry fires *after* that window closes, so a
+ * provider whose own effect activation waited on a slow child still binds.
+ */
+const CONTEXT_RETRY_DELAY = 210
 
 /* === Exported Class and Functions === */
 
@@ -181,8 +193,33 @@ const makeProvideContexts =
  * Create a `requestContext` helper bound to a specific component host.
  *
  * Returns a function that dispatches a `context-request` event from `host`
- * and wraps the resolved getter in a `Memo<T>`. If no provider responds,
- * the Memo returns `fallback`. For use inside `expose()` as a property initializer.
+ * and returns a `Slot<T>` that tracks the provider's value. If no provider
+ * responds, the Slot delegates to a `State` holding `fallback`. For use inside
+ * `expose()` as a property initializer.
+ *
+ * A provider may miss the initial synchronous dispatch if its
+ * `customElements.define()` runs after the consumer's (bundle ordering,
+ * code-splitting, deferred script) or its own `provideContexts` listener hasn't
+ * activated yet (descriptors activate after dependency resolution — see ADR
+ * 0007). The request is therefore re-dispatched once on a microtask (covers
+ * providers upgraded later in the same bundle) and once after
+ * {@link CONTEXT_RETRY_DELAY} (covers providers whose effect activation waited
+ * on `customElements.whenDefined()`). When a provider answers late, the Slot's
+ * backing signal is swapped (`slot.replace(createMemo(getter))`), so the
+ * consumer's value switches from `fallback` to the provided value reactively —
+ * no consumer code change required. If no provider ever answers, `fallback` is
+ * permanent for that connection (and a `DEV_MODE` warning names the context
+ * and host).
+ *
+ * The `Slot` is the same primitive `pass()` uses to override a child
+ * component's reactive property: the backing signal is overridable, and
+ * `replace()` invalidates all downstream subscribers without breaking existing
+ * edges. The Slot's computation reads the delegated signal inside a tracking
+ * context, so both the late-binding swap and the provider's live value updates
+ * propagate from a single `slot.get()`.
+ *
+ * Resolved once per component lifetime, at first connect: `connectedCallback`
+ * re-activates cached descriptors on reconnect but does not re-run the factory.
  *
  * @since 2.0
  * @param {HTMLElement & P} host - The component host element
@@ -190,14 +227,46 @@ const makeProvideContexts =
  */
 const makeRequestContext =
 	<P extends ComponentProps>(host: HTMLElement & P): RequestContextHelper =>
-	<T extends {}>(context: Context<string, () => T>, fallback: T): Memo<T> => {
-		let consumed: () => T = () => fallback
-		host.dispatchEvent(
-			new ContextRequestEvent(context, (getter: () => T) => {
-				consumed = getter
-			}),
-		)
-		return createMemo(consumed)
+	<T extends {}>(context: Context<string, () => T>, fallback: T): Signal<T> => {
+		// A Slot is a forwarding signal whose backing signal can be swapped via
+		// replace(). It starts delegating to a State holding the fallback; when a
+		// provider answers, its getter () => host[context] is wrapped in a Memo
+		// (so the provider's underlying signal is tracked) and swapped in. The
+		// Slot's own computation reads the delegate inside a tracking context, so
+		// a single slot.get() tracks both the swap and the provider's live value.
+		const slot = createSlot(createState(fallback))
+		let answered = false
+
+		const dispatch = () => {
+			host.dispatchEvent(
+				new ContextRequestEvent(context, (getter: () => T) => {
+					answered = true
+					slot.replace(createMemo(getter))
+				}),
+			)
+		}
+
+		dispatch()
+		if (!answered) {
+			// Retry once providers defined later in the same bundle have upgraded
+			// (their define() calls run before this microtask drains) …
+			queueMicrotask(() => {
+				if (!answered && host.isConnected) dispatch()
+			})
+			// … and once more after the dependency-resolution window, for
+			// providers whose own effect activation waited on whenDefined().
+			setTimeout(() => {
+				if (!answered && host.isConnected) {
+					dispatch()
+					if (!answered && DEV_MODE)
+						console.warn(
+							`requestContext: no provider answered for '${String(context)}' on ${elementName(host)}; using fallback`,
+						)
+				}
+			}, CONTEXT_RETRY_DELAY)
+		}
+
+		return slot
 	}
 
 export {

@@ -2056,6 +2056,7 @@ class InvalidSelectorError extends TypeError {
 
 // src/helpers/context.ts
 var CONTEXT_REQUEST = "context-request";
+var CONTEXT_RETRY_DELAY = 210;
 
 class ContextRequestEvent extends Event {
   context;
@@ -2092,11 +2093,29 @@ var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
   return () => host.removeEventListener(CONTEXT_REQUEST, listener);
 });
 var makeRequestContext = (host) => (context, fallback) => {
-  let consumed = () => fallback;
-  host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
-    consumed = getter;
-  }));
-  return createMemo(consumed);
+  const slot = createSlot(createState(fallback));
+  let answered = false;
+  const dispatch = () => {
+    host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
+      answered = true;
+      slot.replace(createMemo(getter));
+    }));
+  };
+  dispatch();
+  if (!answered) {
+    queueMicrotask(() => {
+      if (!answered && host.isConnected)
+        dispatch();
+    });
+    setTimeout(() => {
+      if (!answered && host.isConnected) {
+        dispatch();
+        if (!answered && DEV_MODE)
+          console.warn(`requestContext: no provider answered for '${String(context)}' on ${elementName(host)}; using fallback`);
+      }
+    }, CONTEXT_RETRY_DELAY);
+  }
+  return slot;
 };
 
 // src/helpers/dom.ts

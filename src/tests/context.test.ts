@@ -3,6 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
+import { createEffect, createScope } from '@zeix/cause-effect'
 import {
 	CONTEXT_REQUEST,
 	ContextRequestEvent,
@@ -468,6 +469,198 @@ describe('makeRequestContext', () => {
 		const memo = requestContext(context, fallback)
 
 		expect(memo.get()).toBe(fallback)
+	})
+})
+
+/* === makeRequestContext Late-Provider Tests === */
+
+describe('makeRequestContext late-provider resolution', () => {
+	let host: TestHost
+	let eventMap: ReturnType<typeof createEventListenerMap>
+	let dispatchedEvents: Event[]
+
+	beforeEach(() => {
+		eventMap = createEventListenerMap()
+		dispatchedEvents = []
+		// isConnected: true so the microtask/timeout retries are not skipped;
+		// tests that exercise the disconnect guard override it to false.
+		host = {
+			...createTestHost(),
+			isConnected: true,
+			addEventListener: eventMap.addEventListener,
+			removeEventListener: eventMap.removeEventListener,
+			dispatchEvent: (event: Event) => {
+				dispatchedEvents.push(event)
+				return eventMap.dispatchEvent(event)
+			},
+		} as unknown as TestHost
+	})
+
+	afterEach(() => {
+		for (const [, ls] of eventMap.listeners) ls.length = 0
+		dispatchedEvents.length = 0
+	})
+
+	test('recovers when a provider answers on the microtask retry', async () => {
+		// No provider listener at first dispatch → memo serves fallback.
+		// Then a provider attaches (simulating a late customElements.define)
+		// before the microtask retry drains, and the consumer recovers.
+		const requestContext = makeRequestContext(host)
+		const context = createContext<() => string>('theme')
+		const memo = requestContext(context, 'fallback-value')
+
+		// Before the provider appears: fallback.
+		expect(memo.get()).toBe('fallback-value')
+
+		// The provider upgrades now, attaching its listener.
+		const provideContexts = makeProvideContexts(host)
+		const cleanup = provideContexts(['theme'])()
+
+		// Flush the microtask retry.
+		await Promise.resolve()
+		await Promise.resolve()
+
+		expect(memo.get()).toBe('light')
+
+		cleanup?.()
+	})
+
+	test('memo reactively re-runs an effect on late-provider answer', async () => {
+		const requestContext = makeRequestContext(host)
+		const context = createContext<() => string>('theme')
+		const memo = requestContext(context, 'fallback-value')
+
+		const values: string[] = []
+		const cleanupEffect = createScope(() =>
+			createEffect(() => {
+				values.push(memo.get())
+			}),
+		)
+
+		// First run captured the fallback.
+		expect(values).toEqual(['fallback-value'])
+
+		// Provider appears after the synchronous dispatch but before the retry.
+		const provideContexts = makeProvideContexts(host)
+		const cleanup = provideContexts(['theme'])()
+
+		await Promise.resolve()
+		await Promise.resolve()
+
+		// The effect re-ran with the provider's value.
+		expect(values).toEqual(['fallback-value', 'light'])
+
+		cleanup?.()
+		cleanupEffect()
+	})
+
+	test('recovers when a provider answers after the timeout retry', async () => {
+		// Provider attaches only after the microtask retry has already fired
+		// (missed it), but before the ~210 ms timeout retry.
+		const requestContext = makeRequestContext(host)
+		const context = createContext<() => string>('theme')
+		const memo = requestContext(context, 'fallback-value')
+
+		// Drain past the microtask retry without a provider attached.
+		await Promise.resolve()
+		await Promise.resolve()
+		expect(memo.get()).toBe('fallback-value')
+
+		// Now the provider upgrades — after the microtask, before the timeout.
+		const provideContexts = makeProvideContexts(host)
+		const cleanup = provideContexts(['theme'])()
+
+		// Wait past the CONTEXT_RETRY_DELAY (210 ms).
+		await new Promise(r => setTimeout(r, 260))
+
+		expect(memo.get()).toBe('light')
+
+		cleanup?.()
+	})
+
+	test('stays on fallback when no provider ever answers (DEV_MODE warning)', async () => {
+		const originalWarn = console.warn
+		const warnings: unknown[][] = []
+		console.warn = (...args: unknown[]) => warnings.push(args)
+
+		try {
+			mock.module('../util', () => ({ ...realUtil, DEV_MODE: true }))
+
+			const requestContext = makeRequestContext(host)
+			const context = createContext<() => string>('theme')
+			const memo = requestContext(context, 'fallback-value')
+
+			await new Promise(r => setTimeout(r, 260))
+
+			expect(memo.get()).toBe('fallback-value')
+			expect(warnings).toHaveLength(1)
+			expect(String(warnings[0])).toContain('requestContext')
+			expect(String(warnings[0])).toContain('theme')
+		} finally {
+			mock.module('../util', () => realUtil)
+			console.warn = originalWarn
+		}
+	})
+
+	test('does not emit a DEV_MODE warning when DEV_MODE is off', async () => {
+		const originalWarn = console.warn
+		const warnings: unknown[][] = []
+		console.warn = (...args: unknown[]) => warnings.push(args)
+
+		try {
+			mock.module('../util', () => ({ ...realUtil, DEV_MODE: false }))
+
+			const requestContext = makeRequestContext(host)
+			const context = createContext<() => string>('theme')
+			const memo = requestContext(context, 'fallback-value')
+
+			await new Promise(r => setTimeout(r, 260))
+
+			expect(memo.get()).toBe('fallback-value')
+			expect(warnings).toHaveLength(0)
+		} finally {
+			mock.module('../util', () => realUtil)
+			console.warn = originalWarn
+		}
+	})
+
+	test('dispatches exactly once when a provider answers immediately', async () => {
+		// Provider present at the synchronous dispatch #1 → the microtask and
+		// timeout retries must be skipped (no gratuitous event traffic).
+		const provideContexts = makeProvideContexts(host)
+		const cleanup = provideContexts(['theme'])()
+
+		const requestContext = makeRequestContext(host)
+		const context = createContext<() => string>('theme')
+		requestContext(context, 'fallback-value')
+
+		// Drain both retry windows.
+		await Promise.resolve()
+		await Promise.resolve()
+		await new Promise(r => setTimeout(r, 260))
+
+		expect(dispatchedEvents.length).toBe(1)
+
+		cleanup?.()
+	})
+
+	test('does not re-dispatch from a disconnected host', async () => {
+		const requestContext = makeRequestContext(host)
+		const context = createContext<() => string>('theme')
+		requestContext(context, 'fallback-value')
+
+		// Synchronous dispatch already happened (count 1).
+		expect(dispatchedEvents.length).toBe(1)
+
+		// Disconnect before the microtask retry fires.
+		;(host as unknown as { isConnected: boolean }).isConnected = false
+
+		await Promise.resolve()
+		await Promise.resolve()
+		await new Promise(r => setTimeout(r, 260))
+
+		// No retries dispatched.
+		expect(dispatchedEvents.length).toBe(1)
 	})
 })
 
