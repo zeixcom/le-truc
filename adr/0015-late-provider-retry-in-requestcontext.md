@@ -27,7 +27,7 @@ The dispatch sequence:
 
 1. **Synchronous** — during the factory run, as before.
 2. **Microtask retry** — `queueMicrotask`, catches providers upgraded later in the same bundle whose `define()` calls run before the microtask drains. Skipped if already answered or the host disconnected.
-3. **Timeout retry** — after `CONTEXT_RETRY_DELAY` (210 ms), deliberately exceeding `DEPENDENCY_TIMEOUT` (200 ms) so a provider whose own effect activation waited on `customElements.whenDefined()` has had time to attach its listener. Skipped if already answered or the host disconnected. If still unanswered at this point and `DEV_MODE` is on, a `console.warn` names the context key and host element.
+3. **Timeout retry** — after `CONTEXT_RETRY_DELAY` (210 ms), deliberately exceeding `DEPENDENCY_TIMEOUT` (200 ms) so a provider whose own effect activation waited on `customElements.whenDefined()` has had time to attach its listener. Skipped if already answered or the host disconnected. If still unanswered at this point and `DEV_MODE` is on, a `console.warn` names the context key and host element. Both constants live in `src/internal.ts`, where `CONTEXT_RETRY_DELAY` is derived as `DEPENDENCY_TIMEOUT + 10` so the ordering invariant holds by construction; `src/tests/constants.test.ts` additionally guards it.
 
 An `answered` flag guards all retries: once a provider answers, no further dispatches occur. Providers call `e.stopImmediatePropagation()` before answering, so at most one provider answers per dispatch.
 

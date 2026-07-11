@@ -12,16 +12,27 @@ type MethodProducer = ((...args: any[]) => void) & {
     readonly [METHOD_BRAND]: true;
 };
 /**
- * Property names that must not be used as reactive component properties
- * because they are fundamental JavaScript / `Object` builtins.
+ * The single source of truth for reserved property names.
+ *
+ * These are fundamental JavaScript / `Object` builtins that must not be used
+ * as reactive component properties. Defining them as own properties on the
+ * host would corrupt the prototype chain or shadow builtins used internally
+ * by the reactive layer.
+ *
+ * The {@link ReservedWords} type and {@link RESERVED_WORDS} runtime set are
+ * both derived from this tuple so they can never diverge.
  */
-type ReservedWords = 'constructor' | 'prototype' | '__proto__' | 'toString' | 'valueOf' | 'hasOwnProperty' | 'isPrototypeOf' | 'propertyIsEnumerable' | 'toLocaleString';
+declare const RESERVED_WORDS_LIST: readonly ["constructor", "prototype", "__proto__", "toString", "valueOf", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString"];
 /**
- * Runtime mirror of the {@link ReservedWords} type. Used by `#initSignals`
- * to reject reserved property names that defeat the type-level exclusion
- * (e.g. via `asJSON`-parsed keys or `Record<string, …>` casts). Defining
- * these as own properties on the host would corrupt the prototype chain or
- * shadow builtins used internally by the reactive layer.
+ * Property names that must not be used as reactive component properties.
+ * Derived from {@link RESERVED_WORDS_LIST} — do not edit directly.
+ */
+type ReservedWords = (typeof RESERVED_WORDS_LIST)[number];
+/**
+ * Runtime mirror of the {@link ReservedWords} type, derived from the same
+ * {@link RESERVED_WORDS_LIST} source. Used by `#initSignals` to reject
+ * reserved property names that defeat the type-level exclusion (e.g. via
+ * `asJSON`-parsed keys or `Record<string, …>` casts). O(1) lookup via `Set`.
  */
 declare const RESERVED_WORDS: ReadonlySet<string>;
 /** A valid reactive property name — any string that is not an `HTMLElement` or `ReservedWords` key. */
@@ -101,4 +112,4 @@ declare const asParser: <T extends {}>(fn: Parser<T>) => Parser<T>;
 declare const defineMethod: <T extends (...args: any[]) => void>(fn: T) => T & {
     readonly [METHOD_BRAND]: true;
 };
-export { asParser, type ComponentProp, type ComponentProps, defineMethod, type EffectDescriptor, type FactoryResult, type Falsy, isMethodProducer, isParser, isReservedWord, type MethodProducer, type Parser, RESERVED_WORDS, type ReservedWords, };
+export { asParser, type ComponentProp, type ComponentProps, defineMethod, type EffectDescriptor, type FactoryResult, type Falsy, isMethodProducer, isParser, isReservedWord, type MethodProducer, type Parser, RESERVED_WORDS, RESERVED_WORDS_LIST, type ReservedWords, };
