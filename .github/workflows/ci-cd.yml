@@ -2,10 +2,10 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, next]
     tags: ['v*']
   pull_request:
-    branches: [main, develop]
+    branches: [main, next]
   release:
     types: [published]
 
@@ -16,7 +16,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -33,11 +33,19 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Bundle size regression
+        run: bun run check:size
+
       - name: Generate & verify Custom Elements Manifest
         # Guards against silent plugin-load failure: if @zeix/cem-plugin-le-truc
         # fails to load, cem analyze still exits 0 but emits garbage declarations.
         # verify-cem.ts asserts all declaration names are PascalCase (plugin-ran signal).
         run: bun run build:cem
+
+      - name: Build documentation site
+        # docs/ is gitignored; Playwright tests are served from it
+        # (serve:examples only rebuilds docs/assets, not the HTML pages).
+        run: bun run build:docs
 
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps
@@ -45,8 +53,11 @@ jobs:
       - name: Run tests
         run: bun run test
 
+      - name: Run server tests
+        run: bun run test:server
+
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: playwright-report

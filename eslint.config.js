@@ -8,7 +8,6 @@ export default [
 	{
 		ignores: [
 			'index.js',
-			'index.dev.js',
 			'types/**/*.d.ts',
 			'docs/assets/**/*.js',
 			'server/typedoc-heading-shift.mjs',

@@ -1,6 +1,6 @@
 import { createEffect, match } from '@zeix/cause-effect'
 import { API_DIR, PAGES_DIR, ROOT } from '../config'
-import { libraryScripts } from '../file-signals'
+import { apiMarkdown, docsMarkdown, libraryScripts } from '../file-signals'
 import {
 	calculateFileHash,
 	fileExists,
@@ -199,6 +199,11 @@ export const apiEffect = (onRebuild?: () => void) => {
 					previousSourcesHash = currentHash
 					console.log('📚 API documentation rebuilt successfully')
 
+					// docs-src/api is generated (gitignored): on a fresh checkout the
+					// initial scan ran before TypeDoc wrote anything and no fs watcher
+					// was attached, so push the new files through the signal explicitly.
+					await apiMarkdown.sources.rescan()
+
 					// Generate listnav-compatible API index page
 					// TypeDoc 0.28+ uses README.md instead of globals.md
 					const readmePath = getFilePath(API_DIR, 'README.md')
@@ -209,6 +214,10 @@ export const apiEffect = (onRebuild?: () => void) => {
 						if (categories.length > 0) {
 							const apiIndexMd = generateApiIndexMarkdown(categories)
 							await writeFileSafe(getFilePath(PAGES_DIR, 'api.md'), apiIndexMd)
+							// api.md is generated (gitignored) — same reasoning as the
+							// apiMarkdown rescan above, and the fs watcher's 50ms debounce
+							// would race buildOnce's cleanup on a one-shot build.
+							await docsMarkdown.sources.rescan()
 							console.log(
 								`📖 Generated API index with ${categories.length} categories`,
 							)

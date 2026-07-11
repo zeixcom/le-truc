@@ -23,6 +23,7 @@ const API_DIR = join(ROOT, 'docs-src/api')
 const LAYOUTS_DIR = join(ROOT, 'docs-src/layouts')
 const INCLUDES_DIR = join(ROOT, 'docs-src/includes')
 const MENU_FILE = join(ROOT, 'docs-src/includes/menu.html')
+const STATIC_DIR = join(ROOT, 'docs-src/static')
 
 const OUTPUT_DIR = join(ROOT, 'docs')
 const ASSETS_DIR = join(ROOT, 'docs/assets')
@@ -133,6 +134,7 @@ export {
 	SITEMAP_FILE,
 	SOURCES_DIR,
 	SRC_DIR,
+	STATIC_DIR,
 	TEMPLATES_DIR,
 	TEST_DIR,
 	TS_FILE,

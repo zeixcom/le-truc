@@ -15,7 +15,7 @@ import {
 	SRC_DIR,
 	TEMPLATES_DIR,
 } from './config'
-import { watchFiles } from './file-watcher'
+import { type WatchedFiles, watchFiles } from './file-watcher'
 import {
 	highlightCodeBlocks,
 	injectModuleDemoPreview,
@@ -141,7 +141,7 @@ function extractFrontmatter(content: string): {
 /* === Exported Signals === */
 
 const docsMarkdown: {
-	sources: List<FileInfo>
+	sources: WatchedFiles
 	processed: Memo<Map<string, FileInfo & { metadata: PageMetadata }>>
 	pageInfos: Memo<PageInfo[]>
 	fullyProcessed: Task<Map<string, ProcessedMarkdownFile>>
