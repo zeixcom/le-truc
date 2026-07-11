@@ -50,6 +50,6 @@ The plugin is published as `@zeix/cem-plugin-le-truc` and used internally by add
 
 ## Related
 
-- Requirements: [M13](REQUIREMENTS.md#m13-typescript-types-exported-and-accurate), [Secondary persona](REQUIREMENTS.md#secondary-design-system--component-library-author)
-- Architecture: [Ecosystem Tooling](ARCHITECTURE.md#ecosystem-tooling)
+- Requirements: [M13](../REQUIREMENTS.md#m13-typescript-types-exported-and-accurate), [Secondary persona](../REQUIREMENTS.md#secondary-design-system--component-library-author)
+- Architecture: [Ecosystem Tooling](../ARCHITECTURE.md#ecosystem-tooling)
 - ADR [0005](0005-branded-parsers-and-methods-with-symbol-based-branding.md) — Parser branding (relevant to attribute detection heuristic)

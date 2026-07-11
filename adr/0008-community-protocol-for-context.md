@@ -42,6 +42,6 @@ Implement the [Community Protocol for Context](https://github.com/webcomponents-
 
 ## Related
 
-- Requirements: [M10](REQUIREMENTS.md#m10-context-protocol)
-- Architecture: [The Context Protocol](ARCHITECTURE.md#the-context-protocol)
+- Requirements: [M10](../REQUIREMENTS.md#m10-context-protocol)
+- Architecture: [Context Protocol](../ARCHITECTURE.md#context-protocol)
 - Supersedes: None

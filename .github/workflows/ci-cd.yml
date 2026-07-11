@@ -56,6 +56,13 @@ jobs:
       - name: Run server tests
         run: bun run test:server
 
+      - name: Check doc links
+        # Validates internal links and anchors in adr/*.md, ARCHITECTURE.md,
+        # REQUIREMENTS.md, AGENTS.md — catches rotted paths and stale anchors.
+        # Runs after tests so its wall-clock cost doesn't pressure the
+        # time-sensitive Playwright specs (esp. WebKit route.fetch in CI).
+        run: bun run check:links
+
       - name: Upload test results
         uses: actions/upload-artifact@v5
         if: always()

@@ -30,6 +30,6 @@ Use single factory form `(name, factory)` for `defineComponent` instead of 4-par
 
 ## Related
 
-- Requirements: [M1](REQUIREMENTS.md#m1-component-definition-via-a-single-function)
-- Architecture: [The Factory Form — Specification](ARCHITECTURE.md#the-factory-form--specification)
+- Requirements: [M1](../REQUIREMENTS.md#m1-component-definition-via-a-single-function)
+- Architecture: [Component Model](../ARCHITECTURE.md#component-model)
 - Supersedes: None
