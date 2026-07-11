@@ -1,0 +1,197 @@
+# Cause & Effect — Primitive Reference
+
+Per-primitive signatures, laziness/`watched` activation, equality, and canonical examples. Sourced from `@zeix/cause-effect` 1.4.0 `src/` and README — when they disagree, `src/` wins. This file selects and warns; it does not mirror the README (read it directly in `node_modules/@zeix/cause-effect/README.md` for the full tour).
+
+All signals enforce `T extends {}` — `null` and `undefined` are rejected at the type level and throw `NullishSignalValueError` at runtime (see `pitfalls.md`).
+
+## Common shape
+
+Every signal has `.get()`. Inside an effect/memo/task, `.get()` both returns the value and registers a dependency edge (explicit reactivity — no hidden subscriptions). Outside a reactive context `.get()` just returns the current value.
+
+`SignalOptions<T>` (accepted by most creators):
+
+- `equals?: (a: T, b: T) => boolean` — default `===` (`DEFAULT_EQUALITY`). When equal, propagation stops for this signal's **entire downstream subtree**, not just this signal. Built-ins: `DEEP_EQUALITY` (structural, cycle-safe), `SKIP_EQUALITY` (always re-propagate — for mutable objects observed by reference).
+- `guard?: (value: unknown) => value is T` — validates on `.set()`/`.update()`; throws `InvalidSignalValueError` on failure.
+
+## State
+
+```ts
+createState<T extends {}>(value: T, options?: SignalOptions<T>): State<T>
+```
+
+Mutable source. API: `get()`, `set(next: T)`, `update(fn: (prev: T) => T)`. `.set()` **stores** the value — it does not invoke a function argument (that is what `.update()` is for; see `pitfalls.md`). Use for primitives or objects you replace wholesale.
+
+```ts
+const count = createState(42)
+count.set(24)
+count.update(v => ++v)
+```
+
+## Sensor
+
+```ts
+createSensor<T extends {}>(
+  watched: (set: (next: T) => void) => Cleanup,
+  options?: SensorOptions<T>   // SignalOptions & { value?: T }
+): Sensor<T>   // read-only
+```
+
+Read-only external input. `watched` runs when the sensor gains its **first** downstream subscriber; its returned `Cleanup` runs when the **last** subscriber leaves (lazy resource lifecycle). `.get()` **throws `UnsetSignalValueError`** before the first event unless `{ value }` seeds it — so for unseeded sensors, always route through `match()`'s `nil` branch.
+
+`watched` must be a **sync** function (`isSyncFunction` is validated) — never `async`.
+
+```ts
+const mousePos = createSensor((set) => {
+  const handler = (e: MouseEvent) => set({ x: e.clientX, y: e.clientY })
+  window.addEventListener('mousemove', handler)
+  return () => window.removeEventListener('mousemove', handler)
+}, { value: { x: 0, y: 0 } })
+```
+
+Mutable-object observation (same reference, internal state changes): use `{ equals: SKIP_EQUALITY }` and re-`set` the same node from a `MutationObserver`.
+
+## Memo
+
+```ts
+createMemo<T extends {}>(
+  fn: (prev: T | undefined) => T,
+  options?: ComputedOptions<T>   // SignalOptions & { value?: T, watched? }
+): Memo<T>   // read-only
+```
+
+Synchronous memoized derivation. Lazy — recomputes only when a tracked dependency actually changed **and** something reads it. The callback receives `prev` (the previous value, or `undefined` on first run), enabling reducer patterns with `{ value: T }`.
+
+For cheap/simple derivations a **plain function** `() => count.get() * 2` is often faster than a Memo — reserve `createMemo` for expensive, shared, or stateful derivations.
+
+`watched?: (invalidate: () => void) => Cleanup` activates when the memo gains its first reader; `invalidate()` marks it dirty and triggers recomputation (e.g. a `MutationObserver` for DOM-query memos — this is how le-truc's `all()` works). **Conditional reads delay activation** — if a read sits inside an untaken branch, `watched` won't fire until that branch runs. Read signals eagerly before conditional logic to force immediate activation.
+
+```ts
+const counter = createMemo(prev => {
+  switch (actions.get()) {
+    case 'increment': return prev + 1
+    case 'reset': return 0
+    default: return prev
+  }
+}, { value: 0 })
+```
+
+## Task
+
+```ts
+createTask<T extends {}>(
+  fn: (prev: T | undefined, signal: AbortSignal) => Promise<T>,
+  options?: ComputedOptions<T>
+): Task<T>   // read-only, +isPending()/abort()
+```
+
+Async derivation with automatic cancellation. When dependencies change mid-flight, the previous run's `AbortSignal` aborts (pass it to `fetch`, etc.). API adds `isPending()` and `abort()`. `.get()` returns the last resolved value even while a new run is pending — but throws `UnsetSignalValueError` on first read unless `{ value }` seeds it.
+
+`fn` must be an **`async`** function (`isAsyncFunction` is validated). A forget-`async` callback that still returns a Promise is misdetected as sync and throws `PromiseValueError` on first read (see `pitfalls.md`).
+
+Use Task — not a plain async function — when you need memoization, cancellation, and reactive pending/error states. Pending/error are first-class reactive values that compose naturally with `match()`.
+
+```ts
+const data = createTask(async (oldValue, abort) => {
+  const response = await fetch(`/api/users/${id.get()}`, { signal: abort })
+  if (!response.ok) throw new Error('Failed to fetch')
+  return response.json()
+})
+id.set(2) // cancels the previous fetch automatically
+```
+
+## createComputed (sync-or-async auto-detect)
+
+```ts
+createComputed<T extends {}>(
+  callback: TaskCallback<T>, options?: ComputedOptions<T>): Task<T>
+createComputed<T extends {}>(
+  callback: MemoCallback<T>, options?: ComputedOptions<T>): Memo<T>
+```
+
+Returns a `Memo` or a `Task` depending on whether `callback` is `async`. The decision is made **statically, before the callback ever runs** (it inspects the function prototype, not the return value). This is why a non-`async` function returning a Promise becomes a `Memo` that later throws `PromiseValueError` — the library already committed to the sync path.
+
+`createMemo` and `createTask` are the explicit primitives; `createComputed` is the convenience dispatcher. Le Truc uses `createComputed` internally where the sync/async split is data-dependent.
+
+## Store
+
+```ts
+createStore<T extends UnknownRecord>(obj: T, options?: { watched?, equals?, guard? }): Store<T>
+```
+
+Reactive object — each property (recursively, for nested plain objects) becomes its own signal, exposed via a Proxy: `user.age.get()`, `user.age.update(v => v + 1)`. Direct proxy mutation (`user.age = 30`, `delete user.x`, `Object.defineProperty`) throws `InvalidStoreMutationError` — use `.set()`/`.update()` on the property signal, `.add(key, value)`/`.remove(key)` for dynamic keys, or `store.set(nextObj)` to replace the whole object. Iterate keys reactively with `.keys()`; access by key with `.byKey(key)`.
+
+## List
+
+```ts
+createList<T extends {}>(arr: readonly T[], options?: { keyConfig?, watched?, equals?, guard? }): List<T>
+```
+
+Reactive array with stable keys and per-item signals. `keyConfig` is either a string prefix (`'item-'` → `'item-0'`, `'item-1'`) or `(item: T) => string`. Keys are stable across sort/reorder. API: `.at(i)`, `.byKey(key)`, `.indexOfKey(key)`, `.keyAt(i)`, reactive `.length`, `.keys()`, `.add(item)` (returns the new key), `.remove(key)`, `.replace(key, value)`, `.sort()`, `.splice(...)`.
+
+**Update items with `.replace(key, value)`, not `.byKey(key).set()`.** `.byKey()` returns the item's own signal; calling `.set()` on it updates that item but is **not guaranteed** to reach subscribers that read the list structurally (`.keys()`, `.length`, the iterator). `.replace()` propagates to all subscribers regardless of how they subscribed. Unlike Store, deeply nested item properties are **not** converted to individual signals.
+
+Duplicate keys throw `DuplicateKeyError`.
+
+## Collection
+
+```ts
+createCollection<T extends {}, S extends Signal<T> = Signal<T>>(
+  watched: (applyChanges: (changes: { add?, change?, remove? }) => void) => Cleanup,
+  options?: { keyConfig?, value?, equals?, guard? }
+): Collection<T>
+
+list.deriveCollection<R>(fn: (sourceValue: T) => R | Promise<R>): Collection<R>
+collection.deriveCollection<R>(fn: (sourceValue: T) => R | Promise<R>): Collection<R>
+```
+
+Keyed collection with item-level memoization. Two flavors:
+
+- **Externally-driven** (`createCollection`) — receives data from WebSocket / SSE / etc. via `applyChanges({ add, change, remove })`. Same lazy `watched` lifecycle as Sensor.
+- **Derived** (`.deriveCollection()` on a `List` or `Collection`) — sync or async mapping; chains compose data pipelines. **Watched propagation:** reading a derived collection activates the source's `watched` callback through every chain level; mutations on the source don't tear down the watcher; cleanup cascades upstream when the last effect disposes.
+
+## Slot
+
+```ts
+createSlot<T extends {}>(
+  initialSignal: Signal<T> | SlotDescriptor<T>,
+  options?: SignalOptions<T>
+): Slot<T>
+
+type SlotDescriptor<T extends {}> = { get(): T; set?(next: T): void }
+```
+
+Stable reactive source that delegates to a **swappable** backing signal. Subscribers link to the slot itself, so `replace(nextSignal)` invalidates them without breaking edges. The slot object is shaped as an `Object.defineProperty` descriptor (`get`/`set`/`configurable`/`enumerable`) — install it directly as a property. A Slot is a **forwarding layer, not a value owner**: `set()` delegates to the backing signal (throws `ReadonlySignalError` if read-only), and **`update()` is intentionally absent**. `replace<U extends T>(next)` allows narrowing; `current()` returns the delegated signal.
+
+This is what backs every le-truc reactive prop, and what `pass()` swaps — see `../le-truc-dev/references/cause-effect-integration.md`.
+
+## Effect
+
+```ts
+createEffect(fn: () => MaybeCleanup): Cleanup
+```
+
+Terminal side-effect sink — consumes values, produces none. Runs immediately on creation, re-runs on dep changes, executed during the flush phase after updates batch. The returned function disposes the effect. If `fn` returns a function, it is registered as cleanup and runs **before each re-run and on dispose**.
+
+**Owner behavior:** `createEffect` registers its cleanup on `activeOwner` *if one exists* — it does **not** itself throw on a missing owner. A top-level effect with no owner is never auto-disposed and will leak until you call the returned `dispose()`. (Only `match()` throws `RequiredOwnerError` outright.) Always create effects inside a `createScope` unless you intend to own the lifetime manually.
+
+An effect that writes to a signal it also reads re-runs until the graph settles; graphs that never settle (unconditional self-increment, two effects writing each other's deps) throw `EffectConvergenceError` after a bounded number of flush passes.
+
+## Coordination utilities
+
+| Utility | Signature | Effect |
+|---|---|---|
+| `createScope(fn, { root })` | `(fn: () => MaybeCleanup, options?: ScopeOptions) => Cleanup` | Creates an ownership scope; returns a `dispose`. `{ root: true }` detaches from the parent owner — the `dispose` is the sole teardown. |
+| `batch(fn)` | `(fn: () => void) => void` | Defers effect propagation until the outermost batch completes. Nestable. |
+| `untrack(fn)` | `<T>(fn: () => T) => T` | Suppresses **dependency tracking** (reads don't link edges) for `fn`; still runs inside the current owner. |
+| `unown(fn)` | `<T>(fn: () => T) => T` | Suppresses **ownership registration** (scopes/effects inside don't attach to the current owner) for `fn`; deps still tracked. |
+| `match(signal(s), handlers)` | see SKILL.md | Routes on signal state (`nil`> `err` > `stale` > `ok`); **requires an active owner**. |
+
+`untrack` and `unown` answer different questions — see `pitfalls.md` for the distinction.
+
+## Polymorphic factories & predicates
+
+- `createSignal(value)` — infers type from value: array → `List`, plain object → `Store`, async fn → `Task`, sync fn → `Memo`, else → `State`. Returns the input unchanged if it's already a signal.
+- `createMutableSignal(value)` — same but restricted to `State`/`Store`/`List`; throws `InvalidSignalValueError` for functions or read-only signals.
+- Predicates: `isSignal` (all 9 types), `isMutableSignal` (`State`/`Store`/`List`), `isState`, `isMemo`, `isTask`, `isSensor`, `isSlot`, `isStore`, `isList`, `isCollection`, `isComputed` (`Memo`/`Task`).
+
+All type checks use `Symbol.toStringTag` branding (`isSignalOfType`), not structural duck-typing.
