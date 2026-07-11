@@ -1,5 +1,5 @@
 /** @see https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md */
-import { type Memo } from '@zeix/cause-effect';
+import { type Signal } from '@zeix/cause-effect';
 import type { ComponentProps, EffectDescriptor } from '../types';
 /**
  * A context key.
@@ -43,11 +43,11 @@ type ProvideContextsHelper<P extends ComponentProps> = (contexts: Array<keyof P>
 /**
  * The `requestContext` helper type in `FactoryContext`.
  *
- * Dispatches a `context-request` event from the host and returns a `Memo<T>`
+ * Dispatches a `context-request` event from the host and returns a `Signal<T>`
  * that tracks the provider's value. Falls back to `fallback` if no provider responds.
  * For use inside `expose()` as a property initializer.
  */
-type RequestContextHelper = <T extends {}>(context: Context<string, () => T>, fallback: T) => Memo<T>;
+type RequestContextHelper = <T extends {}>(context: Context<string, () => T>, fallback: T) => Signal<T>;
 declare const CONTEXT_REQUEST = "context-request";
 /**
  * Class for context-request events
@@ -108,8 +108,33 @@ declare const makeProvideContexts: <P extends ComponentProps>(host: HTMLElement 
  * Create a `requestContext` helper bound to a specific component host.
  *
  * Returns a function that dispatches a `context-request` event from `host`
- * and wraps the resolved getter in a `Memo<T>`. If no provider responds,
- * the Memo returns `fallback`. For use inside `expose()` as a property initializer.
+ * and returns a `Slot<T>` that tracks the provider's value. If no provider
+ * responds, the Slot delegates to a `State` holding `fallback`. For use inside
+ * `expose()` as a property initializer.
+ *
+ * A provider may miss the initial synchronous dispatch if its
+ * `customElements.define()` runs after the consumer's (bundle ordering,
+ * code-splitting, deferred script) or its own `provideContexts` listener hasn't
+ * activated yet (descriptors activate after dependency resolution — see ADR
+ * 0007). The request is therefore re-dispatched once on a microtask (covers
+ * providers upgraded later in the same bundle) and once after
+ * {@link CONTEXT_RETRY_DELAY} (covers providers whose effect activation waited
+ * on `customElements.whenDefined()`). When a provider answers late, the Slot's
+ * backing signal is swapped (`slot.replace(createMemo(getter))`), so the
+ * consumer's value switches from `fallback` to the provided value reactively —
+ * no consumer code change required. If no provider ever answers, `fallback` is
+ * permanent for that connection (and a `DEV_MODE` warning names the context
+ * and host).
+ *
+ * The `Slot` is the same primitive `pass()` uses to override a child
+ * component's reactive property: the backing signal is overridable, and
+ * `replace()` invalidates all downstream subscribers without breaking existing
+ * edges. The Slot's computation reads the delegated signal inside a tracking
+ * context, so both the late-binding swap and the provider's live value updates
+ * propagate from a single `slot.get()`.
+ *
+ * Resolved once per component lifetime, at first connect: `connectedCallback`
+ * re-activates cached descriptors on reconnect but does not re-run the factory.
  *
  * @since 2.0
  * @param {HTMLElement & P} host - The component host element

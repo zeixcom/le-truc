@@ -19,8 +19,9 @@ This file is auto-generated. Do not edit manually.
 | [0012](0012-deprecate-unrestricted-write-short-forms-in-pass.md) | Deprecate Unrestricted-Write Short Forms in pass() | ✅ Accepted | M11, S4 |
 | [0013](0013-cem-plugin-for-le-truc-factory-pattern.md) | Custom Elements Manifest via `@custom-elements-manifest/analyzer` Plugin | ✅ Accepted | M13 |
 | [0014](0014-keyed-per-element-scopes-for-memo-collections.md) | Keyed Per-Element Scopes for Memo-Driven Collections | ✅ Accepted | M5, M6, M7, M11, §1, §4 |
+| [0015](0015-late-provider-retry-in-requestcontext.md) | Late-Provider Retry in requestContext | ✅ Accepted | M10 |
 
 ---
 
 **Last updated:** 2026-07-11
-**Total ADRs:** 14 (excluding template)
+**Total ADRs:** 15 (excluding template)
