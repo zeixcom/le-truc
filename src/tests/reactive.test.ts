@@ -605,7 +605,7 @@ describe('each — element leave/enter disposal', () => {
 		expect(log).toEqual(['enter:a', 'leave:a', 'enter:b', 'leave:b'])
 	})
 
-	test("keeps an element's scope behaviorally equivalent across a re-run when it stays in the collection", () => {
+	test("keeps a surviving element's scope alive when another element enters", () => {
 		const elA = { id: 'a' } as unknown as Element
 		const elB = { id: 'b' } as unknown as Element
 		const source = createState<Element[]>([elA])
@@ -619,20 +619,62 @@ describe('each — element leave/enter disposal', () => {
 		const cleanup = createScope(() => descriptor())
 		expect(log).toEqual(['enter:a'])
 
-		// elA stays, elB is added — `each()` rebuilds scopes for the whole
-		// current set on every run (no diffing), so elA's scope is torn down
-		// and recreated too, not just elB's.
+		// elA stays, elB is added — scopes are keyed by element identity, so
+		// only the entering elB gets a new scope; elA's scope (and everything
+		// registered on it) survives untouched.
 		source.set([elA, elB])
-		expect(log).toEqual(['enter:a', 'leave:a', 'enter:a', 'enter:b'])
+		expect(log).toEqual(['enter:a', 'enter:b'])
 
+		// Disposing the component scope still tears down every live
+		// per-element scope, including the root-scoped surviving ones.
 		cleanup?.()
-		expect(log).toEqual([
-			'enter:a',
-			'leave:a',
-			'enter:a',
-			'enter:b',
-			'leave:a',
-			'leave:b',
-		])
+		expect(log).toEqual(['enter:a', 'enter:b', 'leave:a', 'leave:b'])
+	})
+})
+
+describe('makePass — keyed per-element lifecycle for Memo targets', () => {
+	const makeTarget = (name: string) => {
+		const originalState = createState(`original-${name}`)
+		const slot = createSlot(originalState)
+		const target = { localName: 'my-target' } as unknown as HTMLElement &
+			ComponentProps
+		getSignals(target)['greeting'] = slot
+		Object.defineProperty(target, 'greeting', slot)
+		return { target, slot, originalState }
+	}
+
+	test("keeps a surviving target's injected slot signal identity-stable when another target enters", () => {
+		const hostState = createState('host-value')
+		const host = { greeting: hostState } as unknown as HTMLElement &
+			ComponentProps
+		const a = makeTarget('a')
+		const b = makeTarget('b')
+
+		const source = createState<(HTMLElement & ComponentProps)[]>([a.target])
+		const memo = createMemo(() => source.get())
+
+		const pass = makePass(host)
+		const descriptor = pass(memo, { greeting: () => hostState.get() })
+
+		const cleanup = createScope(() => descriptor())
+		expect((a.target as any).greeting).toBe('host-value')
+		const injectedIntoA = a.slot.current()
+
+		// b enters — a's scope must survive: its slot still holds the very
+		// same injected signal instance, not a freshly created computed.
+		source.set([a.target, b.target])
+		expect(a.slot.current()).toBe(injectedIntoA)
+		expect((b.target as any).greeting).toBe('host-value')
+
+		// b leaves — only b's slot is restored; a is still untouched.
+		source.set([a.target])
+		expect(a.slot.current()).toBe(injectedIntoA)
+		expect(b.slot.current()).toBe(b.originalState)
+		expect((b.target as any).greeting).toBe('original-b')
+
+		// Component disconnect restores the surviving target's original signal.
+		cleanup?.()
+		expect(a.slot.current()).toBe(a.originalState)
+		expect((a.target as any).greeting).toBe('original-a')
 	})
 })

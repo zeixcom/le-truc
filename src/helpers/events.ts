@@ -1,6 +1,5 @@
 import {
 	batch,
-	createEffect,
 	createScope,
 	isMemo,
 	isRecord,
@@ -9,6 +8,7 @@ import {
 import { throttle } from '../scheduler'
 import type { ComponentProps, EffectDescriptor, Falsy } from '../types'
 import { DEV_MODE, elementName } from '../util'
+import { keyedScopes } from './reactive'
 
 /* === Types === */
 
@@ -125,7 +125,7 @@ const attachListener = <P extends ComponentProps, E extends Element>(
 	type: string,
 	handler: OnEventHandler<P, Event, E>,
 	options: AddEventListenerOptions,
-): EffectDescriptor => {
+): (() => void) => {
 	const rawListener = (e: Event) => {
 		const result = handler(e, target)
 		if (!isRecord(result)) return
@@ -217,14 +217,10 @@ const makeOn = <P extends ComponentProps>(
 							`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`,
 						)
 					}
-					// Fall back to per-element listeners with per-element lifecycle
-					return createEffect(() => {
-						for (const el of target.get()) {
-							createScope(() => {
-								return attachListener(host, el, type, handler, options)
-							})
-						}
-					})
+					// Fall back to per-element listeners with keyed per-element lifecycle
+					return keyedScopes(target, el =>
+						attachListener(host, el, type, handler, options),
+					)
 				}
 
 				// Event delegation: one listener on the query root

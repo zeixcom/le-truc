@@ -154,6 +154,56 @@ const activateResult = (result: FactoryResult): void => {
 }
 
 /**
+ * Drive per-element scopes from a `Memo<E[]>` with element-identity keying.
+ *
+ * Elements entering the collection get a scope created by `mount`; elements
+ * leaving get exactly their own scope disposed. Surviving elements are
+ * untouched across re-runs. All remaining scopes are disposed when the
+ * enclosing owner (component scope) is disposed.
+ *
+ * Two ownership details are load-bearing:
+ * - Per-element scopes use `{ root: true }` — a plain `createScope` inside the
+ *   effect would register its dispose on the effect, which runs all cleanups
+ *   before every re-run, silently reproducing wholesale rebuild.
+ * - The outer `createScope` wrapper registers on the component scope; its
+ *   returned cleanup is the only thing that tears down still-live root-scoped
+ *   element scopes on component disconnect.
+ *
+ * @since 2.2
+ * @param {Memo<E[]>} memo - Memo of the current element collection
+ * @param {(element: E) => MaybeCleanup} mount - Called once per entering element inside its scope; a returned cleanup registers on that scope
+ */
+const keyedScopes = <E extends object>(
+	memo: Memo<E[]>,
+	mount: (element: E) => MaybeCleanup,
+): void => {
+	const scopes = new Map<E, () => void>()
+	createScope(() => {
+		createEffect(() => {
+			const current = memo.get()
+			const currentSet = new Set(current)
+			// Dispose leaving elements before mounting entering ones, preserving
+			// teardown-before-setup ordering for one-mutation replacements.
+			for (const [el, dispose] of Array.from(scopes)) {
+				if (!currentSet.has(el)) {
+					dispose()
+					scopes.delete(el)
+				}
+			}
+			for (const el of current) {
+				if (scopes.has(el)) continue
+				const dispose = createScope(() => mount(el), { root: true })
+				scopes.set(el, dispose)
+			}
+		})
+		return () => {
+			for (const dispose of scopes.values()) dispose()
+			scopes.clear()
+		}
+	})
+}
+
+/**
  * Resolve a `Reactive` value to a Signal usable by `match`.
  *
  * - String: look up the signal in the component's signal map; fall back to a computed
@@ -393,10 +443,8 @@ const makePass = <P extends ComponentProps>(
 		return () => {
 			if (!target) return
 			if (isMemo<(HTMLElement & Q)[]>(target)) {
-				// Memo target: per-element lifecycle via createEffect
-				createEffect(() => {
-					for (const el of target.get()) createScope(() => swapSlots(el, props))
-				})
+				// Memo target: keyed per-element lifecycle
+				keyedScopes(target, el => swapSlots(el, props))
 			} else {
 				// Single element: swap slots directly in current scope
 				swapSlots(target, props)
@@ -423,14 +471,10 @@ function each<E extends Element>(
 	callback: (element: E) => FactoryResult | EffectDescriptor | Falsy,
 ): EffectDescriptor {
 	return () => {
-		createEffect(() => {
-			for (const element of memo.get()) {
-				createScope(() => {
-					const result = callback(element)
-					if (Array.isArray(result)) activateResult(result)
-					else if (typeof result === 'function') result()
-				})
-			}
+		keyedScopes(memo, element => {
+			const result = callback(element)
+			if (Array.isArray(result)) activateResult(result)
+			else if (typeof result === 'function') result()
 		})
 	}
 }
@@ -441,6 +485,7 @@ export {
 	each,
 	type FactoryResult,
 	type Falsy,
+	keyedScopes,
 	makePass,
 	makeWatch,
 	type PassedProps,

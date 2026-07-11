@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
-import { createMemo, type Memo } from '@zeix/cause-effect'
+import { createMemo, createState, type Memo } from '@zeix/cause-effect'
 import { makeOn } from '../helpers/events'
 // `mock.module` mutates the live module namespace in place, so a captured
 // `import * as ns` reference reflects whatever the mock last set — it is NOT
@@ -221,6 +221,50 @@ describe('makeOn Memo target dispatch', () => {
 		expect(el2._listeners.has('focus')).toBe(true)
 		// No delegated listener on the root for a non-bubbling type
 		expect(host._listeners.has('focus')).toBe(false)
+	})
+
+	test('per-element fallback keeps surviving elements’ listeners when the collection changes', () => {
+		const makeSpiedElement = () => {
+			const el = makeFakeElement()
+			const counts = { added: 0, removed: 0 }
+			const originalAdd = el.addEventListener.bind(el)
+			const originalRemove = el.removeEventListener.bind(el)
+			el.addEventListener = (type: string, listener: EventListener) => {
+				counts.added++
+				originalAdd(type, listener)
+			}
+			el.removeEventListener = (type: string, listener: EventListener) => {
+				counts.removed++
+				originalRemove(type, listener)
+			}
+			return Object.assign(el, { _counts: counts })
+		}
+
+		const el1 = makeSpiedElement()
+		const el2 = makeSpiedElement()
+		const el3 = makeSpiedElement()
+		const host = makeHost()
+		const source = createState<Element[]>([el1, el2])
+		const memo = createMemo(() => source.get())
+
+		const on = makeOn(host)
+		on(memo, 'focus', () => {})()
+
+		expect(el1._counts).toEqual({ added: 1, removed: 0 })
+		expect(el2._counts).toEqual({ added: 1, removed: 0 })
+
+		// el3 enters — the surviving el1/el2 listeners are not detached or
+		// re-attached; only el3 gets exactly one new listener.
+		source.set([el1, el2, el3])
+		expect(el1._counts).toEqual({ added: 1, removed: 0 })
+		expect(el2._counts).toEqual({ added: 1, removed: 0 })
+		expect(el3._counts).toEqual({ added: 1, removed: 0 })
+
+		// el2 leaves — only its listener is removed.
+		source.set([el1, el3])
+		expect(el1._counts).toEqual({ added: 1, removed: 0 })
+		expect(el2._counts).toEqual({ added: 1, removed: 1 })
+		expect(el3._counts).toEqual({ added: 1, removed: 0 })
 	})
 
 	test('per-element fallback logs a DEV_MODE warning pointing at each() + on()', () => {
