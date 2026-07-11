@@ -2222,122 +2222,6 @@ var makeElementQueries = (host) => {
   return [{ first, all }, resolveDependencies];
 };
 
-// src/helpers/events.ts
-var PASSIVE_EVENTS = new Set([
-  "scroll",
-  "resize",
-  "mousewheel",
-  "touchstart",
-  "touchmove",
-  "wheel"
-]);
-var NON_BUBBLING_EVENTS = new Set([
-  "focus",
-  "blur",
-  "scroll",
-  "resize",
-  "load",
-  "unload",
-  "error",
-  "toggle",
-  "mouseenter",
-  "mouseleave",
-  "pointerenter",
-  "pointerleave",
-  "abort",
-  "canplay",
-  "canplaythrough",
-  "durationchange",
-  "emptied",
-  "ended",
-  "loadeddata",
-  "loadedmetadata",
-  "loadstart",
-  "pause",
-  "play",
-  "playing",
-  "progress",
-  "ratechange",
-  "seeked",
-  "seeking",
-  "stalled",
-  "suspend",
-  "timeupdate",
-  "volumechange",
-  "waiting"
-]);
-var attachListener = (host, target, type, handler, options) => {
-  const rawListener = (e) => {
-    const result = handler(e, target);
-    if (!isRecord(result))
-      return;
-    batch(() => {
-      for (const [key, value] of Object.entries(result)) {
-        host[key] = value;
-      }
-    });
-  };
-  const listener = options.passive ? throttle(rawListener) : rawListener;
-  target.addEventListener(type, listener, options);
-  return () => {
-    target.removeEventListener(type, listener);
-    listener.cancel?.();
-  };
-};
-var makeOn = (host) => {
-  function on(target, type, handler, options = {}) {
-    return () => {
-      if (!target)
-        return;
-      if (!("passive" in options)) {
-        options = { ...options, passive: PASSIVE_EVENTS.has(type) };
-      }
-      if (isMemo(target)) {
-        if (NON_BUBBLING_EVENTS.has(type)) {
-          if (DEV_MODE) {
-            console.warn(`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
-          }
-          return createEffect(() => {
-            for (const el of target.get()) {
-              createScope(() => {
-                return attachListener(host, el, type, handler, options);
-              });
-            }
-          });
-        }
-        const root = host.shadowRoot ?? host;
-        const rawListener = (e) => {
-          const path = e.composedPath();
-          for (const el of target.get()) {
-            if (path.includes(el)) {
-              const result = handler(e, el);
-              if (!isRecord(result))
-                break;
-              batch(() => {
-                for (const [key, value] of Object.entries(result)) {
-                  host[key] = value;
-                }
-              });
-              break;
-            }
-          }
-        };
-        const listener = options.passive ? throttle(rawListener) : rawListener;
-        createScope(() => {
-          root.addEventListener(type, listener, options);
-          return () => {
-            root.removeEventListener(type, listener);
-            listener.cancel?.();
-          };
-        });
-        return;
-      }
-      createScope(() => attachListener(host, target, type, handler, options));
-    };
-  }
-  return on;
-};
-
 // src/internal.ts
 var componentSignals = new WeakMap;
 var getSignals = (el) => {
@@ -2357,6 +2241,32 @@ var activateResult = (result) => {
     else if (descriptor)
       descriptor();
   }
+};
+var keyedScopes = (memo, mount) => {
+  const scopes = new Map;
+  createScope(() => {
+    createEffect(() => {
+      const current = memo.get();
+      const currentSet = new Set(current);
+      for (const [el, dispose] of Array.from(scopes)) {
+        if (!currentSet.has(el)) {
+          dispose();
+          scopes.delete(el);
+        }
+      }
+      for (const el of current) {
+        if (scopes.has(el))
+          continue;
+        const dispose = createScope(() => mount(el), { root: true });
+        scopes.set(el, dispose);
+      }
+    });
+    return () => {
+      for (const dispose of scopes.values())
+        dispose();
+      scopes.clear();
+    };
+  });
 };
 var toSignal = (host, source) => {
   if (isFunction(source))
@@ -2441,10 +2351,7 @@ var makePass = (host) => {
       if (!target)
         return;
       if (isMemo(target)) {
-        createEffect(() => {
-          for (const el of target.get())
-            createScope(() => swapSlots(el, props));
-        });
+        keyedScopes(target, (el) => swapSlots(el, props));
       } else {
         swapSlots(target, props);
       }
@@ -2454,19 +2361,125 @@ var makePass = (host) => {
 };
 function each(memo, callback) {
   return () => {
-    createEffect(() => {
-      for (const element of memo.get()) {
-        createScope(() => {
-          const result = callback(element);
-          if (Array.isArray(result))
-            activateResult(result);
-          else if (typeof result === "function")
-            result();
-        });
-      }
+    keyedScopes(memo, (element) => {
+      const result = callback(element);
+      if (Array.isArray(result))
+        activateResult(result);
+      else if (typeof result === "function")
+        result();
     });
   };
 }
+
+// src/helpers/events.ts
+var PASSIVE_EVENTS = new Set([
+  "scroll",
+  "resize",
+  "mousewheel",
+  "touchstart",
+  "touchmove",
+  "wheel"
+]);
+var NON_BUBBLING_EVENTS = new Set([
+  "focus",
+  "blur",
+  "scroll",
+  "resize",
+  "load",
+  "unload",
+  "error",
+  "toggle",
+  "mouseenter",
+  "mouseleave",
+  "pointerenter",
+  "pointerleave",
+  "abort",
+  "canplay",
+  "canplaythrough",
+  "durationchange",
+  "emptied",
+  "ended",
+  "loadeddata",
+  "loadedmetadata",
+  "loadstart",
+  "pause",
+  "play",
+  "playing",
+  "progress",
+  "ratechange",
+  "seeked",
+  "seeking",
+  "stalled",
+  "suspend",
+  "timeupdate",
+  "volumechange",
+  "waiting"
+]);
+var attachListener = (host, target, type, handler, options) => {
+  const rawListener = (e) => {
+    const result = handler(e, target);
+    if (!isRecord(result))
+      return;
+    batch(() => {
+      for (const [key, value] of Object.entries(result)) {
+        host[key] = value;
+      }
+    });
+  };
+  const listener = options.passive ? throttle(rawListener) : rawListener;
+  target.addEventListener(type, listener, options);
+  return () => {
+    target.removeEventListener(type, listener);
+    listener.cancel?.();
+  };
+};
+var makeOn = (host) => {
+  function on(target, type, handler, options = {}) {
+    return () => {
+      if (!target)
+        return;
+      if (!("passive" in options)) {
+        options = { ...options, passive: PASSIVE_EVENTS.has(type) };
+      }
+      if (isMemo(target)) {
+        if (NON_BUBBLING_EVENTS.has(type)) {
+          if (DEV_MODE) {
+            console.warn(`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
+          }
+          return keyedScopes(target, (el) => attachListener(host, el, type, handler, options));
+        }
+        const root = host.shadowRoot ?? host;
+        const rawListener = (e) => {
+          const path = e.composedPath();
+          for (const el of target.get()) {
+            if (path.includes(el)) {
+              const result = handler(e, el);
+              if (!isRecord(result))
+                break;
+              batch(() => {
+                for (const [key, value] of Object.entries(result)) {
+                  host[key] = value;
+                }
+              });
+              break;
+            }
+          }
+        };
+        const listener = options.passive ? throttle(rawListener) : rawListener;
+        createScope(() => {
+          root.addEventListener(type, listener, options);
+          return () => {
+            root.removeEventListener(type, listener);
+            listener.cancel?.();
+          };
+        });
+        return;
+      }
+      createScope(() => attachListener(host, target, type, handler, options));
+    };
+  }
+  return on;
+};
 
 // src/types.ts
 var PARSER_BRAND = Symbol("parser");

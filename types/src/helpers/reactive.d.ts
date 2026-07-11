@@ -78,6 +78,27 @@ type PassHelper<P extends ComponentProps> = {
  */
 declare const activateResult: (result: FactoryResult) => void;
 /**
+ * Drive per-element scopes from a `Memo<E[]>` with element-identity keying.
+ *
+ * Elements entering the collection get a scope created by `mount`; elements
+ * leaving get exactly their own scope disposed. Surviving elements are
+ * untouched across re-runs. All remaining scopes are disposed when the
+ * enclosing owner (component scope) is disposed.
+ *
+ * Two ownership details are load-bearing:
+ * - Per-element scopes use `{ root: true }` — a plain `createScope` inside the
+ *   effect would register its dispose on the effect, which runs all cleanups
+ *   before every re-run, silently reproducing wholesale rebuild.
+ * - The outer `createScope` wrapper registers on the component scope; its
+ *   returned cleanup is the only thing that tears down still-live root-scoped
+ *   element scopes on component disconnect.
+ *
+ * @since 2.2
+ * @param {Memo<E[]>} memo - Memo of the current element collection
+ * @param {(element: E) => MaybeCleanup} mount - Called once per entering element inside its scope; a returned cleanup registers on that scope
+ */
+declare const keyedScopes: <E extends object>(memo: Memo<E[]>, mount: (element: E) => MaybeCleanup) => void;
+/**
  * Create a `watch` helper bound to a specific component host.
  *
  * `watch` wraps `match` to create a reactive effect driven by explicitly declared
@@ -128,4 +149,4 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => Pas
  * @since 2.0
  */
 declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult | EffectDescriptor | Falsy): EffectDescriptor;
-export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, type WatchHelper, };
+export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, keyedScopes, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, type WatchHelper, };
