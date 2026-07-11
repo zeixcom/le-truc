@@ -1,6 +1,6 @@
 {
 	"name": "@zeix/le-truc",
-	"version": "2.1.0",
+	"version": "2.2.0",
 	"description": "Le Truc - the thing for type-safe reactive web components",
 	"keywords": [
 		"Le Truc",
@@ -23,16 +23,34 @@
 	"author": "Esther Brunner",
 	"type": "module",
 	"main": "index.js",
-	"module": "index.ts",
 	"types": "types/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./types/index.d.ts",
+			"bun": "./index.ts",
+			"default": "./index.js"
+		},
+		"./package.json": "./package.json",
+		"./custom-elements.json": "./custom-elements.json"
+	},
+	"files": [
+		"index.js",
+		"index.ts",
+		"src",
+		"!src/tests",
+		"types",
+		"!types/src/tests",
+		"custom-elements.json",
+		"SECURITY.md"
+	],
+	"customElements": "custom-elements.json",
 	"directories": {
 		"doc": "docs",
 		"example": "examples"
 	},
 	"scripts": {
-		"build:prod": "bun build index.ts --outdir ./ --minify --define process.env.DEV_MODE=false --sourcemap=external",
-		"build:dev": "BUN_ENV=development bun build index.ts --outfile index.dev.js --define process.env.DEV_MODE='\"true\"'",
-		"build": "bun run build:prod && bun run build:dev && bunx tsc -p tsconfig.build.json && bun run lint",
+		"build:prod": "bun build index.ts --outdir ./ --define process.env.DEV_MODE=false",
+		"build": "bun run build:prod && bunx tsc -p tsconfig.build.json && bun run lint",
 		"build:docs": "bun ./server/build.ts",
 		"build:docs:watch": "bun ./server/build.ts --watch",
 		"build:examples:js": "bun run build && bun build examples/main.ts --outdir docs/assets --target browser --define process.env.DEV_MODE='\"true\"' --minify",
@@ -50,26 +68,38 @@
 		"test:server": "bun test server/tests",
 		"test:server:unit": "bun test server/tests --bail",
 		"test:server:integration": "bun test server/tests --timeout 10000",
-		"test:server:watch": "bun test server/tests --watch"
+		"test:server:watch": "bun test server/tests --watch",
+		"check:links": "bun scripts/check-doc-links.ts",
+		"check:size": "bun test test/regression-bundle.test.ts",
+		"build:cem": "cem analyze && bun run verify:cem",
+		"verify:cem": "bun run scripts/verify-cem.ts"
 	},
 	"dependencies": {
-		"@zeix/cause-effect": "^1.3.4"
+		"@zeix/cause-effect": "^1.4.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.4.14",
+		"@biomejs/biome": "^2.5.3",
+		"@custom-elements-manifest/analyzer": "^0.11.0",
 		"@markdoc/markdoc": "^0.5.7",
 		"@playwright/test": "^1.61.1",
 		"@types/bun": "^1.3.14",
 		"@types/culori": "^4.0.1",
-		"@types/node": "^25.9.4",
+		"@types/node": "^26.1.1",
+		"@zeix/cem-plugin-le-truc": "^0.2.1",
 		"culori": "^4.0.2",
 		"dompurify": "^3.4.11",
 		"lightningcss-cli": "^1.32.0",
-		"shiki": "^4.2.0",
-		"typedoc": "^0.28.19",
-		"typedoc-plugin-markdown": "^4.12.0"
+		"shiki": "^4.3.1",
+		"typedoc": "^0.28.20",
+		"typedoc-plugin-markdown": "^4.12.0",
+		"typescript": "^6.0.3"
 	},
 	"peerDependencies": {
-		"typescript": "^6.0.2"
+		"typescript": ">=5.8.0"
+	},
+	"peerDependenciesMeta": {
+		"typescript": {
+			"optional": true
+		}
 	}
 }

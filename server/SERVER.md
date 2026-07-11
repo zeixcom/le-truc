@@ -87,7 +87,8 @@ The `docsMarkdown` signal has a multi-stage pipeline:
 ```
 sources (List<FileInfo>)
   → processed (Memo: frontmatter extraction, metadata)
-  │     └─▶ mdMirrorEffect     → docs/**/*.md  (clean Markdown mirrors)
+  │     ├─▶ mdMirrorEffect         → docs/**/*.md  (clean Markdown mirrors)
+  │     └─▶ llmsFullManifestEffect → docs/llms-full.txt
   → pageInfos (Memo: page navigation data)
   │     ├─▶ menuEffect         → docs-src/includes/menu.html
   │     ├─▶ sitemapEffect      → docs/sitemap.xml
@@ -106,6 +107,7 @@ Each effect factory calls `createEffect(() => match([...signals], { ok, err }))`
 | `apiPagesEffect` | `apiMarkdown.sources` | `docs/api/**/*.html` | Markdoc + Shiki (HTML fragments) |
 | `cssEffect` | `docsStyles`, `componentStyles` | `docs/assets/main.css` | LightningCSS (`bunx lightningcss`) |
 | `jsEffect` | `docsScripts`, `libraryScripts`, `componentScripts` | `docs/assets/main.js` + sourcemap | `bun build` |
+| `staticAssetsEffect` | — (one-shot copy, not watched) | `docs/**` (static assets from `docs-src/static/`) | File copy |
 | `serviceWorkerEffect` | All style + script sources | `docs/sw.js` | Template generation |
 | `examplesEffect` | `componentMarkdown`, `componentMarkup` | `docs/examples/<name>.html` | Markdoc + Shiki |
 | `mocksEffect` | `componentMocks.sources` | `docs/test/<component>/mocks/*` | File copy |
@@ -115,6 +117,7 @@ Each effect factory calls `createEffect(() => match([...signals], { ok, err }))`
 | `sitemapEffect` | `docsMarkdown.pageInfos` | `docs/sitemap.xml` | XML template |
 | `mdMirrorEffect` | `docsMarkdown.processed` | `docs/**/*.md` | Regex tag stripping |
 | `llmsManifestEffect` | `docsMarkdown.pageInfos` | `docs/llms.txt` | Template generation |
+| `llmsFullManifestEffect` | `docsMarkdown.processed` | `docs/llms-full.txt` | Curated concatenation |
 
 ### Build Outputs
 
@@ -139,7 +142,8 @@ docs/
 │   └── <component>/mocks/ # Copied mock files for component tests
 ├── <page>.html           # Documentation pages (with alternate link in <head>)
 ├── <page>.md             # Clean Markdown mirrors (agent-readable)
-├── llms.txt              # AI crawler entry point
+├── llms.txt              # AI crawler entry point (link index)
+├── llms-full.txt         # AI crawler full content (concatenated reference)
 ├── sw.js                 # Service worker
 └── sitemap.xml           # SEO sitemap
 docs-src/
@@ -212,11 +216,27 @@ This is injected via the `'alternate-link'` key in `applyTemplate()`'s `replacem
 
 Section name mapping: no section → "Core Reference"; `api` → "API Reference"; `components` → "Component Library"; `blog` → "Blog"; `examples` → "Examples"; other → capitalized section name. Section order follows `SECTION_ORDER` in `llms-manifest.ts`; unknown sections fall after the known ones, sorted alphabetically.
 
-### Path Constant
+### Full Content (`llmsFullManifestEffect`)
+
+**File:** `server/effects/llms-full-manifest.ts`  
+**Depends on:** `docsMarkdown.processed`  
+**Output:** `docs/llms-full.txt`
+
+While `llms.txt` is a link index, `llms-full.txt` is the **authoritative concatenated content** file defined by the llms.txt spec — the single document AI tools prefer over scrape-and-summarize. `generateLlmsFullTxt()` concatenates a curated subset of documentation in a fixed order:
+
+1. `README.md` (read from repo root, plain Markdown — passed through verbatim)
+2. Curated narrative pages from `docs-src/pages/`: `index`, `getting-started`, `components`, `styling`, `data-flow` — each run through `stripMarkdocTags()` (same transform as `mdMirrorEffect`)
+3. `ARCHITECTURE.md` (repo root, plain Markdown)
+4. `AGENTS.md` (repo root, plain Markdown — includes the factory form and the "Surprising Behaviors" gotchas)
+
+Sections are delimited by `---` and headed with an H1. Blog posts, `about.md`, `examples.md`, and the per-symbol TypeDoc API files are excluded to keep the file focused on authoring guidance. Narrative pages have Markdoc tags stripped; standalone root docs pass through unchanged (they are plain Markdown). Standalone docs are read from `ROOT` via `Bun.file().text()` inside the effect.
+
+### Path Constants
 
 | Constant | Path | Description |
 |----------|------|-------------|
-| `LLMS_TXT_FILE` | `docs/llms.txt` | Output path for the AI crawler manifest |
+| `LLMS_TXT_FILE` | `docs/llms.txt` | Output path for the AI crawler link index |
+| `LLMS_FULL_TXT_FILE` | `docs/llms-full.txt` | Output path for the AI crawler full content |
 
 ## Markdoc Content System
 
@@ -418,6 +438,7 @@ server/tests/
 │   ├── api.test.ts                # parseGlobals, generateApiIndexMarkdown, sortCategories
 │   ├── blog-pages.test.ts         # getBlogVariables, generateBlogExcerpts, computeBlogPrevNext
 │   ├── examples.test.ts           # processExample
+│   ├── llms-full-manifest.test.ts # generateLlmsFullTxt
 │   ├── llms-manifest.test.ts      # generateLlmsTxt
 │   ├── md-mirror.test.ts          # stripMarkdocTags, serializeFrontmatter
 │   ├── mocks.test.ts              # getMockOutputPath
@@ -462,6 +483,7 @@ server/tests/
 | `effects/api.test.ts` | `parseGlobals`, `generateApiIndexMarkdown`, `sortCategories` |
 | `effects/blog-pages.test.ts` | `getBlogVariables`, `generateBlogExcerpts`, `computeBlogPrevNext` |
 | `effects/examples.test.ts` | `processExample` |
+| `effects/llms-full-manifest.test.ts` | `generateLlmsFullTxt` |
 | `effects/llms-manifest.test.ts` | `generateLlmsTxt` |
 | `effects/md-mirror.test.ts` | `stripMarkdocTags`, `serializeFrontmatter` |
 | `effects/mocks.test.ts` | `getMockOutputPath` |

@@ -34,7 +34,7 @@ test.describe('v2.0 factory form: expose() + empty return array', () => {
 		expect(result.count).toBe(42)
 	})
 
-	test('observedAttributes is empty in v1.1 factory form', async ({ page }) => {
+	test('observedAttributes is empty in v2.x factory form', async ({ page }) => {
 		const observed = await page.evaluate(() =>
 			Array.from(
 				(customElements.get('test-expose') as any)?.observedAttributes ?? [],

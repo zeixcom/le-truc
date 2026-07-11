@@ -34,6 +34,6 @@ Need to watch for DOM changes to matched elements from `all(selector)`, but avoi
 
 ## Related
 
-- Requirements: [M7](REQUIREMENTS.md#m7-dynamic-element-collections-via-all)
-- Architecture: [The UI Query System](ARCHITECTURE.md#the-ui-query-system), [`all(selector, required?)`](ARCHITECTURE.md#allselector-required)
+- Requirements: [M7](../REQUIREMENTS.md#m7-dynamic-element-collections-via-all)
+- Architecture: [Query System](../ARCHITECTURE.md#query-system), [`first(selector)` / `all(selector)`](../ARCHITECTURE.md#firstselector--allselector)
 - Supersedes: None

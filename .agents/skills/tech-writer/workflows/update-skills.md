@@ -19,9 +19,9 @@ Skill files have three distinct layers — fix only what is wrong:
 
 | Layer | File | Fix when |
 |---|---|---|
-| SKILL.md | `.vibe/skills/<name>/SKILL.md` | Intake options, routing, scope declaration, or workflow index are wrong |
-| Reference | `.vibe/skills/<name>/references/*.md` | A fact about an API, type, or behavior is incorrect or missing |
-| Workflow | `.vibe/skills/<name>/workflows/*.md` | A process step leads the agent to wrong output |
+| SKILL.md | `.agents/skills/<name>/SKILL.md` | Intake options, routing, scope declaration, or workflow index are wrong |
+| Reference | `.agents/skills/<name>/references/*.md` | A fact about an API, type, or behavior is incorrect or missing |
+| Workflow | `.agents/skills/<name>/workflows/*.md` | A process step leads the agent to wrong output |
 
 ### Step 4: Apply surgical edits
 

@@ -33,6 +33,6 @@ The factory function returns a flat `FactoryResult` array of these effect descri
 
 ## Related
 
-- Requirements: [M8](REQUIREMENTS.md#m8-dependency-resolution-for-nested-custom-elements)
-- Architecture: [connectedCallback — initialization](ARCHITECTURE.md#connectedcallback--initialization), [The Effect System](ARCHITECTURE.md#the-effect-system)
+- Requirements: [M8](../REQUIREMENTS.md#m8-dependency-resolution-for-nested-custom-elements)
+- Architecture: [Lifecycle](../ARCHITECTURE.md#lifecycle), [Effect Descriptors](../ARCHITECTURE.md#effect-descriptors)
 - Supersedes: None

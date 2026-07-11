@@ -1,3 +1,2756 @@
-var x4=Object.getPrototypeOf(async()=>{});function A(Z){return typeof Z==="function"}function $Z(Z){return A(Z)&&Object.getPrototypeOf(Z)===x4}function PZ(Z){return A(Z)&&Object.getPrototypeOf(Z)!==x4}function _(Z,$){return Z!=null&&Z[Symbol.toStringTag]===$}function T(Z){return Z!==null&&typeof Z==="object"&&Object.getPrototypeOf(Z)===Object.prototype}function FZ(Z){if(typeof Z==="string")return`"${Z}"`;if(Z!=null&&typeof Z==="object")try{return JSON.stringify(Z)}catch{return String(Z)}return String(Z)}class _Z extends Error{constructor(Z){super(`[${Z}] Circular dependency detected`);this.name="CircularDependencyError"}}class YZ extends TypeError{constructor(Z){super(`[${Z}] Signal value cannot be null or undefined`);this.name="NullishSignalValueError"}}class JZ extends Error{constructor(Z){super(`[${Z}] Signal value is unset`);this.name="UnsetSignalValueError"}}class UZ extends TypeError{constructor(Z,$){super(`[${Z}] Signal value ${FZ($)} is invalid`);this.name="InvalidSignalValueError"}}class pZ extends TypeError{constructor(Z,$){super(`[${Z}] Callback ${FZ($)} is invalid`);this.name="InvalidCallbackError"}}class fZ extends Error{constructor(Z){super(`[${Z}] Signal is read-only`);this.name="ReadonlySignalError"}}class TZ extends Error{constructor(Z){super(`[${Z}] Active owner is required`);this.name="RequiredOwnerError"}}class bZ extends TypeError{constructor(Z){super(`[${Z}] Callback returned a Promise — use an async callback to create a Task instead`);this.name="PromiseValueError"}}class l extends Error{constructor(Z,$,J){super(`[${Z}] Could not add key "${$}"${J!=null?` with value ${JSON.stringify(J)}`:""} because it already exists`);this.name="DuplicateKeyError"}}function Y(Z,$,J){if($==null)throw new YZ(Z);if(J&&!J($))throw new UZ(Z,$)}function OZ(Z,$){if($==null)throw new JZ(Z)}function v(Z,$,J=A){if(!J($))throw new pZ(Z,$)}var XZ="State",t="Memo",jZ="Task",WZ="Sensor",E="List",n="Collection",BZ="Store",QZ="Slot",k=0,qZ=1,N=2,SZ=4,y=8,P=null,m=null,vZ=[],I=0,B4=!1,d=(Z,$)=>Z===$,dZ=(Z,$)=>!1,r4=(Z,$)=>Q4(Z,$,new WeakSet),Q4=(Z,$,J)=>{if(Object.is(Z,$))return!0;if(typeof Z!==typeof $)return!1;if(Z==null||typeof Z!=="object"||$==null||typeof $!=="object")return!1;if(J.has(Z))return!0;J.add(Z);try{let X=Array.isArray(Z);if(X!==Array.isArray($))return!1;if(X){let j=Z,Q=$;if(j.length!==Q.length)return!1;for(let U=0;U<j.length;U++)if(!Q4(j[U],Q[U],J))return!1;return!0}if(Z instanceof Date&&$ instanceof Date)return Z.getTime()===$.getTime();if(Z instanceof RegExp&&$ instanceof RegExp)return Z.source===$.source&&Z.flags===$.flags;if(T(Z)&&T($)){let j=Object.keys(Z);if(j.length!==Object.keys($).length)return!1;for(let Q of j){if(!(Q in $))return!1;if(!Q4(Z[Q],$[Q],J))return!1}return!0}return!1}finally{J.delete(Z)}},a=(Z,$)=>r4(Z,$);function t4(Z,$){let J=$.sourcesTail;if(J){let X=$.sources;while(X){if(X===Z)return!0;if(X===J)break;X=X.nextSource}}return!1}function b(Z,$){let J=$.sourcesTail;if(J?.source===Z)return;let X=null,j=$.flags&SZ;if(j){if(X=J?J.nextSource:$.sources,X?.source===Z){$.sourcesTail=X;return}}let Q=Z.sinksTail;if(Q?.sink===$&&(!j||t4(Q,$)))return;let U={source:Z,sink:$,nextSource:X,prevSink:Q,nextSink:null};if($.sourcesTail=Z.sinksTail=U,J)J.nextSource=U;else $.sources=U;if(Q)Q.nextSink=U;else Z.sinks=U}function n4(Z){let{source:$,nextSource:J,nextSink:X,prevSink:j}=Z;if(X)X.prevSink=j;else $.sinksTail=j;if(j)j.nextSink=X;else $.sinks=X;if(!$.sinks){if($.stop)$.stop(),$.stop=void 0;if("sources"in $&&$.sources){let Q=$;Q.sourcesTail=null,CZ(Q),Q.flags|=N}}return J}function CZ(Z){let $=Z.sourcesTail,J=$?$.nextSource:Z.sources;while(J)J=n4(J);if($)$.nextSource=null;else Z.sources=null}function O(Z,$=N){let J=Z.flags;if("sinks"in Z){if((J&(N|qZ))>=$)return;if(Z.flags=J|$,"controller"in Z&&Z.controller)Z.controller.abort(),Z.controller=void 0;for(let X=Z.sinks;X;X=X.nextSink)O(X.sink,qZ)}else{if((J&(N|qZ))>=$)return;let X=J&(N|qZ);if(Z.flags=$,!X)vZ.push(Z)}}function s(Z,$){if(Z.equals(Z.value,$))return;Z.value=$;for(let J=Z.sinks;J;J=J.nextSink)O(J.sink);if(I===0)L()}function MZ(Z,$){if(!Z.cleanup)Z.cleanup=$;else if(Array.isArray(Z.cleanup))Z.cleanup.push($);else Z.cleanup=[Z.cleanup,$]}function cZ(Z){if(!Z.cleanup)return;if(Array.isArray(Z.cleanup))for(let $=0;$<Z.cleanup.length;$++)Z.cleanup[$]();else Z.cleanup();Z.cleanup=null}function a4(Z){let $=P;P=Z,Z.sourcesTail=null,Z.flags=SZ;let J=!1;try{let X=Z.fn(Z.value);if(X instanceof Promise)throw new bZ(t);if(Z.error||!Z.equals(X,Z.value))Z.value=X,Z.error=void 0,J=!0}catch(X){J=!0,Z.error=X instanceof Error?X:Error(String(X))}finally{P=$,CZ(Z)}if(J){for(let X=Z.sinks;X;X=X.nextSink)if(X.sink.flags&qZ)X.sink.flags|=N}Z.flags=k}function e4(Z){Z.controller?.abort();let $=new AbortController;Z.controller=$,Z.error=void 0;let J=P;P=Z,Z.sourcesTail=null,Z.flags=SZ;let X;try{X=Z.fn(Z.value,$.signal)}catch(j){Z.controller=void 0,Z.error=j instanceof Error?j:Error(String(j)),Z.flags=k,s(Z.pendingNode,!1);return}finally{P=J,CZ(Z)}s(Z.pendingNode,!0),X.then((j)=>{if($.signal.aborted)return;Z.controller=void 0,h(()=>{if(Z.error||!Z.equals(j,Z.value)){Z.value=j,Z.error=void 0;for(let Q=Z.sinks;Q;Q=Q.nextSink)O(Q.sink)}s(Z.pendingNode,!1)})},(j)=>{if($.signal.aborted)return;Z.controller=void 0;let Q=j instanceof Error?j:Error(String(j));h(()=>{if(!Z.error||Q.name!==Z.error.name||Q.message!==Z.error.message){Z.error=Q;for(let U=Z.sinks;U;U=U.nextSink)O(U.sink)}s(Z.pendingNode,!1)})}),Z.flags=k}function H4(Z){cZ(Z);let $=P,J=m;P=m=Z,Z.sourcesTail=null,Z.flags=SZ;try{let X=Z.fn();if(typeof X==="function")MZ(Z,X)}finally{P=$,m=J,CZ(Z)}Z.flags=k}function w(Z){if(Z.flags&qZ)for(let $=Z.sources;$;$=$.nextSource){if("fn"in $.source)w($.source);if(Z.flags&N)break}if(Z.flags&SZ)throw new _Z("controller"in Z?jZ:("value"in Z)?t:"Effect");if(Z.flags&N)if("controller"in Z)e4(Z);else if("value"in Z)a4(Z);else H4(Z);else Z.flags=k}function L(){if(B4)return;B4=!0;try{for(let Z=0;Z<vZ.length;Z++){let $=vZ[Z];if($.flags&(N|qZ))w($)}vZ.length=0}finally{B4=!1}}function h(Z){I++;try{Z()}finally{if(I--,I===0)L()}}function f(Z){let $=P;P=null;try{return Z()}finally{P=$}}function g(Z,$){let J=m,X={cleanup:null};m=X;let j=()=>cZ(X);try{let Q=Z();if(typeof Q==="function")MZ(X,Q);return j}finally{if(m=J,!$?.root&&J)MZ(J,j)}}function R4(Z){let $=m;m=null;try{return Z()}finally{m=$}}function r(Z,$){return $?()=>{if(P){if(!Z.sinks)Z.stop=$();b(Z,P)}}:()=>{if(P)b(Z,P)}}function c(Z,$){Y(XZ,Z,$?.guard);let J={value:Z,sinks:null,sinksTail:null,equals:$?.equals??d,guard:$?.guard};return{[Symbol.toStringTag]:XZ,get(){if(P)b(J,P);return J.value},set(X){Y(XZ,X,J.guard),s(J,X)},update(X){v(XZ,X);let j=X(J.value);Y(XZ,j,J.guard),s(J,j)}}}function IZ(Z){return _(Z,XZ)}function uZ(Z,$){if(Z.length!==$.length)return!1;for(let J=0;J<Z.length;J++)if(Z[J]!==$[J])return!1;return!0}function z4(Z){let $=0,J=typeof Z==="function";return[typeof Z==="string"?()=>`${Z}${$++}`:J?(X)=>Z(X)||String($++):()=>String($++),J]}function Z$(Z,$,J,X,j){let Q={},U={},q={},G=[],H=!1,D=Math.min(Z.length,$.length);for(let B=0;B<D;B++){let V=J[B];if(G.push(V),!j(Z[B],$[B]))U[V]=$[B],H=!0}for(let B=D;B<$.length;B++){let V=$[B],W=X(V);G.push(W),Q[W]=V,H=!0}for(let B=D;B<Z.length;B++)q[J[B]]=null,H=!0;return{add:Q,change:U,remove:q,newKeys:G,changed:H}}function $$(Z,$,J,X,j,Q){if(!j)return Z$(Z,$,J,X,Q);let U={},q={},G={},H=[],D=!1,B=new Map;for(let W=0;W<Z.length;W++){let M=J[W],z=Z[W];if(M&&z!==void 0)B.set(M,z)}let V=new Set;for(let W=0;W<$.length;W++){let M=$[W];Y(`${E} item at index ${W}`,M);let z=X(M);if(V.has(z))throw new l(E,z,M);if(H.push(z),V.add(z),!B.has(z))U[z]=M,D=!0;else if(!Q(B.get(z),M))q[z]=M,D=!0}for(let[W]of B)if(!V.has(W))G[W]=null,D=!0;if(!D&&!uZ(J,H))D=!0;return{add:U,change:q,remove:G,newKeys:H,changed:D}}function VZ(Z,$){Y(E,Z,Array.isArray);let J=new Map,X=[],[j,Q]=z4($?.keyConfig),U=$?.itemEquals??a,q=$?.createItem??((W)=>c(W,{equals:U})),G=()=>{let W=[];for(let M of X){let z=J.get(M)?.get();if(z!==void 0)W.push(z)}return W},H={fn:G,value:Z,flags:N,sources:null,sourcesTail:null,sinks:null,sinksTail:null,equals:a,error:void 0},D=(W)=>{let M=!1;for(let K in W.add){let F=W.add[K];Y(`${E} item for key "${K}"`,F),J.set(K,q(F)),M=!0}let z=!1;for(let K in W.change){z=!0;break}if(z)h(()=>{for(let K in W.change){let F=W.change[K];Y(`${E} item for key "${K}"`,F);let i=J.get(K);if(i)i.set(F)}});for(let K in W.remove){J.delete(K);let F=X.indexOf(K);if(F!==-1)X.splice(F,1);M=!0}if(M)H.flags|=y;return W.changed},B=r(H,$?.watched);for(let W=0;W<Z.length;W++){let M=Z[W];if(M==null)throw new YZ(`${E} item ${W}`);let z=X[W];if(!z)z=j(M),X[W]=z;J.set(z,q(M))}H.value=Z,H.flags=0;let V={[Symbol.toStringTag]:E,[Symbol.isConcatSpreadable]:!0,*[Symbol.iterator](){B();for(let W of X){let M=J.get(W);if(M)yield M}},get length(){return B(),X.length},get(){if(B(),H.sources){if(H.flags){let W=H.flags&y;if(H.value=f(G),W){if(H.flags=N,w(H),H.error)throw H.error}else H.flags=k}}else if(w(H),H.error)throw H.error;return H.value},set(W){let M=H.flags&N?G():H.value,z=$$(M,W,X,j,Q,U);if(z.changed){X=z.newKeys,D(z),H.flags|=N;for(let K=H.sinks;K;K=K.nextSink)O(K.sink);if(I===0)L()}},update(W){V.set(W(V.get()))},at(W){B();let M=X[W];return M!==void 0?J.get(M):void 0},keys(){return B(),X.values()},byKey(W){return B(),J.get(W)},keyAt(W){return B(),X[W]},indexOfKey(W){return B(),X.indexOf(W)},add(W){let M=j(W);if(J.has(M))throw new l(E,M,W);X.push(M),Y(`${E} item for key "${M}"`,W),J.set(M,q(W)),H.flags|=N|y;for(let z=H.sinks;z;z=z.nextSink)O(z.sink);if(I===0)L();return M},remove(W){let M=typeof W==="number"?X[W]:W;if(M===void 0)return;if(J.delete(M)){let K=typeof W==="number"?W:X.indexOf(M);if(K>=0)X.splice(K,1);H.flags|=N|y;for(let F=H.sinks;F;F=F.nextSink)O(F.sink);if(I===0)L()}},replace(W,M){let z=J.get(W);if(!z)return;if(Y(`${E} item for key "${W}"`,M),U(f(()=>z.get()),M))return;if(h(()=>{z.set(M),H.flags|=N;for(let K=H.sinks;K;K=K.nextSink)O(K.sink)}),I===0)L()},sort(W){let M=[];for(let K of X){let F=J.get(K)?.get();if(F!==void 0)M.push([K,F])}M.sort(A(W)?(K,F)=>W(K[1],F[1]):(K,F)=>String(K[1]).localeCompare(String(F[1])));let z=[];for(let[K]of M)z.push(K);if(!uZ(X,z)){X=z,H.flags|=N;for(let K=H.sinks;K;K=K.nextSink)O(K.sink);if(I===0)L()}},splice(W,M,...z){let K=X.length,F=W<0?Math.max(0,K+W):Math.min(W,K),i=Math.max(0,Math.min(M??Math.max(0,K-Math.max(0,F)),K-F)),NZ={},C={},x=!1;for(let p=0;p<i;p++){let ZZ=F+p,W4=X[ZZ];if(W4){let I4=J.get(W4);if(I4)C[W4]=I4.get(),x=!0}}let R=X.slice(0,F),F4={},Y4=!1,O4=!1;for(let p of z){let ZZ=j(p);if(ZZ in C)delete C[ZZ],F4[ZZ]=p,O4=!0;else if(J.has(ZZ))throw new l(E,ZZ,p);else NZ[ZZ]=p,Y4=!0;R.push(ZZ)}R.push(...X.slice(F+i));let C4=Y4||x||O4;if(C4){D({add:NZ,change:F4,remove:C,changed:C4}),X=R,H.flags|=N;for(let p=H.sinks;p;p=p.nextSink)O(p.sink);if(I===0)L()}return Object.values(C)},deriveCollection(W){return iZ(V,W)}};return V}function xZ(Z){return _(Z,E)}function u(Z,$){if(v(t,Z,PZ),$?.value!==void 0)Y(t,$.value,$?.guard);let J={fn:Z,value:$?.value,flags:N,sources:null,sourcesTail:null,sinks:null,sinksTail:null,equals:$?.equals??d,error:void 0,stop:void 0},X=$?.watched,j=r(J,X?()=>X(()=>{if(O(J),I===0)L()}):void 0);return{[Symbol.toStringTag]:t,get(){if(j(),w(J),J.error)throw J.error;return OZ(t,J.value),J.value}}}function HZ(Z){return _(Z,t)}function GZ(Z,$){if(v(jZ,Z,$Z),$?.value!==void 0)Y(jZ,$.value,$?.guard);let J={value:!1,sinks:null,sinksTail:null,equals:d},X={fn:Z,value:$?.value,sources:null,sourcesTail:null,sinks:null,sinksTail:null,flags:N,equals:$?.equals??d,controller:void 0,error:void 0,stop:void 0,pendingNode:J},j=$?.watched,Q=r(X,j?()=>j(()=>{if(O(X),I===0)L()}):void 0),U=r(J);return{[Symbol.toStringTag]:jZ,get(){if(Q(),w(X),X.error)throw X.error;return OZ(jZ,X.value),X.value},isPending(){return U(),X.pendingNode.value},abort(){X.controller?.abort(),X.controller=void 0,s(X.pendingNode,!1)}}}function KZ(Z){return _(Z,jZ)}function iZ(Z,$){v(n,$);let J=$Z($),X=new Map,j=[],Q=(W)=>{let M=J?GZ(async(z,K)=>{let F=f(()=>Z.byKey(W));if(!F)return z;let i=F.get();if(i==null)return z;return $(i,K)}):u(()=>{let z=f(()=>Z.byKey(W));if(!z)return;let K=z.get();if(K==null)return;return $(K)});X.set(W,M)};function U(W){if(!uZ(j,W)){let M=new Set(W);for(let z of j)if(!M.has(z))X.delete(z);for(let z of W)if(!X.has(z))Q(z);j=W,H.flags|=y}}function q(){U(Array.from(Z.keys()));let W=[];for(let M of j)try{let z=X.get(M)?.get();if(z!=null)W.push(z)}catch(z){if(!(z instanceof JZ))throw z}return W}let H={fn:q,value:[],flags:N,sources:null,sourcesTail:null,sinks:null,sinksTail:null,equals:(W,M)=>{if(W.length!==M.length)return!1;for(let z=0;z<W.length;z++)if(W[z]!==M[z])return!1;return!0},error:void 0};function D(){if(H.sources){if(H.flags)if(H.value=f(q),H.flags&y){if(H.flags=N,w(H),H.error)throw H.error}else H.flags=k}else if(H.sinks){if(w(H),H.error)throw H.error}else H.value=f(q)}let B=Array.from(f(()=>Z.keys()));for(let W of B)Q(W);j=B;let V={[Symbol.toStringTag]:n,[Symbol.isConcatSpreadable]:!0,*[Symbol.iterator](){if(P)b(H,P);D();for(let W of j){let M=X.get(W);if(M)yield M}},get length(){if(P)b(H,P);return D(),j.length},keys(){if(P)b(H,P);return D(),j.values()},get(){if(P)b(H,P);return D(),H.value},at(W){if(P)b(H,P);D();let M=j[W];return M!==void 0?X.get(M):void 0},byKey(W){if(P)b(H,P);return D(),X.get(W)},keyAt(W){if(P)b(H,P);return D(),j[W]},indexOfKey(W){if(P)b(H,P);return D(),j.indexOf(W)},deriveCollection(W){return iZ(V,W)}};return V}function A4(Z,$){let J=$?.value??[];if(J.length)Y(n,J,Array.isArray);v(n,Z,PZ);let X=new Map,j=[],Q=new Map,[U,q]=z4($?.keyConfig),G=(z)=>Q.get(z)??(q?U(z):void 0),H=$?.createItem??((z)=>c(z,{equals:$?.itemEquals??a}));function D(){let z=[];for(let K of j)try{let F=X.get(K)?.get();if(F!=null)z.push(F)}catch(F){if(!(F instanceof JZ))throw F}return z}let B={fn:D,value:J,flags:N,sources:null,sourcesTail:null,sinks:null,sinksTail:null,equals:dZ,error:void 0};for(let z of J){let K=U(z);X.set(K,H(z)),Q.set(z,K),j.push(K)}B.value=J,B.flags=N;let V=(z)=>{let{add:K,change:F,remove:i}=z;if(!K?.length&&!F?.length&&!i?.length)return;let NZ=!1;h(()=>{if(K){let C=new Map;for(let x of K){let R=U(x);if(X.has(R)||C.has(R))throw new l(n,R,x);C.set(R,x)}for(let[x,R]of C){if(X.set(x,H(R)),Q.set(R,x),!j.includes(x))j.push(x);NZ=!0}}if(F)for(let C of F){let x=G(C);if(!x)continue;let R=X.get(x);if(R&&IZ(R))Q.delete(R.get()),R.set(C),Q.set(C,x)}if(i)for(let C of i){let x=G(C);if(!x)continue;Q.delete(C),X.delete(x);let R=j.indexOf(x);if(R!==-1)j.splice(R,1);NZ=!0}B.flags=N|(NZ?y:0);for(let C=B.sinks;C;C=C.nextSink)O(C.sink)})},W=r(B,()=>Z(V)),M={[Symbol.toStringTag]:n,[Symbol.isConcatSpreadable]:!0,*[Symbol.iterator](){W();for(let z of j){let K=X.get(z);if(K)yield K}},get length(){return W(),j.length},keys(){return W(),j.values()},get(){if(W(),B.sources){if(B.flags){let z=B.flags&y;if(B.value=f(D),z){if(B.flags=N,w(B),B.error)throw B.error}else B.flags=k}}else if(w(B),B.error)throw B.error;return B.value},at(z){W();let K=j[z];return K!==void 0?X.get(K):void 0},byKey(z){return W(),X.get(z)},keyAt(z){return W(),j[z]},indexOfKey(z){return W(),j.indexOf(z)},deriveCollection(z){return iZ(M,z)}};return M}function w4(Z){return _(Z,n)}function e(Z){v("Effect",Z);let $={fn:Z,flags:N,sources:null,sourcesTail:null,cleanup:null},J=()=>{cZ($),$.fn=void 0,$.flags=k,$.sourcesTail=null,CZ($)};if(m)MZ(m,J);return H4($),J}function RZ(Z,$){if(!m)throw new TZ("match");let J=!Array.isArray(Z),X=J?[Z]:Z,{nil:j,stale:Q}=$,U=J?(V)=>$.ok(V[0]):(V)=>$.ok(V),q=J&&$.err?(V)=>$.err(V[0]):$.err??console.error,G,H=!1,D=Array(X.length);for(let V=0;V<X.length;V++)try{D[V]=X[V].get()}catch(W){if(W instanceof JZ){H=!0;continue}if(!G)G=[];G.push(W instanceof Error?W:Error(String(W)))}let B;try{if(H)B=j?.();else if(G)B=q(G);else if(Q&&(J?KZ(X[0])&&X[0].isPending():X.some((V)=>KZ(V)&&V.isPending())))B=Q();else B=U(D)}catch(V){B=q([V instanceof Error?V:Error(String(V))])}if(typeof B==="function")return B;if(B instanceof Promise){let V=m,W=new AbortController;MZ(V,()=>W.abort()),B.then((M)=>{if(!W.signal.aborted&&typeof M==="function")MZ(V,M)}).catch((M)=>{q([M instanceof Error?M:Error(String(M))])})}}function L4(Z,$){if(v(WZ,Z,PZ),$?.value!==void 0)Y(WZ,$.value,$?.guard);let J={value:$?.value,sinks:null,sinksTail:null,equals:$?.equals??d,guard:$?.guard,stop:void 0};return{[Symbol.toStringTag]:WZ,get(){if(P){if(!J.sinks)J.stop=Z((X)=>{Y(WZ,X,J.guard),s(J,X)});b(J,P)}return OZ(WZ,J.value),J.value}}}function _4(Z){return _(Z,WZ)}function J$(Z,$){let J={},X={},j={},Q=!1,U=Object.keys(Z),q=Object.keys($);for(let G of q)if(G in Z){if(!a(Z[G],$[G]))X[G]=$[G],Q=!0}else J[G]=$[G],Q=!0;for(let G of U)if(!(G in $))j[G]=void 0,Q=!0;return{add:J,change:X,remove:j,changed:Q}}function AZ(Z,$){Y(BZ,Z,T);let J=new Map,X=(B,V)=>{if(Y(`${BZ} for key "${B}"`,V),Array.isArray(V))J.set(B,VZ(V));else if(T(V))J.set(B,AZ(V));else J.set(B,c(V))},j=(B)=>{if(Array.isArray(B))return"list";if(T(B))return"store";return"state"},Q=(B)=>{if(xZ(B))return"list";if(EZ(B))return"store";return"state"},U=()=>{let B={};for(let[V,W]of J)B[V]=W.get();return B},q={fn:U,value:Z,flags:N,sources:null,sourcesTail:null,sinks:null,sinksTail:null,equals:a,error:void 0},G=(B)=>{let V=!1;for(let M in B.add)X(M,B.add[M]),V=!0;let W=!1;for(let M in B.change){W=!0;break}if(W)h(()=>{for(let M in B.change){let z=B.change[M];Y(`${BZ} for key "${M}"`,z);let K=J.get(M);if(K)if(j(z)!==Q(K))X(M,z),V=!0;else K.set(z)}});for(let M in B.remove)J.delete(M),V=!0;if(V)q.flags|=y;return B.changed},H=r(q,$?.watched);for(let B of Object.keys(Z))X(B,Z[B]);let D={[Symbol.toStringTag]:BZ,[Symbol.isConcatSpreadable]:!1,*[Symbol.iterator](){H();for(let[B,V]of J)yield[B,V]},keys(){return H(),J.keys()},byKey(B){return J.get(B)},get(){if(H(),q.sources){if(q.flags){let B=q.flags&y;if(q.value=f(U),B){if(q.flags=N,w(q),q.error)throw q.error}else q.flags=k}}else if(w(q),q.error)throw q.error;return q.value},set(B){let V=q.flags&N?f(U):q.value,W=J$(V,B);if(G(W)){q.flags|=N;for(let M=q.sinks;M;M=M.nextSink)O(M.sink);if(I===0)L()}},update(B){D.set(B(D.get()))},add(B,V){if(J.has(B))throw new l(BZ,B,V);X(B,V),q.flags|=N|y;for(let W=q.sinks;W;W=W.nextSink)O(W.sink);if(I===0)L();return B},remove(B){if(J.delete(B)){q.flags|=N|y;for(let W=q.sinks;W;W=W.nextSink)O(W.sink);if(I===0)L()}}};return new Proxy(D,{get(B,V){if(V in B)return Reflect.get(B,V);if(typeof V!=="symbol")return B.byKey(V)},has(B,V){if(V in B)return!0;return B.byKey(String(V))!==void 0},ownKeys(B){return Array.from(B.keys())},getOwnPropertyDescriptor(B,V){if(V in B)return Reflect.getOwnPropertyDescriptor(B,V);if(typeof V==="symbol")return;let W=B.byKey(String(V));return W?{enumerable:!0,configurable:!0,writable:!0,value:W}:void 0}})}function EZ(Z){return _(Z,BZ)}var X$=new Set([XZ,t,jZ,WZ,QZ,E,n,BZ]);function wZ(Z,$){return $Z(Z)?GZ(Z,$):u(Z,$)}function f4(Z){if(zZ(Z))return Z;if(Z==null)throw new UZ("createSignal",Z);if($Z(Z))return GZ(Z);if(A(Z))return u(Z);if(Array.isArray(Z)&&Z.every(($)=>$!=null))return VZ(Z);if(T(Z))return AZ(Z);return c(Z)}function T4(Z){if(yZ(Z))return Z;if(Z==null||A(Z)||zZ(Z))throw new UZ("createMutableSignal",Z);if(Array.isArray(Z)&&Z.every(($)=>$!=null))return VZ(Z);if(T(Z))return AZ(Z);return c(Z)}function b4(Z){return HZ(Z)||KZ(Z)}function zZ(Z){return Z!=null&&X$.has(Z[Symbol.toStringTag])}function yZ(Z){return IZ(Z)||EZ(Z)||xZ(Z)}var U4=new WeakSet;function S4(Z){if(zZ(Z))return!0;return Z!==null&&typeof Z==="object"&&"get"in Z&&typeof Z.get==="function"}function oZ(Z,$){Y(QZ,Z,S4);let J=Z,X=$?.guard,j={fn:()=>J.get(),value:void 0,flags:N,sources:null,sourcesTail:null,sinks:null,sinksTail:null,equals:$?.equals??d,error:void 0},Q=()=>{if(P)b(j,P);if(w(j),j.error)throw j.error;return j.value},U=(G)=>{if(U4.has(j))throw Error("[Slot] Circular delegation detected in set()");U4.add(j);try{if(DZ(J))return void J.set(G);if("set"in J&&typeof J.set==="function")Y(QZ,G,X),J.set(G);else throw new fZ(QZ)}finally{U4.delete(j)}},q=(G)=>{Y(QZ,G,S4),J=G,j.flags|=N;for(let H=j.sinks;H;H=H.nextSink)O(H.sink);if(I===0)L()};return{[Symbol.toStringTag]:QZ,configurable:!0,enumerable:!0,get:Q,set:U,replace:q,current:()=>J}}function DZ(Z){return _(Z,QZ)}var q4=new Set,E4=new WeakMap,lZ=new Set,M4,j$=()=>{M4=void 0;let Z=Array.from(q4);q4.clear();for(let J of Z)try{E4.get(J)?.()}catch(X){console.error("[le-truc scheduler]",X)}let $=Array.from(lZ);lZ.clear();for(let J of $)try{J()}catch(X){console.error("[le-truc scheduler]",X)}},y4=()=>{if(!M4)M4=requestAnimationFrame(j$)},mZ=(Z,$)=>{E4.set(Z,$),q4.add(Z),y4()},sZ=(Z,$)=>{let J=!1,X,j=()=>{J=!1,Z(...X)},Q=(...U)=>{if(X=U,J)return;J=!0,lZ.add(j),y4()};return Q.cancel=()=>{if(J)lZ.delete(j),J=!1},$?.addEventListener("abort",Q.cancel,{once:!0}),Q};var W$=["type","src","async","defer","nomodule","crossorigin","integrity","nonce","referrerpolicy","fetchpriority"],B$=(Z)=>{let $=String(Z).replace(/[\t\n\r\f\v]/g,"").trim();if(/^(javascript|data|vbscript):/i.test($))return!1;if(/^(mailto|tel):/i.test($))return!0;if(/^[\\/][\\/]/.test($))return!1;if($.includes("://"))try{let J=new URL($);return["http:","https:","ftp:"].includes(J.protocol)}catch{return!1}return!0},m4=(Z,$,J)=>{if(/^on/i.test($))throw Error(`setAttribute: blocked unsafe attribute name '${$}' on ${Z.localName} — event handler attributes are not allowed`);if(J=String(J).trim(),!B$(J))throw Error(`setAttribute: blocked unsafe value for '${$}' on <${Z.localName}>: '${J}'`);Z.setAttribute($,J)},Q$=(Z)=>Z.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"),k4=(Z,$)=>{Array.from(Z.childNodes).filter((J)=>J.nodeType!==Node.COMMENT_NODE).forEach((J)=>{J.remove()}),Z.append(document.createTextNode($))},H$=(Z,$=!1)=>$?(J)=>k4(Z,String(J)):(J)=>{Z.textContent=String(J)},z$=(Z,$)=>(J)=>{Z[$]=J},U$=(Z,$)=>(J)=>{Z.classList.toggle($,Boolean(J))},q$=(Z)=>($)=>{Z.hidden=!$},M$=(Z,$,J=!1)=>({ok:(X)=>{if(typeof X==="boolean")Z.toggleAttribute($,X);else if(J)Z.setAttribute($,X);else m4(Z,$,X)},nil:()=>{Z.removeAttribute($)}}),V$=(Z,$)=>({ok:(J)=>{Z.style.setProperty($,J)},nil:()=>{Z.style.removeProperty($)}}),G$=(Z,$={})=>{let J=()=>{if(Z.shadowRoot)Z.shadowRoot.replaceChildren(document.createElement("slot"));else Z.replaceChildren()};return{ok:(X)=>{if(!X){mZ(Z,J);return}let{shadowRootMode:j,allowScripts:Q,sanitize:U}=$;if(j&&!Z.shadowRoot)Z.attachShadow({mode:j});let q=Z.shadowRoot||Z,G=U?U(X):X;mZ(Z,()=>{try{q.innerHTML=G}catch(H){queueMicrotask(()=>{throw H});return}if(Q)q.querySelectorAll("script").forEach((H)=>{let D=document.createElement("script");for(let B of W$){let V=H.getAttribute(B);if(V!==null)D.setAttribute(B,V)}if(!H.hasAttribute("src"))D.appendChild(document.createTextNode(H.textContent??""));q.appendChild(D),H.remove()})})},nil:()=>mZ(Z,J)}};var LZ=typeof process<"u"&&!1==="true",V4=(Z)=>Z.localName.includes("-"),G4=(Z)=>V4(Z)&&Z.matches(":not(:defined)"),S=(Z)=>{if(!Z)return"<unknown>";let $=Z.id?`#${Z.id}`:"",J=Z.classList?.length?`.${Array.from(Z.classList).join(".")}`:"";return`<${Z.localName}${$}${J}>`};class rZ extends TypeError{constructor(Z){super(`Invalid component name "${Z}". Custom element names must contain a hyphen, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens.`);this.name="InvalidComponentNameError"}}class tZ extends TypeError{constructor(Z,$,J){super(`Invalid property name "${$}" for component <${Z}>. ${J}`);this.name="InvalidPropertyNameError"}}class kZ extends Error{constructor(Z,$,J){super(`Missing required element <${$}> in component ${S(Z)}. ${J}`);this.name="MissingElementError"}}class nZ extends Error{constructor(Z,$){super(`Timeout waiting for: [${$.join(", ")}] in component ${S(Z)}.`);this.name="DependencyTimeoutError"}}class aZ extends TypeError{constructor(Z,$,J){super(`Expected reactives passed from ${S(Z)} to ${S($)} to be a record of signals, reactive property names or functions. Got ${FZ(J)}.`);this.name="InvalidReactivesError"}}class eZ extends TypeError{constructor(Z,$){super(`Target ${S(Z)} is not a custom element in ${$}.`);this.name="InvalidCustomElementError"}}class Z4 extends TypeError{constructor(Z,$,J){let X=Array.from(J,([j,Q])=>`'${j}' ${Q}`).join("; ");super(`Cannot pass from ${S(Z)} to ${S($)}: ${X}.`);this.name="InvalidPassPropertyError"}}class $4 extends TypeError{constructor(Z,$,J){let X=typeof ShadowRoot<"u"&&Z instanceof ShadowRoot?`${S(Z.host)} shadow root`:typeof Element<"u"&&Z instanceof Element?S(Z):"document";super(`Invalid selector "${$}" passed to all() in ${X}. ${J instanceof Error?J.message:String(J)}`);this.name="InvalidSelectorError"}}var J4="context-request";class K4 extends Event{context;callback;subscribe;constructor(Z,$,J=!1){super(J4,{bubbles:!0,composed:!0});this.context=Z,this.callback=$,this.subscribe=J}}var K$=(Z)=>Z,h4=(Z)=>($)=>()=>g(()=>{let J=(X)=>{let{context:j,callback:Q}=X;if(typeof j==="string"&&$.includes(j)&&A(Q))X.stopImmediatePropagation(),Q(()=>{try{return Z[j]}catch(U){if(LZ)console.warn("provideContexts: getter threw",S(Z),U);return}})};return Z.addEventListener(J4,J),()=>Z.removeEventListener(J4,J)}),g4=(Z)=>($,J)=>{let X=()=>J;return Z.dispatchEvent(new K4($,(j)=>{X=j})),u(X)};var D$=200,N$=(Z)=>{let $=new Set,J="",X=0;for(let j of Z)if(j==="[")X++;else if(j==="]"){if(X>0)X--}else if(X===0)J+=j;if(J.includes("."))$.add("class");if(J.includes("#"))$.add("id");if(Z.includes("[")){let j=Z.split("[");for(let Q=1;Q<j.length;Q++){let U=j[Q];if(!U||!U.includes("]"))continue;let q=U.split("=")[0].split("]")[0].trim().replace(/[^a-zA-Z0-9_-]/g,"");if(q)$.add(q)}}return[...$]};function p4(Z,$){try{Z.querySelector($)}catch(J){throw new $4(Z,$,J)}return u(()=>Array.from(Z.querySelectorAll($)),{value:[],equals:(J,X)=>J.length===X.length&&J.every((j,Q)=>j===X[Q]),watched:(J)=>{let X={childList:!0,subtree:!0},j=N$($);if(j.length)X.attributes=!0,X.attributeFilter=j;let Q=(G)=>G instanceof Element&&(G.matches($)||G.querySelector($)),U=(G)=>{if(G.type==="attributes")return!0;if(G.type==="childList")return Array.from(G.addedNodes).some(Q)||Array.from(G.removedNodes).some(Q);return!1},q=new MutationObserver((G)=>{for(let H of G)if(U(H)){J();return}});return q.observe(Z,X),()=>q.disconnect()}})}var v4=(Z)=>{let $=Z.shadowRoot??Z,J=new Set;function X(U,q){let G=$.querySelector(U);if(q!=null&&!G)throw new kZ(Z,U,q);if(G&&G4(G))J.add(G.localName);return G??void 0}function j(U,q){let G=p4($,U),H=G.get();if(q!=null&&!H.length)throw new kZ(Z,U,q);if(H.length){for(let D of H)if(G4(D))J.add(D.localName)}return G}return[{first:X,all:j},(U)=>{if(J.size)queueMicrotask(()=>{let q=Array.from(J).filter((G)=>!customElements.get(G));if(!q.length){U();return}Promise.race([Promise.all(q.map((G)=>customElements.whenDefined(G))),new Promise((G,H)=>{setTimeout(()=>{H(new nZ(Z,q.filter((D)=>!customElements.get(D))))},D$)})]).then(U).catch((G)=>{if(LZ)console.warn(G);U()})});else U()}]};var P$=new Set(["scroll","resize","mousewheel","touchstart","touchmove","wheel"]),F$=new Set(["focus","blur","scroll","resize","load","unload","error","toggle","mouseenter","mouseleave","pointerenter","pointerleave","abort","canplay","canplaythrough","durationchange","emptied","ended","loadeddata","loadedmetadata","loadstart","pause","play","playing","progress","ratechange","seeked","seeking","stalled","suspend","timeupdate","volumechange","waiting"]),d4=(Z,$,J,X,j)=>{let Q=(q)=>{let G=X(q,$);if(!T(G))return;h(()=>{for(let[H,D]of Object.entries(G))Z[H]=D})},U=j.passive?sZ(Q):Q;return $.addEventListener(J,U,j),()=>{$.removeEventListener(J,U),U.cancel?.()}},c4=(Z)=>{function $(J,X,j,Q={}){return()=>{if(!J)return;if(!("passive"in Q))Q={...Q,passive:P$.has(X)};if(HZ(J)){if(F$.has(X)){if(LZ)console.warn(`on(): '${X}' does not bubble — prefer each() + on() for per-element listeners in ${S(Z)}`);return e(()=>{for(let H of J.get())g(()=>{return d4(Z,H,X,j,Q)})})}let U=Z.shadowRoot??Z,q=(H)=>{let D=H.composedPath();for(let B of J.get())if(D.includes(B)){let V=j(H,B);if(!T(V))break;h(()=>{for(let[W,M]of Object.entries(V))Z[W]=M});break}},G=Q.passive?sZ(q):q;g(()=>{return U.addEventListener(X,G,Q),()=>{U.removeEventListener(X,G),G.cancel?.()}});return}g(()=>d4(Z,J,X,j,Q))}}return $};var u4=new WeakMap,hZ=(Z)=>{let $=u4.get(Z);if(!$)$={},u4.set(Z,$);return $};var X4=(Z)=>{for(let $ of Z)if(Array.isArray($))X4($);else if($)$()},D4=(Z,$)=>{if(A($))return wZ($);if(typeof $==="string"){let J=hZ(Z)[$];if(J)return J;return u(()=>Z[$])}if($&&typeof $==="object"&&"get"in $&&!(Symbol.toStringTag in $))return $;return $},i4=(Z)=>{function $(J,X){return()=>{if(Array.isArray(J)){let Q=J.map((q)=>D4(Z,q)),U=X;return e(()=>RZ(Q,{ok:(q)=>f(()=>U(q))}))}let j=D4(Z,J);if(typeof X==="function")return e(()=>RZ(j,{ok:(Q)=>f(()=>X(Q))}));return e(()=>RZ(j,X))}}return $},o4=(Z)=>{let $=(X,j)=>g(()=>{if(!V4(X))throw new eZ(X,`pass from ${S(Z)}`);if(!T(j))throw new aZ(Z,X,j);let Q=hZ(X),U=S(X),q=new Map,G=[];for(let[D,B]of Object.entries(j)){if(B==null)continue;if(!(D in X)){q.set(D,`does not exist on ${U}`);continue}let V=D4(Z,B);if(!V){q.set(D,"could not be resolved to a signal");continue}let W=Q[D];if(!DZ(W)){q.set(D,`is not Slot-backed on ${U} (read-only property, or target is not a Le Truc component)`);continue}G.push({slot:W,signal:V})}if(q.size)throw new Z4(Z,X,q);let H=G.map(({slot:D,signal:B})=>{let V=D.current();return D.replace(B),()=>D.replace(V)});if(H.length)return()=>{for(let D of H)D()}});function J(X,j){return()=>{if(!X)return;if(HZ(X))e(()=>{for(let Q of X.get())g(()=>$(Q,j))});else $(X,j)}}return J};function Y$(Z,$){return()=>{e(()=>{for(let J of Z.get())g(()=>{let X=$(J);if(Array.isArray(X))X4(X);else if(typeof X==="function")X()})})}}var l4=Symbol("parser"),s4=Symbol("method"),O$=new Set(["constructor","prototype","__proto__","toString","valueOf","hasOwnProperty","isPrototypeOf","propertyIsEnumerable","toLocaleString"]),N4=(Z)=>typeof Z==="function"&&(l4 in Z),P4=(Z)=>typeof Z==="function"&&(s4 in Z),j4=(Z)=>O$.has(Z),o=(Z)=>Object.assign(Z,{[l4]:!0}),C$=(Z)=>Object.assign(Z,{[s4]:!0});function I$(Z,$){if(!Z.includes("-")||!Z.match(/^[a-z][a-z0-9-]*$/))throw new rZ(Z);class J extends HTMLElement{#J=!1;#$=[];#Z;connectedCallback(){let X=()=>{this.#Z=g(()=>{X4(this.#$)},{root:!0})};if(this.#J){if(A(this.#Z))this.#Z();X()}else{let j=this,[Q,U]=v4(j),q={expose:this.#j.bind(this),host:j,...Q,watch:i4(j),on:c4(j),pass:o4(j),provideContexts:h4(j),requestContext:g4(j)},G=$(q);if(G)this.#$=G;if(this.#J=!0,!this.#$.length)return;U(X)}}disconnectedCallback(){if(A(this.#Z))this.#Z()}#j(X){let j=(Q,U)=>{if(N4(U)){let q=U(this.getAttribute(Q));if(q!=null)this.#X(Q,q)}else if(P4(U))this[Q]=U;else{let q=U;if(q!=null)this.#X(Q,q)}};for(let[Q,U]of Object.entries(X)){if(U==null)continue;if(j4(Q))throw new tZ(this.localName,Q,"reserved word or Object builtin — cannot be used as a reactive property");if(Q in this)continue;j(Q,U)}}#X(X,j){let Q=zZ(j)?j:A(j)?wZ(j):c(j),U=hZ(this),q=X,G=U[q];if(DZ(G))G.replace(Q);else if(yZ(Q)){let H=oZ(Q);U[q]=H,Object.defineProperty(this,X,H)}else U[q]=Q,Object.defineProperty(this,X,{get:Q.get,enumerable:!0})}}return customElements.define(Z,J),customElements.get(Z)}var x$=()=>o((Z)=>Z!=null&&Z.toLowerCase()!=="false");var R$=(Z)=>o(($)=>{if(($??Z)==null)throw TypeError("asJSON: Value and fallback are both null or undefined");if($==null)return Z;if($==="")throw SyntaxError("Empty string is not valid JSON");let J;try{J=JSON.parse($,(X,j)=>j4(X)?void 0:j)}catch(X){throw SyntaxError(`Failed to parse JSON: ${String(X)}`,{cause:X})}return J??Z});var gZ=(Z,$)=>{if($==null)return;let J=Z($);return Number.isFinite(J)?J:void 0},A$=(Z=0)=>o(($)=>{if($==null)return Z;let J=$.trim();if(J.toLowerCase().startsWith("0x"))return gZ((j)=>parseInt(j,16),J)??Z;let X=gZ(parseFloat,$);return X!=null?Math.trunc(X):Z}),w$=(Z=0)=>o(($)=>gZ(parseFloat,$)??Z),L$=(Z=0,$=Number.MAX_SAFE_INTEGER)=>o((J)=>{if(J==null)return Z;let X=J.trim(),j=X.toLowerCase().startsWith("0x")?gZ((U)=>parseInt(U,16),X):gZ(parseFloat,J),Q=j!=null?Math.trunc(j):Z;return Math.max(Z,Math.min(Q,$))});var _$=(Z="")=>o(($)=>$??Z),f$=(Z)=>o(($)=>{if($==null)return Z[0];let J=$.toLowerCase();return Z.find((j)=>j.toLowerCase()===J)??Z[0]});export{f as untrack,R4 as unown,sZ as throttle,k4 as setTextPreservingComments,mZ as schedule,m4 as safeSetAttribute,RZ as match,KZ as isTask,EZ as isStore,IZ as isState,DZ as isSlot,_ as isSignalOfType,zZ as isSignal,_4 as isSensor,T as isRecord,N4 as isParser,yZ as isMutableSignal,P4 as isMethodProducer,HZ as isMemo,xZ as isList,A as isFunction,b4 as isComputed,w4 as isCollection,$Z as isAsyncFunction,Q$ as escapeHTML,Y$ as each,C$ as defineMethod,I$ as defineComponent,G$ as dangerouslyBindInnerHTML,GZ as createTask,AZ as createStore,c as createState,oZ as createSlot,f4 as createSignal,L4 as createSensor,g as createScope,T4 as createMutableSignal,u as createMemo,VZ as createList,p4 as createElementsMemo,e as createEffect,K$ as createContext,wZ as createComputed,A4 as createCollection,q$ as bindVisible,H$ as bindText,V$ as bindStyle,z$ as bindProperty,U$ as bindClass,M$ as bindAttribute,h as batch,_$ as asString,o as asParser,w$ as asNumber,R$ as asJSON,A$ as asInteger,f$ as asEnum,L$ as asClampedInteger,x$ as asBoolean,JZ as UnsetSignalValueError,dZ as SKIP_EQUALITY,TZ as RequiredOwnerError,fZ as ReadonlySignalError,bZ as PromiseValueError,YZ as NullishSignalValueError,kZ as MissingElementError,UZ as InvalidSignalValueError,$4 as InvalidSelectorError,aZ as InvalidReactivesError,tZ as InvalidPropertyNameError,Z4 as InvalidPassPropertyError,eZ as InvalidCustomElementError,rZ as InvalidComponentNameError,pZ as InvalidCallbackError,l as DuplicateKeyError,nZ as DependencyTimeoutError,d as DEFAULT_EQUALITY,a as DEEP_EQUALITY,K4 as ContextRequestEvent,_Z as CircularDependencyError,J4 as CONTEXT_REQUEST};
+// node_modules/@zeix/cause-effect/index.js
+var ASYNC_FUNCTION_PROTO = Object.getPrototypeOf(async () => {});
+function isFunction(fn) {
+  return typeof fn === "function";
+}
+function isAsyncFunction(fn) {
+  return isFunction(fn) && Object.getPrototypeOf(fn) === ASYNC_FUNCTION_PROTO;
+}
+function isSyncFunction(fn) {
+  return isFunction(fn) && Object.getPrototypeOf(fn) !== ASYNC_FUNCTION_PROTO;
+}
+function isSignalOfType(value, type) {
+  return value != null && value[Symbol.toStringTag] === type;
+}
+function isRecord(value) {
+  return value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype;
+}
+function valueString(value) {
+  if (typeof value === "string")
+    return `"${value}"`;
+  if (value != null && typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
 
-//# debugId=EEDAAEF16F4D54F864756E2164756E21
+class CircularDependencyError extends Error {
+  constructor(where) {
+    super(`[${where}] Circular dependency detected`);
+    this.name = "CircularDependencyError";
+  }
+}
+
+class EffectConvergenceError extends Error {
+  constructor(passes) {
+    super(`[Effect] Effects did not settle after ${passes} flush passes — check for effects that write to signals they depend on`);
+    this.name = "EffectConvergenceError";
+  }
+}
+
+class NullishSignalValueError extends TypeError {
+  constructor(where) {
+    super(`[${where}] Signal value cannot be null or undefined`);
+    this.name = "NullishSignalValueError";
+  }
+}
+
+class UnsetSignalValueError extends Error {
+  constructor(where) {
+    super(`[${where}] Signal value is unset`);
+    this.name = "UnsetSignalValueError";
+  }
+}
+
+class InvalidSignalValueError extends TypeError {
+  constructor(where, value) {
+    super(`[${where}] Signal value ${valueString(value)} is invalid`);
+    this.name = "InvalidSignalValueError";
+  }
+}
+
+class InvalidCallbackError extends TypeError {
+  constructor(where, value) {
+    super(`[${where}] Callback ${valueString(value)} is invalid`);
+    this.name = "InvalidCallbackError";
+  }
+}
+
+class ReadonlySignalError extends Error {
+  constructor(where) {
+    super(`[${where}] Signal is read-only`);
+    this.name = "ReadonlySignalError";
+  }
+}
+
+class RequiredOwnerError extends Error {
+  constructor(where) {
+    super(`[${where}] Active owner is required`);
+    this.name = "RequiredOwnerError";
+  }
+}
+
+class PromiseValueError extends TypeError {
+  constructor(where) {
+    super(`[${where}] Callback returned a Promise — use an async callback to create a Task instead`);
+    this.name = "PromiseValueError";
+  }
+}
+
+class DuplicateKeyError extends Error {
+  constructor(where, key, value) {
+    super(`[${where}] Could not add key "${key}"${value != null ? ` with value ${JSON.stringify(value)}` : ""} because it already exists`);
+    this.name = "DuplicateKeyError";
+  }
+}
+
+class InvalidStoreMutationError extends TypeError {
+  constructor(prop, action) {
+    const guidance = action === "delete" ? `use store.remove(${JSON.stringify(prop)})` : `use store.${prop}.set(value), store.set(next), or store.add(key, value)`;
+    super(`[Store] Cannot ${action} property "${prop}" directly — ${guidance}`);
+    this.name = "InvalidStoreMutationError";
+  }
+}
+function validateSignalValue(where, value, guard) {
+  if (value == null)
+    throw new NullishSignalValueError(where);
+  if (guard && !guard(value))
+    throw new InvalidSignalValueError(where, value);
+}
+function validateReadValue(where, value) {
+  if (value == null)
+    throw new UnsetSignalValueError(where);
+}
+function validateCallback(where, value, guard = isFunction) {
+  if (!guard(value))
+    throw new InvalidCallbackError(where, value);
+}
+var TYPE_STATE = "State";
+var TYPE_MEMO = "Memo";
+var TYPE_TASK = "Task";
+var TYPE_SENSOR = "Sensor";
+var TYPE_LIST = "List";
+var TYPE_COLLECTION = "Collection";
+var TYPE_STORE = "Store";
+var TYPE_SLOT = "Slot";
+var FLAG_CLEAN = 0;
+var FLAG_CHECK = 1 << 0;
+var FLAG_DIRTY = 1 << 1;
+var FLAG_RUNNING = 1 << 2;
+var FLAG_RELINK = 1 << 3;
+var activeSink = null;
+var activeOwner = null;
+var queuedEffects = [];
+var batchDepth = 0;
+var flushing = false;
+var DEFAULT_EQUALITY = (a, b) => a === b;
+var SKIP_EQUALITY = (_a, _b) => false;
+var deepEqual = (a, b) => deepEqualInner(a, b, new WeakSet);
+var deepEqualInner = (a, b, seen) => {
+  if (Object.is(a, b))
+    return true;
+  if (typeof a !== typeof b)
+    return false;
+  if (a == null || typeof a !== "object" || b == null || typeof b !== "object")
+    return false;
+  if (seen.has(a))
+    return true;
+  seen.add(a);
+  try {
+    const aIsArray = Array.isArray(a);
+    if (aIsArray !== Array.isArray(b))
+      return false;
+    if (aIsArray) {
+      const aa = a;
+      const ba = b;
+      if (aa.length !== ba.length)
+        return false;
+      for (let i = 0;i < aa.length; i++)
+        if (!deepEqualInner(aa[i], ba[i], seen))
+          return false;
+      return true;
+    }
+    if (a instanceof Date && b instanceof Date)
+      return a.getTime() === b.getTime();
+    if (a instanceof RegExp && b instanceof RegExp)
+      return a.source === b.source && a.flags === b.flags;
+    if (isRecord(a) && isRecord(b)) {
+      const aKeys = Object.keys(a);
+      if (aKeys.length !== Object.keys(b).length)
+        return false;
+      for (const key of aKeys) {
+        if (!(key in b))
+          return false;
+        if (!deepEqualInner(a[key], b[key], seen))
+          return false;
+      }
+      return true;
+    }
+    return false;
+  } finally {
+    seen.delete(a);
+  }
+};
+var DEEP_EQUALITY = (a, b) => deepEqual(a, b);
+function isValidEdge(checkEdge, node) {
+  const sourcesTail = node.sourcesTail;
+  if (sourcesTail) {
+    let edge = node.sources;
+    while (edge) {
+      if (edge === checkEdge)
+        return true;
+      if (edge === sourcesTail)
+        break;
+      edge = edge.nextSource;
+    }
+  }
+  return false;
+}
+function link(source, sink) {
+  const prevSource = sink.sourcesTail;
+  if (prevSource?.source === source)
+    return;
+  let nextSource = null;
+  const isRecomputing = sink.flags & FLAG_RUNNING;
+  if (isRecomputing) {
+    nextSource = prevSource ? prevSource.nextSource : sink.sources;
+    if (nextSource?.source === source) {
+      sink.sourcesTail = nextSource;
+      return;
+    }
+  }
+  const prevSink = source.sinksTail;
+  if (prevSink?.sink === sink && (!isRecomputing || isValidEdge(prevSink, sink)))
+    return;
+  const newEdge = { source, sink, nextSource, prevSink, nextSink: null };
+  sink.sourcesTail = source.sinksTail = newEdge;
+  if (prevSource)
+    prevSource.nextSource = newEdge;
+  else
+    sink.sources = newEdge;
+  if (prevSink)
+    prevSink.nextSink = newEdge;
+  else
+    source.sinks = newEdge;
+}
+function unlink(edge) {
+  const { source, nextSource, nextSink, prevSink } = edge;
+  if (nextSink)
+    nextSink.prevSink = prevSink;
+  else
+    source.sinksTail = prevSink;
+  if (prevSink)
+    prevSink.nextSink = nextSink;
+  else
+    source.sinks = nextSink;
+  if (!source.sinks) {
+    if (source.stop) {
+      source.stop();
+      source.stop = undefined;
+    }
+    if ("sources" in source && source.sources) {
+      const sinkNode = source;
+      sinkNode.sourcesTail = null;
+      trimSources(sinkNode);
+      sinkNode.flags |= FLAG_DIRTY;
+    }
+  }
+  return nextSource;
+}
+function trimSources(node) {
+  const tail = node.sourcesTail;
+  let source = tail ? tail.nextSource : node.sources;
+  while (source)
+    source = unlink(source);
+  if (tail)
+    tail.nextSource = null;
+  else
+    node.sources = null;
+}
+function propagate(node, newFlag = FLAG_DIRTY) {
+  const flags = node.flags;
+  if ("sinks" in node) {
+    if ((flags & (FLAG_DIRTY | FLAG_CHECK)) >= newFlag)
+      return;
+    node.flags = flags | newFlag;
+    if ("controller" in node && node.controller) {
+      node.controller.abort();
+      node.controller = undefined;
+    }
+    for (let e = node.sinks;e; e = e.nextSink)
+      propagate(e.sink, FLAG_CHECK);
+  } else {
+    if ((flags & (FLAG_DIRTY | FLAG_CHECK)) >= newFlag)
+      return;
+    const wasQueued = flags & (FLAG_DIRTY | FLAG_CHECK);
+    node.flags = flags & FLAG_RUNNING | newFlag;
+    if (!wasQueued)
+      queuedEffects.push(node);
+  }
+}
+function setState(node, next) {
+  if (node.equals(node.value, next))
+    return;
+  node.value = next;
+  for (let e = node.sinks;e; e = e.nextSink)
+    propagate(e.sink);
+  if (batchDepth === 0)
+    flush();
+}
+function registerCleanup(owner, fn) {
+  if (!owner.cleanup)
+    owner.cleanup = fn;
+  else if (Array.isArray(owner.cleanup))
+    owner.cleanup.push(fn);
+  else
+    owner.cleanup = [owner.cleanup, fn];
+}
+function runCleanup(owner) {
+  if (!owner.cleanup)
+    return;
+  if (Array.isArray(owner.cleanup))
+    for (let i = 0;i < owner.cleanup.length; i++)
+      owner.cleanup[i]();
+  else
+    owner.cleanup();
+  owner.cleanup = null;
+}
+function recomputeMemo(node) {
+  const prevWatcher = activeSink;
+  activeSink = node;
+  node.sourcesTail = null;
+  node.flags = FLAG_RUNNING;
+  let changed = false;
+  try {
+    const next = node.fn(node.value);
+    if (next instanceof Promise)
+      throw new PromiseValueError(TYPE_MEMO);
+    if (node.error || !node.equals(next, node.value)) {
+      node.value = next;
+      node.error = undefined;
+      changed = true;
+    }
+  } catch (err) {
+    changed = true;
+    node.error = err instanceof Error ? err : new Error(String(err));
+  } finally {
+    activeSink = prevWatcher;
+    trimSources(node);
+  }
+  if (changed) {
+    for (let e = node.sinks;e; e = e.nextSink)
+      if (e.sink.flags & FLAG_CHECK)
+        e.sink.flags |= FLAG_DIRTY;
+  }
+  node.flags = FLAG_CLEAN;
+}
+function recomputeTask(node) {
+  node.controller?.abort();
+  const controller = new AbortController;
+  node.controller = controller;
+  node.error = undefined;
+  const prevWatcher = activeSink;
+  activeSink = node;
+  node.sourcesTail = null;
+  node.flags = FLAG_RUNNING;
+  let promise;
+  try {
+    promise = node.fn(node.value, controller.signal);
+  } catch (err) {
+    node.controller = undefined;
+    node.error = err instanceof Error ? err : new Error(String(err));
+    node.flags = FLAG_CLEAN;
+    setState(node.pendingNode, false);
+    return;
+  } finally {
+    activeSink = prevWatcher;
+    trimSources(node);
+  }
+  setState(node.pendingNode, true);
+  promise.then((next) => {
+    if (controller.signal.aborted)
+      return;
+    node.controller = undefined;
+    batch(() => {
+      if (node.error || !node.equals(next, node.value)) {
+        node.value = next;
+        node.error = undefined;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+      }
+      setState(node.pendingNode, false);
+    });
+  }, (err) => {
+    if (controller.signal.aborted)
+      return;
+    node.controller = undefined;
+    const error = err instanceof Error ? err : new Error(String(err));
+    batch(() => {
+      if (!node.error || error.name !== node.error.name || error.message !== node.error.message) {
+        node.error = error;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+      }
+      setState(node.pendingNode, false);
+    });
+  });
+  node.flags = FLAG_CLEAN;
+}
+function runEffect(node) {
+  runCleanup(node);
+  const prevContext = activeSink;
+  const prevOwner = activeOwner;
+  activeSink = activeOwner = node;
+  node.sourcesTail = null;
+  node.flags = FLAG_RUNNING;
+  try {
+    const out = node.fn();
+    if (typeof out === "function")
+      registerCleanup(node, out);
+  } finally {
+    activeSink = prevContext;
+    activeOwner = prevOwner;
+    trimSources(node);
+    node.flags &= FLAG_DIRTY | FLAG_CHECK;
+  }
+}
+function refresh(node) {
+  if (node.flags & FLAG_CHECK) {
+    for (let e = node.sources;e; e = e.nextSource) {
+      if ("fn" in e.source)
+        refresh(e.source);
+      if (node.flags & FLAG_DIRTY)
+        break;
+    }
+  }
+  if (node.flags & FLAG_RUNNING) {
+    throw new CircularDependencyError("controller" in node ? TYPE_TASK : ("value" in node) ? TYPE_MEMO : "Effect");
+  }
+  if (node.flags & FLAG_DIRTY) {
+    if ("controller" in node)
+      recomputeTask(node);
+    else if ("value" in node)
+      recomputeMemo(node);
+    else
+      runEffect(node);
+  } else {
+    node.flags = FLAG_CLEAN;
+  }
+}
+var MAX_FLUSH_PASSES = 1000;
+function flush() {
+  if (flushing)
+    return;
+  flushing = true;
+  let errors;
+  let passes = 0;
+  try {
+    while (queuedEffects.length > 0) {
+      if (++passes > MAX_FLUSH_PASSES) {
+        queuedEffects.length = 0;
+        if (!errors)
+          errors = [];
+        errors.push(new EffectConvergenceError(MAX_FLUSH_PASSES));
+        break;
+      }
+      const batch = queuedEffects.slice();
+      queuedEffects.length = 0;
+      for (let i = 0;i < batch.length; i++) {
+        const effect = batch[i];
+        if (effect.flags & FLAG_RUNNING)
+          continue;
+        if (effect.flags & (FLAG_DIRTY | FLAG_CHECK)) {
+          try {
+            refresh(effect);
+          } catch (err) {
+            if (!errors)
+              errors = [];
+            errors.push(err);
+          }
+        }
+      }
+    }
+  } finally {
+    flushing = false;
+  }
+  if (errors) {
+    if (errors.length === 1)
+      throw errors[0];
+    throw new AggregateError(errors, "Multiple effects threw during flush");
+  }
+}
+function scheduleEffect(node) {
+  if (node.flags & (FLAG_DIRTY | FLAG_CHECK)) {
+    queuedEffects.push(node);
+    if (batchDepth === 0)
+      flush();
+  }
+}
+function batch(fn) {
+  batchDepth++;
+  try {
+    fn();
+  } finally {
+    batchDepth--;
+    if (batchDepth === 0)
+      flush();
+  }
+}
+function untrack(fn) {
+  const prev = activeSink;
+  activeSink = null;
+  try {
+    return fn();
+  } finally {
+    activeSink = prev;
+  }
+}
+function createScope(fn, options) {
+  const prevOwner = activeOwner;
+  const scope = { cleanup: null };
+  activeOwner = scope;
+  const dispose = () => runCleanup(scope);
+  try {
+    const out = fn();
+    if (typeof out === "function")
+      registerCleanup(scope, out);
+    return dispose;
+  } finally {
+    activeOwner = prevOwner;
+    if (!options?.root && prevOwner)
+      registerCleanup(prevOwner, dispose);
+  }
+}
+function unown(fn) {
+  const prev = activeOwner;
+  activeOwner = null;
+  try {
+    return fn();
+  } finally {
+    activeOwner = prev;
+  }
+}
+function makeSubscribe(node, onWatch) {
+  return onWatch ? () => {
+    if (activeSink) {
+      if (!node.sinks)
+        node.stop = onWatch();
+      link(node, activeSink);
+    }
+  } : () => {
+    if (activeSink)
+      link(node, activeSink);
+  };
+}
+function createState(value, options) {
+  validateSignalValue(TYPE_STATE, value, options?.guard);
+  const node = {
+    value,
+    sinks: null,
+    sinksTail: null,
+    equals: options?.equals ?? DEFAULT_EQUALITY,
+    guard: options?.guard
+  };
+  return {
+    [Symbol.toStringTag]: TYPE_STATE,
+    get() {
+      if (activeSink)
+        link(node, activeSink);
+      return node.value;
+    },
+    set(next) {
+      validateSignalValue(TYPE_STATE, next, node.guard);
+      setState(node, next);
+    },
+    update(fn) {
+      validateCallback(TYPE_STATE, fn);
+      const next = fn(node.value);
+      validateSignalValue(TYPE_STATE, next, node.guard);
+      setState(node, next);
+    }
+  };
+}
+function isState(value) {
+  return isSignalOfType(value, TYPE_STATE);
+}
+function keysEqual(a, b) {
+  if (a.length !== b.length)
+    return false;
+  for (let i = 0;i < a.length; i++)
+    if (a[i] !== b[i])
+      return false;
+  return true;
+}
+function getKeyGenerator(keyConfig) {
+  let keyCounter = 0;
+  const contentBased = typeof keyConfig === "function";
+  return [
+    typeof keyConfig === "string" ? () => `${keyConfig}${keyCounter++}` : contentBased ? (item) => keyConfig(item) || String(keyCounter++) : () => String(keyCounter++),
+    contentBased
+  ];
+}
+function diffPositional(prev, next, prevKeys, generateKey, itemEquals) {
+  const add = {};
+  const change = {};
+  const remove = {};
+  const nextKeys = [];
+  let changed = false;
+  const minLen = Math.min(prev.length, next.length);
+  for (let i = 0;i < minLen; i++) {
+    const key = prevKeys[i];
+    nextKeys.push(key);
+    if (!itemEquals(prev[i], next[i])) {
+      change[key] = next[i];
+      changed = true;
+    }
+  }
+  for (let i = minLen;i < next.length; i++) {
+    const val = next[i];
+    const key = generateKey(val);
+    nextKeys.push(key);
+    add[key] = val;
+    changed = true;
+  }
+  for (let i = minLen;i < prev.length; i++) {
+    remove[prevKeys[i]] = null;
+    changed = true;
+  }
+  return { add, change, remove, newKeys: nextKeys, changed };
+}
+function diffArrays(prev, next, prevKeys, generateKey, contentBased, itemEquals) {
+  if (!contentBased)
+    return diffPositional(prev, next, prevKeys, generateKey, itemEquals);
+  const add = {};
+  const change = {};
+  const remove = {};
+  const nextKeys = [];
+  let changed = false;
+  const prevByKey = new Map;
+  for (let i = 0;i < prev.length; i++) {
+    const key = prevKeys[i];
+    const item = prev[i];
+    if (key && item !== undefined)
+      prevByKey.set(key, item);
+  }
+  const seenKeys = new Set;
+  for (let i = 0;i < next.length; i++) {
+    const val = next[i];
+    validateSignalValue(`${TYPE_LIST} item at index ${i}`, val);
+    const key = generateKey(val);
+    if (seenKeys.has(key))
+      throw new DuplicateKeyError(TYPE_LIST, key, val);
+    nextKeys.push(key);
+    seenKeys.add(key);
+    if (!prevByKey.has(key)) {
+      add[key] = val;
+      changed = true;
+    } else if (!itemEquals(prevByKey.get(key), val)) {
+      change[key] = val;
+      changed = true;
+    }
+  }
+  for (const [key] of prevByKey) {
+    if (!seenKeys.has(key)) {
+      remove[key] = null;
+      changed = true;
+    }
+  }
+  if (!changed && !keysEqual(prevKeys, nextKeys))
+    changed = true;
+  return { add, change, remove, newKeys: nextKeys, changed };
+}
+function createList(value, options) {
+  validateSignalValue(TYPE_LIST, value, Array.isArray);
+  const signals = new Map;
+  let keys = [];
+  const [generateKey, contentBased] = getKeyGenerator(options?.keyConfig);
+  const itemEquals = options?.itemEquals ?? DEEP_EQUALITY;
+  const itemFactory = options?.createItem ?? ((item) => createState(item, { equals: itemEquals }));
+  const buildValue = () => {
+    const result = [];
+    for (const key of keys) {
+      const v = signals.get(key)?.get();
+      if (v !== undefined)
+        result.push(v);
+    }
+    return result;
+  };
+  const node = {
+    fn: buildValue,
+    value,
+    flags: FLAG_DIRTY,
+    sources: null,
+    sourcesTail: null,
+    sinks: null,
+    sinksTail: null,
+    equals: DEEP_EQUALITY,
+    error: undefined
+  };
+  const applyChanges = (changes) => {
+    let structural = false;
+    for (const key in changes.add) {
+      const val = changes.add[key];
+      validateSignalValue(`${TYPE_LIST} item for key "${key}"`, val);
+      signals.set(key, itemFactory(val));
+      structural = true;
+    }
+    let hasChange = false;
+    for (const _key in changes.change) {
+      hasChange = true;
+      break;
+    }
+    if (hasChange) {
+      batch(() => {
+        for (const key in changes.change) {
+          const val = changes.change[key];
+          validateSignalValue(`${TYPE_LIST} item for key "${key}"`, val);
+          const signal = signals.get(key);
+          if (signal)
+            signal.set(val);
+        }
+      });
+    }
+    for (const key in changes.remove) {
+      signals.delete(key);
+      const index = keys.indexOf(key);
+      if (index !== -1)
+        keys.splice(index, 1);
+      structural = true;
+    }
+    if (structural)
+      node.flags |= FLAG_RELINK;
+    return changes.changed;
+  };
+  const subscribe = makeSubscribe(node, options?.watched);
+  for (let i = 0;i < value.length; i++) {
+    const val = value[i];
+    if (val == null)
+      throw new NullishSignalValueError(`${TYPE_LIST} item ${i}`);
+    let key = keys[i];
+    if (!key) {
+      key = generateKey(val);
+      keys[i] = key;
+    }
+    signals.set(key, itemFactory(val));
+  }
+  node.value = value;
+  node.flags = 0;
+  const list = {
+    [Symbol.toStringTag]: TYPE_LIST,
+    [Symbol.isConcatSpreadable]: true,
+    *[Symbol.iterator]() {
+      subscribe();
+      for (const key of keys) {
+        const signal = signals.get(key);
+        if (signal)
+          yield signal;
+      }
+    },
+    get length() {
+      subscribe();
+      return keys.length;
+    },
+    get() {
+      subscribe();
+      if (node.sources) {
+        if (node.flags) {
+          const relink = node.flags & FLAG_RELINK;
+          node.value = untrack(buildValue);
+          if (relink) {
+            node.flags = FLAG_DIRTY;
+            refresh(node);
+            if (node.error)
+              throw node.error;
+          } else {
+            node.flags = FLAG_CLEAN;
+          }
+        }
+      } else {
+        refresh(node);
+        if (node.error)
+          throw node.error;
+      }
+      return node.value;
+    },
+    set(next) {
+      const prev = node.flags & FLAG_DIRTY ? untrack(buildValue) : node.value;
+      const changes = diffArrays(prev, next, keys, generateKey, contentBased, itemEquals);
+      if (changes.changed) {
+        keys = changes.newKeys;
+        applyChanges(changes);
+        node.flags |= FLAG_DIRTY;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+        if (batchDepth === 0)
+          flush();
+      }
+    },
+    update(fn) {
+      list.set(fn(untrack(() => list.get())));
+    },
+    at(index) {
+      subscribe();
+      const key = keys[index];
+      return key !== undefined ? signals.get(key) : undefined;
+    },
+    keys() {
+      subscribe();
+      return keys.values();
+    },
+    byKey(key) {
+      subscribe();
+      return signals.get(key);
+    },
+    keyAt(index) {
+      subscribe();
+      return keys[index];
+    },
+    indexOfKey(key) {
+      subscribe();
+      return keys.indexOf(key);
+    },
+    add(value2) {
+      const key = generateKey(value2);
+      if (signals.has(key))
+        throw new DuplicateKeyError(TYPE_LIST, key, value2);
+      keys.push(key);
+      validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
+      signals.set(key, itemFactory(value2));
+      node.flags |= FLAG_DIRTY | FLAG_RELINK;
+      for (let e = node.sinks;e; e = e.nextSink)
+        propagate(e.sink);
+      if (batchDepth === 0)
+        flush();
+      return key;
+    },
+    remove(keyOrIndex) {
+      const key = typeof keyOrIndex === "number" ? keys[keyOrIndex] : keyOrIndex;
+      if (key === undefined)
+        return;
+      const ok = signals.delete(key);
+      if (ok) {
+        const index = typeof keyOrIndex === "number" ? keyOrIndex : keys.indexOf(key);
+        if (index >= 0)
+          keys.splice(index, 1);
+        node.flags |= FLAG_DIRTY | FLAG_RELINK;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+        if (batchDepth === 0)
+          flush();
+      }
+    },
+    replace(key, value2) {
+      const signal = signals.get(key);
+      if (!signal)
+        return;
+      validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
+      if (itemEquals(untrack(() => signal.get()), value2))
+        return;
+      batch(() => {
+        signal.set(value2);
+        node.flags |= FLAG_DIRTY;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+      });
+      if (batchDepth === 0)
+        flush();
+    },
+    sort(compareFn) {
+      const entries = [];
+      untrack(() => {
+        for (const key of keys) {
+          const v = signals.get(key)?.get();
+          if (v !== undefined)
+            entries.push([key, v]);
+        }
+      });
+      entries.sort(isFunction(compareFn) ? (a, b) => compareFn(a[1], b[1]) : (a, b) => String(a[1]).localeCompare(String(b[1])));
+      const newOrder = [];
+      for (const [key] of entries)
+        newOrder.push(key);
+      if (!keysEqual(keys, newOrder)) {
+        keys = newOrder;
+        node.flags |= FLAG_DIRTY;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+        if (batchDepth === 0)
+          flush();
+      }
+    },
+    splice(start, deleteCount, ...items) {
+      const length = keys.length;
+      const actualStart = start < 0 ? Math.max(0, length + start) : Math.min(start, length);
+      const actualDeleteCount = Math.max(0, Math.min(deleteCount ?? Math.max(0, length - Math.max(0, actualStart)), length - actualStart));
+      const add = {};
+      const remove = {};
+      let hasRemove = false;
+      untrack(() => {
+        for (let i = 0;i < actualDeleteCount; i++) {
+          const index = actualStart + i;
+          const key = keys[index];
+          if (key) {
+            const signal = signals.get(key);
+            if (signal) {
+              remove[key] = signal.get();
+              hasRemove = true;
+            }
+          }
+        }
+      });
+      const newOrder = keys.slice(0, actualStart);
+      const change = {};
+      let hasAdd = false;
+      let hasChange = false;
+      for (const item of items) {
+        const key = generateKey(item);
+        if (key in remove) {
+          delete remove[key];
+          change[key] = item;
+          hasChange = true;
+        } else if (signals.has(key)) {
+          throw new DuplicateKeyError(TYPE_LIST, key, item);
+        } else {
+          add[key] = item;
+          hasAdd = true;
+        }
+        newOrder.push(key);
+      }
+      newOrder.push(...keys.slice(actualStart + actualDeleteCount));
+      const changed = hasAdd || hasRemove || hasChange;
+      if (changed) {
+        applyChanges({
+          add,
+          change,
+          remove,
+          changed
+        });
+        keys = newOrder;
+        node.flags |= FLAG_DIRTY;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+        if (batchDepth === 0)
+          flush();
+      }
+      return Object.values(remove);
+    },
+    deriveCollection(cb) {
+      return deriveCollection(list, cb);
+    }
+  };
+  return list;
+}
+function isList(value) {
+  return isSignalOfType(value, TYPE_LIST);
+}
+function createMemo(fn, options) {
+  validateCallback(TYPE_MEMO, fn, isSyncFunction);
+  if (options?.value !== undefined)
+    validateSignalValue(TYPE_MEMO, options.value, options?.guard);
+  const node = {
+    fn,
+    value: options?.value,
+    flags: FLAG_DIRTY,
+    sources: null,
+    sourcesTail: null,
+    sinks: null,
+    sinksTail: null,
+    equals: options?.equals ?? DEFAULT_EQUALITY,
+    error: undefined,
+    stop: undefined
+  };
+  const watched = options?.watched;
+  const subscribe = makeSubscribe(node, watched ? () => watched(() => {
+    propagate(node);
+    if (batchDepth === 0)
+      flush();
+  }) : undefined);
+  return {
+    [Symbol.toStringTag]: TYPE_MEMO,
+    get() {
+      subscribe();
+      refresh(node);
+      if (node.error)
+        throw node.error;
+      validateReadValue(TYPE_MEMO, node.value);
+      return node.value;
+    }
+  };
+}
+function isMemo(value) {
+  return isSignalOfType(value, TYPE_MEMO);
+}
+function createTask(fn, options) {
+  validateCallback(TYPE_TASK, fn, isAsyncFunction);
+  if (options?.value !== undefined)
+    validateSignalValue(TYPE_TASK, options.value, options?.guard);
+  const pendingNode = {
+    value: false,
+    sinks: null,
+    sinksTail: null,
+    equals: DEFAULT_EQUALITY
+  };
+  const node = {
+    fn,
+    value: options?.value,
+    sources: null,
+    sourcesTail: null,
+    sinks: null,
+    sinksTail: null,
+    flags: FLAG_DIRTY,
+    equals: options?.equals ?? DEFAULT_EQUALITY,
+    controller: undefined,
+    error: undefined,
+    stop: undefined,
+    pendingNode
+  };
+  const watched = options?.watched;
+  const subscribe = makeSubscribe(node, watched ? () => watched(() => {
+    propagate(node);
+    if (batchDepth === 0)
+      flush();
+  }) : undefined);
+  const pendingSubscribe = makeSubscribe(pendingNode);
+  return {
+    [Symbol.toStringTag]: TYPE_TASK,
+    get() {
+      subscribe();
+      refresh(node);
+      if (node.error)
+        throw node.error;
+      validateReadValue(TYPE_TASK, node.value);
+      return node.value;
+    },
+    isPending() {
+      pendingSubscribe();
+      return node.pendingNode.value;
+    },
+    abort() {
+      node.controller?.abort();
+      node.controller = undefined;
+      setState(node.pendingNode, false);
+    }
+  };
+}
+function isTask(value) {
+  return isSignalOfType(value, TYPE_TASK);
+}
+function deriveCollection(source, callback) {
+  validateCallback(TYPE_COLLECTION, callback);
+  const isAsync = isAsyncFunction(callback);
+  const signals = new Map;
+  let keys = [];
+  const addSignal = (key) => {
+    const signal = isAsync ? createTask(async (prev, abort) => {
+      const itemSignal = untrack(() => source.byKey(key));
+      if (!itemSignal)
+        return prev;
+      const sourceValue = itemSignal.get();
+      if (sourceValue == null)
+        return prev;
+      return callback(sourceValue, abort);
+    }) : createMemo(() => {
+      const itemSignal = untrack(() => source.byKey(key));
+      if (!itemSignal)
+        return;
+      const sourceValue = itemSignal.get();
+      if (sourceValue == null)
+        return;
+      return callback(sourceValue);
+    });
+    signals.set(key, signal);
+  };
+  function syncKeys(nextKeys) {
+    if (!keysEqual(keys, nextKeys)) {
+      const nextSet = new Set(nextKeys);
+      for (const key of keys)
+        if (!nextSet.has(key))
+          signals.delete(key);
+      for (const key of nextKeys)
+        if (!signals.has(key))
+          addSignal(key);
+      keys = nextKeys;
+      node.flags |= FLAG_RELINK;
+    }
+  }
+  function buildValue() {
+    syncKeys(Array.from(source.keys()));
+    const result = [];
+    for (const key of keys) {
+      try {
+        const v = signals.get(key)?.get();
+        if (v != null)
+          result.push(v);
+      } catch (e) {
+        if (!(e instanceof UnsetSignalValueError))
+          throw e;
+      }
+    }
+    return result;
+  }
+  const valuesEqual = (a, b) => {
+    if (a.length !== b.length)
+      return false;
+    for (let i = 0;i < a.length; i++)
+      if (a[i] !== b[i])
+        return false;
+    return true;
+  };
+  const node = {
+    fn: buildValue,
+    value: [],
+    flags: FLAG_DIRTY,
+    sources: null,
+    sourcesTail: null,
+    sinks: null,
+    sinksTail: null,
+    equals: valuesEqual,
+    error: undefined
+  };
+  function ensureFresh() {
+    if (node.sources) {
+      if (node.flags) {
+        node.value = untrack(buildValue);
+        if (node.flags & FLAG_RELINK) {
+          node.flags = FLAG_DIRTY;
+          refresh(node);
+          if (node.error)
+            throw node.error;
+        } else {
+          node.flags = FLAG_CLEAN;
+        }
+      }
+    } else if (node.sinks) {
+      refresh(node);
+      if (node.error)
+        throw node.error;
+    } else {
+      node.value = untrack(buildValue);
+    }
+  }
+  const initialKeys = Array.from(untrack(() => source.keys()));
+  for (const key of initialKeys)
+    addSignal(key);
+  keys = initialKeys;
+  const collection = {
+    [Symbol.toStringTag]: TYPE_COLLECTION,
+    [Symbol.isConcatSpreadable]: true,
+    *[Symbol.iterator]() {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
+      for (const key of keys) {
+        const signal = signals.get(key);
+        if (signal)
+          yield signal;
+      }
+    },
+    get length() {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
+      return keys.length;
+    },
+    keys() {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
+      return keys.values();
+    },
+    get() {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
+      return node.value;
+    },
+    at(index) {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
+      const key = keys[index];
+      return key !== undefined ? signals.get(key) : undefined;
+    },
+    byKey(key) {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
+      return signals.get(key);
+    },
+    keyAt(index) {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
+      return keys[index];
+    },
+    indexOfKey(key) {
+      if (activeSink)
+        link(node, activeSink);
+      ensureFresh();
+      return keys.indexOf(key);
+    },
+    deriveCollection(cb) {
+      return deriveCollection(collection, cb);
+    }
+  };
+  return collection;
+}
+function createCollection(watched, options) {
+  const value = options?.value ?? [];
+  if (value.length)
+    validateSignalValue(TYPE_COLLECTION, value, Array.isArray);
+  validateCallback(TYPE_COLLECTION, watched, isSyncFunction);
+  const signals = new Map;
+  const keys = [];
+  const itemToKey = new Map;
+  const [generateKey, contentBased] = getKeyGenerator(options?.keyConfig);
+  const resolveKey = (item) => itemToKey.get(item) ?? (contentBased ? generateKey(item) : undefined);
+  const itemFactory = options?.createItem ?? ((item) => createState(item, {
+    equals: options?.itemEquals ?? DEEP_EQUALITY
+  }));
+  function buildValue() {
+    const result = [];
+    for (const key of keys) {
+      try {
+        const v = signals.get(key)?.get();
+        if (v != null)
+          result.push(v);
+      } catch (e) {
+        if (!(e instanceof UnsetSignalValueError))
+          throw e;
+      }
+    }
+    return result;
+  }
+  const node = {
+    fn: buildValue,
+    value,
+    flags: FLAG_DIRTY,
+    sources: null,
+    sourcesTail: null,
+    sinks: null,
+    sinksTail: null,
+    equals: SKIP_EQUALITY,
+    error: undefined
+  };
+  for (const item of value) {
+    const key = generateKey(item);
+    signals.set(key, itemFactory(item));
+    itemToKey.set(item, key);
+    keys.push(key);
+  }
+  node.value = value;
+  node.flags = FLAG_DIRTY;
+  const onChanges = (changes) => {
+    const { add, change, remove } = changes;
+    if (!add?.length && !change?.length && !remove?.length)
+      return;
+    let structural = false;
+    batch(() => {
+      if (add) {
+        const staged = new Map;
+        for (const item of add) {
+          const key = generateKey(item);
+          if (signals.has(key) || staged.has(key))
+            throw new DuplicateKeyError(TYPE_COLLECTION, key, item);
+          staged.set(key, item);
+        }
+        for (const [key, item] of staged) {
+          signals.set(key, itemFactory(item));
+          itemToKey.set(item, key);
+          if (!keys.includes(key))
+            keys.push(key);
+          structural = true;
+        }
+      }
+      if (change) {
+        for (const item of change) {
+          const key = resolveKey(item);
+          if (!key)
+            continue;
+          const signal = signals.get(key);
+          if (signal && isState(signal)) {
+            itemToKey.delete(untrack(() => signal.get()));
+            signal.set(item);
+            itemToKey.set(item, key);
+          }
+        }
+      }
+      if (remove) {
+        for (const item of remove) {
+          const key = resolveKey(item);
+          if (!key)
+            continue;
+          itemToKey.delete(item);
+          signals.delete(key);
+          const index = keys.indexOf(key);
+          if (index !== -1)
+            keys.splice(index, 1);
+          structural = true;
+        }
+      }
+      node.flags = FLAG_DIRTY | (structural ? FLAG_RELINK : 0);
+      for (let e = node.sinks;e; e = e.nextSink)
+        propagate(e.sink);
+    });
+  };
+  const subscribe = makeSubscribe(node, () => watched(onChanges));
+  const collection = {
+    [Symbol.toStringTag]: TYPE_COLLECTION,
+    [Symbol.isConcatSpreadable]: true,
+    *[Symbol.iterator]() {
+      subscribe();
+      for (const key of keys) {
+        const signal = signals.get(key);
+        if (signal)
+          yield signal;
+      }
+    },
+    get length() {
+      subscribe();
+      return keys.length;
+    },
+    keys() {
+      subscribe();
+      return keys.values();
+    },
+    get() {
+      subscribe();
+      if (node.sources) {
+        if (node.flags) {
+          const relink = node.flags & FLAG_RELINK;
+          node.value = untrack(buildValue);
+          if (relink) {
+            node.flags = FLAG_DIRTY;
+            refresh(node);
+            if (node.error)
+              throw node.error;
+          } else {
+            node.flags = FLAG_CLEAN;
+          }
+        }
+      } else {
+        refresh(node);
+        if (node.error)
+          throw node.error;
+      }
+      return node.value;
+    },
+    at(index) {
+      subscribe();
+      const key = keys[index];
+      return key !== undefined ? signals.get(key) : undefined;
+    },
+    byKey(key) {
+      subscribe();
+      return signals.get(key);
+    },
+    keyAt(index) {
+      subscribe();
+      return keys[index];
+    },
+    indexOfKey(key) {
+      subscribe();
+      return keys.indexOf(key);
+    },
+    deriveCollection(cb) {
+      return deriveCollection(collection, cb);
+    }
+  };
+  return collection;
+}
+function isCollection(value) {
+  return isSignalOfType(value, TYPE_COLLECTION);
+}
+function createEffect(fn) {
+  validateCallback("Effect", fn);
+  const node = {
+    fn,
+    flags: FLAG_DIRTY,
+    sources: null,
+    sourcesTail: null,
+    cleanup: null
+  };
+  const dispose = () => {
+    runCleanup(node);
+    node.fn = undefined;
+    node.flags = FLAG_CLEAN;
+    node.sourcesTail = null;
+    trimSources(node);
+  };
+  if (activeOwner)
+    registerCleanup(activeOwner, dispose);
+  runEffect(node);
+  scheduleEffect(node);
+  return dispose;
+}
+function match(signalOrSignals, handlers) {
+  if (!activeOwner)
+    throw new RequiredOwnerError("match");
+  const isSingle = !Array.isArray(signalOrSignals);
+  const signals = isSingle ? [signalOrSignals] : signalOrSignals;
+  const { nil, stale } = handlers;
+  const ok = isSingle ? (values2) => handlers.ok(values2[0]) : (values2) => handlers.ok(values2);
+  const err = isSingle && handlers.err ? (errors2) => handlers.err(errors2[0]) : handlers.err ?? console.error;
+  let errors;
+  let pending = false;
+  const values = new Array(signals.length);
+  for (let i = 0;i < signals.length; i++) {
+    try {
+      values[i] = signals[i].get();
+    } catch (e) {
+      if (e instanceof UnsetSignalValueError) {
+        pending = true;
+        continue;
+      }
+      if (!errors)
+        errors = [];
+      errors.push(e instanceof Error ? e : new Error(String(e)));
+    }
+  }
+  let out;
+  try {
+    if (pending)
+      out = nil?.();
+    else if (errors)
+      out = err(errors);
+    else if (stale && (isSingle ? isTask(signals[0]) && signals[0].isPending() : signals.some((s) => isTask(s) && s.isPending())))
+      out = stale();
+    else
+      out = ok(values);
+  } catch (e) {
+    out = err([e instanceof Error ? e : new Error(String(e))]);
+  }
+  if (typeof out === "function")
+    return out;
+  if (out instanceof Promise) {
+    const owner = activeOwner;
+    const controller = new AbortController;
+    registerCleanup(owner, () => controller.abort());
+    out.then((cleanup) => {
+      if (!controller.signal.aborted && typeof cleanup === "function")
+        registerCleanup(owner, cleanup);
+    }).catch((e) => {
+      err([e instanceof Error ? e : new Error(String(e))]);
+    });
+  }
+}
+function createSensor(watched, options) {
+  validateCallback(TYPE_SENSOR, watched, isSyncFunction);
+  if (options?.value !== undefined)
+    validateSignalValue(TYPE_SENSOR, options.value, options?.guard);
+  const node = {
+    value: options?.value,
+    sinks: null,
+    sinksTail: null,
+    equals: options?.equals ?? DEFAULT_EQUALITY,
+    guard: options?.guard,
+    stop: undefined
+  };
+  return {
+    [Symbol.toStringTag]: TYPE_SENSOR,
+    get() {
+      if (activeSink) {
+        if (!node.sinks)
+          node.stop = watched((next) => {
+            validateSignalValue(TYPE_SENSOR, next, node.guard);
+            setState(node, next);
+          });
+        link(node, activeSink);
+      }
+      validateReadValue(TYPE_SENSOR, node.value);
+      return node.value;
+    }
+  };
+}
+function isSensor(value) {
+  return isSignalOfType(value, TYPE_SENSOR);
+}
+function diffRecords(prev, next) {
+  const add = {};
+  const change = {};
+  const remove = {};
+  let changed = false;
+  const prevKeys = Object.keys(prev);
+  const nextKeys = Object.keys(next);
+  for (const key of nextKeys) {
+    if (key in prev) {
+      if (!DEEP_EQUALITY(prev[key], next[key])) {
+        change[key] = next[key];
+        changed = true;
+      }
+    } else {
+      add[key] = next[key];
+      changed = true;
+    }
+  }
+  for (const key of prevKeys) {
+    if (!(key in next)) {
+      remove[key] = undefined;
+      changed = true;
+    }
+  }
+  return { add, change, remove, changed };
+}
+function createStore(value, options) {
+  validateSignalValue(TYPE_STORE, value, isRecord);
+  const signals = new Map;
+  const addSignal = (key, val) => {
+    validateSignalValue(`${TYPE_STORE} for key "${key}"`, val);
+    if (Array.isArray(val))
+      signals.set(key, createList(val));
+    else if (isRecord(val))
+      signals.set(key, createStore(val));
+    else
+      signals.set(key, createState(val));
+  };
+  const shapeCategory = (val) => {
+    if (Array.isArray(val))
+      return "list";
+    if (isRecord(val))
+      return "store";
+    return "state";
+  };
+  const signalCategory = (signal) => {
+    if (isList(signal))
+      return "list";
+    if (isStore(signal))
+      return "store";
+    return "state";
+  };
+  const buildValue = () => {
+    const record = {};
+    for (const [key, signal] of signals)
+      record[key] = signal.get();
+    return record;
+  };
+  const node = {
+    fn: buildValue,
+    value,
+    flags: FLAG_DIRTY,
+    sources: null,
+    sourcesTail: null,
+    sinks: null,
+    sinksTail: null,
+    equals: DEEP_EQUALITY,
+    error: undefined
+  };
+  const applyChanges = (changes) => {
+    let structural = false;
+    for (const key in changes.add) {
+      addSignal(key, changes.add[key]);
+      structural = true;
+    }
+    let hasChange = false;
+    for (const _key in changes.change) {
+      hasChange = true;
+      break;
+    }
+    if (hasChange) {
+      batch(() => {
+        for (const key in changes.change) {
+          const val = changes.change[key];
+          validateSignalValue(`${TYPE_STORE} for key "${key}"`, val);
+          const signal = signals.get(key);
+          if (signal) {
+            if (shapeCategory(val) !== signalCategory(signal)) {
+              addSignal(key, val);
+              structural = true;
+            } else
+              signal.set(val);
+          }
+        }
+      });
+    }
+    for (const key in changes.remove) {
+      signals.delete(key);
+      structural = true;
+    }
+    if (structural)
+      node.flags |= FLAG_RELINK;
+    return changes.changed;
+  };
+  const subscribe = makeSubscribe(node, options?.watched);
+  for (const key of Object.keys(value))
+    addSignal(key, value[key]);
+  const store = {
+    [Symbol.toStringTag]: TYPE_STORE,
+    [Symbol.isConcatSpreadable]: false,
+    *[Symbol.iterator]() {
+      subscribe();
+      for (const [key, signal] of signals) {
+        yield [key, signal];
+      }
+    },
+    keys() {
+      subscribe();
+      return signals.keys();
+    },
+    byKey(key) {
+      return signals.get(key);
+    },
+    get() {
+      subscribe();
+      if (node.sources) {
+        if (node.flags) {
+          const relink = node.flags & FLAG_RELINK;
+          node.value = untrack(buildValue);
+          if (relink) {
+            node.flags = FLAG_DIRTY;
+            refresh(node);
+            if (node.error)
+              throw node.error;
+          } else {
+            node.flags = FLAG_CLEAN;
+          }
+        }
+      } else {
+        refresh(node);
+        if (node.error)
+          throw node.error;
+      }
+      return node.value;
+    },
+    set(next) {
+      const prev = node.flags & FLAG_DIRTY ? untrack(buildValue) : node.value;
+      const changes = diffRecords(prev, next);
+      if (applyChanges(changes)) {
+        node.flags |= FLAG_DIRTY;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+        if (batchDepth === 0)
+          flush();
+      }
+    },
+    update(fn) {
+      store.set(fn(untrack(() => store.get())));
+    },
+    add(key, value2) {
+      if (signals.has(key))
+        throw new DuplicateKeyError(TYPE_STORE, key, value2);
+      addSignal(key, value2);
+      node.flags |= FLAG_DIRTY | FLAG_RELINK;
+      for (let e = node.sinks;e; e = e.nextSink)
+        propagate(e.sink);
+      if (batchDepth === 0)
+        flush();
+      return key;
+    },
+    remove(key) {
+      const ok = signals.delete(key);
+      if (ok) {
+        node.flags |= FLAG_DIRTY | FLAG_RELINK;
+        for (let e = node.sinks;e; e = e.nextSink)
+          propagate(e.sink);
+        if (batchDepth === 0)
+          flush();
+      }
+    }
+  };
+  return new Proxy(store, {
+    get(target, prop) {
+      if (prop in target)
+        return Reflect.get(target, prop);
+      if (typeof prop !== "symbol")
+        return target.byKey(prop);
+    },
+    set(_target, prop) {
+      throw new InvalidStoreMutationError(String(prop), "assign to");
+    },
+    deleteProperty(_target, prop) {
+      throw new InvalidStoreMutationError(String(prop), "delete");
+    },
+    defineProperty(_target, prop) {
+      throw new InvalidStoreMutationError(String(prop), "define");
+    },
+    has(target, prop) {
+      if (prop in target)
+        return true;
+      return target.byKey(String(prop)) !== undefined;
+    },
+    ownKeys(target) {
+      return Array.from(target.keys());
+    },
+    getOwnPropertyDescriptor(target, prop) {
+      if (prop in target)
+        return Reflect.getOwnPropertyDescriptor(target, prop);
+      if (typeof prop === "symbol")
+        return;
+      const signal = target.byKey(String(prop));
+      return signal ? {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: signal
+      } : undefined;
+    }
+  });
+}
+function isStore(value) {
+  return isSignalOfType(value, TYPE_STORE);
+}
+var SIGNAL_TYPES = new Set([
+  TYPE_STATE,
+  TYPE_MEMO,
+  TYPE_TASK,
+  TYPE_SENSOR,
+  TYPE_SLOT,
+  TYPE_LIST,
+  TYPE_COLLECTION,
+  TYPE_STORE
+]);
+function createComputed(callback, options) {
+  return isAsyncFunction(callback) ? createTask(callback, options) : createMemo(callback, options);
+}
+function createSignal(value) {
+  if (isSignal(value))
+    return value;
+  if (value == null)
+    throw new InvalidSignalValueError("createSignal", value);
+  if (isAsyncFunction(value))
+    return createTask(value);
+  if (isFunction(value))
+    return createMemo(value);
+  if (Array.isArray(value) && value.every((item) => item != null))
+    return createList(value);
+  if (isRecord(value))
+    return createStore(value);
+  return createState(value);
+}
+function createMutableSignal(value) {
+  if (isMutableSignal(value))
+    return value;
+  if (value == null || isFunction(value) || isSignal(value))
+    throw new InvalidSignalValueError("createMutableSignal", value);
+  if (Array.isArray(value) && value.every((item) => item != null))
+    return createList(value);
+  if (isRecord(value))
+    return createStore(value);
+  return createState(value);
+}
+function isComputed(value) {
+  return isMemo(value) || isTask(value);
+}
+function isSignal(value) {
+  return value != null && SIGNAL_TYPES.has(value[Symbol.toStringTag]);
+}
+function isMutableSignal(value) {
+  return isState(value) || isStore(value) || isList(value);
+}
+var settingSlots = new WeakSet;
+function isSignalOrDescriptor(value) {
+  if (isSignal(value))
+    return true;
+  return value !== null && typeof value === "object" && "get" in value && typeof value.get === "function";
+}
+function createSlot(initialSignal, options) {
+  validateSignalValue(TYPE_SLOT, initialSignal, isSignalOrDescriptor);
+  let delegated = initialSignal;
+  const guard = options?.guard;
+  const node = {
+    fn: () => delegated.get(),
+    value: undefined,
+    flags: FLAG_DIRTY,
+    sources: null,
+    sourcesTail: null,
+    sinks: null,
+    sinksTail: null,
+    equals: options?.equals ?? DEFAULT_EQUALITY,
+    error: undefined
+  };
+  const get = () => {
+    if (activeSink)
+      link(node, activeSink);
+    refresh(node);
+    if (node.error)
+      throw node.error;
+    return node.value;
+  };
+  const set = (next) => {
+    if (settingSlots.has(node))
+      throw new Error("[Slot] Circular delegation detected in set()");
+    settingSlots.add(node);
+    try {
+      if (isSlot(delegated))
+        return void delegated.set(next);
+      if ("set" in delegated && typeof delegated.set === "function") {
+        validateSignalValue(TYPE_SLOT, next, guard);
+        delegated.set(next);
+      } else {
+        throw new ReadonlySignalError(TYPE_SLOT);
+      }
+    } finally {
+      settingSlots.delete(node);
+    }
+  };
+  const replace = (next) => {
+    validateSignalValue(TYPE_SLOT, next, isSignalOrDescriptor);
+    delegated = next;
+    node.flags |= FLAG_DIRTY;
+    for (let e = node.sinks;e; e = e.nextSink)
+      propagate(e.sink);
+    if (batchDepth === 0)
+      flush();
+  };
+  return {
+    [Symbol.toStringTag]: TYPE_SLOT,
+    configurable: true,
+    enumerable: true,
+    get,
+    set,
+    replace,
+    current: () => delegated
+  };
+}
+function isSlot(value) {
+  return isSignalOfType(value, TYPE_SLOT);
+}
+// src/scheduler.ts
+var objects = new Set;
+var tasks = new WeakMap;
+var throttledCallbacks = new Set;
+var requestId;
+var runTasks = () => {
+  requestId = undefined;
+  const elements = Array.from(objects);
+  objects.clear();
+  for (const element of elements) {
+    try {
+      tasks.get(element)?.();
+    } catch (e) {
+      console.error("[le-truc scheduler]", e);
+    }
+  }
+  const callbacks = Array.from(throttledCallbacks);
+  throttledCallbacks.clear();
+  for (const cb of callbacks) {
+    try {
+      cb();
+    } catch (e) {
+      console.error("[le-truc scheduler]", e);
+    }
+  }
+};
+var requestTick = () => {
+  if (!requestId)
+    requestId = requestAnimationFrame(runTasks);
+};
+var schedule = (key, task) => {
+  tasks.set(key, task);
+  objects.add(key);
+  requestTick();
+};
+var throttle = (fn, signal) => {
+  let pending = false;
+  let lastArgs;
+  const flush2 = () => {
+    pending = false;
+    fn(...lastArgs);
+  };
+  const wrapped = (...args) => {
+    lastArgs = args;
+    if (pending)
+      return;
+    pending = true;
+    throttledCallbacks.add(flush2);
+    requestTick();
+  };
+  wrapped.cancel = () => {
+    if (pending) {
+      throttledCallbacks.delete(flush2);
+      pending = false;
+    }
+  };
+  signal?.addEventListener("abort", wrapped.cancel, { once: true });
+  return wrapped;
+};
+
+// src/bindings.ts
+var SCRIPT_ATTRS = [
+  "type",
+  "src",
+  "async",
+  "defer",
+  "nomodule",
+  "crossorigin",
+  "integrity",
+  "nonce",
+  "referrerpolicy",
+  "fetchpriority"
+];
+var isSafeURL = (value) => {
+  const stripped = String(value).replace(/[\x00-\x20]/g, "");
+  if (/^(javascript|data|vbscript):/i.test(stripped))
+    return false;
+  if (/^(mailto|tel):/i.test(stripped))
+    return true;
+  if (/^[\\/][\\/]/.test(stripped))
+    return false;
+  if (stripped.includes("://")) {
+    try {
+      const url = new URL(stripped);
+      return ["http:", "https:", "ftp:"].includes(url.protocol);
+    } catch {
+      return false;
+    }
+  }
+  return true;
+};
+var safeSetAttribute = (element, attr, value) => {
+  if (/^on/i.test(attr))
+    throw new Error(`setAttribute: blocked unsafe attribute name '${attr}' on ${element.localName} — event handler attributes are not allowed`);
+  value = String(value).trim();
+  if (!isSafeURL(value))
+    throw new Error(`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`);
+  element.setAttribute(attr, value);
+};
+var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+var setTextPreservingComments = (element, text) => {
+  Array.from(element.childNodes).filter((node) => node.nodeType !== Node.COMMENT_NODE).forEach((node) => {
+    node.remove();
+  });
+  element.append(document.createTextNode(text));
+};
+var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
+  element.textContent = String(value);
+};
+var bindProperty = (object, key) => (value) => {
+  object[key] = value;
+};
+var bindClass = (element, token) => (value) => {
+  element.classList.toggle(token, Boolean(value));
+};
+var bindVisible = (element) => (value) => {
+  element.hidden = !value;
+};
+var bindAttribute = (element, name, allowUnsafe = false) => ({
+  ok: (value) => {
+    if (typeof value === "boolean") {
+      element.toggleAttribute(name, value);
+    } else if (allowUnsafe) {
+      element.setAttribute(name, value);
+    } else {
+      safeSetAttribute(element, name, value);
+    }
+  },
+  nil: () => {
+    element.removeAttribute(name);
+  }
+});
+var bindStyle = (element, prop) => ({
+  ok: (value) => {
+    element.style.setProperty(prop, value);
+  },
+  nil: () => {
+    element.style.removeProperty(prop);
+  }
+});
+var dangerouslyBindInnerHTML = (element, options = {}) => {
+  const reset = () => {
+    if (element.shadowRoot)
+      element.shadowRoot.replaceChildren(document.createElement("slot"));
+    else
+      element.replaceChildren();
+  };
+  return {
+    ok: (rawHtml) => {
+      if (!rawHtml) {
+        schedule(element, reset);
+        return;
+      }
+      const { shadowRootMode, allowScripts, sanitize } = options;
+      if (shadowRootMode && !element.shadowRoot)
+        element.attachShadow({ mode: shadowRootMode });
+      const target = element.shadowRoot || element;
+      const html = sanitize ? sanitize(rawHtml) : rawHtml;
+      schedule(element, () => {
+        try {
+          target.innerHTML = html;
+        } catch (e) {
+          queueMicrotask(() => {
+            throw e;
+          });
+          return;
+        }
+        if (allowScripts) {
+          target.querySelectorAll("script").forEach((script) => {
+            const newScript = document.createElement("script");
+            for (const attr of SCRIPT_ATTRS) {
+              const attrValue = script.getAttribute(attr);
+              if (attrValue !== null)
+                newScript.setAttribute(attr, attrValue);
+            }
+            if (!script.hasAttribute("src"))
+              newScript.appendChild(document.createTextNode(script.textContent ?? ""));
+            target.appendChild(newScript);
+            script.remove();
+          });
+        }
+      });
+    },
+    nil: () => schedule(element, reset)
+  };
+};
+// src/util.ts
+var DEV_MODE = typeof process !== "undefined" && false === "true";
+var isCustomElement = (element) => element.localName.includes("-");
+var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
+var elementName = (el) => {
+  if (!el)
+    return "<unknown>";
+  const id = el.id ? `#${el.id}` : "";
+  const classes = el.classList?.length ? `.${Array.from(el.classList).join(".")}` : "";
+  return `<${el.localName}${id}${classes}>`;
+};
+
+// src/errors.ts
+class InvalidComponentNameError extends TypeError {
+  constructor(component) {
+    super(`Invalid component name "${component}". Custom element names must contain a hyphen, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens.`);
+    this.name = "InvalidComponentNameError";
+  }
+}
+
+class InvalidPropertyNameError extends TypeError {
+  constructor(component, prop, reason) {
+    super(`Invalid property name "${prop}" for component <${component}>. ${reason}`);
+    this.name = "InvalidPropertyNameError";
+  }
+}
+
+class MissingElementError extends Error {
+  constructor(host, selector, required) {
+    super(`Missing required element <${selector}> in component ${elementName(host)}. ${required}`);
+    this.name = "MissingElementError";
+  }
+}
+
+class DependencyTimeoutError extends Error {
+  constructor(host, missing) {
+    super(`Timeout waiting for: [${missing.join(", ")}] in component ${elementName(host)}.`);
+    this.name = "DependencyTimeoutError";
+  }
+}
+
+class InvalidReactivesError extends TypeError {
+  constructor(host, target, reactives) {
+    super(`Expected reactives passed from ${elementName(host)} to ${elementName(target)} to be a record of signals, reactive property names or functions. Got ${valueString(reactives)}.`);
+    this.name = "InvalidReactivesError";
+  }
+}
+
+class InvalidCustomElementError extends TypeError {
+  constructor(target, where) {
+    super(`Target ${elementName(target)} is not a custom element in ${where}.`);
+    this.name = "InvalidCustomElementError";
+  }
+}
+
+class InvalidPassPropertyError extends TypeError {
+  constructor(host, target, reasons) {
+    const detail = Array.from(reasons, ([prop, reason]) => `'${prop}' ${reason}`).join("; ");
+    super(`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}.`);
+    this.name = "InvalidPassPropertyError";
+  }
+}
+
+class InvalidSelectorError extends TypeError {
+  constructor(parent, selector, cause) {
+    const where = typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
+    super(`Invalid selector "${selector}" passed to all() in ${where}. ${cause instanceof Error ? cause.message : String(cause)}`);
+    this.name = "InvalidSelectorError";
+  }
+}
+
+// src/internal.ts
+var DEPENDENCY_TIMEOUT = 200;
+var CONTEXT_RETRY_DELAY = DEPENDENCY_TIMEOUT + 10;
+var componentSignals = new WeakMap;
+var getSignals = (el) => {
+  let signals = componentSignals.get(el);
+  if (!signals) {
+    signals = {};
+    componentSignals.set(el, signals);
+  }
+  return signals;
+};
+
+// src/helpers/context.ts
+var CONTEXT_REQUEST = "context-request";
+
+class ContextRequestEvent extends Event {
+  context;
+  callback;
+  subscribe;
+  constructor(context, callback, subscribe = false) {
+    super(CONTEXT_REQUEST, {
+      bubbles: true,
+      composed: true
+    });
+    this.context = context;
+    this.callback = callback;
+    this.subscribe = subscribe;
+  }
+}
+var createContext = (key) => key;
+var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
+  const listener = (e) => {
+    const { context, callback } = e;
+    if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
+      e.stopImmediatePropagation();
+      callback(() => {
+        try {
+          return host[context];
+        } catch (error) {
+          if (DEV_MODE)
+            console.warn("provideContexts: getter threw", elementName(host), error);
+          return;
+        }
+      });
+    }
+  };
+  host.addEventListener(CONTEXT_REQUEST, listener);
+  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
+});
+var makeRequestContext = (host) => (context, fallback) => {
+  const slot = createSlot(createState(fallback));
+  let answered = false;
+  const dispatch = () => {
+    host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
+      answered = true;
+      slot.replace(createMemo(getter));
+    }));
+  };
+  dispatch();
+  if (!answered) {
+    queueMicrotask(() => {
+      if (!answered && host.isConnected)
+        dispatch();
+    });
+    setTimeout(() => {
+      if (!answered && host.isConnected) {
+        dispatch();
+        if (!answered && DEV_MODE)
+          console.warn(`requestContext: no provider answered for '${String(context)}' on ${elementName(host)}; using fallback`);
+      }
+    }, CONTEXT_RETRY_DELAY);
+  }
+  return slot;
+};
+
+// src/helpers/dom.ts
+var extractAttributes = (selector) => {
+  const attributes = new Set;
+  let withoutAttrValues = "";
+  let depth = 0;
+  for (const ch of selector) {
+    if (ch === "[")
+      depth++;
+    else if (ch === "]") {
+      if (depth > 0)
+        depth--;
+    } else if (depth === 0)
+      withoutAttrValues += ch;
+  }
+  if (withoutAttrValues.includes("."))
+    attributes.add("class");
+  if (withoutAttrValues.includes("#"))
+    attributes.add("id");
+  if (selector.includes("[")) {
+    const parts = selector.split("[");
+    for (let i = 1;i < parts.length; i++) {
+      const part = parts[i];
+      if (!part || !part.includes("]"))
+        continue;
+      const attrName = part.split("=")[0].split("]")[0].trim().replace(/[^a-zA-Z0-9_-]/g, "");
+      if (attrName)
+        attributes.add(attrName);
+    }
+  }
+  return [...attributes];
+};
+function createElementsMemo(parent, selector) {
+  try {
+    parent.querySelector(selector);
+  } catch (error) {
+    throw new InvalidSelectorError(parent, selector, error);
+  }
+  return createMemo(() => Array.from(parent.querySelectorAll(selector)), {
+    value: [],
+    equals: (a, b) => a.length === b.length && a.every((el, i) => el === b[i]),
+    watched: (invalidate) => {
+      const observerConfig = {
+        childList: true,
+        subtree: true
+      };
+      const observedAttributes = extractAttributes(selector);
+      if (observedAttributes.length) {
+        observerConfig.attributes = true;
+        observerConfig.attributeFilter = observedAttributes;
+      }
+      const couldMatch = (node) => node instanceof Element && (node.matches(selector) || node.querySelector(selector));
+      const maybeDirty = (mutation) => {
+        if (mutation.type === "attributes")
+          return true;
+        if (mutation.type === "childList")
+          return Array.from(mutation.addedNodes).some(couldMatch) || Array.from(mutation.removedNodes).some(couldMatch);
+        return false;
+      };
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (maybeDirty(mutation)) {
+            invalidate();
+            return;
+          }
+        }
+      });
+      observer.observe(parent, observerConfig);
+      return () => observer.disconnect();
+    }
+  });
+}
+var makeElementQueries = (host) => {
+  const root = host.shadowRoot ?? host;
+  const dependencies = new Set;
+  function first(selector, required) {
+    const target = root.querySelector(selector);
+    if (required != null && !target)
+      throw new MissingElementError(host, selector, required);
+    if (target && isNotYetDefinedComponent(target))
+      dependencies.add(target.localName);
+    return target ?? undefined;
+  }
+  function all(selector, required) {
+    const targets = createElementsMemo(root, selector);
+    const current = targets.get();
+    if (required != null && !current.length)
+      throw new MissingElementError(host, selector, required);
+    if (current.length)
+      for (const target of current) {
+        if (isNotYetDefinedComponent(target))
+          dependencies.add(target.localName);
+      }
+    return targets;
+  }
+  const resolveDependencies = (callback) => {
+    if (dependencies.size) {
+      queueMicrotask(() => {
+        const deps = Array.from(dependencies).filter((dep) => !customElements.get(dep));
+        if (!deps.length) {
+          callback();
+          return;
+        }
+        Promise.race([
+          Promise.all(deps.map((dep) => customElements.whenDefined(dep))),
+          new Promise((_, reject) => {
+            setTimeout(() => {
+              reject(new DependencyTimeoutError(host, deps.filter((dep) => !customElements.get(dep))));
+            }, DEPENDENCY_TIMEOUT);
+          })
+        ]).then(callback).catch((error) => {
+          if (DEV_MODE)
+            console.warn(error);
+          callback();
+        });
+      });
+    } else {
+      callback();
+    }
+  };
+  return [{ first, all }, resolveDependencies];
+};
+
+// src/helpers/reactive.ts
+var activateResult = (result) => {
+  for (const descriptor of result) {
+    if (Array.isArray(descriptor))
+      activateResult(descriptor);
+    else if (descriptor)
+      descriptor();
+  }
+};
+var keyedScopes = (memo, mount) => {
+  const scopes = new Map;
+  createScope(() => {
+    createEffect(() => {
+      const current = memo.get();
+      const currentSet = new Set(current);
+      for (const [el, dispose] of Array.from(scopes)) {
+        if (!currentSet.has(el)) {
+          dispose();
+          scopes.delete(el);
+        }
+      }
+      for (const el of current) {
+        if (scopes.has(el))
+          continue;
+        const dispose = createScope(() => mount(el), { root: true });
+        scopes.set(el, dispose);
+      }
+    });
+    return () => {
+      for (const dispose of scopes.values())
+        dispose();
+      scopes.clear();
+    };
+  });
+};
+var toSignal = (host, source) => {
+  if (isFunction(source))
+    return createComputed(source);
+  if (typeof source === "string") {
+    const sig = getSignals(host)[source];
+    if (sig)
+      return sig;
+    return createMemo(() => host[source]);
+  }
+  if (source && typeof source === "object" && "get" in source && !(Symbol.toStringTag in source)) {
+    return source;
+  }
+  return source;
+};
+var makeWatch = (host) => {
+  function watch(source, handlerOrHandlers) {
+    return () => {
+      if (Array.isArray(source)) {
+        const signals = source.map((s) => toSignal(host, s));
+        const handler = handlerOrHandlers;
+        return createEffect(() => match(signals, { ok: (values) => untrack(() => handler(values)) }));
+      }
+      const signal = toSignal(host, source);
+      if (typeof handlerOrHandlers === "function") {
+        return createEffect(() => match(signal, {
+          ok: (value) => untrack(() => handlerOrHandlers(value))
+        }));
+      }
+      return createEffect(() => match(signal, handlerOrHandlers));
+    };
+  }
+  return watch;
+};
+var makePass = (host) => {
+  const swapSlots = (target, props) => createScope(() => {
+    if (!isCustomElement(target))
+      throw new InvalidCustomElementError(target, `pass from ${elementName(host)}`);
+    if (!isRecord(props))
+      throw new InvalidReactivesError(host, target, props);
+    const signals = getSignals(target);
+    const targetName = elementName(target);
+    const failures = new Map;
+    const bindings = [];
+    for (const [prop, reactive] of Object.entries(props)) {
+      if (reactive == null)
+        continue;
+      if (!(prop in target)) {
+        failures.set(prop, `does not exist on ${targetName}`);
+        continue;
+      }
+      const signal = toSignal(host, reactive);
+      if (!signal) {
+        failures.set(prop, "could not be resolved to a signal");
+        continue;
+      }
+      if (DEV_MODE && !isComputed(signal) && !(signal && typeof signal === "object" && ("get" in signal) && !(Symbol.toStringTag in signal))) {
+        console.warn(`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`);
+      }
+      const slot = signals[prop];
+      if (!isSlot(slot)) {
+        failures.set(prop, `is not Slot-backed on ${targetName} (read-only property, or target is not a Le Truc component)`);
+        continue;
+      }
+      bindings.push({ slot, signal });
+    }
+    if (failures.size)
+      throw new InvalidPassPropertyError(host, target, failures);
+    const cleanups = bindings.map(({ slot, signal }) => {
+      const original = slot.current();
+      slot.replace(signal);
+      return () => slot.replace(original);
+    });
+    if (cleanups.length)
+      return () => {
+        for (const c of cleanups)
+          c();
+      };
+  });
+  function pass(target, props) {
+    return () => {
+      if (!target)
+        return;
+      if (isMemo(target)) {
+        keyedScopes(target, (el) => swapSlots(el, props));
+      } else {
+        swapSlots(target, props);
+      }
+    };
+  }
+  return pass;
+};
+function each(memo, callback) {
+  return () => {
+    keyedScopes(memo, (element) => {
+      const result = callback(element);
+      if (Array.isArray(result))
+        activateResult(result);
+      else if (typeof result === "function")
+        result();
+    });
+  };
+}
+
+// src/helpers/events.ts
+var PASSIVE_EVENTS = new Set([
+  "scroll",
+  "resize",
+  "mousewheel",
+  "touchstart",
+  "touchmove",
+  "wheel"
+]);
+var NON_BUBBLING_EVENTS = new Set([
+  "focus",
+  "blur",
+  "scroll",
+  "resize",
+  "load",
+  "unload",
+  "error",
+  "toggle",
+  "mouseenter",
+  "mouseleave",
+  "pointerenter",
+  "pointerleave",
+  "abort",
+  "canplay",
+  "canplaythrough",
+  "durationchange",
+  "emptied",
+  "ended",
+  "loadeddata",
+  "loadedmetadata",
+  "loadstart",
+  "pause",
+  "play",
+  "playing",
+  "progress",
+  "ratechange",
+  "seeked",
+  "seeking",
+  "stalled",
+  "suspend",
+  "timeupdate",
+  "volumechange",
+  "waiting"
+]);
+var attachListener = (host, target, type, handler, options) => {
+  const rawListener = (e) => {
+    const result = handler(e, target);
+    if (!isRecord(result))
+      return;
+    batch(() => {
+      for (const [key, value] of Object.entries(result)) {
+        host[key] = value;
+      }
+    });
+  };
+  const listener = options.passive ? throttle(rawListener) : rawListener;
+  target.addEventListener(type, listener, options);
+  return () => {
+    target.removeEventListener(type, listener);
+    listener.cancel?.();
+  };
+};
+var makeOn = (host) => {
+  function on(target, type, handler, options = {}) {
+    return () => {
+      if (!target)
+        return;
+      if (!("passive" in options)) {
+        options = { ...options, passive: PASSIVE_EVENTS.has(type) };
+      }
+      if (isMemo(target)) {
+        if (NON_BUBBLING_EVENTS.has(type)) {
+          if (DEV_MODE) {
+            console.warn(`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
+          }
+          return keyedScopes(target, (el) => attachListener(host, el, type, handler, options));
+        }
+        const root = host.shadowRoot ?? host;
+        const rawListener = (e) => {
+          const path = e.composedPath();
+          for (const el of target.get()) {
+            if (path.includes(el)) {
+              const result = handler(e, el);
+              if (!isRecord(result))
+                break;
+              batch(() => {
+                for (const [key, value] of Object.entries(result)) {
+                  host[key] = value;
+                }
+              });
+              break;
+            }
+          }
+        };
+        const listener = options.passive ? throttle(rawListener) : rawListener;
+        createScope(() => {
+          root.addEventListener(type, listener, options);
+          return () => {
+            root.removeEventListener(type, listener);
+            listener.cancel?.();
+          };
+        });
+        return;
+      }
+      createScope(() => attachListener(host, target, type, handler, options));
+    };
+  }
+  return on;
+};
+
+// src/types.ts
+var PARSER_BRAND = Symbol("parser");
+var METHOD_BRAND = Symbol("method");
+var RESERVED_WORDS_LIST = [
+  "constructor",
+  "prototype",
+  "__proto__",
+  "toString",
+  "valueOf",
+  "hasOwnProperty",
+  "isPrototypeOf",
+  "propertyIsEnumerable",
+  "toLocaleString"
+];
+var RESERVED_WORDS = new Set(RESERVED_WORDS_LIST);
+var isParser = (value) => typeof value === "function" && (PARSER_BRAND in value);
+var isMethodProducer = (value) => typeof value === "function" && (METHOD_BRAND in value);
+var isReservedWord = (name) => RESERVED_WORDS.has(name);
+var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
+var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
+
+// src/component.ts
+function defineComponent(name, factory) {
+  if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
+    throw new InvalidComponentNameError(name);
+
+  class Truc extends HTMLElement {
+    #initialized = false;
+    #setup = [];
+    #cleanup;
+    connectedCallback() {
+      const runSetup = () => {
+        this.#cleanup = createScope(() => {
+          activateResult(this.#setup);
+        }, {
+          root: true
+        });
+      };
+      if (this.#initialized) {
+        if (isFunction(this.#cleanup))
+          this.#cleanup();
+        runSetup();
+      } else {
+        const host = this;
+        const [elementQueries, resolveDependencies] = makeElementQueries(host);
+        const context = {
+          expose: this.#initSignals.bind(this),
+          host,
+          ...elementQueries,
+          watch: makeWatch(host),
+          on: makeOn(host),
+          pass: makePass(host),
+          provideContexts: makeProvideContexts(host),
+          requestContext: makeRequestContext(host)
+        };
+        const result = factory(context);
+        if (result)
+          this.#setup = result;
+        this.#initialized = true;
+        if (!this.#setup.length)
+          return;
+        resolveDependencies(runSetup);
+      }
+    }
+    disconnectedCallback() {
+      if (isFunction(this.#cleanup))
+        this.#cleanup();
+    }
+    #initSignals(instanceProps) {
+      const createReactiveProperty = (key, initializer) => {
+        if (isParser(initializer)) {
+          const result = initializer(this.getAttribute(key));
+          if (result != null)
+            this.#setAccessor(key, result);
+        } else if (isMethodProducer(initializer)) {
+          this[key] = initializer;
+        } else {
+          const value = initializer;
+          if (value != null)
+            this.#setAccessor(key, value);
+        }
+      };
+      for (const [prop, initializer] of Object.entries(instanceProps)) {
+        if (initializer == null)
+          continue;
+        if (isReservedWord(prop))
+          throw new InvalidPropertyNameError(this.localName, prop, "reserved word or Object builtin — cannot be used as a reactive property");
+        if (prop in this)
+          continue;
+        createReactiveProperty(prop, initializer);
+      }
+    }
+    #setAccessor(key, value) {
+      const signal = isSignal(value) ? value : isFunction(value) ? createComputed(value) : createState(value);
+      const signals = getSignals(this);
+      const k = key;
+      const prev = signals[k];
+      if (isSlot(prev)) {
+        prev.replace(signal);
+      } else if (isMutableSignal(signal)) {
+        const slot = createSlot(signal);
+        signals[k] = slot;
+        Object.defineProperty(this, key, slot);
+      } else {
+        signals[k] = signal;
+        Object.defineProperty(this, key, {
+          get: signal.get,
+          enumerable: true
+        });
+      }
+    }
+  }
+  customElements.define(name, Truc);
+  return customElements.get(name);
+}
+// src/parsers/boolean.ts
+var asBoolean = () => asParser((value) => value != null && value.toLowerCase() !== "false");
+// src/parsers/json.ts
+var asJSON = (fallback) => asParser((value) => {
+  if ((value ?? fallback) == null)
+    throw new TypeError("asJSON: Value and fallback are both null or undefined");
+  if (value == null)
+    return fallback;
+  if (value === "")
+    throw new SyntaxError("Empty string is not valid JSON");
+  let result;
+  try {
+    result = JSON.parse(value, (key, parsed) => isReservedWord(key) ? undefined : parsed);
+  } catch (error) {
+    throw new SyntaxError(`Failed to parse JSON: ${String(error)}`, {
+      cause: error
+    });
+  }
+  return result ?? fallback;
+});
+// src/parsers/number.ts
+var parseNumber = (parseFn, value) => {
+  if (value == null)
+    return;
+  const parsed = parseFn(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+var asInteger = (fallback = 0) => asParser((value) => {
+  if (value == null)
+    return fallback;
+  const trimmed = value.trim();
+  if (trimmed.toLowerCase().startsWith("0x"))
+    return parseNumber((v) => parseInt(v, 16), trimmed) ?? fallback;
+  const parsed = parseNumber(parseFloat, value);
+  return parsed != null ? Math.trunc(parsed) : fallback;
+});
+var asNumber = (fallback = 0) => asParser((value) => parseNumber(parseFloat, value) ?? fallback);
+var asClampedInteger = (min = 0, max = Number.MAX_SAFE_INTEGER) => asParser((value) => {
+  if (value == null)
+    return min;
+  const trimmed = value.trim();
+  const raw = trimmed.toLowerCase().startsWith("0x") ? parseNumber((v) => parseInt(v, 16), trimmed) : parseNumber(parseFloat, value);
+  const parsed = raw != null ? Math.trunc(raw) : min;
+  return Math.max(min, Math.min(parsed, max));
+});
+// src/parsers/string.ts
+var asString = (fallback = "") => asParser((value) => value ?? fallback);
+var asEnum = (valid) => asParser((value) => {
+  if (value == null)
+    return valid[0];
+  const lowerValue = value.toLowerCase();
+  const matchingValid = valid.find((v) => v.toLowerCase() === lowerValue);
+  return matchingValid ?? valid[0];
+});
+export {
+  untrack,
+  unown,
+  throttle,
+  setTextPreservingComments,
+  schedule,
+  safeSetAttribute,
+  match,
+  isTask,
+  isStore,
+  isState,
+  isSlot,
+  isSignalOfType,
+  isSignal,
+  isSensor,
+  isRecord,
+  isParser,
+  isMutableSignal,
+  isMethodProducer,
+  isMemo,
+  isList,
+  isFunction,
+  isComputed,
+  isCollection,
+  isAsyncFunction,
+  escapeHTML,
+  each,
+  defineMethod,
+  defineComponent,
+  dangerouslyBindInnerHTML,
+  createTask,
+  createStore,
+  createState,
+  createSlot,
+  createSignal,
+  createSensor,
+  createScope,
+  createMutableSignal,
+  createMemo,
+  createList,
+  createElementsMemo,
+  createEffect,
+  createContext,
+  createComputed,
+  createCollection,
+  bindVisible,
+  bindText,
+  bindStyle,
+  bindProperty,
+  bindClass,
+  bindAttribute,
+  batch,
+  asString,
+  asParser,
+  asNumber,
+  asJSON,
+  asInteger,
+  asEnum,
+  asClampedInteger,
+  asBoolean,
+  UnsetSignalValueError,
+  SKIP_EQUALITY,
+  RequiredOwnerError,
+  ReadonlySignalError,
+  PromiseValueError,
+  NullishSignalValueError,
+  MissingElementError,
+  InvalidStoreMutationError,
+  InvalidSignalValueError,
+  InvalidSelectorError,
+  InvalidReactivesError,
+  InvalidPropertyNameError,
+  InvalidPassPropertyError,
+  InvalidCustomElementError,
+  InvalidComponentNameError,
+  InvalidCallbackError,
+  EffectConvergenceError,
+  DuplicateKeyError,
+  DependencyTimeoutError,
+  DEFAULT_EQUALITY,
+  DEEP_EQUALITY,
+  ContextRequestEvent,
+  CircularDependencyError,
+  CONTEXT_REQUEST
+};

@@ -12,7 +12,7 @@ declare global {
 }
 
 /**
- * Minimal v1.1 factory form component for Phase 1 engine tests.
+ * Minimal v2.x factory form component for Phase 1 engine tests.
  * Uses expose() only — no effects. Verifies that signals are created
  * and accessible via host properties when the return array is empty.
  */

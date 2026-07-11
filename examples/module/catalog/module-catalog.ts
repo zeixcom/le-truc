@@ -6,6 +6,13 @@ declare global {
 	}
 }
 
+/**
+ * A product catalog that aggregates spinbutton quantities and passes the total to a cart button.
+ * Use it as a demo of inter-component communication via `pass()` — when spinbutton
+ * values change, the aggregated total updates the cart button reactively.
+ * Each product row should contain a `<form-spinbutton>` for quantity input;
+ * the cart button must have class `cart` for the total binding to attach.
+ * @demo {./docs/examples/module-catalog.html} Interactive preview and usage examples */
 export default defineComponent('module-catalog', ({ all, first, pass }) => {
 	const button = first(
 		'basic-button',

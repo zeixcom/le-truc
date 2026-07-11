@@ -3,6 +3,7 @@ import {
 	createTask,
 	dangerouslyBindInnerHTML,
 	defineComponent,
+	schedule,
 } from '../../..'
 import {
 	fetchWithCache,
@@ -11,6 +12,7 @@ import {
 } from '../../_common/fetchWithCache'
 
 export type ModuleLazyloadProps = {
+	/** URL of the HTML partial to fetch and render. Read from the `src` attribute at connect time. */
 	src: string
 }
 
@@ -20,6 +22,13 @@ declare global {
 	}
 }
 
+/**
+ * Fetches and renders an HTML partial from a URL, with loading and error states.
+ * Use it for lazy-loading content on demand — the `src` attribute should point to a
+ * same-origin URL; cross-origin or `javascript:` URLs are rejected for security.
+ * Untrusted HTML must be sanitised server-side; set `allow-scripts` only when required.
+ * Set `allow-scripts` attribute to permit inline scripts in the fetched content.
+ * @demo {./docs/examples/module-lazyload.html} Interactive preview and usage examples */
 export default defineComponent<ModuleLazyloadProps>(
 	'module-lazyload',
 	({ expose, first, host, watch }) => {
@@ -50,6 +59,13 @@ export default defineComponent<ModuleLazyloadProps>(
 
 		expose({ src: asString() })
 
+		// Skip the scroll-to-heading on the very first load, so the page
+		// doesn't jump on initial mount — only on subsequent src changes.
+		let hasLoaded = false
+		// Distinct key from `contentEl` (used by dangerouslyBindInnerHTML above)
+		// so this scroll task doesn't clobber the pending innerHTML write.
+		const scrollTask = {}
+
 		return [
 			watch(content, {
 				ok: content => {
@@ -57,6 +73,15 @@ export default defineComponent<ModuleLazyloadProps>(
 					loading.hidden = true
 					contentEl.hidden = false
 					setHTML(content)
+
+					if (hasLoaded) {
+						schedule(scrollTask, () => {
+							contentEl
+								.querySelector('h1, h2, h3, h4, h5, h6')
+								?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+						})
+					}
+					hasLoaded = true
 				},
 				nil: () => {
 					callout.hidden = false

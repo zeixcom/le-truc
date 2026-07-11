@@ -73,6 +73,68 @@ bun install
 
 (Le Truc uses Bun as its package manager and runtime.)
 
+**Generate the Custom Elements Manifest:**
+
+```sh
+bun run build:cem
+```
+
+This runs `cem analyze` (provided by the `@custom-elements-manifest/analyzer` devDependency and the `@zeix/cem-plugin-le-truc` plugin) and creates `custom-elements.json` (gitignored). No extra install is needed — the analyzer CLI is already bundled with the project dependencies.
+
+Attributes exposed via `expose()` parsers are detected automatically. An attribute that a component reads once via `host.getAttribute()` at connect time (and deliberately does *not* expose as a reactive property) must be declared with an `@attribute {type} [name=default] - description` JSDoc tag (alias `@attr`) on the component's export — see `module-splitview`'s `orientation` for an example.
+
+---
+
+### Optional: editor autocomplete and AI agent tooling
+
+The steps below are **optional**. They add editor autocomplete (`cem lsp`) and AI agent component context (`cem mcp`) for Le Truc elements. They are not required to build, test, or contribute to Le Truc — `cem analyze` above already works without them.
+
+These features are provided by [`@pwrs/cem`](https://github.com/bennypowers/cem), a separate tool from the analyzer. It ships a ~58 MB native binary (platform-specific), so it is **not** a project dependency — install it globally only if you want the editor/AI integration.
+
+**Install the CEM multitool globally (optional, only for lsp/mcp):**
+
+```sh
+bun add -g @pwrs/cem
+```
+
+**Configure editor autocomplete (`cem lsp`):**
+
+*VS Code*: Open this repo — the workspace settings in `.vscode/settings.json` already point the HTML Language Server at `custom-elements.json`, so autocomplete, hover, and diagnostics for Le Truc elements work automatically once the manifest is generated and `cem lsp` is running.
+
+*Zed*: Add the following to your project or global `settings.json`:
+
+```json
+"lsp": {
+  "html": {
+    "initialization_options": {
+      "customData": ["./custom-elements.json"]
+    }
+  }
+}
+```
+
+**Configure AI agent component context (`cem mcp`):**
+
+Create a local `.mcp.json` in the repo root (gitignored — do not commit):
+
+```json
+{
+  "mcpServers": {
+    "cem": {
+      "command": "/path/to/cem",
+      "args": ["mcp"],
+      "type": "stdio"
+    }
+  }
+}
+```
+
+Replace `/path/to/cem` with the output of `which cem`. This gives Claude Code and other AI agents live access to component definitions when working in this repo.
+
+**Known false positive — "is not imported" diagnostic:**
+
+`cem lsp` assumes a module-per-file architecture and emits a diagnostic like `Custom element 'basic-hello' is not imported` for every Le Truc element used in an HTML file. **This is a false positive for this project.** Le Truc's docs bundle all components into a single global `assets/main.js` (via `bun build examples/main.ts`), so components are registered on `customElements` globally. The hover docs, autocomplete, and tag validation all work correctly — only the import suggestion is noise here. Ignore it.
+
 **Configure the merge driver for auto-generated docs (once per clone):**
 
 ```sh

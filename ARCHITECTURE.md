@@ -52,7 +52,7 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 
 ### Event Binding
 
-`on(target, type, handler)` binds events with unified `(event, target)` signature. For `Memo<Element[]>` targets, uses event delegation with fallback to per-element listeners for non-bubbling events.
+`on(target, type, handler)` binds events with unified `(event, target)` signature. For `Memo<Element[]>` targets, uses event delegation with fallback to per-element listeners for non-bubbling events. Per-element lifecycles over `Memo<Element[]>` collections — `each()`, `pass()` with a Memo target, and the non-bubbling `on()` fallback — share the internal `keyedScopes` helper, which keys scopes by element identity so collection changes only mount entering elements and dispose leaving ones, leaving survivors untouched (see [ADR 0014](adr/0014-keyed-per-element-scopes-for-memo-collections.md)).
 
 ## Query System
 
@@ -81,12 +81,12 @@ Parsers transform HTML attribute strings to typed values (see [ADR 0005](adr/000
 
 Implements the [Community Protocol for Context](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md) (see [ADR 0008](adr/0008-community-protocol-for-context.md)):
 
-- `provideContexts([...])`: Provider side, installs `context-request` listener; a throwing property getter is caught and degrades to `undefined` (logged in `DEV_MODE`) rather than throwing inside the consumer's `Memo`
-- `requestContext(context, fallback)`: Consumer side, dispatches `ContextRequestEvent`, returns `Memo<T>`
+- `provideContexts([...])`: Provider side, installs `context-request` listener; a throwing property getter is caught and degrades to `undefined` (logged in `DEV_MODE`) rather than throwing inside the consumer's `Slot`
+- `requestContext(context, fallback)`: Consumer side, dispatches `ContextRequestEvent`, returns a `Signal<T>` backed by a `Slot` (the same primitive `pass()` uses for overridable backing signals). A provider that upgrades *after* the consumer's synchronous dispatch (its `customElements.define()` runs later in the bundle, or its own `provideContexts` listener hasn't activated yet) is caught by two re-dispatches — once on a microtask and once after the 200 ms dependency-resolution window — so the `Slot` swaps its delegate from the fallback `State` to a `Memo` of the provider's getter, switching the value reactively with no consumer code change. Once a provider answers, the consumer retains its value for the lifetime of the connection — providers are stable single sources of truth that update *values*, not entities to be removed or swapped (that is an anti-pattern), so disconnecting a provider does not revert the consumer to `fallback` (see [ADR 0015](adr/0015-late-provider-retry-in-requestcontext.md))
 
 ### Inter-Component Signal Sharing (Pass)
 
-`pass(target, props)` swaps Slot-backed signals for zero-overhead live **Signal** sharing between Le Truc **Component** instances. Every entry in `props` is a declared intent to bind a live signal: if a prop doesn't exist on the target, can't be resolved to a signal, or isn't Slot-backed (target is a non-Le-Truc custom element, or the prop is read-only/computed), `pass()` throws `InvalidPassPropertyError` naming every failing prop — validated eagerly before any signal is swapped, so a failure never leaves a partial bind. See [ADR 0011](adr/0011-throw-on-pass-binding-failure.md).
+`pass(target, props)` swaps Slot-backed signals for zero-overhead live **Signal** sharing between Le Truc **Component** instances. Every entry in `props` is a declared intent to bind a live signal: if a prop doesn't exist on the target, can't be resolved to a signal, or isn't Slot-backed (target is a non-Le-Truc custom element, or the prop is read-only/computed), `pass()` throws `InvalidPassPropertyError` naming every failing prop — validated eagerly before any signal is swapped, so a failure never leaves a partial bind. See [ADR 0011](adr/0011-throw-on-pass-binding-failure.md). The property-key and bare-writable-signal short forms — which grant the child unrestricted `.set()` on the parent's signal — are deprecated in favor of the thunk (read-only) and `{ get, set }` descriptor (mediated writable) forms; they warn in DEV_MODE and will be removed in the next major (see [ADR 0012](adr/0012-deprecate-unrestricted-write-short-forms-in-pass.md)).
 
 ## Naming Conventions
 
@@ -105,4 +105,49 @@ Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestConte
 
 ## Scheduler
 
-`schedule(element, task)` deduplicates high-frequency DOM updates using `requestAnimationFrame`. Used by `on()` for passive events and `dangerouslyBindInnerHTML`.
+`schedule(element, task)` deduplicates high-frequency DOM updates using `requestAnimationFrame`, keyed per element. It is used by `dangerouslyBindInnerHTML`. The sibling `throttle(fn, signal?)` helper — which shares the same single RAF tick — limits passive event handlers in `on()` to one call per animation frame.
+
+## Ecosystem Tooling
+
+### Custom Elements Manifest
+
+Le Truc example components are analysed by `@custom-elements-manifest/analyzer` using the `@zeix/cem-plugin-le-truc` plugin (see [ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md)). The plugin bridges the gap between Le Truc's factory pattern and the standard CEM ecosystem.
+
+The generated `custom-elements.json` (repo root, referenced via `"customElements"` in `package.json`, gitignored) enables two **optional** tooling features — neither is required to build, test, or contribute to Le Truc:
+- **`cem lsp`**: Editor autocomplete, hover docs, and diagnostics in HTML templates (VS Code, Zed) — requires `@pwrs/cem` installed globally (see CONTRIBUTING.md); not a project dependency.
+- **`cem mcp`**: AI-native component context for coding agents (Claude Code, etc.) — opt-in via a gitignored `.mcp.json` per the CONTRIBUTING.md instructions
+
+#### What the plugin extracts
+
+| CEM field | Source |
+|---|---|
+| `tagName` | First string argument of `defineComponent(tagName, …)` |
+| `name` | PascalCase from tagName (`basic-counter` → `BasicCounter`) |
+| `description` | JSDoc above the `export default defineComponent(…)` |
+| `members` | Properties of `Props` type via TypeScript type checker — always the source of truth |
+| `attributes` | Properties in `expose({})` whose initializer is a call to an `as*` Parser from `@zeix/le-truc` (imported by package name **or** by relative path into the package root — resolved against the owning `package.json`) |
+| `slots`, `events`, `cssParts`, `cssProperties` | `@slot`, `@fires`, `@csspart`, `@cssprop` JSDoc tags on the export |
+
+#### JSDoc annotation contract
+
+```typescript
+/**
+ * Component description.
+ * @slot - Default slot description
+ * @fires event-name - Fired when …
+ */
+export default defineComponent<MyProps>('my-element', …)
+```
+
+Property descriptions go on the `Props` type:
+
+```typescript
+export type MyProps = {
+  /** Property description. Read from the `value` attribute at connect time. */
+  value: string
+}
+```
+
+#### Generation
+
+Run `bun run build:cem` to generate `custom-elements.json`. The script runs `cem analyze` using `custom-elements-manifest.config.mjs` targeting `examples/**/*.ts` (test files excluded). The manifest is gitignored — it is a local build artifact, not committed.

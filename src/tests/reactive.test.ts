@@ -9,7 +9,7 @@
  * No DOM required — host is a plain stub; Task signals are passed directly.
  */
 
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, mock, test } from 'bun:test'
 import {
 	createEffect,
 	createMemo,
@@ -21,6 +21,13 @@ import {
 import { activateResult, each, makePass, makeWatch } from '../helpers/reactive'
 import { getSignals } from '../internal'
 import type { ComponentProps } from '../types'
+// `mock.module` mutates the live module namespace in place, so a captured
+// `import * as ns` reference reflects whatever the mock last set — it is NOT
+// a stable snapshot. Spread it into a plain object at file-load time, before
+// any `mock.module('../util', …)` call below, and restore from that snapshot.
+import * as realUtilNamespace from '../util'
+
+const realUtil = { ...realUtilNamespace }
 
 /* === Helpers === */
 
@@ -394,6 +401,177 @@ describe('makePass — real slot swap and restore', () => {
 	})
 })
 
+describe('makePass — ADR-0012 DEV_MODE warning for writable short forms', () => {
+	// Shared helper: a Le-Truc-style target with one Slot-backed prop, so the
+	// warning fires before the eager slot validation rejects the binding.
+	const makeTarget = (prop: string) => {
+		const targetState = createState('original')
+		const slot = createSlot(targetState)
+		const target = { localName: 'my-target' } as unknown as HTMLElement &
+			ComponentProps
+		getSignals(target)[prop] = slot
+		Object.defineProperty(target, prop, slot)
+		return target
+	}
+
+	// Deliberately synchronous (no `await`) — see events.test.ts's DEV_MODE
+	// test for why an `await` here would risk leaking the mock into other
+	// files' tests via bun:test interleaving.
+	const captureWarnings = () => {
+		const warnings: unknown[][] = []
+		const originalWarn = console.warn
+		console.warn = (...args: unknown[]) => warnings.push(args)
+		mock.module('../util', () => ({ ...realUtil, DEV_MODE: true }))
+		return {
+			warnings,
+			restore: () => {
+				mock.module('../util', () => realUtil)
+				console.warn = originalWarn
+			},
+		}
+	}
+
+	const EXPECTED = (prop: string) =>
+		`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`
+
+	// Detection is reversed (ADR-0012): allow only what is provably read-only.
+
+	test('warns for a property key resolving to a writable host State', () => {
+		const hostState = createState('host')
+		const host = { value: hostState } as unknown as HTMLElement & ComponentProps
+		// Register the host signal like a real Le Truc component, so the
+		// property-key form resolves to the writable State (not a createMemo
+		// fallback, which is read-only and would not warn).
+		getSignals(host)['value'] = hostState
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() => makePass(host)(target, { value: 'value' })())
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0]?.[0]).toBe(EXPECTED('value'))
+	})
+
+	test('warns for a bare State passed directly', () => {
+		const hostState = createState('host')
+		const host = {} as unknown as HTMLElement & ComponentProps
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() => makePass(host)(target, { value: hostState })())
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0]?.[0]).toBe(EXPECTED('value'))
+	})
+
+	test('warns for a bare Slot passed directly (backing may swap to mutable at runtime)', () => {
+		const backingState = createState('host')
+		const slot = createSlot(backingState)
+		const host = {} as unknown as HTMLElement & ComponentProps
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() => makePass(host)(target, { value: slot })())
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0]?.[0]).toBe(EXPECTED('value'))
+	})
+
+	test('does NOT warn for a { get, set } descriptor (explicit mediated form)', () => {
+		const hostState = createState('host')
+		const host = {} as unknown as HTMLElement & ComponentProps
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() =>
+				makePass(host)(target, {
+					value: { get: hostState.get, set: hostState.set },
+				})(),
+			)
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(0)
+	})
+
+	test('does NOT warn for a thunk () => ... (toSignal wraps it as a Memo)', () => {
+		const hostState = createState('host')
+		const host = { value: hostState } as unknown as HTMLElement & ComponentProps
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() =>
+				makePass(host)(target, { value: () => hostState.get() })(),
+			)
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(0)
+	})
+
+	test('does NOT warn for a bare Memo passed directly (read-only derived)', () => {
+		const memo = createMemo(() => 'derived')
+		const host = {} as unknown as HTMLElement & ComponentProps
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() => makePass(host)(target, { value: memo })())
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(0)
+	})
+
+	test('does NOT warn for a bare Task passed directly (read-only derived)', () => {
+		const task = createTask(async () => 'resolved', { value: 'seeded' })
+		const host = {} as unknown as HTMLElement & ComponentProps
+		const target = makeTarget('value')
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() => makePass(host)(target, { value: task })())
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(0)
+	})
+
+	test('warns once per writable prop and aggregates across multiple props', () => {
+		const hostState = createState('host')
+		const host = { a: hostState, b: hostState } as unknown as HTMLElement &
+			ComponentProps
+		// Register the 'a' host signal so the property-key form resolves to
+		// the writable State (the 'b' entry passes the State directly).
+		getSignals(host)['a'] = hostState
+		const target = makeTarget('a')
+		// second Slot-backed prop
+		const slotB = createSlot(createState('orig-b'))
+		getSignals(target)['b'] = slotB
+		Object.defineProperty(target, 'b', slotB)
+
+		const { warnings, restore } = captureWarnings()
+		try {
+			createScope(() =>
+				makePass(host)(target, {
+					a: 'a',
+					b: hostState,
+				})(),
+			)
+		} finally {
+			restore()
+		}
+		expect(warnings).toHaveLength(2)
+		const messages = warnings.map(w => w[0])
+		expect(messages).toContain(EXPECTED('a'))
+		expect(messages).toContain(EXPECTED('b'))
+	})
+})
+
 describe('each — element leave/enter disposal', () => {
 	// The callback's returned descriptor is invoked and its return value
 	// discarded (see `activateResult`) — a bare `() => cleanupFn` registers
@@ -427,7 +605,7 @@ describe('each — element leave/enter disposal', () => {
 		expect(log).toEqual(['enter:a', 'leave:a', 'enter:b', 'leave:b'])
 	})
 
-	test("keeps an element's scope behaviorally equivalent across a re-run when it stays in the collection", () => {
+	test("keeps a surviving element's scope alive when another element enters", () => {
 		const elA = { id: 'a' } as unknown as Element
 		const elB = { id: 'b' } as unknown as Element
 		const source = createState<Element[]>([elA])
@@ -441,20 +619,62 @@ describe('each — element leave/enter disposal', () => {
 		const cleanup = createScope(() => descriptor())
 		expect(log).toEqual(['enter:a'])
 
-		// elA stays, elB is added — `each()` rebuilds scopes for the whole
-		// current set on every run (no diffing), so elA's scope is torn down
-		// and recreated too, not just elB's.
+		// elA stays, elB is added — scopes are keyed by element identity, so
+		// only the entering elB gets a new scope; elA's scope (and everything
+		// registered on it) survives untouched.
 		source.set([elA, elB])
-		expect(log).toEqual(['enter:a', 'leave:a', 'enter:a', 'enter:b'])
+		expect(log).toEqual(['enter:a', 'enter:b'])
 
+		// Disposing the component scope still tears down every live
+		// per-element scope, including the root-scoped surviving ones.
 		cleanup?.()
-		expect(log).toEqual([
-			'enter:a',
-			'leave:a',
-			'enter:a',
-			'enter:b',
-			'leave:a',
-			'leave:b',
-		])
+		expect(log).toEqual(['enter:a', 'enter:b', 'leave:a', 'leave:b'])
+	})
+})
+
+describe('makePass — keyed per-element lifecycle for Memo targets', () => {
+	const makeTarget = (name: string) => {
+		const originalState = createState(`original-${name}`)
+		const slot = createSlot(originalState)
+		const target = { localName: 'my-target' } as unknown as HTMLElement &
+			ComponentProps
+		getSignals(target)['greeting'] = slot
+		Object.defineProperty(target, 'greeting', slot)
+		return { target, slot, originalState }
+	}
+
+	test("keeps a surviving target's injected slot signal identity-stable when another target enters", () => {
+		const hostState = createState('host-value')
+		const host = { greeting: hostState } as unknown as HTMLElement &
+			ComponentProps
+		const a = makeTarget('a')
+		const b = makeTarget('b')
+
+		const source = createState<(HTMLElement & ComponentProps)[]>([a.target])
+		const memo = createMemo(() => source.get())
+
+		const pass = makePass(host)
+		const descriptor = pass(memo, { greeting: () => hostState.get() })
+
+		const cleanup = createScope(() => descriptor())
+		expect((a.target as any).greeting).toBe('host-value')
+		const injectedIntoA = a.slot.current()
+
+		// b enters — a's scope must survive: its slot still holds the very
+		// same injected signal instance, not a freshly created computed.
+		source.set([a.target, b.target])
+		expect(a.slot.current()).toBe(injectedIntoA)
+		expect((b.target as any).greeting).toBe('host-value')
+
+		// b leaves — only b's slot is restored; a is still untouched.
+		source.set([a.target])
+		expect(a.slot.current()).toBe(injectedIntoA)
+		expect(b.slot.current()).toBe(b.originalState)
+		expect((b.target as any).greeting).toBe('original-b')
+
+		// Component disconnect restores the surviving target's original signal.
+		cleanup?.()
+		expect(a.slot.current()).toBe(a.originalState)
+		expect((a.target as any).greeting).toBe('original-a')
 	})
 })

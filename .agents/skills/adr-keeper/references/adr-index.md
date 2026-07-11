@@ -16,8 +16,12 @@ This file is auto-generated. Do not edit manually.
 | [0009](0009-security-validation-in-bindattribute.md) | Security Validation in bindAttribute | ✅ Accepted (partially superseded by 0010) | M16 |
 | [0010](0010-trusted-types-support-via-sanitize-hook.md) | Trusted Types Support via the sanitize Hook | ✅ Accepted | M16, §4, §7 |
 | [0011](0011-throw-on-pass-binding-failure.md) | Throw on pass() Binding Failure Instead of Warning | ✅ Accepted | M11, S3 |
+| [0012](0012-deprecate-unrestricted-write-short-forms-in-pass.md) | Deprecate Unrestricted-Write Short Forms in pass() | ✅ Accepted | M11, S4 |
+| [0013](0013-cem-plugin-for-le-truc-factory-pattern.md) | Custom Elements Manifest via `@custom-elements-manifest/analyzer` Plugin | ✅ Accepted | M13 |
+| [0014](0014-keyed-per-element-scopes-for-memo-collections.md) | Keyed Per-Element Scopes for Memo-Driven Collections | ✅ Accepted | M5, M6, M7, M11, §1, §4 |
+| [0015](0015-late-provider-retry-in-requestcontext.md) | Late-Provider Retry in requestContext | ✅ Accepted | M10 |
 
 ---
 
-**Last updated:** 2026-06-25
-**Total ADRs:** 11 (excluding template)
+**Last updated:** 2026-07-11
+**Total ADRs:** 15 (excluding template)

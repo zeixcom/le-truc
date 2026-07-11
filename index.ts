@@ -1,4 +1,4 @@
-// Le Truc 2.1.0
+// Le Truc 2.2.0
 
 // From Cause & Effect
 export {
@@ -26,9 +26,11 @@ export {
 	DEFAULT_EQUALITY,
 	DuplicateKeyError,
 	type EffectCallback,
+	EffectConvergenceError,
 	type Guard,
 	InvalidCallbackError,
 	InvalidSignalValueError,
+	InvalidStoreMutationError,
 	isAsyncFunction,
 	isCollection,
 	isComputed,

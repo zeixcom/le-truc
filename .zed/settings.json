@@ -22,4 +22,11 @@
 			"language_servers": ["!biome", "..."],
 		},
 	},
+	"lsp": {
+		"cem-lsp": {
+			"initialization_options": {
+				"customData": ["./custom-elements.json"],
+			},
+		},
+	},
 }

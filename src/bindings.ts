@@ -62,9 +62,10 @@ const SCRIPT_ATTRS = [
 /**
  * Check whether a URL string is safe to use as an attribute value.
  *
- * Rejects `javascript:`, `data:`, and `vbscript:` schemes (including internal
- * whitespace variants such as `java\tscript:`, which browsers canonicalize before
- * parsing the scheme). Rejects protocol-relative URLs (`//host`) and backslash
+ * Rejects `javascript:`, `data:`, and `vbscript:` schemes (including variants
+ * masked by C0 control characters or whitespace, such as `\x01javascript:` or
+ * `java\tscript:`, which browsers strip/canonicalize before parsing the scheme).
+ * Rejects protocol-relative URLs (`//host`) and backslash
  * variants (`\\host`), which resolve against the page origin. Allows relative
  * paths, fragments, query strings, `mailto:`, `tel:`, and absolute URLs with
  * `http:`, `https:`, or `ftp:` protocols.
@@ -73,12 +74,12 @@ const SCRIPT_ATTRS = [
  * @returns {boolean} `true` if the URL is considered safe, `false` otherwise
  */
 const isSafeURL = (value: string): boolean => {
-	// Strip ALL ASCII whitespace, not just edges. Browsers ignore internal
-	// tab/newline/CR when parsing URL schemes, so "java\tscript:" would otherwise
-	// slip past the `^javascript:` check below and execute.
-	const stripped = String(value)
-		.replace(/[\t\n\r\f\v]/g, '')
-		.trim()
+	// Strip the full C0 control + ASCII space range (U+0000–U+0020). Browsers
+	// strip leading controls before parsing schemes; internal tab/newline/CR are
+	// also ignored — without this, "\x01javascript:" or "java\tscript:" slip past
+	// the `^javascript:` check below and execute on activation.
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping C0 controls is the point, not a typo
+	const stripped = String(value).replace(/[\x00-\x20]/g, '')
 	if (/^(javascript|data|vbscript):/i.test(stripped)) return false
 	if (/^(mailto|tel):/i.test(stripped)) return true
 	// Protocol-relative (//host) and backslash-prefixed (\\host) URLs resolve
@@ -104,7 +105,7 @@ const isSafeURL = (value: string): boolean => {
  * a safe-protocol allowlist (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`).
  * Violations throw a descriptive error — they are never silent.
  *
- * @since 1.1
+ * @since 2.0
  * @param {Element} element - Target element
  * @param {string} attr - Attribute name to set
  * @param {string} value - Attribute value to set
@@ -131,7 +132,7 @@ const safeSetAttribute = (
  *
  * Escapes `&`, `<`, `>`, `"`, and `'`.
  *
- * @since 1.1
+ * @since 2.0
  * @param {string} text - Plain text to escape
  * @returns {string} HTML-safe string
  */
@@ -149,7 +150,7 @@ const escapeHTML = (text: string): string =>
  * Removes all child nodes except comments, then appends a new text node.
  * Useful when HTML comments are used as markers or server-rendered annotations.
  *
- * @since 1.1
+ * @since 2.0
  * @param {Element} element - Target element
  * @param {string} text - Text content to set
  */

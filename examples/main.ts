@@ -23,6 +23,7 @@ import './module/coloreditor/module-coloreditor.ts'
 import './module/colorinfo/module-colorinfo.ts'
 import './module/dialog/module-dialog.ts'
 import './module/lazyload/module-lazyload.ts'
+import './module/list/module-list.ts'
 import './module/listnav/module-listnav.ts'
 import './module/pagination/module-pagination.ts'
 import './module/scrollarea/module-scrollarea.ts'
@@ -32,6 +33,7 @@ import './module/ticker/module-ticker.ts'
 import './module/todo/module-todo.ts'
 import './test/audit/test-audit.ts'
 import './test/context/test-context.ts'
+import './test/context/test-context-late-provider.ts'
 import './test/security/test-security.ts'
 import './test/each/test-each.ts'
 import './test/expose/test-expose.ts'
@@ -39,10 +41,30 @@ import './test/on/test-on.ts'
 import './test/pass/test-pass.ts'
 import './test/watch/test-watch.ts'
 
-// Structural-only custom elements
-customElements.define('card-blogpost', class extends HTMLElement {})
-customElements.define('card-callout', class extends HTMLElement {})
-customElements.define('module-demo', class extends HTMLElement {})
-customElements.define('module-toc', class extends HTMLElement {})
-customElements.define('section-hero', class extends HTMLElement {})
-customElements.define('section-menu', class extends HTMLElement {})
+// Structural-only custom elements — no behavior, just layout containers.
+// Declared as named classes (not inline expressions) so the CEM analyzer
+// extracts proper PascalCase names + descriptions for editor LSP awareness.
+
+/** Container for a blog post card in the blog layout. */
+class CardBlogpost extends HTMLElement {}
+customElements.define('card-blogpost', CardBlogpost)
+
+/** Callout banner for highlighted or danger content. */
+class CardCallout extends HTMLElement {}
+customElements.define('card-callout', CardCallout)
+
+/** Wrapper around a live component preview in the docs. */
+class ModuleDemo extends HTMLElement {}
+customElements.define('module-demo', ModuleDemo)
+
+/** Table-of-contents container. */
+class ModuleToc extends HTMLElement {}
+customElements.define('module-toc', ModuleToc)
+
+/** Hero section at the top of a page. */
+class SectionHero extends HTMLElement {}
+customElements.define('section-hero', SectionHero)
+
+/** Navigation menu section. */
+class SectionMenu extends HTMLElement {}
+customElements.define('section-menu', SectionMenu)

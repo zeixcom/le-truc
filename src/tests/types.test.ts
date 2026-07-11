@@ -12,6 +12,7 @@ import {
 	isParser,
 	isReservedWord,
 	RESERVED_WORDS,
+	RESERVED_WORDS_LIST,
 } from '../types'
 
 /* === isParser === */
@@ -108,8 +109,16 @@ describe('defineMethod', () => {
 /* === RESERVED_WORDS / isReservedWord === */
 
 describe('RESERVED_WORDS', () => {
-	test('contains all ReservedWords type members', () => {
-		// Must mirror the ReservedWords union exactly.
+	test('mirrors RESERVED_WORDS_LIST exactly', () => {
+		// Both the set and the ReservedWords type derive from this tuple.
+		for (const word of RESERVED_WORDS_LIST) {
+			expect(RESERVED_WORDS.has(word)).toBe(true)
+		}
+		expect(RESERVED_WORDS.size).toBe(RESERVED_WORDS_LIST.length)
+	})
+
+	test('contains the dangerous Object builtins', () => {
+		// Documents intent: these specific builtins must stay reserved.
 		expect(RESERVED_WORDS.has('constructor')).toBe(true)
 		expect(RESERVED_WORDS.has('prototype')).toBe(true)
 		expect(RESERVED_WORDS.has('__proto__')).toBe(true)
@@ -119,7 +128,6 @@ describe('RESERVED_WORDS', () => {
 		expect(RESERVED_WORDS.has('isPrototypeOf')).toBe(true)
 		expect(RESERVED_WORDS.has('propertyIsEnumerable')).toBe(true)
 		expect(RESERVED_WORDS.has('toLocaleString')).toBe(true)
-		expect(RESERVED_WORDS.size).toBe(9)
 	})
 })
 
@@ -130,12 +138,12 @@ describe('isReservedWord', () => {
 		}
 	})
 
-	test('returns true for __proto__ (regression: A3)', () => {
+	test('returns true for __proto__', () => {
 		// The key vector: asJSON-parsed or Record-cast keys reaching #initSignals.
 		expect(isReservedWord('__proto__')).toBe(true)
 	})
 
-	test('returns true for constructor (regression: A3)', () => {
+	test('returns true for constructor', () => {
 		expect(isReservedWord('constructor')).toBe(true)
 	})
 

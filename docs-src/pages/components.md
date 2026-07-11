@@ -15,11 +15,11 @@ description: 'Anatomy, lifecycle, signals, effects'
 
 Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built-in state management and reactive updates**.
 
-{% callout .tip title="Le Truc enhances HTML — it doesn't replace it" %}
+{% callout .note title="Le Truc enhances HTML — it doesn't replace it" %}
 A Le Truc component **wraps existing server-rendered content**. The HTML inside the custom element is the starting point — visible before JavaScript runs. See [Progressive Enhancement](getting-started.html#progressive-enhancement) for how this works.
 {% /callout %}
 
-Le Truc creates components using the `defineComponent()` function:
+Components are created with the `defineComponent()` function, which takes a valid custom element tag name (two or more words joined with `-`) and a factory function:
 
 ```js
 defineComponent('my-component', ({ expose, first, all, watch, on }) => {
@@ -35,7 +35,7 @@ defineComponent('my-component', ({ expose, first, all, watch, on }) => {
 })
 ```
 
-Every Le Truc component must be registered with a valid custom element tag name (two or more words joined with `-`) as the first parameter.
+The factory receives a `FactoryContext` with helpers for querying descendant elements, declaring reactive properties, and returning effect descriptors — each covered in the sections below.
 
 ### Using the Custom Element in HTML
 
@@ -44,90 +44,6 @@ Once registered, the component can be used like any native HTML element:
 ```html
 <my-component>Content goes here</my-component>
 ```
-
-### Anatomy of a Component
-
-Let's examine a complete component example to understand how Le Truc works. The HTML it enhances looks like this:
-
-```html
-<basic-hello>
-  <label>
-    Your name<br />
-    <input name="name" type="text" autocomplete="given-name" />
-  </label>
-  <p>Hello, <output>World</output>!</p>
-</basic-hello>
-```
-
-```js
-defineComponent('basic-hello', ({ expose, first, on, watch }) => {
-  const input = first('input', 'Needed to enter the name.')
-  const output = first('output', 'Needed to display the name.')
-  const fallback = output.textContent || ''
-
-  expose({ name: output.textContent ?? '' })
-
-  return [
-    on(input, 'input', () => ({ name: input.value || fallback })),
-    watch('name', bindText(output)),
-  ]
-})
-```
-
-#### Reactive Properties
-
-```js
-expose({ name: output.textContent ?? '' })
-```
-
-This declares `name` as a reactive property:
-
-- `expose()` registers signal-backed accessors on `host`; call it before any effect references a property by name
-- `output.textContent ?? ''` initializes `name` from the DOM content at connect time — Le Truc reads `"World"` from the `<output>` element, preserving the server-rendered content
-- When `name` changes, any effects that depend on it update automatically
-
-#### Querying Elements
-
-Element queries happen inline at the top of the factory body:
-
-```js
-const input = first('input', 'Needed to enter the name.')
-const output = first('output', 'Needed to display the name.')
-```
-
-`first()` finds the first descendant matching a selector. Also available is `all()`, which returns a `Memo<E[]>` — a lazily observed collection that dynamically updates when matching elements are added or removed from the DOM. Both helpers take a selector string and an optional error message:
-
-```js
-// Optional element — returns undefined if not found; use && to skip effects conditionally
-const input = first('input')
-
-// Required element — throws MissingElementError with your message if not found
-const input = first('input', 'Needed to enter the name.')
-```
-
-If a queried element is a custom element that has not been defined yet, Le Truc waits up to 200 ms for it to be defined before running effects. This ensures child components are always ready before parent effects activate.
-
-#### Returning Effects
-
-The factory returns a flat array of **effect descriptors** — deferred thunks that activate after all child custom element dependencies are resolved:
-
-```js
-return [
-  on(input, 'input', () => ({ name: input.value || fallback })),
-  watch('name', bindText(output)),
-]
-```
-
-Effects define **component behaviors**:
-
-- `on(input, 'input', ...)` adds an event listener to the `<input>` element; the handler may return `{ prop: value }` to batch-update host properties
-- `watch('name', bindText(output))` keeps `output`'s text in sync with the `name` property
-
-Characteristics of effects:
-
-- Effects run when the component connects to the DOM (after dependency resolution)
-- Reactive effects re-run when their declared source changes
-- Effects may return a cleanup function executed when the component disconnects
 
 {% /section %}
 
@@ -176,6 +92,23 @@ console.log(el.count) // Read the signal value
 el.count = 42 // Update the signal value
 ```
 
+### Signal Types
+
+Le Truc re-exports the reactive primitives from [`@zeix/cause-effect`](https://github.com/zeixcom/cause-effect). Every signal type participates in the same dependency graph with the same propagation, batching, and cleanup semantics. Use the type that matches the data's role:
+
+| Type | Role | When to use it |
+|------|------|----------------|
+| [`State`](./api.html#functions/createState) | Mutable source | Local mutable state you read and write inside the component |
+| [`Sensor`](./api.html#functions/createSensor) | External input (lazy) | Values that arrive from outside the graph — `matchMedia`, `IntersectionObserver`, geolocation. Seeds an initial value via `{ value }` |
+| [`Memo`](./api.html#functions/createMemo) | Sync derivation | A value computed from other signals — e.g. the sum of a spinbutton collection. For cheap one-off derivations, a plain thunk passed to `watch()` is often enough |
+| [`Task`](./api.html#functions/createTask) | Async derivation | `fetch`, dynamic imports, or any async work. Auto-cancels in-flight work when its dependencies change and exposes pending / error / ok states via `match()` |
+| [`Store`](./api.html#functions/createStore) | Reactive object | An object whose individual properties are each reactive |
+| [`List`](./api.html#functions/createList) | Reactive array | A keyed collection with stable item identity across add, remove, sort, and reorder |
+| [`Collection`](./api.html#functions/createCollection) | Reactive collection | Externally-driven streams (WebSocket, SSE) or derived pipelines |
+| [`Effect`](./api.html#functions/createEffect) | Side-effect sink | Terminal consumer for work outside the graph. Inside a component, prefer the factory's `watch()` / `on()` over a bare `createEffect()` |
+
+`Slot` is an integration primitive used internally by `pass()` to swap a child's backing signal; you rarely create one directly.
+
 ### Characteristics and Special Values
 
 Signals are **statically typed** and **non-nullable** — no null-checks needed inside effects.
@@ -202,7 +135,7 @@ defineComponent('my-component', ({ expose }) => {
 })
 ```
 
-{% callout .tip title="Parsers run once at connect time" %}
+{% callout .note title="Parsers run once at connect time" %}
 The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser — use event handlers or direct property writes to update state post-connect.
 {% /callout %}
 
@@ -253,6 +186,8 @@ defineComponent('module-tabgroup', ({ all, expose, on, watch }) => {
 Without a hint string (second argument), `first()` returns `undefined` if no match is found and effects for that key are silently skipped. With a hint string, `first()` throws a `MissingElementError` if the element is missing — use this when the element is truly required for the component to function.
 
 The `all()` function returns a `Memo<E[]>` — a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. Because it's reactive, effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM. A malformed selector throws `InvalidSelectorError` immediately, at the `all()` call site.
+
+If a queried element is a custom element that has not been defined yet, Le Truc waits up to 200 ms for it to be defined before running effects. This ensures child components are always ready before parent effects activate.
 
 {% callout .tip %}
 `all()` observes structural changes and re-runs effects accordingly. Prefer `first()` when targeting a single element known to be present at connection time.
@@ -327,6 +262,38 @@ Exposing `state.get` rather than the full `State` is what makes the property rea
 watch(length, bindVisible(clearBtn))
 ```
 
+### Exposing Imperative Methods
+
+Not every property is a value you read or watch. Some are **commands** — functions a consumer calls imperatively from event handlers, like `reset()`, `stepUp()` / `stepDown()`, or `clear()`. Wrap the function in `defineMethod()` and pass it to `expose()`:
+
+```js#form-textbox.js
+defineComponent('form-textbox', ({ expose, first, host, on, watch }) => {
+  const textbox = first('input', 'Add a native input or textarea as descendant.')
+
+  expose({
+    value: textbox.value,
+    clear: defineMethod(() => {
+      host.value = ''
+      textbox.value = ''
+      textbox.setCustomValidity('')
+      textbox.checkValidity()
+      textbox.focus()
+    }),
+  })
+
+  return [
+    on(textbox, 'change', () => ({ value: textbox.value })),
+    watch('value', bindProperty(textbox, 'value')),
+  ]
+})
+```
+
+`defineMethod()` brands the function so Le Truc installs it as a callable method on the host. Use methods if you need to expose a function to other components that operates on the host while hiding implementation details. You can expose both reactive values (`value`) and methods (`clear`) side by side.
+
+{% callout .tip title="Always use defineMethod(), never a plain function" %}
+Le Truc identifies method producers by a brand symbol attached by `defineMethod()`. An unbranded function passed to `expose()` is treated as a thunk instead, creating a computed reactive property.
+{% /callout %}
+
 {% /section %}
 
 {% section %}
@@ -348,7 +315,7 @@ return [
 
 The order of descriptors does not matter.
 
-{% callout .tip title="CSS must define what the class or attribute does" %}
+{% callout .note title="CSS must define what the class or attribute does" %}
 `bindClass(el, 'even')` adds or removes the `even` class — but nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `bindAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
 
 See [Reactive Styles](styling.html#reactive-styles) for examples of how CSS and effects work together.

@@ -5,6 +5,7 @@ import { apiPagesEffect } from './effects/api-pages'
 import { cssEffect } from './effects/css'
 import { examplesEffect } from './effects/examples'
 import { jsEffect } from './effects/js'
+import { llmsFullManifestEffect } from './effects/llms-full-manifest'
 import { llmsManifestEffect } from './effects/llms-manifest'
 import { mdMirrorEffect } from './effects/md-mirror'
 import { menuEffect } from './effects/menu'
@@ -13,6 +14,7 @@ import { pagesEffect } from './effects/pages'
 import { serviceWorkerEffect } from './effects/service-worker'
 import { sitemapEffect } from './effects/sitemap'
 import { sourcesEffect } from './effects/sources'
+import { staticAssetsEffect } from './effects/static-assets'
 
 /**
  * Simple reactive build system orchestration with HMR integration
@@ -48,10 +50,21 @@ export async function build(
 					}
 				: undefined
 
+		// Phase 1: generator effects that produce gitignored inputs consumed by
+		// later effects — TypeDoc markdown (docs-src/api, docs-src/pages/api.md)
+		// and the bundled assets (docs/assets/main.{css,js}). On a fresh checkout
+		// none of these exist yet, so the consumers must not take their first-run
+		// snapshot until phase 1 has completed; a one-shot build would otherwise
+		// finish (and clean up subscriptions) before the reactive re-runs settle.
 		const api = apiEffect(scheduleReload)
-		const apiPages = apiPagesEffect(scheduleReload)
 		const css = cssEffect(scheduleReload)
 		const js = jsEffect(scheduleReload)
+		const staticAssets = staticAssetsEffect(scheduleReload)
+
+		await Promise.all([api.ready, css.ready, js.ready, staticAssets.ready])
+
+		// Phase 2: effects consuming phase-1 output
+		const apiPages = apiPagesEffect(scheduleReload)
 		const sw = serviceWorkerEffect(scheduleReload)
 		const examples = examplesEffect(scheduleReload)
 		const mocks = mocksEffect(scheduleReload)
@@ -61,13 +74,11 @@ export async function build(
 		const sitemap = sitemapEffect(scheduleReload)
 		const mdMirror = mdMirrorEffect(scheduleReload)
 		const llmsManifest = llmsManifestEffect(scheduleReload)
+		const llmsFullManifest = llmsFullManifestEffect(scheduleReload)
 
 		// Wait for all effects to complete their first run
 		await Promise.all([
-			api.ready,
 			apiPages.ready,
-			css.ready,
-			js.ready,
 			sw.ready,
 			examples.ready,
 			mocks.ready,
@@ -77,6 +88,7 @@ export async function build(
 			sitemap.ready,
 			mdMirror.ready,
 			llmsManifest.ready,
+			llmsFullManifest.ready,
 		])
 
 		const duration = performance.now() - startTime
@@ -103,6 +115,8 @@ export async function build(
 			sitemap.cleanup?.()
 			mdMirror.cleanup?.()
 			llmsManifest.cleanup?.()
+			llmsFullManifest.cleanup?.()
+			staticAssets.cleanup?.()
 		}
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)

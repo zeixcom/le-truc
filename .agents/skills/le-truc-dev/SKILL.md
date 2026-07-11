@@ -7,7 +7,7 @@ user_invocable: false
 ## Scope
 This skill is for development work **on the @zeix/le-truc library itself** — use it only inside the le-truc repository where `ARCHITECTURE.md`, `src/`, and authoritative documents are present at the project root.
 
-For building components with the le-truc public API, use a different skill. For deep dives into cause-effect signal internals, use the cause-effect-dev skill.
+For building components with the le-truc public API, use a different skill. For deep dives into cause-effect signal internals, use the cause-effect skill.
 
 ## Essential Principles
 

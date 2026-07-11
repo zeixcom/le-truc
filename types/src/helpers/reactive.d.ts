@@ -15,6 +15,10 @@ type Reactive<T, P extends ComponentProps> = keyof P | Signal<T & {}> | (() => T
 /**
  * A map of child component property names to the reactive values to inject into them.
  * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
+ *
+ * Prefer the read-only thunk (`() => host.prop`) and the mediated
+ * `{ get, set }` descriptor forms. The property-key and bare-writable-signal
+ * forms are deprecated; they warn in DEV_MODE and will be removed in the next major.
  */
 type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
     [K in keyof Q & string]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>;
@@ -44,6 +48,20 @@ type WatchHelper<P extends ComponentProps> = {
  *
  * Passes reactive values to a descendant Le Truc component's Slot-backed signals.
  * Supports single-element and Memo targets (per-element lifecycle for Memo).
+ *
+ * The property-key (`'value'`) and bare-writable-signal (`someState`) forms are
+ * deprecated — they hand the child unrestricted `.set()` on the parent's signal
+ * (ADR-0012) and warn in DEV_MODE. Migrate to the behavior-preserving descriptor:
+ *
+ * ```ts
+ * // before (deprecated) — child can write freely
+ * pass(child, { value: parentSignal })
+ * // after — child writes are mediated by the parent
+ * pass(child, { value: { get: parentSignal.get, set: parentSignal.set } })
+ * ```
+ *
+ * For read-only access use the thunk: `pass(child, { value: () => host.value })`.
+ * Both deprecated forms are removed in the next major.
  */
 type PassHelper<P extends ComponentProps> = {
     <Q extends ComponentProps>(target: (HTMLElement & Q) | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
@@ -59,6 +77,27 @@ type PassHelper<P extends ComponentProps> = {
  * @param {FactoryResult} result - Flat or nested array of effect descriptors to activate
  */
 declare const activateResult: (result: FactoryResult) => void;
+/**
+ * Drive per-element scopes from a `Memo<E[]>` with element-identity keying.
+ *
+ * Elements entering the collection get a scope created by `mount`; elements
+ * leaving get exactly their own scope disposed. Surviving elements are
+ * untouched across re-runs. All remaining scopes are disposed when the
+ * enclosing owner (component scope) is disposed.
+ *
+ * Two ownership details are load-bearing:
+ * - Per-element scopes use `{ root: true }` — a plain `createScope` inside the
+ *   effect would register its dispose on the effect, which runs all cleanups
+ *   before every re-run, silently reproducing wholesale rebuild.
+ * - The outer `createScope` wrapper registers on the component scope; its
+ *   returned cleanup is the only thing that tears down still-live root-scoped
+ *   element scopes on component disconnect.
+ *
+ * @since 2.2
+ * @param {Memo<E[]>} memo - Memo of the current element collection
+ * @param {(element: E) => MaybeCleanup} mount - Called once per entering element inside its scope; a returned cleanup registers on that scope
+ */
+declare const keyedScopes: <E extends object>(memo: Memo<E[]>, mount: (element: E) => MaybeCleanup) => void;
 /**
  * Create a `watch` helper bound to a specific component host.
  *
@@ -81,6 +120,17 @@ declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => Wa
  * For Memo targets, uses per-element lifecycle: signals are swapped when elements
  * enter the collection and restored when they leave.
  *
+ * The property-key and bare-writable-signal short forms are deprecated:
+ * They grant the child unrestricted `.set()` on the parent's signal.
+ * In DEV_MODE `pass()` emits a warning for each writable binding:
+ *
+ * > `pass() received a writable signal for '<prop>'. Use () => host.<prop> for read-only access, or { get, set } to mediate writes.`
+ *
+ * The migration is behavior-preserving:
+ * `pass(child, { value: sig })` → `pass(child, { value: { get: sig.get, set: sig.set } })`,
+ * or for read-only access `pass(child, { value: () => host.value })`. The
+ * deprecated forms are removed in the next major.
+ *
  * @since 2.0
  * @param {HTMLElement & P} host - The component host element
  * @returns {PassHelper<P>} Bound `pass` function for the given host
@@ -99,4 +149,4 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => Pas
  * @since 2.0
  */
 declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult | EffectDescriptor | Falsy): EffectDescriptor;
-export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, type WatchHelper, };
+export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, keyedScopes, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, type WatchHelper, };

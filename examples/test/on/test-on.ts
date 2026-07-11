@@ -12,7 +12,7 @@ declare global {
 }
 
 /**
- * Test component for the v1.1 factory `on()` helper.
+ * Test component for the v2.x factory `on()` helper.
  * Exercises: Element target, Memo delegation, non-bubbling event per-element fallback,
  * and handler return value → batch host update.
  */

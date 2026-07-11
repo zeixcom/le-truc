@@ -10,14 +10,23 @@ import {
 import { asOklch } from '../../_common/asOklch'
 
 export type ModuleColorinfoProps = {
+	/** Display name of the color swatch (e.g. "Blue 500"). */
 	name: string
+	/** Color value in Oklch format. Read from the `color` attribute at connect time. */
 	color: Oklch
+	/** CSS color string derived from `color` (read-only, computed). */
 	readonly css: string
+	/** Hex color string derived from `color` (read-only, computed). */
 	readonly hex: string
+	/** RGB color string derived from `color` (read-only, computed). */
 	readonly rgb: string
+	/** HSL color string derived from `color` (read-only, computed). */
 	readonly hsl: string
+	/** Lightness channel of `color` (read-only, computed). */
 	readonly lightness: number
+	/** Chroma channel of `color` (read-only, computed). */
 	readonly chroma: number
+	/** Hue channel of `color` (read-only, computed). */
 	readonly hue: number
 }
 
@@ -27,6 +36,14 @@ declare global {
 	}
 }
 
+/**
+ * Displays detailed color information (CSS, HEX, RGB, HSL, Oklch channels) for a given color.
+ * Use it for inspecting a color's various representations — useful when you need
+ * to evaluate contrast for accessibility or copy a specific format.
+ * The `color` attribute must be a valid Oklch color string.
+ * @cssprop --color-swatch - The CSS color string, set reactively from the `css` property.
+ * @cssprop --color-fallback - The HEX color string, set reactively from the `hex` property.
+ * @demo {./docs/examples/module-colorinfo.html} Interactive preview and usage examples */
 export default defineComponent<ModuleColorinfoProps>(
 	'module-colorinfo',
 	({ all, expose, first, host, pass, watch }) => {
@@ -54,9 +71,9 @@ export default defineComponent<ModuleColorinfoProps>(
 		})
 
 		return [
-			pass(lightnessEls, { value: 'lightness' }),
-			pass(chromaEls, { value: 'chroma' }),
-			pass(hueEls, { value: 'hue' }),
+			pass(lightnessEls, { value: () => host.lightness }),
+			pass(chromaEls, { value: () => host.chroma }),
+			pass(hueEls, { value: () => host.hue }),
 
 			watch('css', bindStyle(host, '--color-swatch')),
 			watch('hex', bindStyle(host, '--color-fallback')),

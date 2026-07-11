@@ -4,6 +4,7 @@ import {
 	InvalidSelectorError,
 	MissingElementError,
 } from '../errors'
+import { DEPENDENCY_TIMEOUT } from '../internal'
 import { DEV_MODE, isNotYetDefinedComponent } from '../util'
 
 /* === Types === */
@@ -108,10 +109,6 @@ type ElementQueries = {
 	first: FirstElement
 	all: AllElements
 }
-
-/* === Constants === */
-
-const DEPENDENCY_TIMEOUT = 200
 
 /* === Internal Functions === */
 

@@ -23,6 +23,7 @@ const API_DIR = join(ROOT, 'docs-src/api')
 const LAYOUTS_DIR = join(ROOT, 'docs-src/layouts')
 const INCLUDES_DIR = join(ROOT, 'docs-src/includes')
 const MENU_FILE = join(ROOT, 'docs-src/includes/menu.html')
+const STATIC_DIR = join(ROOT, 'docs-src/static')
 
 const OUTPUT_DIR = join(ROOT, 'docs')
 const ASSETS_DIR = join(ROOT, 'docs/assets')
@@ -32,6 +33,7 @@ const SOURCES_DIR = join(ROOT, 'docs/sources')
 const TEST_DIR = join(ROOT, 'docs/test')
 const SITEMAP_FILE = join(ROOT, 'docs/sitemap.xml')
 const LLMS_TXT_FILE = join(ROOT, 'docs/llms.txt')
+const LLMS_FULL_TXT_FILE = join(ROOT, 'docs/llms-full.txt')
 
 // Page ordering configuration
 const PAGE_ORDER = [
@@ -120,6 +122,7 @@ export {
 	INCLUDES_DIR,
 	INPUT_DIR,
 	LAYOUTS_DIR,
+	LLMS_FULL_TXT_FILE,
 	LLMS_TXT_FILE,
 	MENU_FILE,
 	MIME_TYPES,
@@ -131,6 +134,7 @@ export {
 	SITEMAP_FILE,
 	SOURCES_DIR,
 	SRC_DIR,
+	STATIC_DIR,
 	TEMPLATES_DIR,
 	TEST_DIR,
 	TS_FILE,

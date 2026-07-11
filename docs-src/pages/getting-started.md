@@ -126,7 +126,7 @@ This renders a greeting and an input field. It is fully usable before any JavaSc
 
 Le Truc cannot enhance a plain `<div>` directly — custom elements require a hyphenated name. But wrapping is low-cost: one extra element, no structural changes to the children. If you have existing HTML inside a `<div>`, either rename the element in your template or add a custom element as a parent wrapper. The children stay exactly as they are; Le Truc just has a defined upgrade point.
 
-{% callout .tip title="Naming convention" %}
+{% callout .note title="Naming convention" %}
 The custom element name becomes the hook for both JavaScript (`defineComponent('basic-hello', ...)`) and CSS (`basic-hello { ... }`). Keep it descriptive and specific to the component's role.
 {% /callout %}
 

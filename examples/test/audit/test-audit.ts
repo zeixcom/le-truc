@@ -98,7 +98,7 @@ const stripEventHandlers = (html: string): string => {
 }
 
 defineComponent<SanitizeProps>('audit-sanitize', ({ expose, first, watch }) => {
-	const target = first('[data-target]') as HTMLElement
+	const target = first('[data-target]', 'required')
 	expose({ content: '' })
 	return [
 		watch(

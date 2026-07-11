@@ -53,7 +53,6 @@ Never use the templates `html` inside a Markdoc schema transform. Never use mark
 |------|----------|
 | Architecture overview, effects table, file signals, HTTP routes, HMR | `server/SERVER.md` |
 | Test strategy, conventions, verification | `server/TESTS.md` |
-| Open tasks and design decisions | `server/TASKS.md` |
 | Template system design | `server/templates/README.md` |
 | Source file locations | `server/SERVER.md` source files section |
 

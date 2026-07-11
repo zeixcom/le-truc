@@ -79,85 +79,109 @@ For the library itself:
 
 ### Must Have
 
-**M1. Component definition via a single function**
+#### M1. Component definition via a single function
+
 `defineComponent(name, factory)` is the sole entry point for defining a component. It registers a native Custom Element with no additional boilerplate. The factory receives a `FactoryContext` with element queries, `expose()` for declaring reactive properties, and helpers for creating effects.
 
-**M2. Reactive properties backed by signals**
+#### M2. Reactive properties backed by signals
+
 Component properties are signals. Reading a property inside an effect automatically tracks it as a dependency. Writing a property triggers all dependent effects. Properties must behave like normal JS object properties from the outside (`host.count++` works).
 
-**M3. Attribute → property initialisation via parsers**
+#### M3. Attribute → property initialisation via parsers
+
 Properties declared with a `Parser` function read the corresponding HTML attribute once at connect time and transform the string value into a typed JS value. Parsers are for server-side-authored initial configuration only — `observedAttributes` is always empty and `attributeChangedCallback` is never used. Post-connect state changes must go through event handlers, `watch()`, or direct property writes.
 
 > **Design note:** Live attribute sync via `observedAttributes` was intentionally dropped in v2.0. It was the primary obstacle to simplifying the `defineComponent` signature (required the `U extends UI` generic on parsers) and the mental model (authors confused "attribute as initial config" with "attribute as reactive state"). Le Truc provides real, type-safe reactivity through properties — attribute observation is an escape hatch for interop, not a first-class pattern. If live attribute sync is needed for a specific use case, it can be added as an optional third parameter to `defineComponent` in a future release.
 
-**M4. Type-safe DOM queries**
+#### M4. Type-safe DOM queries
+
 `first(selector)` and `all(selector)` must infer the correct `HTMLElement` subtype from the CSS selector string at compile time. Required elements must throw a typed error if missing. Optional elements must return `undefined` without throwing.
 
-**M5. Fine-grained DOM effects**
+#### M5. Fine-grained DOM effects
+
 Effects are applied per-element, not per-component. Updates are targeted to the exact DOM node that needs changing. The `watch(source, handler)` helper drives any DOM update from an explicit reactive source. The following built-in DOM binding helpers are required: `bindText`, `bindAttribute` (covers `setAttribute` and `toggleAttribute`), `bindClass`, `bindProperty`, `bindStyle`, `bindVisible` (replaces `show`), `dangerouslyBindInnerHTML`. Event handling and inter-component binding are covered by `on()` and `pass()` respectively.
 
-**M6. Automatic dependency tracking**
+#### M6. Automatic dependency tracking
+
 Effects must automatically re-run when their reactive dependencies change, with no manual subscription management. Effects must clean up after themselves when the component disconnects.
 
-**M7. Dynamic element collections via `all()`**
+#### M7. Dynamic element collections via `all()`
+
 `all()` must return a live `Memo<Element[]>` backed by a `MutationObserver`. When elements are added or removed from the DOM, the memo updates and dependent effects re-run. Spurious invalidations from mutations _inside_ matched elements must be filtered out.
 
-**M8. Dependency resolution for nested custom elements**
+#### M8. Dependency resolution for nested custom elements
+
 If a component queries child custom elements that are not yet defined, initialization must wait for their definition before running effects. Timeout must be graceful: log the error and proceed rather than blocking indefinitely.
 
-**M9. Event-driven sensors**
+#### M9. Event-driven sensors
+
 `createEventsSensor` must allow deriving a single reactive value from multiple DOM event types on a collection of elements, without imperative event listener management.
 
-**M10. Context protocol**
+#### M10. Context protocol
+
 `provideContexts` and `requestContext` must implement the Web Components Community Protocol for Context, enabling ancestor-to-descendant reactive value sharing without prop drilling or direct component coupling.
 
-**M11. Signal injection between components via `pass()`**
+#### M11. Signal injection between components via `pass()`
+
 A parent component must be able to inject its own reactive signal directly into a child component's property slot, creating a live reactive binding. The child must have no knowledge of the parent.
 
-**M12. Async task signals**
+#### M12. Async task signals
+
 `createTask` must support async operations with: automatic re-run when reactive dependencies change, cancellation of in-flight requests (AbortSignal), pending/ok/error state tracking, and initial value before resolution.
 
-**M13. TypeScript types exported and accurate**
+#### M13. TypeScript types exported and accurate
+
 All public API must be fully typed. Type inference must work without explicit type annotations in the common case. Errors from incorrect usage (wrong property name, type mismatch) must surface at compile time, not runtime.
 
-**M14. Tree-shakeable exports**
+#### M14. Tree-shakeable exports
+
 Unused effects, parsers, and utilities must be eliminable by a bundler. No side effects at module load time except `customElements.define()` triggered by `defineComponent`.
 
-**M15. No-build CDN usage supported**
+#### M15. No-build CDN usage supported
+
 The library must be consumable via a `<script type="module">` tag from a CDN without a build step, for teams not using a bundler.
 
-**M16. Security validation in `setAttribute`**
+#### M16. Security validation in `setAttribute`
+
 `setAttribute` must block `on*` event handler attributes and reject URLs with unsafe protocols (`javascript:`, `data:`, etc.) to prevent XSS via attribute injection.
 
 ### Should Have
 
-**S1. Parser/Reader distinction replaced by explicit API** ✅ _Resolved in v2.0_
-`Reader<T, U>` is removed. `Parser<T>` is branded via `asParser()`, detected by `isParser()` on `PARSER_BRAND` only — no function-length fallback. Custom parsers must use `asParser()`.
+#### S1. Parser/Reader distinction replaced by explicit API
 
-**S2. MethodProducer made explicit in the type system** ✅ _Resolved in v2.0_
-`MethodProducer` is branded via `defineMethod()` and detected by `isMethodProducer()` on `METHOD_BRAND` only. No implicit function-type fallback.
+✅ _Resolved in v2.0._ `Reader<T, U>` is removed. `Parser<T>` is branded via `asParser()`, detected by `isParser()` on `PARSER_BRAND` only — no function-length fallback. Custom parsers must use `asParser()`.
 
-**S3. Required element error messages are actionable**
+#### S2. MethodProducer made explicit in the type system
+
+✅ _Resolved in v2.0._ `MethodProducer` is branded via `defineMethod()` and detected by `isMethodProducer()` on `METHOD_BRAND` only. No implicit function-type fallback.
+
+#### S3. Required element error messages are actionable
+
 When a required element is missing (`MissingElementError`), the error message must identify which component, which selector failed, and include the developer-provided hint string. Errors must name the component element.
 
-**S4. Development mode with enhanced diagnostics**
+#### S4. Development mode with enhanced diagnostics
+
 When `DEV_MODE` is enabled: detailed error messages with component context, warnings for dependency resolution timeouts, and effect execution logging.
 
-**S5. Scheduler deduplication for innerHTML mutations**
+#### S5. Scheduler deduplication for innerHTML mutations
+
 `dangerouslyBindInnerHTML` updates must be deferred and deduplicated via `requestAnimationFrame`. Deduplication is per element so multiple helpers targeting the same element all run, while rapid re-fires of the same helper within one frame collapse to a single write. Passive event handlers (`on()` with scroll, resize, etc.) are separately throttled at the signal-graph input level via `throttle()` to prevent upstream churn.
 
 ### Should Avoid
 
-**X1. `observedAttributes` / `attributeChangedCallback` for reactive state**
+#### X1. `observedAttributes` / `attributeChangedCallback` for reactive state
+
 Do not use `observedAttributes` to drive reactive property updates. Attribute observation couples component state to HTML attribute mutations, which is a weak and error-prone reactivity model compared to signal-backed properties. It was the primary obstacle to removing the `U extends UI` generic from parsers and simplifying the `defineComponent` API. Le Truc components use properties as the reactive interface; attributes are for initial server-authored configuration only (read once at connect time via parsers). If interop with attribute-mutation patterns is strictly required (e.g., for compatibility with specific CMS tooling), it may be offered as an opt-in escape hatch via an optional parameter, but it must never be the default or encouraged path.
 
 ### Nice to Have
 
-**N1. Debug flag per component instance**
+#### N1. Debug flag per component instance
+
 `host.debug = true` enables verbose logging for a single component instance without enabling global dev mode.
 
-**N2. Compile-time selector type inference for SVG and MathML**
-Extend the CSS selector type parser to cover `SVGElementTagNameMap` and `MathMLElementTagNameMap` in addition to `HTMLElementTagNameMap`.
+#### N2. Compile-time selector type inference for SVG and MathML
+
+✅ _Resolved: `KnownTag` in `src/helpers/dom.ts` covers `SVGElementTagNameMap` and `MathMLElementTagNameMap`._ Extend the CSS selector type parser to cover `SVGElementTagNameMap` and `MathMLElementTagNameMap` in addition to `HTMLElementTagNameMap`.
 
 ---
 

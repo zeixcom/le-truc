@@ -31,6 +31,6 @@ Use `@zeix/cause-effect` as the sole reactive primitive layer. The dependency is
 
 ## Related
 
-- Requirements: [M1](REQUIREMENTS.md#m1-component-definition-via-a-single-function), [M2](REQUIREMENTS.md#m2-reactive-properties-backed-by-signals)
-- Architecture: [The Component Lifecycle](ARCHITECTURE.md#the-component-lifecycle), [The Effect System](ARCHITECTURE.md#the-effect-system)
+- Requirements: [M1](../REQUIREMENTS.md#m1-component-definition-via-a-single-function), [M2](../REQUIREMENTS.md#m2-reactive-properties-backed-by-signals)
+- Architecture: [Lifecycle](../ARCHITECTURE.md#lifecycle), [Effect Descriptors](../ARCHITECTURE.md#effect-descriptors)
 - Supersedes: None

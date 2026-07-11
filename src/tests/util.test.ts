@@ -188,7 +188,7 @@ describe('DEV_MODE', () => {
 		expect(await loadDevModeWith('true')).toBe(true)
 	})
 
-	test('is false when process.env.DEV_MODE is "false" (regression)', async () => {
+	test('is false when process.env.DEV_MODE is "false"', async () => {
 		// The bug: "false" is a non-empty string and was therefore truthy.
 		expect(await loadDevModeWith('false')).toBe(false)
 	})

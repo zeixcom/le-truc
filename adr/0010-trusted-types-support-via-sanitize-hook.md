@@ -21,7 +21,7 @@ Le Truc's hard constraints bear directly on the solution space:
 - **No bundled sanitizer / no client-side templating** (REQUIREMENTS §7, "Out of Scope"). The library must not ship a sanitizer; bundle size must stay ≤10 kB gzipped (target), hard ceiling 14 kB.
 - **Backend-agnostic, progressive enhancement** (REQUIREMENTS §1, §6). Consumers run heterogeneous backends and CSPs; the library must not assume a particular security posture.
 
-Relevant requirements: [M16](REQUIREMENTS.md#m16-security-validation-in-bindattribute) (security validation), the bundle-size and no-templating constraints in §4/§5.
+Relevant requirements: [M16](../REQUIREMENTS.md#m16-security-validation-in-setattribute) (security validation), the bundle-size and no-templating constraints in §4/§5.
 
 ## Decision
 
@@ -75,7 +75,7 @@ For sourcing the `TrustedHTML` type itself (Decision point 2):
 
 ## Related
 
-- Requirements: [M16](REQUIREMENTS.md#m16-security-validation-in-bindattribute), §4 (bundle size), §7 (Out of Scope — no templating/sanitizer)
+- Requirements: [M16](../REQUIREMENTS.md#m16-security-validation-in-setattribute), §4 (bundle size), §7 (Out of Scope — no templating/sanitizer)
 - Architecture: Security, `bind*` helpers, Safety Utilities
 - Partially supersedes: [ADR-0009](0009-security-validation-in-bindattribute.md) — only the `dangerouslyBindInnerHTML` / `innerHTML`-sink guidance; ADR-0009's `bindAttribute` / `safeSetAttribute` URL and `on*` validation stands unchanged.
 - CHANGELOG: 2.1.0 entry documents `TrustedHTML`'s module-private `object` type and the `RETURN_TRUSTED_TYPE` option.

@@ -6,7 +6,9 @@ import {
 } from '../../..'
 
 export type ModulePaginationProps = {
+	/** Total number of pages. Read from the `max` attribute at connect time. */
 	max: number
+	/** Current page number (1-based). Read from the `value` attribute at connect time. */
 	value: number
 }
 
@@ -16,6 +18,11 @@ declare global {
 	}
 }
 
+/**
+ * A pagination control with prev/next buttons, a direct page input, and keyboard navigation.
+ * Use it for navigating paged data — provides ARIA navigation semantics, keyboard
+ * focus management, and Enter key support on the page input field.
+ * @demo {./docs/examples/module-pagination.html} Interactive preview and usage examples */
 export default defineComponent<ModulePaginationProps>(
 	'module-pagination',
 	({ expose, first, host, on, watch }) => {

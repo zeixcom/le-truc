@@ -31,6 +31,6 @@ Use `createSlot` from `@zeix/cause-effect` wrapping mutable signals to enable `p
 
 ## Related
 
-- Requirements: [M11](REQUIREMENTS.md#m11-signal-injection-between-components-via-pass)
-- Architecture: [#setAccessor — signal creation](ARCHITECTURE.md#setaccessor--signal-creation), [`pass()` — inter-component binding](ARCHITECTURE.md#pass--inter-component-binding)
+- Requirements: [M11](../REQUIREMENTS.md#m11-signal-injection-between-components-via-pass)
+- Architecture: [Signals and Properties](../ARCHITECTURE.md#signals-and-properties), [Inter-Component Signal Sharing (Pass)](../ARCHITECTURE.md#inter-component-signal-sharing-pass)
 - Supersedes: None
