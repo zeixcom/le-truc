@@ -27,7 +27,7 @@ defineComponent<P extends ComponentProps>(name, factory)
 | `on(target, type, handler, options?)` | Create event listener descriptor |
 | `pass(target, props)` | Create slot-swap descriptor for Le Truc child |
 | `provideContexts(contexts)` | Create context-provider descriptor |
-| `requestContext(context, fallback)` | Return `Memo<T>` for use inside `expose()` |
+| `requestContext(context, fallback)` | Return `Signal<T>` (backed by a `Slot`) for use inside `expose()` |
 
 ### Example
 

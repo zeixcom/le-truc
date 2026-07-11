@@ -8,7 +8,6 @@ Where to find things in the server/ build system. Read this before locating any 
 |---|---|
 | Architecture overview, effects table, file signals, HTTP routes, HMR | `server/SERVER.md` |
 | Test strategy, conventions, verification processes | `server/TESTS.md` |
-| Open tasks and prior design decisions | `server/TASKS.md` |
 | Template system design and patterns | `server/templates/README.md` |
 
 ## Source Files
@@ -17,7 +16,7 @@ Where to find things in the server/ build system. Read this before locating any 
 
 | File | Contents |
 |---|---|
-| `server/build.ts` | Effect orchestration: initialises all 13 effects, awaits `ready` promises, HMR broadcast |
+| `server/build.ts` | Effect orchestration: initialises all 15 effects, awaits `ready` promises, HMR broadcast |
 | `server/dev.ts` | Development entry point: wires `serve.ts` + `build.ts` + SIGINT shutdown |
 | `server/serve.ts` | HTTP + WebSocket server (`Bun.serve`): all routes, layout caching, HMR injection, `guardPath()` |
 | `server/config.ts` | All path constants, page ordering, route-to-layout map, MIME types, server config |
@@ -40,6 +39,7 @@ Where to find things in the server/ build system. Read this before locating any 
 | `css.ts` | `docs/assets/main.css` (LightningCSS) |
 | `examples.ts` | `docs/examples/*.html` (example pages with demo previews) |
 | `js.ts` | `docs/assets/main.js` + sourcemap (Bun bundler) |
+| `llms-full-manifest.ts` | `docs/llms-full.txt` (curated full-content concatenation for AI consumers) |
 | `llms-manifest.ts` | `docs/llms.txt` (AI crawler manifest) |
 | `md-mirror.ts` | `docs/**/*.md` (clean Markdown mirrors) |
 | `menu.ts` | `docs-src/includes/menu.html` (navigation menu fragment) |
@@ -48,6 +48,7 @@ Where to find things in the server/ build system. Read this before locating any 
 | `service-worker.ts` | `docs/sw.js` (service worker with asset cache hashing) |
 | `sitemap.ts` | `docs/sitemap.xml` |
 | `sources.ts` | `docs/sources/*.html` (syntax-highlighted source tab groups) |
+| `static-assets.ts` | `docs/**` static assets copied from `docs-src/static/` (one-shot, not watched) |
 
 **Templates** (`server/templates/`):
 

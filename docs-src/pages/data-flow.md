@@ -500,7 +500,7 @@ The provider component wraps your entire application or a section that needs sha
 
 ## Consuming Context
 
-**Consumer components** use `requestContext()` to access shared state from ancestor providers. The returned `Memo<T>` is reactive — when the provider's signal updates, all consumers update automatically.
+**Consumer components** use `requestContext()` to access shared state from ancestor providers. The returned `Signal<T>` is reactive — when the provider's signal updates, all consumers update automatically. It serves the `fallback` until a provider answers, and a provider that connects late (bundle ordering, code-splitting) is still picked up — the consumer switches from fallback to the provided value without any extra code.
 
 ### Consumer Component
 

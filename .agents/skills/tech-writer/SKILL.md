@@ -1,13 +1,13 @@
 ---
 name: tech-writer
-description: Keep le-truc developer-facing documents up to date with the source code and examples docs-src/pages/, README.md, ARCHITECTURE.md, AGENTS.md, JSDoc in src/, and skill files in .vibe/skills/. Use after code changes, to verify consistency, or to update a specific document.
+description: Keep le-truc developer-facing documents up to date with the source code and examples docs-src/pages/, README.md, ARCHITECTURE.md, AGENTS.md, JSDoc in src/, and skill files in .agents/skills/. Use after code changes, to verify consistency, or to update a specific document.
 user_invocable: false
 ---
 
 ## Scope
 This skill maintains the **authored documentation** for the @zeix/le-truc library and the **AI skill files** that agents use to work with the codebase.
 
-**In scope:** `docs-src/pages/`, `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, JSDoc in `src/`, all files under `.vibe/skills/` (SKILL.md, references/, workflows/), and `server/SERVER.md`.
+**In scope:** `docs-src/pages/`, `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, JSDoc in `src/`, all files under `.agents/skills/` (SKILL.md, references/, workflows/), and `server/SERVER.md`.
 
 **Out of scope — do not edit:**
 - `docs-src/api/` — TypeDoc-generated from source; regenerate with `bun run build:docs` instead
@@ -36,7 +36,7 @@ What do you need to do?
 2. **Review consistency** — check that all documents reflect the current source
 3. **Update a specific document** — you know exactly which one
 4. **Write a blog post** — draft a new post for `docs-src/pages/blog/`
-5. **Update a skill file** — a skill description, reference, or workflow under `.vibe/skills/` is inaccurate or incomplete
+5. **Update a skill file** — a skill description, reference, or workflow under `.agents/skills/` is inaccurate or incomplete
 
 Wait for response before proceeding.
 
@@ -59,7 +59,7 @@ Wait for response before proceeding.
 | `ARCHITECTURE.md` | workflows/update-architecture.md |
 | `AGENTS.md` | workflows/update-agent-docs.md |
 | JSDoc / `src/` | workflows/update-jsdoc.md |
-| Any file under `.vibe/skills/` | workflows/update-skills.md |
+| Any file under `.agents/skills/` | workflows/update-skills.md |
 | `server/SERVER.md` | workflows/update-server-md.md |
 
 **Intent-based routing (clear intent without selecting a number):**
@@ -95,7 +95,7 @@ All in `workflows/`:
 | update-architecture.md | Update `ARCHITECTURE.md` |
 | update-agent-docs.md | Update `AGENTS.md` |
 | update-jsdoc.md | Update JSDoc comments in `src/` |
-| update-skills.md | Fix inaccurate or incomplete skill files under `.vibe/skills/` |
+| update-skills.md | Fix inaccurate or incomplete skill files under `.agents/skills/` |
 | update-server-md.md | Update `server/SERVER.md` after dev server or build pipeline changes |
 | consistency-review.md | Review all documents for consistency with current source |
 | write-blog-post.md | Draft a new blog post in `docs-src/pages/blog/` |

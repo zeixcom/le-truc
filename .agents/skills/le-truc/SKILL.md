@@ -50,7 +50,7 @@ The factory receives a `FactoryContext` at connect time with these helpers:
 | `on(target, type, handler, options?)` | Create event listener descriptor |
 | `pass(target, props)` | Create slot-swap descriptor for Le Truc child |
 | `provideContexts(contexts)` | Create context-provider descriptor |
-| `requestContext(context, fallback)` | Return `Memo<T>` for use inside `expose()` |
+| `requestContext(context, fallback)` | Return `Signal<T>` (backed by a `Slot`) for use inside `expose()` |
 
 ### Reactivity Flow
 
@@ -106,7 +106,7 @@ Binding helpers connect signals to DOM properties/attributes:
 | **Factory Context** | Object passed to factory with helpers | component context |
 | **Effect Descriptor** | Thunk returned by `watch()`, `on()`, `pass()` | effect, reaction |
 | **Signal** | Reactive primitive from `@zeix/cause-effect` | state, observable |
-| **Slot** | Wrapper enabling signal swapping for `pass()` | container, wrapper |
+| **Slot** | Wrapper enabling signal swapping for `pass()` and `requestContext()` | container, wrapper |
 | **Parser** | Transforms HTML attribute string to typed value | converter, decoder |
 | **Binding** | One-way signal→DOM connection via `bind*` | link, sync, pass |
 | **Pass** | Zero-overhead signal sharing between Le Truc components | forward, share, bind |

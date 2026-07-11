@@ -31,7 +31,7 @@ The changelog uses this heading hierarchy:
 
 ## Adding Entries
 1. Read `CHANGELOG.md`.
-2. Inspect the diff to identify changes: `git diff main..HEAD -- src/ index.ts .vibe/skills/` or as directed. Changes to `.vibe/skills/` are considered as significant as source code changes — skills govern how code is generated and reviewed.
+2. Inspect the diff to identify changes: `git diff main..HEAD -- src/ index.ts .agents/skills/` or as directed. Changes to `.agents/skills/` are considered as significant as source code changes — skills govern how code is generated and reviewed.
 3. If there is no `## [Unreleased]` section, create one immediately below `# Changelog`.
 4. Classify each change into exactly one category: Added, Changed, Deprecated, Removed, Fixed, or Security.
 5. Write entries following the style guide below.
@@ -54,7 +54,7 @@ When asked to release a version:
 - **Include migration notes** under Changed or Removed when behavior breaks compatibility. State clearly what consumers must change and why.
 - Use backticks for all public API names, internal types, flags, and file names.
 
-**Skill changes** (changes to `.vibe/skills/`):
+**Skill changes** (changes to `.agents/skills/`):
 - Classify as **Changed** when an existing skill's behavior, scope, or reference material is updated; **Added** when a new skill or workflow file is introduced; **Removed** when one is deleted.
 - Bold the skill name and the affected file or section: `- **\`changelog-keeper\` \`adding_entries\`**: description…`
 - State what the skill now does differently and why — the audience is developers who invoke skills and need to know when their mental model of a skill's behavior has changed.

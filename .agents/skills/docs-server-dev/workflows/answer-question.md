@@ -18,7 +18,6 @@ references/source-map.md — lists which authoritative document answers which qu
 | The two `html` tags confusion | `references/template-system.md` → The Two `html` Tags |
 | Test categories, test-utils API, what to test | `references/testing.md` |
 | Where a specific source file is, what it exports | `references/source-map.md` |
-| Open tasks, prior design decisions | `server/TASKS.md` |
 | HTTP routes, layout selection, `guardPath` | `server/SERVER.md` → HTTP Server section |
 | HMR: how it works, message protocol | `server/SERVER.md` → Hot Module Replacement |
 | File signals: which signal watches what | `server/SERVER.md` → File Signals table |

@@ -26,10 +26,9 @@ defineComponent<ParentProps>('parent-el', ({ expose, first, pass }) => {
   expose({ disabled: false })
   return [
     pass(child, {
-      disabled: 'disabled',            // string prop name → reads host.disabled
-      label: () => host.label,         // thunk
-      value: mySignal,                 // Signal
-      // SlotDescriptor — inline bi-directional adapter (e.g. type conversion):
+      disabled: () => host.disabled,   // thunk — read-only
+      label: readonlyMemo,             // read-only signal (Memo/Task)
+      // SlotDescriptor — mediated writable (also for type conversion):
       progress: {
         get: () => host.value / host.max,             // normalize to 0-1
         set: (v: number) => { host.value = v * host.max },
@@ -38,6 +37,8 @@ defineComponent<ParentProps>('parent-el', ({ expose, first, pass }) => {
   ]
 })
 ```
+
+**Deprecated short forms (removed in next major):** the property-key form (`disabled: 'disabled'`) and the bare-writable-signal form (`value: someState`) hand the child unrestricted `.set()` on the parent's signal and warn in DEV_MODE (ADR 0012). Use a thunk for read-only access or a `{ get, set }` descriptor to mediate writes.
 
 **Scope: Le Truc components only.** For Lit, Stencil, FAST, plain custom elements, or native elements, use `watch('prop', bindProperty(el, 'key'))` instead — `pass()` bypasses external frameworks' change-detection and has no effect on them.
 
@@ -73,13 +74,15 @@ const THEME_CONTEXT = Symbol.for('theme')
 
 defineComponent<MyProps>('my-consumer', ({ expose, requestContext, watch }) => {
   expose({
-    theme: requestContext(THEME_CONTEXT, 'light'),  // Memo<string> — fallback if no provider
+    theme: requestContext(THEME_CONTEXT, 'light'),  // Signal<string> — fallback if no provider
   })
   return [
     watch('theme', value => { /* react to theme */ }),
   ]
 })
 ```
+
+The returned `Signal<T>` is backed by a `Slot`: it serves `fallback` until a provider answers, and a provider that upgrades late (bundle ordering, code-splitting) is still caught by automatic re-dispatches — the consumer switches from fallback to the provided value reactively, no consumer code needed. Providers are stable single sources of truth: update the *values* they provide, don't remove or swap the provider at runtime.
 
 Use for: data-fetch scopes, auth state, locale, theme, any value shared across unknown subtree depth.
 
