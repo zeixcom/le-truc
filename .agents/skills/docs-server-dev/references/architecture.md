@@ -72,6 +72,8 @@ sources  (List<FileInfo>)
 | `pagesEffect` | `docsMarkdown.fullyProcessed` | `docs/**/*.html` (all doc pages + blog posts) |
 | `mdMirrorEffect` | `docsMarkdown.processed` | `docs/**/*.md` (parallel Markdown mirror for every HTML page) |
 | `llmsManifestEffect` | `docsMarkdown.pageInfos` | `docs/llms.txt` (AI crawler manifest) |
+| `llmsFullManifestEffect` | `docsMarkdown.processed` | `docs/llms-full.txt` (curated full-content concatenation) |
+| `staticAssetsEffect` | — (one-shot copy, not watched) | `docs/**` (static assets from `docs-src/static/`) |
 | `menuEffect` | `docsMarkdown.pageInfos` | `docs-src/includes/menu.html` |
 | `sitemapEffect` | `docsMarkdown.pageInfos` | `docs/sitemap.xml` |
 
@@ -82,12 +84,13 @@ GitHub Pages cannot set response headers dynamically, so `Accept: text/markdown`
 - `mdMirrorEffect` strips Markdoc tags (`stripMarkdocTags()`) and prepends a YAML frontmatter block (`serializeFrontmatter()`) before writing `docs/**/*.md` alongside each `docs/**/*.html`.
 - `pagesEffect` injects `<link rel="alternate" type="text/markdown" href="./page.md" />` into every HTML `<head>` so crawlers can discover the mirror.
 - `llmsManifestEffect` generates `docs/llms.txt` — a structured Markdown file listing all pages grouped by section, for AI crawlers that look for `llms.txt` at the root.
+- `llmsFullManifestEffect` generates `docs/llms-full.txt` — a curated concatenation of the full page contents, for AI consumers that want the whole documentation in one request.
 
 ### Build Orchestration
 
-`build()` in `build.ts`:
-1. Calls all 13 effect factories — each returns `{ cleanup, ready }`
-2. `await Promise.all([...ready promises])` — waits for every effect's first run
+`build()` in `build.ts` runs the 15 effects in **two phases** — each factory returns `{ cleanup, ready }`:
+1. Phase 1 — generators: `apiEffect`, `cssEffect`, `jsEffect`, `staticAssetsEffect`; their `ready` promises are awaited before phase 2 starts, because consumers must not take their first-run snapshot until the generated inputs (TypeDoc output, bundled assets) exist on disk (matters on a fresh checkout, where generated files are gitignored)
+2. Phase 2 — consumers: the remaining 11 effects are instantiated, then all their `ready` promises awaited
 3. After all ready: broadcasts HMR `build-success` + `reload` (watch mode only)
 4. Returns a cleanup function that calls all `cleanup()` functions for graceful shutdown
 

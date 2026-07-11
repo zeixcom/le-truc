@@ -107,6 +107,7 @@ Each effect factory calls `createEffect(() => match([...signals], { ok, err }))`
 | `apiPagesEffect` | `apiMarkdown.sources` | `docs/api/**/*.html` | Markdoc + Shiki (HTML fragments) |
 | `cssEffect` | `docsStyles`, `componentStyles` | `docs/assets/main.css` | LightningCSS (`bunx lightningcss`) |
 | `jsEffect` | `docsScripts`, `libraryScripts`, `componentScripts` | `docs/assets/main.js` + sourcemap | `bun build` |
+| `staticAssetsEffect` | — (one-shot copy, not watched) | `docs/**` (static assets from `docs-src/static/`) | File copy |
 | `serviceWorkerEffect` | All style + script sources | `docs/sw.js` | Template generation |
 | `examplesEffect` | `componentMarkdown`, `componentMarkup` | `docs/examples/<name>.html` | Markdoc + Shiki |
 | `mocksEffect` | `componentMocks.sources` | `docs/test/<component>/mocks/*` | File copy |

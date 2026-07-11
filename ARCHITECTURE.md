@@ -52,7 +52,7 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 
 ### Event Binding
 
-`on(target, type, handler)` binds events with unified `(event, target)` signature. For `Memo<Element[]>` targets, uses event delegation with fallback to per-element listeners for non-bubbling events.
+`on(target, type, handler)` binds events with unified `(event, target)` signature. For `Memo<Element[]>` targets, uses event delegation with fallback to per-element listeners for non-bubbling events. Per-element lifecycles over `Memo<Element[]>` collections — `each()`, `pass()` with a Memo target, and the non-bubbling `on()` fallback — share the internal `keyedScopes` helper, which keys scopes by element identity so collection changes only mount entering elements and dispose leaving ones, leaving survivors untouched (see [ADR 0014](adr/0014-keyed-per-element-scopes-for-memo-collections.md)).
 
 ## Query System
 
@@ -86,7 +86,7 @@ Implements the [Community Protocol for Context](https://github.com/webcomponents
 
 ### Inter-Component Signal Sharing (Pass)
 
-`pass(target, props)` swaps Slot-backed signals for zero-overhead live **Signal** sharing between Le Truc **Component** instances. Every entry in `props` is a declared intent to bind a live signal: if a prop doesn't exist on the target, can't be resolved to a signal, or isn't Slot-backed (target is a non-Le-Truc custom element, or the prop is read-only/computed), `pass()` throws `InvalidPassPropertyError` naming every failing prop — validated eagerly before any signal is swapped, so a failure never leaves a partial bind. See [ADR 0011](adr/0011-throw-on-pass-binding-failure.md).
+`pass(target, props)` swaps Slot-backed signals for zero-overhead live **Signal** sharing between Le Truc **Component** instances. Every entry in `props` is a declared intent to bind a live signal: if a prop doesn't exist on the target, can't be resolved to a signal, or isn't Slot-backed (target is a non-Le-Truc custom element, or the prop is read-only/computed), `pass()` throws `InvalidPassPropertyError` naming every failing prop — validated eagerly before any signal is swapped, so a failure never leaves a partial bind. See [ADR 0011](adr/0011-throw-on-pass-binding-failure.md). The property-key and bare-writable-signal short forms — which grant the child unrestricted `.set()` on the parent's signal — are deprecated in favor of the thunk (read-only) and `{ get, set }` descriptor (mediated writable) forms; they warn in DEV_MODE and will be removed in the next major (see [ADR 0012](adr/0012-deprecate-unrestricted-write-short-forms-in-pass.md)).
 
 ## Naming Conventions
 
@@ -105,7 +105,7 @@ Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestConte
 
 ## Scheduler
 
-`schedule(element, task)` deduplicates high-frequency DOM updates using `requestAnimationFrame`. Used by `on()` for passive events and `dangerouslyBindInnerHTML`.
+`schedule(element, task)` deduplicates high-frequency DOM updates using `requestAnimationFrame`, keyed per element. It is used by `dangerouslyBindInnerHTML`. The sibling `throttle(fn, signal?)` helper — which shares the same single RAF tick — limits passive event handlers in `on()` to one call per animation frame.
 
 ## Ecosystem Tooling
 
