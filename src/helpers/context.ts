@@ -8,6 +8,7 @@ import {
 	isFunction,
 	type Signal,
 } from '@zeix/cause-effect'
+import { CONTEXT_RETRY_DELAY } from '../internal'
 import type { ComponentProps, EffectDescriptor } from '../types'
 import { DEV_MODE, elementName } from '../util'
 
@@ -74,16 +75,6 @@ type RequestContextHelper = <T extends {}>(
 /* === Constants === */
 
 const CONTEXT_REQUEST = 'context-request'
-
-/**
- * How long (ms) to wait before the final context-request re-dispatch.
- *
- * Must exceed `DEPENDENCY_TIMEOUT` (200 ms) in `src/helpers/dom.ts`, the window
- * a parent effect spends in `customElements.whenDefined()` before activating its
- * `provideContexts` listener. The retry fires *after* that window closes, so a
- * provider whose own effect activation waited on a slow child still binds.
- */
-const CONTEXT_RETRY_DELAY = 210
 
 /* === Exported Class and Functions === */
 

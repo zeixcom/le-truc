@@ -2054,9 +2054,21 @@ class InvalidSelectorError extends TypeError {
   }
 }
 
+// src/internal.ts
+var DEPENDENCY_TIMEOUT = 200;
+var CONTEXT_RETRY_DELAY = DEPENDENCY_TIMEOUT + 10;
+var componentSignals = new WeakMap;
+var getSignals = (el) => {
+  let signals = componentSignals.get(el);
+  if (!signals) {
+    signals = {};
+    componentSignals.set(el, signals);
+  }
+  return signals;
+};
+
 // src/helpers/context.ts
 var CONTEXT_REQUEST = "context-request";
-var CONTEXT_RETRY_DELAY = 210;
 
 class ContextRequestEvent extends Event {
   context;
@@ -2119,7 +2131,6 @@ var makeRequestContext = (host) => (context, fallback) => {
 };
 
 // src/helpers/dom.ts
-var DEPENDENCY_TIMEOUT = 200;
 var extractAttributes = (selector) => {
   const attributes = new Set;
   let withoutAttrValues = "";
@@ -2239,17 +2250,6 @@ var makeElementQueries = (host) => {
     }
   };
   return [{ first, all }, resolveDependencies];
-};
-
-// src/internal.ts
-var componentSignals = new WeakMap;
-var getSignals = (el) => {
-  let signals = componentSignals.get(el);
-  if (!signals) {
-    signals = {};
-    componentSignals.set(el, signals);
-  }
-  return signals;
 };
 
 // src/helpers/reactive.ts
@@ -2503,7 +2503,7 @@ var makeOn = (host) => {
 // src/types.ts
 var PARSER_BRAND = Symbol("parser");
 var METHOD_BRAND = Symbol("method");
-var RESERVED_WORDS = new Set([
+var RESERVED_WORDS_LIST = [
   "constructor",
   "prototype",
   "__proto__",
@@ -2513,7 +2513,8 @@ var RESERVED_WORDS = new Set([
   "isPrototypeOf",
   "propertyIsEnumerable",
   "toLocaleString"
-]);
+];
+var RESERVED_WORDS = new Set(RESERVED_WORDS_LIST);
 var isParser = (value) => typeof value === "function" && (PARSER_BRAND in value);
 var isMethodProducer = (value) => typeof value === "function" && (METHOD_BRAND in value);
 var isReservedWord = (name) => RESERVED_WORDS.has(name);
