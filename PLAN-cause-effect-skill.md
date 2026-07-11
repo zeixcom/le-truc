@@ -2,7 +2,7 @@
 
 ## Goal
 
-`.claude/skills/cause-effect/` exists but contains **only a `.DS_Store` file** — no `SKILL.md`, no references. It is a dead directory: the skill loader can't pick it up, so any agent routed toward signal-level questions has nothing to load, while the sibling skills actively point there conceptually (the `le-truc` skill says "For signal-level questions, `@zeix/cause-effect` is re-exported by le-truc"; `le-truc-dev` keeps a thin `references/cause-effect-integration.md` that explicitly disclaims "This is NOT a full cause-effect API reference").
+`.agents/skills/cause-effect/` exists but contains **only a `.DS_Store` file** — no `SKILL.md`, no references. It is a dead directory: the skill loader can't pick it up, so any agent routed toward signal-level questions has nothing to load, while the sibling skills actively point there conceptually (the `le-truc` skill says "For signal-level questions, `@zeix/cause-effect` is re-exported by le-truc"; `le-truc-dev` keeps a thin `references/cause-effect-integration.md` that explicitly disclaims "This is NOT a full cause-effect API reference").
 
 Signal-level questions are where agents most often go wrong in this codebase, because cause-effect has sharp, non-obvious constraints (`T extends {}`, owner requirements, updater-function ambiguity in `.set()`, `match()` routing precedence, lazy `watched` activation). A proper skill turns those recurring landmines into documented, retrievable guidance.
 
@@ -12,20 +12,20 @@ The source of truth is already local and current: `node_modules/@zeix/cause-effe
 
 | File | Change |
 |---|---|
-| `.claude/skills/cause-effect/SKILL.md` | **New** — main skill file with frontmatter |
-| `.claude/skills/cause-effect/references/primitives.md` | **New** — signal-type decision guide |
-| `.claude/skills/cause-effect/references/pitfalls.md` | **New** — constraints and failure modes |
-| `.claude/skills/cause-effect/.DS_Store` | **Delete** |
+| `.agents/skills/cause-effect/SKILL.md` | **New** — main skill file with frontmatter |
+| `.agents/skills/cause-effect/references/primitives.md` | **New** — signal-type decision guide |
+| `.agents/skills/cause-effect/references/pitfalls.md` | **New** — constraints and failure modes |
+| `.agents/skills/cause-effect/.DS_Store` | **Delete** |
 
-Do not touch `.claude/skills/le-truc-dev/references/cause-effect-integration.md` — it stays as the "how *le-truc* uses cause-effect" view; the new skill is the "how cause-effect itself behaves" view. Cross-reference, don't duplicate.
+Do not touch `.agents/skills/le-truc-dev/references/cause-effect-integration.md` — it stays as the "how *le-truc* uses cause-effect" view; the new skill is the "how cause-effect itself behaves" view. Cross-reference, don't duplicate.
 
 ## Step-by-step implementation plan
 
 ### Step 1 — Read the sources
 
 1. `node_modules/@zeix/cause-effect/README.md` — full read; it is the API reference.
-2. `.claude/skills/le-truc-dev/references/cause-effect-integration.md` — to know what *not* to duplicate and what to link.
-3. `.claude/skills/le-truc/SKILL.md` and `.claude/skills/le-truc-dev/SKILL.md` — copy their frontmatter shape, tone, and section conventions exactly (frontmatter keys: `name`, `description`, `user_invocable: true`).
+2. `.agents/skills/le-truc-dev/references/cause-effect-integration.md` — to know what *not* to duplicate and what to link.
+3. `.agents/skills/le-truc/SKILL.md` and `.agents/skills/le-truc-dev/SKILL.md` — copy their frontmatter shape, tone, and section conventions exactly (frontmatter keys: `name`, `description`, `user_invocable: true`).
 
 ### Step 2 — Write `SKILL.md`
 
@@ -66,9 +66,9 @@ Document at minimum these verified sharp edges (each with a one-line fix):
 
 ### Step 5 — Clean up and verify
 
-1. `rm .claude/skills/cause-effect/.DS_Store`.
-2. Verify structure matches siblings: `ls .claude/skills/cause-effect` → `SKILL.md references`.
-3. Start a fresh Claude Code session (or ask the user to) and confirm `cause-effect` appears in the available-skills list with the new description.
+1. `rm .agents/skills/cause-effect/.DS_Store`.
+2. Verify structure matches siblings: `ls .agents/skills/cause-effect` → `SKILL.md references`.
+3. Start a fresh agent session (or ask the user to) and confirm `cause-effect` appears in the available-skills list with the new description.
 
 ## Edge cases a weaker model would likely miss
 
@@ -76,12 +76,12 @@ Document at minimum these verified sharp edges (each with a one-line fix):
 - **`createComputed` vs `createMemo`:** both exist and both are used in le-truc (`component.ts` uses `createComputed`, `dom.ts` uses `createMemo`). Check the README/types for the actual distinction before describing them as synonyms.
 - **Version drift:** add one line to SKILL.md stating which cause-effect version it was written against ("Written against @zeix/cause-effect 1.4 — verify against the installed README on major upgrades"), so future maintainers know when to refresh it.
 - **Don't copy the whole README into references/** — the skill's value is selection and warnings, not mirroring; the README ships in `node_modules` and can always be read directly. Keep references/ files focused (≲ 200 lines each).
-- **Frontmatter must match the loader's expectations** — copy the exact key set from a working sibling (`.claude/skills/le-truc/SKILL.md`); an invalid frontmatter block fails silently (the skill just doesn't appear — which is indistinguishable from today's empty-dir state, so verify step 5.3 explicitly).
+- **Frontmatter must match the loader's expectations** — copy the exact key set from a working sibling (`.agents/skills/le-truc/SKILL.md`); an invalid frontmatter block fails silently (the skill just doesn't appear — which is indistinguishable from today's empty-dir state, so verify step 5.3 explicitly).
 - **The le-truc re-export is not 1:1 forever** — CHANGELOG 2.1.0 notes `valueString` was dropped from le-truc's re-exports while remaining in cause-effect. In the skill, say "most of the public API is re-exported by le-truc; when an import fails from `@zeix/le-truc`, try `@zeix/cause-effect` directly" rather than claiming full re-export.
 
 ## Acceptance criteria
 
-1. `.claude/skills/cause-effect/` contains `SKILL.md` and `references/primitives.md`, `references/pitfalls.md`; no `.DS_Store`.
+1. `.agents/skills/cause-effect/` contains `SKILL.md` and `references/primitives.md`, `references/pitfalls.md`; no `.DS_Store`.
 2. SKILL.md frontmatter parses (same key set as siblings) and the skill appears in a fresh session's available-skills list.
 3. Every API name mentioned exists in `node_modules/@zeix/cause-effect/README.md` or `src/` — verify with grep for at least: `createSlot`, `SlotDescriptor`, `match`, `unown`, `PromiseValueError`, `DuplicateKeyError`, `UnsetSignalValueError`, `root: true`.
 4. The pitfalls file covers all eight listed sharp edges.
