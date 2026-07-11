@@ -23,6 +23,7 @@ Write `@zeix/cem-plugin-le-truc` as a plugin for `@custom-elements-manifest/anal
 3. Resolves the `Props` type argument via `typeChecker.getTypeFromTypeNode()` + `typeChecker.getPropertiesOfType()` to build `members[]`. **`Props` is the source of truth for `members` — not `expose()`.**
 4. Traverses the factory body for `expose({...})` calls and inspects each property initializer: if it is a call to an `as*` function imported from `@zeix/le-truc` (or a call to `asParser()`), the property is also listed in `attributes[]`.
 5. Extracts `@slot`, `@fires`, `@csspart`, and `@cssprop` JSDoc tags from the export declaration to populate the corresponding CEM arrays.
+6. Extracts `@attribute` (alias `@attr`) JSDoc tags — the same tag names the stock analyzer supports for class-based components — into `attributes[]` **without** `fieldName`, for attributes read once via `host.getAttribute()` at connect time that are deliberately not exposed as reactive properties (server-side configuration of stable client-side behavior, e.g. `module-splitview`'s `orientation`, `context-media`'s breakpoints). Syntax: `@attribute {type} [name=default] - description`. If a tag names an `expose()`-derived attribute, the entries merge: `Props` remains the source of truth for `type` and `fieldName`; JSDoc contributes `description` and `default`.
 6. Synthesises a PascalCase `name` from the tag name (e.g. `basic-counter` → `BasicCounter`) since the internal `Truc` class is private to `defineComponent`.
 
 The plugin is published as `@zeix/cem-plugin-le-truc` and used internally by adding `custom-elements-manifest.config.mjs` to the le-truc repo targeting `examples/**/*.ts`.
@@ -33,7 +34,7 @@ The plugin is published as `@zeix/cem-plugin-le-truc` and used internally by add
 
 - **`bennypowers/cem generate` with vanilla support**: The tool explicitly lists `extends HTMLElement` support as "rudimentary and not a priority." Le Truc components do not extend `HTMLElement` in source at all — they call `defineComponent()`. This option cannot work without significant upstream changes to a third-party tool.
 
-- **JSDoc-only manifest (no TypeScript analysis)**: Require authors to annotate all types redundantly in JSDoc (e.g. `@type {number}`). Rejected: duplicates information already expressed precisely in TypeScript types; creates a maintenance burden and a second source of truth for types.
+- **JSDoc-only manifest (no TypeScript analysis)**: Require authors to annotate all types redundantly in JSDoc (e.g. `@type {number}`). Rejected: duplicates information already expressed precisely in TypeScript types; creates a maintenance burden and a second source of truth for types. This rejection does not extend to `@attribute` tags for connect-time attributes (Decision 6): those attributes have no `Props` entry and no type-level representation at all, so JSDoc is the only possible source — the same rationale as the existing `@slot`/`@fires`/`@csspart`/`@cssprop` handling.
 
 ## Consequences
 

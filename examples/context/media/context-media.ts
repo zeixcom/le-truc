@@ -35,6 +35,10 @@ export const MEDIA_ORIENTATION =
  * to react when the user changes reduced-motion, dark/light theme, or viewport breakpoint.
  * Breakpoint attributes must be valid CSS lengths (e.g. `sm="600px"`).
  * Breakpoints (sm, md, lg, xl) can be overridden via attributes of the same name (e.g. `sm="600px"`).
+ * @attribute {string} [sm=32em] - Small breakpoint as a CSS length in `px` or `em` (e.g. `600px`). Read once at connect time.
+ * @attribute {string} [md=48em] - Medium breakpoint as a CSS length in `px` or `em`. Read once at connect time.
+ * @attribute {string} [lg=72em] - Large breakpoint as a CSS length in `px` or `em`. Read once at connect time.
+ * @attribute {string} [xl=104em] - Extra-large breakpoint as a CSS length in `px` or `em`. Read once at connect time.
  * @demo {./docs/examples/context-media.html} Interactive preview and usage examples */
 export default defineComponent<ContextMediaProps>(
 	'context-media',

@@ -31,7 +31,7 @@ interface Declaration {
 }
 
 interface Manifest {
-	modules?: Array<{ declarations?: Declaration[] }>
+	modules?: Array<{ path?: string; declarations?: Declaration[] }>
 }
 
 function fail(message: string): never {
@@ -52,6 +52,21 @@ function main() {
 	} catch (error) {
 		fail(
 			`${MANIFEST_PATH} is not valid JSON: ${error instanceof Error ? error.message : error}`,
+		)
+	}
+
+	// Module paths must be package-root-relative (CEM schema). Absolute paths
+	// mean the machine that generated the manifest leaked its filesystem layout
+	// into the published artifact (locally: /Users/…; in CI: /home/runner/…).
+	// Fixed in @zeix/cem-plugin-le-truc 0.2.1 (packageLinkPhase relativization).
+	const absolutePaths = (manifest.modules ?? [])
+		.map(m => m.path ?? '')
+		.filter(p => p.startsWith('/') || /^[A-Za-z]:[\\/]/.test(p))
+	if (absolutePaths.length > 0) {
+		fail(
+			`${MANIFEST_PATH} has ${absolutePaths.length} module(s) with absolute paths (must be package-root-relative), e.g.:\n` +
+				`  • ${absolutePaths[0]}\n` +
+				'Update @zeix/cem-plugin-le-truc to ^0.2.1 and rerun `bun run build:cem`.',
 		)
 	}
 

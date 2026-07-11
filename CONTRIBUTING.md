@@ -81,6 +81,8 @@ bun run build:cem
 
 This runs `cem analyze` (provided by the `@custom-elements-manifest/analyzer` devDependency and the `@zeix/cem-plugin-le-truc` plugin) and creates `custom-elements.json` (gitignored). No extra install is needed — the analyzer CLI is already bundled with the project dependencies.
 
+Attributes exposed via `expose()` parsers are detected automatically. An attribute that a component reads once via `host.getAttribute()` at connect time (and deliberately does *not* expose as a reactive property) must be declared with an `@attribute {type} [name=default] - description` JSDoc tag (alias `@attr`) on the component's export — see `module-splitview`'s `orientation` for an example.
+
 ---
 
 ### Optional: editor autocomplete and AI agent tooling
