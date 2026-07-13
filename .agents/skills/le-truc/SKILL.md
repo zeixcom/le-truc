@@ -93,6 +93,7 @@ Binding helpers connect signals to DOM properties/attributes:
 | Ancestor → descendant (any depth) | `provideContexts` / `requestContext` |
 | Parent → bubbled events | `on(host, type, handler)` |
 | Parent → dynamic descendants | `all(selector)` + `each()` |
+| Keyed data → container children | `createList()` + `reconcile()` — data-driven |
 | Sibling → sibling | **Not supported** — lift to common ancestor |
 
 ---

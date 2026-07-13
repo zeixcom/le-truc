@@ -1,4 +1,6 @@
 import {
+	type Cleanup,
+	type Collection,
 	createComputed,
 	createEffect,
 	createMemo,
@@ -8,9 +10,11 @@ import {
 	isMemo,
 	isRecord,
 	isSlot,
+	type List,
 	type MaybeCleanup,
 	type MaybePromise,
 	type Memo,
+	type MutableSignal,
 	match,
 	type Signal,
 	type SingleMatchHandlers,
@@ -22,6 +26,7 @@ import {
 	InvalidCustomElementError,
 	InvalidPassPropertyError,
 	InvalidReactivesError,
+	InvalidTemplateError,
 } from '../errors'
 import { getSignals, pushDescriptor, withCollector } from '../internal'
 import type {
@@ -569,6 +574,200 @@ function each<E extends Element>(
 	return descriptor
 }
 
+/**
+ * Sync a keyed reactive data source to a container's children.
+ *
+ * For every key in the source (in source order), the container holds one
+ * element carrying `data-key`: entering keys clone the `<template>`'s single
+ * root element, leaving keys dispose their scope and remove their element,
+ * and surviving elements are moved with `insertBefore()` — always reused,
+ * never recreated. The sync is strictly one-way, data → DOM: `reconcile()`
+ * never reads item data back from the DOM; event handlers that mutate the
+ * source are the legitimate path to change structural state.
+ *
+ * On the first run, existing children carrying `data-key` are **adopted** if
+ * their key is present in the source (`bindItem` is mounted for them too —
+ * it is responsible for its own idempotency against server-rendered content);
+ * keyed children whose key is absent are removed (DEV_MODE warning), and all
+ * other unkeyed children are removed (self-cleaning container).
+ *
+ * Children carrying `data-unreconciled` are exempt from reconciliation:
+ * never removed, never repositioned, no `bindItem`. An element that
+ * `reconcile()` itself placed and that later gains the attribute (e.g. a
+ * mid-drag item) still claims its key, so no duplicate clone is created for
+ * it while it is exempt. Keyed elements are positioned relative to the
+ * **keyed subset** (after the previous keyed sibling, or at the head if
+ * first), so unmanaged elements interspersed in the container do not drift
+ * keyed positions.
+ *
+ * `bindItem` is called once per entering element inside a root-keyed scope;
+ * a returned cleanup registers on that scope, which is disposed when the key
+ * leaves the source or the component disconnects. The driving effect tracks
+ * *structural* changes only (the source's keys); per-item value changes flow
+ * through the `byKey` signal passed to `bindItem` and never trigger
+ * structural work.
+ *
+ * Throws `InvalidTemplateError` at activation if the template content does
+ * not contain exactly one root element. See ADR 0017.
+ *
+ * @since 2.3
+ * @param {Element} container - Container element whose children are reconciled
+ * @param {HTMLTemplateElement} template - Template whose single root element is cloned for entering keys
+ * @param {List<T> | Collection<T>} source - Keyed reactive data source
+ * @param {(element: HTMLElement, item: Signal<T>, key: string) => MaybeCleanup} bindItem - Mounted once per entering element in its own scope
+ * @returns {EffectDescriptor} Effect descriptor to include in the component's factory result
+ */
+function reconcile<T extends {}, S extends MutableSignal<T>>(
+	container: Element,
+	template: HTMLTemplateElement,
+	source: List<T, S>,
+	bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup,
+): EffectDescriptor
+function reconcile<T extends {}, S extends Signal<T>>(
+	container: Element,
+	template: HTMLTemplateElement,
+	source: Collection<T, S>,
+	bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup,
+): EffectDescriptor
+function reconcile<T extends {}>(
+	container: Element,
+	template: HTMLTemplateElement,
+	source: List<T> | Collection<T>,
+	bindItem: (
+		element: HTMLElement,
+		item: Signal<T>,
+		key: string,
+	) => MaybeCleanup,
+): EffectDescriptor {
+	return () => {
+		if (template.content.childElementCount !== 1)
+			throw new InvalidTemplateError(
+				container,
+				template.content.childElementCount,
+			)
+		const itemRoot = template.content.firstElementChild as HTMLElement
+
+		// WeakMap is the runtime element→key bookkeeping; `data-key` stays on the
+		// DOM for SSR adoption harvest and event-delegation ergonomics (ADR 0017).
+		const keyOf = new WeakMap<Element, string>()
+		const disposers = new Map<string, Cleanup>()
+
+		// Next reconciled element after `after` in document order — skips
+		// `data-unreconciled` elements, which are invisible to positioning.
+		const nextKeyed = (after: Element | null): Element | null => {
+			let node = after ? after.nextElementSibling : container.firstElementChild
+			while (
+				node &&
+				(!keyOf.has(node) || node.hasAttribute('data-unreconciled'))
+			)
+				node = node.nextElementSibling
+			return node
+		}
+
+		createScope(() => {
+			createEffect(() => {
+				const keys = Array.from(source.keys())
+				untrack(() => {
+					const keySet = new Set(keys)
+					const current = new Map<string, HTMLElement>()
+					const adopted = new Set<string>()
+					const pinned = new Set<string>()
+					const leavers: Element[] = []
+
+					// Scan: classify children. Survivors are kept, unknown children
+					// with a matching unclaimed `data-key` are adopted, everything
+					// else (leavers, unmatched keys, unkeyed children) is removed.
+					for (const child of Array.from(container.children)) {
+						if (child.hasAttribute('data-unreconciled')) {
+							// A previously reconciled element that turned unreconciled
+							// (e.g. a mid-drag item) still claims its key: it must not be
+							// duplicated by a clone, but is never moved or re-mounted.
+							const key = keyOf.get(child)
+							if (key !== undefined && keySet.has(key)) {
+								current.set(key, child as HTMLElement)
+								pinned.add(key)
+							}
+							continue
+						}
+						const key = keyOf.get(child)
+						if (key !== undefined) {
+							if (keySet.has(key)) current.set(key, child as HTMLElement)
+							else leavers.push(child)
+							continue
+						}
+						const harvested = child.getAttribute('data-key')
+						if (
+							harvested !== null &&
+							keySet.has(harvested) &&
+							!current.has(harvested)
+						) {
+							keyOf.set(child, harvested)
+							current.set(harvested, child as HTMLElement)
+							adopted.add(harvested)
+							continue
+						}
+						if (DEV_MODE && harvested !== null)
+							console.warn(
+								`reconcile() removed child with data-key="${harvested}" from ${elementName(container)} — key not present in the source.`,
+							)
+						child.remove()
+					}
+
+					// Dispose leaving scopes before removing their elements, and both
+					// before mounting enterers (teardown-before-setup, as in
+					// keyedScopes). Also reaps scopes whose element vanished through
+					// external DOM mutation.
+					for (const [key, dispose] of disposers) {
+						if (keySet.has(key)) continue
+						dispose()
+						disposers.delete(key)
+					}
+					for (const el of leavers) el.remove()
+
+					// Enter, mount, and position in source key order.
+					let prev: Element | null = null
+					for (const key of keys) {
+						let el = current.get(key)
+						let mount = adopted.has(key)
+						if (!el) {
+							el = itemRoot.cloneNode(true) as HTMLElement
+							el.setAttribute('data-key', key)
+							keyOf.set(el, key)
+							mount = true
+						}
+						if (mount) {
+							// A stale scope survives only if the element was replaced
+							// behind our back (removed externally, or re-adopted).
+							disposers.get(key)?.()
+							const item = source.byKey(key)
+							if (item) {
+								const element = el
+								disposers.set(
+									key,
+									createScope(() => bindItem(element, item, key), {
+										root: true,
+									}),
+								)
+							}
+						}
+						if (pinned.has(key)) continue
+						if (nextKeyed(prev) !== el)
+							container.insertBefore(
+								el,
+								prev ? prev.nextElementSibling : container.firstElementChild,
+							)
+						prev = el
+					}
+				})
+			})
+			return () => {
+				for (const dispose of disposers.values()) dispose()
+				disposers.clear()
+			}
+		})
+	}
+}
+
 export {
 	activateResult,
 	type EffectDescriptor,
@@ -584,5 +783,6 @@ export {
 	type PassHelper,
 	type Reactive,
 	type RunHelper,
+	reconcile,
 	type WatchHelper,
 }

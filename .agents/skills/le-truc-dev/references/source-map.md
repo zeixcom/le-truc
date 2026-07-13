@@ -22,13 +22,13 @@ Core files in `src/`:
 |---|---|
 | `component.ts` | `defineComponent`, `Truc` class, component lifecycle, `#setAccessor`, `#initSignals`, `FactoryContext`, parser/method dispatch via `isParser`/`isMethodProducer` |
 | `types.ts` | `Parser`, `MethodProducer`, `asParser`, `defineMethod`, `isParser`, `isMethodProducer`, parser/method branding (`PARSER_BRAND`/`METHOD_BRAND`), `ComponentProps`, `EffectDescriptor`, `FactoryResult`, `Falsy`, `ReservedWords` |
-| `helpers/reactive.ts` | `makeWatch`, `makePass`, `makeRun`, `each`, `activateResult`, `forEachUnseen`, `keyedScopes`, `EffectDescriptor`, `FactoryResult`, `Reactive`, `WatchHelper`, `PassHelper`, `RunHelper` |
+| `helpers/reactive.ts` | `makeWatch`, `makePass`, `makeRun`, `each`, `reconcile`, `activateResult`, `forEachUnseen`, `keyedScopes`, `EffectDescriptor`, `FactoryResult`, `Reactive`, `WatchHelper`, `PassHelper`, `RunHelper` |
 | `helpers/events.ts` | `makeOn`, `OnHelper`, event delegation, passive event throttling |
 | `bindings.ts` | `bindText`, `bindProperty`, `bindClass`, `bindVisible`, `bindAttribute`, `bindStyle`, `dangerouslyBindInnerHTML`, `safeSetAttribute`, `escapeHTML`, `setTextPreservingComments` |
 | `helpers/dom.ts` | `first`, `all`, `makeElementQueries`, `createElementsMemo`, selector type inference |
 | `helpers/context.ts` | `makeProvideContexts`, `makeRequestContext`, `ContextRequestEvent` |
 | `scheduler.ts` | `schedule`, `throttle` — rAF-based task deduplication |
-| `errors.ts` | `MissingElementError`, `DependencyTimeoutError`, `InvalidCustomElementError`, `InvalidPassPropertyError`, `InvalidPropertyNameError`, `InvalidReactivesError`, `InvalidSelectorError`, `InvalidComponentNameError`, `NoActiveCollectorError` |
+| `errors.ts` | `MissingElementError`, `DependencyTimeoutError`, `InvalidCustomElementError`, `InvalidPassPropertyError`, `InvalidPropertyNameError`, `InvalidReactivesError`, `InvalidSelectorError`, `InvalidTemplateError`, `InvalidComponentNameError`, `NoActiveCollectorError` |
 | `internal.ts` | `getSignals` — internal signal map shared by `component.ts` and `helpers/reactive.ts`; `withCollector`, `pushDescriptor`, `installActiveCollector`/`restoreActiveCollector` (ADR 0018 ambient effect-descriptor collector) |
 | `util.ts` | `elementName`, `DEV_MODE`, `isCustomElement`, `isNotYetDefinedComponent` |
 

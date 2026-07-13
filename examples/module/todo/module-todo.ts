@@ -8,6 +8,7 @@ import {
 	createStore,
 	defineComponent,
 	each,
+	reconcile,
 	type Store,
 } from '../../..'
 
@@ -111,17 +112,23 @@ export default defineComponent(
 		}
 
 		function moveItem(item: HTMLElement, direction: -1 | 1) {
-			const items = Array.from(container.children)
-			const newIdx = items.indexOf(item) + direction
-			if (newIdx < 0 || newIdx >= items.length) return
-			if (direction === 1) items[newIdx]?.after(item)
-			else items[newIdx]?.before(item)
-			const newPos = Array.from(container.children).indexOf(item) + 1
+			const key = item.dataset.key
+			if (!key) return
+			const index = list.indexOfKey(key)
+			const newIdx = index + direction
+			if (index < 0 || newIdx < 0 || newIdx >= list.length) return
+			// Mutate the list — reconcile() moves the element synchronously,
+			// so position and focus can be read right after.
+			list.update(prev => {
+				const next = [...prev]
+				const [moved] = next.splice(index, 1)
+				next.splice(newIdx, 0, moved!)
+				return next
+			})
 			status.set(
-				`${getItemText(item)} moved to position ${newPos} of ${list.length}.`,
+				`${getItemText(item)} moved to position ${newIdx + 1} of ${list.length}.`,
 			)
 			item.querySelector<HTMLElement>(REORDER_SELECTOR)?.focus()
-			reorderList()
 		}
 
 		function updateMarkerPosition(clientY: number) {
@@ -141,10 +148,7 @@ export default defineComponent(
 			else container.appendChild(marker)
 		}
 
-		function reorderList() {
-			const keys = Array.from(container.children)
-				.filter(el => el instanceof HTMLElement && el.dataset.key)
-				.map(el => (el as HTMLElement).dataset.key)
+		function applyOrder(keys: string[]) {
 			list.update(prev => {
 				const byKey = new Map(prev.map((item, i) => [list.keyAt(i), item]))
 				return keys.map(k => byKey.get(k)).filter(Boolean) as TodoItem[]
@@ -184,47 +188,19 @@ export default defineComponent(
 			})
 		})
 
-		watch(
-			() => Array.from(list.keys()),
-			keys => {
-				const current = new Map<string, HTMLElement>()
-				for (const child of container.children) {
-					const el = child as HTMLElement
-					if (el.dataset.key) current.set(el.dataset.key, el)
-				}
-
-				const keysSet = new Set(keys)
-
-				for (const [key, el] of current) {
-					if (!keysSet.has(key)) el.remove()
-				}
-
-				for (let i = 0; i < keys.length; i++) {
-					const key = keys[i]
-					let el = key && current.get(key)
-					if (key && !el) {
-						const fragment = template.content.cloneNode(
-							true,
-						) as DocumentFragment
-						el = fragment.firstElementChild as HTMLElement
-						el.dataset.key = key
-						const id = `${key}-checkbox`
-						const checkbox = el.querySelector('input')
-						if (checkbox) checkbox.id = id
-						const label = el.querySelector('label')
-						if (label) label.htmlFor = id
-						const text = el.querySelector('slot')
-						if (text)
-							text.replaceWith(
-								document.createTextNode(list.byKey(key)?.label.get() ?? ''),
-							)
-					}
-					const currentAtI = container.children[i]
-					if (el && currentAtI !== el)
-						container.insertBefore(el, currentAtI ?? null)
-				}
-			},
-		)
+		// Sync the container's children to the list. bindItem fills the cloned
+		// content — server-adopted items already carry ids and text, so the
+		// fill is naturally idempotent (no <slot> left to replace).
+		reconcile(container, template, list, (element, item, key) => {
+			const id = `${key}-checkbox`
+			const checkbox = element.querySelector('input')
+			if (checkbox) checkbox.id = id
+			const label = element.querySelector('label')
+			if (label) label.htmlFor = id
+			element
+				.querySelector('slot')
+				?.replaceWith(document.createTextNode(item.label.get()))
+		})
 
 		on(form, 'submit', e => {
 			e.preventDefault()
@@ -299,11 +275,16 @@ export default defineComponent(
 				const rect = item.getBoundingClientRect()
 				dragOffsetY = pointerStartY - rect.top
 
+				// Transient drag state is owned by the event handlers:
+				// data-unreconciled protects the marker and the dragged item
+				// from a reconcile re-run mid-drag (e.g. a concurrent edit).
 				marker = document.createElement('li')
 				marker.className = 'drop-marker'
+				marker.setAttribute('data-unreconciled', '')
 				marker.style.height = `${rect.height - 4}px`
 				container.insertBefore(marker, item)
 
+				item.setAttribute('data-unreconciled', '')
 				item.style.top = `${rect.top}px`
 				item.style.left = `${rect.left}px`
 				item.style.width = `${rect.width}px`
@@ -318,13 +299,30 @@ export default defineComponent(
 
 		on(host, 'pointerup', () => {
 			if (dragItem && marker) {
-				marker.replaceWith(dragItem)
+				// Committed order: keyed children in DOM order, with the dragged
+				// key at the marker's position. Read before cleaning up.
+				const keys: string[] = []
+				for (const child of container.children) {
+					if (child === marker) {
+						if (dragItem.dataset.key) keys.push(dragItem.dataset.key)
+					} else if (
+						child instanceof HTMLElement &&
+						child.dataset.key &&
+						child !== dragItem
+					) {
+						keys.push(child.dataset.key)
+					}
+				}
+				// Clean up transient state and strip the pin before committing —
+				// reconcile() is the sole writer to structural children.
+				marker.remove()
 				dragItem.style.cssText = ''
 				dragItem.classList.remove(DRAGGING_CLASS)
+				dragItem.removeAttribute('data-unreconciled')
 				dragItem = null
 				marker = null
 				suppressNextClick = true
-				reorderList()
+				applyOrder(keys)
 			}
 			pendingDragHandle = null
 		})
@@ -334,6 +332,7 @@ export default defineComponent(
 				marker.remove()
 				dragItem.style.cssText = ''
 				dragItem.classList.remove(DRAGGING_CLASS)
+				dragItem.removeAttribute('data-unreconciled')
 				dragItem = null
 				marker = null
 			}

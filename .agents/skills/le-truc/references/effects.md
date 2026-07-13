@@ -53,6 +53,7 @@ Without thunks, these require custom handlers. Thunks keep intent declarative.
 | Attach event listener | `on(target, type, handler, options?)` | registers an `EffectDescriptor` |
 | Bind Le Truc child prop | `pass(target, props)` | registers an `EffectDescriptor` |
 | Per-element effects on Memo | `each(memo, callback)` | registers an `EffectDescriptor` |
+| Sync keyed data to container children | `reconcile(container, template, source, bindItem)` | registers an `EffectDescriptor` |
 | Register a hand-authored descriptor | `run(descriptor)` | registers a raw `EffectDescriptor` not produced by any helper |
 
 ---
@@ -195,9 +196,25 @@ each(items, item => {
 
 The callback can call `watch()`, `on()`, `each()` (nested, to any depth), `pass()`, and `provideContexts()` directly — same as the factory itself — or return a single `EffectDescriptor` / `FactoryResult` array (legacy form, still supported).
 
+### `reconcile(container, template, source, bindItem)`
+
+Data-driven complement of `each()`: syncs a keyed `List<T>` or `Collection<T>` (from cause-effect) to a container's children. The component owns the container; entering keys clone the `<template>`'s single root element (stamped with `data-key`), leaving keys dispose their scope and are removed, survivors are moved — always reused. `bindItem(element, item, key)` is mounted once per entering element in its own scope (a returned cleanup runs on leave/disconnect) and does all content work; it also runs for server-rendered children adopted by `data-key` on first run, so keep it idempotent. Unkeyed and unmatched children are removed (self-cleaning); children with `data-unreconciled` are exempt entirely.
+
+```typescript
+const container = first('[data-container]', 'Add a container element.')
+const template = first('template', 'Add a template element for items.')
+const list = createList<string>([], { keyConfig: 'item' })
+reconcile(container, template, list, (element, item) => {
+  element.querySelector('slot')?.replaceWith(document.createTextNode(item.get()))
+})
+on(form, 'submit', e => { e.preventDefault(); list.add(textbox.value.trim()) })
+```
+
+One-way sync, data → DOM: mutate the list in event handlers, never the container's children directly. Throws `InvalidTemplateError` if the template content doesn't have exactly one root element. See ADR 0017.
+
 ### `run(descriptor)`
 
-Registers a hand-authored `EffectDescriptor` — a raw `() => MaybeCleanup` thunk not produced by `watch()`/`on()`/`pass()`/`each()`/`provideContexts()`. Use it for native APIs with their own setup/cleanup lifecycle:
+Registers a hand-authored `EffectDescriptor` — a raw `() => MaybeCleanup` thunk not produced by `watch()`/`on()`/`pass()`/`each()`/`reconcile()`/`provideContexts()`. Use it for native APIs with their own setup/cleanup lifecycle:
 
 ```typescript
 run(() => {

@@ -165,6 +165,25 @@ class NoActiveCollectorError extends Error {
 }
 
 /**
+ * Error thrown when the template passed to `reconcile()` does not contain
+ * exactly one root element in its content
+ *
+ * @since 2.3.0
+ */
+class InvalidTemplateError extends TypeError {
+	/**
+	 * @param {Element} container - Container element the template was meant to fill
+	 * @param {number} count - Number of root elements found in the template content
+	 */
+	constructor(container: Element, count: number) {
+		super(
+			`Invalid template for reconcile() into ${elementName(container)}. Expected exactly 1 root element in the template content, found ${count}.`,
+		)
+		this.name = 'InvalidTemplateError'
+	}
+}
+
+/**
  * Error thrown when a CSS selector passed to `all()` is malformed
  *
  * @since 2.0.4
@@ -197,6 +216,7 @@ export {
 	InvalidPropertyNameError,
 	InvalidReactivesError,
 	InvalidSelectorError,
+	InvalidTemplateError,
 	MissingElementError,
 	NoActiveCollectorError,
 }

@@ -21,9 +21,10 @@ This file is auto-generated. Do not edit manually.
 | [0014](0014-keyed-per-element-scopes-for-memo-collections.md) | Keyed Per-Element Scopes for Memo-Driven Collections | ✅ Accepted | M5, M6, M7, M11, §1, §4 |
 | [0015](0015-late-provider-retry-in-requestcontext.md) | Late-Provider Retry in requestContext | ✅ Accepted | M10 |
 | [0016](0016-element-internals-for-form-association-and-states.md) | ElementInternals for Form Association and Custom States | ✅ Accepted | M1, §4 |
+| [0017](0017-keyed-template-clone-reconciliation-for-lists.md) | Keyed Template-Clone Reconciliation for Lists | ✅ Accepted | M5, M6, §1, §4, §6 |
 | [0018](0018-implicit-effect-collection-via-ambient-context.md) | Implicit Effect Collection via Ambient Context | 🔄 Proposed | M8, M5, M6 |
 
 ---
 
 **Last updated:** 2026-07-20
-**Total ADRs:** 17 (excluding template; 0017 reserved for the in-flight reconciler ADR)
+**Total ADRs:** 18 (excluding template)
