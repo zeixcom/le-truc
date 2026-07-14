@@ -8,8 +8,8 @@ import { expect, test } from '@playwright/test'
  * FEATURES COVERED:
  * - Initial state rendering with proper ARIA attributes
  * - Value updates on change event; length updates on input event
- * - Validation error handling
- * - Writable properties (error, description, value) update correctly
+ * - Validation error handling (native validity)
+ * - Writable properties (description, value) update correctly; validity via setCustomValidity
  * - Clear button and clear() method
  * - Textarea value and length
  * - Character remaining count for textarea with maxlength
@@ -48,8 +48,9 @@ test.describe('form-textbox component', () => {
 
 		// Should have proper ARIA attributes
 		await expect(input).toHaveAttribute('aria-describedby', 'city-description')
+		// No aria-invalid / aria-errormessage on host — native :invalid replaces them
+		await expect(textboxComponent).not.toHaveAttribute('aria-invalid')
 		await expect(textboxComponent).not.toHaveAttribute('aria-errormessage')
-		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'false')
 
 		// Initial sensor property values
 		const state = await page.evaluate(() => {
@@ -119,7 +120,6 @@ test.describe('form-textbox component', () => {
 
 		// Initially no error
 		await expect(errorElement).toBeEmpty()
-		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'false')
 
 		// Fill and then clear to trigger validation
 		await input.fill('test')
@@ -133,18 +133,17 @@ test.describe('form-textbox component', () => {
 
 		// Should show validation error
 		await expect(errorElement).not.toBeEmpty()
-		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'true')
-		await expect(textboxComponent).toHaveAttribute(
-			'aria-errormessage',
-			'name-error',
-		)
 
-		// Error property should be set
+		// Validity should reflect invalid state
 		const errorText = await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
-			return element.error
+			return {
+				validationMessage: element.validationMessage,
+				valid: element.validity.valid,
+			}
 		})
-		expect(errorText).toBeTruthy()
+		expect(errorText.validationMessage).toBeTruthy()
+		expect(errorText.valid).toBe(false)
 	})
 
 	test('clears error when valid input is provided', async ({ page }) => {
@@ -173,14 +172,16 @@ test.describe('form-textbox component', () => {
 
 		// Error should clear
 		await expect(errorElement).toBeEmpty()
-		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'false')
-		await expect(textboxComponent).not.toHaveAttribute('aria-errormessage')
 
 		const errorText = await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
-			return element.error
+			return {
+				validationMessage: element.validationMessage,
+				valid: element.validity.valid,
+			}
 		})
-		expect(errorText).toBe('')
+		expect(errorText.validationMessage).toBe('')
+		expect(errorText.valid).toBe(true)
 	})
 
 	// ===== TEXTAREA TESTS =====
@@ -321,36 +322,51 @@ test.describe('form-textbox component', () => {
 		await expect(description).toHaveText('Updated description text')
 	})
 
-	test('updates error property programmatically', async ({ page }) => {
-		const textboxComponent = page.locator('form-textbox').first()
-		const errorElement = textboxComponent.locator('.error')
+	test('updates validity programmatically via setCustomValidity', async ({
+		page,
+	}) => {
+		// Initially valid
+		let state = await page.evaluate(() => {
+			const element = document.querySelector('form-textbox') as any
+			return {
+				validationMessage: element.validationMessage,
+				valid: element.validity.valid,
+			}
+		})
+		expect(state.validationMessage).toBe('')
+		expect(state.valid).toBe(true)
 
-		// Initially no error
-		await expect(errorElement).toBeEmpty()
-		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'false')
-
-		// Set error property (this should work - it's a writable property)
+		// Set validity via setCustomValidity (native API parity)
 		await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
-			element.error = 'Custom error message'
+			element.setCustomValidity('Custom error message')
 		})
 
-		await expect(errorElement).toHaveText('Custom error message')
-		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'true')
-		await expect(textboxComponent).toHaveAttribute(
-			'aria-errormessage',
-			'name-error',
-		)
+		state = await page.evaluate(() => {
+			const element = document.querySelector('form-textbox') as any
+			return {
+				validationMessage: element.validationMessage,
+				valid: element.validity.valid,
+			}
+		})
+		expect(state.validationMessage).toBe('Custom error message')
+		expect(state.valid).toBe(false)
 
-		// Clear error
+		// Clear validity
 		await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
-			element.error = ''
+			element.setCustomValidity('')
 		})
 
-		await expect(errorElement).toBeEmpty()
-		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'false')
-		await expect(textboxComponent).not.toHaveAttribute('aria-errormessage')
+		state = await page.evaluate(() => {
+			const element = document.querySelector('form-textbox') as any
+			return {
+				validationMessage: element.validationMessage,
+				valid: element.validity.valid,
+			}
+		})
+		expect(state.validationMessage).toBe('')
+		expect(state.valid).toBe(true)
 	})
 
 	// ===== READONLY PROPERTY TESTS =====
@@ -462,11 +478,16 @@ test.describe('form-textbox component', () => {
 		})
 		expect(value).toBe('')
 
-		// Error should be cleared
+		// Validity should be cleared
 		const error = await page.evaluate(() => {
-			return (document.querySelector('form-textbox') as any).error
+			const element = document.querySelector('form-textbox') as any
+			return {
+				validationMessage: element.validationMessage,
+				valid: element.validity.valid,
+			}
 		})
-		expect(error).toBe('')
+		expect(error.validationMessage).toBe('')
+		expect(error.valid).toBe(true)
 	})
 
 	// ===== EVENT TESTS =====
@@ -535,33 +556,36 @@ test.describe('form-textbox component', () => {
 	// ===== PROPERTY TYPE TESTS =====
 
 	test('component properties exist with correct types', async ({ page }) => {
-		// Verify the component has the expected properties even if they don't work
+		// Verify the component has the expected exposed properties
 		const componentState = await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
 			return {
 				hasValue: 'value' in element,
 				hasLength: 'length' in element,
-				hasError: 'error' in element,
 				hasDescription: 'description' in element,
 				hasClear: 'clear' in element,
+				// Native validity API surface
+				hasValidationMessage: 'validationMessage' in element,
+				hasValidity: 'validity' in element,
 				valueType: typeof element.value,
 				lengthType: typeof element.length,
-				errorType: typeof element.error,
 				descriptionType: typeof element.description,
 				clearType: typeof element.clear,
 			}
 		})
 
-		// Properties should exist with correct types
+		// Exposed props should exist with correct types
 		expect(componentState.hasValue).toBe(true)
 		expect(componentState.hasLength).toBe(true)
-		expect(componentState.hasError).toBe(true)
 		expect(componentState.hasDescription).toBe(true)
 		expect(componentState.hasClear).toBe(true)
 
+		// Native validity API inherited from ElementInternals
+		expect(componentState.hasValidationMessage).toBe(true)
+		expect(componentState.hasValidity).toBe(true)
+
 		expect(componentState.valueType).toBe('string')
 		expect(componentState.lengthType).toBe('number')
-		expect(componentState.errorType).toBe('string')
 		expect(componentState.descriptionType).toBe('string')
 		expect(componentState.clearType).toBe('function')
 	})

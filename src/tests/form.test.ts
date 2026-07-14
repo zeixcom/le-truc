@@ -1,14 +1,20 @@
 /**
  * Unit tests for ElementInternals support (form association, custom states).
  *
- * Tests the integration between `defineComponent({ formAssociated: true })`,
- * the `internals` context property, and the `onForm*()` lifecycle helpers.
+ * Tests the **managed form-control convention**: a form-associated component
+ * exposes a reactive `value` property, and the library owns form value sync
+ * (value → setFormValue), formResetCallback (restore default), state restore,
+ * formDisabledCallback (managed disabled signal), and the native-parity host
+ * contract. The `internals` escape hatch is tested for typed validity flags
+ * and custom :state() pseudo-classes.
+ *
  * Uses the same FakeHTMLElement / fake customElements pattern as component.test.ts.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { createState } from '@zeix/cause-effect'
 import { defineComponent } from '../component'
+import { InvalidPropertyNameError } from '../errors'
+import { asParser } from '../types'
 
 /* === Fake customElements registry + HTMLElement base === */
 
@@ -39,6 +45,9 @@ class FakeHTMLElement {
 		if (!this.#internals) this.#internals = new FakeElementInternals()
 		return this.#internals
 	}
+	querySelector(): HTMLElement | null {
+		return null
+	}
 }
 
 /** Mutable ValidityState — the real DOM type has readonly fields. */
@@ -64,6 +73,8 @@ class FakeElementInternals {
 	validationMessage = ''
 	states = new Set<string>()
 	willValidate = true
+	form: HTMLFormElement | null = null
+	labels: NodeList = [] as unknown as NodeList
 
 	setFormValue(value: string | File | FormData | null) {
 		this.formValue = value
@@ -74,7 +85,6 @@ class FakeElementInternals {
 		anchor?: HTMLElement,
 	) {
 		Object.assign(this.validity, flags)
-		// Recompute valid: true only if no error flag is set
 		this.validity.valid =
 			!this.validity.valueMissing &&
 			!this.validity.typeMismatch &&
@@ -159,6 +169,343 @@ describe('static formAssociated', () => {
 	})
 })
 
+/* === Managed value sync === */
+
+describe('managed value sync', () => {
+	test('value is synced to internals.setFormValue on connect', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 'initial' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+		expect(internals.formValue).toBe('initial')
+	})
+
+	test('value changes propagate to internals.setFormValue', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		instance.value = 'hello'
+		expect(internals.formValue).toBe('hello')
+
+		instance.value = 'world'
+		expect(internals.formValue).toBe('world')
+	})
+
+	test('numeric value is coerced with String()', () => {
+		const Ctor = defineComponent<{ value: number }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 0 })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		expect(internals.formValue).toBe('0')
+		instance.value = 42
+		expect(internals.formValue).toBe('42')
+	})
+})
+
+/* === Managed formResetCallback === */
+
+describe('managed formResetCallback', () => {
+	test('restores value to static default', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 'default' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		instance.value = 'changed'
+		expect(instance.value).toBe('changed')
+
+		instance.formResetCallback()
+		expect(instance.value).toBe('default')
+	})
+
+	test('restores value by re-parsing the value attribute (parser initializer)', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: asParser(v => v ?? '') })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.setAttribute('value', 'from-attribute')
+		instance.connectedCallback()
+		expect(instance.value).toBe('from-attribute')
+
+		instance.value = 'changed'
+		instance.formResetCallback()
+		expect(instance.value).toBe('from-attribute')
+	})
+
+	test('is a no-op when value was not exposed', () => {
+		const Ctor = defineComponent<{ foo: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ foo: 'bar' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		expect(() => instance.formResetCallback()).not.toThrow()
+	})
+})
+
+/* === Managed formStateRestoreCallback === */
+
+describe('managed formStateRestoreCallback', () => {
+	test('assigns string state to value', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+
+		instance.formStateRestoreCallback('restored', 'restore')
+		expect(instance.value).toBe('restored')
+	})
+
+	test('ignores non-string state', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 'keep' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+
+		instance.formStateRestoreCallback({ custom: 'object' }, 'restore')
+		expect(instance.value).toBe('keep')
+	})
+})
+
+/* === Managed formDisabledCallback === */
+
+describe('managed formDisabledCallback', () => {
+	test('writes disabled state into the managed disabled signal', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+
+		expect(instance.disabled).toBe(false)
+		instance.formDisabledCallback(true)
+		expect(instance.disabled).toBe(true)
+		instance.formDisabledCallback(false)
+		expect(instance.disabled).toBe(false)
+	})
+
+	test('disabled can be watched by authors', () => {
+		let lastDisabled = false
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose, watch }) => {
+				expose({ value: '' })
+				return [
+					watch('disabled', d => {
+						lastDisabled = d
+					}),
+				]
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+
+		instance.formDisabledCallback(true)
+		expect(lastDisabled).toBe(true)
+	})
+})
+
+/* === Native-parity host contract === */
+
+describe('native-parity host contract', () => {
+	test('checkValidity delegates to internals', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		expect(instance.checkValidity()).toBe(true)
+		internals.setValidity({ valueMissing: true }, 'Required')
+		expect(instance.checkValidity()).toBe(false)
+		expect(instance.validationMessage).toBe('Required')
+	})
+
+	test('reportValidity delegates to internals', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		expect(instance.reportValidity()).toBe(true)
+		internals.setValidity({ customError: true }, 'Bad')
+		expect(instance.reportValidity()).toBe(false)
+	})
+
+	test('setCustomValidity delegates to internals with customError flag and anchor', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		instance.setCustomValidity('Something went wrong')
+		expect(internals.validity.customError).toBe(true)
+		expect(internals.validationMessage).toBe('Something went wrong')
+
+		instance.setCustomValidity('')
+		expect(internals.validity.customError).toBe(false)
+		expect(internals.validationMessage).toBe('')
+	})
+
+	test('validity, willValidate, form, labels delegate to internals', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		expect(instance.willValidate).toBe(true)
+		expect(instance.form).toBe(null)
+		expect(instance.validity.valid).toBe(true)
+
+		internals.willValidate = false
+		internals.form = {} as HTMLFormElement
+		internals.setValidity({ valueMissing: true }, 'x')
+		expect(instance.willValidate).toBe(false)
+		expect(instance.form).toBe(internals.form)
+		expect(instance.validity.valid).toBe(false)
+	})
+})
+
+/* === Managed-name collision guard === */
+
+describe('managed-name collision guard', () => {
+	test('throws InvalidPropertyNameError when exposing a managed member name', () => {
+		const Ctor = defineComponent<Record<string, NonNullable<unknown>>>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ validity: 'evil' } as any)
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		expect(() => instance.connectedCallback()).toThrow(InvalidPropertyNameError)
+	})
+
+	test('throws for disabled specifically', () => {
+		const Ctor = defineComponent<Record<string, NonNullable<unknown>>>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ disabled: true } as any)
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		expect(() => instance.connectedCallback()).toThrow(InvalidPropertyNameError)
+	})
+
+	test('value is the deliberate exception — exposing it is required', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 'ok' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		expect(() => instance.connectedCallback()).not.toThrow()
+		expect(instance.value).toBe('ok')
+	})
+
+	test('non-form-associated components may expose these names freely', () => {
+		const Ctor = defineComponent<{ validity: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ validity: 'fine' })
+				return []
+			},
+		)!
+		const instance = new Ctor() as any
+		expect(() => instance.connectedCallback()).not.toThrow()
+		expect(instance.validity).toBe('fine')
+	})
+})
+
 /* === internals on FactoryContext === */
 
 describe('internals on FactoryContext', () => {
@@ -192,46 +539,20 @@ describe('internals on FactoryContext', () => {
 			{ formAssociated: true },
 		)!
 		const instance = new Ctor() as any
-		// Should not throw during construction or connection
 		expect(() => instance.connectedCallback()).not.toThrow()
 		expect(capturedInternals).toBe(null)
 	})
 
-	test('internals can be used imperatively inside watch() to setFormValue', () => {
-		const Ctor = defineComponent<{ value: string }>(
+	test('internals can be used imperatively for typed validity flags', () => {
+		const Ctor = defineComponent<{ value: number }>(
 			uniqueName(),
-			({ expose, host, internals, watch }) => {
-				expose({ value: '' })
+			({ expose, internals, watch }) => {
+				expose({ value: 0 })
 				return [
 					watch('value', v => {
-						internals?.setFormValue(v)
-					}),
-				]
-			},
-			{ formAssociated: true },
-		)!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-		const internals = (
-			instance as any
-		).attachInternals() as FakeElementInternals
-		expect(internals.formValue).toBe('')
-
-		instance.value = 'hello'
-		expect(internals.formValue).toBe('hello')
-	})
-
-	test('internals can be used to setValidity', () => {
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose, host, internals, watch }) => {
-				expose({ value: '' })
-				return [
-					watch('value', v => {
-						const valid = v.length > 0
 						internals?.setValidity(
-							{ valueMissing: !valid, customError: !valid },
-							valid ? '' : 'Value is required',
+							{ rangeOverflow: v > 10 },
+							v > 10 ? 'Too high' : '',
 						)
 					}),
 				]
@@ -240,276 +561,12 @@ describe('internals on FactoryContext', () => {
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
-		const internals = (
-			instance as any
-		).attachInternals() as FakeElementInternals
+		const internals = instance.attachInternals() as FakeElementInternals
 
-		// Initial: value is '', should be invalid
-		expect(internals.validity.valid).toBe(false)
-		expect(internals.validity.valueMissing).toBe(true)
-		expect(internals.validationMessage).toBe('Value is required')
-
-		instance.value = 'ok'
-		expect(internals.validity.valid).toBe(true)
-		expect(internals.validationMessage).toBe('')
-	})
-})
-
-/* === onForm* lifecycle helpers === */
-
-describe('onFormReset', () => {
-	test('handler is called when formResetCallback fires', () => {
-		let resetCount = 0
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose, host, onFormReset }) => {
-				expose({ value: 'initial' })
-				return [
-					onFormReset(() => {
-						resetCount++
-					}),
-				]
-			},
-			{ formAssociated: true },
-		)!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-		expect(resetCount).toBe(0)
-
-		instance.formResetCallback()
-		expect(resetCount).toBe(1)
-	})
-
-	test('handler can reset host state', () => {
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose, host, onFormReset }) => {
-				expose({ value: 'initial' })
-				return [
-					onFormReset(() => {
-						host.value = 'initial'
-					}),
-				]
-			},
-			{ formAssociated: true },
-		)!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-		instance.value = 'changed'
-		expect(instance.value).toBe('changed')
-
-		instance.formResetCallback()
-		expect(instance.value).toBe('initial')
-	})
-})
-
-describe('onFormDisabled', () => {
-	test('handler is called with the disabled value', () => {
-		const calls: boolean[] = []
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose, onFormDisabled }) => {
-				expose({ value: '' })
-				return [
-					onFormDisabled(d => {
-						calls.push(d)
-					}),
-				]
-			},
-			{ formAssociated: true },
-		)!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-
-		instance.formDisabledCallback(true)
-		instance.formDisabledCallback(false)
-		expect(calls).toEqual([true, false])
-	})
-})
-
-describe('onFormAssociated', () => {
-	test('handler is called when formAssociatedCallback fires', () => {
-		const calls: (HTMLFormElement | null)[] = []
-		const fakeForm = {} as HTMLFormElement
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose, onFormAssociated }) => {
-				expose({ value: '' })
-				return [
-					onFormAssociated(form => {
-						calls.push(form)
-					}),
-				]
-			},
-			{ formAssociated: true },
-		)!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-
-		instance.formAssociatedCallback(fakeForm)
-		expect(calls).toEqual([fakeForm])
-
-		instance.formAssociatedCallback(null)
-		expect(calls).toEqual([fakeForm, null])
-	})
-
-	test('late-registration replay: handler fires with cached form if callback already fired', () => {
-		const calls: (HTMLFormElement | null)[] = []
-		const fakeForm = {} as HTMLFormElement
-
-		// Simulate the scenario: formAssociatedCallback fires BEFORE the
-		// effect activates (e.g. no child dependencies to wait for, but
-		// the onFormAssociated descriptor hasn't run yet).
-		// We achieve this by calling formAssociatedCallback before
-		// connectedCallback, then connecting — the handler should replay.
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose, onFormAssociated }) => {
-				expose({ value: '' })
-				return [
-					onFormAssociated(form => {
-						calls.push(form)
-					}),
-				]
-			},
-			{ formAssociated: true },
-		)!
-		const instance = new Ctor() as any
-
-		// formAssociatedCallback fires during DOM insertion, before the
-		// factory's effect descriptors activate.
-		instance.formAssociatedCallback(fakeForm)
-		expect(calls).toEqual([]) // no handler registered yet
-
-		instance.connectedCallback()
-		// The handler was registered and replayed with the cached form value
-		expect(calls).toEqual([fakeForm])
-	})
-})
-
-describe('onFormStateRestore', () => {
-	test('handler is called with state and mode', () => {
-		const calls: Array<{ state: unknown; mode: string }> = []
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose, onFormStateRestore }) => {
-				expose({ value: '' })
-				return [
-					onFormStateRestore((state, mode) => {
-						calls.push({ state, mode })
-					}),
-				]
-			},
-			{ formAssociated: true },
-		)!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-
-		instance.formStateRestoreCallback('restored-value', 'restore')
-		expect(calls).toEqual([{ state: 'restored-value', mode: 'restore' }])
-	})
-})
-
-/* === Form callbacks without registered handlers === */
-
-describe('form callbacks without registered handlers', () => {
-	test('formResetCallback does not throw when no handler is registered', () => {
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose }) => {
-				expose({ value: '' })
-				return []
-			},
-			{ formAssociated: true },
-		)!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-		expect(() => instance.formResetCallback()).not.toThrow()
-	})
-
-	test('formDisabledCallback does not throw when no handler is registered', () => {
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose }) => {
-				expose({ value: '' })
-				return []
-			},
-			{ formAssociated: true },
-		)!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-		expect(() => instance.formDisabledCallback(true)).not.toThrow()
-	})
-
-	test('formAssociatedCallback does not throw when no handler is registered', () => {
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose }) => {
-				expose({ value: '' })
-				return []
-			},
-			{ formAssociated: true },
-		)!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-		expect(() =>
-			instance.formAssociatedCallback(null as unknown as HTMLFormElement),
-		).not.toThrow()
-	})
-
-	test('formStateRestoreCallback does not throw when no handler is registered', () => {
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose }) => {
-				expose({ value: '' })
-				return []
-			},
-			{ formAssociated: true },
-		)!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-		expect(() =>
-			instance.formStateRestoreCallback(null, 'restore'),
-		).not.toThrow()
-	})
-})
-
-/* === Non-form-associated components === */
-
-describe('non-form-associated components', () => {
-	test('internals is still available (attachInternals is unconditional)', () => {
-		let capturedInternals: unknown = 'unset'
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose, internals }) => {
-				expose({ value: '' })
-				capturedInternals = internals
-				return []
-			},
-		)!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-		expect(capturedInternals).not.toBe(null)
-	})
-
-	test('form callback stubs exist but are no-ops', () => {
-		const Ctor = defineComponent<{ value: string }>(
-			uniqueName(),
-			({ expose }) => {
-				expose({ value: '' })
-				return []
-			},
-		)!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-		expect(() => instance.formResetCallback()).not.toThrow()
-		expect(() => instance.formDisabledCallback(true)).not.toThrow()
-		expect(() =>
-			instance.formAssociatedCallback(null as unknown as HTMLFormElement),
-		).not.toThrow()
-		expect(() =>
-			instance.formStateRestoreCallback(null, 'restore'),
-		).not.toThrow()
+		expect(internals.validity.rangeOverflow).toBe(false)
+		instance.value = 15
+		expect(internals.validity.rangeOverflow).toBe(true)
+		expect(internals.validationMessage).toBe('Too high')
 	})
 })
 
@@ -540,6 +597,40 @@ describe('internals.states', () => {
 		expect(internals.states.has('open')).toBe(true)
 		instance.open = false
 		expect(internals.states.has('open')).toBe(false)
+	})
+})
+
+/* === internals on non-form-associated components === */
+
+describe('non-form-associated components', () => {
+	test('internals is still available (attachInternals is unconditional)', () => {
+		let capturedInternals: unknown = 'unset'
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose, internals }) => {
+				expose({ value: '' })
+				capturedInternals = internals
+				return []
+			},
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		expect(capturedInternals).not.toBe(null)
+	})
+
+	test('no managed value sync effect runs (no setFormValue call)', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 'test' })
+				return []
+			},
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+		// No managed sync — formValue stays null
+		expect(internals.formValue).toBe(null)
 	})
 })
 

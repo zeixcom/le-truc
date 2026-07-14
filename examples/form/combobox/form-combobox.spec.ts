@@ -17,7 +17,7 @@ import { expect, test } from '@playwright/test'
  * - ✅ Clear functionality and button visibility (clearable attribute behavior)
  * - ✅ Accessibility features (ARIA expanded, invalid, described by, error messages)
  * - ✅ Form integration and value management (form submission, name attributes)
- * - ✅ Component property reactivity (value, length, error, description properties)
+ * - ✅ Component property reactivity (value, length, description properties)
  * - ✅ Edge cases and performance (rapid typing, focus management, empty states)
  *
  * Architecture Notes:
@@ -547,22 +547,24 @@ test.describe('form-combobox component', () => {
 			await textbox.fill('')
 			await textbox.blur()
 
-			// Should show validation error
-			const componentError = await page.evaluate(() => {
+			// External consumers read host.validationMessage (native parity)
+			const validationMessage = await page.evaluate(() => {
 				const element = document.querySelector('form-combobox')
-				return element?.error ?? ''
+				return element?.validationMessage ?? ''
 			})
-			expect(componentError).toBeTruthy()
+			expect(validationMessage).toBeTruthy()
 
 			// Error element should show the message
-			await expect(errorElement).toHaveText(componentError)
+			await expect(errorElement).toHaveText(validationMessage)
 
-			// ARIA attributes should reflect error state on the host
+			// Host validity should reflect the invalid state
+			const isValid = await page.evaluate(() => {
+				const element = document.querySelector('form-combobox')
+				return element?.validity.valid ?? true
+			})
+			expect(isValid).toBe(false)
+
 			await expect(combobox).toHaveAttribute('aria-invalid', 'true')
-			await expect(combobox).toHaveAttribute(
-				'aria-errormessage',
-				'timezone-error',
-			)
 		})
 
 		test('validates required input correctly', async ({ page }) => {
@@ -586,23 +588,32 @@ test.describe('form-combobox component', () => {
 			await expect(combobox).toHaveAttribute('aria-invalid', 'false')
 		})
 
-		test('updates error property reactively', async ({ page }) => {
+		test('updates validation state reactively via setCustomValidity', async ({
+			page,
+		}) => {
 			const combobox = page.locator('form-combobox').first()
 			const errorElement = combobox.locator('> .error')
 
-			// Set error programmatically (writable property)
+			// Set a custom error via the native-parity API
 			await page.evaluate(() => {
 				const element = document.querySelector('form-combobox')
-				if (element) element.error = 'Custom error message'
+				if (element) element.setCustomValidity('Custom error message')
 			})
 
-			// Error should be displayed
+			// validationMessage should reflect the set message
+			const message = await page.evaluate(() => {
+				const element = document.querySelector('form-combobox')
+				return element?.validationMessage ?? ''
+			})
+			expect(message).toBe('Custom error message')
+
+			// The bound error element should display the message
 			await expect(errorElement).toHaveText('Custom error message')
 
-			// Clear error
+			// Clear the error
 			await page.evaluate(() => {
 				const element = document.querySelector('form-combobox')
-				if (element) element.error = ''
+				if (element) element.setCustomValidity('')
 			})
 
 			await expect(errorElement).toHaveText('')

@@ -1,6 +1,6 @@
 ### Form Colorgraph
 
-An interactive OKLCH color picker combining a 2D lightness/chroma graph, a hue slider, and numeric inputs. Demonstrates `defineMethod()` for the `stepDown`/`stepUp` API, `createState()` and `createMemo()` for internal canvas sizing, `each()` for per-element effects on decrement/increment buttons and error messages, `throttle()` for pointer move handlers, a `ResizeObserver` managed inside `watch()` with a cleanup return value, and `bindStyle()` for CSS variable bindings. All pointer and keyboard interactions update `host.color` via a shared `commit()` helper that batch-clears errors. Form participation submits one serialized `oklch(...)` value via ElementInternals (`formAssociated: true`, `setFormValue`).
+An interactive OKLCH color picker combining a 2D lightness/chroma graph, a hue slider, and numeric inputs. Demonstrates `defineMethod()` for the `stepDown`/`stepUp` API, `createState()` and `createMemo()` for internal canvas sizing, `each()` for per-element effects on decrement/increment buttons and error messages, `throttle()` for pointer move handlers, a `ResizeObserver` managed inside `watch()` with a cleanup return value, and `bindStyle()` for CSS variable bindings. All pointer and keyboard interactions update `host.value` (a CSS color string) via a shared `commit()` helper that batch-clears errors; an internal Oklch memo derives the parsed representation. Form participation is via ElementInternals (`formAssociated: true`) with the managed form-control convention — value sync and reset are library-managed; typed validity flags (`customError`) use `internals.setValidity()` directly.
 
 #### Preview
 
@@ -22,24 +22,24 @@ An interactive OKLCH color picker combining a 2D lightness/chroma graph, a hue s
 - Default
 - Description
 ---
-- `color`
-- `Oklch`
-- `asOklch()` — parsed from `color` attribute
-- The selected color in OKLCH space
+- `value`
+- `string`
+- `asString('oklch(0.48 0.23 263)')` — parsed from `value` attribute
+- The selected color as a CSS string (e.g. `oklch(0.48 0.23 263)`). Form value.
 ---
 - `lightness`
 - `number` (readonly)
-- Derived from `color.l`
+- Derived from internal Oklch memo
 - Lightness component (0–1)
 ---
 - `chroma`
 - `number` (readonly)
-- Derived from `color.c`
+- Derived from internal Oklch memo
 - Chroma component (0–0.4)
 ---
 - `hue`
 - `number` (readonly)
-- Derived from `color.h`
+- Derived from internal Oklch memo
 - Hue angle in degrees (0–360)
 {% /table %}
 

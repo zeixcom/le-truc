@@ -1,29 +1,4 @@
 import type { Signal } from '@zeix/cause-effect'
-import type { FormState } from './types'
-
-/* === Types === */
-
-/**
- * Handler map for the four form-associated lifecycle callbacks.
- *
- * The `Truc` class implements stub callbacks that delegate to the functions
- * registered here via the `onForm*()` factory helpers. The `form` field tracks
- * the current form association so a late-registered `onFormAssociated` handler
- * can be replayed when `formAssociatedCallback` has already fired (first connect
- * with unresolved child dependencies — the handler activates after dependency
- * resolution, but `formAssociatedCallback` fires during DOM insertion).
- */
-type FormHandlers = {
-	associated?: (form: HTMLFormElement | null) => void
-	disabled?: (disabled: boolean) => void
-	reset?: () => void
-	stateRestore?: (state: FormState, mode: string) => void
-	/**
-	 * Current form association. `undefined` = `formAssociatedCallback` has not
-	 * fired yet; `null` = disassociated; `HTMLFormElement` = associated.
-	 */
-	form: HTMLFormElement | null | undefined
-}
 
 /* === Constants === */
 
@@ -57,8 +32,27 @@ const componentSignals = new WeakMap<
 	Record<string, Signal<unknown & {}>>
 >()
 
-/** Module-internal map from component instances to their form lifecycle handlers. */
-const componentFormHandlers = new WeakMap<HTMLElement, FormHandlers>()
+/**
+ * Module-internal map from component instances to their `ElementInternals`
+ * (or `null` if `attachInternals()` failed). Stored here rather than as a
+ * private class field so the prototype-installed host-contract getters (added
+ * conditionally for form-associated components) can access it — private fields
+ * are only reachable inside the class body.
+ */
+const internalsMap = new WeakMap<HTMLElement, ElementInternals | null>()
+
+/**
+ * Module-internal map from form-associated component instances to the retained
+ * `value` initializer (for managed `formResetCallback`). The initializer is the
+ * original value passed to `expose({ value: ... })`: a `Parser` is re-run
+ * against the current `value` attribute; a static value is restored directly.
+ * Enables native `defaultValue`-style reset semantics generically, because prop
+ * parsers already encode attribute → value.
+ */
+const initialValueInitializers = new WeakMap<
+	HTMLElement,
+	unknown // Parser | MaybeSignal, captured verbatim from expose({ value })
+>()
 
 /** Get the signals map for a component, creating it if needed. */
 const getSignals = (el: HTMLElement): Record<string, Signal<unknown & {}>> => {
@@ -70,21 +64,10 @@ const getSignals = (el: HTMLElement): Record<string, Signal<unknown & {}>> => {
 	return signals
 }
 
-/** Get the form handlers map for a component, creating it if needed. */
-const getFormHandlers = (el: HTMLElement): FormHandlers => {
-	let handlers = componentFormHandlers.get(el)
-	if (!handlers) {
-		handlers = { form: undefined }
-		componentFormHandlers.set(el, handlers)
-	}
-	return handlers
-}
-
 export {
 	CONTEXT_RETRY_DELAY,
 	DEPENDENCY_TIMEOUT,
-	type FormHandlers,
-	type FormState,
-	getFormHandlers,
 	getSignals,
+	initialValueInitializers,
+	internalsMap,
 }

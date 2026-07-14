@@ -27,7 +27,7 @@ declare global {
  * @demo {./docs/examples/form-spinbutton.html} Interactive preview and usage examples */
 export default defineComponent<FormSpinbuttonProps>(
 	'form-spinbutton',
-	({ all, expose, first, host, internals, on, onFormReset, watch }) => {
+	({ all, expose, first, host, internals, on, watch }) => {
 		const controls = all('button, input:not([disabled])')
 		const increment = first(
 			'button.increment',
@@ -98,9 +98,10 @@ export default defineComponent<FormSpinbuttonProps>(
 			watch(() => String(host.value), bindProperty(input, 'value')),
 			watch(() => String(host.max), bindProperty(input, 'max')),
 			watch(() => host.value >= host.max, bindProperty(increment, 'disabled')),
-			watch('value', v => {
-				internals?.setFormValue(String(v))
-			}),
+			// Form value sync: managed (value → setFormValue via ElementInternals)
+			// Form reset: managed (value attribute is the default)
+			// Typed validity flags — the one legitimate direct-internals use
+			// among the form examples (rangeOverflow / rangeUnderflow).
 			watch(
 				() => ({ value: host.value, max: host.max }),
 				({ value, max }) => {
@@ -119,9 +120,6 @@ export default defineComponent<FormSpinbuttonProps>(
 					)
 				},
 			),
-			onFormReset(() => {
-				host.value = 0
-			}),
 		]
 	},
 	{ formAssociated: true },

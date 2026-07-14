@@ -63,7 +63,7 @@ const HANDLED_KEYS = [...DECREMENT_KEYS, ...INCREMENT_KEYS, FIRST_KEY, LAST_KEY]
  * @demo {./docs/examples/form-listbox.html} Interactive preview and usage examples */
 export default defineComponent<FormListboxProps>(
 	'form-listbox',
-	({ all, expose, first, host, internals, on, onFormReset, watch }) => {
+	({ all, expose, first, host, on, watch }) => {
 		const filterEl = first('input.filter') as HTMLInputElement | undefined
 		const clearBtn = first('button.clear')
 		const callout = first('card-callout')
@@ -158,6 +158,10 @@ export default defineComponent<FormListboxProps>(
 				) as HTMLButtonElement
 				if (option && option.value !== host.value) {
 					host.value = option.value
+					// Native-parity commit event — dispatches from the host so
+					// composing components (form-combobox) can listen without
+					// reaching into the listbox's DOM.
+					host.dispatchEvent(new Event('change', { bubbles: true }))
 				}
 			}),
 			on(listbox, 'keydown', e => {
@@ -182,13 +186,9 @@ export default defineComponent<FormListboxProps>(
 				getVisibleOptions()[focusIndex]?.click()
 			}),
 
-			watch('value', value => {
-				host.setAttribute('value', value)
-				internals?.setFormValue(value)
-			}),
-			onFormReset(() => {
-				host.value = ''
-			}),
+			// Form value sync: managed (value → setFormValue via ElementInternals)
+			// Form reset: managed (value attribute is the default)
+			// Disabled, state restore: managed
 			host.src &&
 				watch(content, {
 					nil: () => {

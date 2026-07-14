@@ -94,6 +94,7 @@ export {
 	type ComponentOptions,
 	defineComponent,
 	type FactoryContext,
+	type FormAssociatedElement,
 	type Initializers,
 	type MaybeSignal,
 } from './src/component'
@@ -134,13 +135,7 @@ export {
 	type TrimWhitespace,
 } from './src/helpers/dom'
 export type { EventType, OnEventHandler, OnHelper } from './src/helpers/events'
-export {
-	type FormHelpers,
-	type OnFormAssociatedHelper,
-	type OnFormDisabledHelper,
-	type OnFormResetHelper,
-	type OnFormStateRestoreHelper,
-} from './src/helpers/form'
+export { FOCUSABLE_FORM_CONTROL_SELECTOR } from './src/helpers/form'
 export {
 	each,
 	type PassedProps,
@@ -161,7 +156,6 @@ export {
 	type EffectDescriptor,
 	type FactoryResult,
 	type Falsy,
-	type FormState,
 	isMethodProducer,
 	isParser,
 	type MethodProducer,

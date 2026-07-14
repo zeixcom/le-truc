@@ -1,6 +1,6 @@
 ### Form Textbox
 
-A general-purpose text field wrapper for `input` or `textarea` elements. Demonstrates `createState()` with `on()` for the read-only `length` property, `createMemo()` for a computed `description` that shows remaining character count when `data-remaining` is set on the description element, the MethodProducer pattern for `clear`, and `setAttribute()` for dynamic ARIA linkage (`aria-errormessage`, `aria-describedby`). Designed to be composable — `form-combobox` and `module-todo` both embed it and drive it via `pass()`. Form participation and validity are via ElementInternals (`formAssociated: true`, `setFormValue`, `setValidity`) — no hidden input needed.
+A general-purpose text field wrapper for `input` or `textarea` elements. Demonstrates `createState()` with `on()` for the read-only `length` property, `createMemo()` for a computed `description` that shows remaining character count when `data-remaining` is set on the description element, the MethodProducer pattern for `clear`, and `setAttribute()` for dynamic ARIA linkage (`aria-describedby`). Designed to be composable — `form-combobox` and `module-todo` both embed it and drive it via `pass()`. Form participation is via ElementInternals (`formAssociated: true`) with the managed form-control convention — value sync and reset are library-managed. Validity relays the inner input's `validationMessage` via `host.setCustomValidity()`, giving external consumers native `validationMessage` / `validity` / `:invalid` / `:user-invalid` parity. No hidden input needed.
 
 #### Preview
 
@@ -31,11 +31,6 @@ A general-purpose text field wrapper for `input` or `textarea` elements. Demonst
 - `number` (readonly)
 - `0`
 - Length of current textbox value
----
-- `error`
-- `string`
-- `''`
-- Validation error text shown in `.error`
 ---
 - `description`
 - `string`
