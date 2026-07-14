@@ -2,7 +2,6 @@ import { type MemoCallback, type Signal, type TaskCallback } from '@zeix/cause-e
 import { type ProvideContextsHelper, type RequestContextHelper } from './helpers/context';
 import { type ElementQueries } from './helpers/dom';
 import { type OnHelper } from './helpers/events';
-import { type OnFormAssociatedHelper, type OnFormDisabledHelper, type OnFormResetHelper, type OnFormStateRestoreHelper } from './helpers/form';
 import { type FactoryResult, type Falsy, type PassHelper, type WatchHelper } from './helpers/reactive';
 import { type ComponentProps, type MethodProducer, type Parser } from './types';
 /**
@@ -35,15 +34,35 @@ type Initializers<P extends ComponentProps> = {
  */
 type ComponentOptions = {
     /**
-     * When `true`, the generated class gets `static formAssociated = true` and
-     * the four form-lifecycle callback stubs. The browser then treats the
-     * element as a form-associated custom element (FACE), enabling
-     * `setFormValue`, `setValidity`, and the `formAssociatedCallback` /
-     * `formDisabledCallback` / `formResetCallback` / `formStateRestoreCallback`
-     * lifecycle. Default: `false`.
+     * When `true`, the generated class gets `static formAssociated = true`, the
+     * managed form-control behavior (value sync, reset, state restore, disabled,
+     * native-parity host contract). The browser treats the element as a
+     * form-associated custom element (FACE). Default: `false`.
      */
     formAssociated?: boolean;
 };
+/**
+ * The native form-control members the generated class defines on the host when
+ * `formAssociated: true`, delegating to `internals`. Authors use this interface
+ * in the declarations the library cannot write for them, chiefly the tag-name
+ * map: `'my-input': FormAssociatedElement & MyProps`.
+ *
+ * `value` is deliberately **not** part of this interface: it is component-exposed
+ * (string for textbox, number for spinbutton) and belongs in the author's props
+ * type.
+ */
+interface FormAssociatedElement extends HTMLElement {
+    readonly form: HTMLFormElement | null;
+    name: string;
+    disabled: boolean;
+    readonly labels: NodeList;
+    readonly validity: ValidityState;
+    readonly validationMessage: string;
+    readonly willValidate: boolean;
+    checkValidity(): boolean;
+    reportValidity(): boolean;
+    setCustomValidity(message: string): void;
+}
 /**
  * The context object passed to the v2.x factory function.
  *
@@ -64,10 +83,17 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
     pass: PassHelper<P>;
     provideContexts: ProvideContextsHelper<P>;
     requestContext: RequestContextHelper;
-    onFormAssociated: OnFormAssociatedHelper;
-    onFormDisabled: OnFormDisabledHelper;
-    onFormReset: OnFormResetHelper;
-    onFormStateRestore: OnFormStateRestoreHelper;
+};
+/**
+ * The factory context for form-associated components. Extends `FactoryContext`
+ * with `host` typed as `FormAssociatedElement & P` (the native-parity members)
+ * and `watch`/`on`/`pass` accepting the managed `disabled` reactive prop in
+ * addition to the author's `P`.
+ */
+type FormFactoryContext<P extends ComponentProps> = Omit<FactoryContext<P & {
+    disabled: boolean;
+}>, 'host'> & {
+    host: FormAssociatedElement & P;
 };
 /**
  * Define and register a reactive custom element using the v2.x factory form.
@@ -86,5 +112,10 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  * @param {ComponentOptions} [options] - Static class-level configuration (e.g. `{ formAssociated: true }`)
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
+declare function defineComponent<P extends ComponentProps & {
+    value: string | number;
+}>(name: string, factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void, options: ComponentOptions & {
+    formAssociated: true;
+}): CustomElementConstructor | undefined;
 declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void, options?: ComponentOptions): CustomElementConstructor | undefined;
-export { type ComponentOptions, defineComponent, type FactoryContext, type Initializers, type MaybeSignal, };
+export { type ComponentOptions, defineComponent, type FactoryContext, type FormAssociatedElement, type Initializers, type MaybeSignal, };

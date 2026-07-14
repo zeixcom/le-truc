@@ -2058,7 +2058,8 @@ class InvalidSelectorError extends TypeError {
 var DEPENDENCY_TIMEOUT = 200;
 var CONTEXT_RETRY_DELAY = DEPENDENCY_TIMEOUT + 10;
 var componentSignals = new WeakMap;
-var componentFormHandlers = new WeakMap;
+var internalsMap = new WeakMap;
+var initialValueInitializers = new WeakMap;
 var getSignals = (el) => {
   let signals = componentSignals.get(el);
   if (!signals) {
@@ -2066,14 +2067,6 @@ var getSignals = (el) => {
     componentSignals.set(el, signals);
   }
   return signals;
-};
-var getFormHandlers = (el) => {
-  let handlers = componentFormHandlers.get(el);
-  if (!handlers) {
-    handlers = { form: undefined };
-    componentFormHandlers.set(el, handlers);
-  }
-  return handlers;
 };
 
 // src/helpers/context.ts
@@ -2510,23 +2503,22 @@ var makeOn = (host) => {
 };
 
 // src/helpers/form.ts
-var makeFormHelpers = (host) => {
-  const onFormAssociated = (handler) => () => {
-    const handlers = getFormHandlers(host);
-    handlers.associated = handler;
-    if (handlers.form !== undefined)
-      handler(handlers.form);
-  };
-  const onFormDisabled = (handler) => () => {
-    getFormHandlers(host).disabled = handler;
-  };
-  const onFormReset = (handler) => () => {
-    getFormHandlers(host).reset = handler;
-  };
-  const onFormStateRestore = (handler) => () => {
-    getFormHandlers(host).stateRestore = handler;
-  };
-  return { onFormAssociated, onFormDisabled, onFormReset, onFormStateRestore };
+var MANAGED_FORM_MEMBERS = new Set([
+  "form",
+  "name",
+  "labels",
+  "validity",
+  "validationMessage",
+  "willValidate",
+  "checkValidity",
+  "reportValidity",
+  "setCustomValidity",
+  "disabled"
+]);
+var FOCUSABLE_FORM_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
+var resolveAnchor = (host) => host.querySelector(FOCUSABLE_FORM_CONTROL_SELECTOR) ?? host;
+var managedSetCustomValidity = (internals, host, message) => {
+  internals.setValidity({ customError: !!message }, message || undefined, resolveAnchor(host));
 };
 
 // src/types.ts
@@ -2551,6 +2543,19 @@ var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
 var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 
 // src/component.ts
+var EMPTY_VALIDITY_STATE = {
+  valueMissing: false,
+  typeMismatch: false,
+  patternMismatch: false,
+  tooLong: false,
+  tooShort: false,
+  rangeUnderflow: false,
+  rangeOverflow: false,
+  stepMismatch: false,
+  badInput: false,
+  customError: false,
+  valid: true
+};
 function defineComponent(name, factory, options) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
@@ -2561,14 +2566,13 @@ function defineComponent(name, factory, options) {
     #initialized = false;
     #setup = [];
     #cleanup;
-    #internals = null;
     #internalsAccessed = false;
     constructor() {
       super();
       try {
-        this.#internals = this.attachInternals();
+        internalsMap.set(this, this.attachInternals());
       } catch {
-        this.#internals = null;
+        internalsMap.set(this, null);
       }
     }
     connectedCallback() {
@@ -2587,18 +2591,17 @@ function defineComponent(name, factory, options) {
         const instance = this;
         const host = this;
         const [elementQueries, resolveDependencies] = makeElementQueries(host);
-        const formHelpers = makeFormHelpers(host);
         const context = {
           expose: this.#initSignals.bind(this),
           host,
           ...elementQueries,
-          ...formHelpers,
           get internals() {
-            if (DEV_MODE && instance.#internals === null && !instance.#internalsAccessed) {
+            const internals2 = internalsMap.get(instance) ?? null;
+            if (DEV_MODE && internals2 === null && !instance.#internalsAccessed) {
               instance.#internalsAccessed = true;
               console.warn(`internals is null — attachInternals() failed in ${elementName(host)}. The component works but cannot participate in form association, custom states, or ARIA reflection.`);
             }
-            return instance.#internals;
+            return internals2;
           },
           watch: makeWatch(host),
           on: makeOn(host),
@@ -2609,6 +2612,14 @@ function defineComponent(name, factory, options) {
         const result = factory(context);
         if (result)
           this.#setup = result;
+        const internals = internalsMap.get(this);
+        if (formAssociated && internals) {
+          const hasValueSignal = "value" in this && getSignals(this).value;
+          if (DEV_MODE && !hasValueSignal)
+            console.warn(`form-associated component ${elementName(host)} did not expose a reactive 'value' property. The managed form-control convention requires a reactive 'value' for form value sync, reset, and state restore.`);
+          this.#createManagedDisabledProperty();
+          this.#setup.push(this.#managedValueSyncDescriptor(internals));
+        }
         this.#initialized = true;
         if (!this.#setup.length)
           return;
@@ -2619,19 +2630,57 @@ function defineComponent(name, factory, options) {
       if (isFunction(this.#cleanup))
         this.#cleanup();
     }
-    formAssociatedCallback(form) {
-      const handlers = getFormHandlers(this);
-      handlers.form = form;
-      handlers.associated?.(form);
+    formResetCallback() {
+      const initializer = initialValueInitializers.get(this);
+      if (initializer === undefined)
+        return;
+      if (isParser(initializer)) {
+        const parse = initializer;
+        const result = parse(this.getAttribute("value"));
+        if (result != null)
+          this.value = result;
+      } else if (!isSignal(initializer) && !isFunction(initializer)) {
+        this.value = initializer;
+      }
+    }
+    formStateRestoreCallback(state, _mode) {
+      if (typeof state === "string")
+        this.value = state;
     }
     formDisabledCallback(disabled) {
-      getFormHandlers(this).disabled?.(disabled);
+      const signals = getSignals(this);
+      const slot = signals["disabled"];
+      if (isSlot(slot))
+        slot.set(disabled);
+      else
+        this.disabled = disabled;
     }
-    formResetCallback() {
-      getFormHandlers(this).reset?.();
+    #managedValueSyncDescriptor(internals) {
+      const instance = this;
+      return () => createEffect(() => {
+        const v = instance.value;
+        internals.setFormValue(typeof v === "string" ? v : String(v ?? ""));
+      });
     }
-    formStateRestoreCallback(state, mode) {
-      getFormHandlers(this).stateRestore?.(state, mode);
+    #createManagedDisabledProperty() {
+      const initial = this.hasAttribute("disabled");
+      const signal = createState(initial);
+      const slot = createSlot(signal);
+      const signals = getSignals(this);
+      signals["disabled"] = slot;
+      const host = this;
+      Object.defineProperty(this, "disabled", {
+        get: () => signal.get(),
+        set: (v) => {
+          signal.set(v);
+          if (v)
+            host.setAttribute("disabled", "");
+          else
+            host.removeAttribute("disabled");
+        },
+        enumerable: true,
+        configurable: true
+      });
     }
     #initSignals(instanceProps) {
       const createReactiveProperty = (key, initializer) => {
@@ -2652,8 +2701,12 @@ function defineComponent(name, factory, options) {
           continue;
         if (isReservedWord(prop))
           throw new InvalidPropertyNameError(this.localName, prop, "reserved word or Object builtin — cannot be used as a reactive property");
+        if (formAssociated && MANAGED_FORM_MEMBERS.has(prop))
+          throw new InvalidPropertyNameError(this.localName, prop, "is a managed form-control member on form-associated components — use the native-parity host contract instead; expose `value` for the form value");
         if (prop in this)
           continue;
+        if (formAssociated && prop === "value")
+          initialValueInitializers.set(this, initializer);
         createReactiveProperty(prop, initializer);
       }
     }
@@ -2676,6 +2729,72 @@ function defineComponent(name, factory, options) {
         });
       }
     }
+  }
+  if (formAssociated) {
+    const proto = Truc.prototype;
+    Object.defineProperties(proto, {
+      form: {
+        get() {
+          return internalsMap.get(this)?.form ?? null;
+        },
+        enumerable: true,
+        configurable: true
+      },
+      labels: {
+        get() {
+          return internalsMap.get(this)?.labels ?? new NodeList;
+        },
+        enumerable: true,
+        configurable: true
+      },
+      validity: {
+        get() {
+          return internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE;
+        },
+        enumerable: true,
+        configurable: true
+      },
+      validationMessage: {
+        get() {
+          return internalsMap.get(this)?.validationMessage ?? "";
+        },
+        enumerable: true,
+        configurable: true
+      },
+      willValidate: {
+        get() {
+          return internalsMap.get(this)?.willValidate ?? false;
+        },
+        enumerable: true,
+        configurable: true
+      },
+      checkValidity: {
+        value() {
+          return internalsMap.get(this)?.checkValidity() ?? true;
+        },
+        enumerable: true,
+        configurable: true,
+        writable: true
+      },
+      reportValidity: {
+        value() {
+          return internalsMap.get(this)?.reportValidity() ?? true;
+        },
+        enumerable: true,
+        configurable: true,
+        writable: true
+      },
+      setCustomValidity: {
+        value(message) {
+          const internals = internalsMap.get(this);
+          if (internals)
+            managedSetCustomValidity(internals, this, message);
+        },
+        enumerable: true,
+        configurable: true,
+        writable: true
+      }
+    });
   }
   customElements.define(name, Truc);
   return customElements.get(name);
@@ -2810,6 +2929,7 @@ export {
   InvalidCustomElementError,
   InvalidComponentNameError,
   InvalidCallbackError,
+  FOCUSABLE_FORM_CONTROL_SELECTOR,
   EffectConvergenceError,
   DuplicateKeyError,
   DependencyTimeoutError,

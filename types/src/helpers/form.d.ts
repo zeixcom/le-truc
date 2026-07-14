@@ -1,63 +1,36 @@
-import type { ComponentProps, EffectDescriptor, FormState } from '../types';
 /**
- * The `onFormAssociated` helper type in `FactoryContext`.
+ * Managed member names reserved on form-associated components.
  *
- * Registers a handler for `formAssociatedCallback(form)`. The browser calls
- * this when the element is associated with (or disassociated from) a `<form>`.
- * Returns an `EffectDescriptor`.
+ * These are the native form-control members the generated class defines on the
+ * host when `formAssociated: true`, delegating to `internals`. `expose()` throws
+ * `InvalidPropertyNameError` for any of these names on a form-associated
+ * component — the check runs before the `prop in this` guard, which would
+ * otherwise silently skip the colliding initializer (these are prototype-defined).
+ * `value` is the deliberate exception: the component must expose it.
  */
-type OnFormAssociatedHelper = (handler: (form: HTMLFormElement | null) => void) => EffectDescriptor;
+declare const MANAGED_FORM_MEMBERS: ReadonlySet<string>;
+/** Selector for the managed validation-anchor heuristic. */
+declare const FOCUSABLE_FORM_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
 /**
- * The `onFormDisabled` helper type in `FactoryContext`.
- *
- * Registers a handler for `formDisabledCallback(disabled)`. The browser calls
- * this when the owning form's `disabled` state changes (e.g. `<fieldset disabled>`).
- * Returns an `EffectDescriptor`.
- */
-type OnFormDisabledHelper = (handler: (disabled: boolean) => void) => EffectDescriptor;
-/**
- * The `onFormReset` helper type in `FactoryContext`.
- *
- * Registers a handler for `formResetCallback()`. The browser calls this when
- * the owning form is reset. Returns an `EffectDescriptor`.
- */
-type OnFormResetHelper = (handler: () => void) => EffectDescriptor;
-/**
- * The `onFormStateRestore` helper type in `FactoryContext`.
- *
- * Registers a handler for `formStateRestoreCallback(state, mode)`. The browser
- * calls this during back/forward navigation or bfcache restoration with the
- * state value previously set via `setFormValue(value, state)`.
- * Returns an `EffectDescriptor`.
- */
-type OnFormStateRestoreHelper = (handler: (state: FormState, mode: string) => void) => EffectDescriptor;
-/**
- * The four form-lifecycle helper functions bound to a component host.
- *
- * Each registers a handler for the corresponding form-associated callback
- * and returns an `EffectDescriptor` — consistent with the `on()` pattern.
- */
-type FormHelpers = {
-    onFormAssociated: OnFormAssociatedHelper;
-    onFormDisabled: OnFormDisabledHelper;
-    onFormReset: OnFormResetHelper;
-    onFormStateRestore: OnFormStateRestoreHelper;
-};
-/**
- * Create the form-lifecycle helpers bound to a component host.
- *
- * Each helper registers a handler in the instance's `FormHandlers` map (stored
- * in a module-private WeakMap) and returns an `EffectDescriptor`. The `Truc`
- * class implements stub callbacks that delegate to these registered handlers.
- *
- * `onFormAssociated` has a late-registration guard: if `formAssociatedCallback`
- * has already fired (form association happens during DOM insertion, which can
- * precede the effect-activation phase that waits on dependency resolution),
- * the handler is replayed with the cached form value on activation.
+ * Resolve the validation anchor for `setValidity`: the first focusable
+ * form-control descendant, falling back to the host. Le Truc hosts are
+ * typically not focusable themselves, so a descendant anchor is needed for the
+ * browser to focus the control and show the validation bubble on blocked
+ * submission or `reportValidity()`.
  *
  * @since 2.3
- * @param {HTMLElement & P} host - The component host element
- * @returns {FormHelpers} Bound form-lifecycle helpers for the given host
+ * @param {HTMLElement} host - The component host element
+ * @returns {HTMLElement} The anchor element (descendant or host)
  */
-declare const makeFormHelpers: <P extends ComponentProps>(host: HTMLElement & P) => FormHelpers;
-export { type FormHelpers, makeFormHelpers, type OnFormAssociatedHelper, type OnFormDisabledHelper, type OnFormResetHelper, type OnFormStateRestoreHelper, };
+declare const resolveAnchor: (host: HTMLElement) => HTMLElement;
+/**
+ * Managed `setCustomValidity` implementation. Delegates to
+ * `internals.setValidity`, setting `{ customError: true }` (or clearing it)
+ * and the message. The anchor is resolved via the managed heuristic so the
+ * browser can focus the control on blocked submission.
+ *
+ * @since 2.3
+ * @internal
+ */
+declare const managedSetCustomValidity: (internals: ElementInternals, host: HTMLElement, message: string) => void;
+export { FOCUSABLE_FORM_CONTROL_SELECTOR, MANAGED_FORM_MEMBERS, managedSetCustomValidity, resolveAnchor, };
