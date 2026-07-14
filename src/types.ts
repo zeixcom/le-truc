@@ -69,6 +69,15 @@ type ComponentProps = Record<ComponentProp, NonNullable<unknown>>
 type Falsy = false | null | undefined | '' | 0 | 0n
 
 /**
+ * The state value passed to `formStateRestoreCallback`.
+ *
+ * Mirrors the types accepted by `ElementInternals.setFormValue(value, state)`.
+ * The browser restores the `state` argument (not the submitted `value`) during
+ * back/forward navigation or bfcache restoration.
+ */
+type FormState = string | File | FormData | null
+
+/**
  * A deferred effect: a thunk that, when called inside a reactive scope, creates
  * a reactive effect and returns an optional cleanup function.
  *
@@ -161,6 +170,7 @@ export {
 	type EffectDescriptor,
 	type FactoryResult,
 	type Falsy,
+	type FormState,
 	isMethodProducer,
 	isParser,
 	isReservedWord,

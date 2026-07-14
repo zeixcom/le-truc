@@ -23,6 +23,14 @@ import {
 import { type ElementQueries, makeElementQueries } from './helpers/dom'
 import { makeOn, type OnHelper } from './helpers/events'
 import {
+	type FormHelpers,
+	makeFormHelpers,
+	type OnFormAssociatedHelper,
+	type OnFormDisabledHelper,
+	type OnFormResetHelper,
+	type OnFormStateRestoreHelper,
+} from './helpers/form'
+import {
 	activateResult,
 	type FactoryResult,
 	type Falsy,
@@ -31,7 +39,12 @@ import {
 	type PassHelper,
 	type WatchHelper,
 } from './helpers/reactive'
-import { getSignals } from './internal'
+import {
+	type FormHandlers,
+	type FormState,
+	getFormHandlers,
+	getSignals,
+} from './internal'
 import {
 	type ComponentProps,
 	isMethodProducer,
@@ -40,6 +53,7 @@ import {
 	type MethodProducer,
 	type Parser,
 } from './types'
+import { DEV_MODE, elementName } from './util'
 
 /* === Types === */
 
@@ -71,18 +85,48 @@ type Initializers<P extends ComponentProps> = {
 }
 
 /**
+ * Static class-level configuration for a component.
+ *
+ * Passed as the third (optional) argument to `defineComponent`. Currently
+ * carries only `formAssociated`, but is extensible for future class-level
+ * options without further signature changes.
+ */
+type ComponentOptions = {
+	/**
+	 * When `true`, the generated class gets `static formAssociated = true` and
+	 * the four form-lifecycle callback stubs. The browser then treats the
+	 * element as a form-associated custom element (FACE), enabling
+	 * `setFormValue`, `setValidity`, and the `formAssociatedCallback` /
+	 * `formDisabledCallback` / `formResetCallback` / `formStateRestoreCallback`
+	 * lifecycle. Default: `false`.
+	 */
+	formAssociated?: boolean
+}
+
+/**
  * The context object passed to the v2.x factory function.
  *
  * Components destructure only what they need.
  */
 type FactoryContext<P extends ComponentProps> = ElementQueries & {
 	host: HTMLElement & P
+	/**
+	 * The `ElementInternals` object, or `null` if `attachInternals()` failed
+	 * (pre-upgrade / parser-ordering edge case). Use imperatively inside
+	 * `watch()` — e.g. `watch('value', v => { internals?.setFormValue(v) })`.
+	 * The optional chaining is the graceful-degradation guard.
+	 */
+	internals: ElementInternals | null
 	expose: (props: Initializers<P>) => void
 	watch: WatchHelper<P>
 	on: OnHelper<P>
 	pass: PassHelper<P>
 	provideContexts: ProvideContextsHelper<P>
 	requestContext: RequestContextHelper
+	onFormAssociated: OnFormAssociatedHelper
+	onFormDisabled: OnFormDisabledHelper
+	onFormReset: OnFormResetHelper
+	onFormStateRestore: OnFormStateRestoreHelper
 }
 
 /* === Exported Functions === */
@@ -101,18 +145,38 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  * @since 2.0
  * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
  * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
+ * @param {ComponentOptions} [options] - Static class-level configuration (e.g. `{ formAssociated: true }`)
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
 function defineComponent<P extends ComponentProps>(
 	name: string,
 	factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void,
+	options?: ComponentOptions,
 ): CustomElementConstructor | undefined {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
+	const formAssociated = options?.formAssociated ?? false
 	class Truc extends HTMLElement {
+		static formAssociated = formAssociated
+
 		#initialized = false
 		#setup: FactoryResult = []
 		#cleanup: MaybeCleanup
+		#internals: ElementInternals | null = null
+		#internalsAccessed = false
+
+		constructor() {
+			super()
+			try {
+				this.#internals = this.attachInternals()
+			} catch {
+				// attachInternals() throws NotSupportedError for pre-upgrade
+				// instances or parser-ordering edge cases. The component
+				// degrades gracefully — internals is null, a DEV_MODE warning
+				// fires on first access.
+				this.#internals = null
+			}
+		}
 
 		/**
 		 * Native callback when the custom element is first connected to the document
@@ -138,12 +202,28 @@ function defineComponent<P extends ComponentProps>(
 				if (isFunction(this.#cleanup)) this.#cleanup()
 				runSetup()
 			} else {
+				const instance = this
 				const host = this as unknown as HTMLElement & P
 				const [elementQueries, resolveDependencies] = makeElementQueries(host)
+				const formHelpers = makeFormHelpers(host)
 				const context: FactoryContext<P> = {
 					expose: this.#initSignals.bind(this),
 					host,
 					...elementQueries,
+					...formHelpers,
+					get internals() {
+						if (
+							DEV_MODE &&
+							instance.#internals === null &&
+							!instance.#internalsAccessed
+						) {
+							instance.#internalsAccessed = true
+							console.warn(
+								`internals is null — attachInternals() failed in ${elementName(host)}. The component works but cannot participate in form association, custom states, or ARIA reflection.`,
+							)
+						}
+						return instance.#internals
+					},
 					watch: makeWatch(host),
 					on: makeOn(host),
 					pass: makePass(host),
@@ -164,6 +244,32 @@ function defineComponent<P extends ComponentProps>(
 		 */
 		disconnectedCallback() {
 			if (isFunction(this.#cleanup)) this.#cleanup()
+		}
+
+		/* === Form-associated custom element lifecycle callbacks === */
+		//
+		// The browser looks for these methods on the class. They delegate to
+		// handlers registered via the `onForm*()` factory helpers. The handlers
+		// activate after dependency resolution, so `formAssociatedCallback` may
+		// fire before any handler is registered — the `form` field in
+		// `FormHandlers` caches the value for late replay.
+
+		formAssociatedCallback(form: HTMLFormElement | null) {
+			const handlers = getFormHandlers(this)
+			handlers.form = form
+			handlers.associated?.(form)
+		}
+
+		formDisabledCallback(disabled: boolean) {
+			getFormHandlers(this).disabled?.(disabled)
+		}
+
+		formResetCallback() {
+			getFormHandlers(this).reset?.()
+		}
+
+		formStateRestoreCallback(state: FormState, mode: string) {
+			getFormHandlers(this).stateRestore?.(state, mode)
 		}
 
 		/**
@@ -248,6 +354,7 @@ function defineComponent<P extends ComponentProps>(
 }
 
 export {
+	type ComponentOptions,
 	defineComponent,
 	type FactoryContext,
 	type Initializers,

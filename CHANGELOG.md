@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **`ElementInternals` support via `internals` on `FactoryContext` and `{ formAssociated: true }` option**: `defineComponent` now accepts an optional third `options` parameter — `defineComponent(name, factory, { formAssociated: true })`. The generated class gets `static formAssociated = true` and the four form-lifecycle callback stubs (`formAssociatedCallback`, `formDisabledCallback`, `formResetCallback`, `formStateRestoreCallback`). `attachInternals()` is called unconditionally in the constructor (not gated on `formAssociated`) so custom `:state()` pseudo-classes and ARIA reflection are available to all components; a try/catch handles the `NotSupportedError` edge case gracefully. The `internals` object (or `null` on failure) is exposed on the `FactoryContext` for imperative use inside `watch()` — e.g. `watch('value', v => { internals?.setFormValue(v) })`. A `DEV_MODE` warning fires once per instance on first access when `internals` is `null`. See [ADR 0016](adr/0016-element-internals-for-form-association-and-states.md).
+- **`onFormAssociated`, `onFormDisabled`, `onFormReset`, `onFormStateRestore` helpers**: four factory-context helpers that register handlers for the form-associated lifecycle callbacks. They follow the existing `on()` pattern — each returns an `EffectDescriptor` activated after dependency resolution. The class stubs delegate to a per-instance handler map (module-private `WeakMap`); calling a callback with no registered handler is a safe no-op. `onFormAssociated` includes a late-registration replay: `formAssociatedCallback` fires during DOM insertion (before effect activation), so the handler map caches the form value and replays it when the effect activates. See [ADR 0016](adr/0016-element-internals-for-form-association-and-states.md).
+- **`ComponentOptions` and `FormState` type exports**: `ComponentOptions` (the options object type for `defineComponent`'s third parameter) and `FormState` (`string | File | FormData | null`, the state value type for `formStateRestoreCallback`) are now exported from the package root.
+
+### Changed
+
+- **`form-listbox` migrated from hidden-input hack to ElementInternals**: the example component now uses `{ formAssociated: true }` and `internals?.setFormValue(v)` instead of an embedded `<input type="hidden">` + manual `dispatchEvent(new Event('change'))` + `input.value =` sync. The hidden `<input>` elements have been removed from the HTML; `name` attributes are now on the `<form-listbox>` elements themselves. A new `onFormReset(() => { host.value = '' })` closes the latent form-reset bug (on `<form reset()>`, the selection state was desynchronized from the submitted value). The Playwright tests now verify form submission via `new FormData(form).get(name)` and include a form-reset regression test. See [ADR 0016](adr/0016-element-internals-for-form-association-and-states.md).
+
 ## 2.2.0
 
 ### Added

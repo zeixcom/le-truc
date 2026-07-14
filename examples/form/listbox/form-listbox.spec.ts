@@ -7,9 +7,13 @@ import { expect, test } from '@playwright/test'
  *
  * Basic features (inline options):
  * - Initial state rendering with proper ARIA attributes
- * - Option selection updates value, hidden input, and aria-selected
+ * - Option selection updates value, form submission value, and aria-selected
  * - Changing selection updates all option states
  * - Component value property reflects selection
+ *
+ * Form integration (ElementInternals):
+ * - Form value is submitted via setFormValue (no hidden input)
+ * - Form reset restores the initial value
  *
  * Filter functionality (grouped options):
  * - Filter input shows/hides options by text match
@@ -75,11 +79,13 @@ test.describe('form-listbox component', () => {
 		})
 		expect(value).toBe('green')
 
-		// Hidden input should sync
-		const inputValue = await page
-			.locator('#colors input[type="hidden"]')
-			.inputValue()
-		expect(inputValue).toBe('green')
+		// Form submission value should sync via ElementInternals
+		const formValue = await page.evaluate(() => {
+			const el = document.getElementById('colors') as any
+			const form = el.closest('form')
+			return new FormData(form).get('color')
+		})
+		expect(formValue).toBe('green')
 	})
 
 	test('clicking another option changes selection', async ({ page }) => {
@@ -117,10 +123,47 @@ test.describe('form-listbox component', () => {
 		await expect(purpleOption).toHaveAttribute('aria-selected', 'true')
 		await expect(purpleOption).toHaveAttribute('tabindex', '0')
 
-		const inputValue = await page
-			.locator('#colors input[type="hidden"]')
-			.inputValue()
-		expect(inputValue).toBe('purple')
+		// Form submission value should sync via ElementInternals
+		const formValue = await page.evaluate(() => {
+			const el = document.getElementById('colors') as any
+			const form = el.closest('form')
+			return new FormData(form).get('color')
+		})
+		expect(formValue).toBe('purple')
+	})
+
+	// ===== FORM RESET (ElementInternals formResetCallback) =====
+
+	test('form reset restores the initial value', async ({ page }) => {
+		const greenOption = page.locator(
+			'#colors button[role="option"][value="green"]',
+		)
+
+		await greenOption.click()
+		await expect(greenOption).toHaveAttribute('aria-selected', 'true')
+
+		// Verify value was set
+		const valueBefore = await page.evaluate(() => {
+			return (document.getElementById('colors') as any).value
+		})
+		expect(valueBefore).toBe('green')
+
+		// Reset the form
+		await page.evaluate(() => {
+			const el = document.getElementById('colors') as any
+			el.closest('form').reset()
+		})
+		await page.waitForTimeout(100)
+
+		// Value should be reset to initial value ('')
+		const valueAfter = await page.evaluate(() => {
+			return (document.getElementById('colors') as any).value
+		})
+		expect(valueAfter).toBe('')
+
+		// Selection should be cleared
+		await expect(greenOption).toHaveAttribute('aria-selected', 'false')
+		await expect(greenOption).toHaveAttribute('tabindex', '-1')
 	})
 
 	// ===== FILTER FUNCTIONALITY (fruits listbox with groups) =====

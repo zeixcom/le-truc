@@ -59,15 +59,11 @@ const HANDLED_KEYS = [...DECREMENT_KEYS, ...INCREMENT_KEYS, FIRST_KEY, LAST_KEY]
 /**
  * A filterable listbox that loads options from a remote JSON source and integrates with HTML forms.
  * Use it for searchable, single-select option lists — provides ARIA listbox semantics,
- * keyboard navigation (Arrow, Home, End), accessibility, and automatic form value synchronization via a hidden input.
+ * keyboard navigation (Arrow, Home, End), accessibility, and form participation via ElementInternals.
  * @demo {./docs/examples/form-listbox.html} Interactive preview and usage examples */
 export default defineComponent<FormListboxProps>(
 	'form-listbox',
-	({ all, expose, first, host, on, watch }) => {
-		const input = first(
-			'input[type="hidden"]',
-			'Needed to store the selected value.',
-		) as HTMLInputElement
+	({ all, expose, first, host, internals, on, onFormReset, watch }) => {
 		const filterEl = first('input.filter') as HTMLInputElement | undefined
 		const clearBtn = first('button.clear')
 		const callout = first('card-callout')
@@ -162,7 +158,6 @@ export default defineComponent<FormListboxProps>(
 				) as HTMLButtonElement
 				if (option && option.value !== host.value) {
 					host.value = option.value
-					input.dispatchEvent(new Event('change', { bubbles: true }))
 				}
 			}),
 			on(listbox, 'keydown', e => {
@@ -189,7 +184,10 @@ export default defineComponent<FormListboxProps>(
 
 			watch('value', value => {
 				host.setAttribute('value', value)
-				input.value = value
+				internals?.setFormValue(value)
+			}),
+			onFormReset(() => {
+				host.value = ''
 			}),
 			host.src &&
 				watch(content, {
@@ -253,4 +251,5 @@ export default defineComponent<FormListboxProps>(
 			clearBtn && watch(lowerFilter, bindVisible(clearBtn)),
 		]
 	},
+	{ formAssociated: true },
 )

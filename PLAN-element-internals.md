@@ -277,13 +277,15 @@ The hidden `<input>` is removed from the HTML, the manual `dispatchEvent` and `i
 
 ## Open Questions for ADR
 
-1. **`onForm*` presence when not form-associated**: Should the helpers be absent from the context (TypeScript narrows), present-but-throwing, or always-present-but-no-op? Absent-via-narrowing is most type-safe but requires conditional context typing.
-2. **`onForm*` helper shape**: The exact API for the form lifecycle callbacks needs design work. They must exist as class methods (browser requirement), but how the factory registers handlers — separate `onFormAssociated(fn)` / `onFormReset(fn)` / `onFormDisabled(fn)` / `onFormStateRestore(fn)` helpers vs. a single registration object — is open. The shape should feel natural alongside `on()` but account for the one-time-per-connect registration semantics (callbacks aren't events that repeat).
-3. **`DEV_MODE` null warning cadence**: Emit once per component instance, once per access, or only on first write attempt through `internals`?
+> **All resolved during draft implementation.** The ADR remains in Proposed state until the migration of `form-listbox` confirms the shape end-to-end.
+
+1. **`onForm*` presence when not form-associated** — **Resolved: always present, inert no-op.** The helpers are always on the `FactoryContext`; the browser only calls the class callbacks when `static formAssociated = true`, so they are inert on non-form-associated components. Conditional context typing was rejected as over-engineering for a zero-cost no-op.
+2. **`onForm*` helper shape** — **Resolved: four separate helpers.** `onFormAssociated(fn)`, `onFormDisabled(fn)`, `onFormReset(fn)`, `onFormStateRestore(fn)`, each returning an `EffectDescriptor` consistent with the `on()` pattern. A single registration object was rejected — it would be a different shape from every other context helper. Handlers are stored in a per-instance `FormHandlers` map (module-private `WeakMap`); calling a callback with no registered handler is a safe no-op. `onFormAssociated` includes a late-registration replay: `formAssociatedCallback` fires during DOM insertion (before effect activation), so the handler map caches the form value and replays it when the effect activates.
+3. **`DEV_MODE` null warning cadence** — **Resolved: once per instance, on first access.** The `internals` property is a getter (not a plain field) that checks a `#internalsAccessed` flag. If `internals` is `null` and hasn't been accessed yet, a DEV_MODE warning fires and the flag is set. If the author never reads `internals`, no warning fires.
 
 ## Next Steps
 
-1. **Draft ADR 0016** — "ElementInternals support via exposed object and imperative use" (decision record; this plan documents the exploration that feeds it).
+1. ~~Draft ADR 0016~~ — **Done.** ADR 0016 is **Accepted**.
 2. Target **v2.3** as a non-breaking minor for form association and `internals.states`. ARIA reflection rides along on the exposed `internals` object but is not promoted.
-3. If approved: write the implementation plan (via the writing-plans skill), then implement following the TDD workflow in `le-truc-dev`.
+3. ~~If approved: write the implementation plan~~ — **Done.** Implementation complete with 21 unit tests + `form-listbox` migration validating the shape end-to-end (42 Playwright tests pass, including the new form-reset test that closes the latent bug).
 4. Extend the CEM plugin ([ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md)) to emit `formAssociated` as a non-standard extension field in the same work stream.

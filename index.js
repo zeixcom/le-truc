@@ -2058,6 +2058,7 @@ class InvalidSelectorError extends TypeError {
 var DEPENDENCY_TIMEOUT = 200;
 var CONTEXT_RETRY_DELAY = DEPENDENCY_TIMEOUT + 10;
 var componentSignals = new WeakMap;
+var componentFormHandlers = new WeakMap;
 var getSignals = (el) => {
   let signals = componentSignals.get(el);
   if (!signals) {
@@ -2065,6 +2066,14 @@ var getSignals = (el) => {
     componentSignals.set(el, signals);
   }
   return signals;
+};
+var getFormHandlers = (el) => {
+  let handlers = componentFormHandlers.get(el);
+  if (!handlers) {
+    handlers = { form: undefined };
+    componentFormHandlers.set(el, handlers);
+  }
+  return handlers;
 };
 
 // src/helpers/context.ts
@@ -2500,6 +2509,26 @@ var makeOn = (host) => {
   return on;
 };
 
+// src/helpers/form.ts
+var makeFormHelpers = (host) => {
+  const onFormAssociated = (handler) => () => {
+    const handlers = getFormHandlers(host);
+    handlers.associated = handler;
+    if (handlers.form !== undefined)
+      handler(handlers.form);
+  };
+  const onFormDisabled = (handler) => () => {
+    getFormHandlers(host).disabled = handler;
+  };
+  const onFormReset = (handler) => () => {
+    getFormHandlers(host).reset = handler;
+  };
+  const onFormStateRestore = (handler) => () => {
+    getFormHandlers(host).stateRestore = handler;
+  };
+  return { onFormAssociated, onFormDisabled, onFormReset, onFormStateRestore };
+};
+
 // src/types.ts
 var PARSER_BRAND = Symbol("parser");
 var METHOD_BRAND = Symbol("method");
@@ -2522,14 +2551,26 @@ var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
 var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 
 // src/component.ts
-function defineComponent(name, factory) {
+function defineComponent(name, factory, options) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
+  const formAssociated = options?.formAssociated ?? false;
 
   class Truc extends HTMLElement {
+    static formAssociated = formAssociated;
     #initialized = false;
     #setup = [];
     #cleanup;
+    #internals = null;
+    #internalsAccessed = false;
+    constructor() {
+      super();
+      try {
+        this.#internals = this.attachInternals();
+      } catch {
+        this.#internals = null;
+      }
+    }
     connectedCallback() {
       const runSetup = () => {
         this.#cleanup = createScope(() => {
@@ -2543,12 +2584,22 @@ function defineComponent(name, factory) {
           this.#cleanup();
         runSetup();
       } else {
+        const instance = this;
         const host = this;
         const [elementQueries, resolveDependencies] = makeElementQueries(host);
+        const formHelpers = makeFormHelpers(host);
         const context = {
           expose: this.#initSignals.bind(this),
           host,
           ...elementQueries,
+          ...formHelpers,
+          get internals() {
+            if (DEV_MODE && instance.#internals === null && !instance.#internalsAccessed) {
+              instance.#internalsAccessed = true;
+              console.warn(`internals is null — attachInternals() failed in ${elementName(host)}. The component works but cannot participate in form association, custom states, or ARIA reflection.`);
+            }
+            return instance.#internals;
+          },
           watch: makeWatch(host),
           on: makeOn(host),
           pass: makePass(host),
@@ -2567,6 +2618,20 @@ function defineComponent(name, factory) {
     disconnectedCallback() {
       if (isFunction(this.#cleanup))
         this.#cleanup();
+    }
+    formAssociatedCallback(form) {
+      const handlers = getFormHandlers(this);
+      handlers.form = form;
+      handlers.associated?.(form);
+    }
+    formDisabledCallback(disabled) {
+      getFormHandlers(this).disabled?.(disabled);
+    }
+    formResetCallback() {
+      getFormHandlers(this).reset?.();
+    }
+    formStateRestoreCallback(state, mode) {
+      getFormHandlers(this).stateRestore?.(state, mode);
     }
     #initSignals(instanceProps) {
       const createReactiveProperty = (key, initializer) => {

@@ -91,6 +91,7 @@ export {
 	setTextPreservingComments,
 } from './src/bindings'
 export {
+	type ComponentOptions,
 	defineComponent,
 	type FactoryContext,
 	type Initializers,
@@ -134,6 +135,13 @@ export {
 } from './src/helpers/dom'
 export type { EventType, OnEventHandler, OnHelper } from './src/helpers/events'
 export {
+	type FormHelpers,
+	type OnFormAssociatedHelper,
+	type OnFormDisabledHelper,
+	type OnFormResetHelper,
+	type OnFormStateRestoreHelper,
+} from './src/helpers/form'
+export {
 	each,
 	type PassedProps,
 	type PassHelper,
@@ -153,6 +161,7 @@ export {
 	type EffectDescriptor,
 	type FactoryResult,
 	type Falsy,
+	type FormState,
 	isMethodProducer,
 	isParser,
 	type MethodProducer,

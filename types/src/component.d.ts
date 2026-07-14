@@ -2,6 +2,7 @@ import { type MemoCallback, type Signal, type TaskCallback } from '@zeix/cause-e
 import { type ProvideContextsHelper, type RequestContextHelper } from './helpers/context';
 import { type ElementQueries } from './helpers/dom';
 import { type OnHelper } from './helpers/events';
+import { type OnFormAssociatedHelper, type OnFormDisabledHelper, type OnFormResetHelper, type OnFormStateRestoreHelper } from './helpers/form';
 import { type FactoryResult, type Falsy, type PassHelper, type WatchHelper } from './helpers/reactive';
 import { type ComponentProps, type MethodProducer, type Parser } from './types';
 /**
@@ -26,18 +27,47 @@ type Initializers<P extends ComponentProps> = {
     [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K]> | MethodProducer;
 };
 /**
+ * Static class-level configuration for a component.
+ *
+ * Passed as the third (optional) argument to `defineComponent`. Currently
+ * carries only `formAssociated`, but is extensible for future class-level
+ * options without further signature changes.
+ */
+type ComponentOptions = {
+    /**
+     * When `true`, the generated class gets `static formAssociated = true` and
+     * the four form-lifecycle callback stubs. The browser then treats the
+     * element as a form-associated custom element (FACE), enabling
+     * `setFormValue`, `setValidity`, and the `formAssociatedCallback` /
+     * `formDisabledCallback` / `formResetCallback` / `formStateRestoreCallback`
+     * lifecycle. Default: `false`.
+     */
+    formAssociated?: boolean;
+};
+/**
  * The context object passed to the v2.x factory function.
  *
  * Components destructure only what they need.
  */
 type FactoryContext<P extends ComponentProps> = ElementQueries & {
     host: HTMLElement & P;
+    /**
+     * The `ElementInternals` object, or `null` if `attachInternals()` failed
+     * (pre-upgrade / parser-ordering edge case). Use imperatively inside
+     * `watch()` — e.g. `watch('value', v => { internals?.setFormValue(v) })`.
+     * The optional chaining is the graceful-degradation guard.
+     */
+    internals: ElementInternals | null;
     expose: (props: Initializers<P>) => void;
     watch: WatchHelper<P>;
     on: OnHelper<P>;
     pass: PassHelper<P>;
     provideContexts: ProvideContextsHelper<P>;
     requestContext: RequestContextHelper;
+    onFormAssociated: OnFormAssociatedHelper;
+    onFormDisabled: OnFormDisabledHelper;
+    onFormReset: OnFormResetHelper;
+    onFormStateRestore: OnFormStateRestoreHelper;
 };
 /**
  * Define and register a reactive custom element using the v2.x factory form.
@@ -53,7 +83,8 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  * @since 2.0
  * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
  * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
+ * @param {ComponentOptions} [options] - Static class-level configuration (e.g. `{ formAssociated: true }`)
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
-declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void): CustomElementConstructor | undefined;
-export { defineComponent, type FactoryContext, type Initializers, type MaybeSignal, };
+declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void, options?: ComponentOptions): CustomElementConstructor | undefined;
+export { type ComponentOptions, defineComponent, type FactoryContext, type Initializers, type MaybeSignal, };

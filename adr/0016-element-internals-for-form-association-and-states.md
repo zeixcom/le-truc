@@ -2,7 +2,7 @@
 
 ## Status
 
-🔄 Proposed
+✅ Accepted
 
 ## Context
 
@@ -78,7 +78,9 @@ onFormReset(() => { host.value = '' }),
 onFormDisabled(disabled => { host.disabled = disabled }),
 ```
 
-These helpers follow the existing `on()` pattern and return `EffectDescriptor`s. Their exact API shape (separate functions vs. a registration object, presence when `formAssociated` is false) is an implementation detail to be finalized during implementation.
+These helpers follow the existing `on()` pattern and return `EffectDescriptor`s. Four separate helpers — `onFormAssociated`, `onFormDisabled`, `onFormReset`, `onFormStateRestore` — each taking a single handler function. They are always present on the `FactoryContext` (not conditionally narrowed by `formAssociated`): the browser only calls the class callbacks when `static formAssociated = true`, so the helpers are inert no-ops on non-form-associated components. The class stubs delegate to a per-instance handler map stored in a module-private `WeakMap`; calling a callback with no registered handler is a safe no-op.
+
+`onFormAssociated` has a late-registration guard: `formAssociatedCallback` fires during DOM insertion, which can precede the effect-activation phase that waits on dependency resolution. The handler map caches the form value (`undefined` = not yet fired, `null` = disassociated, `HTMLFormElement` = associated) and replays it when the `onFormAssociated` effect activates.
 
 ### ARIA reflection: available but not promoted
 
@@ -109,6 +111,7 @@ These helpers follow the existing `on()` pattern and return `EffectDescriptor`s.
 - **ARIA reflection tooling gap (significant).** `internals.role` and `internals.aria*` are not reliably visible to accessibility testing tools. axe-core produces documented false positives ([#4259](https://github.com/dequelabs/axe-core/issues/4259), [#4659](https://github.com/dequelands/axe-core/issues/4659)); Chromium does not reliably update the accessibility tree from `internals.aria*` ([#40810268](https://issues.chromium.org/issues/40810268)); the W3C has not resolved the spec gap ([aria #2663](https://github.com/w3c/aria/issues/2663)). The nested-element trap is concrete: if `<basic-button>` set `internals.role = 'button'` and dropped its inner `<button>`, static tools would not flag invalid button nesting — a regression in the safety net. **Mitigation**: ARIA reflection rides along on the exposed `internals` object (cannot be withheld), but is not promoted — no helpers, no examples, and an active advisory in the docs to keep explicit `aria-*` attributes and native semantic elements until the platform catches up.
 - **CEM cannot represent `formAssociated`.** The Custom Elements Manifest schema has no `formAssociated` field and `@custom-elements-manifest/analyzer` (v0.11.0) does not detect it. **Mitigation**: the Le Truc CEM plugin ([ADR-0013](0013-cem-plugin-for-le-truc-factory-pattern.md)) will be extended to emit `formAssociated` as a non-standard extension field in the same work stream.
 - The `FactoryContext` type gains `internals` and `onForm*` properties. This is additive but is a visible type change.
+- The `internals` property is exposed via a getter (not a plain field) so a `DEV_MODE` warning can fire once per instance when `internals` is `null` (the `attachInternals()` failed path). The warning fires only on first access — if the author never reads `internals`, no warning fires.
 
 **Compatibility:**
 
