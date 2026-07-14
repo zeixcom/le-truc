@@ -278,11 +278,15 @@ p,
 li,
 dt,
 dd,
-pre,
-input {
+pre {
 	font-size: var(--font-size-m);
 	line-height: var(--line-height-l);
 }
+
+input {
+	font-size: var(--font-size-m);
+}
+
 small,
 th,
 td {
