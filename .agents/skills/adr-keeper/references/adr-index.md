@@ -24,5 +24,5 @@ This file is auto-generated. Do not edit manually.
 
 ---
 
-**Last updated:** 2026-07-13
+**Last updated:** 2026-07-14
 **Total ADRs:** 16 (excluding template)
