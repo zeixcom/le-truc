@@ -72,7 +72,7 @@ test.describe('form-combobox component', () => {
 
 			// Check initial ARIA attributes
 			await expect(textbox).toHaveAttribute('aria-expanded', 'false')
-			await expect(textbox).toHaveAttribute('aria-invalid', 'false')
+			await expect(combobox).toHaveAttribute('aria-invalid', 'false')
 			await expect(textbox).toHaveAttribute(
 				'aria-describedby',
 				'timezone-description',
@@ -557,9 +557,9 @@ test.describe('form-combobox component', () => {
 			// Error element should show the message
 			await expect(errorElement).toHaveText(componentError)
 
-			// ARIA attributes should reflect error state
-			await expect(textbox).toHaveAttribute('aria-invalid', 'true')
-			await expect(textbox).toHaveAttribute(
+			// ARIA attributes should reflect error state on the host
+			await expect(combobox).toHaveAttribute('aria-invalid', 'true')
+			await expect(combobox).toHaveAttribute(
 				'aria-errormessage',
 				'timezone-error',
 			)
@@ -583,7 +583,7 @@ test.describe('form-combobox component', () => {
 			expect(componentValue).toBe('America/New_York')
 
 			// Should not have error state with valid input
-			await expect(textbox).toHaveAttribute('aria-invalid', 'false')
+			await expect(combobox).toHaveAttribute('aria-invalid', 'false')
 		})
 
 		test('updates error property reactively', async ({ page }) => {
@@ -788,8 +788,31 @@ test.describe('form-combobox component', () => {
 			// Fill textbox
 			await textbox.fill('America/New_York')
 
-			// Check that input has correct name attribute
-			await expect(textbox).toHaveAttribute('name', 'timezone')
+			// Check that host has correct name attribute
+			await expect(combobox).toHaveAttribute('name', 'timezone')
+		})
+
+		test('form reset restores empty value and clears error', async ({
+			page,
+		}) => {
+			const form = page.locator('form').nth(0)
+			const combobox = form.locator('form-combobox')
+			const textbox = combobox.locator('input[role="combobox"]')
+
+			// Fill with a value
+			await textbox.fill('Blue')
+
+			// Reset the form
+			await page.evaluate(() => {
+				document.querySelector('form')?.reset()
+			})
+			await page.waitForTimeout(100)
+
+			// Value should be reset
+			const value = await page.evaluate(() => {
+				return (document.querySelector('form form-combobox') as any)?.value
+			})
+			expect(value).toBe('')
 		})
 	})
 

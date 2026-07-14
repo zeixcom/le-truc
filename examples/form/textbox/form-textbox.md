@@ -1,6 +1,6 @@
 ### Form Textbox
 
-A general-purpose text field wrapper for `input` or `textarea` elements. Demonstrates `createState()` with `on()` for the read-only `length` property, `createMemo()` for a computed `description` that shows remaining character count when `data-remaining` is set on the description element, the MethodProducer pattern for `clear`, and `setAttribute()` for dynamic ARIA linkage (`aria-errormessage`, `aria-describedby`). Designed to be composable — `form-combobox` and `module-todo` both embed it and drive it via `pass()`.
+A general-purpose text field wrapper for `input` or `textarea` elements. Demonstrates `createState()` with `on()` for the read-only `length` property, `createMemo()` for a computed `description` that shows remaining character count when `data-remaining` is set on the description element, the MethodProducer pattern for `clear`, and `setAttribute()` for dynamic ARIA linkage (`aria-errormessage`, `aria-describedby`). Designed to be composable — `form-combobox` and `module-todo` both embed it and drive it via `pass()`. Form participation and validity are via ElementInternals (`formAssociated: true`, `setFormValue`, `setValidity`) — no hidden input needed.
 
 #### Preview
 
@@ -66,7 +66,7 @@ A general-purpose text field wrapper for `input` or `textarea` elements. Demonst
 - `first('input, textarea')`
 - `HTMLInputElement | HTMLTextAreaElement`
 - **required**
-- Native text field bound to `value`
+- Native text field bound to `value`; no `name` attribute needed (the host carries it)
 ---
 - `first('button.clear')`
 - `HTMLButtonElement`

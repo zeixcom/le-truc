@@ -1,6 +1,6 @@
 ### Form Spinbutton
 
-A quantity spinbutton with increment/decrement buttons, clamped values, and keyboard support that works both **controlled** and **uncontrolled**. Demonstrates `read()` to initialise both `value` and `max` from DOM state, and `on()` effects on the shared `controls` collection for all three event types (`change`, `click`, `keydown`) — each handler inspects the event target to determine whether to increment, decrement, or validate a typed value, then writes back to `host.value`. `createMemo()` derives a private `nonZero` signal used to show/hide zero-state UI without exposing it as a reactive property. Assigning `host.value = n` programmatically drives all downstream DOM effects directly.
+A quantity spinbutton with increment/decrement buttons, clamped values, and keyboard support that works both **controlled** and **uncontrolled**. Demonstrates `expose()` to initialise both `value` and `max` from DOM state, and `on()` effects on the shared `controls` collection for all three event types (`change`, `click`, `keydown`) — each handler inspects the event target to determine whether to increment, decrement, or validate a typed value, then writes back to `host.value`. `createMemo()` derives a private `nonZero` signal used to show/hide zero-state UI without exposing it as a reactive property. Assigning `host.value = n` programmatically drives all downstream DOM effects directly. Form participation and range validation are via ElementInternals (`formAssociated: true`, `setFormValue`, `setValidity`).
 
 #### Preview
 
@@ -54,7 +54,7 @@ A quantity spinbutton with increment/decrement buttons, clamped values, and keyb
 - `first('input.value')`
 - `HTMLInputElement`
 - **required**
-- Numeric value source and sync target
+- Numeric value source and sync target; no `name` attribute needed (the host carries it)
 ---
 - `all('button, input:not([disabled])')`
 - `Memo<(HTMLButtonElement | HTMLInputElement)[]>`

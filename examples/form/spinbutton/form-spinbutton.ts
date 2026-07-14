@@ -22,10 +22,12 @@ declare global {
  * A numeric spinbutton with increment/decrement buttons and keyboard support.
  * Use it for numeric input within a bounded range — provides ARIA spinbutton
  * semantics and Arrow key support for incrementing and decrementing the value.
+ * Form participation and range validation are via ElementInternals (`formAssociated: true`,
+ * `setFormValue`, `setValidity`).
  * @demo {./docs/examples/form-spinbutton.html} Interactive preview and usage examples */
 export default defineComponent<FormSpinbuttonProps>(
 	'form-spinbutton',
-	({ all, expose, first, host, on, watch }) => {
+	({ all, expose, first, host, internals, on, onFormReset, watch }) => {
 		const controls = all('button, input:not([disabled])')
 		const increment = first(
 			'button.increment',
@@ -96,6 +98,31 @@ export default defineComponent<FormSpinbuttonProps>(
 			watch(() => String(host.value), bindProperty(input, 'value')),
 			watch(() => String(host.max), bindProperty(input, 'max')),
 			watch(() => host.value >= host.max, bindProperty(increment, 'disabled')),
+			watch('value', v => {
+				internals?.setFormValue(String(v))
+			}),
+			watch(
+				() => ({ value: host.value, max: host.max }),
+				({ value, max }) => {
+					const overflow = value > max
+					const underflow = value < 0
+					internals?.setValidity(
+						{
+							rangeOverflow: overflow,
+							rangeUnderflow: underflow,
+						},
+						overflow
+							? `Value must be ${max} or less`
+							: underflow
+								? 'Value must be 0 or greater'
+								: '',
+					)
+				},
+			),
+			onFormReset(() => {
+				host.value = 0
+			}),
 		]
 	},
+	{ formAssociated: true },
 )

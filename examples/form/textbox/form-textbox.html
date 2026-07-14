@@ -1,10 +1,9 @@
-<form-textbox>
+<form-textbox name="name">
 	<label for="name-input">Name</label>
 	<div class="input">
 		<input
 			type="text"
 			id="name-input"
-			name="name"
 			autocomplete="name"
 			required
 		>
@@ -17,13 +16,12 @@
 
 <hr>
 
-<form-textbox clearable>
+<form-textbox name="query" clearable>
 	<label for="query-input">Search terms</label>
 	<div class="input">
 		<input
 			type="text"
 			id="query-input"
-			name="query"
 			autocomplete="off"
 			placeholder="apple banana"
 			required
@@ -37,12 +35,11 @@
 
 <hr>
 
-<form-textbox>
+<form-textbox name="comment">
 	<label for="comment-input">Comment</label>
 	<div class="input">
 		<textarea
 			id="comment-input"
-			name="comment"
 			autocomplete="off"
 			maxlength="500"
 		></textarea>

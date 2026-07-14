@@ -50,23 +50,24 @@ const getStep = (axis: FormColorgraphAxis, shiftKey: boolean) =>
  * slider axis, with live preview of the resulting color and out-of-gamut warnings.
  * Out-of-gamut colors should be handled with a fallback, as display coverage varies.
  * Chroma values must stay within the Oklch gamut; extreme values are clamped automatically.
+ * Form participation submits one serialized `oklch(...)` value via ElementInternals.
  * @demo {./docs/examples/form-colorgraph.html} Interactive preview and usage examples */
 export default defineComponent<FormColorgraphProps>(
 	'form-colorgraph',
-	({ all, expose, first, host, on, watch }) => {
+	({ all, expose, first, host, internals, on, onFormReset, watch }) => {
 		// Required elements
 		const inputs = {
 			l: first(
-				'input[name="lightness"]',
-				'Add an <input[name="lightness"]> element to control the lightness of the color.',
+				'input#lightness',
+				'Add an <input id="lightness"> element to control the lightness of the color.',
 			),
 			c: first(
-				'input[name="chroma"]',
-				'Add an <input[name="chroma"]> element to control the chroma of the color.',
+				'input#chroma',
+				'Add an <input id="chroma"> element to control the chroma of the color.',
 			),
 			h: first(
-				'input[name="hue"]',
-				'Add an <input[name="hue"]> element to control the hue of the color.',
+				'input#hue',
+				'Add an <input id="hue"> element to control the hue of the color.',
 			),
 		}
 		const graphEl = first(
@@ -110,11 +111,7 @@ export default defineComponent<FormColorgraphProps>(
 		// Internal states
 		const canvasSize = createState(graphEl.getBoundingClientRect().width)
 		const trackWidth = createMemo(() => canvasSize.get() - 2 * TRACK_OFFSET)
-		const errors = {
-			l: createState(''),
-			c: createState(''),
-			h: createState(''),
-		}
+		const error = createState('')
 
 		// Helper functions
 		const formatNumber = (axis: FormColorgraphAxis, value: number) => {
@@ -162,8 +159,7 @@ export default defineComponent<FormColorgraphProps>(
 		const commit = (color: Oklch) => {
 			batch(() => {
 				host.color = color
-				for (const key of ['l', 'c', 'h'])
-					errors[key as keyof typeof errors].set('')
+				error.set('')
 			})
 		}
 		const getValue = (axis: FormColorgraphAxis) =>
@@ -175,8 +171,7 @@ export default defineComponent<FormColorgraphProps>(
 			if (inP3Gamut(color)) {
 				commit(color)
 			} else {
-				inputs[axis].setCustomValidity('Color out of gamut')
-				errors[axis].set(inputs[axis].validationMessage)
+				error.set('Color out of gamut')
 			}
 		}
 		const moveKnob = throttle(
@@ -196,6 +191,9 @@ export default defineComponent<FormColorgraphProps>(
 			}
 			if (inP3Gamut(color)) commit(color)
 		})
+
+		// Capture initial color from attribute for form reset
+		const initialColor = asOklch()(host.getAttribute('color'))
 
 		expose({
 			color: asOklch(),
@@ -236,13 +234,6 @@ export default defineComponent<FormColorgraphProps>(
 			each(allInputs, input => {
 				const axis = getAxis(input)
 				return [
-					axis &&
-						watch(errors[axis], error => {
-							input.ariaInvalid = String(!!error)
-							if (error && input.id)
-								input.setAttribute('aria-errormessage', `${input.id}-error`)
-							else input.removeAttribute('aria-errormessage')
-						}),
 					watch('color', color => {
 						if (axis) input.value = formatNumber(axis, color[axis] ?? 0)
 					}),
@@ -256,17 +247,15 @@ export default defineComponent<FormColorgraphProps>(
 						if (inP3Gamut(newColor)) {
 							commit(newColor)
 						} else {
-							input.setCustomValidity('Color out of gamut')
-							errors[axis].set(input.validationMessage)
+							error.set('Color out of gamut')
 						}
 					}),
 				]
 			}),
 
-			// Error text per-element effects
+			// Error text — single host-level error displayed in all .error elements
 			each(allErrors, errorEl => {
-				const axis = getAxis(errorEl as HTMLElement)
-				return [axis ? watch(errors[axis], bindText(errorEl)) : false]
+				return [watch(error, bindText(errorEl))]
 			}),
 
 			// Graph pointer interaction + canvas size CSS variable
@@ -531,6 +520,23 @@ export default defineComponent<FormColorgraphProps>(
 				)
 		}
 
+		effects.push(
+			// Form participation: submit one serialized oklch value
+			watch('color', color => {
+				internals?.setFormValue(formatCss(color))
+			}),
+			// Host-level validity from the error state
+			watch(error, err => {
+				internals?.setValidity({ customError: !!err }, err || undefined)
+				host.ariaInvalid = String(!!err)
+			}),
+			// Form reset: restore the initial color
+			onFormReset(() => {
+				host.color = initialColor
+			}),
+		)
+
 		return effects
 	},
+	{ formAssociated: true },
 )

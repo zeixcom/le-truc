@@ -30,11 +30,12 @@ declare global {
 /**
  * A single-line or multiline text input with validation, optional clear button, and helper text.
  * Use it when you need a styled text field — the underlying native input provides
- * keyboard accessibility and standard ARIA textbox semantics.
+ * keyboard accessibility and standard ARIA textbox semantics. Form participation
+ * and validity are via ElementInternals (`formAssociated: true`, `setFormValue`, `setValidity`).
  * @demo {./docs/examples/form-textbox.html} Interactive preview and usage examples */
 export default defineComponent<FormTextboxProps>(
 	'form-textbox',
-	({ expose, first, host, on, watch }) => {
+	({ expose, first, host, internals, on, onFormReset, watch }) => {
 		const textbox = first(
 			'input, textarea',
 			'Add a native input or textarea as descendant element.',
@@ -91,15 +92,24 @@ export default defineComponent<FormTextboxProps>(
 				host.clear()
 			}),
 
-			watch('value', bindProperty(textbox, 'value')),
+			watch('value', v => {
+				internals?.setFormValue(v)
+				bindProperty(textbox, 'value')(v)
+			}),
 			watch('error', error => {
-				textbox.ariaInvalid = String(!!error)
-				if (error && errorId) textbox.setAttribute('aria-errormessage', errorId)
-				else textbox.removeAttribute('aria-errormessage')
+				internals?.setValidity({ customError: !!error }, error || undefined)
+				host.ariaInvalid = String(!!error)
+				if (error && errorId) host.setAttribute('aria-errormessage', errorId)
+				else host.removeAttribute('aria-errormessage')
 			}),
 			errorEl && watch('error', bindText(errorEl)),
 			descriptionEl && watch('description', bindText(descriptionEl)),
 			clearBtn && watch(length, bindVisible(clearBtn)),
+			onFormReset(() => {
+				host.value = ''
+				host.error = ''
+			}),
 		]
 	},
+	{ formAssociated: true },
 )

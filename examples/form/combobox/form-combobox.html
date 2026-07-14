@@ -1,10 +1,9 @@
-<form-combobox clearable>
+<form-combobox name="timezone" clearable>
 	<label for="timezone-input" id="timezone-label">Choose a timezone</label>
 	<div class="input">
 		<input
 			id="timezone-input"
 			type="text"
-			name="timezone"
 			role="combobox"
 			aria-expanded="false"
 			aria-controls="timezone-popup"
@@ -16,7 +15,6 @@
 			id="timezone-popup"
 			src="./test/form-listbox/mocks/timezones.json"
 		>
-			<input type="hidden" name="timezone-listbox">
 			<card-callout>
 				<p class="loading" role="status">Loading...</p>
 				<p class="error" role="alert" aria-live="assertive" hidden></p>
@@ -39,7 +37,7 @@
 <hr>
 
 <form>
-	<form-combobox>
+	<form-combobox name="color">
 		<label for="color-input" id="color-label"
 			>What is your favorite color?</label
 		>
@@ -47,7 +45,6 @@
 			<input
 				id="color-input"
 				type="text"
-				name="color"
 				role="combobox"
 				aria-expanded="false"
 				aria-controls="color-popup"
@@ -55,7 +52,6 @@
 				autocomplete="off"
 			>
 			<form-listbox id="color-popup">
-				<input type="hidden" name="color-listbox">
 				<div role="listbox" aria-labelledby="color-label">
 					<button type="button" role="option" tabindex="-1" value="Red">
 						Red

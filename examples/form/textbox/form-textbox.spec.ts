@@ -48,8 +48,8 @@ test.describe('form-textbox component', () => {
 
 		// Should have proper ARIA attributes
 		await expect(input).toHaveAttribute('aria-describedby', 'city-description')
-		await expect(input).not.toHaveAttribute('aria-errormessage')
-		await expect(input).toHaveAttribute('aria-invalid', 'false')
+		await expect(textboxComponent).not.toHaveAttribute('aria-errormessage')
+		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'false')
 
 		// Initial sensor property values
 		const state = await page.evaluate(() => {
@@ -119,7 +119,7 @@ test.describe('form-textbox component', () => {
 
 		// Initially no error
 		await expect(errorElement).toBeEmpty()
-		await expect(input).toHaveAttribute('aria-invalid', 'false')
+		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'false')
 
 		// Fill and then clear to trigger validation
 		await input.fill('test')
@@ -133,8 +133,11 @@ test.describe('form-textbox component', () => {
 
 		// Should show validation error
 		await expect(errorElement).not.toBeEmpty()
-		await expect(input).toHaveAttribute('aria-invalid', 'true')
-		await expect(input).toHaveAttribute('aria-errormessage', 'name-error')
+		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'true')
+		await expect(textboxComponent).toHaveAttribute(
+			'aria-errormessage',
+			'name-error',
+		)
 
 		// Error property should be set
 		const errorText = await page.evaluate(() => {
@@ -170,8 +173,8 @@ test.describe('form-textbox component', () => {
 
 		// Error should clear
 		await expect(errorElement).toBeEmpty()
-		await expect(input).toHaveAttribute('aria-invalid', 'false')
-		await expect(input).not.toHaveAttribute('aria-errormessage')
+		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'false')
+		await expect(textboxComponent).not.toHaveAttribute('aria-errormessage')
 
 		const errorText = await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
@@ -320,12 +323,11 @@ test.describe('form-textbox component', () => {
 
 	test('updates error property programmatically', async ({ page }) => {
 		const textboxComponent = page.locator('form-textbox').first()
-		const input = textboxComponent.locator('input')
 		const errorElement = textboxComponent.locator('.error')
 
 		// Initially no error
 		await expect(errorElement).toBeEmpty()
-		await expect(input).toHaveAttribute('aria-invalid', 'false')
+		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'false')
 
 		// Set error property (this should work - it's a writable property)
 		await page.evaluate(() => {
@@ -334,8 +336,11 @@ test.describe('form-textbox component', () => {
 		})
 
 		await expect(errorElement).toHaveText('Custom error message')
-		await expect(input).toHaveAttribute('aria-invalid', 'true')
-		await expect(input).toHaveAttribute('aria-errormessage', 'name-error')
+		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'true')
+		await expect(textboxComponent).toHaveAttribute(
+			'aria-errormessage',
+			'name-error',
+		)
 
 		// Clear error
 		await page.evaluate(() => {
@@ -344,8 +349,8 @@ test.describe('form-textbox component', () => {
 		})
 
 		await expect(errorElement).toBeEmpty()
-		await expect(input).toHaveAttribute('aria-invalid', 'false')
-		await expect(input).not.toHaveAttribute('aria-errormessage')
+		await expect(textboxComponent).toHaveAttribute('aria-invalid', 'false')
+		await expect(textboxComponent).not.toHaveAttribute('aria-errormessage')
 	})
 
 	// ===== READONLY PROPERTY TESTS =====
@@ -408,11 +413,13 @@ test.describe('form-textbox component', () => {
 		const firstInput = page.locator('form-textbox input').first()
 		const secondInput = page.locator('form-textbox input').nth(1)
 
-		// Fill inputs
+		// Fill inputs and blur to trigger change events
 		await firstInput.fill('John Doe')
+		await firstInput.blur()
 		await secondInput.fill('javascript react')
+		await secondInput.blur()
 
-		// Test form data (DOM-based, should work fine)
+		// Test form data — values submitted via ElementInternals setFormValue
 		const formData = await page.evaluate(() => {
 			const form = document.querySelector('form')
 			if (!form) return null
@@ -424,6 +431,42 @@ test.describe('form-textbox component', () => {
 			name: 'John Doe',
 			query: 'javascript react',
 		})
+	})
+
+	test('form reset restores empty value and clears error', async ({ page }) => {
+		// Wrap the first textbox in a form
+		await page.evaluate(() => {
+			const form = document.createElement('form')
+			const textbox = document.querySelector('form-textbox')
+			if (!textbox) return
+			textbox.parentNode?.insertBefore(form, textbox)
+			form.appendChild(textbox)
+		})
+
+		const textboxComponent = page.locator('form-textbox').first()
+		const input = textboxComponent.locator('input')
+
+		// Type a value
+		await input.fill('John Doe')
+		await input.blur()
+
+		// Reset the form
+		await page.evaluate(() => {
+			document.querySelector('form')?.reset()
+		})
+		await page.waitForTimeout(100)
+
+		// Value should be reset
+		const value = await page.evaluate(() => {
+			return (document.querySelector('form-textbox') as any).value
+		})
+		expect(value).toBe('')
+
+		// Error should be cleared
+		const error = await page.evaluate(() => {
+			return (document.querySelector('form-textbox') as any).error
+		})
+		expect(error).toBe('')
 	})
 
 	// ===== EVENT TESTS =====

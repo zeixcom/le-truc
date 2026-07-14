@@ -638,6 +638,34 @@ test.describe('form-spinbutton component', () => {
 		expect(formData).toEqual({ interactive: '2' })
 	})
 
+	test('form reset restores zero value', async ({ page }) => {
+		const incrementButton = page.locator(
+			'#interactive-input-test button.increment',
+		)
+
+		// Increment the value
+		await incrementButton.click()
+		await incrementButton.click()
+
+		// Verify value is non-zero
+		const valueBefore = await page.evaluate(() => {
+			return (document.querySelector('#interactive-input-test') as any).value
+		})
+		expect(valueBefore).toBe(2)
+
+		// Reset the form
+		await page.evaluate(() => {
+			;(document.querySelector('#test-form') as HTMLFormElement)?.reset()
+		})
+		await page.waitForTimeout(100)
+
+		// Value should be reset to 0
+		const valueAfter = await page.evaluate(() => {
+			return (document.querySelector('#interactive-input-test') as any).value
+		})
+		expect(valueAfter).toBe(0)
+	})
+
 	test('input shows proper max attribute synchronization', async ({ page }) => {
 		const spinbutton = page.locator('form-spinbutton').first()
 		const input = spinbutton.locator('input.value')

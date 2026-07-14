@@ -1,6 +1,6 @@
 ### Form Colorgraph
 
-An interactive OKLCH color picker combining a 2D lightness/chroma graph, a hue slider, and numeric inputs. Demonstrates `defineMethod()` for the `stepDown`/`stepUp` API, `createState()` and `createMemo()` for internal canvas sizing, `each()` for per-element effects on decrement/increment buttons and error messages, `throttle()` for pointer move handlers, a `ResizeObserver` managed inside `watch()` with a cleanup return value, and `bindStyle()` for CSS variable bindings. All pointer and keyboard interactions update `host.color` via a shared `commit()` helper that batch-clears errors.
+An interactive OKLCH color picker combining a 2D lightness/chroma graph, a hue slider, and numeric inputs. Demonstrates `defineMethod()` for the `stepDown`/`stepUp` API, `createState()` and `createMemo()` for internal canvas sizing, `each()` for per-element effects on decrement/increment buttons and error messages, `throttle()` for pointer move handlers, a `ResizeObserver` managed inside `watch()` with a cleanup return value, and `bindStyle()` for CSS variable bindings. All pointer and keyboard interactions update `host.color` via a shared `commit()` helper that batch-clears errors. Form participation submits one serialized `oklch(...)` value via ElementInternals (`formAssociated: true`, `setFormValue`).
 
 #### Preview
 
@@ -101,20 +101,20 @@ Arrow keys navigate the focused axis. When the graph area is focused: `ArrowUp`/
 - **required**
 - Draggable thumb controlling hue
 ---
-- `first('input[name="lightness"]')`
+- `first('#lightness')`
 - `HTMLInputElement`
 - **required**
-- Numeric input for lightness (0–100)
+- Numeric input for lightness (0–100); no `name` attribute needed (the host carries it)
 ---
-- `first('input[name="chroma"]')`
+- `first('#chroma')`
 - `HTMLInputElement`
 - **required**
-- Numeric input for chroma (0–0.4)
+- Numeric input for chroma (0–0.4); no `name` attribute needed (the host carries it)
 ---
-- `first('input[name="hue"]')`
+- `first('#hue')`
 - `HTMLInputElement`
 - **required**
-- Numeric input for hue angle (0–360)
+- Numeric input for hue angle (0–360); no `name` attribute needed (the host carries it)
 ---
 - `all('button.decrement')`
 - `HTMLButtonElement[]`

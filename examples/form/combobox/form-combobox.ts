@@ -32,10 +32,11 @@ declare global {
  * A combobox (searchable select) that combines a text input with a filterable listbox popup.
  * Use it for searchable selection — provides ARIA roles for the combobox pattern,
  * keyboard interaction (type to filter, Escape to close, Enter to select), and focus management.
+ * Form participation and validity are via ElementInternals (`formAssociated: true`, `setFormValue`, `setValidity`).
  * @demo {./docs/examples/form-combobox.html} Interactive preview and usage examples */
 export default defineComponent<FormComboboxProps>(
 	'form-combobox',
-	({ expose, first, host, on, pass, watch }) => {
+	({ expose, first, host, internals, on, onFormReset, pass, watch }) => {
 		const textbox = first('input', 'Needed to enter value.')
 		const listbox = first('form-listbox', 'Needed to display options.')
 		const clearBtn = first('button.clear')
@@ -93,27 +94,33 @@ export default defineComponent<FormComboboxProps>(
 					if (isExpanded.get()) listbox.options[0]?.focus()
 				}
 			}),
-			on(listbox, 'change', ({ target }: Event) => {
-				if (target instanceof HTMLInputElement) {
-					textbox.value = target.value
-					textbox.checkValidity()
-					batch(() => {
-						host.value = target.value
-						host.error = textbox.validationMessage ?? ''
-						showPopup.set(false)
-						textbox.focus()
-					})
-				}
+			on(listbox, 'click', ({ target }) => {
+				const option = (target as HTMLElement).closest(
+					'[role="option"]',
+				) as HTMLButtonElement | null
+				if (!option) return
+				textbox.value = option.value
+				textbox.checkValidity()
+				batch(() => {
+					host.value = option.value
+					host.error = textbox.validationMessage ?? ''
+					showPopup.set(false)
+					textbox.focus()
+				})
 			}),
 			on(clearBtn, 'click', () => {
 				host.clear()
 			}),
 
 			watch('value', bindAttribute(host, 'value')),
+			watch('value', v => {
+				internals?.setFormValue(v)
+			}),
 			watch('error', error => {
-				textbox.ariaInvalid = String(!!error)
-				if (error && errorId) textbox.setAttribute('aria-errormessage', errorId)
-				else textbox.removeAttribute('aria-errormessage')
+				internals?.setValidity({ customError: !!error }, error || undefined)
+				host.ariaInvalid = String(!!error)
+				if (error && errorId) host.setAttribute('aria-errormessage', errorId)
+				else host.removeAttribute('aria-errormessage')
 			}),
 			errorEl && watch('error', bindText(errorEl)),
 			descriptionEl && watch('description', bindText(descriptionEl)),
@@ -122,6 +129,11 @@ export default defineComponent<FormComboboxProps>(
 				textbox.ariaExpanded = String(expanded)
 			}),
 			clearBtn && watch(length, bindVisible(clearBtn)),
+			onFormReset(() => {
+				host.value = ''
+				host.error = ''
+			}),
 		]
 	},
+	{ formAssociated: true },
 )

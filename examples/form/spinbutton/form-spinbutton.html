@@ -1,11 +1,10 @@
-<form-spinbutton>
+<form-spinbutton name="amount">
 	<button type="button" class="decrement" aria-label="Decrement" hidden>
 		−
 	</button>
 	<input
 		type="number"
 		class="value"
-		name="amount"
 		value="0"
 		min="0"
 		max="10"
@@ -22,14 +21,13 @@
 <hr>
 
 <!-- Test with different max value -->
-<form-spinbutton id="max-5-test">
+<form-spinbutton id="max-5-test" name="count">
 	<button type="button" class="decrement" aria-label="Decrement" hidden>
 		−
 	</button>
 	<input
 		type="number"
 		class="value"
-		name="count"
 		value="0"
 		min="0"
 		max="5"
@@ -44,12 +42,11 @@
 <hr>
 
 <!-- Test with initial value from DOM -->
-<form-spinbutton id="initial-value-test">
+<form-spinbutton id="initial-value-test" name="number">
 	<button type="button" class="decrement" aria-label="Decrement">−</button>
 	<input
 		type="number"
 		class="value"
-		name="number"
 		value="3"
 		min="0"
 		max="15"
@@ -65,11 +62,10 @@
 <hr>
 
 <!-- Test with no zero element (fallback behavior) -->
-<form-spinbutton id="no-zero-test">
+<form-spinbutton id="no-zero-test" name="counter">
 	<input
 		type="number"
 		class="value"
-		name="counter"
 		value="0"
 		min="0"
 		max="8"
@@ -85,14 +81,13 @@
 
 <!-- Test with interactive input field -->
 <form id="test-form">
-	<form-spinbutton id="interactive-input-test">
+	<form-spinbutton id="interactive-input-test" name="interactive">
 		<button type="button" class="decrement" aria-label="Decrement" hidden>
 			−
 		</button>
 		<input
 			type="number"
 			class="value"
-			name="interactive"
 			value="0"
 			min="0"
 			max="12"
