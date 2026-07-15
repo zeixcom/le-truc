@@ -8,6 +8,8 @@ import {
 	defineMethod,
 	type FormAssociatedElement,
 } from '../../..'
+import { relayValidity } from '../../_common/relayValidity'
+import type { FormListboxProps } from '../listbox/form-listbox'
 
 export type FormComboboxProps = {
 	/** Current text input value. Updated on each `input` event. */
@@ -37,7 +39,10 @@ export default defineComponent<FormComboboxProps>(
 	'form-combobox',
 	({ expose, first, host, on, pass, watch }) => {
 		const textbox = first('input', 'Needed to enter value.')
-		const listbox = first('form-listbox', 'Needed to display options.')
+		const listbox = first<HTMLElement & FormListboxProps>(
+			'form-listbox',
+			'Needed to display options.',
+		)
 		const clearBtn = first('button.clear')
 		const errorEl = first('form-combobox > .error')
 		const descriptionEl = first('.description')
@@ -81,12 +86,9 @@ export default defineComponent<FormComboboxProps>(
 			}),
 			on(textbox, 'input', () => {
 				length.set(textbox.value.length)
-				textbox.checkValidity()
-				const msg = textbox.validationMessage ?? ''
 				batch(() => {
 					host.value = textbox.value
-					error.set(msg)
-					host.setCustomValidity(msg)
+					relayValidity(textbox, host, error)
 					showPopup.set(true)
 				})
 			}),
@@ -100,14 +102,11 @@ export default defineComponent<FormComboboxProps>(
 			// instead of reaching into its DOM with closest('[role="option"]').
 			on(listbox, 'change', () => {
 				const optionValue = (listbox as any).value
-				if (!optionValue) return
+				if (optionValue == null) return
 				textbox.value = optionValue
-				textbox.checkValidity()
-				const msg = textbox.validationMessage ?? ''
 				batch(() => {
 					host.value = optionValue
-					error.set(msg)
-					host.setCustomValidity(msg)
+					relayValidity(textbox, host, error)
 					showPopup.set(false)
 					textbox.focus()
 				})

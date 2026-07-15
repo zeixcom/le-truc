@@ -3,6 +3,7 @@ import {
 	bindVisible,
 	createMemo,
 	defineComponent,
+	type FormAssociatedElement,
 } from '../../..'
 
 export type FormSpinbuttonProps = {
@@ -14,7 +15,7 @@ export type FormSpinbuttonProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-spinbutton': HTMLElement & FormSpinbuttonProps
+		'form-spinbutton': FormAssociatedElement & FormSpinbuttonProps
 	}
 }
 

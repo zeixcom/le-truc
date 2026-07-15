@@ -315,6 +315,45 @@ describe('managed formStateRestoreCallback', () => {
 		instance.formStateRestoreCallback({ custom: 'object' }, 'restore')
 		expect(instance.value).toBe('keep')
 	})
+
+	test('coerces restored string to number for number-valued components', () => {
+		const Ctor = defineComponent<{ value: number }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 0 })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+
+		// The browser restores what setFormValue submitted — a string "42".
+		// A number-valued component (e.g. form-spinbutton) must receive a
+		// number, not the raw string, or downstream arithmetic concatenates.
+		instance.formStateRestoreCallback('42', 'restore')
+		expect(instance.value).toBe(42)
+		expect(typeof instance.value).toBe('number')
+	})
+
+	test('re-parses restored string through a Parser initializer', () => {
+		const Ctor = defineComponent<{ value: boolean }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: asParser(v => v === 'true') })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+
+		// The restored string "true" must be re-parsed to boolean, not
+		// assigned as the string "true" (which is truthy but wrong type).
+		instance.formStateRestoreCallback('true', 'restore')
+		expect(instance.value).toBe(true)
+		expect(typeof instance.value).toBe('boolean')
+	})
 })
 
 /* === Managed formDisabledCallback === */
@@ -358,6 +397,39 @@ describe('managed formDisabledCallback', () => {
 
 		instance.formDisabledCallback(true)
 		expect(lastDisabled).toBe(true)
+	})
+
+	test('host.disabled stays consistent when the Slot delegate is replaced', () => {
+		// Regression: #createManagedDisabledProperty used to close over the raw
+		// backing State signal while the signals map held the Slot wrapping it.
+		// After pass() calls slot.replace(newSignal), host.disabled would read
+		// the stale original signal instead of the new delegate.
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+
+		// Writing via formDisabledCallback must update host.disabled
+		instance.formDisabledCallback(true)
+		expect(instance.disabled).toBe(true)
+
+		// Setting host.disabled must reflect to the attribute AND stay in sync
+		instance.disabled = false
+		expect(instance.disabled).toBe(false)
+		expect(instance.hasAttribute('disabled')).toBe(false)
+		instance.disabled = true
+		expect(instance.disabled).toBe(true)
+		expect(instance.hasAttribute('disabled')).toBe(true)
+
+		// After host.disabled = true, formDisabledCallback(false) must override it
+		instance.formDisabledCallback(false)
+		expect(instance.disabled).toBe(false)
 	})
 })
 
@@ -446,6 +518,68 @@ describe('native-parity host contract', () => {
 		expect(instance.willValidate).toBe(false)
 		expect(instance.form).toBe(internals.form)
 		expect(instance.validity.valid).toBe(false)
+	})
+
+	test('name reflects the name attribute', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+
+		// Absent → empty string (native parity: <input> returns '')
+		expect(instance.name).toBe('')
+
+		// Set via attribute
+		instance.setAttribute('name', 'email')
+		expect(instance.name).toBe('email')
+
+		// Set via property reflects to attribute
+		instance.name = 'username'
+		expect(instance.getAttribute('name')).toBe('username')
+		expect(instance.name).toBe('username')
+
+		// Setting to null removes the attribute
+		instance.name = null
+		expect(instance.hasAttribute('name')).toBe(false)
+		expect(instance.name).toBe('')
+	})
+
+	test('labels fallback returns empty list when internals is null', () => {
+		installFakeCustomElements(FakeHTMLElementNoInternals)
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		const instance = new Ctor() as any
+		expect(() => instance.connectedCallback()).not.toThrow()
+
+		// Must not throw — new NodeList() would throw TypeError: Illegal constructor
+		const labels = instance.labels
+		expect(labels).toBeDefined()
+		expect(labels.length).toBe(0)
+	})
+
+	test('form lifecycle callbacks are installed on the prototype', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+				return []
+			},
+			{ formAssociated: true },
+		)!
+		expect(typeof Ctor.prototype.formResetCallback).toBe('function')
+		expect(typeof Ctor.prototype.formStateRestoreCallback).toBe('function')
+		expect(typeof Ctor.prototype.formDisabledCallback).toBe('function')
 	})
 })
 
@@ -631,6 +765,21 @@ describe('non-form-associated components', () => {
 		const internals = instance.attachInternals() as FakeElementInternals
 		// No managed sync — formValue stays null
 		expect(internals.formValue).toBe(null)
+	})
+
+	test('form lifecycle callbacks are not on the prototype', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+				return []
+			},
+		)!
+		// The three form lifecycle callbacks live only on form-associated
+		// prototypes — not on every component's prototype.
+		expect(Ctor.prototype.formResetCallback).toBeUndefined()
+		expect(Ctor.prototype.formStateRestoreCallback).toBeUndefined()
+		expect(Ctor.prototype.formDisabledCallback).toBeUndefined()
 	})
 })
 

@@ -7,6 +7,7 @@ import {
 	defineComponent,
 	each,
 	escapeHTML,
+	type FormAssociatedElement,
 	schedule,
 } from '../../..'
 import {
@@ -43,7 +44,7 @@ export type FormListboxProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-listbox': HTMLElement & FormListboxProps
+		'form-listbox': FormAssociatedElement & FormListboxProps
 	}
 }
 

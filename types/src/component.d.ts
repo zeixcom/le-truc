@@ -73,7 +73,10 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
     /**
      * The `ElementInternals` object, or `null` if `attachInternals()` failed
      * (pre-upgrade / parser-ordering edge case). Use imperatively inside
-     * `watch()` — e.g. `watch('value', v => { internals?.setFormValue(v) })`.
+     * `watch()` for typed validity flags or custom `:state()` pseudo-classes
+     * — e.g. `watch('value', v => { internals?.setValidity({ rangeOverflow: v > max }, msg) })`.
+     * Note: form value sync (`setFormValue`) is managed automatically —
+     * do NOT call `internals?.setFormValue(v)` from a `watch('value', …)`.
      * The optional chaining is the graceful-degradation guard.
      */
     internals: ElementInternals | null;
@@ -89,11 +92,17 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  * with `host` typed as `FormAssociatedElement & P` (the native-parity members)
  * and `watch`/`on`/`pass` accepting the managed `disabled` reactive prop in
  * addition to the author's `P`.
+ *
+ * `expose` is deliberately typed over `Initializers<P>` (not the widened
+ * `P & { disabled: boolean }`) so `expose({ disabled: … })` is a type error —
+ * `disabled` is managed by the library and `expose()` throws
+ * `InvalidPropertyNameError` for it at runtime.
  */
 type FormFactoryContext<P extends ComponentProps> = Omit<FactoryContext<P & {
     disabled: boolean;
-}>, 'host'> & {
+}>, 'host' | 'expose'> & {
     host: FormAssociatedElement & P;
+    expose: (props: Initializers<P>) => void;
 };
 /**
  * Define and register a reactive custom element using the v2.x factory form.

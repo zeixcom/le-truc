@@ -23,7 +23,10 @@ import {
 } from './helpers/context'
 import { type ElementQueries, makeElementQueries } from './helpers/dom'
 import { makeOn, type OnHelper } from './helpers/events'
-import { MANAGED_FORM_MEMBERS, managedSetCustomValidity } from './helpers/form'
+import {
+	installFormAssociatedMembers,
+	MANAGED_FORM_MEMBERS,
+} from './helpers/form'
 import {
 	activateResult,
 	type FactoryResult,
@@ -45,21 +48,6 @@ import {
 import { DEV_MODE, elementName } from './util'
 
 /* === Types === */
-
-/** Fallback ValidityState for when internals is null (attachInternals failed). */
-const EMPTY_VALIDITY_STATE: ValidityState = {
-	valueMissing: false,
-	typeMismatch: false,
-	patternMismatch: false,
-	tooLong: false,
-	tooShort: false,
-	rangeUnderflow: false,
-	rangeOverflow: false,
-	stepMismatch: false,
-	badInput: false,
-	customError: false,
-	valid: true,
-} as ValidityState
 
 /**
  * Any value that `#setAccessor` can turn into a signal:
@@ -138,7 +126,10 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 	/**
 	 * The `ElementInternals` object, or `null` if `attachInternals()` failed
 	 * (pre-upgrade / parser-ordering edge case). Use imperatively inside
-	 * `watch()` — e.g. `watch('value', v => { internals?.setFormValue(v) })`.
+	 * `watch()` for typed validity flags or custom `:state()` pseudo-classes
+	 * — e.g. `watch('value', v => { internals?.setValidity({ rangeOverflow: v > max }, msg) })`.
+	 * Note: form value sync (`setFormValue`) is managed automatically —
+	 * do NOT call `internals?.setFormValue(v)` from a `watch('value', …)`.
 	 * The optional chaining is the graceful-degradation guard.
 	 */
 	internals: ElementInternals | null
@@ -155,12 +146,18 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  * with `host` typed as `FormAssociatedElement & P` (the native-parity members)
  * and `watch`/`on`/`pass` accepting the managed `disabled` reactive prop in
  * addition to the author's `P`.
+ *
+ * `expose` is deliberately typed over `Initializers<P>` (not the widened
+ * `P & { disabled: boolean }`) so `expose({ disabled: … })` is a type error —
+ * `disabled` is managed by the library and `expose()` throws
+ * `InvalidPropertyNameError` for it at runtime.
  */
 type FormFactoryContext<P extends ComponentProps> = Omit<
 	FactoryContext<P & { disabled: boolean }>,
-	'host'
+	'host' | 'expose'
 > & {
 	host: FormAssociatedElement & P
+	expose: (props: Initializers<P>) => void
 }
 
 /* === Exported Functions === */
@@ -310,45 +307,6 @@ function defineComponent<P extends ComponentProps>(
 			if (isFunction(this.#cleanup)) this.#cleanup()
 		}
 
-		/* === Form-associated custom element lifecycle callbacks === */
-
-		formResetCallback() {
-			// Managed reset: restore `value` to its default by re-running the
-			// retained initializer — re-parse the current `value` attribute for a
-			// Parser (native defaultValue semantics), or restore a static value.
-			// No-op if signals are not yet initialized or no value initializer
-			// was retained (e.g. value was pre-set on the instance before upgrade).
-			const initializer = initialValueInitializers.get(this)
-			if (initializer === undefined) return
-			if (isParser(initializer)) {
-				const parse = initializer as (
-					v: string | null | undefined,
-				) => NonNullable<unknown>
-				const result = parse(this.getAttribute('value'))
-				if (result != null) (this as any).value = result
-			} else if (!isSignal(initializer) && !isFunction(initializer)) {
-				;(this as any).value = initializer
-			}
-		}
-
-		formStateRestoreCallback(state: unknown, _mode: string) {
-			// Managed state restore: if the restored state is a string, assign it
-			// to `value`. Non-string states (File/FormData, custom two-argument
-			// setFormValue states) are not managed — deferred until a concrete
-			// need surfaces.
-			if (typeof state === 'string') (this as any).value = state
-		}
-
-		formDisabledCallback(disabled: boolean) {
-			// Managed: write the effective disabled state into the `disabled`
-			// signal. Covers both own `disabled` attribute and ancestor
-			// `<fieldset disabled>` (which never touches the element's attribute).
-			const signals = getSignals(this)
-			const slot = signals['disabled']
-			if (isSlot(slot)) slot.set(disabled)
-			else (this as any).disabled = disabled
-		}
-
 		/**
 		 * Build the managed form-control value-sync effect descriptor. Returns an
 		 * `EffectDescriptor` (a thunk) that activates after dependency resolution
@@ -373,20 +331,23 @@ function defineComponent<P extends ComponentProps>(
 		 * Create the managed `disabled` reactive property on this form-associated
 		 * host. Slot-backed so `formDisabledCallback` can write the effective
 		 * disabled state (including `<fieldset disabled>` inheritance). The
-		 * property setter reflects to the `disabled` content attribute so FACE
+		 * property getter and setter go through the Slot (not the raw backing
+		 * signal) so that `pass()` replacing the Slot's delegate stays
+		 * consistent — `host.disabled`, `watch('disabled')`, and
+		 * `formDisabledCallback` all read and write the same source of truth.
+		 * The setter also reflects to the `disabled` content attribute so FACE
 		 * gives native `:disabled` / barred-from-validation for free.
 		 */
 		#createManagedDisabledProperty(): void {
 			const initial = this.hasAttribute('disabled')
-			const signal = createState(initial)
-			const slot = createSlot(signal)
+			const slot = createSlot(createState(initial))
 			const signals = getSignals(this)
 			signals['disabled'] = slot
 			const host = this as unknown as HTMLElement
 			Object.defineProperty(this, 'disabled', {
-				get: () => signal.get(),
+				get: () => slot.get(),
 				set: (v: boolean) => {
-					signal.set(v)
+					slot.set(v)
 					if (v) host.setAttribute('disabled', '')
 					else host.removeAttribute('disabled')
 				},
@@ -490,75 +451,14 @@ function defineComponent<P extends ComponentProps>(
 		}
 	}
 
-	// Install the native-parity host contract on the prototype only for
-	// form-associated components. Defining these unconditionally would shadow
-	// same-named reactive props on non-form-associated components (the
-	// `prop in this` guard would silently skip them).
+	// Install the native-parity host contract and managed form lifecycle
+	// callbacks on the prototype only for form-associated components. The
+	// descriptors and reserved-name set are driven from one table in
+	// helpers/form.ts — see installFormAssociatedMembers. Defining these
+	// unconditionally would shadow same-named reactive props on non-form-
+	// associated components (the `prop in this` guard would silently skip them).
 	if (formAssociated) {
-		const proto = Truc.prototype as any
-		Object.defineProperties(proto, {
-			form: {
-				get(this: HTMLElement) {
-					return internalsMap.get(this)?.form ?? null
-				},
-				enumerable: true,
-				configurable: true,
-			},
-			labels: {
-				get(this: HTMLElement) {
-					return internalsMap.get(this)?.labels ?? new NodeList()
-				},
-				enumerable: true,
-				configurable: true,
-			},
-			validity: {
-				get(this: HTMLElement) {
-					return internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE
-				},
-				enumerable: true,
-				configurable: true,
-			},
-			validationMessage: {
-				get(this: HTMLElement) {
-					return internalsMap.get(this)?.validationMessage ?? ''
-				},
-				enumerable: true,
-				configurable: true,
-			},
-			willValidate: {
-				get(this: HTMLElement) {
-					return internalsMap.get(this)?.willValidate ?? false
-				},
-				enumerable: true,
-				configurable: true,
-			},
-			checkValidity: {
-				value(this: HTMLElement) {
-					return internalsMap.get(this)?.checkValidity() ?? true
-				},
-				enumerable: true,
-				configurable: true,
-				writable: true,
-			},
-			reportValidity: {
-				value(this: HTMLElement) {
-					return internalsMap.get(this)?.reportValidity() ?? true
-				},
-				enumerable: true,
-				configurable: true,
-				writable: true,
-			},
-			setCustomValidity: {
-				value(this: HTMLElement, message: string) {
-					const internals = internalsMap.get(this)
-					if (internals)
-						managedSetCustomValidity(internals, this as HTMLElement, message)
-				},
-				enumerable: true,
-				configurable: true,
-				writable: true,
-			},
-		})
+		installFormAssociatedMembers(Truc.prototype as unknown as HTMLElement)
 	}
 
 	customElements.define(name, Truc)

@@ -144,14 +144,15 @@ form-colorgraph {
 			margin: 0;
 		}
 
-		&[aria-invalid="true"] {
-			box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
-		}
-
 		&::placeholder {
 			color: var(--color-text);
 			opacity: var(--opacity-translucent);
 		}
+	}
+
+	/* Native validity styling — replaces the old aria-invalid attribute hook. */
+	&:user-invalid input {
+		box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
 	}
 
 	.input {

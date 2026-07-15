@@ -8,6 +8,7 @@ import {
 	defineMethod,
 	type FormAssociatedElement,
 } from '../../..'
+import { relayValidity } from '../../_common/relayValidity'
 
 export type FormTextboxProps = {
 	/** Current text value. Synced with the native input or textarea. */
@@ -80,13 +81,10 @@ export default defineComponent<FormTextboxProps>(
 		})
 
 		return [
-			on(textbox, 'change', () => {
-				textbox.checkValidity()
-				const msg = textbox.validationMessage
-				error.set(msg)
-				host.setCustomValidity(msg)
-				return { value: textbox.value }
-			}),
+		on(textbox, 'change', () => {
+			relayValidity(textbox, host, error)
+			return { value: textbox.value }
+		}),
 			on(textbox, 'input', () => {
 				length.set(textbox.value.length)
 			}),

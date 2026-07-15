@@ -2502,25 +2502,6 @@ var makeOn = (host) => {
   return on;
 };
 
-// src/helpers/form.ts
-var MANAGED_FORM_MEMBERS = new Set([
-  "form",
-  "name",
-  "labels",
-  "validity",
-  "validationMessage",
-  "willValidate",
-  "checkValidity",
-  "reportValidity",
-  "setCustomValidity",
-  "disabled"
-]);
-var FOCUSABLE_FORM_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
-var resolveAnchor = (host) => host.querySelector(FOCUSABLE_FORM_CONTROL_SELECTOR) ?? host;
-var managedSetCustomValidity = (internals, host, message) => {
-  internals.setValidity({ customError: !!message }, message || undefined, resolveAnchor(host));
-};
-
 // src/types.ts
 var PARSER_BRAND = Symbol("parser");
 var METHOD_BRAND = Symbol("method");
@@ -2542,7 +2523,8 @@ var isReservedWord = (name) => RESERVED_WORDS.has(name);
 var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
 var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 
-// src/component.ts
+// src/helpers/form.ts
+var EMPTY_NODELIST = typeof document !== "undefined" ? document.createDocumentFragment().childNodes : [];
 var EMPTY_VALIDITY_STATE = {
   valueMissing: false,
   typeMismatch: false,
@@ -2556,6 +2538,151 @@ var EMPTY_VALIDITY_STATE = {
   customError: false,
   valid: true
 };
+var HOST_CONTRACT_DESCRIPTORS = {
+  form: {
+    get() {
+      return internalsMap.get(this)?.form ?? null;
+    },
+    enumerable: true,
+    configurable: true
+  },
+  name: {
+    get() {
+      return this.getAttribute("name") ?? "";
+    },
+    set(v) {
+      if (v == null)
+        this.removeAttribute("name");
+      else
+        this.setAttribute("name", v);
+    },
+    enumerable: true,
+    configurable: true
+  },
+  labels: {
+    get() {
+      return internalsMap.get(this)?.labels ?? EMPTY_NODELIST;
+    },
+    enumerable: true,
+    configurable: true
+  },
+  validity: {
+    get() {
+      return internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE;
+    },
+    enumerable: true,
+    configurable: true
+  },
+  validationMessage: {
+    get() {
+      return internalsMap.get(this)?.validationMessage ?? "";
+    },
+    enumerable: true,
+    configurable: true
+  },
+  willValidate: {
+    get() {
+      return internalsMap.get(this)?.willValidate ?? false;
+    },
+    enumerable: true,
+    configurable: true
+  },
+  checkValidity: {
+    value() {
+      return internalsMap.get(this)?.checkValidity() ?? true;
+    },
+    enumerable: true,
+    configurable: true,
+    writable: true
+  },
+  reportValidity: {
+    value() {
+      return internalsMap.get(this)?.reportValidity() ?? true;
+    },
+    enumerable: true,
+    configurable: true,
+    writable: true
+  },
+  setCustomValidity: {
+    value(message) {
+      const internals = internalsMap.get(this);
+      if (internals)
+        managedSetCustomValidity(internals, this, message);
+    },
+    enumerable: true,
+    configurable: true,
+    writable: true
+  }
+};
+var MANAGED_FORM_MEMBERS = new Set([
+  ...Object.keys(HOST_CONTRACT_DESCRIPTORS),
+  "disabled"
+]);
+var FOCUSABLE_FORM_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
+var resolveAnchor = (host) => host.querySelector(FOCUSABLE_FORM_CONTROL_SELECTOR) ?? host;
+var managedSetCustomValidity = (internals, host, message) => {
+  internals.setValidity({ customError: !!message }, message || undefined, resolveAnchor(host));
+};
+var formResetCallback = function() {
+  const initializer = initialValueInitializers.get(this);
+  if (initializer === undefined)
+    return;
+  if (isParser(initializer)) {
+    const parse = initializer;
+    const result = parse(this.getAttribute("value"));
+    if (result != null)
+      this.value = result;
+  } else if (!isSignal(initializer) && !isFunction(initializer)) {
+    this.value = initializer;
+  }
+};
+var formStateRestoreCallback = function(state, _mode) {
+  if (typeof state !== "string")
+    return;
+  const initializer = initialValueInitializers.get(this);
+  if (isParser(initializer)) {
+    const parse = initializer;
+    const result = parse(state);
+    if (result != null)
+      this.value = result;
+  } else if (typeof this.value === "number") {
+    const n = Number(state);
+    if (!Number.isNaN(n))
+      this.value = n;
+  } else {
+    this.value = state;
+  }
+};
+var formDisabledCallback = function(disabled) {
+  const signals = getSignals(this);
+  const slot = signals["disabled"];
+  if (isSlot(slot))
+    slot.set(disabled);
+  else
+    this.disabled = disabled;
+};
+var installFormAssociatedMembers = (proto) => {
+  Object.defineProperties(proto, HOST_CONTRACT_DESCRIPTORS);
+  Object.defineProperties(proto, {
+    formResetCallback: {
+      value: formResetCallback,
+      writable: true,
+      configurable: true
+    },
+    formStateRestoreCallback: {
+      value: formStateRestoreCallback,
+      writable: true,
+      configurable: true
+    },
+    formDisabledCallback: {
+      value: formDisabledCallback,
+      writable: true,
+      configurable: true
+    }
+  });
+};
+
+// src/component.ts
 function defineComponent(name, factory, options) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
@@ -2630,31 +2757,6 @@ function defineComponent(name, factory, options) {
       if (isFunction(this.#cleanup))
         this.#cleanup();
     }
-    formResetCallback() {
-      const initializer = initialValueInitializers.get(this);
-      if (initializer === undefined)
-        return;
-      if (isParser(initializer)) {
-        const parse = initializer;
-        const result = parse(this.getAttribute("value"));
-        if (result != null)
-          this.value = result;
-      } else if (!isSignal(initializer) && !isFunction(initializer)) {
-        this.value = initializer;
-      }
-    }
-    formStateRestoreCallback(state, _mode) {
-      if (typeof state === "string")
-        this.value = state;
-    }
-    formDisabledCallback(disabled) {
-      const signals = getSignals(this);
-      const slot = signals["disabled"];
-      if (isSlot(slot))
-        slot.set(disabled);
-      else
-        this.disabled = disabled;
-    }
     #managedValueSyncDescriptor(internals) {
       const instance = this;
       return () => createEffect(() => {
@@ -2664,15 +2766,14 @@ function defineComponent(name, factory, options) {
     }
     #createManagedDisabledProperty() {
       const initial = this.hasAttribute("disabled");
-      const signal = createState(initial);
-      const slot = createSlot(signal);
+      const slot = createSlot(createState(initial));
       const signals = getSignals(this);
       signals["disabled"] = slot;
       const host = this;
       Object.defineProperty(this, "disabled", {
-        get: () => signal.get(),
+        get: () => slot.get(),
         set: (v) => {
-          signal.set(v);
+          slot.set(v);
           if (v)
             host.setAttribute("disabled", "");
           else
@@ -2731,70 +2832,7 @@ function defineComponent(name, factory, options) {
     }
   }
   if (formAssociated) {
-    const proto = Truc.prototype;
-    Object.defineProperties(proto, {
-      form: {
-        get() {
-          return internalsMap.get(this)?.form ?? null;
-        },
-        enumerable: true,
-        configurable: true
-      },
-      labels: {
-        get() {
-          return internalsMap.get(this)?.labels ?? new NodeList;
-        },
-        enumerable: true,
-        configurable: true
-      },
-      validity: {
-        get() {
-          return internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE;
-        },
-        enumerable: true,
-        configurable: true
-      },
-      validationMessage: {
-        get() {
-          return internalsMap.get(this)?.validationMessage ?? "";
-        },
-        enumerable: true,
-        configurable: true
-      },
-      willValidate: {
-        get() {
-          return internalsMap.get(this)?.willValidate ?? false;
-        },
-        enumerable: true,
-        configurable: true
-      },
-      checkValidity: {
-        value() {
-          return internalsMap.get(this)?.checkValidity() ?? true;
-        },
-        enumerable: true,
-        configurable: true,
-        writable: true
-      },
-      reportValidity: {
-        value() {
-          return internalsMap.get(this)?.reportValidity() ?? true;
-        },
-        enumerable: true,
-        configurable: true,
-        writable: true
-      },
-      setCustomValidity: {
-        value(message) {
-          const internals = internalsMap.get(this);
-          if (internals)
-            managedSetCustomValidity(internals, this, message);
-        },
-        enumerable: true,
-        configurable: true,
-        writable: true
-      }
-    });
+    installFormAssociatedMembers(Truc.prototype);
   }
   customElements.define(name, Truc);
   return customElements.get(name);
