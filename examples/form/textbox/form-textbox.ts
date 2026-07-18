@@ -81,10 +81,10 @@ export default defineComponent<FormTextboxProps>(
 		})
 
 		return [
-		on(textbox, 'change', () => {
-			relayValidity(textbox, host, error)
-			return { value: textbox.value }
-		}),
+			on(textbox, 'change', () => {
+				relayValidity(textbox, host, error)
+				return { value: textbox.value }
+			}),
 			on(textbox, 'input', () => {
 				length.set(textbox.value.length)
 			}),

@@ -1912,6 +1912,14 @@ var bindProperty = (object, key) => (value) => {
 var bindClass = (element, token) => (value) => {
   element.classList.toggle(token, Boolean(value));
 };
+var bindState = (internals, token) => (value) => {
+  if (!internals)
+    return;
+  if (value)
+    internals.states.add(token);
+  else
+    internals.states.delete(token);
+};
 var bindVisible = (element) => (value) => {
   element.hidden = !value;
 };
@@ -2939,6 +2947,7 @@ export {
   bindVisible,
   bindText,
   bindStyle,
+  bindState,
   bindProperty,
   bindClass,
   bindAttribute,

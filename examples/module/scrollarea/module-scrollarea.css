@@ -29,11 +29,11 @@ module-scrollarea {
 		background: linear-gradient(0deg, var(--color-shadow), transparent);
 	}
 
-	&.overflow-start::before {
+	&:state(overflow-start)::before {
 		opacity: 1;
 	}
 
-	&.overflow-end::after {
+	&:state(overflow-end)::after {
 		opacity: 1;
 	}
 

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { converter, formatCss, type Oklch } from 'culori/fn'
+import { converter, formatCss, type Oklch } from 'culori'
 
 /*
  * FORM-COLORGRAPH COMPONENT TESTS

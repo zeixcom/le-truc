@@ -1,9 +1,4 @@
-import {
-	clampChroma,
-	formatCss,
-	inGamut,
-	type Oklch,
-} from 'culori/fn'
+import { clampChroma, formatCss, inGamut, type Oklch } from 'culori/fn'
 import {
 	asString,
 	batch,

@@ -126,8 +126,10 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 	/**
 	 * The `ElementInternals` object, or `null` if `attachInternals()` failed
 	 * (pre-upgrade / parser-ordering edge case). Use imperatively inside
-	 * `watch()` for typed validity flags or custom `:state()` pseudo-classes
-	 * — e.g. `watch('value', v => { internals?.setValidity({ rangeOverflow: v > max }, msg) })`.
+	 * `watch()` for typed validity flags
+	 * — e.g. `watch('value', v => { internals?.setValidity({ rangeOverflow: v > max }, msg) })` —
+	 * or with `bindState()` for custom `:state()` pseudo-classes
+	 * — e.g. `watch(overflowEnd, bindState(internals, 'overflow-end'))`.
 	 * Note: form value sync (`setFormValue`) is managed automatically —
 	 * do NOT call `internals?.setFormValue(v)` from a `watch('value', …)`.
 	 * The optional chaining is the graceful-degradation guard.

@@ -101,8 +101,7 @@ export default defineComponent<FormComboboxProps>(
 			// Listen to listbox's host change event (native-parity commit event)
 			// instead of reaching into its DOM with closest('[role="option"]').
 			on(listbox, 'change', () => {
-				const optionValue = (listbox as any).value
-				if (optionValue == null) return
+				const optionValue = listbox.value
 				textbox.value = optionValue
 				batch(() => {
 					host.value = optionValue

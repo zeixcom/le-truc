@@ -81,6 +81,7 @@ export {
 	bindAttribute,
 	bindClass,
 	bindProperty,
+	bindState,
 	bindStyle,
 	bindText,
 	bindVisible,

@@ -1,4 +1,4 @@
-import { batch, bindClass, createState, defineComponent } from '../../..'
+import { batch, bindState, createState, defineComponent } from '../../..'
 
 const MIN_INTERSECTION_RATIO = 0
 const MAX_INTERSECTION_RATIO = 0.99 // ignore rounding errors of fraction pixels
@@ -20,8 +20,8 @@ const observeOverflow =
 			([entry]) => {
 				if (!entry) return
 				if (
-					entry.intersectionRatio > MIN_INTERSECTION_RATIO
-					&& entry.intersectionRatio < MAX_INTERSECTION_RATIO
+					entry.intersectionRatio > MIN_INTERSECTION_RATIO &&
+					entry.intersectionRatio < MAX_INTERSECTION_RATIO
 				)
 					overflowCallback()
 				else batch(noOverflowCallback)
@@ -38,54 +38,57 @@ const observeOverflow =
 	}
 
 /**
- * Adds overflow indicator classes (`overflow`, `overflow-start`, `overflow-end`) to a scrollable container.
- * Use it when you need to show scroll affordances — provides reactive CSS classes
- * that update as the user scrolls, useful for custom scroll UI that should
- * respect reduced-motion accessibility preferences.
+ * Adds overflow indicator custom states (`overflow`, `overflow-start`, `overflow-end`) to a scrollable container.
+ * Use it when you need to show scroll affordances — provides component-owned
+ * `:state()` pseudo-classes (via ElementInternals) that update as the user scrolls,
+ * useful for custom scroll UI that should respect reduced-motion accessibility preferences.
  * Set the `orientation` attribute to `horizontal` for horizontal scroll detection.
  * @demo {./docs/examples/module-scrollarea.html} Interactive preview and usage examples */
-export default defineComponent('module-scrollarea', ({ host, on, watch }) => {
-	const child = host.firstElementChild
-	if (!child) return []
+export default defineComponent(
+	'module-scrollarea',
+	({ first, host, internals, on, watch }) => {
+		const child = host.firstElementChild
+		if (!child) return []
 
-	const overflowStart = createState(false)
-	const overflowEnd = createState(false)
-	const hasOverflow = () => overflowStart.get() || overflowEnd.get()
+		const overflowStart = createState(false)
+		const overflowEnd = createState(false)
+		const isHorizontal = host.getAttribute('orientation') === 'horizontal'
+		const hasOverflow = () => overflowStart.get() || overflowEnd.get()
 
-	const scrollCallback =
-		host.getAttribute('orientation') === 'horizontal'
-			? () => {
-					overflowStart.set(host.scrollLeft > 0)
-					overflowEnd.set(host.scrollLeft < host.scrollWidth - host.offsetWidth)
-				}
-			: () => {
-					overflowStart.set(host.scrollTop > 0)
-					overflowEnd.set(
-						host.scrollTop < host.scrollHeight - host.offsetHeight,
-					)
-				}
+		const scrollCallback =
+			isHorizontal
+				? () => {
+						overflowStart.set(host.scrollLeft > 0)
+						overflowEnd.set(
+							host.scrollLeft < host.scrollWidth - host.offsetWidth,
+						)
+					}
+				: () => {
+						overflowStart.set(host.scrollTop > 0)
+						overflowEnd.set(
+							host.scrollTop < host.scrollHeight - host.offsetHeight,
+						)
+					}
 
-	return [
-		on(host, 'scroll', () => {
-			if (hasOverflow()) batch(scrollCallback)
-		}),
+		return [
+			on(host, 'scroll', () => {
+				if (hasOverflow()) batch(scrollCallback)
+			}),
 
-		watch(
-			() => overflowStart.get() || overflowEnd.get(),
-			bindClass(host, 'overflow'),
-		),
-		watch(overflowStart, bindClass(host, 'overflow-start')),
-		watch(overflowEnd, bindClass(host, 'overflow-end')),
-		() =>
-			observeOverflow(
-				child,
-				() => {
-					overflowEnd.set(true)
-				},
-				() => {
-					overflowStart.set(false)
-					overflowEnd.set(false)
-				},
-			)(host),
-	]
-})
+			watch(hasOverflow, bindState(internals, 'overflow')),
+			watch(overflowStart, bindState(internals, 'overflow-start')),
+			watch(overflowEnd, bindState(internals, 'overflow-end')),
+			() =>
+				observeOverflow(
+					child,
+					() => {
+						overflowEnd.set(true)
+					},
+					() => {
+						overflowStart.set(false)
+						overflowEnd.set(false)
+					},
+				)(host),
+		]
+	},
+)

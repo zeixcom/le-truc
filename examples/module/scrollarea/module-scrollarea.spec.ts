@@ -1,37 +1,35 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Locator, test } from '@playwright/test'
 
 /**
- * Helper function to wait for CSS classes to be applied reliably across browsers.
- * WebKit may have timing delays with IntersectionObserver and class updates.
+ * Check whether a custom state (ElementInternals `states`) is set on the
+ * element, via the `:state()` pseudo-class. Evaluated in the browser because
+ * Playwright's own selector engine does not parse `:state()`.
  */
-async function waitForClasses(
-	element: any,
-	expectedClasses: string[],
+function hasState(element: Locator, state: string): Promise<boolean> {
+	return element.evaluate(
+		(el: Element, s: string) => el.matches(`:state(${s})`),
+		state,
+	)
+}
+
+/**
+ * Assert a custom state with polling — the state updates asynchronously after
+ * IntersectionObserver / scroll callbacks, and WebKit may have timing delays.
+ */
+async function expectState(
+	element: Locator,
+	state: string,
+	expected: boolean,
 	timeout = 1000,
 ) {
-	const startTime = Date.now()
-
-	while (Date.now() - startTime < timeout) {
-		const className = await element.getAttribute('class')
-		const hasAllClasses = expectedClasses.every(
-			cls => className && className.includes(cls),
-		)
-
-		if (hasAllClasses) {
-			// Give extra time for pseudo-elements to update
-			await new Promise(resolve => setTimeout(resolve, 50))
-			return
-		}
-
-		await new Promise(resolve => setTimeout(resolve, 50))
-	}
+	await expect.poll(() => hasState(element, state), { timeout }).toBe(expected)
 }
 
 /**
  * Helper to get pseudo-element opacity with fallback for WebKit.
  */
 async function getPseudoElementOpacity(
-	element: any,
+	element: Locator,
 	pseudoElement: '::before' | '::after',
 ): Promise<number> {
 	try {
@@ -88,56 +86,54 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#empty-scrollarea')
 			await expect(scrollarea).toBeVisible()
 
-			// Should not have overflow classes when empty
-			await expect(scrollarea).not.toHaveClass(/overflow/)
+			// Should not have overflow states when empty
+			await expectState(scrollarea, 'overflow', false)
 		})
 	})
 
 	test.describe('Overflow Detection - Vertical', () => {
-		test('detects vertical overflow and adds appropriate classes', async ({
+		test('detects vertical overflow and sets appropriate states', async ({
 			page,
 		}) => {
 			const scrollarea = page.locator('#default-vertical')
 
-			// Should have overflow classes when content overflows
-			await expect(scrollarea).toHaveClass(/overflow/)
-			await expect(scrollarea).toHaveClass(/overflow-end/)
+			// Should have overflow states when content overflows
+			await expectState(scrollarea, 'overflow', true)
+			await expectState(scrollarea, 'overflow-end', true)
 
 			// Should not have overflow-start initially (at top)
-			await expect(scrollarea).not.toHaveClass(/overflow-start/)
+			await expectState(scrollarea, 'overflow-start', false)
 		})
 
-		test('does not add overflow classes when content fits', async ({
-			page,
-		}) => {
+		test('does not set overflow states when content fits', async ({ page }) => {
 			const scrollarea = page.locator('#no-overflow-vertical')
 
-			// Should not have any overflow classes
-			await expect(scrollarea).not.toHaveClass(/overflow/)
-			await expect(scrollarea).not.toHaveClass(/overflow-start/)
-			await expect(scrollarea).not.toHaveClass(/overflow-end/)
+			// Should not have any overflow states
+			await expectState(scrollarea, 'overflow', false)
+			await expectState(scrollarea, 'overflow-start', false)
+			await expectState(scrollarea, 'overflow-end', false)
 		})
 
-		test('updates overflow classes on scroll in vertical direction', async ({
+		test('updates overflow states on scroll in vertical direction', async ({
 			page,
 		}) => {
 			const scrollarea = page.locator('#default-vertical')
 
-			await expect(scrollarea).toHaveClass(/overflow-end/)
-			await expect(scrollarea).not.toHaveClass(/overflow-start/)
+			await expectState(scrollarea, 'overflow-end', true)
+			await expectState(scrollarea, 'overflow-start', false)
 
 			// Scroll down a bit
 			await scrollarea.evaluate(el => {
 				el.scrollTop = 50
 			})
 
-			// Should now have both overflow classes
-			await expect(scrollarea).toHaveClass(/overflow/)
-			await expect(scrollarea).toHaveClass(/overflow-start/)
-			await expect(scrollarea).toHaveClass(/overflow-end/)
+			// Should now have both overflow states
+			await expectState(scrollarea, 'overflow', true)
+			await expectState(scrollarea, 'overflow-start', true)
+			await expectState(scrollarea, 'overflow-end', true)
 		})
 
-		test('removes overflow-end class when scrolled to bottom', async ({
+		test('removes overflow-end state when scrolled to bottom', async ({
 			page,
 			browserName,
 		}) => {
@@ -153,13 +149,13 @@ test.describe('module-scrollarea component', () => {
 			})
 
 			// Should have overflow-start but not overflow-end
-			await expect(scrollarea).toHaveClass(/overflow-start/)
-			await expect(scrollarea).not.toHaveClass(/overflow-end/)
+			await expectState(scrollarea, 'overflow-start', true)
+			await expectState(scrollarea, 'overflow-end', false)
 		})
 	})
 
 	test.describe('Overflow Detection - Horizontal', () => {
-		test('detects horizontal overflow and adds appropriate classes', async ({
+		test('detects horizontal overflow and sets appropriate states', async ({
 			page,
 		}) => {
 			const scrollarea = page.locator('#horizontal-overflow')
@@ -170,22 +166,20 @@ test.describe('module-scrollarea component', () => {
 				return htmlEl.scrollWidth > htmlEl.clientWidth
 			})
 
-			// Test the actual overflow measurement (more reliable than CSS classes)
+			// Test the actual overflow measurement (more reliable than CSS states)
 			expect(hasOverflow).toBe(true)
 
-			// Check for overflow classes if they exist (Firefox may not apply them reliably)
-			const classesApplied = await scrollarea.evaluate(el =>
-				el.className.includes('overflow'),
-			)
+			// Check for overflow states if they exist (Firefox may not apply them reliably)
+			const statesApplied = await hasState(scrollarea, 'overflow')
 
-			if (classesApplied) {
-				await expect(scrollarea).toHaveClass(/overflow/)
-				await expect(scrollarea).toHaveClass(/overflow-end/)
-				await expect(scrollarea).not.toHaveClass(/overflow-start/)
+			if (statesApplied) {
+				await expectState(scrollarea, 'overflow', true)
+				await expectState(scrollarea, 'overflow-end', true)
+				await expectState(scrollarea, 'overflow-start', false)
 			}
 		})
 
-		test('does not add overflow classes when content fits horizontally', async ({
+		test('does not set overflow states when content fits horizontally', async ({
 			page,
 		}) => {
 			const scrollarea = page.locator('#no-overflow-horizontal')
@@ -199,11 +193,11 @@ test.describe('module-scrollarea component', () => {
 				}
 			})
 
-			// Test based on actual measurements (component may be slow to update classes)
+			// Test based on actual measurements (component may be slow to update states)
 			expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth)
 		})
 
-		test('updates overflow classes on horizontal scroll', async ({
+		test('updates overflow states on horizontal scroll', async ({
 			page,
 			browserName,
 		}) => {
@@ -222,7 +216,7 @@ test.describe('module-scrollarea component', () => {
 				return
 			}
 
-			// Test actual scroll behavior instead of just classes
+			// Test actual scroll behavior instead of just states
 			const initialScrollLeft = await scrollarea.evaluate(el => el.scrollLeft)
 			expect(initialScrollLeft).toBe(0)
 
@@ -235,12 +229,10 @@ test.describe('module-scrollarea component', () => {
 			const newScrollLeft = await scrollarea.evaluate(el => el.scrollLeft)
 			expect(newScrollLeft).toBeGreaterThan(0)
 
-			// Check for classes if they're supported in this browser
-			const hasClasses = await scrollarea.evaluate(el =>
-				el.className.includes('overflow'),
-			)
-			if (hasClasses) {
-				await expect(scrollarea).toHaveClass(/overflow-start/)
+			// Check for states if they're supported in this browser
+			const statesApplied = await hasState(scrollarea, 'overflow')
+			if (statesApplied) {
+				await expectState(scrollarea, 'overflow-start', true)
 			}
 		})
 
@@ -282,26 +274,17 @@ test.describe('module-scrollarea component', () => {
 		}) => {
 			const scrollarea = page.locator('#default-vertical')
 
-			// Wait for overflow detection and classes to be applied
-			await waitForClasses(scrollarea, ['overflow', 'overflow-end'])
+			// Wait for overflow detection and states to be applied
+			await expectState(scrollarea, 'overflow', true)
+			await expectState(scrollarea, 'overflow-end', true)
+			await expectState(scrollarea, 'overflow-start', false)
 
-			// Check that overflow classes are properly set
-			await expect(scrollarea).toHaveClass(/overflow/)
-			await expect(scrollarea).toHaveClass(/overflow-end/)
-			await expect(scrollarea).not.toHaveClass(/overflow-start/)
-
-			// Try to check pseudo-elements (may not work in all WebKit versions)
-			const afterOpacity = await getPseudoElementOpacity(scrollarea, '::after')
-			const beforeOpacity = await getPseudoElementOpacity(
-				scrollarea,
-				'::before',
-			)
-
-			// Only assert if pseudo-elements are accessible
-			if (afterOpacity !== undefined && beforeOpacity !== undefined) {
-				expect(afterOpacity).toBeGreaterThan(0)
-				expect(beforeOpacity).toBe(0)
-			}
+			// Poll: the shadow's opacity transition starts only after the state
+			// is set, so a single read may still see the transition's start value.
+			await expect
+				.poll(() => getPseudoElementOpacity(scrollarea, '::after'))
+				.toBeGreaterThan(0)
+			expect(await getPseudoElementOpacity(scrollarea, '::before')).toBe(0)
 		})
 
 		test('shows shadow gradients based on overflow state in horizontal mode', async ({
@@ -351,29 +334,19 @@ test.describe('module-scrollarea component', () => {
 				el.scrollTop = 50
 			})
 
-			// Wait for classes to update after scroll
-			await waitForClasses(scrollarea, [
-				'overflow',
-				'overflow-start',
-				'overflow-end',
-			])
+			// Wait for states to update after scroll
+			await expectState(scrollarea, 'overflow', true)
+			await expectState(scrollarea, 'overflow-start', true)
+			await expectState(scrollarea, 'overflow-end', true)
 
-			// Verify classes are properly set (more reliable than pseudo-elements)
-			await expect(scrollarea).toHaveClass(/overflow-start/)
-			await expect(scrollarea).toHaveClass(/overflow-end/)
-
-			// Try pseudo-elements as secondary verification
-			const beforeOpacity = await getPseudoElementOpacity(
-				scrollarea,
-				'::before',
-			)
-			const afterOpacity = await getPseudoElementOpacity(scrollarea, '::after')
-
-			// Only assert if pseudo-elements are accessible
-			if (beforeOpacity !== undefined && afterOpacity !== undefined) {
-				expect(beforeOpacity).toBeGreaterThan(0)
-				expect(afterOpacity).toBeGreaterThan(0)
-			}
+			// Poll: the shadow's opacity transition starts only after the state
+			// is set, so a single read may still see the transition's start value.
+			await expect
+				.poll(() => getPseudoElementOpacity(scrollarea, '::before'))
+				.toBeGreaterThan(0)
+			await expect
+				.poll(() => getPseudoElementOpacity(scrollarea, '::after'))
+				.toBeGreaterThan(0)
 		})
 	})
 
@@ -436,26 +409,18 @@ test.describe('module-scrollarea component', () => {
 		})
 	})
 
-	test.describe('CSS Classes and Styling', () => {
-		test('applies correct CSS classes for overflow states', async ({
-			page,
-		}) => {
+	test.describe('Custom States and Styling', () => {
+		test('sets correct custom states for overflow', async ({ page }) => {
 			const scrollarea = page.locator('#default-vertical')
 
-			// Wait for overflow detection to complete
-			await waitForClasses(scrollarea, ['overflow', 'overflow-end'])
+			// Check state combinations
+			await expectState(scrollarea, 'overflow', true)
+			await expectState(scrollarea, 'overflow-end', true)
+			await expectState(scrollarea, 'overflow-start', false)
 
-			// Check class combinations with more reliable assertions
-			await expect(scrollarea).toHaveClass(/overflow/)
-			await expect(scrollarea).toHaveClass(/overflow-end/)
-			await expect(scrollarea).not.toHaveClass(/overflow-start/)
-
-			// Also verify with direct class name inspection
+			// States must be component-owned, not class tokens on the host
 			const classes = await scrollarea.getAttribute('class')
-			expect(classes).toBeTruthy()
-			expect(classes).toMatch(/overflow/)
-			expect(classes).toMatch(/overflow-end/)
-			expect(classes).not.toMatch(/overflow-start/)
+			expect(classes ?? '').not.toMatch(/overflow/)
 		})
 
 		test('maintains correct display and positioning styles', async ({
@@ -481,7 +446,7 @@ test.describe('module-scrollarea component', () => {
 			const scrollarea = page.locator('#no-overflow-vertical')
 
 			// Initially no overflow
-			await expect(scrollarea).not.toHaveClass(/overflow/)
+			await expectState(scrollarea, 'overflow', false)
 
 			// Add more content dynamically
 			await scrollarea.evaluate(el => {
@@ -493,14 +458,14 @@ test.describe('module-scrollarea component', () => {
 			})
 
 			// Should now detect overflow
-			await expect(scrollarea).toHaveClass(/overflow/)
+			await expectState(scrollarea, 'overflow', true)
 		})
 
 		test('handles content changes that affect overflow', async ({ page }) => {
 			const scrollarea = page.locator('#default-vertical')
 
 			// Initial state with overflow
-			await expect(scrollarea).toHaveClass(/overflow/)
+			await expectState(scrollarea, 'overflow', true)
 
 			// Remove content to eliminate overflow
 			await scrollarea.evaluate(el => {
@@ -510,8 +475,8 @@ test.describe('module-scrollarea component', () => {
 				}
 			})
 
-			// Should no longer have overflow classes
-			await expect(scrollarea).not.toHaveClass(/overflow-end/)
+			// Should no longer have overflow-end state
+			await expectState(scrollarea, 'overflow-end', false)
 		})
 
 		test('maintains performance with rapid scroll events', async ({ page }) => {
@@ -527,7 +492,7 @@ test.describe('module-scrollarea component', () => {
 			// Should still respond correctly to final position
 			const finalScrollTop = await scrollarea.evaluate(el => el.scrollTop)
 			expect(finalScrollTop).toBeGreaterThan(0)
-			await expect(scrollarea).toHaveClass(/overflow-start/)
+			await expectState(scrollarea, 'overflow-start', true)
 		})
 	})
 })

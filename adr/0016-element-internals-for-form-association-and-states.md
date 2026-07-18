@@ -104,6 +104,18 @@ type FactoryContext<P> = ElementQueries & {
 
 It is the escape hatch for everything the managed layer does not cover: typed validity flags (`internals.setValidity({ rangeOverflow: true }, msg, anchor)`), custom `:state()` pseudo-classes (`internals.states`), and the two-argument `setFormValue(value, state)`. A typical form component never touches it.
 
+### 8. `bindState()` binding for custom states
+
+Custom `:state()` pseudo-classes get one convenience binding, `bindState(internals, token)`, mirroring `bindClass(element, token)`:
+
+```ts
+watch(overflowEnd, bindState(internals, 'overflow-end'))
+```
+
+`value=true` adds the token to `internals.states`, `value=false` removes it; a `null` internals makes it a no-op (graceful degradation). Custom states are the right primitive for **component-owned** styling hooks — unlike a class, a state cannot be clobbered by consumer code or frameworks rewriting the host's `class` attribute. They work on *any* component (internals is attached unconditionally, §1), not only form-associated ones. `module-scrollarea` is the reference example (`:state(overflow)`, `:state(overflow-start)`, `:state(overflow-end)`).
+
+This is a deliberate carve-out from the bind-helper rejection below: `internals.states` is Baseline across evergreen browsers and — unlike ARIA reflection — has no accessibility-tooling gap, and the per-token signature adds real symmetry with `bindClass` rather than renaming a platform API.
+
 ### ARIA reflection: available but not promoted
 
 `internals.role` and `internals.aria*` are accessible via the exposed `internals` object — they cannot be withheld once the object is on the context. However, **no convenience helpers will be added** for ARIA reflection, and the documentation will carry an active warning against replacing explicit `aria-*` attributes or native semantic elements with it until the platform tooling gap is resolved (see Consequences).
@@ -114,7 +126,7 @@ It is the escape hatch for everything the managed layer does not cover: typed va
 
 - **Declarative `internals({...})` map (like `expose()`).** Rejected. It would be both too early and too late: too early because the factory body runs in `connectedCallback`, after `attachInternals()` must already have been called; too late because reactive values that read descendant state must wait for dependency resolution (the `watch()` pipeline). Note this timing argument does **not** apply to the managed value-sync effect: the library owns `connectedCallback` and registers its internal effect in the same deferred-activation pipeline as author effects. See [ADR-0007](0007-effect-descriptors-with-deferred-activation.md).
 
-- **`bindFormValue(internals)` / `bindValidity(internals, anchor)` / `bindStates(internals)` / `bindAria(internals, name)` helpers.** Rejected. Most wrap a single imperative statement without making it shorter or clearer, and they hide standard ElementInternals method names behind Le-Truc-specific names. The managed convention goes the other way: instead of renaming the low-level API, it removes the need to call it at all in the common case.
+- **`bindFormValue(internals)` / `bindValidity(internals, anchor)` / `bindAria(internals, name)` helpers.** Rejected. Most wrap a single imperative statement without making it shorter or clearer, and they hide standard ElementInternals method names behind Le-Truc-specific names. The managed convention goes the other way: instead of renaming the low-level API, it removes the need to call it at all in the common case. A whole-set `bindStates(internals)` was rejected on the same grounds, but a **per-token `bindState(internals, token)` is accepted** (see §8): it mirrors the existing `bindClass(element, token)` signature exactly, so it hides nothing — and unlike ARIA reflection, `internals.states` is stable across evergreen browsers and has no tooling-gap problem, so the original reason for withholding helpers does not apply to custom states.
 
 - **Separate `defineFormComponent()` function.** Rejected. It keeps `defineComponent`'s signature untouched but creates two parallel registration paths and duplicates the entire component-definition logic. An options parameter is the standard way to carry class-level configuration.
 
@@ -130,7 +142,7 @@ It is the escape hatch for everything the managed layer does not cover: typed va
 - **Native contract in both directions.** Outside code can call `checkValidity()` / `reportValidity()`, read `validity` / `validationMessage`, and call `setCustomValidity()` on a Le Truc form component exactly as on `<input>`. CSS can use `:disabled`, `:invalid`, `:user-invalid` natively.
 - Form participation without nested hidden inputs; `form-listbox`'s hidden-input hack and its latent form-reset bug are eliminated; `form-colorgraph` submits one serialized value; `form-spinbutton` drops its vestigial input.
 - The manual validity relay (`checkValidity()` → `host.error` → `aria-invalid`/`aria-errormessage`) is genuinely retired, not relocated — styling hooks move to native `:invalid` / `:user-invalid` on the host.
-- Custom `:state()` pseudo-classes come for free via `internals.states`.
+- Custom `:state()` pseudo-classes come for free via `internals.states`, with `bindState(internals, token)` as the `bindClass`-symmetric binding for component-owned styling hooks (demonstrated by `module-scrollarea`).
 - **The convention is type-checked and collision-safe.** The `{ formAssociated: true }` overload enforces the `value` prop at compile time; `FormAssociatedElement` gives consumers native-control typing; managed-name collisions in `expose()` fail loudly with `InvalidPropertyNameError` instead of being silently skipped by the `prop in this` guard.
 - Smaller API surface than the draft: no `onForm*` helpers on `FactoryContext`, no public `FormState` type.
 
