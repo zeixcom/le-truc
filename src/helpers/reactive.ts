@@ -350,6 +350,47 @@ const makeWatch = <P extends ComponentProps>(
 }
 
 /**
+ * The `run` helper type in `FactoryContext`.
+ *
+ * Registers a hand-authored `EffectDescriptor` — a thunk not produced by
+ * `watch()`, `on()`, `pass()`, `each()`, or `provideContexts()` — into the
+ * ambient collector, the same way those helpers already do internally. For
+ * wrapping native APIs (`IntersectionObserver`, etc.) or composed cause-effect
+ * primitives that need deferred activation and automatic disconnect cleanup.
+ */
+type RunHelper = (descriptor: EffectDescriptor) => void
+
+/**
+ * Create a `run` helper bound to a specific component host.
+ *
+ * `run` pushes a hand-authored `EffectDescriptor` into the ambient collector.
+ * It is the registration path for effects that don't fit `watch()`/`on()`/
+ * `pass()`/`each()`/`provideContexts()` — e.g. a raw `IntersectionObserver`
+ * wrapped in a thunk that returns its own cleanup.
+ *
+ * Wraps `rawDescriptor` in `createScope()` rather than pushing it directly:
+ * the activation loop that calls every collected descriptor (`activateResult`)
+ * discards each call's return value — `watch()`/`on()`/`pass()` are unaffected
+ * because they call `createEffect()`/`createScope()` internally, which
+ * self-register onto the active owner regardless of what the outer caller
+ * does with the return value, but a raw thunk that just returns a bare
+ * cleanup has no such internal registration. `createScope()` picks up
+ * `rawDescriptor`'s returned cleanup and registers it on whatever owner is
+ * active when the wrapped descriptor runs (the component's root scope during
+ * normal activation), so it actually runs on disconnect.
+ *
+ * @since 2.3
+ * @param {HTMLElement & P} host - The component host element
+ * @returns {RunHelper} Bound `run` function for the given host
+ */
+const makeRun =
+	<P extends ComponentProps>(host: HTMLElement & P): RunHelper =>
+	(rawDescriptor: EffectDescriptor): void => {
+		const descriptor: EffectDescriptor = () => createScope(rawDescriptor)
+		pushDescriptor(host, 'run', descriptor)
+	}
+
+/**
  * Create a `pass` helper bound to a specific component host.
  *
  * `pass` passes reactive values to a descendant Le Truc component by swapping
@@ -537,9 +578,11 @@ export {
 	forEachUnseen,
 	keyedScopes,
 	makePass,
+	makeRun,
 	makeWatch,
 	type PassedProps,
 	type PassHelper,
 	type Reactive,
+	type RunHelper,
 	type WatchHelper,
 }

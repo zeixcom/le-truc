@@ -158,7 +158,7 @@ class NoActiveCollectorError extends Error {
 	constructor(host: HTMLElement | undefined, helper: string) {
 		const where = host ? ` in component ${elementName(host)}` : ''
 		super(
-			`${helper}() called outside synchronous factory or each() callback execution${where}. watch(), on(), pass(), each(), and provideContexts() must be called synchronously during setup — not after an await, inside a detached setTimeout, or from an event handler defined during setup.`,
+			`${helper}() called outside synchronous factory or each() callback execution${where}. watch(), on(), pass(), each(), provideContexts(), and run() must be called synchronously during setup — not after an await, inside a detached setTimeout, or from an event handler defined during setup.`,
 		)
 		this.name = 'NoActiveCollectorError'
 	}

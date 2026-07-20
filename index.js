@@ -2054,6 +2054,14 @@ class InvalidPassPropertyError extends TypeError {
   }
 }
 
+class NoActiveCollectorError extends Error {
+  constructor(host, helper) {
+    const where = host ? ` in component ${elementName(host)}` : "";
+    super(`${helper}() called outside synchronous factory or each() callback execution${where}. watch(), on(), pass(), each(), provideContexts(), and run() must be called synchronously during setup — not after an await, inside a detached setTimeout, or from an event handler defined during setup.`);
+    this.name = "NoActiveCollectorError";
+  }
+}
+
 class InvalidSelectorError extends TypeError {
   constructor(parent, selector, cause) {
     const where = typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
@@ -2076,6 +2084,21 @@ var getSignals = (el) => {
   }
   return signals;
 };
+var activeCollector;
+var withCollector = (collector, fn) => {
+  const previous = activeCollector;
+  activeCollector = collector;
+  try {
+    return fn();
+  } finally {
+    activeCollector = previous;
+  }
+};
+var pushDescriptor = (host, helper, descriptor) => {
+  if (!activeCollector)
+    throw new NoActiveCollectorError(host, helper);
+  activeCollector.push(descriptor);
+};
 
 // src/helpers/context.ts
 var CONTEXT_REQUEST = "context-request";
@@ -2095,25 +2118,29 @@ class ContextRequestEvent extends Event {
   }
 }
 var createContext = (key) => key;
-var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
-  const listener = (e) => {
-    const { context, callback } = e;
-    if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
-      e.stopImmediatePropagation();
-      callback(() => {
-        try {
-          return host[context];
-        } catch (error) {
-          if (DEV_MODE)
-            console.warn("provideContexts: getter threw", elementName(host), error);
-          return;
-        }
-      });
-    }
-  };
-  host.addEventListener(CONTEXT_REQUEST, listener);
-  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
-});
+var makeProvideContexts = (host) => (contexts) => {
+  const descriptor = () => createScope(() => {
+    const listener = (e) => {
+      const { context, callback } = e;
+      if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
+        e.stopImmediatePropagation();
+        callback(() => {
+          try {
+            return host[context];
+          } catch (error) {
+            if (DEV_MODE)
+              console.warn("provideContexts: getter threw", elementName(host), error);
+            return;
+          }
+        });
+      }
+    };
+    host.addEventListener(CONTEXT_REQUEST, listener);
+    return () => host.removeEventListener(CONTEXT_REQUEST, listener);
+  });
+  pushDescriptor(host, "provideContexts", descriptor);
+  return descriptor;
+};
 var makeRequestContext = (host) => (context, fallback) => {
   const slot = createSlot(createState(fallback));
   let answered = false;
@@ -2271,6 +2298,14 @@ var activateResult = (result) => {
       descriptor();
   }
 };
+var forEachUnseen = (result, seen, visit) => {
+  if (Array.isArray(result)) {
+    for (const item of result)
+      forEachUnseen(item, seen, visit);
+  } else if (typeof result === "function" && !seen.has(result)) {
+    visit(result);
+  }
+};
 var keyedScopes = (memo, mount) => {
   const scopes = new Map;
   createScope(() => {
@@ -2313,7 +2348,7 @@ var toSignal = (host, source) => {
 };
 var makeWatch = (host) => {
   function watch(source, handlerOrHandlers) {
-    return () => {
+    const descriptor = () => {
       if (Array.isArray(source)) {
         const signals = source.map((s) => toSignal(host, s));
         const handler = handlerOrHandlers;
@@ -2327,8 +2362,14 @@ var makeWatch = (host) => {
       }
       return createEffect(() => match(signal, handlerOrHandlers));
     };
+    pushDescriptor(host, "watch", descriptor);
+    return descriptor;
   }
   return watch;
+};
+var makeRun = (host) => (rawDescriptor) => {
+  const descriptor = () => createScope(rawDescriptor);
+  pushDescriptor(host, "run", descriptor);
 };
 var makePass = (host) => {
   const swapSlots = (target, props) => createScope(() => {
@@ -2376,7 +2417,7 @@ var makePass = (host) => {
       };
   });
   function pass(target, props) {
-    return () => {
+    const descriptor = () => {
       if (!target)
         return;
       if (isMemo(target)) {
@@ -2385,19 +2426,22 @@ var makePass = (host) => {
         swapSlots(target, props);
       }
     };
+    pushDescriptor(host, "pass", descriptor);
+    return descriptor;
   }
   return pass;
 };
 function each(memo, callback) {
-  return () => {
+  const descriptor = () => {
     keyedScopes(memo, (element) => {
-      const result = callback(element);
-      if (Array.isArray(result))
-        activateResult(result);
-      else if (typeof result === "function")
-        result();
+      const collected = [];
+      const result = withCollector(collected, () => callback(element));
+      activateResult(collected);
+      forEachUnseen(result, new Set(collected), (d) => d());
     });
   };
+  pushDescriptor(undefined, "each", descriptor);
+  return descriptor;
 }
 
 // src/helpers/events.ts
@@ -2464,7 +2508,7 @@ var attachListener = (host, target, type, handler, options) => {
 };
 var makeOn = (host) => {
   function on(target, type, handler, options = {}) {
-    return () => {
+    const descriptor = () => {
       if (!target)
         return;
       if (!("passive" in options)) {
@@ -2506,6 +2550,8 @@ var makeOn = (host) => {
       }
       createScope(() => attachListener(host, target, type, handler, options));
     };
+    pushDescriptor(host, "on", descriptor);
+    return descriptor;
   }
   return on;
 };
@@ -2742,11 +2788,16 @@ function defineComponent(name, factory, options) {
           on: makeOn(host),
           pass: makePass(host),
           provideContexts: makeProvideContexts(host),
-          requestContext: makeRequestContext(host)
+          requestContext: makeRequestContext(host),
+          run: makeRun(host)
         };
-        const result = factory(context);
-        if (result)
-          this.#setup = result;
+        const collector = [];
+        const result = withCollector(collector, () => factory(context));
+        this.#setup = collector;
+        if (result) {
+          const seen = new Set(collector);
+          forEachUnseen(result, seen, (d) => this.#setup.push(d));
+        }
         const internals = internalsMap.get(this);
         if (formAssociated && internals) {
           const hasValueSignal = "value" in this && getSignals(this).value;
@@ -2966,6 +3017,7 @@ export {
   ReadonlySignalError,
   PromiseValueError,
   NullishSignalValueError,
+  NoActiveCollectorError,
   MissingElementError,
   InvalidStoreMutationError,
   InvalidSignalValueError,

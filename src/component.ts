@@ -34,8 +34,10 @@ import {
 	type Falsy,
 	forEachUnseen,
 	makePass,
+	makeRun,
 	makeWatch,
 	type PassHelper,
+	type RunHelper,
 	type WatchHelper,
 } from './helpers/reactive'
 import {
@@ -148,6 +150,15 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 	pass: PassHelper<P>
 	provideContexts: ProvideContextsHelper<P>
 	requestContext: RequestContextHelper
+	/**
+	 * Registers a hand-authored `EffectDescriptor` — a thunk not produced by
+	 * `watch()`, `on()`, `pass()`, `each()`, or `provideContexts()` — into the
+	 * component's ambient collector. Use it to wrap a native API
+	 * (`IntersectionObserver`, etc.) or a composed cause-effect primitive that
+	 * needs deferred activation and automatic disconnect cleanup.
+	 * @since 2.3
+	 */
+	run: RunHelper
 }
 
 /**
@@ -277,6 +288,7 @@ function defineComponent<P extends ComponentProps>(
 					pass: makePass(host),
 					provideContexts: makeProvideContexts(host),
 					requestContext: makeRequestContext(host),
+					run: makeRun(host),
 				}
 
 				// watch()/on()/pass()/each()/provideContexts() already pushed their
