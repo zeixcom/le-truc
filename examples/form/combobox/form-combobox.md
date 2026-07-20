@@ -1,6 +1,6 @@
 ### Form Combobox
 
-An advanced form component that coordinates a text input with a popup `form-listbox`. Demonstrates multiple Le Truc concepts together: `createState()` with `on()` for the read-only `length` property, `createMemo()` for private derived state (`isExpanded`), `pass()` to push the filter value into the child listbox reactively, `batch()` for simultaneous prop updates, multiple effects per UI element, and `setAttribute()` for dynamic ARIA attributes (`aria-errormessage`, `aria-describedby`, `aria-expanded`). The `clear` method property shows the MethodProducer pattern for exposing imperative actions as reactive properties.
+An advanced form component that coordinates a text input with a popup `form-listbox`. Demonstrates multiple Le Truc concepts together: `createState()` with `on()` for the read-only `length` property, `createMemo()` for private derived state (`isExpanded`), `pass()` to push the filter value into the child listbox reactively, `batch()` for simultaneous prop updates, multiple effects per UI element, and `setAttribute()` for dynamic ARIA attributes (`aria-describedby`, `aria-expanded`). Listens to the listbox's host `change` event (native-parity commit event) for selection. The `clear` method property shows the MethodProducer pattern for exposing imperative actions as reactive properties. Form participation is via ElementInternals (`formAssociated: true`) with the managed form-control convention; validity relays the inner input's `validationMessage` via `host.setCustomValidity()`.
 
 #### Preview
 
@@ -32,11 +32,6 @@ An advanced form component that coordinates a text input with a popup `form-list
 - `0`
 - Length of current input value
 ---
-- `error`
-- `string`
-- `''`
-- Validation error text shown in `.error`
----
 - `description`
 - `string`
 - Text content of `.description`
@@ -66,7 +61,7 @@ An advanced form component that coordinates a text input with a popup `form-list
 - `first('input')`
 - `HTMLInputElement`
 - **required**
-- Textbox for combobox input
+- Textbox for combobox input; no `name` attribute needed (the host carries it)
 ---
 - `first('form-listbox')`
 - `HTMLElement & FormListboxProps`

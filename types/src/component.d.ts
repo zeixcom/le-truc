@@ -26,18 +26,85 @@ type Initializers<P extends ComponentProps> = {
     [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K]> | MethodProducer;
 };
 /**
+ * Static class-level configuration for a component.
+ *
+ * Passed as the third (optional) argument to `defineComponent`. Currently
+ * carries only `formAssociated`, but is extensible for future class-level
+ * options without further signature changes.
+ */
+type ComponentOptions = {
+    /**
+     * When `true`, the generated class gets `static formAssociated = true`, the
+     * managed form-control behavior (value sync, reset, state restore, disabled,
+     * native-parity host contract). The browser treats the element as a
+     * form-associated custom element (FACE). Default: `false`.
+     */
+    formAssociated?: boolean;
+};
+/**
+ * The native form-control members the generated class defines on the host when
+ * `formAssociated: true`, delegating to `internals`. Authors use this interface
+ * in the declarations the library cannot write for them, chiefly the tag-name
+ * map: `'my-input': FormAssociatedElement & MyProps`.
+ *
+ * `value` is deliberately **not** part of this interface: it is component-exposed
+ * (string for textbox, number for spinbutton) and belongs in the author's props
+ * type.
+ */
+interface FormAssociatedElement extends HTMLElement {
+    readonly form: HTMLFormElement | null;
+    name: string;
+    disabled: boolean;
+    readonly labels: NodeList;
+    readonly validity: ValidityState;
+    readonly validationMessage: string;
+    readonly willValidate: boolean;
+    checkValidity(): boolean;
+    reportValidity(): boolean;
+    setCustomValidity(message: string): void;
+}
+/**
  * The context object passed to the v2.x factory function.
  *
  * Components destructure only what they need.
  */
 type FactoryContext<P extends ComponentProps> = ElementQueries & {
     host: HTMLElement & P;
+    /**
+     * The `ElementInternals` object, or `null` if `attachInternals()` failed
+     * (pre-upgrade / parser-ordering edge case). Use imperatively inside
+     * `watch()` for typed validity flags
+     * — e.g. `watch('value', v => { internals?.setValidity({ rangeOverflow: v > max }, msg) })` —
+     * or with `bindState()` for custom `:state()` pseudo-classes
+     * — e.g. `watch(overflowEnd, bindState(internals, 'overflow-end'))`.
+     * Note: form value sync (`setFormValue`) is managed automatically —
+     * do NOT call `internals?.setFormValue(v)` from a `watch('value', …)`.
+     * The optional chaining is the graceful-degradation guard.
+     */
+    internals: ElementInternals | null;
     expose: (props: Initializers<P>) => void;
     watch: WatchHelper<P>;
     on: OnHelper<P>;
     pass: PassHelper<P>;
     provideContexts: ProvideContextsHelper<P>;
     requestContext: RequestContextHelper;
+};
+/**
+ * The factory context for form-associated components. Extends `FactoryContext`
+ * with `host` typed as `FormAssociatedElement & P` (the native-parity members)
+ * and `watch`/`on`/`pass` accepting the managed `disabled` reactive prop in
+ * addition to the author's `P`.
+ *
+ * `expose` is deliberately typed over `Initializers<P>` (not the widened
+ * `P & { disabled: boolean }`) so `expose({ disabled: … })` is a type error —
+ * `disabled` is managed by the library and `expose()` throws
+ * `InvalidPropertyNameError` for it at runtime.
+ */
+type FormFactoryContext<P extends ComponentProps> = Omit<FactoryContext<P & {
+    disabled: boolean;
+}>, 'host' | 'expose'> & {
+    host: FormAssociatedElement & P;
+    expose: (props: Initializers<P>) => void;
 };
 /**
  * Define and register a reactive custom element using the v2.x factory form.
@@ -53,7 +120,13 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  * @since 2.0
  * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
  * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
+ * @param {ComponentOptions} [options] - Static class-level configuration (e.g. `{ formAssociated: true }`)
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
-declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void): CustomElementConstructor | undefined;
-export { defineComponent, type FactoryContext, type Initializers, type MaybeSignal, };
+declare function defineComponent<P extends ComponentProps & {
+    value: string | number;
+}>(name: string, factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void, options: ComponentOptions & {
+    formAssociated: true;
+}): CustomElementConstructor | undefined;
+declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void, options?: ComponentOptions): CustomElementConstructor | undefined;
+export { type ComponentOptions, defineComponent, type FactoryContext, type FormAssociatedElement, type Initializers, type MaybeSignal, };

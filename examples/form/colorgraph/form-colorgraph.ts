@@ -1,5 +1,6 @@
 import { clampChroma, formatCss, inGamut, type Oklch } from 'culori/fn'
 import {
+	asString,
 	batch,
 	bindStyle,
 	bindText,
@@ -8,15 +9,18 @@ import {
 	defineComponent,
 	defineMethod,
 	each,
+	type FormAssociatedElement,
+	type State,
 	throttle,
 } from '../../..'
-import { asOklch } from '../../_common/asOklch.ts'
+import { asOklch } from '../../_common/asOklch'
 import { getStepColor } from '../../_common/getStepColor.ts'
 
 export type FormColorgraphAxis = 'l' | 'c' | 'h'
 
 export type FormColorgraphProps = {
-	color: Oklch
+	/** Current color as a CSS string (e.g. `oklch(0.48 0.23 263)`). Form value. */
+	value: string
 	readonly lightness: number
 	readonly chroma: number
 	readonly hue: number
@@ -26,9 +30,11 @@ export type FormColorgraphProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-colorgraph': HTMLElement & FormColorgraphProps
+		'form-colorgraph': FormAssociatedElement & FormColorgraphProps
 	}
 }
+
+const parseOklch = asOklch()
 
 const inP3Gamut = inGamut('p3')
 const inRGBGamut = inGamut('rgb')
@@ -50,6 +56,7 @@ const getStep = (axis: FormColorgraphAxis, shiftKey: boolean) =>
  * slider axis, with live preview of the resulting color and out-of-gamut warnings.
  * Out-of-gamut colors should be handled with a fallback, as display coverage varies.
  * Chroma values must stay within the Oklch gamut; extreme values are clamped automatically.
+ * Form participation submits one serialized CSS color value via ElementInternals.
  * @demo {./docs/examples/form-colorgraph.html} Interactive preview and usage examples */
 export default defineComponent<FormColorgraphProps>(
 	'form-colorgraph',
@@ -57,16 +64,16 @@ export default defineComponent<FormColorgraphProps>(
 		// Required elements
 		const inputs = {
 			l: first(
-				'input[name="lightness"]',
-				'Add an <input[name="lightness"]> element to control the lightness of the color.',
+				'input#lightness',
+				'Add an <input id="lightness"> element to control the lightness of the color.',
 			),
 			c: first(
-				'input[name="chroma"]',
-				'Add an <input[name="chroma"]> element to control the chroma of the color.',
+				'input#chroma',
+				'Add an <input id="chroma"> element to control the chroma of the color.',
 			),
 			h: first(
-				'input[name="hue"]',
-				'Add an <input[name="hue"]> element to control the hue of the color.',
+				'input#hue',
+				'Add an <input id="hue"> element to control the hue of the color.',
 			),
 		}
 		const graphEl = first(
@@ -110,11 +117,34 @@ export default defineComponent<FormColorgraphProps>(
 		// Internal states
 		const canvasSize = createState(graphEl.getBoundingClientRect().width)
 		const trackWidth = createMemo(() => canvasSize.get() - 2 * TRACK_OFFSET)
-		const errors = {
+		// Per-axis error states — a gamut error on one axis must only display
+		// under that axis, not under all three. Each `.error` element binds to
+		// its own axis's state.
+		const errors: Record<FormColorgraphAxis, State<string>> = {
 			l: createState(''),
 			c: createState(''),
 			h: createState(''),
 		}
+		const clearErrors = () => {
+			batch(() => {
+				errors.l.set('')
+				errors.c.set('')
+				errors.h.set('')
+			})
+		}
+		const setError = (axis: FormColorgraphAxis, msg: string) => {
+			batch(() => {
+				errors.l.set('')
+				errors.c.set('')
+				errors.h.set('')
+				errors[axis].set(msg)
+			})
+		}
+
+		// Internal Oklch memo derived from the string value (the form value).
+		// `value` is the source of truth; `color` is the parsed representation
+		// the UI derives from. Interactions write serialized strings back to value.
+		const color = createMemo<Oklch>(() => parseOklch(host.value))
 
 		// Helper functions
 		const formatNumber = (axis: FormColorgraphAxis, value: number) => {
@@ -153,55 +183,53 @@ export default defineComponent<FormColorgraphProps>(
 			target.style.setProperty('top', `${y}px`)
 		}
 		const getHueFromPosition = (x: number): Oklch => {
-			const newColor = { ...host.color, h: x * AXIS_MAX.h }
+			const newColor = { ...color.get(), h: x * AXIS_MAX.h }
 			if (inRGBGamut(newColor)) return newColor
 			if (inP3Gamut(newColor)) newColor.alpha = 0.5
 			else newColor.alpha = 0
 			return newColor
 		}
-		const commit = (color: Oklch) => {
+		// Commit writes a serialized CSS color string to host.value (the form value).
+		const commit = (c: Oklch) => {
 			batch(() => {
-				host.color = color
-				for (const key of ['l', 'c', 'h'])
-					errors[key as keyof typeof errors].set('')
+				host.value = formatCss(c)
+				clearErrors()
 			})
 		}
-		const getValue = (axis: FormColorgraphAxis) =>
-			axis === 'l' ? host.lightness : axis === 'c' ? host.chroma : host.hue
+		const getValue = (axis: FormColorgraphAxis) => {
+			const c = color.get()
+			return axis === 'l' ? c.l : axis === 'c' ? c.c : (c.h ?? 0)
+		}
 		const setToNearestStep = (axis: FormColorgraphAxis, value: number) => {
 			const nearest = Math.round(value / AXIS_STEP[axis]) * AXIS_STEP[axis]
 			if (nearest < 0 || nearest > AXIS_MAX[axis]) return
-			const color = { ...host.color, [axis]: nearest }
-			if (inP3Gamut(color)) {
-				commit(color)
-			} else {
-				inputs[axis].setCustomValidity('Color out of gamut')
-				errors[axis].set(inputs[axis].validationMessage)
-			}
+			const c = { ...color.get(), [axis]: nearest }
+			if (inP3Gamut(c)) commit(c)
+			else setError(axis, 'Color out of gamut')
 		}
 		const moveKnob = throttle(
 			(x: number, y: number, top: number, left: number, size: number) => {
-				const color = {
-					...host.color,
+				const c = {
+					...color.get(),
 					c: Math.min(Math.max((x - left) / size, 0), 1) * AXIS_MAX.c,
 					l: 1 - Math.min(Math.max((y - top) / size, 0), 1),
 				}
-				if (inP3Gamut(color)) commit(color)
+				if (inP3Gamut(c)) commit(c)
 			},
 		)
 		const moveThumb = throttle((x: number, left: number, width: number) => {
-			const color = {
-				...host.color,
+			const c = {
+				...color.get(),
 				h: Math.min(Math.max((x - left) / width, 0), 1) * AXIS_MAX.h,
 			}
-			if (inP3Gamut(color)) commit(color)
+			if (inP3Gamut(c)) commit(c)
 		})
 
 		expose({
-			color: asOklch(),
-			lightness: () => host.color.l,
-			chroma: () => host.color.c,
-			hue: () => host.color.h ?? 0,
+			value: asString('oklch(0.48 0.23 263)'),
+			lightness: () => color.get().l,
+			chroma: () => color.get().c,
+			hue: () => color.get().h ?? 0,
 			stepDown: defineMethod((axis: FormColorgraphAxis, bigStep = false) => {
 				setToNearestStep(axis, getValue(axis) - getStep(axis, bigStep))
 			}),
@@ -230,43 +258,33 @@ export default defineComponent<FormColorgraphProps>(
 			),
 
 			// Host CSS variable
-			watch(() => formatCss(host.color), bindStyle(host, '--color-base')),
+			watch(() => formatCss(color.get()), bindStyle(host, '--color-base')),
 
 			// Input per-element effects
 			each(allInputs, input => {
 				const axis = getAxis(input)
 				return [
-					axis &&
-						watch(errors[axis], error => {
-							input.ariaInvalid = String(!!error)
-							if (error && input.id)
-								input.setAttribute('aria-errormessage', `${input.id}-error`)
-							else input.removeAttribute('aria-errormessage')
-						}),
-					watch('color', color => {
-						if (axis) input.value = formatNumber(axis, color[axis] ?? 0)
+					watch(color, c => {
+						if (axis) input.value = formatNumber(axis, c[axis] ?? 0)
 					}),
 					on(input, 'change', () => {
 						if (!axis) return
 						const value = input.valueAsNumber
-						const newColor = {
-							...host.color,
+						const c = {
+							...color.get(),
 							[axis]: axis === 'l' ? value / 100 : value,
 						}
-						if (inP3Gamut(newColor)) {
-							commit(newColor)
-						} else {
-							input.setCustomValidity('Color out of gamut')
-							errors[axis].set(input.validationMessage)
-						}
+						if (inP3Gamut(c)) commit(c)
+						else setError(axis, 'Color out of gamut')
 					}),
 				]
 			}),
 
-			// Error text per-element effects
+			// Error text — per-axis: each .error element binds to its own axis
 			each(allErrors, errorEl => {
-				const axis = getAxis(errorEl as HTMLElement)
-				return [axis ? watch(errors[axis], bindText(errorEl)) : false]
+				const axis = getAxis(errorEl)
+				if (!axis) return []
+				return [watch(errors[axis], bindText(errorEl))]
 			}),
 
 			// Graph pointer interaction + canvas size CSS variable
@@ -292,7 +310,7 @@ export default defineComponent<FormColorgraphProps>(
 
 			// Graph canvas: redraw on hue or size change
 			watch(
-				() => ({ hue: host.hue, n: Math.round(canvasSize.get()) }),
+				() => ({ hue: color.get().h ?? 0, n: Math.round(canvasSize.get()) }),
 				({ hue, n }) => {
 					canvas.width = n
 					canvas.height = n
@@ -343,8 +361,8 @@ export default defineComponent<FormColorgraphProps>(
 			// Knob position
 			watch(
 				() => ({
-					l: host.lightness,
-					c: host.chroma,
+					l: color.get().l,
+					c: color.get().c,
 					size: canvasSize.get(),
 				}),
 				({ l, c, size }) => {
@@ -383,14 +401,15 @@ export default defineComponent<FormColorgraphProps>(
 				() => `${trackWidth.get()}px`,
 				bindStyle(sliderEl, '--track-width'),
 			),
-			watch('hue', hue => {
+			watch(color, c => {
+				const hue = c.h ?? 0
 				sliderEl.setAttribute('aria-valuenow', String(hue))
 				sliderEl.setAttribute('aria-valuetext', `${formatNumber('h', hue)}°`)
 			}),
 
 			// Track canvas: redraw on color or track width change
 			watch(
-				() => ({ color: host.color, n: Math.round(trackWidth.get()) }),
+				() => ({ c: color.get(), n: Math.round(trackWidth.get()) }),
 				({ n }) => {
 					track.width = n
 					const ctx = track.getContext('2d', { colorSpace: 'display-p3' })
@@ -406,8 +425,8 @@ export default defineComponent<FormColorgraphProps>(
 			// Thumb position
 			watch(
 				() => ({
-					hue: host.hue,
-					l: host.lightness,
+					hue: color.get().h ?? 0,
+					l: color.get().l,
 					tw: trackWidth.get(),
 				}),
 				({ hue, l, tw }) => {
@@ -429,12 +448,12 @@ export default defineComponent<FormColorgraphProps>(
 					on(btn, 'click', event => {
 						if (axis) host.stepDown(axis, (event as MouseEvent).shiftKey)
 					}),
-					watch('color', color => {
+					watch(color, c => {
 						if (!axis) {
 							btn.disabled = true
 							return
 						}
-						btn.disabled = (color[axis] ?? 0) <= 0
+						btn.disabled = (c[axis] ?? 0) <= 0
 					}),
 				]
 			}),
@@ -446,12 +465,12 @@ export default defineComponent<FormColorgraphProps>(
 					on(btn, 'click', event => {
 						if (axis) host.stepUp(axis, (event as MouseEvent).shiftKey)
 					}),
-					watch('color', color => {
+					watch(color, c => {
 						if (!axis) {
 							btn.disabled = true
 							return
 						}
-						btn.disabled = (color[axis] ?? 0) >= AXIS_MAX[axis]
+						btn.disabled = (c[axis] ?? 0) >= AXIS_MAX[axis]
 					}),
 				]
 			}),
@@ -511,9 +530,9 @@ export default defineComponent<FormColorgraphProps>(
 			if (li)
 				effects.push(
 					watch(
-						() => ({ color: host.color, size: canvasSize.get() }),
-						({ color }) => {
-							setStepPosition(li, getStepColor(color, 1 - i / 10))
+						() => ({ c: color.get(), size: canvasSize.get() }),
+						({ c }) => {
+							setStepPosition(li, getStepColor(c, 1 - i / 10))
 						},
 					),
 				)
@@ -523,14 +542,32 @@ export default defineComponent<FormColorgraphProps>(
 			if (li)
 				effects.push(
 					watch(
-						() => ({ color: host.color, size: canvasSize.get() }),
-						({ color }) => {
-							setStepPosition(li, getStepColor(color, 1 - (i + 5) / 10))
+						() => ({ c: color.get(), size: canvasSize.get() }),
+						({ c }) => {
+							setStepPosition(li, getStepColor(c, 1 - (i + 5) / 10))
 						},
 					),
 				)
 		}
 
+		effects.push(
+			// Host-level validity from any axis error. Goes through the managed
+			// host.setCustomValidity() so the validation anchor (first focusable
+			// descendant) is resolved for focus-on-blocked-submission — consistent
+			// with the other form examples.
+			watch(
+				() => errors.l.get() || errors.c.get() || errors.h.get(),
+				err => {
+					host.setCustomValidity(err)
+				},
+			),
+			// Form value sync: managed (value → setFormValue via ElementInternals)
+			// Form reset: managed (value attribute is the default — restores
+			// the initial CSS color string, replacing the hand-rolled
+			// initialColor capture from the previous design).
+		)
+
 		return effects
 	},
+	{ formAssociated: true },
 )

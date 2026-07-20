@@ -7,6 +7,7 @@ import {
 	defineComponent,
 	each,
 	escapeHTML,
+	type FormAssociatedElement,
 	schedule,
 } from '../../..'
 import {
@@ -43,7 +44,7 @@ export type FormListboxProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-listbox': HTMLElement & FormListboxProps
+		'form-listbox': FormAssociatedElement & FormListboxProps
 	}
 }
 
@@ -59,15 +60,11 @@ const HANDLED_KEYS = [...DECREMENT_KEYS, ...INCREMENT_KEYS, FIRST_KEY, LAST_KEY]
 /**
  * A filterable listbox that loads options from a remote JSON source and integrates with HTML forms.
  * Use it for searchable, single-select option lists — provides ARIA listbox semantics,
- * keyboard navigation (Arrow, Home, End), accessibility, and automatic form value synchronization via a hidden input.
+ * keyboard navigation (Arrow, Home, End), accessibility, and form participation via ElementInternals.
  * @demo {./docs/examples/form-listbox.html} Interactive preview and usage examples */
 export default defineComponent<FormListboxProps>(
 	'form-listbox',
 	({ all, expose, first, host, on, watch }) => {
-		const input = first(
-			'input[type="hidden"]',
-			'Needed to store the selected value.',
-		) as HTMLInputElement
 		const filterEl = first('input.filter') as HTMLInputElement | undefined
 		const clearBtn = first('button.clear')
 		const callout = first('card-callout')
@@ -162,7 +159,10 @@ export default defineComponent<FormListboxProps>(
 				) as HTMLButtonElement
 				if (option && option.value !== host.value) {
 					host.value = option.value
-					input.dispatchEvent(new Event('change', { bubbles: true }))
+					// Native-parity commit event — dispatches from the host so
+					// composing components (form-combobox) can listen without
+					// reaching into the listbox's DOM.
+					host.dispatchEvent(new Event('change', { bubbles: true }))
 				}
 			}),
 			on(listbox, 'keydown', e => {
@@ -187,10 +187,9 @@ export default defineComponent<FormListboxProps>(
 				getVisibleOptions()[focusIndex]?.click()
 			}),
 
-			watch('value', value => {
-				host.setAttribute('value', value)
-				input.value = value
-			}),
+			// Form value sync: managed (value → setFormValue via ElementInternals)
+			// Form reset: managed (value attribute is the default)
+			// Disabled, state restore: managed
 			host.src &&
 				watch(content, {
 					nil: () => {
@@ -253,4 +252,5 @@ export default defineComponent<FormListboxProps>(
 			clearBtn && watch(lowerFilter, bindVisible(clearBtn)),
 		]
 	},
+	{ formAssociated: true },
 )

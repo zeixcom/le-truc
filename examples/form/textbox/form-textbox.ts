@@ -6,15 +6,15 @@ import {
 	createState,
 	defineComponent,
 	defineMethod,
+	type FormAssociatedElement,
 } from '../../..'
+import { relayValidity } from '../../_common/relayValidity'
 
 export type FormTextboxProps = {
 	/** Current text value. Synced with the native input or textarea. */
 	value: string
 	/** Character length of the current value (read-only). */
 	readonly length: number
-	/** Validation error message from the native input's `validationMessage`. */
-	error: string
 	/** Helper text shown below the input. May include a remaining-characters template. */
 	description: string
 	/** Clears the input value and dispatches `input` and `change` events. */
@@ -23,14 +23,17 @@ export type FormTextboxProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-textbox': HTMLElement & FormTextboxProps
+		'form-textbox': FormAssociatedElement & FormTextboxProps
 	}
 }
 
 /**
  * A single-line or multiline text input with validation, optional clear button, and helper text.
  * Use it when you need a styled text field — the underlying native input provides
- * keyboard accessibility and standard ARIA textbox semantics.
+ * keyboard accessibility and standard ARIA textbox semantics. Form participation
+ * and validity are via ElementInternals (`formAssociated: true`).
+ * External consumers read `host.validationMessage` / `host.validity` like on a
+ * native input; inline error display binds to component-internal state.
  * @demo {./docs/examples/form-textbox.html} Interactive preview and usage examples */
 export default defineComponent<FormTextboxProps>(
 	'form-textbox',
@@ -43,7 +46,6 @@ export default defineComponent<FormTextboxProps>(
 		const errorEl = first('.error')
 		const descriptionEl = first('.description')
 
-		const errorId = errorEl?.id
 		const descriptionId = descriptionEl?.id
 		if (descriptionId) textbox.setAttribute('aria-describedby', descriptionId)
 
@@ -59,11 +61,13 @@ export default defineComponent<FormTextboxProps>(
 				: null
 
 		const length = createState(textbox.value.length)
+		// Internal error state — not a public prop. External consumers read
+		// host.validationMessage / host.validity (native parity).
+		const error = createState('')
 
 		expose({
 			value: textbox.value,
 			length: length.get,
-			error: '',
 			description: descriptionMemo ?? descriptionEl?.textContent?.trim() ?? '',
 			clear: defineMethod(() => {
 				host.value = ''
@@ -78,11 +82,8 @@ export default defineComponent<FormTextboxProps>(
 
 		return [
 			on(textbox, 'change', () => {
-				textbox.checkValidity()
-				return {
-					value: textbox.value,
-					error: textbox.validationMessage,
-				}
+				relayValidity(textbox, host, error)
+				return { value: textbox.value }
 			}),
 			on(textbox, 'input', () => {
 				length.set(textbox.value.length)
@@ -91,15 +92,18 @@ export default defineComponent<FormTextboxProps>(
 				host.clear()
 			}),
 
-			watch('value', bindProperty(textbox, 'value')),
-			watch('error', error => {
-				textbox.ariaInvalid = String(!!error)
-				if (error && errorId) textbox.setAttribute('aria-errormessage', errorId)
-				else textbox.removeAttribute('aria-errormessage')
+			watch('value', v => {
+				bindProperty(textbox, 'value')(v)
 			}),
-			errorEl && watch('error', bindText(errorEl)),
+			// Inline error text binds to internal state, not a public prop
+			errorEl && watch(error, bindText(errorEl)),
 			descriptionEl && watch('description', bindText(descriptionEl)),
 			clearBtn && watch(length, bindVisible(clearBtn)),
+			// Form value sync: managed (value → setFormValue via ElementInternals)
+			// Form reset: managed (value attribute is the default)
+			// Validity: host.setCustomValidity() drives native :invalid /
+			// :user-invalid + host.validationMessage for external consumers.
 		]
 	},
+	{ formAssociated: true },
 )

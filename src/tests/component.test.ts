@@ -24,6 +24,9 @@ class FakeHTMLElement {
 	#attrs = new Map<string, string>()
 	localName = 'fake-element'
 	shadowRoot: null = null
+	formAssociated = false
+	#internals: FakeElementInternals | null = null
+
 	getAttribute(name: string): string | null {
 		return this.#attrs.has(name) ? this.#attrs.get(name)! : null
 	}
@@ -40,6 +43,69 @@ class FakeHTMLElement {
 	removeEventListener() {}
 	dispatchEvent() {
 		return true
+	}
+	attachInternals() {
+		if (!this.#internals) this.#internals = new FakeElementInternals()
+		return this.#internals
+	}
+}
+
+/** Mutable ValidityState — the real DOM type has readonly fields. */
+type MutableValidityState = {
+	-readonly [K in keyof ValidityState]: boolean
+}
+
+/**
+ * Minimal ElementInternals stub for unit tests.
+ * Stores form value, validity, and states for assertion.
+ */
+class FakeElementInternals {
+	formValue: string | File | FormData | null = null
+	validity: MutableValidityState = {
+		valueMissing: false,
+		typeMismatch: false,
+		patternMismatch: false,
+		tooLong: false,
+		tooShort: false,
+		rangeUnderflow: false,
+		rangeOverflow: false,
+		stepMismatch: false,
+		badInput: false,
+		customError: false,
+		valid: true,
+	}
+	validationMessage = ''
+	states = new Set<string>()
+	willValidate = true
+
+	setFormValue(value: string | File | FormData | null) {
+		this.formValue = value
+	}
+	setValidity(
+		flags: ValidityStateFlags,
+		message?: string,
+		anchor?: HTMLElement,
+	) {
+		Object.assign(this.validity, flags)
+		// Recompute valid: true only if no error flag is set
+		this.validity.valid =
+			!this.validity.valueMissing &&
+			!this.validity.typeMismatch &&
+			!this.validity.patternMismatch &&
+			!this.validity.tooLong &&
+			!this.validity.tooShort &&
+			!this.validity.rangeUnderflow &&
+			!this.validity.rangeOverflow &&
+			!this.validity.stepMismatch &&
+			!this.validity.badInput &&
+			!this.validity.customError
+		this.validationMessage = message ?? ''
+	}
+	checkValidity() {
+		return this.validity.valid
+	}
+	reportValidity() {
+		return this.validity.valid
 	}
 }
 

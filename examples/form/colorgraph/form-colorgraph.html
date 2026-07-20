@@ -1,4 +1,5 @@
-<form-colorgraph color="oklch(.48 .23 263)">
+<form>
+<form-colorgraph name="color" value="oklch(.48 .23 263)">
 	<div class="graph">
 		<canvas width="400" height="400"></canvas>
 		<button type="button" class="knob">
@@ -31,7 +32,7 @@
 	<div class="lightness">
 		<label for="lightness">Lightness</label>
 		<div class="input">
-			<input id="lightness" name="lightness" type="number">
+			<input id="lightness" type="number">
 			<span class="unit">%</span>
 		</div>
 		<div class="buttons">
@@ -47,7 +48,7 @@
 	<div class="chroma">
 		<label for="chroma">Chroma</label>
 		<div class="input">
-			<input id="chroma" name="chroma" type="number">
+			<input id="chroma" type="number">
 		</div>
 		<div class="buttons">
 			<button type="button" class="decrement" aria-label="Decrement chroma">
@@ -62,7 +63,7 @@
 	<div class="hue">
 		<label id="hue-label" for="hue">Hue</label>
 		<div class="input">
-			<input id="hue" name="hue" type="number">
+			<input id="hue" type="number">
 			<span class="unit">°</span>
 		</div>
 		<div class="buttons">
@@ -75,4 +76,5 @@
 		</div>
 		<p class="error" aria-live="assertive" id="hue-error"></p>
 	</div>
-</form-colorgraph>
+	</form-colorgraph>
+</form>

@@ -81,6 +81,7 @@ export {
 	bindAttribute,
 	bindClass,
 	bindProperty,
+	bindState,
 	bindStyle,
 	bindText,
 	bindVisible,
@@ -91,8 +92,10 @@ export {
 	setTextPreservingComments,
 } from './src/bindings'
 export {
+	type ComponentOptions,
 	defineComponent,
 	type FactoryContext,
+	type FormAssociatedElement,
 	type Initializers,
 	type MaybeSignal,
 } from './src/component'
@@ -133,6 +136,7 @@ export {
 	type TrimWhitespace,
 } from './src/helpers/dom'
 export type { EventType, OnEventHandler, OnHelper } from './src/helpers/events'
+export { FOCUSABLE_FORM_CONTROL_SELECTOR } from './src/helpers/form'
 export {
 	each,
 	type PassedProps,

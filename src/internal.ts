@@ -32,6 +32,28 @@ const componentSignals = new WeakMap<
 	Record<string, Signal<unknown & {}>>
 >()
 
+/**
+ * Module-internal map from component instances to their `ElementInternals`
+ * (or `null` if `attachInternals()` failed). Stored here rather than as a
+ * private class field so the prototype-installed host-contract getters (added
+ * conditionally for form-associated components) can access it — private fields
+ * are only reachable inside the class body.
+ */
+const internalsMap = new WeakMap<HTMLElement, ElementInternals | null>()
+
+/**
+ * Module-internal map from form-associated component instances to the retained
+ * `value` initializer (for managed `formResetCallback`). The initializer is the
+ * original value passed to `expose({ value: ... })`: a `Parser` is re-run
+ * against the current `value` attribute; a static value is restored directly.
+ * Enables native `defaultValue`-style reset semantics generically, because prop
+ * parsers already encode attribute → value.
+ */
+const initialValueInitializers = new WeakMap<
+	HTMLElement,
+	unknown // Parser | MaybeSignal, captured verbatim from expose({ value })
+>()
+
 /** Get the signals map for a component, creating it if needed. */
 const getSignals = (el: HTMLElement): Record<string, Signal<unknown & {}>> => {
 	let signals = componentSignals.get(el)
@@ -42,4 +64,10 @@ const getSignals = (el: HTMLElement): Record<string, Signal<unknown & {}>> => {
 	return signals
 }
 
-export { CONTEXT_RETRY_DELAY, DEPENDENCY_TIMEOUT, getSignals }
+export {
+	CONTEXT_RETRY_DELAY,
+	DEPENDENCY_TIMEOUT,
+	getSignals,
+	initialValueInitializers,
+	internalsMap,
+}

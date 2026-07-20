@@ -1,6 +1,8 @@
 import {
 	colorsNamed,
+	converter,
 	differenceCiede2000,
+	formatCss,
 	nearest,
 	type Oklch,
 } from 'culori/fn'
@@ -33,6 +35,7 @@ const nearestNamedColor = nearest(
 	Object.keys(colorsNamed),
 	differenceCiede2000(),
 )
+const oklchConverter = converter('oklch')
 
 /**
  * An interactive color editor with Oklch input, named color lookup, and a full lightness scale preview.
@@ -64,15 +67,20 @@ export default defineComponent<ModuleColoreditorProps>(
 					return { name: target.value }
 			}),
 			textbox &&
-				pass(textbox, {
+				pass(textbox as HTMLElement & { value: string; description: string }, {
 					value: { get: () => host.name, set: (v: string) => (host.name = v) },
 					description: () => `Nearest named CSS color: ${host.nearest}`,
 				}),
 			colorgraph &&
-				pass(colorgraph, {
-					color: {
-						get: () => host.color,
-						set: (v: Oklch) => (host.color = v),
+				pass(colorgraph as HTMLElement & { value: string }, {
+					// form-colorgraph exposes `value: string` (CSS color), while
+					// module-coloreditor works in Oklch objects — bridge the gap.
+					value: {
+						get: () => formatCss(host.color),
+						set: (v: string) => {
+							const parsed = oklchConverter(v)
+							if (parsed) host.color = parsed as Oklch
+						},
 					},
 				}),
 			colorscale &&

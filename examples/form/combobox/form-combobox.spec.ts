@@ -17,7 +17,7 @@ import { expect, test } from '@playwright/test'
  * - ✅ Clear functionality and button visibility (clearable attribute behavior)
  * - ✅ Accessibility features (ARIA expanded, invalid, described by, error messages)
  * - ✅ Form integration and value management (form submission, name attributes)
- * - ✅ Component property reactivity (value, length, error, description properties)
+ * - ✅ Component property reactivity (value, length, description properties)
  * - ✅ Edge cases and performance (rapid typing, focus management, empty states)
  *
  * Architecture Notes:
@@ -72,11 +72,18 @@ test.describe('form-combobox component', () => {
 
 			// Check initial ARIA attributes
 			await expect(textbox).toHaveAttribute('aria-expanded', 'false')
-			await expect(textbox).toHaveAttribute('aria-invalid', 'false')
 			await expect(textbox).toHaveAttribute(
 				'aria-describedby',
 				'timezone-description',
 			)
+
+			// Initial validity is valid (native :user-invalid drives styling,
+			// not aria-invalid — which was retired per the managed convention)
+			const initialValid = await page.evaluate(() => {
+				const el = document.querySelector('form-combobox')
+				return el?.validity.valid ?? true
+			})
+			expect(initialValid).toBe(true)
 
 			// Check initial component properties
 			const initialValue = await page.evaluate(() => {
@@ -174,7 +181,7 @@ test.describe('form-combobox component', () => {
 			expect(newLength).toBe(0)
 		})
 
-		test('synchronizes value attribute with component state', async ({
+		test('synchronizes value property with component state', async ({
 			page,
 		}) => {
 			const combobox = page.locator('form-combobox').first()
@@ -182,8 +189,14 @@ test.describe('form-combobox component', () => {
 
 			await textbox.fill('Europe/London')
 
-			// Component should have value attribute
-			await expect(combobox).toHaveAttribute('value', 'Europe/London')
+			// Component value property reflects the typed value (the value
+			// attribute is the default value only, not the current value —
+			// per the managed form-control convention)
+			const componentValue = await page.evaluate(() => {
+				const element = document.querySelector('form-combobox')
+				return element?.value
+			})
+			expect(componentValue).toBe('Europe/London')
 		})
 
 		test('reflects textbox value in component property', async ({ page }) => {
@@ -193,15 +206,12 @@ test.describe('form-combobox component', () => {
 			// Fill textbox directly (this is how the component is designed to work)
 			await textbox.fill('Asia/Tokyo')
 
-			// Component value should reflect textbox value
+			// Component value property should reflect textbox value
 			const componentValue = await page.evaluate(() => {
 				const element = document.querySelector('form-combobox')
 				return element?.value
 			})
 			expect(componentValue).toBe('Asia/Tokyo')
-
-			// Check component attribute is updated
-			await expect(combobox).toHaveAttribute('value', 'Asia/Tokyo')
 		})
 	})
 
@@ -547,22 +557,22 @@ test.describe('form-combobox component', () => {
 			await textbox.fill('')
 			await textbox.blur()
 
-			// Should show validation error
-			const componentError = await page.evaluate(() => {
+			// External consumers read host.validationMessage (native parity)
+			const validationMessage = await page.evaluate(() => {
 				const element = document.querySelector('form-combobox')
-				return element?.error ?? ''
+				return element?.validationMessage ?? ''
 			})
-			expect(componentError).toBeTruthy()
+			expect(validationMessage).toBeTruthy()
 
 			// Error element should show the message
-			await expect(errorElement).toHaveText(componentError)
+			await expect(errorElement).toHaveText(validationMessage)
 
-			// ARIA attributes should reflect error state
-			await expect(textbox).toHaveAttribute('aria-invalid', 'true')
-			await expect(textbox).toHaveAttribute(
-				'aria-errormessage',
-				'timezone-error',
-			)
+			// Host validity should reflect the invalid state
+			const isValid = await page.evaluate(() => {
+				const element = document.querySelector('form-combobox')
+				return element?.validity.valid ?? true
+			})
+			expect(isValid).toBe(false)
 		})
 
 		test('validates required input correctly', async ({ page }) => {
@@ -582,30 +592,48 @@ test.describe('form-combobox component', () => {
 			})
 			expect(componentValue).toBe('America/New_York')
 
-			// Should not have error state with valid input
-			await expect(textbox).toHaveAttribute('aria-invalid', 'false')
+			// Should be valid with valid input
+			const isValid = await page.evaluate(() => {
+				const element = document.querySelector('form-combobox')
+				return element?.validity.valid ?? false
+			})
+			expect(isValid).toBe(true)
 		})
 
-		test('updates error property reactively', async ({ page }) => {
-			const combobox = page.locator('form-combobox').first()
-			const errorElement = combobox.locator('> .error')
-
-			// Set error programmatically (writable property)
+		test('updates validation state reactively via setCustomValidity', async ({
+			page,
+		}) => {
+			// Set a custom error via the native-parity API
 			await page.evaluate(() => {
 				const element = document.querySelector('form-combobox')
-				if (element) element.error = 'Custom error message'
+				if (element) element.setCustomValidity('Custom error message')
 			})
 
-			// Error should be displayed
-			await expect(errorElement).toHaveText('Custom error message')
+			// validationMessage should reflect the set message (native parity)
+			const message = await page.evaluate(() => {
+				const element = document.querySelector('form-combobox')
+				return element?.validationMessage ?? ''
+			})
+			expect(message).toBe('Custom error message')
 
-			// Clear error
+			// validity should reflect the custom error
+			const isValid = await page.evaluate(() => {
+				const element = document.querySelector('form-combobox')
+				return element?.validity.valid ?? true
+			})
+			expect(isValid).toBe(false)
+
+			// Clear the error
 			await page.evaluate(() => {
 				const element = document.querySelector('form-combobox')
-				if (element) element.error = ''
+				if (element) element.setCustomValidity('')
 			})
 
-			await expect(errorElement).toHaveText('')
+			const clearedMessage = await page.evaluate(() => {
+				const element = document.querySelector('form-combobox')
+				return element?.validationMessage ?? ''
+			})
+			expect(clearedMessage).toBe('')
 		})
 	})
 
@@ -788,8 +816,31 @@ test.describe('form-combobox component', () => {
 			// Fill textbox
 			await textbox.fill('America/New_York')
 
-			// Check that input has correct name attribute
-			await expect(textbox).toHaveAttribute('name', 'timezone')
+			// Check that host has correct name attribute
+			await expect(combobox).toHaveAttribute('name', 'timezone')
+		})
+
+		test('form reset restores empty value and clears error', async ({
+			page,
+		}) => {
+			const form = page.locator('form').nth(0)
+			const combobox = form.locator('form-combobox')
+			const textbox = combobox.locator('input[role="combobox"]')
+
+			// Fill with a value
+			await textbox.fill('Blue')
+
+			// Reset the form
+			await page.evaluate(() => {
+				document.querySelector('form')?.reset()
+			})
+			await page.waitForTimeout(100)
+
+			// Value should be reset
+			const value = await page.evaluate(() => {
+				return (document.querySelector('form form-combobox') as any)?.value
+			})
+			expect(value).toBe('')
 		})
 	})
 
@@ -803,13 +854,12 @@ test.describe('form-combobox component', () => {
 			// Type in textbox
 			await textbox.fill('Asia/Tokyo')
 
-			// Component value should reflect textbox
+			// Component value property should reflect textbox
 			let componentValue = await page.evaluate(() => {
 				const element = document.querySelector('form-combobox')
 				return element?.value
 			})
 			expect(componentValue).toBe('Asia/Tokyo')
-			await expect(combobox).toHaveAttribute('value', 'Asia/Tokyo')
 
 			// Update via more typing
 			await textbox.fill('Europe/London')

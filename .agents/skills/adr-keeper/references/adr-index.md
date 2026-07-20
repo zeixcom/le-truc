@@ -20,8 +20,9 @@ This file is auto-generated. Do not edit manually.
 | [0013](0013-cem-plugin-for-le-truc-factory-pattern.md) | Custom Elements Manifest via `@custom-elements-manifest/analyzer` Plugin | ✅ Accepted | M13 |
 | [0014](0014-keyed-per-element-scopes-for-memo-collections.md) | Keyed Per-Element Scopes for Memo-Driven Collections | ✅ Accepted | M5, M6, M7, M11, §1, §4 |
 | [0015](0015-late-provider-retry-in-requestcontext.md) | Late-Provider Retry in requestContext | ✅ Accepted | M10 |
+| [0016](0016-element-internals-for-form-association-and-states.md) | ElementInternals for Form Association and Custom States | ✅ Accepted | M1, §4 |
 
 ---
 
-**Last updated:** 2026-07-11
-**Total ADRs:** 15 (excluding template)
+**Last updated:** 2026-07-14
+**Total ADRs:** 16 (excluding template)
