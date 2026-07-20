@@ -11,7 +11,7 @@ This file is auto-generated. Do not edit manually.
 | [0004](0004-slot-based-signal-swapping-for-inter-component-binding.md) | Slot-Based Signal Swapping for Inter-Component Binding | ✅ Accepted | M11 |
 | [0005](0005-branded-parsers-and-methods-with-symbol-based-branding.md) | Branded Parsers and Methods with Symbol-Based Branding | ✅ Accepted | M13, S1, S2 |
 | [0006](0006-lazy-mutationobserver-for-all-collections.md) | Lazy MutationObserver for all() Collections | ✅ Accepted | M7 |
-| [0007](0007-effect-descriptors-with-deferred-activation.md) | Effect Descriptors with Deferred Activation | ✅ Accepted | M8 |
+| [0007](0007-effect-descriptors-with-deferred-activation.md) | Effect Descriptors with Deferred Activation | 🗑️ Superseded by [0018](0018-implicit-effect-collection-via-ambient-context.md) | M8 |
 | [0008](0008-community-protocol-for-context.md) | Community Protocol for Context | ✅ Accepted | M10 |
 | [0009](0009-security-validation-in-bindattribute.md) | Security Validation in bindAttribute | ✅ Accepted (partially superseded by 0010) | M16 |
 | [0010](0010-trusted-types-support-via-sanitize-hook.md) | Trusted Types Support via the sanitize Hook | ✅ Accepted | M16, §4, §7 |
@@ -21,8 +21,9 @@ This file is auto-generated. Do not edit manually.
 | [0014](0014-keyed-per-element-scopes-for-memo-collections.md) | Keyed Per-Element Scopes for Memo-Driven Collections | ✅ Accepted | M5, M6, M7, M11, §1, §4 |
 | [0015](0015-late-provider-retry-in-requestcontext.md) | Late-Provider Retry in requestContext | ✅ Accepted | M10 |
 | [0016](0016-element-internals-for-form-association-and-states.md) | ElementInternals for Form Association and Custom States | ✅ Accepted | M1, §4 |
+| [0018](0018-implicit-effect-collection-via-ambient-context.md) | Implicit Effect Collection via Ambient Context | 🔄 Proposed | M8, M5, M6 |
 
 ---
 
-**Last updated:** 2026-07-14
-**Total ADRs:** 16 (excluding template)
+**Last updated:** 2026-07-20
+**Total ADRs:** 17 (excluding template; 0017 reserved for the in-flight reconciler ADR)
