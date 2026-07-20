@@ -108,6 +108,7 @@ export {
 	InvalidReactivesError,
 	InvalidSelectorError,
 	MissingElementError,
+	NoActiveCollectorError,
 } from './src/errors'
 export {
 	CONTEXT_REQUEST,

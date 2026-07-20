@@ -11,7 +11,8 @@ import {
 	makeProvideContexts,
 	makeRequestContext,
 } from '../helpers/context'
-import type { ComponentProps } from '../types'
+import { installActiveCollector, restoreActiveCollector } from '../internal'
+import type { ComponentProps, EffectDescriptor } from '../types'
 // `mock.module` mutates the live module namespace in place, so a captured
 // `import * as ns` reference reflects whatever the mock last set — it is NOT
 // a stable snapshot. Spread it into a plain object at file-load time, before
@@ -67,6 +68,18 @@ const createEventListenerMap = () => {
 	}
 	return { listeners, addEventListener, removeEventListener, dispatchEvent }
 }
+
+// provideContexts() pushes into the currently active effect-descriptor
+// collector (ADR 0018) and throws NoActiveCollectorError if none is active.
+// These tests call it directly, outside `defineComponent`'s factory
+// execution, so install a throwaway collector for the duration of the file.
+let previousCollector: EffectDescriptor[] | undefined
+beforeEach(() => {
+	previousCollector = installActiveCollector([])
+})
+afterEach(() => {
+	restoreActiveCollector(previousCollector)
+})
 
 /* === ContextRequestEvent Tests === */
 
@@ -141,6 +154,15 @@ describe('makeProvideContexts', () => {
 	afterEach(() => {
 		// Clean up any remaining listeners
 		for (const [, ls] of eventMap.listeners) ls.length = 0
+	})
+
+	test('pushes its descriptor into the active collector (ADR 0018)', () => {
+		const provideContexts = makeProvideContexts(host)
+		const collector: EffectDescriptor[] = []
+		const previous = installActiveCollector(collector)
+		const descriptor = provideContexts(['theme'])
+		restoreActiveCollector(previous)
+		expect(collector).toEqual([descriptor])
 	})
 
 	test('returns a function that accepts contexts array', () => {

@@ -23,7 +23,7 @@ import {
 	InvalidPassPropertyError,
 	InvalidReactivesError,
 } from '../errors'
-import { getSignals } from '../internal'
+import { getSignals, pushDescriptor, withCollector } from '../internal'
 import type {
 	ComponentProps,
 	EffectDescriptor,
@@ -150,6 +150,38 @@ const activateResult = (result: FactoryResult): void => {
 	for (const descriptor of result) {
 		if (Array.isArray(descriptor)) activateResult(descriptor)
 		else if (descriptor) descriptor()
+	}
+}
+
+/**
+ * Recursively flatten a `FactoryResult` (or a single descriptor, or a falsy
+ * value), invoking `visit` for each descriptor not already present in `seen`
+ * (checked by reference).
+ *
+ * Reconciles the legacy explicit-`return` form with descriptors already
+ * pushed into the active collector by `watch()`/`on()`/`pass()`/`each()`
+ * (ADR 0018) — a descriptor produced by one of those helpers is pushed
+ * whether or not it's also `return`ed, so it must only be visited once. A
+ * manually-constructed `EffectDescriptor` that bypasses every helper (never
+ * pushed anywhere) is not in `seen` and is still visited — the explicit
+ * `FactoryResult` return type has always allowed authoring one directly,
+ * without going through `watch()`/`on()`/`pass()`/`each()`, so this remains
+ * the one path such a descriptor can be picked up by.
+ *
+ * @since 2.3
+ * @param {FactoryResult | EffectDescriptor | Falsy} result - Flat or nested array, single descriptor, or falsy value to reconcile
+ * @param {ReadonlySet<EffectDescriptor>} seen - Descriptors already accounted for (by reference) — skipped
+ * @param {(descriptor: EffectDescriptor) => void} visit - Called once per not-yet-seen descriptor, in encounter order
+ */
+const forEachUnseen = (
+	result: FactoryResult | EffectDescriptor | Falsy,
+	seen: ReadonlySet<EffectDescriptor>,
+	visit: (descriptor: EffectDescriptor) => void,
+): void => {
+	if (Array.isArray(result)) {
+		for (const item of result) forEachUnseen(item, seen, visit)
+	} else if (typeof result === 'function' && !seen.has(result)) {
+		visit(result)
 	}
 }
 
@@ -291,7 +323,7 @@ const makeWatch = <P extends ComponentProps>(
 			| ((value: any) => MaybePromise<MaybeCleanup>)
 			| SingleMatchHandlers<any>,
 	): EffectDescriptor {
-		return () => {
+		const descriptor: EffectDescriptor = () => {
 			if (Array.isArray(source)) {
 				const signals = source.map(s => toSignal(host, s))
 				const handler = handlerOrHandlers as (
@@ -311,6 +343,8 @@ const makeWatch = <P extends ComponentProps>(
 			}
 			return createEffect(() => match(signal, handlerOrHandlers))
 		}
+		pushDescriptor(host, 'watch', descriptor)
+		return descriptor
 	}
 	return watch
 }
@@ -440,7 +474,7 @@ const makePass = <P extends ComponentProps>(
 		target: (HTMLElement & Q) | Memo<(HTMLElement & Q)[]> | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor {
-		return () => {
+		const descriptor: EffectDescriptor = () => {
 			if (!target) return
 			if (isMemo<(HTMLElement & Q)[]>(target)) {
 				// Memo target: keyed per-element lifecycle
@@ -450,6 +484,8 @@ const makePass = <P extends ComponentProps>(
 				swapSlots(target, props)
 			}
 		}
+		pushDescriptor(host, 'pass', descriptor)
+		return descriptor
 	}
 	return pass
 }
@@ -460,9 +496,19 @@ const makePass = <P extends ComponentProps>(
  * When elements enter the collection, their effects are created in a per-element
  * scope; when they leave, their effects are disposed with that scope.
  *
- * The callback receives a single element and returns a `FactoryResult` (array of
- * `EffectDescriptor`s) or a single `EffectDescriptor` (single-descriptor shortcut).
- * Falsy values can also be returned to skip conditionally.
+ * As of v2.3, the callback can call `watch()`/`on()`/`pass()` directly without
+ * returning them — each call registers into a collector local to that element's
+ * `mount`, established for the duration of the callback (see ADR 0018). Nesting
+ * is unbounded: a callback that calls `each()` again (e.g. a grid of rows
+ * containing columns) gets its own nested collector the same way.
+ *
+ * Descriptors produced by `watch()`/`on()`/`pass()` inside the callback are
+ * picked up via the implicit collector regardless of whether the callback also
+ * `return`s them — an old-style `return [watch(...)]` still works, activated
+ * exactly once, not twice (see `forEachUnseen()`). A manually-constructed
+ * `EffectDescriptor` that bypasses every helper is only reachable via `return`
+ * and is still activated, since the public `FactoryResult` type has always
+ * allowed authoring one directly.
  *
  * @since 2.0
  */
@@ -470,13 +516,16 @@ function each<E extends Element>(
 	memo: Memo<E[]>,
 	callback: (element: E) => FactoryResult | EffectDescriptor | Falsy,
 ): EffectDescriptor {
-	return () => {
+	const descriptor: EffectDescriptor = () => {
 		keyedScopes(memo, element => {
-			const result = callback(element)
-			if (Array.isArray(result)) activateResult(result)
-			else if (typeof result === 'function') result()
+			const collected: EffectDescriptor[] = []
+			const result = withCollector(collected, () => callback(element))
+			activateResult(collected)
+			forEachUnseen(result, new Set(collected), d => d())
 		})
 	}
+	pushDescriptor(undefined, 'each', descriptor)
+	return descriptor
 }
 
 export {
@@ -485,6 +534,7 @@ export {
 	each,
 	type FactoryResult,
 	type Falsy,
+	forEachUnseen,
 	keyedScopes,
 	makePass,
 	makeWatch,

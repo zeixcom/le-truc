@@ -29,14 +29,21 @@ import {
 } from './helpers/form'
 import {
 	activateResult,
+	type EffectDescriptor,
 	type FactoryResult,
 	type Falsy,
+	forEachUnseen,
 	makePass,
 	makeWatch,
 	type PassHelper,
 	type WatchHelper,
 } from './helpers/reactive'
-import { getSignals, initialValueInitializers, internalsMap } from './internal'
+import {
+	getSignals,
+	initialValueInitializers,
+	internalsMap,
+	withCollector,
+} from './internal'
 import {
 	type ComponentProps,
 	isMethodProducer,
@@ -272,8 +279,23 @@ function defineComponent<P extends ComponentProps>(
 					requestContext: makeRequestContext(host),
 				}
 
-				const result = factory(context)
-				if (result) this.#setup = result
+				// watch()/on()/pass()/each()/provideContexts() already pushed their
+				// descriptors into this collector when called, whether or not the
+				// factory also `return`s them — an old-style `return [...]` is
+				// redundant for those, not required. But the factory's return value
+				// is still reconciled (not ignored outright): the public
+				// `FactoryResult` type has always allowed authoring a raw
+				// `EffectDescriptor` by hand, bypassing every helper, and such a
+				// descriptor is never pushed anywhere — `return` is the only path
+				// that can pick it up. `forEachUnseen` skips anything already in the
+				// collector by reference, so nothing activates twice. See ADR 0018.
+				const collector: EffectDescriptor[] = []
+				const result = withCollector(collector, () => factory(context))
+				this.#setup = collector
+				if (result) {
+					const seen = new Set(collector)
+					forEachUnseen(result, seen, d => this.#setup.push(d))
+				}
 
 				// Managed form-control behavior: register the library-internal
 				// value-sync effect in the same deferred-activation pipeline as

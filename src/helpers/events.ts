@@ -5,6 +5,7 @@ import {
 	isRecord,
 	type Memo,
 } from '@zeix/cause-effect'
+import { pushDescriptor } from '../internal'
 import { throttle } from '../scheduler'
 import type { ComponentProps, EffectDescriptor, Falsy } from '../types'
 import { DEV_MODE, elementName } from '../util'
@@ -202,7 +203,7 @@ const makeOn = <P extends ComponentProps>(
 		handler: OnEventHandler<P, Event, Element>,
 		options: AddEventListenerOptions = {},
 	): EffectDescriptor {
-		return () => {
+		const descriptor: EffectDescriptor = () => {
 			if (!target) return
 
 			if (!('passive' in options)) {
@@ -254,6 +255,8 @@ const makeOn = <P extends ComponentProps>(
 			// Single Element target
 			createScope(() => attachListener(host, target, type, handler, options))
 		}
+		pushDescriptor(host, 'on', descriptor)
+		return descriptor
 	}
 	return on
 }
