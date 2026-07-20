@@ -105,6 +105,19 @@ declare class NoActiveCollectorError extends Error {
     constructor(host: HTMLElement | undefined, helper: string);
 }
 /**
+ * Error thrown when the template passed to `reconcile()` does not contain
+ * exactly one root element in its content
+ *
+ * @since 2.3.0
+ */
+declare class InvalidTemplateError extends TypeError {
+    /**
+     * @param {Element} container - Container element the template was meant to fill
+     * @param {number} count - Number of root elements found in the template content
+     */
+    constructor(container: Element, count: number);
+}
+/**
  * Error thrown when a CSS selector passed to `all()` is malformed
  *
  * @since 2.0.4
@@ -117,4 +130,4 @@ declare class InvalidSelectorError extends TypeError {
      */
     constructor(parent: ParentNode, selector: string, cause: unknown);
 }
-export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPassPropertyError, InvalidPropertyNameError, InvalidReactivesError, InvalidSelectorError, MissingElementError, NoActiveCollectorError, };
+export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPassPropertyError, InvalidPropertyNameError, InvalidReactivesError, InvalidSelectorError, InvalidTemplateError, MissingElementError, NoActiveCollectorError, };

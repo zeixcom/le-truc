@@ -45,7 +45,7 @@ Explicit `return [...]` of a `FactoryResult` (nested arrays flattened, falsy val
 
 - **Event-driven read-only props use `createState` + `on`**: Expose `state.get` (not the full `State`) to make a prop readable but not settable by consumers. Update the value in an `on()` handler. To watch the prop inside the factory, pass the signal directly: `watch(length, bindVisible(clearBtn))`.
 
-- **`DEV_MODE` enables enhanced diagnostics**: Build with `process.env.DEV_MODE=true` for detailed error messages, dependency-timeout warnings, and effect-execution logging. No per-instance debug flag exists.
+- **Dev mode enables enhanced diagnostics**: Build with `--define process.env.DEV_MODE='"true"'` (the **string** `"true"` — guards check `process.env.DEV_MODE === 'true'` inline, so a bare boolean does not enable them) for detailed error messages, dependency-timeout warnings, and effect-execution logging. Production builds define the string `"false"`, which constant-folds every dev branch out of the bundle. No per-instance debug flag exists.
 
 - **`bindVisible` is the inverse of `el.hidden`**: `bindVisible(el)` sets `el.hidden = !value`. A value of `true` makes the element visible.
 

@@ -157,10 +157,33 @@ class NoActiveCollectorError extends Error {
 	 */
 	constructor(host: HTMLElement | undefined, helper: string) {
 		const where = host ? ` in component ${elementName(host)}` : ''
-		super(
-			`${helper}() called outside synchronous factory or each() callback execution${where}. watch(), on(), pass(), each(), provideContexts(), and run() must be called synchronously during setup — not after an await, inside a detached setTimeout, or from an event handler defined during setup.`,
-		)
+		let message = `${helper}() called outside synchronous factory or each() callback execution${where}.`
+		// Remediation guidance is DEV-only so the production bundle carries
+		// just the diagnosis; the guard folds away under the build define.
+		if (process.env.DEV_MODE === 'true')
+			message +=
+				' watch(), on(), pass(), each(), provideContexts(), and run() must be called synchronously during setup — not after an await, inside a detached setTimeout, or from an event handler defined during setup.'
+		super(message)
 		this.name = 'NoActiveCollectorError'
+	}
+}
+
+/**
+ * Error thrown when the template passed to `reconcile()` does not contain
+ * exactly one root element in its content
+ *
+ * @since 2.3.0
+ */
+class InvalidTemplateError extends TypeError {
+	/**
+	 * @param {Element} container - Container element the template was meant to fill
+	 * @param {number} count - Number of root elements found in the template content
+	 */
+	constructor(container: Element, count: number) {
+		super(
+			`Invalid template for reconcile() into ${elementName(container)}. Expected exactly 1 root element in the template content, found ${count}.`,
+		)
+		this.name = 'InvalidTemplateError'
 	}
 }
 
@@ -197,6 +220,7 @@ export {
 	InvalidPropertyNameError,
 	InvalidReactivesError,
 	InvalidSelectorError,
+	InvalidTemplateError,
 	MissingElementError,
 	NoActiveCollectorError,
 }

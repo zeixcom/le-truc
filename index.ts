@@ -107,6 +107,7 @@ export {
 	InvalidPropertyNameError,
 	InvalidReactivesError,
 	InvalidSelectorError,
+	InvalidTemplateError,
 	MissingElementError,
 	NoActiveCollectorError,
 } from './src/errors'
@@ -142,6 +143,7 @@ export {
 	each,
 	type PassedProps,
 	type PassHelper,
+	reconcile,
 	type Reactive,
 	type RunHelper,
 	type WatchHelper,

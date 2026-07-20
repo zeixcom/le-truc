@@ -49,7 +49,7 @@
 		"example": "examples"
 	},
 	"scripts": {
-		"build:prod": "bun build index.ts --outdir ./ --define process.env.DEV_MODE=false",
+		"build:prod": "bun build index.ts --outdir ./ --define process.env.DEV_MODE='\"false\"'",
 		"build": "bun run build:prod && bunx tsc -p tsconfig.build.json && bun run lint",
 		"build:docs": "bun ./server/build.ts",
 		"build:docs:watch": "bun ./server/build.ts --watch",

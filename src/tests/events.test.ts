@@ -5,18 +5,11 @@
  * The element is a plain object stub — no real DOM required.
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { createMemo, createState, type Memo } from '@zeix/cause-effect'
 import { makeOn } from '../helpers/events'
 import { installActiveCollector, restoreActiveCollector } from '../internal'
 import type { EffectDescriptor } from '../types'
-// `mock.module` mutates the live module namespace in place, so a captured
-// `import * as ns` reference reflects whatever the mock last set — it is NOT
-// a stable snapshot. Spread it into a plain object at file-load time, before
-// any `mock.module('../util', …)` call below, and restore from that snapshot.
-import * as realUtilNamespace from '../util'
-
-const realUtil = { ...realUtilNamespace }
 
 /* === RAF Mock === */
 
@@ -296,22 +289,23 @@ describe('makeOn Memo target dispatch', () => {
 	})
 
 	test('per-element fallback logs a DEV_MODE warning pointing at each() + on()', () => {
-		// Deliberately synchronous (no `await`) — see context.test.ts's
-		// DEV_MODE test for why an `await` here would risk leaking the mock
-		// into other files' tests via bun:test interleaving.
+		// DEV guards read `process.env.DEV_MODE` at call time, so flipping the
+		// env var around the call is enough — no module mocking required.
 		const originalWarn = console.warn
 		const warnings: unknown[][] = []
 		console.warn = (...args: unknown[]) => warnings.push(args)
+		const prevDevMode = process.env.DEV_MODE
 
 		try {
-			mock.module('../util', () => ({ ...realUtil, DEV_MODE: true }))
+			process.env.DEV_MODE = 'true'
 			const el1 = makeFakeElement()
 			const host = makeHost()
 			const memo = createMemo(() => [el1]) as unknown as Memo<Element[]>
 			const on = makeOn(host)
 			on(memo, 'focus', () => {})()
 		} finally {
-			mock.module('../util', () => realUtil)
+			if (prevDevMode === undefined) delete process.env.DEV_MODE
+			else process.env.DEV_MODE = prevDevMode
 			console.warn = originalWarn
 		}
 

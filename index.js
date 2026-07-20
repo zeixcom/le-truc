@@ -1992,7 +1992,6 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
   };
 };
 // src/util.ts
-var DEV_MODE = typeof process !== "undefined" && false === "true";
 var isCustomElement = (element) => element.localName.includes("-");
 var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
 var elementName = (el) => {
@@ -2057,8 +2056,18 @@ class InvalidPassPropertyError extends TypeError {
 class NoActiveCollectorError extends Error {
   constructor(host, helper) {
     const where = host ? ` in component ${elementName(host)}` : "";
-    super(`${helper}() called outside synchronous factory or each() callback execution${where}. watch(), on(), pass(), each(), provideContexts(), and run() must be called synchronously during setup — not after an await, inside a detached setTimeout, or from an event handler defined during setup.`);
+    let message = `${helper}() called outside synchronous factory or each() callback execution${where}.`;
+    if (false)
+      ;
+    super(message);
     this.name = "NoActiveCollectorError";
+  }
+}
+
+class InvalidTemplateError extends TypeError {
+  constructor(container, count) {
+    super(`Invalid template for reconcile() into ${elementName(container)}. Expected exactly 1 root element in the template content, found ${count}.`);
+    this.name = "InvalidTemplateError";
   }
 }
 
@@ -2128,8 +2137,8 @@ var makeProvideContexts = (host) => (contexts) => {
           try {
             return host[context];
           } catch (error) {
-            if (DEV_MODE)
-              console.warn("provideContexts: getter threw", elementName(host), error);
+            if (false)
+              ;
             return;
           }
         });
@@ -2159,8 +2168,8 @@ var makeRequestContext = (host) => (context, fallback) => {
     setTimeout(() => {
       if (!answered && host.isConnected) {
         dispatch();
-        if (!answered && DEV_MODE)
-          console.warn(`requestContext: no provider answered for '${String(context)}' on ${elementName(host)}; using fallback`);
+        if (false)
+          ;
       }
     }, CONTEXT_RETRY_DELAY);
   }
@@ -2277,8 +2286,8 @@ var makeElementQueries = (host) => {
             }, DEPENDENCY_TIMEOUT);
           })
         ]).then(callback).catch((error) => {
-          if (DEV_MODE)
-            console.warn(error);
+          if (false)
+            ;
           callback();
         });
       });
@@ -2393,9 +2402,7 @@ var makePass = (host) => {
         failures.set(prop, "could not be resolved to a signal");
         continue;
       }
-      if (DEV_MODE && !isComputed(signal) && !(signal && typeof signal === "object" && ("get" in signal) && !(Symbol.toStringTag in signal))) {
-        console.warn(`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`);
-      }
+      if (false) {}
       const slot = signals[prop];
       if (!isSlot(slot)) {
         failures.set(prop, `is not Slot-backed on ${targetName} (read-only property, or target is not a Le Truc component)`);
@@ -2441,6 +2448,102 @@ function each(memo, callback) {
     });
   };
   pushDescriptor(undefined, "each", descriptor);
+  return descriptor;
+}
+function reconcile(container, template, source, bindItem) {
+  const descriptor = () => {
+    if (template.content.childElementCount !== 1)
+      throw new InvalidTemplateError(container, template.content.childElementCount);
+    const itemRoot = template.content.firstElementChild;
+    const keyOf = new WeakMap;
+    const disposers = new Map;
+    const nextKeyed = (after) => {
+      let node = after ? after.nextElementSibling : container.firstElementChild;
+      while (node && (!keyOf.has(node) || node.hasAttribute("data-unreconciled")))
+        node = node.nextElementSibling;
+      return node;
+    };
+    createScope(() => {
+      createEffect(() => {
+        const keys = Array.from(source.keys());
+        untrack(() => {
+          const keySet = new Set(keys);
+          const current = new Map;
+          const adopted = new Set;
+          const pinned = new Set;
+          const leavers = [];
+          for (const child of Array.from(container.children)) {
+            if (child.hasAttribute("data-unreconciled")) {
+              const key2 = keyOf.get(child);
+              if (key2 !== undefined && keySet.has(key2)) {
+                current.set(key2, child);
+                pinned.add(key2);
+              }
+              continue;
+            }
+            const key = keyOf.get(child);
+            if (key !== undefined) {
+              if (keySet.has(key))
+                current.set(key, child);
+              else
+                leavers.push(child);
+              continue;
+            }
+            const harvested = child.getAttribute("data-key");
+            if (harvested !== null && keySet.has(harvested) && !current.has(harvested)) {
+              keyOf.set(child, harvested);
+              current.set(harvested, child);
+              adopted.add(harvested);
+              continue;
+            }
+            if (false)
+              ;
+            child.remove();
+          }
+          for (const [key, dispose] of disposers) {
+            if (keySet.has(key))
+              continue;
+            dispose();
+            disposers.delete(key);
+          }
+          for (const el of leavers)
+            el.remove();
+          let prev = null;
+          for (const key of keys) {
+            let el = current.get(key);
+            let mount = adopted.has(key);
+            if (!el) {
+              el = itemRoot.cloneNode(true);
+              el.setAttribute("data-key", key);
+              keyOf.set(el, key);
+              mount = true;
+            }
+            if (mount) {
+              disposers.get(key)?.();
+              const item = source.byKey(key);
+              if (item) {
+                const element = el;
+                disposers.set(key, createScope(() => bindItem(element, item, key), {
+                  root: true
+                }));
+              }
+            }
+            if (pinned.has(key))
+              continue;
+            if (nextKeyed(prev) !== el)
+              container.insertBefore(el, prev ? prev.nextElementSibling : container.firstElementChild);
+            prev = el;
+          }
+        });
+      });
+      return () => {
+        for (const dispose of disposers.values())
+          dispose();
+        disposers.clear();
+      };
+    });
+  };
+  pushDescriptor(undefined, "reconcile", descriptor);
   return descriptor;
 }
 
@@ -2516,9 +2619,7 @@ var makeOn = (host) => {
       }
       if (isMemo(target)) {
         if (NON_BUBBLING_EVENTS.has(type)) {
-          if (DEV_MODE) {
-            console.warn(`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
-          }
+          if (false) {}
           return keyedScopes(target, (el) => attachListener(host, el, type, handler, options));
         }
         const root = host.shadowRoot ?? host;
@@ -2778,10 +2879,7 @@ function defineComponent(name, factory, options) {
           ...elementQueries,
           get internals() {
             const internals2 = internalsMap.get(instance) ?? null;
-            if (DEV_MODE && internals2 === null && !instance.#internalsAccessed) {
-              instance.#internalsAccessed = true;
-              console.warn(`internals is null — attachInternals() failed in ${elementName(host)}. The component works but cannot participate in form association, custom states, or ARIA reflection.`);
-            }
+            if (false) {}
             return internals2;
           },
           watch: makeWatch(host),
@@ -2801,8 +2899,8 @@ function defineComponent(name, factory, options) {
         const internals = internalsMap.get(this);
         if (formAssociated && internals) {
           const hasValueSignal = "value" in this && getSignals(this).value;
-          if (DEV_MODE && !hasValueSignal)
-            console.warn(`form-associated component ${elementName(host)} did not expose a reactive 'value' property. The managed form-control convention requires a reactive 'value' for form value sync, reset, and state restore.`);
+          if (false)
+            ;
           this.#createManagedDisabledProperty();
           this.#setup.push(this.#managedValueSyncDescriptor(internals));
         }
@@ -2861,8 +2959,12 @@ function defineComponent(name, factory, options) {
           continue;
         if (isReservedWord(prop))
           throw new InvalidPropertyNameError(this.localName, prop, "reserved word or Object builtin — cannot be used as a reactive property");
-        if (formAssociated && MANAGED_FORM_MEMBERS.has(prop))
-          throw new InvalidPropertyNameError(this.localName, prop, "is a managed form-control member on form-associated components — use the native-parity host contract instead; expose `value` for the form value");
+        if (formAssociated && MANAGED_FORM_MEMBERS.has(prop)) {
+          let reason = "is a managed form-control member on form-associated components";
+          if (false)
+            ;
+          throw new InvalidPropertyNameError(this.localName, prop, reason);
+        }
         if (prop in this)
           continue;
         if (formAssociated && prop === "value")
@@ -2957,6 +3059,7 @@ export {
   setTextPreservingComments,
   schedule,
   safeSetAttribute,
+  reconcile,
   match,
   isTask,
   isStore,
@@ -3019,6 +3122,7 @@ export {
   NullishSignalValueError,
   NoActiveCollectorError,
   MissingElementError,
+  InvalidTemplateError,
   InvalidStoreMutationError,
   InvalidSignalValueError,
   InvalidSelectorError,

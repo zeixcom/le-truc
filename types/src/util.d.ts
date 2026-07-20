@@ -1,4 +1,3 @@
-declare const DEV_MODE: boolean;
 /**
  * Check whether an element is a custom element
  *
@@ -21,4 +20,4 @@ declare const isNotYetDefinedComponent: (element: Element) => boolean;
  * @returns {string}
  */
 declare const elementName: (el: Element | undefined | null) => string;
-export { DEV_MODE, elementName, isCustomElement, isNotYetDefinedComponent };
+export { elementName, isCustomElement, isNotYetDefinedComponent };

@@ -10,7 +10,7 @@ import {
 } from '@zeix/cause-effect'
 import { CONTEXT_RETRY_DELAY, pushDescriptor } from '../internal'
 import type { ComponentProps, EffectDescriptor } from '../types'
-import { DEV_MODE, elementName } from '../util'
+import { elementName } from '../util'
 
 /* === Types === */
 
@@ -165,7 +165,7 @@ const makeProvideContexts =
 							try {
 								return host[context as keyof P]
 							} catch (error) {
-								if (DEV_MODE)
+								if (process.env.DEV_MODE === 'true')
 									console.warn(
 										'provideContexts: getter threw',
 										elementName(host),
@@ -252,7 +252,7 @@ const makeRequestContext =
 			setTimeout(() => {
 				if (!answered && host.isConnected) {
 					dispatch()
-					if (!answered && DEV_MODE)
+					if (process.env.DEV_MODE === 'true' && !answered)
 						console.warn(
 							`requestContext: no provider answered for '${String(context)}' on ${elementName(host)}; using fallback`,
 						)

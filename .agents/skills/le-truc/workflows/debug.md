@@ -63,7 +63,7 @@ Check each link in order:
 
 ## Step 3: Enable Debug Logging
 
-Build with `process.env.DEV_MODE=true` for enhanced error messages, dependency-timeout warnings, and unbranded-parser warnings. There is no per-instance debug flag — `DEV_MODE` is a module-level flag set at build time, not a runtime property on the host element.
+Build with `--define process.env.DEV_MODE='"true"'` (the **string** `"true"` — guards check `process.env.DEV_MODE === 'true'` inline, so a bare boolean does not enable them) for enhanced error messages, dependency-timeout warnings, and unbranded-parser warnings. There is no per-instance debug flag — dev mode is decided at build time (or by the env var in unbundled runtimes like `bun test`), not by a runtime property on the host element.
 
 ---
 

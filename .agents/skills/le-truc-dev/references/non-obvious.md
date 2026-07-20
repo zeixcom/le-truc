@@ -41,6 +41,18 @@ The observer in `src/helpers/dom.ts` only activates when the `Memo` is **read in
 
 The observer watches only mutations implied by the CSS selector (class, ID, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the memo's `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
 
+## `reconcile()` Owns the Container; `each()` Does Not
+
+`reconcile(container, template, source, bindItem)` (src/helpers/reactive.ts) is data-driven and owns the container's children — the opposite ownership of `each()`, which enhances DOM the component doesn't own. Non-obvious details (see ADR 0017):
+
+- The source parameter is the **branded** union `List<T> | Collection<T>`, not a structural interface — `Store<T>` satisfies the shape but is deliberately excluded (its items are not homomorphic).
+- First run **adopts** existing children by `data-key` and removes everything else, including unkeyed children (self-cleaning). `bindItem` runs for adopted elements too and must be idempotent against server-rendered content.
+- Children with `data-unreconciled` are structurally invisible: never removed, never repositioned, no `bindItem`. But an element `reconcile()` itself placed that later gains the attribute (mid-drag pin) still **claims its key** — otherwise a re-run would clone a duplicate for it.
+- Positioning is keyed-relative (after the previous keyed sibling), not absolute-index, so unmanaged elements never drift keyed positions.
+- Internal element→key bookkeeping is a `WeakMap`; `data-key` on the DOM exists for SSR adoption and event delegation — complementary, not either/or.
+- The driving effect reads `source.keys()` only; everything after is wrapped in `untrack()`, so signal reads inside `bindItem` do not become structural dependencies.
+- Ownership follows `keyedScopes`: per-item scopes are `{ root: true }`, an outer `createScope` registers teardown-all on the component scope, and leavers are disposed before their elements are removed and before enterers mount.
+
 ## `pass()` Scope is Le Truc Components Only
 
 `pass()` (`makePass` in `src/helpers/reactive.ts`) replaces the backing `Slot` signal of a child's property using `getSignals(target)` from `src/internal.ts`. It only works for Le Truc components whose properties are Slot-backed. For any other custom element or plain HTML element, use `bindProperty()` instead.
@@ -93,14 +105,14 @@ When the reactive value is boolean, `toggleAttribute` is called — the attribut
 
 When the reactive is nil, `el.style.removeProperty(prop)` is called, restoring whatever value the CSS cascade provides. Setting the reactive back to a string re-applies the inline style.
 
-## Debug Mode
+## Debug Mode Guards Must Stay in Foldable Form
 
-`DEV_MODE` is the only debug mode — build with `process.env.DEV_MODE=true` for enhanced errors and unbranded-parser warnings. There is no per-instance debug flag.
+Dev mode is the only debug mode — there is no per-instance debug flag. As of v2.3 there is **no `DEV_MODE` const** in `util.ts`: every DEV-gated diagnostic is guarded inline by `process.env.DEV_MODE === 'true'` at its use site. This exact form is load-bearing: Bun's minifier does no cross-reference constant propagation (an imported `const DEV_MODE = false` — and even `var o = !1; if (o) …` — survives minification), but it does fold a same-type literal comparison in an `if` condition. The build therefore defines the **string** `'"false"'` (prod) or `'"true"'` (dev) — a bare boolean define produces `false === 'true'`, which Bun does *not* fold, silently shipping all DEV code again (this was a real ~450B-gzipped regression). In `&&` chains, keep the env check in first position. `test/regression-bundle.test.ts` asserts known DEV-only strings are absent from the prod bundle.
 
 ## Event-Driven Read-Only Props
 
 Expose `state.get` (not the full `State`) to make a prop readable but not settable by consumers. Update the value in an `on()` handler. To watch the prop inside the factory, pass the signal directly: `watch(length, bindVisible(clearBtn))`.
 
-## Testing a DEV_MODE-Gated Branch Requires `mock.module`, and a Snapshot
+## Testing a DEV-Gated Branch: Flip the Env Var, No Module Mocking
 
-`DEV_MODE` (`src/util.ts`) is a module-level `const` captured at import time, so setting `process.env.DEV_MODE` from a test has no effect on already-loaded consumers (`helpers/context.ts`, `helpers/events.ts`, `helpers/dom.ts`, …). `bun:test`'s `mock.module('../util', factory)` does retroactively patch the live binding in already-imported consumers — but it mutates the module's namespace object **in place**. A captured `import * as ns from '../util'` reference is therefore not a stable snapshot: after the first `mock.module` call, `ns.DEV_MODE` reflects the mock, not the original. Restoring with `mock.module('../util', () => ns)` just re-feeds the already-mutated values, permanently corrupting `DEV_MODE` for the rest of the `bun test` process (confirmed: produced a real cross-file leak into unrelated tests). Fix: spread the namespace into a plain object (`const realUtil = { ...ns }`) once, before any mocking, and restore from that snapshot — never from the live namespace. Keep the whole mock→assert→restore sequence synchronous (no `await` in between); an `await` point lets `bun:test` interleave other files' tests while the mock is still active. See `src/tests/context.test.ts` and `src/tests/events.test.ts` for the pattern.
+Since v2.3, DEV guards read `process.env.DEV_MODE` at call time (no import-time const), so a test exercises a DEV branch by setting `process.env.DEV_MODE = 'true'` around the call and restoring the previous value in a `finally` (see `withDevMode` in `src/tests/context.test.ts`, and the inline pattern in `events.test.ts` / `reactive.test.ts`). The historical `mock.module('../util', …)` + namespace-snapshot dance is gone — do not reintroduce it. One residual caveat: the env var is process-global, so while an `await` is pending inside a DEV-enabled window, guards in interleaved tests from other files also see it. That only produces extra `console.warn` calls; keep warn-counting assertions inside the same file (bun runs a file's tests sequentially) and this stays benign.

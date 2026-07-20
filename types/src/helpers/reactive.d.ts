@@ -1,4 +1,4 @@
-import { type MaybeCleanup, type MaybePromise, type Memo, type Signal, type SingleMatchHandlers, type SlotDescriptor } from '@zeix/cause-effect';
+import { type Collection, type List, type MaybeCleanup, type MaybePromise, type Memo, type MutableSignal, type Signal, type SingleMatchHandlers, type SlotDescriptor } from '@zeix/cause-effect';
 import type { ComponentProps, EffectDescriptor, FactoryResult, Falsy } from '../types';
 /**
  * A reactive value that drives a DOM update or a slot injection.
@@ -214,4 +214,49 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => Pas
  * @since 2.0
  */
 declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult | EffectDescriptor | Falsy): EffectDescriptor;
-export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, forEachUnseen, keyedScopes, makePass, makeRun, makeWatch, type PassedProps, type PassHelper, type Reactive, type RunHelper, type WatchHelper, };
+/**
+ * Sync a keyed reactive data source to a container's children.
+ *
+ * For every key in the source (in source order), the container holds one
+ * element carrying `data-key`: entering keys clone the `<template>`'s single
+ * root element, leaving keys dispose their scope and remove their element,
+ * and surviving elements are moved with `insertBefore()` — always reused,
+ * never recreated. The sync is strictly one-way, data → DOM: `reconcile()`
+ * never reads item data back from the DOM; event handlers that mutate the
+ * source are the legitimate path to change structural state.
+ *
+ * On the first run, existing children carrying `data-key` are **adopted** if
+ * their key is present in the source (`bindItem` is mounted for them too —
+ * it is responsible for its own idempotency against server-rendered content);
+ * keyed children whose key is absent are removed (DEV_MODE warning), and all
+ * other unkeyed children are removed (self-cleaning container).
+ *
+ * Children carrying `data-unreconciled` are exempt from reconciliation:
+ * never removed, never repositioned, no `bindItem`. An element that
+ * `reconcile()` itself placed and that later gains the attribute (e.g. a
+ * mid-drag item) still claims its key, so no duplicate clone is created for
+ * it while it is exempt. Keyed elements are positioned relative to the
+ * **keyed subset** (after the previous keyed sibling, or at the head if
+ * first), so unmanaged elements interspersed in the container do not drift
+ * keyed positions.
+ *
+ * `bindItem` is called once per entering element inside a root-keyed scope;
+ * a returned cleanup registers on that scope, which is disposed when the key
+ * leaves the source or the component disconnects. The driving effect tracks
+ * *structural* changes only (the source's keys); per-item value changes flow
+ * through the `byKey` signal passed to `bindItem` and never trigger
+ * structural work.
+ *
+ * Throws `InvalidTemplateError` at activation if the template content does
+ * not contain exactly one root element. See ADR 0017.
+ *
+ * @since 2.3
+ * @param {Element} container - Container element whose children are reconciled
+ * @param {HTMLTemplateElement} template - Template whose single root element is cloned for entering keys
+ * @param {List<T> | Collection<T>} source - Keyed reactive data source
+ * @param {(element: HTMLElement, item: Signal<T>, key: string) => MaybeCleanup} bindItem - Mounted once per entering element in its own scope
+ * @returns {EffectDescriptor} Effect descriptor to include in the component's factory result
+ */
+declare function reconcile<T extends {}, S extends MutableSignal<T>>(container: Element, template: HTMLTemplateElement, source: List<T, S>, bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup): EffectDescriptor;
+declare function reconcile<T extends {}, S extends Signal<T>>(container: Element, template: HTMLTemplateElement, source: Collection<T, S>, bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup): EffectDescriptor;
+export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, forEachUnseen, keyedScopes, makePass, makeRun, makeWatch, type PassedProps, type PassHelper, type Reactive, type RunHelper, reconcile, type WatchHelper, };
