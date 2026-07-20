@@ -23,19 +23,15 @@ export default defineComponent<TestEachProps>(
 
 		expose({ selected: -1 })
 
-		return [
-			// each() with FactoryResult array (run + on per element)
-			each(items, item => {
-				const index = Number(item.dataset.index ?? -1)
-				return [
-					// nested run: highlight selected item
-					watch('selected', sel => {
-						item.classList.toggle('active', sel === index)
-					}),
-					// nested on: clicking item updates selected prop
-					on(item, 'click', () => ({ selected: index })),
-				]
-			}),
-		]
+		// each() with implicit collection (watch + on per element)
+		each(items, item => {
+			const index = Number(item.dataset.index ?? -1)
+			// nested watch: highlight selected item
+			watch('selected', sel => {
+				item.classList.toggle('active', sel === index)
+			})
+			// nested on: clicking item updates selected prop
+			on(item, 'click', () => ({ selected: index }))
+		})
 	},
 )

@@ -1,5 +1,4 @@
 import { asBoolean, bindAttribute, defineComponent } from '../../..'
-import type { BasicButtonProps } from '../../basic/button/basic-button'
 import { copyToClipboard } from '../../basic/button/copyToClipboard'
 
 export type ModuleCodeblockProps = {
@@ -28,17 +27,15 @@ export default defineComponent<ModuleCodeblockProps>(
 
 		expose({ collapsed: asBoolean() })
 
-		return [
-			on(overlay, 'click', () => ({ collapsed: false })),
-			copy &&
-				copyToClipboard(code, copy as HTMLElement & BasicButtonProps, {
-					success: copy.getAttribute('copy-success') || 'Copied!',
-					error:
-						copy.getAttribute('copy-error') ||
-						'Error trying to copy to clipboard!',
-				}),
+		on(overlay, 'click', () => ({ collapsed: false }))
+		if (copy)
+			copyToClipboard(code, copy, {
+				success: copy.getAttribute('copy-success') || 'Copied!',
+				error:
+					copy.getAttribute('copy-error') ||
+					'Error trying to copy to clipboard!',
+			})
 
-			watch('collapsed', bindAttribute(host, 'collapsed')),
-		]
+		watch('collapsed', bindAttribute(host, 'collapsed'))
 	},
 )

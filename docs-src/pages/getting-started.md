@@ -154,10 +154,8 @@ Add the following inside a `<script type="module">` tag, or in an external modul
 
     expose({ name: output.textContent ?? '' })
 
-    return [
-      on(input, 'input', () => ({ name: input.value || fallback })),
-      watch('name', bindText(output)),
-    ]
+    on(input, 'input', () => ({ name: input.value || fallback }))
+    watch('name', bindText(output))
   })
 </script>
 ```

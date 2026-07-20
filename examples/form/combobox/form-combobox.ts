@@ -74,58 +74,56 @@ export default defineComponent<FormComboboxProps>(
 			}),
 		})
 
-		return [
-			pass(listbox, { filter: () => host.value }),
+		pass(listbox, { filter: () => host.value })
 
-			on(host, 'keyup', ({ key }: KeyboardEvent) => {
-				if (key === 'Escape') {
-					showPopup.set(false)
-					textbox.focus()
-				}
-				if (key === 'Delete') host.clear()
-			}),
-			on(textbox, 'input', () => {
-				length.set(textbox.value.length)
-				batch(() => {
-					host.value = textbox.value
-					relayValidity(textbox, host, error)
-					showPopup.set(true)
-				})
-			}),
-			on(textbox, 'keydown', ({ key, altKey }) => {
-				if (key === 'ArrowDown') {
-					if (altKey) showPopup.set(true)
-					if (isExpanded.get()) listbox.options[0]?.focus()
-				}
-			}),
-			// Listen to listbox's host change event (native-parity commit event)
-			// instead of reaching into its DOM with closest('[role="option"]').
-			on(listbox, 'change', () => {
-				const optionValue = listbox.value
-				textbox.value = optionValue
-				batch(() => {
-					host.value = optionValue
-					relayValidity(textbox, host, error)
-					showPopup.set(false)
-					textbox.focus()
-				})
-			}),
-			on(clearBtn, 'click', () => {
-				host.clear()
-			}),
+		on(host, 'keyup', ({ key }: KeyboardEvent) => {
+			if (key === 'Escape') {
+				showPopup.set(false)
+				textbox.focus()
+			}
+			if (key === 'Delete') host.clear()
+		})
+		on(textbox, 'input', () => {
+			length.set(textbox.value.length)
+			batch(() => {
+				host.value = textbox.value
+				relayValidity(textbox, host, error)
+				showPopup.set(true)
+			})
+		}),
+		on(textbox, 'keydown', ({ key, altKey }) => {
+			if (key === 'ArrowDown') {
+				if (altKey) showPopup.set(true)
+				if (isExpanded.get()) listbox.options[0]?.focus()
+			}
+		})
+		// Listen to listbox's host change event (native-parity commit event)
+		// instead of reaching into its DOM with closest('[role="option"]').
+		on(listbox, 'change', () => {
+			const optionValue = listbox.value
+			textbox.value = optionValue
+			batch(() => {
+				host.value = optionValue
+				relayValidity(textbox, host, error)
+				showPopup.set(false)
+				textbox.focus()
+			})
+		})
+		on(clearBtn, 'click', () => {
+			host.clear()
+		})
 
-			// Form value sync: managed (value → setFormValue via ElementInternals)
-			// Form reset: managed (value attribute is the default)
-			// Validity: host.setCustomValidity() drives native :invalid /
-			// :user-invalid + host.validationMessage for external consumers.
-			errorEl && watch(error, bindText(errorEl)),
-			descriptionEl && watch('description', bindText(descriptionEl)),
-			watch(isExpanded, expanded => {
-				listbox.hidden = !expanded
-				textbox.ariaExpanded = String(expanded)
-			}),
-			clearBtn && watch(length, bindVisible(clearBtn)),
-		]
+		// Form value sync: managed (value → setFormValue via ElementInternals)
+		// Form reset: managed (value attribute is the default)
+		// Validity: host.setCustomValidity() drives native :invalid /
+		// :user-invalid + host.validationMessage for external consumers.
+		if (errorEl) watch(error, bindText(errorEl))
+		if (descriptionEl) watch('description', bindText(descriptionEl))
+		watch(isExpanded, expanded => {
+			listbox.hidden = !expanded
+			textbox.ariaExpanded = String(expanded)
+		})
+		if (clearBtn) watch(length, bindVisible(clearBtn))
 	},
 	{ formAssociated: true },
 )

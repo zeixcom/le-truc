@@ -22,13 +22,6 @@
 - **`module-scrollarea` migrated from indicator classes to custom states**: the example component now sets `:state(overflow)`, `:state(overflow-start)`, and `:state(overflow-end)` via `bindState()` instead of toggling `overflow`/`overflow-start`/`overflow-end` classes on the host. **Migration:** CSS targeting the old classes must change from `module-scrollarea.overflow-end` to `module-scrollarea:state(overflow-end)`.
 - **`form-colorgraph` refactored from `color: Oklch` to `value: string`**: the example component's public prop is now `value: string` (a CSS color string, the form value) instead of `color: Oklch`. An internal Oklch memo derives the parsed representation. Interactions write serialized strings back to `value`. Managed reset restores from the `value` attribute (replacing the hand-rolled `initialColor` capture). The HTML attribute changed from `color="..."` to `value="..."`. The consumer `module-coloreditor` bridges Oklch ↔ CSS string at the `pass()` boundary.
 
-### Removed
-
-- **`onFormAssociated`, `onFormDisabled`, `onFormReset`, `onFormStateRestore` helpers**: removed before release. The managed form-control convention replaces them — three of the four went unused across all five form examples, and the fourth (`onFormReset`) was used five times to hand-roll `defaultValue` semantics the library now manages generically.
-- **`FormState` type export**: removed. It was only needed by the `onFormStateRestore` helper signature.
-
-## 2.2.0
-
 ## 2.2.0
 
 ### Added

@@ -141,12 +141,10 @@ Visually-hidden CSS:
 Use `host.focus()` or `element.focus()` inside event handlers:
 
 ```typescript
-return [
-  on(host, 'open', () => {
-    firstFocusable.focus()
-    // Set up focus trap
-  }),
-]
+on(host, 'open', () => {
+  firstFocusable.focus()
+  // Set up focus trap
+})
 ```
 
 ---
@@ -222,12 +220,10 @@ Implement keyboard handlers via `on()`:
 
 ```typescript
 const button = first('button')
-return [
-  on(button, 'keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      // Activate
-    }
-  }),
-]
+on(button, 'keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    // Activate
+  }
+})
 ```

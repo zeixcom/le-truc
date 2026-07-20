@@ -60,60 +60,52 @@ export default defineComponent<ModuleColoreditorProps>(
 			hue: () => host.color.h ?? 0,
 		})
 
-		const effects = [
-			on(host, 'change', event => {
-				const { target } = event
-				if (target instanceof HTMLInputElement && target.name === 'name')
-					return { name: target.value }
-			}),
-			textbox &&
-				pass(textbox as HTMLElement & { value: string; description: string }, {
-					value: { get: () => host.name, set: (v: string) => (host.name = v) },
-					description: () => `Nearest named CSS color: ${host.nearest}`,
-				}),
-			colorgraph &&
-				pass(colorgraph as HTMLElement & { value: string }, {
-					// form-colorgraph exposes `value: string` (CSS color), while
-					// module-coloreditor works in Oklch objects — bridge the gap.
-					value: {
-						get: () => formatCss(host.color),
-						set: (v: string) => {
-							const parsed = oklchConverter(v)
-							if (parsed) host.color = parsed as Oklch
-						},
+		on(host, 'change', event => {
+			const { target } = event
+			if (target instanceof HTMLInputElement && target.name === 'name')
+				return { name: target.value }
+		})
+		if (textbox)
+			pass(textbox as HTMLElement & { value: string; description: string }, {
+				value: { get: () => host.name, set: (v: string) => (host.name = v) },
+				description: () => `Nearest named CSS color: ${host.nearest}`,
+			})
+		if (colorgraph)
+			pass(colorgraph as HTMLElement & { value: string }, {
+				// form-colorgraph exposes `value: string` (CSS color), while
+				// module-coloreditor works in Oklch objects — bridge the gap.
+				value: {
+					get: () => formatCss(host.color),
+					set: (v: string) => {
+						const parsed = oklchConverter(v)
+						if (parsed) host.color = parsed as Oklch
 					},
-				}),
-			colorscale &&
-				pass(colorscale, {
-					color: () => host.color,
-					name: () => host.name,
-				}),
-			colorinfoBase &&
-				pass(colorinfoBase, {
-					color: () => host.color,
-					name: () => `${host.name} 500`,
-				}),
-		]
+				},
+			})
+		if (colorscale)
+			pass(colorscale, {
+				color: () => host.color,
+				name: () => host.name,
+			})
+		if (colorinfoBase)
+			pass(colorinfoBase, {
+				color: () => host.color,
+				name: () => `${host.name} 500`,
+			})
 
 		for (let i = 1; i < 5; i++) {
 			const infoLighten = first(`module-colorinfo.lighten${(5 - i) * 20}`)
-			effects.push(
-				pass(infoLighten, {
-					color: () => getStepColor(host.color, 1 - i / 10),
-					name: () => `${host.name} ${i * 100}`,
-				}),
-			)
+			pass(infoLighten, {
+				color: () => getStepColor(host.color, 1 - i / 10),
+				name: () => `${host.name} ${i * 100}`,
+			})
 		}
 		for (let i = 1; i < 5; i++) {
 			const infoDarken = first(`module-colorinfo.darken${i * 20}`)
-			effects.push(
-				pass(infoDarken, {
-					color: () => getStepColor(host.color, 1 - (i + 5) / 10),
-					name: () => `${host.name} ${(i + 5) * 100}`,
-				}),
-			)
+			pass(infoDarken, {
+				color: () => getStepColor(host.color, 1 - (i + 5) / 10),
+				name: () => `${host.name} ${(i + 5) * 100}`,
+			})
 		}
-
-		return effects
 	},
 )

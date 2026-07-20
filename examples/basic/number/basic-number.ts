@@ -125,6 +125,6 @@ export default defineComponent<BasicNumberProps>(
 
 		expose({ value: asNumber() })
 
-		return [watch(() => formatter.format(host.value), bindText(host))]
+		watch(() => formatter.format(host.value), bindText(host))
 	},
 )

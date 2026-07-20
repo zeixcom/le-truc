@@ -46,7 +46,7 @@ import { bindText, defineComponent } from '@zeix/le-truc'
 defineComponent('hello-world', ({ expose, first, watch }) => {
   const span = first('span')
   expose({ name: span.textContent ?? '' })
-  return [watch('name', bindText(span))]
+  watch('name', bindText(span))
 })
 ```
 

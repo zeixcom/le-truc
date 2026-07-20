@@ -27,15 +27,17 @@ defineComponent('my-component', ({ expose, first, all, watch, on }) => {
   const el = first('selector')
   // Declare reactive properties
   expose({ /* ... */ })
-  // Return a flat array of effect descriptors
-  return [
-    watch(/* source */, /* handler */),
-    on(el, /* type */, /* handler */),
-  ]
+  // Call watch(), on(), each(), pass(), or provideContexts()
+  watch(/* source */, /* handler */)
+  on(el, /* type */, /* handler */)
 })
 ```
 
-The factory receives a `FactoryContext` with helpers for querying descendant elements, declaring reactive properties, and returning effect descriptors — each covered in the sections below.
+The factory receives a `FactoryContext` with helpers for querying descendant elements, declaring reactive properties, and registering effects — each covered in the sections below.
+
+{% callout .tip title="Explicit return still works, but is deprecated" %}
+`watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` register their effects automatically when called — no `return` needed. Returning a `FactoryResult` array of the same descriptors (`return [watch(...), on(...)]`) still works for backward compatibility but is deprecated and will be removed in the next major version. See [ADR 0018](https://github.com/zeixcom/le-truc/blob/main/adr/0018-implicit-effect-collection-via-ambient-context.md).
+{% /callout %}
 
 ### Using the Custom Element in HTML
 
@@ -54,30 +56,34 @@ Le Truc manages the **Web Component lifecycle** from creation to removal. Here's
 
 ### Connected to the DOM
 
-The factory function runs inside `connectedCallback()`. Element queries, `expose()`, and the returned effect descriptors all execute at this point — the factory is the component's setup phase, not its constructor. If the component disconnects and reconnects, the factory runs again with a fresh closure. See [Managing State with Signals](#managing-state-with-signals) for the ways to initialize reactive properties.
+The factory function runs inside `connectedCallback()`. Element queries, `expose()`, and the registered effects all execute at this point — the factory is the component's setup phase, not its constructor. If the component disconnects and reconnects, the factory runs again with a fresh closure. See [Managing State with Signals](#managing-state-with-signals) for the ways to initialize reactive properties.
 
 ### Disconnected from the DOM
 
 In the `disconnectedCallback()` Le Truc runs all cleanup functions returned by effects during the setup phase in `connectedCallback()`. This will remove all event listeners and unsubscribe all signals the component is subscribed to, so you don't need to worry about memory leaks.
 
-If you subscribe to **external APIs** that live outside the component's reactive scope, return a cleanup function from the effect descriptor:
+If you subscribe to **external APIs** that live outside the component's reactive scope — a native `IntersectionObserver`, `ResizeObserver`, or similar — wrap the setup and its cleanup in a hand-authored `EffectDescriptor` and register it with `run()`:
 
 ```js
-defineComponent('my-component', ({ host }) => {
-  return [
-    () => {
-      // Setup logic
-      const observer = new IntersectionObserver(([entry]) => {
-        // Do something
-      })
-      observer.observe(host)
+defineComponent('my-component', ({ host, run }) => {
+  run(() => {
+    // Setup logic
+    const observer = new IntersectionObserver(([entry]) => {
+      // Do something
+    })
+    observer.observe(host)
 
-      // Cleanup logic
-      return () => observer.disconnect()
-    },
-  ]
+    // Cleanup logic
+    return () => observer.disconnect()
+  })
 })
 ```
+
+`run(descriptor)` registers a descriptor that isn't produced by `watch()`, `on()`, `each()`, `pass()`, or `provideContexts()` — the same registration those five do automatically when called, made available directly for a descriptor you write by hand.
+
+{% callout .tip title="A returned cleanup only runs if it's registered" %}
+Returning the descriptor from the factory (`return [() => { ...; return cleanup }]`) still works, but a bare thunk you neither `return` nor pass to `run()` never runs its cleanup — there's no path for `disconnectedCallback()` to find it. `run()` is the direct replacement for `return` here, and is deprecated as of v3.0 alongside the other four helpers' explicit-return form.
+{% /callout %}
 
 {% /section %}
 
@@ -202,7 +208,7 @@ Event listeners respond to user interactions. They are the main cause for change
 
 ### on() — Event Handling
 
-`on(target, type, handler)` is called from the factory context with an explicit target element or `Memo<E[]>` collection, and returned in the effect array:
+`on(target, type, handler)` is called from the factory context with an explicit target element or `Memo<E[]>` collection:
 
 ```js
 defineComponent('my-component', ({ all, expose, first, host, on }) => {
@@ -211,15 +217,13 @@ defineComponent('my-component', ({ all, expose, first, host, on }) => {
 
   expose({ active: 0, value: '' })
 
-  return [
-    on(buttons, 'click', (_e, target) => {
-      // Set 'active' signal to value of data-index attribute of button
-      const index = parseInt(target.dataset.index ?? '0', 10)
-      host.active = Number.isInteger(index) ? index : 0
-    }),
-    // Set 'value' signal to value of input element
-    on(input, 'change', () => ({ value: input.value })),
-  ]
+  on(buttons, 'click', (_e, target) => {
+    // Set 'active' signal to value of data-index attribute of button
+    const index = parseInt(target.dataset.index ?? '0', 10)
+    host.active = Number.isInteger(index) ? index : 0
+  })
+  // Set 'value' signal to value of input element
+  on(input, 'change', () => ({ value: input.value }))
 })
 ```
 
@@ -248,11 +252,9 @@ defineComponent('my-input', ({ expose, first, on }) => {
     length: length.get,  // read-only — consumers can read, not set
   })
 
-  return [
-    on(textbox, 'input', () => {
-      length.set(textbox.value.length)
-    }),
-  ]
+  on(textbox, 'input', () => {
+    length.set(textbox.value.length)
+  })
 })
 ```
 
@@ -281,10 +283,8 @@ defineComponent('form-textbox', ({ expose, first, host, on, watch }) => {
     }),
   })
 
-  return [
-    on(textbox, 'change', () => ({ value: textbox.value })),
-    watch('value', bindProperty(textbox, 'value')),
-  ]
+  on(textbox, 'change', () => ({ value: textbox.value }))
+  watch('value', bindProperty(textbox, 'value'))
 })
 ```
 
@@ -303,17 +303,15 @@ Effects **automatically update the DOM** when signals change, avoiding manual DO
 
 ### Applying Effects
 
-The factory returns a flat array of `EffectDescriptor`s. Each one is created by `watch()`, `on()`, `each()`, `pass()`, `provideContexts()`, or a plain thunk. The `watch(source, handler)` helper drives a DOM update from a declared reactive source:
+`watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` each produce an `EffectDescriptor` and register it automatically when called — no `return` needed. A sixth helper, `run(descriptor)`, registers a descriptor you write by hand instead of one produced by the other five — see [Disconnected from the DOM](#disconnected-from-the-dom) for when you need it. The `watch(source, handler)` helper drives a DOM update from a declared reactive source:
 
 ```js
-return [
-  watch('open', bindAttribute(host, 'open')), // set attribute from 'open' signal
-  watch('count', bindText(count)),            // update text from 'count' signal
-  watch('isEven', bindClass(count, 'even')),  // toggle class from 'isEven' signal
-]
+watch('open', bindAttribute(host, 'open')) // set attribute from 'open' signal
+watch('count', bindText(count))            // update text from 'count' signal
+watch('isEven', bindClass(count, 'even'))  // toggle class from 'isEven' signal
 ```
 
-The order of descriptors does not matter.
+The order of calls does not matter.
 
 {% callout .note title="CSS must define what the class or attribute does" %}
 `bindClass(el, 'even')` adds or removes the `even` class — but nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `bindAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
@@ -331,24 +329,26 @@ defineComponent('module-carousel', ({ all, expose, host, watch }) => {
 
   expose({ index: 0 })
 
-  return [
-    each(dots, dot =>
-      watch(
-        () => dot.dataset.index === String(host.index),
-        selected => {
-          dot.ariaSelected = String(selected)
-          dot.tabIndex = selected ? 0 : -1
-        },
-      ),
+  each(dots, dot =>
+    watch(
+      () => dot.dataset.index === String(host.index),
+      selected => {
+        dot.ariaSelected = String(selected)
+        dot.tabIndex = selected ? 0 : -1
+      },
     ),
-  ]
+  )
 })
 ```
 
-The callback receives a single element and returns either a single `EffectDescriptor` or a `FactoryResult` array. `each()` itself returns an `EffectDescriptor` to include in the factory return array.
+The callback receives a single element and returns either a single `EffectDescriptor` or a `FactoryResult` array — or it can call `watch()`, `on()`, or a nested `each()` directly, the same as the factory itself.
 
 {% callout .tip title="each() vs on() with a Memo target" %}
 Use `on(memo, type, handler)` when a single delegated listener on the host is enough — one click handler for all tabs, for example. Use `each(memo, callback)` when you need per-element reactive effects that depend on both the element and a signal — like updating `ariaSelected` on every dot when the selected index changes.
+{% /callout %}
+
+{% callout .tip title="each() nests to any depth" %}
+`each()` callbacks can call another `each()` — for a grid, rows containing columns containing cells — with no limit on depth. Ordinary inline arrow handlers work at any nesting level. If `watch()` reports a confusing "no overload matches" error, the usual cause is a handler body that returns a value instead of `void` (e.g. a one-line `array.push(...)`).
 {% /callout %}
 
 ### DOM Binding Helpers
@@ -368,11 +368,9 @@ defineComponent('my-component', ({ first, on, watch }) => {
   const countState = createState(0)
   const doubleState = createMemo(() => countState.get() * 2)
 
-  return [
-    on(increment, 'click', () => { countState.update(v => ++v) }),
-    watch(countState, bindText(count)),
-    watch(doubleState, bindText(double)),
-  ]
+  on(increment, 'click', () => { countState.update(v => ++v) })
+  watch(countState, bindText(count))
+  watch(doubleState, bindText(double))
 })
 ```
 
@@ -389,10 +387,8 @@ defineComponent('my-component', ({ expose, first, host, watch }) => {
 
   expose({ count: 0 })
 
-  return [
-    watch(() => !(host.count % 2), bindClass(count, 'even')),
-    watch(() => String(host.count * 2), bindText(double)),
-  ]
+  watch(() => !(host.count % 2), bindClass(count, 'even'))
+  watch(() => String(host.count * 2), bindText(double))
 })
 ```
 
@@ -416,12 +412,10 @@ defineComponent('form-checkbox', ({ expose, first, host, on, watch }) => {
     checked: checkbox.checked,
   })
 
-  return [
-    // Capture user interaction → update signal
-    on(checkbox, 'change', () => ({ checked: checkbox.checked })),
-    // Sync signal → drive native element property
-    watch('checked', bindProperty(checkbox, 'checked')),
-  ]
+  // Capture user interaction → update signal
+  on(checkbox, 'change', () => ({ checked: checkbox.checked }))
+  // Sync signal → drive native element property
+  watch('checked', bindProperty(checkbox, 'checked'))
 })
 ```
 

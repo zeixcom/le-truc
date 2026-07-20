@@ -25,11 +25,15 @@ In `DEV_MODE`, using an unbranded function that resembles a parser triggers `con
 
 **Always wrap method producer initializers with `defineMethod()`.** The function IS the method — it is installed directly as `host[key] = fn`.
 
-`provideContexts([...])` returns an `EffectDescriptor` — include it in the return array.
+`provideContexts([...])` creates an `EffectDescriptor` and pushes it into the ambient collector (ADR 0018) — no `return` needed as of v2.3, though returning it still works (dual support, deprecated in v3.0).
 
 ## `watch()` Requires `createEffect` Internally
 
-`watch()` (via `makeWatch` in `src/helpers/reactive.ts`) wraps `match()` inside `createEffect()`. This is why `watch()` returns an `EffectDescriptor` — the `createEffect` only runs after dependency resolution, inside the `createScope` created in `connectedCallback`. Calling `match()` without `createEffect` would track dependencies synchronously and not re-run.
+`watch()` (via `makeWatch` in `src/helpers/reactive.ts`) wraps `match()` inside `createEffect()`. This is why `watch()`'s descriptor is deferred — the `createEffect` only runs after dependency resolution, inside the `createScope` created in `connectedCallback`. Calling `match()` without `createEffect` would track dependencies synchronously and not re-run. `watch()` also pushes its descriptor into the factory's ambient collector (`pushDescriptor`, `src/internal.ts`) when called — this is separate from and unrelated to `createEffect`'s own owner-registration; both happen, for different reasons (collector = when the descriptor activates; `createEffect`'s owner = where its cleanup lives once activated).
+
+## A Hand-Authored `EffectDescriptor` Needs `run()` (or an Internal `createEffect`/`createScope` Call) to Actually Clean Up
+
+`activateResult()` (`src/helpers/reactive.ts`) discards the return value of every descriptor it calls during activation. `watch()`/`on()`/`pass()` are unaffected because they call `createEffect()`/`createScope()` *inside* their own descriptor body, which self-registers cleanup onto the active owner regardless of what the outer caller does with the return value. A raw hand-authored descriptor — `() => { setup(); return cleanup }`, with no internal `createEffect`/`createScope` call — has **no such registration**: if it's called via `activateResult` directly (i.e. `return`ed from the factory with no wrapping), its cleanup is silently dropped and never runs on disconnect. This was a real, previously-shipping bug in several example components (found during LT-010; see NOTES.md history). `run(descriptor)` fixes it by wrapping the raw descriptor in `createScope()` before pushing it — always register hand-authored descriptors via `run()`, not bare `return`, in new code.
 
 ## `all()` MutationObserver is Lazy
 
@@ -71,7 +75,7 @@ If an event handler in `src/helpers/events.ts` returns `{ prop: value }`, all re
 
 ## Context Protocol is the Web Components Community Protocol
 
-`provideContexts` / `requestContext` implement the [webcomponents-cg context spec](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md), not a custom protocol. `provideContexts([...])` returns an `EffectDescriptor` used in the return array; `requestContext(context, fallback)` returns a `Signal<T>` backed by a `Slot`, used directly in `expose()`. The Slot serves `fallback` until a provider answers; a provider that misses the initial synchronous dispatch is caught by two re-dispatches — once on a microtask and once after `CONTEXT_RETRY_DELAY` (~210 ms) — after which the fallback is permanent for that connection (ADR 0015). Providers are stable single sources of truth: removing one does not revert connected consumers to their fallback.
+`provideContexts` / `requestContext` implement the [webcomponents-cg context spec](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md), not a custom protocol. `provideContexts([...])` registers an `EffectDescriptor` automatically (ADR 0018) — call it directly, `return` is not required; `requestContext(context, fallback)` returns a `Signal<T>` backed by a `Slot`, used directly in `expose()`. The Slot serves `fallback` until a provider answers; a provider that misses the initial synchronous dispatch is caught by two re-dispatches — once on a microtask and once after `CONTEXT_RETRY_DELAY` (~210 ms) — after which the fallback is permanent for that connection (ADR 0015). Providers are stable single sources of truth: removing one does not revert connected consumers to their fallback.
 
 ## `bindVisible` is the Inverse of `el.hidden`
 

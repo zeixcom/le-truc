@@ -126,7 +126,7 @@ my-component {
 
 ## State Classes
 
-For state-driven styling, use modifier classes controlled by `bindClass`:
+For state-driven styling, prefer custom `:state()` pseudo-classes via `bindState(internals, token)` over modifier classes — a custom state is component-owned and cannot be clobbered by consumer code rewriting the host's `class` attribute, and it works on any component (`internals` is attached unconditionally in the constructor), not only form-associated ones:
 
 ```css
 my-component {
@@ -134,17 +134,17 @@ my-component {
     cursor: pointer;
   }
 
-  &.disabled button {
+  &:state(disabled) button {
     opacity: 0.5;
     cursor: not-allowed;
   }
 
-  &.loading button {
+  &:state(loading) button {
     cursor: wait;
     position: relative;
   }
 
-  &.loading::after {
+  &:state(loading)::after {
     content: '';
     /* spinner styles */
   }
@@ -153,11 +153,11 @@ my-component {
 
 ```typescript
 // In factory
-return [
-  watch('disabled', bindClass(host, 'disabled')),
-  watch('loading', bindClass(host, 'loading')),
-]
+watch('disabled', bindState(internals, 'disabled'))
+watch('loading', bindState(internals, 'loading'))
 ```
+
+`bindState` mirrors `bindClass`: `true` adds the token to `internals.states`, `false` removes it; a `null` `internals` (only possible if `attachInternals()` failed pre-upgrade) is a graceful no-op. Reach for `bindClass(host, token)` instead only when the state genuinely needs to be visible/targetable from outside as a regular class (e.g. a consumer selector that can't use `:state()`, or JS outside Le Truc reading `classList`) — that's the exception, not the default.
 
 ---
 
@@ -233,7 +233,7 @@ my-button {
     background-color: var(--color-primary-hover);
   }
 
-  &.disabled button {
+  &:state(disabled) button {
     opacity: 0.5;
     cursor: not-allowed;
   }

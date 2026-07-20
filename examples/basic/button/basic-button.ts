@@ -34,10 +34,8 @@ export default defineComponent<BasicButtonProps>(
 			badge: badge?.textContent ?? '',
 		})
 
-		return [
-			watch('disabled', bindProperty(button, 'disabled')),
-			label && watch('label', bindText(label)),
-			badge && watch('badge', bindText(badge)),
-		]
+		watch('disabled', bindProperty(button, 'disabled'))
+		if (label) watch('label', bindText(label))
+		if (badge) watch('badge', bindText(badge))
 	},
 )
