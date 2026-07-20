@@ -259,4 +259,4 @@ declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E)
  */
 declare function reconcile<T extends {}, S extends MutableSignal<T>>(container: Element, template: HTMLTemplateElement, source: List<T, S>, bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup): EffectDescriptor;
 declare function reconcile<T extends {}, S extends Signal<T>>(container: Element, template: HTMLTemplateElement, source: Collection<T, S>, bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup): EffectDescriptor;
-export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, forEachUnseen, keyedScopes, makePass, makeRun, makeWatch, type PassedProps, type PassHelper, reconcile, type Reactive, type RunHelper, type WatchHelper, };
+export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, forEachUnseen, keyedScopes, makePass, makeRun, makeWatch, type PassedProps, type PassHelper, type Reactive, type RunHelper, reconcile, type WatchHelper, };

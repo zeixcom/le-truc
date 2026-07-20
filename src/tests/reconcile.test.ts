@@ -10,7 +10,7 @@
  * `content.firstElementChild`.
  */
 
-import { describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import {
 	createCollection,
 	createList,
@@ -19,6 +19,20 @@ import {
 } from '@zeix/cause-effect'
 import { InvalidTemplateError } from '../errors'
 import { reconcile } from '../helpers/reactive'
+import { installActiveCollector, restoreActiveCollector } from '../internal'
+import type { EffectDescriptor } from '../types'
+
+// reconcile() pushes into the currently active effect-descriptor collector
+// (ADR 0018) and throws NoActiveCollectorError if none is active. These
+// tests call it directly, outside `defineComponent`'s factory execution, so
+// install a throwaway collector for the duration of the file.
+let previousCollector: EffectDescriptor[] | undefined
+beforeEach(() => {
+	previousCollector = installActiveCollector([])
+})
+afterEach(() => {
+	restoreActiveCollector(previousCollector)
+})
 
 /* === Fake DOM === */
 

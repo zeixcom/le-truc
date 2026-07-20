@@ -2451,7 +2451,7 @@ function each(memo, callback) {
   return descriptor;
 }
 function reconcile(container, template, source, bindItem) {
-  return () => {
+  const descriptor = () => {
     if (template.content.childElementCount !== 1)
       throw new InvalidTemplateError(container, template.content.childElementCount);
     const itemRoot = template.content.firstElementChild;
@@ -2543,6 +2543,8 @@ function reconcile(container, template, source, bindItem) {
       };
     });
   };
+  pushDescriptor(undefined, "reconcile", descriptor);
+  return descriptor;
 }
 
 // src/helpers/events.ts

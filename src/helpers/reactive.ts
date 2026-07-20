@@ -639,7 +639,7 @@ function reconcile<T extends {}>(
 		key: string,
 	) => MaybeCleanup,
 ): EffectDescriptor {
-	return () => {
+	const descriptor: EffectDescriptor = () => {
 		if (template.content.childElementCount !== 1)
 			throw new InvalidTemplateError(
 				container,
@@ -766,6 +766,8 @@ function reconcile<T extends {}>(
 			}
 		})
 	}
+	pushDescriptor(undefined, 'reconcile', descriptor)
+	return descriptor
 }
 
 export {
