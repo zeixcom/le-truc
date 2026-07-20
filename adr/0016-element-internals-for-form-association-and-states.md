@@ -20,7 +20,7 @@ Form association cuts both ways, and both directions matter:
 - **Author-facing**: the component must feed its value and validity into the form (`setFormValue`, `setValidity`) and react to form lifecycle events (reset, disable, state restore).
 - **Consumer-facing**: to the outside world — form code, testing tools, other frameworks — a form-associated custom element (FACE) should behave like a native control. FACE does **not** provide this automatically: the host element gets no `checkValidity()`, `reportValidity()`, `validity`, `validationMessage`, `willValidate`, `setCustomValidity()`, `form`, or `labels` members unless the class defines them, delegating to `internals`.
 
-A full needs assessment and exploration are documented in [PLAN-element-internals.md](../PLAN-element-internals.md).
+A full needs assessment and exploration preceded this decision (needs assessment, timing model, tooling-gap analysis, draft-migration evidence) but is not preserved as a standalone document — see git history for `PLAN-element-internals.md` if needed.
 
 Relevant requirements: [M1](../REQUIREMENTS.md#m1-component-definition-via-a-single-function) (component definition via `defineComponent`), §4 Accessibility ("must not make it harder to achieve"), §4 Browser support ("Required APIs: Custom Elements v1 …").
 
@@ -165,7 +165,6 @@ This is a deliberate carve-out from the bind-helper rejection below: `internals.
 
 - Requirements: [M1](../REQUIREMENTS.md#m1-component-definition-via-a-single-function), §4 (Accessibility, Browser support)
 - Architecture: [Component Model](../ARCHITECTURE.md#component-model)
-- Exploration: [PLAN-element-internals.md](../PLAN-element-internals.md) (needs assessment, timing model, tooling gap analysis, draft-migration evidence)
 - Related: [ADR-0002](0002-factory-form-over-builder-pattern.md) — the factory form; this ADR extends the factory context with `internals`
 - Related: [ADR-0007](0007-effect-descriptors-with-deferred-activation.md) — deferred activation; both author `internals.*` calls and the managed value-sync effect run in effects that activate after dependency resolution
 - Related: [ADR-0013](0013-cem-plugin-for-le-truc-factory-pattern.md) — the CEM plugin will be extended to emit `formAssociated`
