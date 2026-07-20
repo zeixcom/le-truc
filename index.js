@@ -1992,7 +1992,6 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
   };
 };
 // src/util.ts
-var DEV_MODE = typeof process !== "undefined" && false === "true";
 var isCustomElement = (element) => element.localName.includes("-");
 var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
 var elementName = (el) => {
@@ -2057,7 +2056,10 @@ class InvalidPassPropertyError extends TypeError {
 class NoActiveCollectorError extends Error {
   constructor(host, helper) {
     const where = host ? ` in component ${elementName(host)}` : "";
-    super(`${helper}() called outside synchronous factory or each() callback execution${where}. watch(), on(), pass(), each(), provideContexts(), and run() must be called synchronously during setup — not after an await, inside a detached setTimeout, or from an event handler defined during setup.`);
+    let message = `${helper}() called outside synchronous factory or each() callback execution${where}.`;
+    if (false)
+      ;
+    super(message);
     this.name = "NoActiveCollectorError";
   }
 }
@@ -2135,8 +2137,8 @@ var makeProvideContexts = (host) => (contexts) => {
           try {
             return host[context];
           } catch (error) {
-            if (DEV_MODE)
-              console.warn("provideContexts: getter threw", elementName(host), error);
+            if (false)
+              ;
             return;
           }
         });
@@ -2166,8 +2168,8 @@ var makeRequestContext = (host) => (context, fallback) => {
     setTimeout(() => {
       if (!answered && host.isConnected) {
         dispatch();
-        if (!answered && DEV_MODE)
-          console.warn(`requestContext: no provider answered for '${String(context)}' on ${elementName(host)}; using fallback`);
+        if (false)
+          ;
       }
     }, CONTEXT_RETRY_DELAY);
   }
@@ -2284,8 +2286,8 @@ var makeElementQueries = (host) => {
             }, DEPENDENCY_TIMEOUT);
           })
         ]).then(callback).catch((error) => {
-          if (DEV_MODE)
-            console.warn(error);
+          if (false)
+            ;
           callback();
         });
       });
@@ -2400,9 +2402,7 @@ var makePass = (host) => {
         failures.set(prop, "could not be resolved to a signal");
         continue;
       }
-      if (DEV_MODE && !isComputed(signal) && !(signal && typeof signal === "object" && ("get" in signal) && !(Symbol.toStringTag in signal))) {
-        console.warn(`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`);
-      }
+      if (false) {}
       const slot = signals[prop];
       if (!isSlot(slot)) {
         failures.set(prop, `is not Slot-backed on ${targetName} (read-only property, or target is not a Le Truc component)`);
@@ -2496,8 +2496,8 @@ function reconcile(container, template, source, bindItem) {
               adopted.add(harvested);
               continue;
             }
-            if (DEV_MODE && harvested !== null)
-              console.warn(`reconcile() removed child with data-key="${harvested}" from ${elementName(container)} — key not present in the source.`);
+            if (false)
+              ;
             child.remove();
           }
           for (const [key, dispose] of disposers) {
@@ -2619,9 +2619,7 @@ var makeOn = (host) => {
       }
       if (isMemo(target)) {
         if (NON_BUBBLING_EVENTS.has(type)) {
-          if (DEV_MODE) {
-            console.warn(`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
-          }
+          if (false) {}
           return keyedScopes(target, (el) => attachListener(host, el, type, handler, options));
         }
         const root = host.shadowRoot ?? host;
@@ -2881,10 +2879,7 @@ function defineComponent(name, factory, options) {
           ...elementQueries,
           get internals() {
             const internals2 = internalsMap.get(instance) ?? null;
-            if (DEV_MODE && internals2 === null && !instance.#internalsAccessed) {
-              instance.#internalsAccessed = true;
-              console.warn(`internals is null — attachInternals() failed in ${elementName(host)}. The component works but cannot participate in form association, custom states, or ARIA reflection.`);
-            }
+            if (false) {}
             return internals2;
           },
           watch: makeWatch(host),
@@ -2904,8 +2899,8 @@ function defineComponent(name, factory, options) {
         const internals = internalsMap.get(this);
         if (formAssociated && internals) {
           const hasValueSignal = "value" in this && getSignals(this).value;
-          if (DEV_MODE && !hasValueSignal)
-            console.warn(`form-associated component ${elementName(host)} did not expose a reactive 'value' property. The managed form-control convention requires a reactive 'value' for form value sync, reset, and state restore.`);
+          if (false)
+            ;
           this.#createManagedDisabledProperty();
           this.#setup.push(this.#managedValueSyncDescriptor(internals));
         }
@@ -2964,8 +2959,12 @@ function defineComponent(name, factory, options) {
           continue;
         if (isReservedWord(prop))
           throw new InvalidPropertyNameError(this.localName, prop, "reserved word or Object builtin — cannot be used as a reactive property");
-        if (formAssociated && MANAGED_FORM_MEMBERS.has(prop))
-          throw new InvalidPropertyNameError(this.localName, prop, "is a managed form-control member on form-associated components — use the native-parity host contract instead; expose `value` for the form value");
+        if (formAssociated && MANAGED_FORM_MEMBERS.has(prop)) {
+          let reason = "is a managed form-control member on form-associated components";
+          if (false)
+            ;
+          throw new InvalidPropertyNameError(this.localName, prop, reason);
+        }
         if (prop in this)
           continue;
         if (formAssociated && prop === "value")

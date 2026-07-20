@@ -8,7 +8,7 @@ import {
 import { pushDescriptor } from '../internal'
 import { throttle } from '../scheduler'
 import type { ComponentProps, EffectDescriptor, Falsy } from '../types'
-import { DEV_MODE, elementName } from '../util'
+import { elementName } from '../util'
 import { keyedScopes } from './reactive'
 
 /* === Types === */
@@ -213,7 +213,7 @@ const makeOn = <P extends ComponentProps>(
 			if (isMemo(target)) {
 				// Memo target: check whether this event type bubbles
 				if (NON_BUBBLING_EVENTS.has(type)) {
-					if (DEV_MODE) {
+					if (process.env.DEV_MODE === 'true') {
 						console.warn(
 							`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`,
 						)

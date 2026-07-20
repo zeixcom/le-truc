@@ -30,7 +30,7 @@ Core files in `src/`:
 | `scheduler.ts` | `schedule`, `throttle` — rAF-based task deduplication |
 | `errors.ts` | `MissingElementError`, `DependencyTimeoutError`, `InvalidCustomElementError`, `InvalidPassPropertyError`, `InvalidPropertyNameError`, `InvalidReactivesError`, `InvalidSelectorError`, `InvalidTemplateError`, `InvalidComponentNameError`, `NoActiveCollectorError` |
 | `internal.ts` | `getSignals` — internal signal map shared by `component.ts` and `helpers/reactive.ts`; `withCollector`, `pushDescriptor`, `installActiveCollector`/`restoreActiveCollector` (ADR 0018 ambient effect-descriptor collector) |
-| `util.ts` | `elementName`, `DEV_MODE`, `isCustomElement`, `isNotYetDefinedComponent` |
+| `util.ts` | `elementName`, `isCustomElement`, `isNotYetDefinedComponent` — DEV diagnostics are gated per-site by `process.env.DEV_MODE === 'true'`, folded out by the build define |
 
 Parser files in `src/parsers/`:
 

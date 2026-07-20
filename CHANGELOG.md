@@ -19,6 +19,7 @@
 
 ### Fixed
 
+- **DEV-mode diagnostics no longer ship in production bundles**: the `DEV_MODE` module const in `util.ts` was never constant-folded by Bun's minifier, so every DEV-gated warning (deprecation guidance, adoption warnings, unbranded-parser hints) shipped as dead weight — ~450B gzipped. Guards now read `process.env.DEV_MODE === 'true'` inline at each site and the build defines the **string** `"false"`/`"true"` (a bare boolean define does not fold — bundler users enabling dev mode must define the string `'"true"'`). `NoActiveCollectorError`'s remediation paragraph and the managed-form-member `expose()` guidance are DEV-only now, keeping the short diagnosis in production.
 - **Disconnect cleanup for hand-authored descriptors**: a raw `EffectDescriptor` returned via `return [...]` had its cleanup silently discarded, since `activateResult()` discards each descriptor's return value — `disconnectedCallback` never ran it. Fixed in the example components that had this bug (`module-carousel`, `module-ticker`, `module-listnav`, `module-scrollarea`) by migrating them to `run()`, which wraps the descriptor in `createScope()` so its cleanup registers correctly.
 
 ## 2.2.0

@@ -9,7 +9,7 @@
  * No DOM required — host is a plain stub; Task signals are passed directly.
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import {
 	createEffect,
 	createMemo,
@@ -32,13 +32,6 @@ import {
 	withCollector,
 } from '../internal'
 import type { ComponentProps, EffectDescriptor } from '../types'
-// `mock.module` mutates the live module namespace in place, so a captured
-// `import * as ns` reference reflects whatever the mock last set — it is NOT
-// a stable snapshot. Spread it into a plain object at file-load time, before
-// any `mock.module('../util', …)` call below, and restore from that snapshot.
-import * as realUtilNamespace from '../util'
-
-const realUtil = { ...realUtilNamespace }
 
 /* === Helpers === */
 
@@ -581,18 +574,19 @@ describe('makePass — ADR-0012 DEV_MODE warning for writable short forms', () =
 		return target
 	}
 
-	// Deliberately synchronous (no `await`) — see events.test.ts's DEV_MODE
-	// test for why an `await` here would risk leaking the mock into other
-	// files' tests via bun:test interleaving.
+	// DEV guards read `process.env.DEV_MODE` at call time, so flipping the
+	// env var around the call is enough — no module mocking required.
 	const captureWarnings = () => {
 		const warnings: unknown[][] = []
 		const originalWarn = console.warn
+		const prevDevMode = process.env.DEV_MODE
 		console.warn = (...args: unknown[]) => warnings.push(args)
-		mock.module('../util', () => ({ ...realUtil, DEV_MODE: true }))
+		process.env.DEV_MODE = 'true'
 		return {
 			warnings,
 			restore: () => {
-				mock.module('../util', () => realUtil)
+				if (prevDevMode === undefined) delete process.env.DEV_MODE
+				else process.env.DEV_MODE = prevDevMode
 				console.warn = originalWarn
 			},
 		}

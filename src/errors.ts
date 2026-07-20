@@ -157,9 +157,13 @@ class NoActiveCollectorError extends Error {
 	 */
 	constructor(host: HTMLElement | undefined, helper: string) {
 		const where = host ? ` in component ${elementName(host)}` : ''
-		super(
-			`${helper}() called outside synchronous factory or each() callback execution${where}. watch(), on(), pass(), each(), provideContexts(), and run() must be called synchronously during setup — not after an await, inside a detached setTimeout, or from an event handler defined during setup.`,
-		)
+		let message = `${helper}() called outside synchronous factory or each() callback execution${where}.`
+		// Remediation guidance is DEV-only so the production bundle carries
+		// just the diagnosis; the guard folds away under the build define.
+		if (process.env.DEV_MODE === 'true')
+			message +=
+				' watch(), on(), pass(), each(), provideContexts(), and run() must be called synchronously during setup — not after an await, inside a detached setTimeout, or from an event handler defined during setup.'
+		super(message)
 		this.name = 'NoActiveCollectorError'
 	}
 }

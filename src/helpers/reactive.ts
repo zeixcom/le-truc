@@ -35,7 +35,7 @@ import type {
 	FactoryResult,
 	Falsy,
 } from '../types'
-import { DEV_MODE, elementName, isCustomElement } from '../util'
+import { elementName, isCustomElement } from '../util'
 
 /* === Types === */
 
@@ -468,7 +468,7 @@ const makePass = <P extends ComponentProps>(
 				// in DEV_MODE. Detection is reversed — allow what is provably
 				// read-only, warn on everything else.
 				if (
-					DEV_MODE &&
+					process.env.DEV_MODE === 'true' &&
 					!isComputed(signal) &&
 					!(
 						signal &&
@@ -706,7 +706,7 @@ function reconcile<T extends {}>(
 							adopted.add(harvested)
 							continue
 						}
-						if (DEV_MODE && harvested !== null)
+						if (process.env.DEV_MODE === 'true' && harvested !== null)
 							console.warn(
 								`reconcile() removed child with data-key="${harvested}" from ${elementName(container)} — key not present in the source.`,
 							)

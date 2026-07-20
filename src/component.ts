@@ -54,7 +54,7 @@ import {
 	type MethodProducer,
 	type Parser,
 } from './types'
-import { DEV_MODE, elementName } from './util'
+import { elementName } from './util'
 
 /* === Types === */
 
@@ -272,7 +272,7 @@ function defineComponent<P extends ComponentProps>(
 					get internals() {
 						const internals = internalsMap.get(instance) ?? null
 						if (
-							DEV_MODE &&
+							process.env.DEV_MODE === 'true' &&
 							internals === null &&
 							!instance.#internalsAccessed
 						) {
@@ -316,7 +316,7 @@ function defineComponent<P extends ComponentProps>(
 				const internals = internalsMap.get(this)
 				if (formAssociated && internals) {
 					const hasValueSignal = 'value' in this && getSignals(this).value
-					if (DEV_MODE && !hasValueSignal)
+					if (process.env.DEV_MODE === 'true' && !hasValueSignal)
 						console.warn(
 							`form-associated component ${elementName(host)} did not expose a reactive 'value' property. The managed form-control convention requires a reactive 'value' for form value sync, reset, and state restore.`,
 						)
@@ -436,12 +436,16 @@ function defineComponent<P extends ComponentProps>(
 				// would otherwise *silently skip* the colliding initializer — the
 				// worst failure mode. `value` is the deliberate exception: the
 				// component must expose it. This check runs before that guard.
-				if (formAssociated && MANAGED_FORM_MEMBERS.has(prop))
-					throw new InvalidPropertyNameError(
-						this.localName,
-						prop,
-						'is a managed form-control member on form-associated components — use the native-parity host contract instead; expose `value` for the form value',
-					)
+				if (formAssociated && MANAGED_FORM_MEMBERS.has(prop)) {
+					let reason =
+						'is a managed form-control member on form-associated components'
+					// Remediation guidance is DEV-only; the guard folds away
+					// under the build define.
+					if (process.env.DEV_MODE === 'true')
+						reason +=
+							' — use the native-parity host contract instead; expose `value` for the form value'
+					throw new InvalidPropertyNameError(this.localName, prop, reason)
+				}
 				// Skip properties already set on the host (explicit DOM value wins).
 				if (prop in this) continue
 				// Retain the `value` initializer for managed formResetCallback
