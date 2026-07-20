@@ -27,10 +27,7 @@ export default defineComponent<BasicHelloProps>(
 
 		expose({ name: output.textContent ?? '' })
 
-		return [
-			on(input, 'input', () => ({ name: input.value || fallback })),
-
-			watch('name', bindText(output)),
-		]
+		on(input, 'input', () => ({ name: input.value || fallback }))
+		watch('name', bindText(output))
 	},
 )

@@ -151,206 +151,204 @@ export default defineComponent(
 			})
 		}
 
-		return [
-			pass(submit, { disabled: () => !textbox.length }),
-			pass(count, { count: () => activeCount.get() }),
-			pass(clearCompleted, {
-				disabled: () => !completedCount.get(),
-				badge: () => (completedCount.get() ? String(completedCount.get()) : ''),
-			}),
+		pass(submit, { disabled: () => !textbox.length })
+		pass(count, { count: () => activeCount.get() })
+		pass(clearCompleted, {
+			disabled: () => !completedCount.get(),
+			badge: () => (completedCount.get() ? String(completedCount.get()) : ''),
+		})
 
-			each(reorderButtons, button => {
-				return watch(() => list.length === 1, bindProperty(button, 'disabled'))
-			}),
+		each(reorderButtons, button => {
+			watch(() => list.length === 1, bindProperty(button, 'disabled'))
+		})
 
-			each(checkboxComponents, checkbox => {
-				const key = checkbox.closest<HTMLElement>('[data-key]')?.dataset.key
-				if (!key || !checkbox.isConnected) return
-				return pass(checkbox, {
-					checked: {
-						get: () => list.byKey(key)?.completed.get() ?? false,
-						set: (checked: boolean) => list.byKey(key)?.completed.set(checked),
-					},
-				})
-			}),
-
-			each(editComponents, editEl => {
-				const key = editEl.closest<HTMLElement>('[data-key]')?.dataset.key
-				if (!key || !editEl.isConnected) return
-				return pass(editEl, {
-					value: {
-						get: () => list.byKey(key)?.label.get() ?? '',
-						set: (value: string) => list.byKey(key)?.label.set(value),
-					},
-				})
-			}),
-
-			watch(
-				() => Array.from(list.keys()),
-				keys => {
-					const current = new Map<string, HTMLElement>()
-					for (const child of container.children) {
-						const el = child as HTMLElement
-						if (el.dataset.key) current.set(el.dataset.key, el)
-					}
-
-					const keysSet = new Set(keys)
-
-					for (const [key, el] of current) {
-						if (!keysSet.has(key)) el.remove()
-					}
-
-					for (let i = 0; i < keys.length; i++) {
-						const key = keys[i]
-						let el = key && current.get(key)
-						if (key && !el) {
-							const fragment = template.content.cloneNode(
-								true,
-							) as DocumentFragment
-							el = fragment.firstElementChild as HTMLElement
-							el.dataset.key = key
-							const id = `${key}-checkbox`
-							const checkbox = el.querySelector('input')
-							if (checkbox) checkbox.id = id
-							const label = el.querySelector('label')
-							if (label) label.htmlFor = id
-							const text = el.querySelector('slot')
-							if (text)
-								text.replaceWith(
-									document.createTextNode(list.byKey(key)?.label.get() ?? ''),
-								)
-						}
-						const currentAtI = container.children[i]
-						if (el && currentAtI !== el)
-							container.insertBefore(el, currentAtI ?? null)
-					}
+		each(checkboxComponents, checkbox => {
+			const key = checkbox.closest<HTMLElement>('[data-key]')?.dataset.key
+			if (!key || !checkbox.isConnected) return
+			pass(checkbox, {
+				checked: {
+					get: () => list.byKey(key)?.completed.get() ?? false,
+					set: (checked: boolean) => list.byKey(key)?.completed.set(checked),
 				},
-			),
+			})
+		})
 
-			on(form, 'submit', e => {
-				e.preventDefault()
-				const label = textbox.value.trim()
-				if (!label) return
-				list.add({
-					id: `todo${++idCounter}`,
-					label,
-					createdAt: new Date(),
-					completed: false,
-				})
-				textbox.clear()
-			}),
+		each(editComponents, editEl => {
+			const key = editEl.closest<HTMLElement>('[data-key]')?.dataset.key
+			if (!key || !editEl.isConnected) return
+			pass(editEl, {
+				value: {
+					get: () => list.byKey(key)?.label.get() ?? '',
+					set: (value: string) => list.byKey(key)?.label.set(value),
+				},
+			})
+		})
 
-			on(host, 'click', e => {
-				if (suppressNextClick) {
-					suppressNextClick = false
-					return
+		watch(
+			() => Array.from(list.keys()),
+			keys => {
+				const current = new Map<string, HTMLElement>()
+				for (const child of container.children) {
+					const el = child as HTMLElement
+					if (el.dataset.key) current.set(el.dataset.key, el)
 				}
-				const target = e.target as HTMLElement
-				const item = target.closest('[data-key]')
+
+				const keysSet = new Set(keys)
+
+				for (const [key, el] of current) {
+					if (!keysSet.has(key)) el.remove()
+				}
+
+				for (let i = 0; i < keys.length; i++) {
+					const key = keys[i]
+					let el = key && current.get(key)
+					if (key && !el) {
+						const fragment = template.content.cloneNode(
+							true,
+						) as DocumentFragment
+						el = fragment.firstElementChild as HTMLElement
+						el.dataset.key = key
+						const id = `${key}-checkbox`
+						const checkbox = el.querySelector('input')
+						if (checkbox) checkbox.id = id
+						const label = el.querySelector('label')
+						if (label) label.htmlFor = id
+						const text = el.querySelector('slot')
+						if (text)
+							text.replaceWith(
+								document.createTextNode(list.byKey(key)?.label.get() ?? ''),
+							)
+					}
+					const currentAtI = container.children[i]
+					if (el && currentAtI !== el)
+						container.insertBefore(el, currentAtI ?? null)
+				}
+			},
+		)
+
+		on(form, 'submit', e => {
+			e.preventDefault()
+			const label = textbox.value.trim()
+			if (!label) return
+			list.add({
+				id: `todo${++idCounter}`,
+				label,
+				createdAt: new Date(),
+				completed: false,
+			})
+			textbox.clear()
+		})
+
+		on(host, 'click', e => {
+			if (suppressNextClick) {
+				suppressNextClick = false
+				return
+			}
+			const target = e.target as HTMLElement
+			const item = target.closest('[data-key]')
+			if (!(item instanceof HTMLElement)) return
+
+			if (target.closest('basic-button.remove')) {
+				e.stopPropagation()
+				if (item === selectedItem) selectItem(null)
+				const key = item.dataset.key
+				if (key) list.remove(key)
+			} else if (target.closest(REORDER_SELECTOR)) {
+				selectItem(item)
+			}
+		})
+
+		on(host, 'keydown', e => {
+			if (!selectedItem) return
+			const target = e.target as HTMLElement
+			if (!target.classList.contains(REORDER_CLASS)) return
+			if (e.key === 'Escape') {
+				selectItem(null)
+				return
+			}
+			if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+			e.preventDefault()
+			if (e.key === 'ArrowUp') moveItem(selectedItem, -1)
+			else moveItem(selectedItem, 1)
+		})
+
+		on(host, 'pointerdown', e => {
+			const handle = (e.target as HTMLElement).closest(REORDER_SELECTOR)
+			if (!(handle instanceof HTMLElement)) return
+			const item = handle.closest('[data-key]')
+			if (!(item instanceof HTMLElement)) return
+			e.preventDefault()
+			pendingDragHandle = handle
+			pointerStartY = e.clientY
+			pointerStartX = e.clientX
+			suppressNextClick = false
+			handle.setPointerCapture(e.pointerId)
+			handle.focus()
+		})
+
+		on(host, 'pointermove', e => {
+			if (!pendingDragHandle) return
+			const dy = Math.abs(e.clientY - pointerStartY)
+			const dx = Math.abs(e.clientX - pointerStartX)
+
+			if (!dragItem && (dy > DRAG_THRESHOLD || dx > DRAG_THRESHOLD)) {
+				const item = pendingDragHandle.closest('[data-key]')
 				if (!(item instanceof HTMLElement)) return
 
-				if (target.closest('basic-button.remove')) {
-					e.stopPropagation()
-					if (item === selectedItem) selectItem(null)
-					const key = item.dataset.key
-					if (key) list.remove(key)
-				} else if (target.closest(REORDER_SELECTOR)) {
-					selectItem(item)
-				}
-			}),
+				dragItem = item
+				const rect = item.getBoundingClientRect()
+				dragOffsetY = pointerStartY - rect.top
 
-			on(host, 'keydown', e => {
-				if (!selectedItem) return
-				const target = e.target as HTMLElement
-				if (!target.classList.contains(REORDER_CLASS)) return
-				if (e.key === 'Escape') {
-					selectItem(null)
-					return
-				}
-				if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
-				e.preventDefault()
-				if (e.key === 'ArrowUp') moveItem(selectedItem, -1)
-				else moveItem(selectedItem, 1)
-			}),
+				marker = document.createElement('li')
+				marker.className = 'drop-marker'
+				marker.style.height = `${rect.height - 4}px`
+				container.insertBefore(marker, item)
 
-			on(host, 'pointerdown', e => {
-				const handle = (e.target as HTMLElement).closest(REORDER_SELECTOR)
-				if (!(handle instanceof HTMLElement)) return
-				const item = handle.closest('[data-key]')
-				if (!(item instanceof HTMLElement)) return
-				e.preventDefault()
-				pendingDragHandle = handle
-				pointerStartY = e.clientY
-				pointerStartX = e.clientX
-				suppressNextClick = false
-				handle.setPointerCapture(e.pointerId)
-				handle.focus()
-			}),
+				item.style.top = `${rect.top}px`
+				item.style.left = `${rect.left}px`
+				item.style.width = `${rect.width}px`
+				item.classList.add(DRAGGING_CLASS)
+			}
 
-			on(host, 'pointermove', e => {
-				if (!pendingDragHandle) return
-				const dy = Math.abs(e.clientY - pointerStartY)
-				const dx = Math.abs(e.clientX - pointerStartX)
+			if (dragItem) {
+				dragItem.style.top = `${e.clientY - dragOffsetY}px`
+				updateMarkerPosition(e.clientY)
+			}
+		})
 
-				if (!dragItem && (dy > DRAG_THRESHOLD || dx > DRAG_THRESHOLD)) {
-					const item = pendingDragHandle.closest('[data-key]')
-					if (!(item instanceof HTMLElement)) return
+		on(host, 'pointerup', () => {
+			if (dragItem && marker) {
+				marker.replaceWith(dragItem)
+				dragItem.style.cssText = ''
+				dragItem.classList.remove(DRAGGING_CLASS)
+				dragItem = null
+				marker = null
+				suppressNextClick = true
+				reorderList()
+			}
+			pendingDragHandle = null
+		})
 
-					dragItem = item
-					const rect = item.getBoundingClientRect()
-					dragOffsetY = pointerStartY - rect.top
+		on(host, 'pointercancel', () => {
+			if (dragItem && marker) {
+				marker.remove()
+				dragItem.style.cssText = ''
+				dragItem.classList.remove(DRAGGING_CLASS)
+				dragItem = null
+				marker = null
+			}
+			pendingDragHandle = null
+			suppressNextClick = false
+		})
 
-					marker = document.createElement('li')
-					marker.className = 'drop-marker'
-					marker.style.height = `${rect.height - 4}px`
-					container.insertBefore(marker, item)
+		on(clearCompleted, 'click', () => {
+			for (let i = list.length - 1; i >= 0; i--) {
+				const key = list.keyAt(i)
+				if (key && list.byKey(key)?.completed.get()) list.remove(key)
+			}
+		})
 
-					item.style.top = `${rect.top}px`
-					item.style.left = `${rect.left}px`
-					item.style.width = `${rect.width}px`
-					item.classList.add(DRAGGING_CLASS)
-				}
-
-				if (dragItem) {
-					dragItem.style.top = `${e.clientY - dragOffsetY}px`
-					updateMarkerPosition(e.clientY)
-				}
-			}),
-
-			on(host, 'pointerup', () => {
-				if (dragItem && marker) {
-					marker.replaceWith(dragItem)
-					dragItem.style.cssText = ''
-					dragItem.classList.remove(DRAGGING_CLASS)
-					dragItem = null
-					marker = null
-					suppressNextClick = true
-					reorderList()
-				}
-				pendingDragHandle = null
-			}),
-
-			on(host, 'pointercancel', () => {
-				if (dragItem && marker) {
-					marker.remove()
-					dragItem.style.cssText = ''
-					dragItem.classList.remove(DRAGGING_CLASS)
-					dragItem = null
-					marker = null
-				}
-				pendingDragHandle = null
-				suppressNextClick = false
-			}),
-
-			on(clearCompleted, 'click', () => {
-				for (let i = list.length - 1; i >= 0; i--) {
-					const key = list.keyAt(i)
-					if (key && list.byKey(key)?.completed.get()) list.remove(key)
-				}
-			}),
-
-			watch(() => filter.value || 'all', bindAttribute(host, 'filter')),
-			watch(status, bindText(liveRegion)),
-		]
+		watch(() => filter.value || 'all', bindAttribute(host, 'filter'))
+		watch(status, bindText(liveRegion))
 	},
 )

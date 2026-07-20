@@ -69,7 +69,7 @@ const valueToHash = (value: string, listbox: HTMLElement): string => {
  * Listbox option values must be relative paths (starting with `./`);
  * the lazyload panel should have an `id` matching the hash target for scroll restoration.
  * @demo {./docs/examples/module-listnav.html} Interactive preview and usage examples */
-export default defineComponent('module-listnav', ({ first, pass }) => {
+export default defineComponent('module-listnav', ({ first, pass, run }) => {
 	const listbox = first('form-listbox', 'Required to select a partial to load')
 	const lazyload = first('module-lazyload', 'Required to load a partial into')
 
@@ -100,30 +100,28 @@ export default defineComponent('module-listnav', ({ first, pass }) => {
 		}
 	}
 
-	return [
-		pass(lazyload, { src: () => listbox.value }),
+	pass(lazyload, { src: () => listbox.value })
 
-		// Sync location.hash ↔ listbox selection
-		() => {
-			// Update hash when selection changes
-			const cleanup = createEffect(() => {
-				const value = listbox.value
-				if (!value) return
+	// Sync location.hash ↔ listbox selection
+	run(() => {
+		// Update hash when selection changes
+		const cleanup = createEffect(() => {
+			const value = listbox.value
+			if (!value) return
 
-				const hash = valueToHash(value, listbox)
-				if (hash && location.hash !== `#${hash}`) {
-					updatingHash = true
-					history.replaceState(null, '', `#${hash}`)
-					updatingHash = false
-				}
-			})
-
-			window.addEventListener('hashchange', onHashChange)
-
-			return () => {
-				cleanup()
-				window.removeEventListener('hashchange', onHashChange)
+			const hash = valueToHash(value, listbox)
+			if (hash && location.hash !== `#${hash}`) {
+				updatingHash = true
+				history.replaceState(null, '', `#${hash}`)
+				updatingHash = false
 			}
-		},
-	]
+		})
+
+		window.addEventListener('hashchange', onHashChange)
+
+		return () => {
+			cleanup()
+			window.removeEventListener('hashchange', onHashChange)
+		}
+	})
 })

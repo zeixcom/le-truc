@@ -80,30 +80,23 @@ export default defineComponent<FormTextboxProps>(
 			}),
 		})
 
-		return [
-			on(textbox, 'change', () => {
-				relayValidity(textbox, host, error)
-				return { value: textbox.value }
-			}),
-			on(textbox, 'input', () => {
-				length.set(textbox.value.length)
-			}),
-			on(clearBtn, 'click', () => {
-				host.clear()
-			}),
+		on(textbox, 'change', () => {
+			relayValidity(textbox, host, error)
+			return { value: textbox.value }
+		})
+		on(textbox, 'input', () => {
+			length.set(textbox.value.length)
+		})
+		on(clearBtn, 'click', () => {
+			host.clear()
+		})
 
-			watch('value', v => {
-				bindProperty(textbox, 'value')(v)
-			}),
-			// Inline error text binds to internal state, not a public prop
-			errorEl && watch(error, bindText(errorEl)),
-			descriptionEl && watch('description', bindText(descriptionEl)),
-			clearBtn && watch(length, bindVisible(clearBtn)),
-			// Form value sync: managed (value → setFormValue via ElementInternals)
-			// Form reset: managed (value attribute is the default)
-			// Validity: host.setCustomValidity() drives native :invalid /
-			// :user-invalid + host.validationMessage for external consumers.
-		]
+		watch('value', v => {
+			bindProperty(textbox, 'value')(v)
+		})
+		if (errorEl) watch(error, bindText(errorEl))
+		if (descriptionEl) watch('description', bindText(descriptionEl))
+		if (clearBtn) watch(length, bindVisible(clearBtn))
 	},
 	{ formAssociated: true },
 )

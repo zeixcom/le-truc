@@ -44,17 +44,15 @@ import { bindText, defineComponent } from '@zeix/le-truc'
 
 defineComponent(
   'basic-hello',                     // Component name (must contain a hyphen)
-  ({ expose, first, on, watch }) => { // Factory: query DOM, declare props, return effects
+  ({ expose, first, on, watch }) => { // Factory: query DOM, declare props, wire up effects
     const input = first('input', 'Needed to enter the name.')
     const output = first('output', 'Needed to display the name.')
     const fallback = output.textContent || ''
 
     expose({ name: output.textContent ?? '' }) // declare reactive prop
 
-    return [
-      on(input, 'input', () => ({ name: input.value || fallback })),
-      watch('name', bindText(output)),
-    ]
+    on(input, 'input', () => ({ name: input.value || fallback }))
+    watch('name', bindText(output))
   },
 )
 ```

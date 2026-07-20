@@ -8,6 +8,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import { createMemo, createState, type Memo } from '@zeix/cause-effect'
 import { makeOn } from '../helpers/events'
+import { installActiveCollector, restoreActiveCollector } from '../internal'
+import type { EffectDescriptor } from '../types'
 // `mock.module` mutates the live module namespace in place, so a captured
 // `import * as ns` reference reflects whatever the mock last set — it is NOT
 // a stable snapshot. Spread it into a plain object at file-load time, before
@@ -22,22 +24,48 @@ type RafCb = (timestamp: number) => void
 
 let rafCallbacks: RafCb[] = []
 
+// on() pushes into the currently active effect-descriptor collector
+// (ADR 0018) and throws NoActiveCollectorError if none is active. These
+// tests call it directly, outside `defineComponent`'s factory execution, so
+// install a throwaway collector for the duration of each test.
+let previousCollector: EffectDescriptor[] | undefined
+
 beforeEach(() => {
 	rafCallbacks = []
 	;(globalThis as any).requestAnimationFrame = (cb: RafCb) => {
 		rafCallbacks.push(cb)
 		return rafCallbacks.length
 	}
+	previousCollector = installActiveCollector([])
 })
 
 afterEach(() => {
 	flushRAF()
+	restoreActiveCollector(previousCollector)
 })
 
 const flushRAF = () => {
 	const cbs = rafCallbacks.splice(0)
 	for (const cb of cbs) cb(0)
 }
+
+describe('makeOn — implicit collection (ADR 0018)', () => {
+	test('on() pushes its descriptor into the active collector', () => {
+		const host = { count: 0, shadowRoot: null } as unknown as HTMLElement & {
+			count: number
+		}
+		const target = {
+			addEventListener: () => {},
+			removeEventListener: () => {},
+		} as unknown as Element
+		const on = makeOn(host)
+		const collector: EffectDescriptor[] = []
+		const previous = installActiveCollector(collector)
+		const descriptor = on(target, 'click', () => {})
+		restoreActiveCollector(previous)
+		expect(collector).toEqual([descriptor])
+	})
+})
 
 /* === makeOn — async handler === */
 

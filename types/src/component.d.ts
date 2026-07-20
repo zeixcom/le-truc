@@ -2,7 +2,7 @@ import { type MemoCallback, type Signal, type TaskCallback } from '@zeix/cause-e
 import { type ProvideContextsHelper, type RequestContextHelper } from './helpers/context';
 import { type ElementQueries } from './helpers/dom';
 import { type OnHelper } from './helpers/events';
-import { type FactoryResult, type Falsy, type PassHelper, type WatchHelper } from './helpers/reactive';
+import { type FactoryResult, type Falsy, type PassHelper, type RunHelper, type WatchHelper } from './helpers/reactive';
 import { type ComponentProps, type MethodProducer, type Parser } from './types';
 /**
  * Any value that `#setAccessor` can turn into a signal:
@@ -88,6 +88,15 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
     pass: PassHelper<P>;
     provideContexts: ProvideContextsHelper<P>;
     requestContext: RequestContextHelper;
+    /**
+     * Registers a hand-authored `EffectDescriptor` — a thunk not produced by
+     * `watch()`, `on()`, `pass()`, `each()`, or `provideContexts()` — into the
+     * component's ambient collector. Use it to wrap a native API
+     * (`IntersectionObserver`, etc.) or a composed cause-effect primitive that
+     * needs deferred activation and automatic disconnect cleanup.
+     * @since 2.3
+     */
+    run: RunHelper;
 };
 /**
  * The factory context for form-associated components. Extends `FactoryContext`

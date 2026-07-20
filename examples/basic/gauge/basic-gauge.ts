@@ -46,27 +46,25 @@ export default defineComponent<BasicGaugeProps>(
 			host.getAttribute('thresholds'),
 		)
 
-		return [
-			pass(valueEl, { value: () => host.value }),
+		pass(valueEl, { value: () => host.value })
 
-			watch('value', value => {
-				meter.value = value
-				host.style.setProperty(
-					'--basic-gauge-degree',
-					`${(240 * value) / meter.max}deg`,
-				)
-			}),
-			watch(
-				() =>
-					thresholds.find(threshold => host.value >= threshold.min) || {
-						label: '',
-						color: 'var(--color-primary)',
-					},
-				qualification => {
-					labelEl.textContent = qualification.label
-					host.style.setProperty('--basic-gauge-color', qualification.color)
+		watch('value', value => {
+			meter.value = value
+			host.style.setProperty(
+				'--basic-gauge-degree',
+				`${(240 * value) / meter.max}deg`,
+			)
+		})
+		watch(
+			() =>
+				thresholds.find(threshold => host.value >= threshold.min) || {
+					label: '',
+					color: 'var(--color-primary)',
 				},
-			),
-		]
+			qualification => {
+				labelEl.textContent = qualification.label
+				host.style.setProperty('--basic-gauge-color', qualification.color)
+			},
+		)
 	},
 )

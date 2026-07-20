@@ -1,6 +1,6 @@
 # Effects
 
-**Overview:** How to drive DOM updates in Le Truc v2.0. All helpers imported from `@zeix/le-truc`. Effects driven by `watch()` in factory return array.
+**Overview:** How to drive DOM updates in Le Truc v2.3. All helpers imported from `@zeix/le-truc`. Effects driven by `watch()`, called directly in the factory — it registers itself, no `return` needed.
 
 ---
 
@@ -46,12 +46,14 @@ Without thunks, these require custom handlers. Thunks keep intent declarative.
 | Set DOM property | `bindProperty(el, key)` | `(value: E[K]) => void` |
 | Show/hide element | `bindVisible(el, transform?)` | `(value: T) => void` |
 | Toggle CSS class | `bindClass(el, token, transform?)` | `(value: T) => void` |
+| Toggle custom `:state()` pseudo-class | `bindState(internals, token)` | `(value: boolean) => void` |
 | Set/remove attribute | `bindAttribute(el, name, allowUnsafe?)` | `SingleMatchHandlers<string \| boolean>` |
 | Set inline style | `bindStyle(el, prop)` | `SingleMatchHandlers<string>` |
 | Set innerHTML | `dangerouslyBindInnerHTML(el, options?)` | `SingleMatchHandlers<string>` |
-| Attach event listener | `on(target, type, handler, options?)` | returns `EffectDescriptor` |
-| Bind Le Truc child prop | `pass(target, props)` | returns `EffectDescriptor` |
-| Per-element effects on Memo | `each(memo, callback)` | returns `EffectDescriptor` |
+| Attach event listener | `on(target, type, handler, options?)` | registers an `EffectDescriptor` |
+| Bind Le Truc child prop | `pass(target, props)` | registers an `EffectDescriptor` |
+| Per-element effects on Memo | `each(memo, callback)` | registers an `EffectDescriptor` |
+| Register a hand-authored descriptor | `run(descriptor)` | registers a raw `EffectDescriptor` not produced by any helper |
 
 ---
 
@@ -93,6 +95,17 @@ watch('active', bindClass(item, 'active'))
 watch('state', bindClass(el, 'is-open', v => v === 'open'))  // custom transform
 ```
 
+### `bindState(internals, token)`
+
+Returns `(value: boolean) => void`. Adds `token` to `internals.states` when truthy, removes when falsy — consumer CSS matches with `:state(token)`. `null` internals (only possible if `attachInternals()` failed pre-upgrade) is a graceful no-op.
+
+```typescript
+watch('disabled', bindState(internals, 'disabled'))
+watch('overflowEnd', bindState(internals, 'overflow-end'))
+```
+
+Prefer `bindState` over `bindClass(host, token)` for host-level state: a custom state can't be clobbered by consumer code rewriting the host's `class` attribute, and it's available on every component (`internals` is attached unconditionally), not only form-associated ones. `internals` comes from `FactoryContext` — destructure it alongside `watch`/`host`/etc.
+
 ### `bindAttribute(element, name, allowUnsafe?)`
 
 Returns `SingleMatchHandlers<string | boolean>`. Pass directly to `watch`.
@@ -131,7 +144,7 @@ Options: `{ shadowRootMode?: ShadowRootMode, allowScripts?: boolean }`.
 
 ### `on(target, type, handler, options?)`
 
-Returns `EffectDescriptor`. Handler receives `(event, element)`.
+Creates and registers an `EffectDescriptor`. Handler receives `(event, element)`.
 
 Two handler return modes:
 
@@ -174,13 +187,29 @@ For per-element effects on `Memo<E[]>` from `all()`. Elements enter/leave collec
 
 ```typescript
 const items = all('[role="option"]')
-return [
-  each(items, item => [
-    on(item, 'focus', () => ({ focusedId: item.id })),
-    watch('selectedId', bindClass(item, 'selected', id => id === item.id)),
-  ]),
-]
+each(items, item => {
+  on(item, 'focus', () => ({ focusedId: item.id }))
+  watch('selectedId', bindClass(item, 'selected', id => id === item.id))
+})
 ```
+
+The callback can call `watch()`, `on()`, `each()` (nested, to any depth), `pass()`, and `provideContexts()` directly — same as the factory itself — or return a single `EffectDescriptor` / `FactoryResult` array (legacy form, still supported).
+
+### `run(descriptor)`
+
+Registers a hand-authored `EffectDescriptor` — a raw `() => MaybeCleanup` thunk not produced by `watch()`/`on()`/`pass()`/`each()`/`provideContexts()`. Use it for native APIs with their own setup/cleanup lifecycle:
+
+```typescript
+run(() => {
+  const observer = new IntersectionObserver(([entry]) => {
+    isVisible.set(entry.isIntersecting)
+  })
+  observer.observe(host)
+  return () => observer.disconnect()
+})
+```
+
+Without `run()` (or `return`), a bare descriptor's cleanup never registers anywhere — `disconnectedCallback()` has no way to find it, so it silently never runs.
 
 ---
 
@@ -211,14 +240,12 @@ watch('active', active => {
 
 ## Multiple Effects on One Element
 
-Return multiple entries in array:
+Call each helper directly — order doesn't matter:
 
 ```typescript
-return [
-  watch('value', bindProperty(input, 'value')),
-  watch('disabled', bindProperty(input, 'disabled')),
-  watch('error', bindClass(input, 'error', Boolean)),
-]
+watch('value', bindProperty(input, 'value'))
+watch('disabled', bindProperty(input, 'disabled'))
+watch('error', bindClass(input, 'error', Boolean))
 ```
 
 ---
@@ -228,7 +255,5 @@ return [
 ```typescript
 const badge = first('span.badge')  // may return null
 
-return [
-  badge && watch('count', bindText(badge)),  // skipped if badge is null
-]
+if (badge) watch('count', bindText(badge))  // skipped if badge is null
 ```

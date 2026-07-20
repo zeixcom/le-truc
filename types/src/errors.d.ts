@@ -89,6 +89,22 @@ declare class InvalidPassPropertyError extends TypeError {
     constructor(host: HTMLElement, target: HTMLElement, reasons: Map<string, string>);
 }
 /**
+ * Error thrown when `watch()`, `on()`, `pass()`, `each()`, or `provideContexts()`
+ * is called with no active effect-descriptor collector — i.e. not synchronously
+ * during factory setup or an `each()` callback. Common causes: calling the
+ * helper after an `await`, inside a detached `setTimeout`, or from an event
+ * handler defined during setup. See ADR 0018.
+ *
+ * @since 2.3.0
+ */
+declare class NoActiveCollectorError extends Error {
+    /**
+     * @param {HTMLElement | undefined} host - Host component the helper was called for, if known (`each()` isn't host-bound, so it has none)
+     * @param {string} helper - Name of the helper that was called (e.g. `'watch'`)
+     */
+    constructor(host: HTMLElement | undefined, helper: string);
+}
+/**
  * Error thrown when a CSS selector passed to `all()` is malformed
  *
  * @since 2.0.4
@@ -101,4 +117,4 @@ declare class InvalidSelectorError extends TypeError {
      */
     constructor(parent: ParentNode, selector: string, cause: unknown);
 }
-export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPassPropertyError, InvalidPropertyNameError, InvalidReactivesError, InvalidSelectorError, MissingElementError, };
+export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPassPropertyError, InvalidPropertyNameError, InvalidReactivesError, InvalidSelectorError, MissingElementError, NoActiveCollectorError, };

@@ -70,17 +70,15 @@ export default defineComponent<ModuleColorinfoProps>(
 			hue: () => host.color.h ?? 0,
 		})
 
-		return [
-			pass(lightnessEls, { value: () => host.lightness }),
-			pass(chromaEls, { value: () => host.chroma }),
-			pass(hueEls, { value: () => host.hue }),
+		pass(lightnessEls, { value: () => host.lightness })
+		pass(chromaEls, { value: () => host.chroma })
+		pass(hueEls, { value: () => host.hue })
 
-			watch('css', bindStyle(host, '--color-swatch')),
-			watch('hex', bindStyle(host, '--color-fallback')),
-			watch('name', bindText(labelStrong)),
-			hexEl && watch('hex', bindText(hexEl)),
-			rgbEl && watch('rgb', bindText(rgbEl)),
-			hslEl && watch('hsl', bindText(hslEl)),
-		]
+		watch('css', bindStyle(host, '--color-swatch'))
+		watch('hex', bindStyle(host, '--color-fallback'))
+		watch('name', bindText(labelStrong))
+		if (hexEl) watch('hex', bindText(hexEl))
+		if (rgbEl) watch('rgb', bindText(rgbEl))
+		if (hslEl) watch('hsl', bindText(hslEl))
 	},
 )

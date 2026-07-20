@@ -9,7 +9,7 @@
  * No DOM required — host is a plain stub; Task signals are passed directly.
  */
 
-import { describe, expect, mock, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import {
 	createEffect,
 	createMemo,
@@ -18,9 +18,20 @@ import {
 	createState,
 	createTask,
 } from '@zeix/cause-effect'
-import { activateResult, each, makePass, makeWatch } from '../helpers/reactive'
-import { getSignals } from '../internal'
-import type { ComponentProps } from '../types'
+import {
+	activateResult,
+	each,
+	makePass,
+	makeRun,
+	makeWatch,
+} from '../helpers/reactive'
+import {
+	getSignals,
+	installActiveCollector,
+	restoreActiveCollector,
+	withCollector,
+} from '../internal'
+import type { ComponentProps, EffectDescriptor } from '../types'
 // `mock.module` mutates the live module namespace in place, so a captured
 // `import * as ns` reference reflects whatever the mock last set — it is NOT
 // a stable snapshot. Spread it into a plain object at file-load time, before
@@ -35,6 +46,88 @@ const realUtil = { ...realUtilNamespace }
 const stubHost = () => ({}) as unknown as HTMLElement
 
 /* === Tests === */
+
+// watch()/pass()/each() push into the currently active effect-descriptor
+// collector (ADR 0018) and throw NoActiveCollectorError if none is active.
+// These tests call the helpers directly, outside `defineComponent`'s factory
+// execution, so install a throwaway collector for the duration of the file.
+let previousCollector: EffectDescriptor[] | undefined
+beforeEach(() => {
+	previousCollector = installActiveCollector([])
+})
+afterEach(() => {
+	restoreActiveCollector(previousCollector)
+})
+
+describe('implicit effect collection (ADR 0018)', () => {
+	test('watch() pushes its descriptor into the active collector', () => {
+		const host = stubHost() as unknown as HTMLElement & ComponentProps
+		const watch = makeWatch(host)
+		const collector: EffectDescriptor[] = []
+		let descriptor: EffectDescriptor
+		withCollector(collector, () => {
+			descriptor = watch(createState('x'), () => {})
+		})
+		expect(collector).toEqual([descriptor!])
+	})
+
+	test('pass() pushes its descriptor into the active collector', () => {
+		const host = stubHost() as unknown as HTMLElement & ComponentProps
+		const pass = makePass(host)
+		const target = { localName: 'my-el' } as unknown as HTMLElement &
+			ComponentProps
+		const collector: EffectDescriptor[] = []
+		let descriptor: EffectDescriptor
+		withCollector(collector, () => {
+			descriptor = pass(target, {})
+		})
+		expect(collector).toEqual([descriptor!])
+	})
+
+	test('throws NoActiveCollectorError when called with no active collector', () => {
+		// Deactivate the file-level throwaway collector installed by the outer
+		// beforeEach — the outer afterEach restores from `previousCollector`
+		// (captured before this test ran), so no manual cleanup is needed here.
+		restoreActiveCollector(undefined)
+		const host = stubHost() as unknown as HTMLElement & ComponentProps
+		const watch = makeWatch(host)
+		expect(() => watch(createState('x'), () => {})).toThrow(
+			'watch() called outside synchronous factory or each() callback execution',
+		)
+	})
+
+	test('run() pushes a wrapped descriptor into the active collector', () => {
+		const host = stubHost() as unknown as HTMLElement & ComponentProps
+		const run = makeRun(host)
+		const rawDescriptor: EffectDescriptor = () => () => {}
+		const collector: EffectDescriptor[] = []
+		withCollector(collector, () => {
+			run(rawDescriptor)
+		})
+		// The pushed descriptor is a createScope() wrapper around rawDescriptor
+		// (see makeRun), not rawDescriptor itself — the wrapping is what makes
+		// rawDescriptor's returned cleanup actually register for disposal.
+		expect(collector).toHaveLength(1)
+		expect(collector[0]).not.toBe(rawDescriptor)
+	})
+
+	test('run() returns void, unlike watch()/on()/pass()/provideContexts()', () => {
+		const host = stubHost() as unknown as HTMLElement & ComponentProps
+		const run = makeRun(host)
+		const collector: EffectDescriptor[] = []
+		const result = withCollector(collector, () => run(() => {}))
+		expect(result).toBeUndefined()
+	})
+
+	test('run() throws NoActiveCollectorError when called with no active collector', () => {
+		restoreActiveCollector(undefined)
+		const host = stubHost() as unknown as HTMLElement & ComponentProps
+		const run = makeRun(host)
+		expect(() => run(() => {})).toThrow(
+			'run() called outside synchronous factory or each() callback execution',
+		)
+	})
+})
 
 describe('makeWatch — basic function signature', () => {
 	test('returns a watch helper function', () => {
@@ -247,6 +340,80 @@ describe('each', () => {
 		createScope(() => descriptor())
 		// The callback should have been called and the descriptor activated
 		expect(called).toBe(true)
+	})
+})
+
+describe('each — implicit collection (ADR 0018)', () => {
+	test('activates a bare (non-returned) watch() call made inside the callback', () => {
+		const el = {} as Element
+		const memo = createMemo(() => [el])
+		const host = stubHost() as unknown as HTMLElement & ComponentProps
+		const state = createState('a')
+		const seen: string[] = []
+		const watch = makeWatch(host)
+		const descriptor = each(memo, () => {
+			// Bare call, no return — must still register and run.
+			watch(state, value => {
+				seen.push(value)
+			})
+		})
+		createScope(() => descriptor())
+		expect(seen).toEqual(['a'])
+	})
+
+	test('does not double-activate a descriptor that is both collected and returned', () => {
+		const el = {} as Element
+		const memo = createMemo(() => [el])
+		const host = stubHost() as unknown as HTMLElement & ComponentProps
+		const state = createState('a')
+		const runs: string[] = []
+		const watch = makeWatch(host)
+		const descriptor = each(memo, () =>
+			// Old explicit-return style: watch() both pushes into the active
+			// collector AND is returned — must run exactly once, not twice.
+			watch(state, value => {
+				runs.push(value)
+			}),
+		)
+		createScope(() => descriptor())
+		expect(runs).toEqual(['a'])
+	})
+
+	test('supports each() nested 3+ levels deep with implicit collection', () => {
+		// A grid: rows containing columns containing cells, each level
+		// registering its own bare watch() call.
+		const seen: string[] = []
+		const cellMemo = createMemo(() => [{} as Element])
+		const colMemo = createMemo(() => [{} as Element])
+		const rowMemo = createMemo(() => [{} as Element])
+		const host = stubHost() as unknown as HTMLElement & ComponentProps
+		const watch = makeWatch(host)
+		const state = createState('grid')
+
+		// Plain inline block-body arrows — no named handlers, no explicit each<Element>
+		// type args needed. See LT-009: the earlier workaround (named handlers with
+		// explicit `: void` return types) wasn't fixing a nesting-depth inference
+		// limitation — it was incidentally avoiding a real type error unrelated to
+		// nesting (an expression-bodied arrow returning a non-void value). Any
+		// void-returning handler compiles fine at any depth; see LT-009's TODO.md
+		// entry for the full root-cause writeup.
+		const descriptor = each(rowMemo, () => {
+			watch(state, v => {
+				seen.push(`row:${v}`)
+			})
+			each(colMemo, () => {
+				watch(state, v => {
+					seen.push(`col:${v}`)
+				})
+				each(cellMemo, () => {
+					watch(state, v => {
+						seen.push(`cell:${v}`)
+					})
+				})
+			})
+		})
+		createScope(() => descriptor())
+		expect(seen).toEqual(['row:grid', 'col:grid', 'cell:grid'])
 	})
 })
 

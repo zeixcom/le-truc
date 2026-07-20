@@ -29,14 +29,23 @@ import {
 } from './helpers/form'
 import {
 	activateResult,
+	type EffectDescriptor,
 	type FactoryResult,
 	type Falsy,
+	forEachUnseen,
 	makePass,
+	makeRun,
 	makeWatch,
 	type PassHelper,
+	type RunHelper,
 	type WatchHelper,
 } from './helpers/reactive'
-import { getSignals, initialValueInitializers, internalsMap } from './internal'
+import {
+	getSignals,
+	initialValueInitializers,
+	internalsMap,
+	withCollector,
+} from './internal'
 import {
 	type ComponentProps,
 	isMethodProducer,
@@ -141,6 +150,15 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 	pass: PassHelper<P>
 	provideContexts: ProvideContextsHelper<P>
 	requestContext: RequestContextHelper
+	/**
+	 * Registers a hand-authored `EffectDescriptor` — a thunk not produced by
+	 * `watch()`, `on()`, `pass()`, `each()`, or `provideContexts()` — into the
+	 * component's ambient collector. Use it to wrap a native API
+	 * (`IntersectionObserver`, etc.) or a composed cause-effect primitive that
+	 * needs deferred activation and automatic disconnect cleanup.
+	 * @since 2.3
+	 */
+	run: RunHelper
 }
 
 /**
@@ -270,10 +288,26 @@ function defineComponent<P extends ComponentProps>(
 					pass: makePass(host),
 					provideContexts: makeProvideContexts(host),
 					requestContext: makeRequestContext(host),
+					run: makeRun(host),
 				}
 
-				const result = factory(context)
-				if (result) this.#setup = result
+				// watch()/on()/pass()/each()/provideContexts() already pushed their
+				// descriptors into this collector when called, whether or not the
+				// factory also `return`s them — an old-style `return [...]` is
+				// redundant for those, not required. But the factory's return value
+				// is still reconciled (not ignored outright): the public
+				// `FactoryResult` type has always allowed authoring a raw
+				// `EffectDescriptor` by hand, bypassing every helper, and such a
+				// descriptor is never pushed anywhere — `return` is the only path
+				// that can pick it up. `forEachUnseen` skips anything already in the
+				// collector by reference, so nothing activates twice. See ADR 0018.
+				const collector: EffectDescriptor[] = []
+				const result = withCollector(collector, () => factory(context))
+				this.#setup = collector
+				if (result) {
+					const seen = new Set(collector)
+					forEachUnseen(result, seen, d => this.#setup.push(d))
+				}
 
 				// Managed form-control behavior: register the library-internal
 				// value-sync effect in the same deferred-activation pipeline as

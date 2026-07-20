@@ -78,6 +78,27 @@ type PassHelper<P extends ComponentProps> = {
  */
 declare const activateResult: (result: FactoryResult) => void;
 /**
+ * Recursively flatten a `FactoryResult` (or a single descriptor, or a falsy
+ * value), invoking `visit` for each descriptor not already present in `seen`
+ * (checked by reference).
+ *
+ * Reconciles the legacy explicit-`return` form with descriptors already
+ * pushed into the active collector by `watch()`/`on()`/`pass()`/`each()`
+ * (ADR 0018) — a descriptor produced by one of those helpers is pushed
+ * whether or not it's also `return`ed, so it must only be visited once. A
+ * manually-constructed `EffectDescriptor` that bypasses every helper (never
+ * pushed anywhere) is not in `seen` and is still visited — the explicit
+ * `FactoryResult` return type has always allowed authoring one directly,
+ * without going through `watch()`/`on()`/`pass()`/`each()`, so this remains
+ * the one path such a descriptor can be picked up by.
+ *
+ * @since 2.3
+ * @param {FactoryResult | EffectDescriptor | Falsy} result - Flat or nested array, single descriptor, or falsy value to reconcile
+ * @param {ReadonlySet<EffectDescriptor>} seen - Descriptors already accounted for (by reference) — skipped
+ * @param {(descriptor: EffectDescriptor) => void} visit - Called once per not-yet-seen descriptor, in encounter order
+ */
+declare const forEachUnseen: (result: FactoryResult | EffectDescriptor | Falsy, seen: ReadonlySet<EffectDescriptor>, visit: (descriptor: EffectDescriptor) => void) => void;
+/**
  * Drive per-element scopes from a `Memo<E[]>` with element-identity keying.
  *
  * Elements entering the collection get a scope created by `mount`; elements
@@ -111,6 +132,40 @@ declare const keyedScopes: <E extends object>(memo: Memo<E[]>, mount: (element: 
  */
 declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => WatchHelper<P>;
 /**
+ * The `run` helper type in `FactoryContext`.
+ *
+ * Registers a hand-authored `EffectDescriptor` — a thunk not produced by
+ * `watch()`, `on()`, `pass()`, `each()`, or `provideContexts()` — into the
+ * ambient collector, the same way those helpers already do internally. For
+ * wrapping native APIs (`IntersectionObserver`, etc.) or composed cause-effect
+ * primitives that need deferred activation and automatic disconnect cleanup.
+ */
+type RunHelper = (descriptor: EffectDescriptor) => void;
+/**
+ * Create a `run` helper bound to a specific component host.
+ *
+ * `run` pushes a hand-authored `EffectDescriptor` into the ambient collector.
+ * It is the registration path for effects that don't fit `watch()`/`on()`/
+ * `pass()`/`each()`/`provideContexts()` — e.g. a raw `IntersectionObserver`
+ * wrapped in a thunk that returns its own cleanup.
+ *
+ * Wraps `rawDescriptor` in `createScope()` rather than pushing it directly:
+ * the activation loop that calls every collected descriptor (`activateResult`)
+ * discards each call's return value — `watch()`/`on()`/`pass()` are unaffected
+ * because they call `createEffect()`/`createScope()` internally, which
+ * self-register onto the active owner regardless of what the outer caller
+ * does with the return value, but a raw thunk that just returns a bare
+ * cleanup has no such internal registration. `createScope()` picks up
+ * `rawDescriptor`'s returned cleanup and registers it on whatever owner is
+ * active when the wrapped descriptor runs (the component's root scope during
+ * normal activation), so it actually runs on disconnect.
+ *
+ * @since 2.3
+ * @param {HTMLElement & P} host - The component host element
+ * @returns {RunHelper} Bound `run` function for the given host
+ */
+declare const makeRun: <P extends ComponentProps>(host: HTMLElement & P) => RunHelper;
+/**
  * Create a `pass` helper bound to a specific component host.
  *
  * `pass` passes reactive values to a descendant Le Truc component by swapping
@@ -142,11 +197,21 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => Pas
  * When elements enter the collection, their effects are created in a per-element
  * scope; when they leave, their effects are disposed with that scope.
  *
- * The callback receives a single element and returns a `FactoryResult` (array of
- * `EffectDescriptor`s) or a single `EffectDescriptor` (single-descriptor shortcut).
- * Falsy values can also be returned to skip conditionally.
+ * As of v2.3, the callback can call `watch()`/`on()`/`pass()` directly without
+ * returning them — each call registers into a collector local to that element's
+ * `mount`, established for the duration of the callback (see ADR 0018). Nesting
+ * is unbounded: a callback that calls `each()` again (e.g. a grid of rows
+ * containing columns) gets its own nested collector the same way.
+ *
+ * Descriptors produced by `watch()`/`on()`/`pass()` inside the callback are
+ * picked up via the implicit collector regardless of whether the callback also
+ * `return`s them — an old-style `return [watch(...)]` still works, activated
+ * exactly once, not twice (see `forEachUnseen()`). A manually-constructed
+ * `EffectDescriptor` that bypasses every helper is only reachable via `return`
+ * and is still activated, since the public `FactoryResult` type has always
+ * allowed authoring one directly.
  *
  * @since 2.0
  */
 declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult | EffectDescriptor | Falsy): EffectDescriptor;
-export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, keyedScopes, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, type WatchHelper, };
+export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, forEachUnseen, keyedScopes, makePass, makeRun, makeWatch, type PassedProps, type PassHelper, type Reactive, type RunHelper, type WatchHelper, };

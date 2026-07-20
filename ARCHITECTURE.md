@@ -12,13 +12,15 @@ The single external dependency is `@zeix/cause-effect`, which provides the react
 defineComponent('my-element', ({ expose, first, watch }) => {
   const input = first('input')
   expose({ value: input.value })
-  return [watch('value', v => { /* ... */ })]
+  watch('value', v => { /* ... */ })
 })
 ```
 
+As of v2.3, `watch()` and the other factory context helpers register into an ambient per-instance collector as they're called — the factory doesn't need to `return` anything (see [ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md)). Explicitly returning a `FactoryResult` array (`return [watch(...), ...]`) still works for backward compatibility but is deprecated as of v3.0 (see [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md), superseded).
+
 ### Lifecycle
 
-- **`connectedCallback`**: Queries DOM, creates signals from parsers, collects effect descriptors, waits for child element definitions, then activates effects in a scope
+- **`connectedCallback`**: Queries DOM, creates signals from parsers, runs the factory (collecting effect descriptors into the ambient collector as `watch`/`on`/`pass`/`each`/`provideContexts` are called), waits for child element definitions, then activates effects in a scope
 - **`disconnectedCallback`**: Tears down all effects and event listeners via the scope cleanup
 
 ### Signals and Properties
@@ -34,7 +36,9 @@ Mutable signals are wrapped in a `Slot` to enable signal swapping for `pass()` (
 
 ### Effect Descriptors
 
-`watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` return effect descriptors (thunks) that are activated after dependency resolution (see [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md)). This ensures child components are defined before effects run.
+`watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` produce effect descriptors (thunks) that are activated after dependency resolution. This ensures child components are defined before effects run.
+
+As of v2.3, each helper pushes its descriptor into an ambient collector rather than relying on the factory to `return` it: each component instance has a closure-scoped collector (created in `connectedCallback`), and `each()`'s per-element `mount` callback pushes its own nested collector for the duration of the callback (popped in a `try`/`finally`), supporting arbitrarily nested per-element structures (e.g. grids). Calling a helper with no active collector — outside synchronous factory/callback execution, such as after an `await` or inside a detached `setTimeout` — throws immediately rather than silently doing nothing. Explicit `return` of a `FactoryResult` array is still supported: descriptors produced by `watch()`/`on()`/`pass()`/`each()`/`provideContexts()` are already in the collector by the time they're returned, so returning them is redundant, not required. The return value isn't simply discarded, though — it's reconciled against the collector (`forEachUnseen()` in `helpers/reactive.ts`, dedup by reference) so a hand-authored `EffectDescriptor` that bypasses every helper is still picked up if returned. `run(descriptor)` is a fifth `FactoryContext` helper for exactly that case: it pushes a hand-authored `EffectDescriptor` into the ambient collector the same way `watch()`/`on()`/`pass()`/`provideContexts()` already do internally, so components that need to wrap a native API (`IntersectionObserver`, etc.) or a raw cause-effect primitive in a descriptor can do so without `return`. This dual-support path is deprecated as of v3.0, when explicit `return` will be removed and the return type narrows to `void` — `run()` is already the v3.0-ready replacement for the one case `return` was otherwise the only path for. See [ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md), superseding [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md).
 
 ### DOM Binding Helpers
 
@@ -97,7 +101,7 @@ Implements the [Community Protocol for Context](https://github.com/webcomponents
 | `as*` | Parsers | `asBoolean`, `asInteger`, `asString` |
 | `create*` | Signals | `createState`, `createEffect`, `createScope` |
 
-Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestContext`, `expose`, `first`, `all`) are plain verbs with no prefix.
+Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestContext`, `run`, `expose`, `first`, `all`) are plain verbs with no prefix.
 
 ## Security
 

@@ -108,6 +108,7 @@ export {
 	InvalidReactivesError,
 	InvalidSelectorError,
 	MissingElementError,
+	NoActiveCollectorError,
 } from './src/errors'
 export {
 	CONTEXT_REQUEST,
@@ -142,6 +143,7 @@ export {
 	type PassedProps,
 	type PassHelper,
 	type Reactive,
+	type RunHelper,
 	type WatchHelper,
 } from './src/helpers/reactive'
 export { asBoolean } from './src/parsers/boolean'

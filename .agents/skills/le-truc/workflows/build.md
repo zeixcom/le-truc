@@ -67,11 +67,9 @@ export default defineComponent<MyComponentProps>(
       label: asString(label?.textContent ?? button.textContent ?? ''),
     })
 
-    // Return effect descriptors (nested arrays OK, falsy guards filtered)
-    return [
-      watch('disabled', bindProperty(button, 'disabled')),
-      label && watch('label', bindText(label)),  // falsy guard for optional
-    ]
+    // Call effect helpers directly — each registers itself, no return needed
+    watch('disabled', bindProperty(button, 'disabled'))
+    if (label) watch('label', bindText(label))  // guard for optional descendant
   },
 )
 ```
@@ -79,9 +77,10 @@ export default defineComponent<MyComponentProps>(
 **Rules:**
 - Only import what you use
 - Always provide `required` string to `first()` for essential elements
-- Use `element && watch(...)` for optional descendants
+- Use `if (element) watch(...)` for optional descendants
 - Custom `watch` handlers with listeners/timers must return cleanup function
 - Mark props `readonly` only if sensor-driven (not settable from outside)
+- For a hand-authored `EffectDescriptor` wrapping a native API (`IntersectionObserver`, etc.), register it with `run(descriptor)` — a bare thunk with no `run()`/`return` never gets its cleanup called on disconnect
 
 ---
 
