@@ -1,0 +1,56 @@
+module-calctable {
+	display: block;
+
+	& th.amount,
+	& th.price-per-unit,
+	& th.price,
+	& td.amount,
+	& td.price-per-unit,
+	& td.price {
+		text-align: right;
+	}
+
+	& tbody tr[data-unreconciled] {
+		& td {
+			border-top: 1px dashed var(--color-border-soft);
+		}
+
+		& input::placeholder {
+			color: var(--color-text-soft);
+		}
+	}
+
+	& tfoot td {
+		font-weight: var(--font-weight-bold);
+	}
+
+	& input {
+		width: 100%;
+		box-sizing: border-box;
+		border: 1px solid transparent;
+		border-radius: var(--space-xxs);
+		padding: var(--space-xs) var(--space-s);
+		background-color: transparent;
+		color: inherit;
+		font: inherit;
+		text-align: inherit;
+
+		&:hover {
+			border-color: var(--color-border-soft);
+		}
+
+		&:focus-visible {
+			border-color: var(--color-selection);
+			background-color: var(--color-input);
+		}
+
+		&.amount,
+		&.price-per-unit {
+			text-align: right;
+		}
+
+		&:invalid {
+			border-color: var(--color-error-invalid);
+		}
+	}
+}
