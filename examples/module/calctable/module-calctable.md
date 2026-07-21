@@ -1,6 +1,6 @@
 ### Module Calctable
 
-An editable calculation table: description, amount, and price/unit columns compute a per-row price, plus running totals in the footer. Demonstrates seeding a `createList()` from server-rendered `<tr data-key>` rows so `reconcile()` adopts them instead of stripping them on first run, a trailing entry row marked `data-unreconciled` (exempt from reconciliation, always stays last) that creates a new row via `list.add()` once its three fields are filled, event delegation on the container for both live `input` sync and committing `change` handling, per-row reactive DOM updates registered from inside `reconcile()`'s `bindItem` with a raw `createEffect()`, and locale-aware currency formatting configured via the `options` attribute — the same `Intl.NumberFormat` validation logic as `<basic-number>`, shared through `examples/_common/getNumberFormatter.ts`.
+An editable calculation table — description, amount, and price/unit columns compute a per-row price, plus running totals in the footer. Rows are synced via `reconcile()`; server-rendered `<tr data-key>` rows are adopted into the initial list so they aren't stripped on first run. A trailing entry row (marked `data-unreconciled`, exempt from reconciliation) creates a new row once its description, amount, and price/unit are all filled; setting an existing row's amount to 0 removes it. Currency formatting is configured via the `options` attribute, parsed the same way as `<basic-number>`.
 
 #### Preview
 

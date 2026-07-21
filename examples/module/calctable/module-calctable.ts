@@ -1,6 +1,5 @@
 import {
 	bindText,
-	createEffect,
 	createList,
 	createMemo,
 	createStore,
@@ -100,33 +99,17 @@ export default defineComponent(
 			keyConfig: item => item.id,
 			createItem: createStore,
 		})
+		const rowPrices = list.deriveCollection(
+			item => item.amount * item.pricePerUnit,
+		)
+		const amountTotal = createMemo(() =>
+			list.get().reduce((sum, item) => sum + item.amount, 0),
+		)
+		const priceTotal = createMemo(() =>
+			rowPrices.get().reduce((sum, price) => sum + price, 0),
+		)
 
-		// Sum by iterating the list directly and reading each item's field
-		// signals — a single hop from memo to Store. Two alternatives were
-		// tried and rejected:
-		// - list.get().reduce(...): list.get()/store.get() snapshots don't
-		//   reliably propagate nested per-field changes up through a memo.
-		// - list.deriveCollection(item => item.amount * item.pricePerUnit)
-		//   reducing over rowPrices.get(): works until a per-row reader of
-		//   the same Collection (rowPrices.byKey(key), read inside a
-		//   reconcile() bindItem scope) is disposed by a list.remove() —
-		//   after that, a later list.add() never reaches this memo again.
-		//   Reproduced in isolation with reconcile() + a throwaway bindItem;
-		//   looks like a "watched" lifecycle bug in Collection, not
-		//   something to work around here. See BUG-nested-composite-primitives.md.
-		const amountTotal = createMemo(() => {
-			let sum = 0
-			for (const item of list) sum += item.amount.get()
-			return sum
-		})
-		const priceTotal = createMemo(() => {
-			let sum = 0
-			for (const item of list)
-				sum += item.amount.get() * item.pricePerUnit.get()
-			return sum
-		})
-
-		reconcile(container, template, list, (element, item) => {
+		reconcile(container, template, list, (element, item, key) => {
 			const descriptionInput =
 				element.querySelector<HTMLInputElement>('input.description')
 			const amountInput =
@@ -138,12 +121,9 @@ export default defineComponent(
 			if (descriptionInput) descriptionInput.value = item.description.get()
 			if (amountInput) amountInput.value = String(item.amount.get())
 			if (priceInput) priceInput.value = item.pricePerUnit.get().toFixed(2)
-			if (!priceOutput) return
-			return createEffect(() => {
-				priceOutput.textContent = formatter.format(
-					item.amount.get() * item.pricePerUnit.get(),
-				)
-			})
+			const priceSignal = rowPrices.byKey(key)
+			if (priceOutput && priceSignal)
+				priceOutput.textContent = formatter.format(priceSignal.get())
 		})
 
 		// Live sync: keep computed price and totals current as the user types.
