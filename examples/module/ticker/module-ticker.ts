@@ -4,6 +4,7 @@ import {
 	bindText,
 	createList,
 	createMemo,
+	createSensor,
 	defineComponent,
 	each,
 } from '../../..'
@@ -76,12 +77,13 @@ const BLOCK_SIZE = 100
  * @demo {./docs/examples/module-ticker.html} Interactive preview and usage examples */
 export default defineComponent<ModuleTickerProps>(
 	'module-ticker',
-	({ all, expose, first, host, on, pass, run, watch }) => {
+	({ all, expose, first, host, on, pass, watch }) => {
 		const toggleBtn = first('basic-button.toggle')
 		const addRowsBtn = first('basic-button.add-rows')
 		const template = first('template') as HTMLTemplateElement | null
 		const table = host.querySelector('table')
 		const rows = all('tr[data-symbol]')
+		const blocks = all('tbody')
 
 		// Read initial state from server-rendered HTML rows
 		const initial: TickerItem[] = Array.from(
@@ -146,23 +148,6 @@ export default defineComponent<ModuleTickerProps>(
 			// each(rows, …) tears down their watch effects automatically.
 		}
 
-		// One shared IntersectionObserver for all blocks. rootMargin pre-loads
-		// blocks just before they scroll into view, hiding the swap latency.
-		const blockObserver = new IntersectionObserver(
-			entries => {
-				for (const entry of entries) {
-					const tbody = entry.target as HTMLTableSectionElement
-					const isVirtualized = !tbody.querySelector('tr[data-symbol]')
-					if (entry.isIntersecting && isVirtualized) materializeBlock(tbody)
-					else if (!entry.isIntersecting && !isVirtualized)
-						virtualizeBlock(tbody)
-				}
-			},
-			{ rootMargin: '400px' },
-		)
-
-		if (block0) blockObserver.observe(block0)
-
 		// Random-walk tick: updates a random subset of symbols each interval.
 		// Virtualized rows have no active watch effects, so signal updates for
 		// them are cheap (no downstream DOM work until the block re-materializes).
@@ -185,10 +170,35 @@ export default defineComponent<ModuleTickerProps>(
 			fraction: asNumber(0.1),
 		})
 
-		// Disconnect the block observer when the component disconnects.
-		// Hand-authored EffectDescriptor (not produced by a helper) — registered
-		// via run() so its returned cleanup actually disconnects on disconnect.
-		run(() => () => blockObserver.disconnect())
+		// One IntersectionObserver sensor per block, discovered via each().
+		// rootMargin pre-loads blocks just before they scroll into view,
+		// hiding the swap latency. The sensor connects its own observer
+		// lazily when watch() first reads it and disconnects automatically
+		// when the block's <tbody> is removed and each() tears the effect down.
+		each(blocks, tbody => {
+			const section = tbody as HTMLTableSectionElement
+			const visible = createSensor(
+				set => {
+					// Only ever observes `section`, so entries always has exactly one entry.
+					const io = new IntersectionObserver(
+						entries => set(entries[0]!.isIntersecting),
+						{ rootMargin: '400px' },
+					)
+					io.observe(section)
+					return () => io.disconnect()
+				},
+				{ value: true }, // assume visible until the first callback corrects it
+			)
+
+			watch(
+				() => visible.get(),
+				isVisible => {
+					const isVirtualized = !section.querySelector('tr[data-symbol]')
+					if (isVisible && isVirtualized) materializeBlock(section)
+					else if (!isVisible && !isVirtualized) virtualizeBlock(section)
+				},
+			)
+		})
 
 		on(toggleBtn, 'click', () => ({ running: !host.running }))
 		pass(toggleBtn, {
@@ -237,8 +247,9 @@ export default defineComponent<ModuleTickerProps>(
 
 		// Batch-add one full block: update tickers list first so each() finds
 		// the new State signals when the MutationObserver fires for the
-		// newly appended template clones. Each click creates its own <tbody>
-		// so the IntersectionObserver can virtualize it independently.
+		// newly appended template clones. Each click creates its own <tbody>;
+		// each(blocks, …) picks it up via MutationObserver and wires its own
+		// sensor + watch effect, so it virtualizes independently.
 		on(addRowsBtn, 'click', () => {
 			if (!template || !table) return
 			const newItems: TickerItem[] = Array.from({ length: BLOCK_SIZE }, () => {
@@ -267,9 +278,6 @@ export default defineComponent<ModuleTickerProps>(
 			}
 			newTbody.append(fragment)
 			table.append(newTbody)
-			// Start observing — if the new block is off-screen the observer
-			// will fire immediately and virtualize it.
-			blockObserver.observe(newTbody)
 		})
 	},
 )
