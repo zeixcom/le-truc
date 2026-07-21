@@ -1,5 +1,6 @@
 import {
 	bindText,
+	createEffect,
 	createList,
 	createMemo,
 	createStore,
@@ -122,8 +123,11 @@ export default defineComponent(
 			if (amountInput) amountInput.value = String(item.amount.get())
 			if (priceInput) priceInput.value = item.pricePerUnit.get().toFixed(2)
 			const priceSignal = rowPrices.byKey(key)
-			if (priceOutput && priceSignal)
+
+			// Reactive price output
+			if (priceOutput && priceSignal) createEffect(() => {
 				priceOutput.textContent = formatter.format(priceSignal.get())
+			})
 		})
 
 		// Live sync: keep computed price and totals current as the user types.
