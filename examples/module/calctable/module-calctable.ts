@@ -101,9 +101,19 @@ export default defineComponent(
 			createItem: createStore,
 		})
 
-		// Iterate the list directly and read each item's field signals rather
-		// than list.get() — list.get()/store.get() snapshots don't reliably
-		// propagate nested per-field changes up through a memo.
+		// Sum by iterating the list directly and reading each item's field
+		// signals — a single hop from memo to Store. Two alternatives were
+		// tried and rejected:
+		// - list.get().reduce(...): list.get()/store.get() snapshots don't
+		//   reliably propagate nested per-field changes up through a memo.
+		// - list.deriveCollection(item => item.amount * item.pricePerUnit)
+		//   reducing over rowPrices.get(): works until a per-row reader of
+		//   the same Collection (rowPrices.byKey(key), read inside a
+		//   reconcile() bindItem scope) is disposed by a list.remove() —
+		//   after that, a later list.add() never reaches this memo again.
+		//   Reproduced in isolation with reconcile() + a throwaway bindItem;
+		//   looks like a "watched" lifecycle bug in Collection, not
+		//   something to work around here. See BUG-nested-composite-primitives.md.
 		const amountTotal = createMemo(() => {
 			let sum = 0
 			for (const item of list) sum += item.amount.get()
