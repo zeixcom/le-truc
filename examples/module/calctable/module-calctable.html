@@ -1,0 +1,235 @@
+<!-- Pre-filled example with CHF currency -->
+<module-calctable options='{"style":"currency","currency":"CHF"}'>
+	<table>
+		<thead>
+			<tr>
+				<th class="description" scope="col">Description</th>
+				<th class="amount" scope="col">Amount</th>
+				<th class="price-per-unit" scope="col">Price/Unit</th>
+				<th class="price" scope="col">Price</th>
+			</tr>
+		</thead>
+		<tbody data-container>
+			<tr data-key="item1">
+				<td class="description">
+					<input type="text" class="description" value="Widget" aria-label="Description">
+				</td>
+				<td class="amount">
+					<input
+						type="number"
+						class="amount"
+						min="0"
+						max="100"
+						step="1"
+						inputmode="numeric"
+						value="3"
+						aria-label="Amount"
+					>
+				</td>
+				<td class="price-per-unit">
+					<input
+						type="number"
+						class="price-per-unit"
+						min="0"
+						max="1000"
+						step="0.01"
+						inputmode="decimal"
+						value="12.50"
+						aria-label="Price per unit"
+					>
+				</td>
+				<td class="price">CHF 37.50</td>
+			</tr>
+			<tr data-key="item2">
+				<td class="description">
+					<input type="text" class="description" value="Gadget" aria-label="Description">
+				</td>
+				<td class="amount">
+					<input
+						type="number"
+						class="amount"
+						min="0"
+						max="100"
+						step="1"
+						inputmode="numeric"
+						value="5"
+						aria-label="Amount"
+					>
+				</td>
+				<td class="price-per-unit">
+					<input
+						type="number"
+						class="price-per-unit"
+						min="0"
+						max="1000"
+						step="0.01"
+						inputmode="decimal"
+						value="8.00"
+						aria-label="Price per unit"
+					>
+				</td>
+				<td class="price">CHF 40.00</td>
+			</tr>
+			<tr data-unreconciled>
+				<td class="description">
+					<input
+						type="text"
+						class="description"
+						placeholder="New item"
+						aria-label="Description"
+					>
+				</td>
+				<td class="amount">
+					<input
+						type="number"
+						class="amount"
+						min="0"
+						max="100"
+						step="1"
+						inputmode="numeric"
+						aria-label="Amount"
+					>
+				</td>
+				<td class="price-per-unit">
+					<input
+						type="number"
+						class="price-per-unit"
+						min="0"
+						max="1000"
+						step="0.01"
+						inputmode="decimal"
+						aria-label="Price per unit"
+					>
+				</td>
+				<td class="price"></td>
+			</tr>
+		</tbody>
+		<tfoot>
+			<tr>
+				<td class="description">Total</td>
+				<td class="amount">8</td>
+				<td class="price-per-unit"></td>
+				<td class="price">CHF 77.50</td>
+			</tr>
+		</tfoot>
+	</table>
+	<template>
+		<tr>
+			<td class="description">
+				<input type="text" class="description" aria-label="Description">
+			</td>
+			<td class="amount">
+				<input
+					type="number"
+					class="amount"
+					min="0"
+					max="100"
+					step="1"
+					inputmode="numeric"
+					aria-label="Amount"
+				>
+			</td>
+			<td class="price-per-unit">
+				<input
+					type="number"
+					class="price-per-unit"
+					min="0"
+					max="1000"
+					step="0.01"
+					inputmode="decimal"
+					aria-label="Price per unit"
+				>
+			</td>
+			<td class="price"></td>
+		</tr>
+	</template>
+</module-calctable>
+
+<hr>
+
+<!-- Empty table, default (decimal) formatting since no currency options are given -->
+<module-calctable>
+	<table>
+		<thead>
+			<tr>
+				<th class="description" scope="col">Description</th>
+				<th class="amount" scope="col">Amount</th>
+				<th class="price-per-unit" scope="col">Price/Unit</th>
+				<th class="price" scope="col">Price</th>
+			</tr>
+		</thead>
+		<tbody data-container>
+			<tr data-unreconciled>
+				<td class="description">
+					<input
+						type="text"
+						class="description"
+						placeholder="New item"
+						aria-label="Description"
+					>
+				</td>
+				<td class="amount">
+					<input
+						type="number"
+						class="amount"
+						min="0"
+						max="100"
+						step="1"
+						inputmode="numeric"
+						aria-label="Amount"
+					>
+				</td>
+				<td class="price-per-unit">
+					<input
+						type="number"
+						class="price-per-unit"
+						min="0"
+						max="1000"
+						step="0.01"
+						inputmode="decimal"
+						aria-label="Price per unit"
+					>
+				</td>
+				<td class="price"></td>
+			</tr>
+		</tbody>
+		<tfoot>
+			<tr>
+				<td class="description">Total</td>
+				<td class="amount">0</td>
+				<td class="price-per-unit"></td>
+				<td class="price">0</td>
+			</tr>
+		</tfoot>
+	</table>
+	<template>
+		<tr>
+			<td class="description">
+				<input type="text" class="description" aria-label="Description">
+			</td>
+			<td class="amount">
+				<input
+					type="number"
+					class="amount"
+					min="0"
+					max="100"
+					step="1"
+					inputmode="numeric"
+					aria-label="Amount"
+				>
+			</td>
+			<td class="price-per-unit">
+				<input
+					type="number"
+					class="price-per-unit"
+					min="0"
+					max="1000"
+					step="0.01"
+					inputmode="decimal"
+					aria-label="Price per unit"
+				>
+			</td>
+			<td class="price"></td>
+		</tr>
+	</template>
+</module-calctable>

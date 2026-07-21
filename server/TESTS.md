@@ -44,6 +44,7 @@ server/tests/
 │   └── test-utils.ts              # Shared test utilities
 ├── config.test.ts                 # Configuration constants
 ├── file-watcher.test.ts           # File watcher
+├── html-shaping.test.ts           # Final HTML shaping (link handling, demo previews)
 ├── io.test.ts                     # IO utilities
 ├── markdoc-constants.test.ts      # Markdoc constants
 ├── markdoc-helpers.test.ts        # Markdoc helper utilities
@@ -68,10 +69,16 @@ server/tests/
 └── effects/
     ├── api-pages.test.ts
     ├── api.test.ts
+    ├── blog-pages.test.ts
     ├── examples.test.ts
+    ├── llms-full-manifest.test.ts
+    ├── llms-manifest.test.ts
+    ├── md-mirror.test.ts
     ├── mocks.test.ts
     └── sources.test.ts
 ```
+
+31 files, 671 tests as of this writing (`bun test server/tests`) — treat as approximate; the file tree above is the source of truth.
 
 ### Running tests
 
@@ -128,7 +135,7 @@ server/tests/
    - An example loads at `/examples/<component>`
    - A test page loads at `/test/<component>`
    - HMR reconnects after server restart
-3. Run `bun run serve:examples && bunx playwright test examples` — Playwright tests must pass
+3. Run `bun run serve:examples && node node_modules/.bin/playwright test examples` — Playwright tests must pass
 
 ### Process 5: After any change to build.ts or effects
 
@@ -150,5 +157,5 @@ server/tests/
 1. Run `bun test server/tests/` — all tests pass
 2. Run `bun run build:docs` — clean build succeeds
 3. Run `bun run serve:docs` — server starts, pages render
-4. Run `bun run serve:examples && bunx playwright test examples` — all Playwright tests pass
+4. Run `bun run serve:examples && node node_modules/.bin/playwright test examples` — all Playwright tests pass
 5. Run `bun run dev` — HMR works, file changes trigger rebuild + reload
