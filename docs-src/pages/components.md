@@ -39,6 +39,10 @@ The factory receives a `FactoryContext` with helpers for querying descendant ele
 `watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` register their effects automatically when called — no `return` needed. Returning a `FactoryResult` array of the same descriptors (`return [watch(...), on(...)]`) still works for backward compatibility but is deprecated and will be removed in the next major version. See [ADR 0018](https://github.com/zeixcom/le-truc/blob/main/adr/0018-implicit-effect-collection-via-ambient-context.md).
 {% /callout %}
 
+{% callout .caution title="Declare props with type, not interface" %}
+`defineComponent<P>` constrains `P` to `ComponentProps`, an indexed record. TypeScript infers an index signature for object type **literals** (`type FooProps = { … }`) but never for **interfaces**, since interfaces can be declaration-merged. Always declare component props with `type` — an `interface` won't compile against the constraint.
+{% /callout %}
+
 ### Using the Custom Element in HTML
 
 Once registered, the component can be used like any native HTML element:

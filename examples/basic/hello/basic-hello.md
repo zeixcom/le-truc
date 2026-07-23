@@ -1,6 +1,6 @@
 ### Basic Hello
 
-The Hello World example from the Quick Start guide. Shows the minimal Le Truc pattern: `asString()` with a reader fallback that reads the initial value from the `output` element, `on('input')` to update `host.name` as the user types, and `setText()` to keep the greeting in sync. Also demonstrates how the setup function can reference a queried UI element (`input`) directly alongside `host`.
+The Hello World example from the Quick Start guide. Shows the minimal Le Truc factory pattern: initialising `name` by reading the `output` element's text content directly in `expose()`, `on('input')` returning `{ name }` to update the host as the user types, and `watch('name', bindText(output))` to keep the greeting in sync.
 
 #### Preview
 

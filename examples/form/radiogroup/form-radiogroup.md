@@ -1,6 +1,6 @@
 ### Form Radiogroup
 
-A roving-tabindex radio group that works both **controlled** and **uncontrolled**. Demonstrates `read()` to initialise `value` from the currently checked radio, and `on('change', ...)` applied to the `radios` Memo so that user interaction propagates back to `host.value`. A `createEffect` on each radio element drives `checked`, `tabIndex`, and the `selected` label class from `host.value`, which means assigning `host.value = 'option'` programmatically is enough to move the selection — no event needed.
+A roving-tabindex radio group that works both **controlled** and **uncontrolled**. Demonstrates initialising `value` from the currently checked radio in `expose()`, and `on('change', ...)` applied to the `radios` Memo so that user interaction propagates back to `host.value`. An `each(radios, ...)` block drives `checked`, `tabIndex`, and the `selected` label class from `host.value` via `watch()`, which means assigning `host.value = 'option'` programmatically is enough to move the selection — no event needed.
 
 #### Preview
 

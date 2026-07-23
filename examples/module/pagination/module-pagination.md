@@ -1,6 +1,6 @@
 ### Module Pagination
 
-A keyboard-navigable page selector with clamped numeric input. Demonstrates `read()` with `asInteger()` to initialise both `value` and `max` from the input element's DOM properties, multiple effects per UI element (e.g. `input` gets both `on('change')` and `setProperty()`), `show()` on `host` to hide the entire control when there is only one page, and `setAttribute()` to keep `value` and `max` in sync as attributes for use by external CSS or components.
+A keyboard-navigable page selector with clamped numeric input. Demonstrates `asClampedInteger()` to initialise both `value` and `max` from the input element's DOM properties in `expose()`, multiple `watch()` effects per source (e.g. `value` drives an attribute, the input field, and the prev-button disabled state), setting `host.hidden` directly inside `watch('max')` to hide the entire control when there is only one page, and `host.setAttribute()` to keep `value` and `max` in sync as attributes for use by external CSS or components.
 
 #### Preview
 

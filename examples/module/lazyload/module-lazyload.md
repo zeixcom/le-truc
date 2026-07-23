@@ -1,6 +1,6 @@
 ### Module Lazyload
 
-The advanced async example from the documentation. Demonstrates `createTask()` — an async signal that re-runs whenever `host.src` changes, exposes `pending`/`ok`/`error` states, and supports aborting in-flight requests. `dangerouslyBindInnerHTML()` renders the fetched HTML, `show()` and `toggleClass()` drive the loading and error UI reactively, and `asString()` makes `src` an attribute-driven reactive property so the component reacts to external `src` changes. After the initial load, every subsequent successful load smoothly scrolls the first heading (`h1`–`h6`) in `.content` into view — useful when `src` changes due to in-page navigation (see `module-listnav`).
+The advanced async example from the documentation. Demonstrates `createTask()` — an async signal that re-runs whenever `host.src` changes, exposes `pending`/`ok`/`error` states, and supports aborting in-flight requests. `dangerouslyBindInnerHTML()` renders the fetched HTML, `watch(content, { ok, nil, stale, err })` drives the loading, error, and content UI reactively via direct `.hidden`/`.classList` assignments, and `asString()` makes `src` an attribute-driven reactive property so the component reacts to external `src` changes. After the initial load, every subsequent successful load smoothly scrolls the first heading (`h1`–`h6`) in `.content` into view — useful when `src` changes due to in-page navigation (see `module-listnav`).
 
 #### Preview
 

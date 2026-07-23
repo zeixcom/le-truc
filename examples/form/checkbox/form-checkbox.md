@@ -1,6 +1,6 @@
 ### Form Checkbox
 
-A wrapper for a native checkbox that shows `read()` as the `checked` state's initial value to read the current DOM state, `asString()` with a reader fallback for the label, and `toggleAttribute()` applied to `host` to reflect `checked` as an attribute for CSS styling.
+A wrapper for a native checkbox that initialises `checked` and `label` by reading DOM state directly in `expose()` (`checkbox.checked`, `.label`/`label` text content), uses `on('change')` returning `{ checked }` to sync host state with the native input, and reflects `checked` back as a host attribute via `toggleAttribute()` inside `watch('checked')` for CSS styling.
 
 #### Preview
 
