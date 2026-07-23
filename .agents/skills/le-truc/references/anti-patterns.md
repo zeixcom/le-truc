@@ -106,6 +106,22 @@ defineComponent<MyComponentProps>('my-component', ({ expose, watch }) => { … }
 
 ---
 
+### Props Type Declared as `interface`
+
+```typescript
+// ❌ interface fails the ComponentProps index-signature constraint
+interface MyComponentProps { value: string }
+defineComponent<MyComponentProps>('my-component', …)  // "Index signature … is missing"
+
+// ✅ Always use type — TS infers an index signature for literals, never interfaces
+type MyComponentProps = { value: string }
+defineComponent<MyComponentProps>('my-component', …)
+```
+
+`ComponentProps` is `Record<ComponentProp, NonNullable<unknown>>`. TypeScript infers an implicit index signature for object type **literals** but never for **interfaces** (interfaces support declaration merging, so TS can't treat them as closed). This isn't a style preference — `interface` won't compile against `defineComponent`'s constraint.
+
+---
+
 ### God Component
 
 ```typescript
@@ -291,6 +307,7 @@ Every component docs file must include:
 | TypeScript | Unbranded method | Use `defineMethod()` |
 | TypeScript | No cleanup in watch | Return cleanup function |
 | TypeScript | Missing Props type | Add explicit generic |
+| TypeScript | Props as `interface` | Declare props with `type` |
 | TypeScript | God component | Split into focused components |
 | TypeScript | Snapshot DOM in reactive | Use live DOM APIs |
 | HTML | Empty custom element | Add content |
