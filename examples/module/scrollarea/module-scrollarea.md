@@ -1,6 +1,6 @@
 ### Module Scrollarea
 
-A scroll container that tracks overflow state using `createState()` signals and a raw effect function wrapping an `IntersectionObserver`. Demonstrates defining a component with no reactive properties, building private signals inside the setup function rather than as declared properties, writing a custom effect function that returns a cleanup callback, using `batch()` to group multiple signal updates from a scroll handler, and exposing derived boolean state as component-owned custom states (`:state(overflow)`, `:state(overflow-start)`, `:state(overflow-end)`) via `bindState()` and ElementInternals.
+A scroll container that tracks overflow state using `createState()` signals and a `run()` block wrapping an `IntersectionObserver`. Demonstrates defining a component with no reactive properties, building private signals inside the factory rather than as declared properties, registering a hand-authored effect via `run()` that returns a cleanup callback to disconnect the observer, using `batch()` to group multiple signal updates from a scroll handler, and exposing derived boolean state as component-owned custom states (`:state(overflow)`, `:state(overflow-start)`, `:state(overflow-end)`) via `bindState()` and ElementInternals.
 
 #### Preview
 

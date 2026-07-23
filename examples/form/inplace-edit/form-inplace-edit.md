@@ -1,6 +1,6 @@
 ### Form Inplace Edit
 
-A self-contained inline label editor. Wraps a `<span>` (label display) and an edit button; on double-click or edit-button click it switches the span to a `<form-textbox>`, letting the user type a new value. Accepts (✓ button, Enter) fires a `commit` CustomEvent; cancels (ESC, blur) silently restore the original span. The `value` prop is reactive — wire it via `pass()` from the coordinating component to keep the display in sync with external data changes.
+A self-contained inline label editor. Wraps a `<span>` (label display) and an edit button; on double-click or edit-button click it switches the span to a `<form-textbox>`, letting the user type a new value. Accepting the edit (✓ button or Enter) returns `{ editing: false, value }` from the `on()` handler to update the host; cancelling (ESC or blur) restores the display span. The `value` prop is reactive — wire it via `pass()` from the coordinating component to keep the display in sync with external data changes.
 
 #### Preview
 
@@ -31,18 +31,6 @@ A self-contained inline label editor. Wraps a `<span>` (label display) and an ed
 - `string`
 - Text content of `.text`
 - Current label value; reactive — set via `pass()` to keep display in sync with external data
-{% /table %}
-
-#### Events
-
-{% table %}
-- Name
-- Detail
-- When
----
-- `commit`
-- `{ value: string }`
-- User accepts the edit (✓ button click or Enter key); not fired on cancel
 {% /table %}
 
 #### Descendant Elements
