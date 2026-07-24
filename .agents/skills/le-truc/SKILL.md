@@ -34,7 +34,7 @@ defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) =>
 })
 ```
 
-`watch()`, `on()`, `pass()`, `each()`, `provideContexts()`, and `run()` register their effect automatically when called — no `return` needed. Explicit `return [...]` of the same descriptors still works (deprecated as of v3.0) — see `run()` below for hand-authored descriptors, which have no other registration path besides `return`.
+`watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` register their effect automatically when called — no `return` needed. Explicit `return [...]` of the same descriptors still works (deprecated as of v3.0). For a hand-authored `EffectDescriptor` not produced by any of these — e.g. wrapping a native `IntersectionObserver` — register it via `watch(() => true, descriptor)` (see the Factory Context table below).
 
 ### Factory Context
 
@@ -51,7 +51,6 @@ The factory receives a `FactoryContext` at connect time with these helpers:
 | `pass(target, props)` | Create slot-swap descriptor for Le Truc child |
 | `provideContexts(contexts)` | Create context-provider descriptor |
 | `requestContext(context, fallback)` | Return `Signal<T>` (backed by a `Slot`) for use inside `expose()` |
-| `run(descriptor)` | Register a hand-authored `EffectDescriptor` — for wrapping native APIs (`IntersectionObserver`, etc.) that no other helper produces |
 
 ### Reactivity Flow
 
@@ -107,7 +106,7 @@ Binding helpers connect signals to DOM properties/attributes:
 | **Custom Element** | DOM element defined via `customElements.define()` | Web Component (API), tag |
 | **Factory** | Function passed to `defineComponent()` | builder, constructor |
 | **Factory Context** | Object passed to factory with helpers | component context |
-| **Effect Descriptor** | Thunk produced by `watch()`, `on()`, `pass()`, `each()`, `provideContexts()`, or hand-authored and registered via `run()` — auto-registered when produced by a helper, no `return` needed | effect, reaction |
+| **Effect Descriptor** | Thunk produced by `watch()`, `on()`, `pass()`, `each()`, `provideContexts()`, or hand-authored and registered via `watch(() => true, descriptor)` — auto-registered when produced by a helper, no `return` needed | effect, reaction |
 | **Signal** | Reactive primitive from `@zeix/cause-effect` | state, observable |
 | **Slot** | Wrapper enabling signal swapping for `pass()` and `requestContext()` | container, wrapper |
 | **Parser** | Transforms HTML attribute string to typed value | converter, decoder |

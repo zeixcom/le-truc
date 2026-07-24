@@ -171,9 +171,10 @@ reconcile<T>(
 - Naive single-pass `insertBefore()` positioning can move more nodes than the
   theoretical minimum on some permutations (no LIS optimization) — accepted;
   same behavior class as the hand-written code it replaces.
-- Collector parity means `watch()`/`on()`/`pass()`/`each()`/`provideContexts()`/
-  `run()` now activate inside `bindItem`; the `NoActiveCollectorError` message
-  (`src/errors.ts`) mentions `each()` and `reconcile()`.
+- Collector parity means `watch()`/`on()`/`pass()`/`each()`/`provideContexts()`
+  now activate inside `bindItem`, including hand-authored descriptors via
+  `watch(() => true, …)`; the `NoActiveCollectorError` message (`src/errors.ts`)
+  mentions `each()` and `reconcile()`.
 
 ## Related
 

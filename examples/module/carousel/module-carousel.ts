@@ -21,7 +21,7 @@ const clamp = (index: number, total: number) =>
  * @demo {./docs/examples/module-carousel.html} Interactive preview and usage examples */
 export default defineComponent<ModuleCarouselProps>(
 	'module-carousel',
-	({ all, expose, first, host, on, run, watch }) => {
+	({ all, expose, first, host, on, watch }) => {
 		const dots = all('button[role="tab"]')
 		const slides = all('[role="tabpanel"]')
 		const buttons = all('nav button')
@@ -39,31 +39,34 @@ export default defineComponent<ModuleCarouselProps>(
 		})
 
 		// Set up IntersectionObserver to detect scroll-based navigation.
-		// Hand-authored EffectDescriptor (not produced by a helper) — registered
-		// via run() so its returned cleanup actually disconnects on disconnect.
-		run(() => {
-			const observer = new IntersectionObserver(
-				entries => {
-					for (const entry of entries) {
-						if (entry.intersectionRatio > 0.5) {
-							const slideIndex = slides
-								.get()
-								.indexOf(entry.target as HTMLElement)
-							if (isNavigating) {
-								if (slideIndex === host.index) isNavigating = false
-							} else if (slideIndex !== host.index && slideIndex >= 0) {
-								lastScrolled = slideIndex
-								host.index = slideIndex
+		// No signal dependency — watch(() => true, …) runs the setup once on
+		// connect and its returned cleanup disconnects the observer on disconnect.
+		watch(
+			() => true,
+			() => {
+				const observer = new IntersectionObserver(
+					entries => {
+						for (const entry of entries) {
+							if (entry.intersectionRatio > 0.5) {
+								const slideIndex = slides
+									.get()
+									.indexOf(entry.target as HTMLElement)
+								if (isNavigating) {
+									if (slideIndex === host.index) isNavigating = false
+								} else if (slideIndex !== host.index && slideIndex >= 0) {
+									lastScrolled = slideIndex
+									host.index = slideIndex
+								}
+								break
 							}
-							break
 						}
-					}
-				},
-				{ root: host, threshold: 0.5 },
-			)
-			for (const slide of slides.get()) observer.observe(slide)
-			return () => observer.disconnect()
-		})
+					},
+					{ root: host, threshold: 0.5 },
+				)
+				for (const slide of slides.get()) observer.observe(slide)
+				return () => observer.disconnect()
+			},
+		)
 
 		// Scroll to slide when index changes (skip if IO already scrolled there)
 		watch('index', idx => {

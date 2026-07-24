@@ -54,7 +54,7 @@ Without thunks, these require custom handlers. Thunks keep intent declarative.
 | Bind Le Truc child prop | `pass(target, props)` | registers an `EffectDescriptor` |
 | Per-element effects on Memo | `each(memo, callback)` | registers an `EffectDescriptor` |
 | Sync keyed data to container children | `reconcile(container, template, source, bindItem)` | registers an `EffectDescriptor` |
-| Register a hand-authored descriptor | `run(descriptor)` | registers a raw `EffectDescriptor` not produced by any helper |
+| Register a hand-authored descriptor | `watch(() => true, descriptor)` | runs `descriptor` once on connect, registers its returned cleanup for disconnect |
 
 ---
 
@@ -212,12 +212,12 @@ on(form, 'submit', e => { e.preventDefault(); list.add(textbox.value.trim()) })
 
 One-way sync, data → DOM: mutate the list in event handlers, never the container's children directly. Throws `InvalidTemplateError` if the template content doesn't have exactly one root element. See ADR 0017.
 
-### `run(descriptor)`
+### Hand-authored descriptors: `watch(() => true, descriptor)`
 
-Registers a hand-authored `EffectDescriptor` — a raw `() => MaybeCleanup` thunk not produced by `watch()`/`on()`/`pass()`/`each()`/`reconcile()`/`provideContexts()`. Use it for native APIs with their own setup/cleanup lifecycle:
+A hand-authored `EffectDescriptor` — a raw `() => MaybeCleanup` thunk not produced by `watch()`/`on()`/`pass()`/`each()`/`reconcile()`/`provideContexts()` — has no dedicated registration helper. For native APIs with their own setup/cleanup lifecycle, bind it to a constant thunk instead:
 
 ```typescript
-run(() => {
+watch(() => true, () => {
   const observer = new IntersectionObserver(([entry]) => {
     isVisible.set(entry.isIntersecting)
   })
@@ -226,7 +226,7 @@ run(() => {
 })
 ```
 
-Without `run()` (or `return`), a bare descriptor's cleanup never registers anywhere — `disconnectedCallback()` has no way to find it, so it silently never runs.
+`() => true` has no signal dependency, so `createComputed` evaluates it once and never reruns — the descriptor's setup runs exactly once, on connect. `watch()` calls `createEffect()` internally, which self-registers the descriptor's returned cleanup on the active owner, so it runs on disconnect. Without this wrapping (or `return`), a bare descriptor's cleanup never registers anywhere — `disconnectedCallback()` has no way to find it, so it silently never runs.
 
 ---
 

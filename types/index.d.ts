@@ -6,7 +6,7 @@ export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEven
 export { type AllElements, createElementsMemo, type ElementFromSelector, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, type FirstElement, type KnownTag, type SplitByComma, type TrimWhitespace, } from './src/helpers/dom';
 export type { EventType, OnEventHandler, OnHelper } from './src/helpers/events';
 export { FOCUSABLE_FORM_CONTROL_SELECTOR } from './src/helpers/form';
-export { each, type PassedProps, type PassHelper, reconcile, type Reactive, type RunHelper, type WatchHelper, } from './src/helpers/reactive';
+export { each, type PassedProps, type PassHelper, reconcile, type Reactive, type WatchHelper, } from './src/helpers/reactive';
 export { asBoolean } from './src/parsers/boolean';
 export { asJSON } from './src/parsers/json';
 export { asClampedInteger, asInteger, asNumber } from './src/parsers/number';

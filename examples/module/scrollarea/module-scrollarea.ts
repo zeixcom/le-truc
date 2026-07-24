@@ -46,7 +46,7 @@ const observeOverflow =
  * @demo {./docs/examples/module-scrollarea.html} Interactive preview and usage examples */
 export default defineComponent(
 	'module-scrollarea',
-	({ host, internals, on, run, watch }) => {
+	({ host, internals, on, watch }) => {
 		const child = host.firstElementChild
 		if (!child) return
 
@@ -54,17 +54,20 @@ export default defineComponent(
 		const overflowEnd = createState(false)
 		const hasOverflow = () => overflowStart.get() || overflowEnd.get()
 
-		const scrollCallback = host.getAttribute('orientation') === 'horizontal'
-			? () => {
-					overflowStart.set(host.scrollLeft > 0)
-					overflowEnd.set(host.scrollLeft < host.scrollWidth - host.offsetWidth)
-				}
-			: () => {
-					overflowStart.set(host.scrollTop > 0)
-					overflowEnd.set(
-						host.scrollTop < host.scrollHeight - host.offsetHeight,
-					)
-				}
+		const scrollCallback =
+			host.getAttribute('orientation') === 'horizontal'
+				? () => {
+						overflowStart.set(host.scrollLeft > 0)
+						overflowEnd.set(
+							host.scrollLeft < host.scrollWidth - host.offsetWidth,
+						)
+					}
+				: () => {
+						overflowStart.set(host.scrollTop > 0)
+						overflowEnd.set(
+							host.scrollTop < host.scrollHeight - host.offsetHeight,
+						)
+					}
 
 		on(host, 'scroll', () => {
 			if (hasOverflow()) batch(scrollCallback)
@@ -73,17 +76,19 @@ export default defineComponent(
 		watch(hasOverflow, bindState(internals, 'overflow'))
 		watch(overflowStart, bindState(internals, 'overflow-start'))
 		watch(overflowEnd, bindState(internals, 'overflow-end'))
-		run(() =>
-			observeOverflow(
-				child,
-				() => {
-					overflowEnd.set(true)
-				},
-				() => {
-					overflowStart.set(false)
-					overflowEnd.set(false)
-				},
-			)(host),
+		watch(
+			() => true,
+			() =>
+				observeOverflow(
+					child,
+					() => {
+						overflowEnd.set(true)
+					},
+					() => {
+						overflowStart.set(false)
+						overflowEnd.set(false)
+					},
+				)(host),
 		)
 	},
 )

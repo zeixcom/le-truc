@@ -80,7 +80,7 @@ export default defineComponent<MyComponentProps>(
 - Use `if (element) watch(...)` for optional descendants
 - Custom `watch` handlers with listeners/timers must return cleanup function
 - Mark props `readonly` only if sensor-driven (not settable from outside)
-- For a hand-authored `EffectDescriptor` wrapping a native API (`IntersectionObserver`, etc.), register it with `run(descriptor)` — a bare thunk with no `run()`/`return` never gets its cleanup called on disconnect
+- For a hand-authored `EffectDescriptor` wrapping a native API (`IntersectionObserver`, etc.), register it with `watch(() => true, descriptor)` — a bare thunk with no `watch()`/`return` never gets its cleanup called on disconnect
 
 ---
 

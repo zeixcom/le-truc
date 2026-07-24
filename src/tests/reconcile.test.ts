@@ -561,7 +561,7 @@ describe('reconcile — Collection source', () => {
 })
 
 // bindItem runs inside an ambient effect-descriptor collector, so watch()/on()/
-// pass()/provideContexts()/run() can be called inside it directly. Collected
+// pass()/provideContexts() can be called inside it directly. Collected
 // descriptors activate against the per-item { root: true } scope, NOT the
 // driving structural effect, so item-level watch(item, …) must not re-trigger
 // structural work.

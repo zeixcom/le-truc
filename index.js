@@ -2370,10 +2370,6 @@ var makeWatch = (host) => {
   }
   return watch;
 };
-var makeRun = (host) => (rawDescriptor) => {
-  const descriptor = () => createScope(rawDescriptor);
-  pushDescriptor(host, "run", descriptor);
-};
 var makePass = (host) => {
   const swapSlots = (target, props) => createScope(() => {
     if (!isCustomElement(target))
@@ -2492,7 +2488,7 @@ function reconcile(container, template, source, bindItem) {
       }
       return { current, adopted, pinned, leavers };
     };
-    const disposeAndRemoveLeavers = (keySet, leavers) => {
+    const leave = (keySet, leavers) => {
       for (const [key, dispose] of disposers) {
         if (keySet.has(key))
           continue;
@@ -2502,7 +2498,7 @@ function reconcile(container, template, source, bindItem) {
       for (const el of leavers)
         el.remove();
     };
-    const enterMountAndPosition = (keys, current, adopted, pinned) => {
+    const enter = (keys, current, adopted, pinned) => {
       let prev = null;
       for (const key of keys) {
         let el = current.get(key);
@@ -2541,8 +2537,8 @@ function reconcile(container, template, source, bindItem) {
         untrack(() => {
           const keySet = new Set(keys);
           const { current, adopted, pinned, leavers } = classify(keySet);
-          disposeAndRemoveLeavers(keySet, leavers);
-          enterMountAndPosition(keys, current, adopted, pinned);
+          leave(keySet, leavers);
+          enter(keys, current, adopted, pinned);
         });
       });
       return () => {
@@ -2895,8 +2891,7 @@ function defineComponent(name, factory, options) {
           on: makeOn(host),
           pass: makePass(host),
           provideContexts: makeProvideContexts(host),
-          requestContext: makeRequestContext(host),
-          run: makeRun(host)
+          requestContext: makeRequestContext(host)
         };
         const collector = [];
         const result = withCollector(collector, () => factory(context));

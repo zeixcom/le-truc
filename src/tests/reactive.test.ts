@@ -18,13 +18,7 @@ import {
 	createState,
 	createTask,
 } from '@zeix/cause-effect'
-import {
-	activateResult,
-	each,
-	makePass,
-	makeRun,
-	makeWatch,
-} from '../helpers/reactive'
+import { activateResult, each, makePass, makeWatch } from '../helpers/reactive'
 import {
 	getSignals,
 	installActiveCollector,
@@ -86,38 +80,6 @@ describe('implicit effect collection (ADR 0018)', () => {
 		const watch = makeWatch(host)
 		expect(() => watch(createState('x'), () => {})).toThrow(
 			'watch() called outside synchronous factory, each() callback, or reconcile() bindItem execution',
-		)
-	})
-
-	test('run() pushes a wrapped descriptor into the active collector', () => {
-		const host = stubHost() as unknown as HTMLElement & ComponentProps
-		const run = makeRun(host)
-		const rawDescriptor: EffectDescriptor = () => () => {}
-		const collector: EffectDescriptor[] = []
-		withCollector(collector, () => {
-			run(rawDescriptor)
-		})
-		// The pushed descriptor is a createScope() wrapper around rawDescriptor
-		// (see makeRun), not rawDescriptor itself — the wrapping is what makes
-		// rawDescriptor's returned cleanup actually register for disposal.
-		expect(collector).toHaveLength(1)
-		expect(collector[0]).not.toBe(rawDescriptor)
-	})
-
-	test('run() returns void, unlike watch()/on()/pass()/provideContexts()', () => {
-		const host = stubHost() as unknown as HTMLElement & ComponentProps
-		const run = makeRun(host)
-		const collector: EffectDescriptor[] = []
-		const result = withCollector(collector, () => run(() => {}))
-		expect(result).toBeUndefined()
-	})
-
-	test('run() throws NoActiveCollectorError when called with no active collector', () => {
-		restoreActiveCollector(undefined)
-		const host = stubHost() as unknown as HTMLElement & ComponentProps
-		const run = makeRun(host)
-		expect(() => run(() => {})).toThrow(
-			'run() called outside synchronous factory, each() callback, or reconcile() bindItem execution',
 		)
 	})
 })
