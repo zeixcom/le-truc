@@ -158,7 +158,7 @@ class NoActiveCollectorError extends Error {
 	constructor(host: HTMLElement | undefined, helper: string) {
 		const where = host ? ` in component ${elementName(host)}` : ''
 		super(
-			`${helper}() called outside synchronous factory, each() callback, or reconcile() bindItem execution${where}.`
+			`${helper}() called outside synchronous factory, each() callback, or reconcile() bindItem execution${where}.`,
 		)
 		this.name = 'NoActiveCollectorError'
 	}

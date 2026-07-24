@@ -202,22 +202,14 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => Pas
 /**
  * Create per-element reactive effects from a `Memo<Element[]>`.
  *
- * When elements enter the collection, their effects are created in a per-element
- * scope; when they leave, their effects are disposed with that scope.
+ * Elements entering the collection get their own scope; when they leave,
+ * that scope — and everything registered in it — is disposed.
  *
- * As of v2.3, the callback can call `watch()`/`on()`/`pass()` directly without
- * returning them — each call registers into a collector local to that element's
- * `mount`, established for the duration of the callback (see ADR 0018). Nesting
- * is unbounded: a callback that calls `each()` again (e.g. a grid of rows
- * containing columns) gets its own nested collector the same way.
- *
- * Descriptors produced by `watch()`/`on()`/`pass()` inside the callback are
- * picked up via the implicit collector regardless of whether the callback also
- * `return`s them — an old-style `return [watch(...)]` still works, activated
- * exactly once, not twice (see `forEachUnseen()`). A manually-constructed
- * `EffectDescriptor` that bypasses every helper is only reachable via `return`
- * and is still activated, since the public `FactoryResult` type has always
- * allowed authoring one directly.
+ * The callback can call `watch()`, `on()`, and `pass()` directly instead of
+ * returning them; each call registers against that element's scope. A
+ * callback that calls `each()` again (e.g. rows containing columns) gets its
+ * own nested scope the same way. Returning descriptors still works and isn't
+ * double-activated if you also call them directly.
  *
  * @since 2.0
  */
@@ -225,40 +217,28 @@ declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E)
 /**
  * Sync a keyed reactive data source to a container's children.
  *
- * For every key in the source (in source order), the container holds one
- * element carrying `data-key`: entering keys clone the `<template>`'s single
- * root element, leaving keys dispose their scope and remove their element,
- * and surviving elements are moved with `insertBefore()` — always reused,
- * never recreated. The sync is strictly one-way, data → DOM: `reconcile()`
- * never reads item data back from the DOM; event handlers that mutate the
- * source are the legitimate path to change structural state.
+ * For every key in `source` (in source order), the container holds one
+ * element carrying `data-key`: entering keys clone `template`'s root
+ * element, leaving keys are disposed and removed, surviving elements are
+ * reused and repositioned. The sync is one-way, data → DOM — `reconcile()`
+ * never reads item data back out; mutate `source` (e.g. from an event
+ * handler) to change structure.
  *
- * On the first run, existing children carrying `data-key` are **adopted** if
- * their key is present in the source (`bindItem` is mounted for them too —
- * it is responsible for its own idempotency against server-rendered content);
- * keyed children whose key is absent are removed (DEV_MODE warning), and all
- * other unkeyed children are removed (self-cleaning container).
+ * On first run, existing children whose `data-key` matches a source key are
+ * adopted (`bindItem` runs for them too, so make it idempotent against
+ * server-rendered content); everything else is removed. Children carrying
+ * `data-unreconciled` are left alone entirely — never removed, repositioned,
+ * or bound, even if `reconcile()` itself originally placed them.
  *
- * Children carrying `data-unreconciled` are exempt from reconciliation:
- * never removed, never repositioned, no `bindItem`. An element that
- * `reconcile()` itself placed and that later gains the attribute (e.g. a
- * mid-drag item) still claims its key, so no duplicate clone is created for
- * it while it is exempt. Keyed elements are positioned relative to the
- * **keyed subset** (after the previous keyed sibling, or at the head if
- * first), so unmanaged elements interspersed in the container do not drift
- * keyed positions.
+ * `bindItem` is called once per entering element, with the same collector
+ * support as `each()`'s callback: `watch()`, `on()`, `pass()`,
+ * `provideContexts()`, and `run()` can be called directly inside it, scoped
+ * to that item rather than the driving structural effect. A returned
+ * `MaybeCleanup` runs when the key leaves the source or the component
+ * disconnects.
  *
- * `bindItem` is called once per entering element inside a root-keyed scope,
- * with **collector parity to `each()`'s callback**: `watch()`, `on()`,
- * `pass()`, `provideContexts()`, and `run()` may be called inside it
- * directly, and the collected descriptors activate against that per-item
- * scope rather than the driving structural effect — so an item-level
- * `watch(item, …)` never makes structural work depend on item signals. A
- * returned `MaybeCleanup` registers as that scope's teardown, disposed when
- * the key leaves the source or the component disconnects.
- *
- * Throws `InvalidTemplateError` at activation if the template content does
- * not contain exactly one root element. See ADR 0017.
+ * See ADR 0017 for the full rationale (SSR adoption, unreconciled pinning,
+ * keyed-relative positioning).
  *
  * @since 2.3
  * @param {Element} container - Container element whose children are reconciled
@@ -266,6 +246,7 @@ declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E)
  * @param {List<T> | Collection<T>} source - Keyed reactive data source
  * @param {(element: HTMLElement, item: Signal<T>, key: string) => MaybeCleanup} bindItem - Mounted once per entering element inside an ambient collector; collected descriptors activate against the per-item scope, and any returned cleanup is that scope's teardown
  * @returns {EffectDescriptor} Effect descriptor to include in the component's factory result
+ * @throws {InvalidTemplateError} if the template content does not contain exactly one root element
  */
 declare function reconcile<T extends {}, S extends MutableSignal<T>>(container: Element, template: HTMLTemplateElement, source: List<T, S>, bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup): EffectDescriptor;
 declare function reconcile<T extends {}, S extends Signal<T>>(container: Element, template: HTMLTemplateElement, source: Collection<T, S>, bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup): EffectDescriptor;
