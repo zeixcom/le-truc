@@ -312,6 +312,8 @@ For every key in source order, the container holds one element stamped with `dat
 
 Two escape hatches keep `reconcile()` composable: children carrying `data-unreconciled` are exempt from reconciliation entirely (never removed, never repositioned — for drag-and-drop markers or server-streamed content arriving mid-interaction), and keyed elements are positioned relative to the keyed subset, not by absolute index, so such unmanaged elements don't drift keyed positions. The sync is strictly one-way, data → DOM: to change the list's structure, mutate the list in an event handler and let `reconcile()` write the DOM.
 
+`bindItem` has **collector parity with `each()`'s callback**: `watch()`, `on()`, `pass()`, and `each()` can be called inside it directly, and the collected descriptors activate against that per-item scope rather than the driving structural effect — so an item-level `watch(item, …)` never makes structural work depend on item signals. For static items a one-time fill (as above) is enough; for items whose displayed content depends on signals that change after creation, call `watch()` inside `bindItem` instead.
+
 ### Adding and Removing Items
 
 Mutations go through the list — never touch the DOM directly. The reconciler reacts to the keys change and updates the container for you.

@@ -19,7 +19,7 @@ Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built
 A Le Truc component **wraps existing server-rendered content**. The HTML inside the custom element is the starting point — visible before JavaScript runs. See [Progressive Enhancement](getting-started.html#progressive-enhancement) for how this works.
 {% /callout %}
 
-Components are created with the `defineComponent()` function, which takes a valid custom element tag name (two or more words joined with `-`) and a factory function:
+Components are created with the `defineComponent()` function, which takes a valid custom element tag name (two or more words joined with `-`), a factory function, and an optional array of [extensions](#extensions):
 
 ```js
 defineComponent('my-component', ({ expose, first, all, watch, on }) => {
@@ -33,7 +33,7 @@ defineComponent('my-component', ({ expose, first, all, watch, on }) => {
 })
 ```
 
-The factory receives a `FactoryContext` with helpers for querying descendant elements, declaring reactive properties, and registering effects — each covered in the sections below.
+The factory receives a `FactoryContext` with helpers for querying descendant elements, declaring reactive properties, and registering effects — each covered in the sections below. The optional third argument augments the component with opt-in capabilities like [form participation](#form-association) or [attribute-driven reactivity](#attribute-driven-reactivity); each bundled extension is tree-shaken away unless imported and used.
 
 {% callout .tip title="Explicit return still works, but is deprecated" %}
 `watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` register their effects automatically when called — no `return` needed. Returning a `FactoryResult` array of the same descriptors (`return [watch(...), on(...)]`) still works for backward compatibility but is deprecated and will be removed in the next major version. See [ADR 0018](https://github.com/zeixcom/le-truc/blob/main/adr/0018-implicit-effect-collection-via-ambient-context.md).
@@ -146,7 +146,7 @@ defineComponent('my-component', ({ expose }) => {
 ```
 
 {% callout .note title="Parsers run once at connect time" %}
-The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser — use event handlers or direct property writes to update state post-connect.
+The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser — use event handlers or direct property writes to update state post-connect. To make a Parser-backed prop re-parse on attribute mutations (e.g. for frameworks like React that set attributes rather than properties), pass the [`observedAttributes()`](#attribute-driven-reactivity) extension to `defineComponent()`.
 {% /callout %}
 
 ### Bundled Attribute Parsers
@@ -436,5 +436,100 @@ This creates a full cycle: DOM → signal → DOM, with the signal as the single
 
 Use `bindProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, `ariaDisabled`.
 {% /callout %}
+
+{% /section %}
+
+{% section %}
+## Extensions
+
+The third argument to `defineComponent()` is an optional array of **extensions** — small, tree-shakable modules that augment a component with opt-in capabilities without bloating the core. `component.ts` never statically imports feature-specific code, so a consumer who never calls an extension never bundles it.
+
+Each extension implements the `ComponentExtension` interface: a `name`, a set of `staticProps` to install on the generated class (e.g. `static formAssociated = true`), `observedAttributes` and `reservedMembers` it contributes, and optional lifecycle hooks (`installOnPrototype`, `onConnect`, `onAttributeChanged`). `defineComponent()` folds the array once at class-definition time. `staticProps` collisions throw `ExtensionCollisionError` in dev mode (first declaration wins in production); `observedAttributes` and `reservedMembers` are unions across all extensions.
+
+```js
+defineComponent('my-element', factory, [formAssociated()])
+```
+
+Le Truc ships three extensions, each imported separately:
+
+| Extension | Purpose |
+|---|---|
+| [`formAssociated()`](#form-association) | Form participation via `ElementInternals` — value sync, reset, state restore, disabled, native-parity host contract |
+| [`formAssociatedCheckbox()`](#checkbox-shaped-controls) | Form participation keyed on a `checked: boolean` prop — submits nothing when unchecked |
+| [`observedAttributes()`](#attribute-driven-reactivity) | Re-parses Parser-backed props when their attribute mutates after connect |
+
+### Form Association
+
+The `formAssociated()` extension adapts a component to the [form-associated custom element](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-face-example) convention. Pass it as the first element of the extensions array, and the factory's context widens to expose the `internals` object alongside the usual helpers:
+
+```js#form-textbox.js
+defineComponent<FormTextboxProps>(
+  'form-textbox',
+  ({ expose, first, host, internals, on, watch }) => {
+    const textbox = first('input, textarea')
+
+    expose({ value: textbox.value })
+
+    // Typed validity flags via the internals escape hatch
+    watch(
+      () => ({ value: host.value, max: host.maxLength }),
+      ({ value, max }) => {
+        internals?.setValidity(
+          { tooLong: value.length > max },
+          value.length > max ? `Max ${max} characters` : '',
+        )
+      },
+    )
+  },
+  [formAssociated()],
+)
+```
+
+With `[formAssociated()]`, Le Truc manages form value sync, reset, state restore, and a `<fieldset disabled>`-aware `disabled` property for you. The host gains a native-parity contract delegating to `internals` — `form`, `name`, `labels`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`, `reportValidity()`, `setCustomValidity()` — so external consumers read them as on a native input. The convention requires a reactive `value` property; expose it and sync it to the underlying native control as usual. `expose()` throws `InvalidPropertyNameError` for any reserved member name managed by the extension.
+
+The `internals` object on the context (`null` only if `attachInternals()` failed) is the escape hatch for typed validity flags and custom `:state()` pseudo-classes. The rule: use `internals?.setFormValue()` indirectly through the managed convention (set `value`, it syncs), but call `internals?.setValidity()` directly when you need flags beyond a simple custom-error message.
+
+### Checkbox-Shaped Controls
+
+A checkbox's primary state is `checked: boolean`, and it submits nothing when unchecked — different from `formAssociated()`'s always-on string `value`. The `formAssociatedCheckbox()` extension handles this shape. It shares the same host contract and `disabled` management as `formAssociated()`, but the value-sync, reset, and state-restore mechanics target a `checked` prop instead of `value`:
+
+```js#form-checkbox.js
+defineComponent<FormCheckboxProps>(
+  'form-checkbox',
+  ({ expose, first, on, watch }) => {
+    const checkbox = first('input[type="checkbox"]')
+
+    expose({ checked: asBoolean() })
+
+    on(checkbox, 'change', () => ({ checked: checkbox.checked }))
+    watch('checked', bindProperty(checkbox, 'checked'))
+  },
+  [formAssociatedCheckbox()],
+)
+```
+
+`internals.setFormValue()` receives the host's own `value` attribute when checked (default `'on'`, matching native `<input type="checkbox">`) and `null` when unchecked. The convention requires a reactive `checked` property.
+
+{% callout .caution title="Do not combine the two form extensions" %}
+Both `formAssociated()` and `formAssociatedCheckbox()` declare the same `staticProps.formAssociated` key. Combining them on one component throws `ExtensionCollisionError` in dev mode. Radio groups and listboxes don't need `formAssociatedCheckbox()` — their selection aggregates into one string `value` on the container, which fits `formAssociated()`.
+{% /callout %}
+
+### Attribute-Driven Reactivity
+
+Properties are the primary reactive interface. By design, a `Parser` passed to `expose()` reads its attribute once, at connect time — attribute changes after connect do not re-run it. The `observedAttributes()` extension is the opt-in escape hatch for when you need the parser to fire again on later attribute mutations. This matters chiefly for frameworks like React that set DOM attributes on custom elements rather than properties:
+
+```js#basic-gauge.js
+defineComponent<BasicGaugeProps>(
+  'basic-gauge',
+  ({ expose, first, host, watch }) => {
+    expose({ value: asNumber() })
+
+    watch('value', v => { /* update the gauge */ })
+  },
+  [observedAttributes(['value'])],
+)
+```
+
+Named attributes are added to the class's `static observedAttributes`. On each mutation, the extension re-runs the same retained `Parser` against the attribute's new string value and writes the result to the prop. Props whose initializer is not a branded `Parser` are left untouched. Use this sparingly — for most components, event handlers or direct property writes are the right way to update state post-connect.
 
 {% /section %}

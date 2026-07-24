@@ -4,6 +4,7 @@ description: Le Truc 2.3 adds form association and custom :state() pseudo-classe
 emoji: 📝
 layout: blog
 date: 2026-07-21
+modified-date: 2026-07-24
 author: Esther Brunner
 tags: forms, accessibility, release
 ---
@@ -15,7 +16,7 @@ Le Truc components have never been able to act as real form controls. If you've 
 
 ## Form association, with almost no code
 
-A component opts in with a third argument to `defineComponent`:
+A component opts in by passing the `formAssociated()` extension as the third argument to `defineComponent`:
 
 ```ts
 defineComponent<FormListboxProps>(
@@ -23,7 +24,7 @@ defineComponent<FormListboxProps>(
 	({ host, expose, watch, each }) => {
 		// ...
 	},
-	{ formAssociated: true },
+	[formAssociated()],
 )
 ```
 
@@ -53,5 +54,5 @@ So `internals` is exposed on the factory context — we can't take it away, sinc
 
 ## What this means for you
 
-Nothing changes for existing components — `formAssociated` is opt-in, and `internals` is a new addition to the factory context, not a change to an existing one. If you're maintaining a form control that currently juggles a hidden input, this is worth a look: read [ADR 0016](https://github.com/zeixcom/le-truc/blob/main/adr/0016-element-internals-for-form-association-and-states.md) for the full convention, or look at `form-listbox` and `form-colorgraph` in `examples/` for the before-and-after.
+Nothing changes for existing components — `formAssociated()` is opt-in, and `internals` is a new addition to the factory context, not a change to an existing one. If you're maintaining a form control that currently juggles a hidden input, this is worth a look: read [ADR 0016](https://github.com/zeixcom/le-truc/blob/main/adr/0016-element-internals-for-form-association-and-states.md) for the full convention, or look at `form-listbox` and `form-colorgraph` in `examples/` for the before-and-after.
 {% /section %}
