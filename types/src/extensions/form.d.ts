@@ -1,3 +1,4 @@
+import type { ComponentExtension } from '../extension';
 /**
  * Genuinely empty NodeList for the `labels` fallback when `internals` is null.
  * `new NodeList()` throws `TypeError: Illegal constructor` — NodeList has no
@@ -120,4 +121,24 @@ declare const managedSetCustomValidity: (internals: ElementInternals, host: HTML
  * @param proto - The prototype to install members on
  */
 declare const installFormAssociatedMembers: (proto: HTMLElement) => void;
-export { EMPTY_NODELIST, EMPTY_VALIDITY_STATE, FOCUSABLE_FORM_CONTROL_SELECTOR, HOST_CONTRACT_DESCRIPTORS, installFormAssociatedMembers, MANAGED_FORM_MEMBERS, managedSetCustomValidity, resolveAnchor, };
+/** Brand distinguishing the form-associated extension at the type level. */
+type FormAssociatedTag = {
+    readonly __kind: 'form-associated';
+};
+/** The `ComponentExtension` returned by {@link formAssociated}. */
+type FormAssociatedExtension = ComponentExtension & FormAssociatedTag;
+/**
+ * Extension enabling the managed form-control convention: native-parity host
+ * contract (`form`, `name`, `labels`, `validity`, ...), managed `disabled`,
+ * value sync to `internals.setFormValue`, reset, and state restore. Pass to
+ * `defineComponent`'s third parameter: `defineComponent(name, factory,
+ * [formAssociated()])`.
+ *
+ * Only referenced by consumers who call this function — `component.ts` never
+ * imports this module at the value level, so a consumer who doesn't use
+ * `formAssociated()` never bundles ElementInternals support.
+ *
+ * @since 2.3
+ */
+declare const formAssociated: () => FormAssociatedExtension;
+export { EMPTY_NODELIST, EMPTY_VALIDITY_STATE, FOCUSABLE_FORM_CONTROL_SELECTOR, type FormAssociatedExtension, type FormAssociatedTag, formAssociated, HOST_CONTRACT_DESCRIPTORS, installFormAssociatedMembers, MANAGED_FORM_MEMBERS, managedSetCustomValidity, resolveAnchor, };

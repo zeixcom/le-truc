@@ -439,7 +439,9 @@ test.describe('form-radiogroup component', () => {
 			.first()
 		await femaleRadio.click()
 
-		// Test form data includes the selected radio value
+		// Test form data includes the selected radio value, submitted by the
+		// host itself via ElementInternals (`name="gender"` is on the host,
+		// not the individual radios — see formAssociated()).
 		const formData = await page.evaluate(() => {
 			const form = document.querySelector('form')
 			if (!form) return null
@@ -448,6 +450,81 @@ test.describe('form-radiogroup component', () => {
 		})
 
 		expect(formData).toEqual({ gender: 'female' })
+	})
+
+	test('restores the default value on form reset', async ({ page }) => {
+		// formAssociated()'s formResetCallback re-runs the retained initializer
+		// (the initially-checked radio's value) — this is the reset-desync bug
+		// fix: without it, the native radios reset but host.value would not.
+		await page.evaluate(() => {
+			const form = document.createElement('form')
+			const radiogroup = document.querySelector('form-radiogroup')
+			if (radiogroup) {
+				radiogroup.parentNode?.insertBefore(form, radiogroup)
+				form.appendChild(radiogroup)
+			}
+		})
+
+		const radiogroupComponent = page.locator('form-radiogroup').first()
+		const femaleRadio = radiogroupComponent.locator('input[value="female"]')
+		const otherRadio = radiogroupComponent.locator('input[value="other"]')
+
+		await femaleRadio.click()
+		await expect(femaleRadio).toBeChecked()
+
+		await page.evaluate(() => {
+			const form = document.querySelector('form')
+			form?.reset()
+		})
+
+		await expect(otherRadio).toBeChecked()
+		const value = await radiogroupComponent.evaluate((node: any) => node.value)
+		expect(value).toBe('other')
+	})
+
+	test('disabling the host propagates to every radio', async ({ page }) => {
+		const radiogroupComponent = page.locator('form-radiogroup').first()
+		const radios = radiogroupComponent.locator('input[type="radio"]')
+
+		await radiogroupComponent.evaluate((node: any) => {
+			node.disabled = true
+		})
+
+		const count = await radios.count()
+		for (let i = 0; i < count; i++) {
+			await expect(radios.nth(i)).toBeDisabled()
+		}
+	})
+
+	test('a disabled ancestor fieldset disables every radio and syncs host.disabled', async ({
+		page,
+	}) => {
+		// formDisabledCallback fires for ancestor <fieldset disabled> too, not
+		// just the host's own disabled attribute — and writes the effective
+		// state into host's managed `disabled` signal (asserted here), which
+		// is what the radios' bindProperty(radio, 'disabled') actually reads,
+		// distinct from the native fieldset-cascade disabling of the radios
+		// directly.
+		const radiogroupComponent = page.locator('form-radiogroup').first()
+		const radios = radiogroupComponent.locator('input[type="radio"]')
+
+		await page.evaluate(() => {
+			const radiogroup = document.querySelector('form-radiogroup')
+			const fieldset = document.createElement('fieldset')
+			fieldset.disabled = true
+			radiogroup?.parentNode?.insertBefore(fieldset, radiogroup)
+			fieldset.appendChild(radiogroup!)
+		})
+
+		const hostDisabled = await radiogroupComponent.evaluate(
+			(node: any) => node.disabled,
+		)
+		expect(hostDisabled).toBe(true)
+
+		const count = await radios.count()
+		for (let i = 0; i < count; i++) {
+			await expect(radios.nth(i)).toBeDisabled()
+		}
 	})
 
 	test('handles keyboard navigation without affecting page scroll', async ({

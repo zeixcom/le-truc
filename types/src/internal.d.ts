@@ -29,14 +29,23 @@ declare const CONTEXT_RETRY_DELAY: number;
  */
 declare const internalsMap: WeakMap<HTMLElement, ElementInternals | null>;
 /**
- * Module-internal map from form-associated component instances to the retained
- * `value` initializer (for managed `formResetCallback`). The initializer is the
- * original value passed to `expose({ value: ... })`: a `Parser` is re-run
- * against the current `value` attribute; a static value is restored directly.
- * Enables native `defaultValue`-style reset semantics generically, because prop
- * parsers already encode attribute → value.
+ * Module-internal map from component instances to their retained property
+ * initializers, keyed by prop name — the original value passed to
+ * `expose({ [prop]: ... })`, captured verbatim before `#initSignals` consumes
+ * it. Populated for every prop (not just extension-reserved ones); cheap
+ * (a plain object assignment already inside the per-prop loop) and keeps
+ * `component.ts` generic — which props are actually read back out of this map
+ * is entirely up to whichever extension wants them, not something core needs
+ * to know about.
+ *
+ * Consumers: `formAssociated()`'s managed `formResetCallback` re-runs the
+ * retained `value` initializer (a `Parser` is re-parsed against the current
+ * `value` attribute; a static value is restored directly) for native
+ * `defaultValue`-style reset semantics. `observedAttributes()` re-runs a
+ * retained `Parser` for an observed prop when its attribute mutates
+ * post-connect.
  */
-declare const initialValueInitializers: WeakMap<HTMLElement, unknown>;
+declare const retainedInitializers: WeakMap<HTMLElement, Record<string, unknown>>;
 /** Get the signals map for a component, creating it if needed. */
 declare const getSignals: (el: HTMLElement) => Record<string, Signal<unknown & {}>>;
 /**
@@ -85,4 +94,4 @@ declare const installActiveCollector: (collector: EffectDescriptor[]) => EffectD
  * @param {EffectDescriptor[] | undefined} previous - The value returned by the matching `installActiveCollector()` call
  */
 declare const restoreActiveCollector: (previous: EffectDescriptor[] | undefined) => void;
-export { CONTEXT_RETRY_DELAY, DEPENDENCY_TIMEOUT, getSignals, initialValueInitializers, installActiveCollector, internalsMap, pushDescriptor, restoreActiveCollector, withCollector, };
+export { CONTEXT_RETRY_DELAY, DEPENDENCY_TIMEOUT, getSignals, installActiveCollector, internalsMap, pushDescriptor, restoreActiveCollector, retainedInitializers, withCollector, };

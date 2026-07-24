@@ -51,7 +51,7 @@ For the library itself:
 - Very few bug reports surface after 1.0 release; none of them requiring a major refactoring
 - Le Truc proves it can scale well in complex web applications with 1000+ frequently updated elements
 - Performance in benchmarks (js-reactivity-benchmark for Cause & Effect, js-framework-benchmark for Le Truc) is among the 5 best-in-class
-- Bundle size remains below 14 kB gzipped (TCP segment threshold); target is ≤10 kB
+- Bundle size for a minimal consumer (`defineComponent`, no extensions) remains below 8 kB gzipped; core + `formAssociated()` warns above 14 kB (TCP segment threshold). Opt-in extensions (`formAssociated()`, `observedAttributes()`, ...) are tree-shaken away when unused — see the `ComponentExtension` mechanism
 
 ---
 
@@ -173,6 +173,8 @@ When `DEV_MODE` is enabled: detailed error messages with component context, warn
 
 Do not use `observedAttributes` to drive reactive property updates. Attribute observation couples component state to HTML attribute mutations, which is a weak and error-prone reactivity model compared to signal-backed properties. It was the primary obstacle to removing the `U extends UI` generic from parsers and simplifying the `defineComponent` API. Le Truc components use properties as the reactive interface; attributes are for initial server-authored configuration only (read once at connect time via parsers). If interop with attribute-mutation patterns is strictly required (e.g., for compatibility with specific CMS tooling), it may be offered as an opt-in escape hatch via an optional parameter, but it must never be the default or encouraged path.
 
+✅ _Resolved: `observedAttributes()` (`src/extensions/attributes.ts`), an opt-in `ComponentExtension` passed to `defineComponent`'s `extensions` parameter — see [ADR 0019](adr/0019-extension-based-dependency-injection-for-definecomponent.md). Re-parses a Parser-backed prop when its attribute mutates post-connect; properties remain the default, encouraged reactive interface._
+
 ### Nice to Have
 
 #### N1. Debug flag per component instance
@@ -189,7 +191,7 @@ Do not use `observedAttributes` to drive reactive property updates. Attribute ob
 
 ### Performance
 
-- Bundle size: ≤10 kB gzipped; hard ceiling 14 kB (one TCP segment)
+- Bundle size, gzipped: minimal entry (`defineComponent`, no extensions) ≤8 kB (hard ceiling, `test/regression-bundle.test.ts`); core + `formAssociated()` warns above 14 kB (one TCP segment); the full barrel (every export, including every bundled extension) is reported but not asserted — it is not a realistic consumer surface once extensions are opt-in
 - DOM updates must be synchronous and targeted: no virtual DOM diffing, no full component re-renders
 - Signal propagation must be glitch-free: no intermediate states visible to effects when multiple signals update in a single batch
 - High-frequency event handlers (scroll, resize, touch) must be frame-rate-limited via the scheduler

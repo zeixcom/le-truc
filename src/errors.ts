@@ -184,6 +184,29 @@ class InvalidTemplateError extends TypeError {
 }
 
 /**
+ * Error thrown in DEV_MODE when two extensions passed to `defineComponent()`
+ * declare the same `staticProps` key. In production the first extension to
+ * declare the key wins and the rest are silently ignored — see ADR on the
+ * `ComponentExtension` mechanism.
+ *
+ * @since 2.3
+ */
+class ExtensionCollisionError extends Error {
+	/**
+	 * @param {string} component - Component name
+	 * @param {string} key - The colliding `staticProps` key
+	 * @param {string} first - Name of the extension that first declared `key`
+	 * @param {string} second - Name of the extension whose declaration was ignored
+	 */
+	constructor(component: string, key: string, first: string, second: string) {
+		super(
+			`Extension collision for component <${component}>: both '${first}' and '${second}' declare staticProps key "${key}". The '${second}' declaration is ignored.`,
+		)
+		this.name = 'ExtensionCollisionError'
+	}
+}
+
+/**
  * Error thrown when a CSS selector passed to `all()` is malformed
  *
  * @since 2.0.4
@@ -210,6 +233,7 @@ class InvalidSelectorError extends TypeError {
 
 export {
 	DependencyTimeoutError,
+	ExtensionCollisionError,
 	InvalidComponentNameError,
 	InvalidCustomElementError,
 	InvalidPassPropertyError,

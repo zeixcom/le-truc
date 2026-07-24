@@ -14,6 +14,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { defineComponent } from '../component'
 import { InvalidPropertyNameError } from '../errors'
+import { formAssociated } from '../extensions/form'
 import { asParser } from '../types'
 
 /* === Fake customElements registry + HTMLElement base === */
@@ -149,23 +150,19 @@ afterEach(() => {
 /* === static formAssociated === */
 
 describe('static formAssociated', () => {
-	test('defaults to false when no options are provided', () => {
+	test('defaults to false when no extensions are provided', () => {
 		const Ctor = defineComponent(uniqueName(), () => [])!
 		expect((Ctor as any).formAssociated).toBe(false)
 	})
 
-	test('is true when { formAssociated: true } is passed', () => {
-		const Ctor = defineComponent(uniqueName(), () => [], {
-			formAssociated: true,
-		})!
-		expect((Ctor as any).formAssociated).toBe(true)
+	test('is false when an empty extensions array is passed explicitly', () => {
+		const Ctor = defineComponent(uniqueName(), () => [], [])!
+		expect((Ctor as any).formAssociated).toBe(false)
 	})
 
-	test('is false when { formAssociated: false } is passed explicitly', () => {
-		const Ctor = defineComponent(uniqueName(), () => [], {
-			formAssociated: false,
-		})!
-		expect((Ctor as any).formAssociated).toBe(false)
+	test('is true when [formAssociated()] is passed', () => {
+		const Ctor = defineComponent(uniqueName(), () => [], [formAssociated()])!
+		expect((Ctor as any).formAssociated).toBe(true)
 	})
 })
 
@@ -179,7 +176,7 @@ describe('managed value sync', () => {
 				expose({ value: 'initial' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -194,7 +191,7 @@ describe('managed value sync', () => {
 				expose({ value: '' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -214,7 +211,7 @@ describe('managed value sync', () => {
 				expose({ value: 0 })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -236,7 +233,7 @@ describe('managed formResetCallback', () => {
 				expose({ value: 'default' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -254,7 +251,7 @@ describe('managed formResetCallback', () => {
 				expose({ value: asParser(v => v ?? '') })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.setAttribute('value', 'from-attribute')
@@ -273,7 +270,7 @@ describe('managed formResetCallback', () => {
 				expose({ foo: 'bar' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -291,7 +288,7 @@ describe('managed formStateRestoreCallback', () => {
 				expose({ value: '' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -307,7 +304,7 @@ describe('managed formStateRestoreCallback', () => {
 				expose({ value: 'keep' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -323,7 +320,7 @@ describe('managed formStateRestoreCallback', () => {
 				expose({ value: 0 })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -343,7 +340,7 @@ describe('managed formStateRestoreCallback', () => {
 				expose({ value: asParser(v => v === 'true') })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -366,7 +363,7 @@ describe('managed formDisabledCallback', () => {
 				expose({ value: '' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -390,7 +387,7 @@ describe('managed formDisabledCallback', () => {
 					}),
 				]
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -410,7 +407,7 @@ describe('managed formDisabledCallback', () => {
 				expose({ value: '' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -443,7 +440,7 @@ describe('native-parity host contract', () => {
 				expose({ value: '' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -462,7 +459,7 @@ describe('native-parity host contract', () => {
 				expose({ value: '' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -480,7 +477,7 @@ describe('native-parity host contract', () => {
 				expose({ value: '' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -502,7 +499,7 @@ describe('native-parity host contract', () => {
 				expose({ value: '' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -527,7 +524,7 @@ describe('native-parity host contract', () => {
 				expose({ value: '' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 
@@ -557,7 +554,7 @@ describe('native-parity host contract', () => {
 				expose({ value: '' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		expect(() => instance.connectedCallback()).not.toThrow()
@@ -575,7 +572,7 @@ describe('native-parity host contract', () => {
 				expose({ value: '' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		expect(typeof Ctor.prototype.formResetCallback).toBe('function')
 		expect(typeof Ctor.prototype.formStateRestoreCallback).toBe('function')
@@ -593,7 +590,7 @@ describe('managed-name collision guard', () => {
 				expose({ validity: 'evil' } as any)
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		expect(() => instance.connectedCallback()).toThrow(InvalidPropertyNameError)
@@ -606,7 +603,7 @@ describe('managed-name collision guard', () => {
 				expose({ disabled: true } as any)
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		expect(() => instance.connectedCallback()).toThrow(InvalidPropertyNameError)
@@ -619,7 +616,7 @@ describe('managed-name collision guard', () => {
 				expose({ value: 'ok' })
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		expect(() => instance.connectedCallback()).not.toThrow()
@@ -652,7 +649,7 @@ describe('internals on FactoryContext', () => {
 				capturedInternals = internals
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -670,7 +667,7 @@ describe('internals on FactoryContext', () => {
 				capturedInternals = internals
 				return []
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		expect(() => instance.connectedCallback()).not.toThrow()
@@ -691,7 +688,7 @@ describe('internals on FactoryContext', () => {
 					}),
 				]
 			},
-			{ formAssociated: true },
+			[formAssociated()],
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()

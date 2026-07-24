@@ -83,4 +83,84 @@ test.describe('form-inplace-edit component', () => {
 			'Edit',
 		)
 	})
+
+	test('submits its value in a form via ElementInternals', async ({ page }) => {
+		await page.evaluate(() => {
+			const form = document.createElement('form')
+			const el = document.querySelector('form-inplace-edit')
+			if (el) {
+				el.parentNode?.insertBefore(form, el)
+				form.appendChild(el)
+			}
+		})
+
+		const formData = await page.evaluate(() => {
+			const form = document.querySelector('form')
+			if (!form) return null
+			return Object.fromEntries(new FormData(form).entries())
+		})
+
+		expect(formData).toEqual({ label: 'Edit me' })
+	})
+
+	test('restores the default value on form reset', async ({ page }) => {
+		// formAssociated()'s formResetCallback re-runs the retained initializer
+		// — the original .text snapshot taken at connect time.
+		await page.evaluate(() => {
+			const form = document.createElement('form')
+			const el = document.querySelector('form-inplace-edit')
+			if (el) {
+				el.parentNode?.insertBefore(form, el)
+				form.appendChild(el)
+			}
+		})
+
+		await page.locator('form-inplace-edit button').click()
+		await page.locator('form-inplace-edit input').fill('Changed value')
+		await page.locator('form-inplace-edit input').press('Enter')
+		await expect(page.locator('form-inplace-edit .text')).toHaveText(
+			'Changed value',
+		)
+
+		await page.evaluate(() => document.querySelector('form')?.reset())
+
+		await expect(page.locator('form-inplace-edit .text')).toHaveText('Edit me')
+		const value = await page
+			.locator('form-inplace-edit')
+			.evaluate((node: any) => node.value)
+		expect(value).toBe('Edit me')
+	})
+
+	test('disabling the host disables the edit button and blocks dblclick entry', async ({
+		page,
+	}) => {
+		await page.locator('form-inplace-edit').evaluate((node: any) => {
+			node.disabled = true
+		})
+
+		await expect(page.locator('form-inplace-edit button')).toBeDisabled()
+
+		await page.locator('form-inplace-edit .text').dblclick()
+		await expect(
+			page.locator('form-inplace-edit form-textbox'),
+		).not.toBeAttached()
+	})
+
+	test('a disabled ancestor fieldset disables the edit button', async ({
+		page,
+	}) => {
+		await page.evaluate(() => {
+			const el = document.querySelector('form-inplace-edit')
+			const fieldset = document.createElement('fieldset')
+			fieldset.disabled = true
+			el?.parentNode?.insertBefore(fieldset, el)
+			fieldset.appendChild(el!)
+		})
+
+		await expect(page.locator('form-inplace-edit button')).toBeDisabled()
+		const hostDisabled = await page
+			.locator('form-inplace-edit')
+			.evaluate((node: any) => node.disabled)
+		expect(hostDisabled).toBe(true)
+	})
 })

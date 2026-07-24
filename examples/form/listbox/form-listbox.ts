@@ -8,6 +8,7 @@ import {
 	each,
 	escapeHTML,
 	type FormAssociatedElement,
+	formAssociated,
 	schedule,
 } from '../../..'
 import {
@@ -248,5 +249,5 @@ export default defineComponent<FormListboxProps>(
 
 		if (clearBtn) watch(lowerFilter, bindVisible(clearBtn))
 	},
-	{ formAssociated: true },
+	[formAssociated()],
 )

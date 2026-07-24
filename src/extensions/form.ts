@@ -1,6 +1,17 @@
-import { isFunction, isSignal, isSlot, type Signal } from '@zeix/cause-effect'
-import { getSignals, initialValueInitializers, internalsMap } from '../internal'
+import {
+	createEffect,
+	createSlot,
+	createState,
+	isFunction,
+	isSignal,
+	isSlot,
+	type MaybeCleanup,
+} from '@zeix/cause-effect'
+import type { ComponentExtension } from '../extension'
+import { getSignals, internalsMap, retainedInitializers } from '../internal'
+import type { FactoryResult } from '../types'
 import { isParser } from '../types'
+import { elementName } from '../util'
 
 /* === Constants === */
 
@@ -190,7 +201,7 @@ const managedSetCustomValidity = (
  * pre-set on the instance before upgrade).
  */
 const formResetCallback = function (this: FormAssociatedHost) {
-	const initializer = initialValueInitializers.get(this)
+	const initializer = retainedInitializers.get(this as HTMLElement)?.['value']
 	if (initializer === undefined) return
 	if (isParser(initializer)) {
 		const parse = initializer as (
@@ -217,7 +228,7 @@ const formStateRestoreCallback = function (
 	_mode: string,
 ) {
 	if (typeof state !== 'string') return
-	const initializer = initialValueInitializers.get(this)
+	const initializer = retainedInitializers.get(this as HTMLElement)?.['value']
 	if (isParser(initializer)) {
 		const parse = initializer as (
 			v: string | null | undefined,
@@ -285,10 +296,95 @@ const installFormAssociatedMembers = (proto: HTMLElement): void => {
 	})
 }
 
+/**
+ * Build the managed form-control value-sync effect descriptor. Returns an
+ * `EffectDescriptor` (a thunk) that activates after dependency resolution in
+ * the same pipeline as author effects. Watches `value` and calls
+ * `internals.setFormValue(String(value))`.
+ */
+const managedValueSyncDescriptor =
+	(instance: HTMLElement, internals: ElementInternals): (() => MaybeCleanup) =>
+	// Thunk — activated lazily inside the component scope, like author effect
+	// descriptors. Reading `(instance as any).value` inside createEffect
+	// registers the Slot-backed accessor as a dependency.
+	() =>
+		createEffect(() => {
+			const v = (instance as any).value
+			internals.setFormValue(typeof v === 'string' ? v : String(v ?? ''))
+		})
+
+/**
+ * Create the managed `disabled` reactive property on a form-associated host.
+ * Slot-backed so `formDisabledCallback` can write the effective disabled
+ * state (including `<fieldset disabled>` inheritance). The property getter
+ * and setter go through the Slot (not the raw backing signal) so that
+ * `pass()` replacing the Slot's delegate stays consistent — `host.disabled`,
+ * `watch('disabled')`, and `formDisabledCallback` all read and write the
+ * same source of truth. The setter also reflects to the `disabled` content
+ * attribute so FACE gives native `:disabled` / barred-from-validation for
+ * free.
+ */
+const createManagedDisabledProperty = (instance: HTMLElement): void => {
+	const initial = instance.hasAttribute('disabled')
+	const slot = createSlot(createState(initial))
+	const signals = getSignals(instance)
+	signals['disabled'] = slot
+	Object.defineProperty(instance, 'disabled', {
+		get: () => slot.get(),
+		set: (v: boolean) => {
+			slot.set(v)
+			if (v) instance.setAttribute('disabled', '')
+			else instance.removeAttribute('disabled')
+		},
+		enumerable: true,
+		configurable: true,
+	})
+}
+
+/** Brand distinguishing the form-associated extension at the type level. */
+type FormAssociatedTag = { readonly __kind: 'form-associated' }
+
+/** The `ComponentExtension` returned by {@link formAssociated}. */
+type FormAssociatedExtension = ComponentExtension & FormAssociatedTag
+
+/**
+ * Extension enabling the managed form-control convention: native-parity host
+ * contract (`form`, `name`, `labels`, `validity`, ...), managed `disabled`,
+ * value sync to `internals.setFormValue`, reset, and state restore. Pass to
+ * `defineComponent`'s third parameter: `defineComponent(name, factory,
+ * [formAssociated()])`.
+ *
+ * Only referenced by consumers who call this function — `component.ts` never
+ * imports this module at the value level, so a consumer who doesn't use
+ * `formAssociated()` never bundles ElementInternals support.
+ *
+ * @since 2.3
+ */
+const formAssociated = (): FormAssociatedExtension => ({
+	name: 'formAssociated',
+	__kind: 'form-associated',
+	staticProps: { formAssociated: true },
+	reservedMembers: MANAGED_FORM_MEMBERS,
+	installOnPrototype: installFormAssociatedMembers,
+	onConnect: (instance, internals): FactoryResult | void => {
+		if (!internals) return
+		const hasValueSignal = 'value' in instance && getSignals(instance).value
+		if (process.env.DEV_MODE === 'true' && !hasValueSignal)
+			console.warn(
+				`form-associated component ${elementName(instance)} did not expose a reactive 'value' property. The managed form-control convention requires a reactive 'value' for form value sync, reset, and state restore.`,
+			)
+		createManagedDisabledProperty(instance)
+		return [managedValueSyncDescriptor(instance, internals)]
+	},
+})
+
 export {
 	EMPTY_NODELIST,
 	EMPTY_VALIDITY_STATE,
 	FOCUSABLE_FORM_CONTROL_SELECTOR,
+	type FormAssociatedExtension,
+	type FormAssociatedTag,
+	formAssociated,
 	HOST_CONTRACT_DESCRIPTORS,
 	installFormAssociatedMembers,
 	MANAGED_FORM_MEMBERS,

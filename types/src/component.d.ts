@@ -1,4 +1,6 @@
 import { type MemoCallback, type Signal, type TaskCallback } from '@zeix/cause-effect';
+import { type ComponentExtension } from './extension';
+import type { FormAssociatedExtension } from './extensions/form';
 import { type ProvideContextsHelper, type RequestContextHelper } from './helpers/context';
 import { type ElementQueries } from './helpers/dom';
 import { type OnHelper } from './helpers/events';
@@ -24,22 +26,6 @@ type MaybeSignal<T extends {}> = T | Signal<T> | MemoCallback<T> | TaskCallback<
  */
 type Initializers<P extends ComponentProps> = {
     [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K]> | MethodProducer;
-};
-/**
- * Static class-level configuration for a component.
- *
- * Passed as the third (optional) argument to `defineComponent`. Currently
- * carries only `formAssociated`, but is extensible for future class-level
- * options without further signature changes.
- */
-type ComponentOptions = {
-    /**
-     * When `true`, the generated class gets `static formAssociated = true`, the
-     * managed form-control behavior (value sync, reset, state restore, disabled,
-     * native-parity host contract). The browser treats the element as a
-     * form-associated custom element (FACE). Default: `false`.
-     */
-    formAssociated?: boolean;
 };
 /**
  * The native form-control members the generated class defines on the host when
@@ -120,13 +106,11 @@ type FormFactoryContext<P extends ComponentProps> = Omit<FactoryContext<P & {
  * @since 2.0
  * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
  * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
- * @param {ComponentOptions} [options] - Static class-level configuration (e.g. `{ formAssociated: true }`)
+ * @param {ComponentExtension[]} [extensions] - Dependency-injected features (e.g. `[formAssociated()]`, `[observedAttributes([...])]`). Bundled extensions are tree-shaken away unless imported and used. `formAssociated()`, if present, must be the first element — that's what widens the factory's context type to `FormFactoryContext`.
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
 declare function defineComponent<P extends ComponentProps & {
     value: string | number;
-}>(name: string, factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void, options: ComponentOptions & {
-    formAssociated: true;
-}): CustomElementConstructor | undefined;
-declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void, options?: ComponentOptions): CustomElementConstructor | undefined;
-export { type ComponentOptions, defineComponent, type FactoryContext, type FormAssociatedElement, type Initializers, type MaybeSignal, };
+}>(name: string, factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void, extensions: readonly [FormAssociatedExtension, ...ComponentExtension[]]): CustomElementConstructor | undefined;
+declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void, extensions?: readonly ComponentExtension[]): CustomElementConstructor | undefined;
+export { defineComponent, type FactoryContext, type FormAssociatedElement, type Initializers, type MaybeSignal, };

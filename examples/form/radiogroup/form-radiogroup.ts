@@ -1,4 +1,10 @@
-import { defineComponent, each } from '../../..'
+import {
+	bindProperty,
+	defineComponent,
+	each,
+	type FormAssociatedElement,
+	formAssociated,
+} from '../../..'
 
 export type FormRadiogroupProps = {
 	/** Value of the currently selected radio button. */
@@ -7,7 +13,7 @@ export type FormRadiogroupProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-radiogroup': HTMLElement & FormRadiogroupProps
+		'form-radiogroup': FormAssociatedElement & FormRadiogroupProps
 	}
 }
 
@@ -26,7 +32,9 @@ const getIndex = (radios: HTMLInputElement[]) =>
 /**
  * A radio group with roving tabindex keyboard navigation and reactive value tracking.
  * Use it for single-choice selection — provides ARIA radiogroup semantics, Arrow/Home/End
- * key support, and focus management across the radio options.
+ * key support, and focus management across the radio options. Form participation and
+ * validity are via ElementInternals (`formAssociated()`) — set `name` on the host, not
+ * the individual radios, which are presentational only.
  * @demo {./docs/examples/form-radiogroup.html} Interactive preview and usage examples */
 export default defineComponent<FormRadiogroupProps>(
 	'form-radiogroup',
@@ -69,7 +77,7 @@ export default defineComponent<FormRadiogroupProps>(
 			radios.get()[focusIndex]?.click()
 		})
 
-		each(radios, radio =>
+		each(radios, radio => {
 			watch(
 				() => radio.value === host.value,
 				isChecked => {
@@ -77,7 +85,9 @@ export default defineComponent<FormRadiogroupProps>(
 					radio.tabIndex = isChecked ? 0 : -1
 					radio.closest('label')?.classList.toggle('selected', isChecked)
 				},
-			),
-		)
+			)
+			watch('disabled', bindProperty(radio, 'disabled'))
+		})
 	},
+	[formAssociated()],
 )

@@ -7,6 +7,7 @@ import {
 	defineComponent,
 	defineMethod,
 	type FormAssociatedElement,
+	formAssociated,
 } from '../../..'
 import { relayValidity } from '../../_common/relayValidity'
 
@@ -31,7 +32,7 @@ declare global {
  * A single-line or multiline text input with validation, optional clear button, and helper text.
  * Use it when you need a styled text field — the underlying native input provides
  * keyboard accessibility and standard ARIA textbox semantics. Form participation
- * and validity are via ElementInternals (`formAssociated: true`).
+ * and validity are via ElementInternals (`formAssociated()`).
  * External consumers read `host.validationMessage` / `host.validity` like on a
  * native input; inline error display binds to component-internal state.
  * @demo {./docs/examples/form-textbox.html} Interactive preview and usage examples */
@@ -98,5 +99,5 @@ export default defineComponent<FormTextboxProps>(
 		if (descriptionEl) watch('description', bindText(descriptionEl))
 		if (clearBtn) watch(length, bindVisible(clearBtn))
 	},
-	{ formAssociated: true },
+	[formAssociated()],
 )
