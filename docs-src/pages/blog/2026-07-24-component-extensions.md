@@ -1,6 +1,6 @@
 ---
 title: Component Extensions
-description: Le Truc 2.3 introduces a tree-shakable extension interface for defineComponent, replacing the static options object. The first three extensions cover form participation and attribute-driven reactivity for React interop.
+description: Le Truc 2.3 introduces a tree-shakable extension interface for defineComponent. The first three extensions cover form participation and attribute-driven reactivity for React interop.
 emoji: 🧩
 layout: blog
 date: 2026-07-24
