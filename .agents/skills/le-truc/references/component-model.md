@@ -28,7 +28,8 @@ defineComponent<P extends ComponentProps>(name, factory)
 | `pass(target, props)` | Create and register a slot-swap descriptor for a Le Truc child |
 | `provideContexts(contexts)` | Create and register a context-provider descriptor |
 | `requestContext(context, fallback)` | Return `Signal<T>` (backed by a `Slot`) for use inside `expose()` |
-| `run(descriptor)` | Register a hand-authored `EffectDescriptor` — for a raw thunk not produced by any of the above (e.g. wrapping `IntersectionObserver`) |
+
+For a raw hand-authored `EffectDescriptor` not produced by any of the above (e.g. wrapping `IntersectionObserver`), register it via `watch(() => true, descriptor)` — `() => true` has no signal dependency, so the effect runs its setup once, on connect, and `watch()`'s internal `createEffect()` call registers the descriptor's returned cleanup for disconnect.
 
 ### Example
 
@@ -51,7 +52,7 @@ defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) =>
 })
 ```
 
-`watch()`, `on()`, `pass()`, `each()`, `provideContexts()`, and `run()` register their descriptor in an ambient collector the moment they're called — the factory doesn't collect or return anything. Calling one of these helpers outside synchronous factory (or `each()` callback) execution — after an `await`, in a detached `setTimeout` — throws `NoActiveCollectorError` immediately, rather than silently doing nothing.
+`watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` register their descriptor in an ambient collector the moment they're called — the factory doesn't collect or return anything. Calling one of these helpers outside synchronous factory (or `each()` callback) execution — after an `await`, in a detached `setTimeout` — throws `NoActiveCollectorError` immediately, rather than silently doing nothing.
 
 Explicit `return [...]` of the same descriptors still works (dual support in v2.3, deprecated as of v3.0) — see ADR 0018.
 

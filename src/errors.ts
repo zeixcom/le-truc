@@ -144,26 +144,22 @@ class InvalidPassPropertyError extends TypeError {
 /**
  * Error thrown when `watch()`, `on()`, `pass()`, `each()`, or `provideContexts()`
  * is called with no active effect-descriptor collector — i.e. not synchronously
- * during factory setup or an `each()` callback. Common causes: calling the
- * helper after an `await`, inside a detached `setTimeout`, or from an event
- * handler defined during setup. See ADR 0018.
+ * during factory setup, an `each()` callback, or a `reconcile()` `bindItem`.
+ * Common causes: calling the helper after an `await`, inside a detached
+ * `setTimeout`, or from an event handler defined during setup. See ADR 0018.
  *
  * @since 2.3.0
  */
 class NoActiveCollectorError extends Error {
 	/**
-	 * @param {HTMLElement | undefined} host - Host component the helper was called for, if known (`each()` isn't host-bound, so it has none)
+	 * @param {HTMLElement | undefined} host - Host component the helper was called for, if known (`each()` and `reconcile()` aren't host-bound, so they have none)
 	 * @param {string} helper - Name of the helper that was called (e.g. `'watch'`)
 	 */
 	constructor(host: HTMLElement | undefined, helper: string) {
 		const where = host ? ` in component ${elementName(host)}` : ''
-		let message = `${helper}() called outside synchronous factory or each() callback execution${where}.`
-		// Remediation guidance is DEV-only so the production bundle carries
-		// just the diagnosis; the guard folds away under the build define.
-		if (process.env.DEV_MODE === 'true')
-			message +=
-				' watch(), on(), pass(), each(), provideContexts(), and run() must be called synchronously during setup — not after an await, inside a detached setTimeout, or from an event handler defined during setup.'
-		super(message)
+		super(
+			`${helper}() called outside synchronous factory, each() callback, or reconcile() bindItem execution${where}.`,
+		)
 		this.name = 'NoActiveCollectorError'
 	}
 }

@@ -69,7 +69,7 @@ const valueToHash = (value: string, listbox: HTMLElement): string => {
  * Listbox option values must be relative paths (starting with `./`);
  * the lazyload panel should have an `id` matching the hash target for scroll restoration.
  * @demo {./docs/examples/module-listnav.html} Interactive preview and usage examples */
-export default defineComponent('module-listnav', ({ first, pass, run }) => {
+export default defineComponent('module-listnav', ({ first, pass, watch }) => {
 	const listbox = first('form-listbox', 'Required to select a partial to load')
 	const lazyload = first('module-lazyload', 'Required to load a partial into')
 
@@ -102,26 +102,31 @@ export default defineComponent('module-listnav', ({ first, pass, run }) => {
 
 	pass(lazyload, { src: () => listbox.value })
 
-	// Sync location.hash ↔ listbox selection
-	run(() => {
-		// Update hash when selection changes
-		const cleanup = createEffect(() => {
-			const value = listbox.value
-			if (!value) return
+	// Sync location.hash ↔ listbox selection — no signal dependency, so
+	// watch(() => true, …) runs the setup once on connect and its returned
+	// cleanup tears both listeners down on disconnect.
+	watch(
+		() => true,
+		() => {
+			// Update hash when selection changes
+			const cleanup = createEffect(() => {
+				const value = listbox.value
+				if (!value) return
 
-			const hash = valueToHash(value, listbox)
-			if (hash && location.hash !== `#${hash}`) {
-				updatingHash = true
-				history.replaceState(null, '', `#${hash}`)
-				updatingHash = false
+				const hash = valueToHash(value, listbox)
+				if (hash && location.hash !== `#${hash}`) {
+					updatingHash = true
+					history.replaceState(null, '', `#${hash}`)
+					updatingHash = false
+				}
+			})
+
+			window.addEventListener('hashchange', onHashChange)
+
+			return () => {
+				cleanup()
+				window.removeEventListener('hashchange', onHashChange)
 			}
-		})
-
-		window.addEventListener('hashchange', onHashChange)
-
-		return () => {
-			cleanup()
-			window.removeEventListener('hashchange', onHashChange)
-		}
-	})
+		},
+	)
 })

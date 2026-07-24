@@ -66,11 +66,11 @@ The factory function runs inside `connectedCallback()`. Element queries, `expose
 
 In the `disconnectedCallback()` Le Truc runs all cleanup functions returned by effects during the setup phase in `connectedCallback()`. This will remove all event listeners and unsubscribe all signals the component is subscribed to, so you don't need to worry about memory leaks.
 
-If you subscribe to **external APIs** that live outside the component's reactive scope — a native `IntersectionObserver`, `ResizeObserver`, or similar — wrap the setup and its cleanup in a hand-authored `EffectDescriptor` and register it with `run()`:
+If you subscribe to **external APIs** that live outside the component's reactive scope — a native `IntersectionObserver`, `ResizeObserver`, or similar — wrap the setup and its cleanup in a hand-authored `EffectDescriptor` and register it with `watch(() => true, …)`:
 
 ```js
-defineComponent('my-component', ({ host, run }) => {
-  run(() => {
+defineComponent('my-component', ({ host, watch }) => {
+  watch(() => true, () => {
     // Setup logic
     const observer = new IntersectionObserver(([entry]) => {
       // Do something
@@ -83,10 +83,10 @@ defineComponent('my-component', ({ host, run }) => {
 })
 ```
 
-`run(descriptor)` registers a descriptor that isn't produced by `watch()`, `on()`, `each()`, `pass()`, or `provideContexts()` — the same registration those five do automatically when called, made available directly for a descriptor you write by hand.
+`() => true` has no signal dependency, so this effect runs its setup exactly once, on connect — `watch()` registers the descriptor's returned cleanup the same way it does for a normal reactive source.
 
 {% callout .tip title="A returned cleanup only runs if it's registered" %}
-Returning the descriptor from the factory (`return [() => { ...; return cleanup }]`) still works, but a bare thunk you neither `return` nor pass to `run()` never runs its cleanup — there's no path for `disconnectedCallback()` to find it. `run()` is the direct replacement for `return` here, and is deprecated as of v3.0 alongside the other four helpers' explicit-return form.
+Returning the descriptor from the factory (`return [() => { ...; return cleanup }]`) still works, but a bare thunk you neither `return` nor pass to a helper never runs its cleanup — there's no path for `disconnectedCallback()` to find it. `watch(() => true, descriptor)` is the direct replacement for `return` here, and explicit `return` is deprecated as of v3.0 alongside the other helpers' explicit-return form.
 {% /callout %}
 
 {% /section %}
@@ -307,7 +307,7 @@ Effects **automatically update the DOM** when signals change, avoiding manual DO
 
 ### Applying Effects
 
-`watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` each produce an `EffectDescriptor` and register it automatically when called — no `return` needed. A sixth helper, `run(descriptor)`, registers a descriptor you write by hand instead of one produced by the other five — see [Disconnected from the DOM](#disconnected-from-the-dom) for when you need it. The `watch(source, handler)` helper drives a DOM update from a declared reactive source:
+`watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` each produce an `EffectDescriptor` and register it automatically when called — no `return` needed. A hand-authored descriptor you write by hand instead of using one of these five is registered the same way, via `watch(() => true, descriptor)` — see [Disconnected from the DOM](#disconnected-from-the-dom) for when you need it. The `watch(source, handler)` helper drives a DOM update from a declared reactive source:
 
 ```js
 watch('open', bindAttribute(host, 'open')) // set attribute from 'open' signal

@@ -4,7 +4,7 @@
 
 ## Factory Form
 
-The factory form is the only way to define components. The factory receives a `FactoryContext` with helpers `{ all, expose, first, host, on, pass, provideContexts, requestContext, run, watch }`, calls `expose({ ... })` for reactive props, and calls effect helpers directly — each registers itself in an ambient collector when called (ADR 0018), no `return` needed:
+The factory form is the only way to define components. The factory receives a `FactoryContext` with helpers `{ all, expose, first, host, on, pass, provideContexts, requestContext, watch }`, calls `expose({ ... })` for reactive props, and calls effect helpers directly — each registers itself in an ambient collector when called (ADR 0018), no `return` needed:
 
 ```ts
 defineComponent<MyProps>('my-element', ({ expose, first, host, on, watch }) => {
@@ -15,7 +15,7 @@ defineComponent<MyProps>('my-element', ({ expose, first, host, on, watch }) => {
 })
 ```
 
-Explicit `return [...]` of a `FactoryResult` (nested arrays flattened, falsy values filtered) still works — dual support in v2.3, deprecated as of v3.0. `run(descriptor)` registers a hand-authored `EffectDescriptor` not produced by `watch`/`on`/`pass`/`each`/`provideContexts`; it's the only registration path for those besides `return` (see the `run()` entry below — a bare `return`ed-but-not-`run()`-registered descriptor has a real footgun around cleanup).
+Explicit `return [...]` of a `FactoryResult` (nested arrays flattened, falsy values filtered) still works — dual support in v2.3, deprecated as of v3.0. A hand-authored `EffectDescriptor` not produced by `watch`/`on`/`pass`/`each`/`provideContexts` has no dedicated registration helper; register it via `watch(() => true, descriptor)` (see the footgun note below) or `return` it directly.
 
 ## Surprising Behaviors
 
@@ -29,7 +29,7 @@ Explicit `return [...]` of a `FactoryResult` (nested arrays flattened, falsy val
 
 - **`MethodProducer` is branded, not structurally distinguished**: `isMethodProducer()` checks for `METHOD_BRAND`. Always wrap method producer initializers with `defineMethod()` — e.g. `clear`, `add`, `delete`. Unbranded `() => void` functions are wrapped in `createComputed()` (treated as a `MemoCallback`), not installed as method producers.
 
-- **A `return`ed-but-unregistered `EffectDescriptor` silently never cleans up**: `activateResult()` discards the return value of every descriptor it activates. `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` are unaffected because they call `createEffect()`/`createScope()` *inside* their own descriptor, which self-registers cleanup onto the active owner regardless of the outer return value. A hand-authored raw descriptor — `() => { setup(); return cleanup }`, with no internal `createEffect`/`createScope` call — has no such registration: if it's `return`ed bare (`return [() => {...}]`) rather than passed to `run()`, its cleanup is silently dropped and never runs on disconnect. Register hand-authored descriptors with `run(descriptor)` (`FactoryContext.run`), which wraps them in `createScope()` before pushing — this was a real, previously-shipping bug in several example components before `run()` existed.
+- **A `return`ed-but-unregistered `EffectDescriptor` silently never cleans up**: `activateResult()` discards the return value of every descriptor it activates. `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` are unaffected because they call `createEffect()`/`createScope()` *inside* their own descriptor, which self-registers cleanup onto the active owner regardless of the outer return value. A hand-authored raw descriptor — `() => { setup(); return cleanup }`, with no internal `createEffect`/`createScope` call — has no such registration: if it's `return`ed bare (`return [() => {...}]`), its cleanup is silently dropped and never runs on disconnect. Wrap it in `watch(() => true, descriptor)` instead — `createComputed(() => true)` has no signal deps so it never reruns, and `watch()`'s internal `createEffect()` call registers the descriptor's returned cleanup on the active owner correctly. This was a real, previously-shipping bug in several example components, fixed by adopting this pattern.
 
 - **`all()` MutationObserver is lazy**: The observer only activates when the `Memo` is read inside a reactive effect. The observer watches attribute changes implied by the CSS selector (classes, IDs, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the memo's `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
 

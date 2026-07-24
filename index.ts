@@ -145,7 +145,6 @@ export {
 	type PassHelper,
 	reconcile,
 	type Reactive,
-	type RunHelper,
 	type WatchHelper,
 } from './src/helpers/reactive'
 export { asBoolean } from './src/parsers/boolean'

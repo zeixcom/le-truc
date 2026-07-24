@@ -461,40 +461,4 @@ describe('implicit effect collection — regression (ADR 0018)', () => {
 		await new Promise(r => setTimeout(r, 10))
 		expect(thrown).toBeInstanceOf(NoActiveCollectorError)
 	})
-
-	test('run() registers a hand-authored descriptor without an explicit return — activates on connect, cleans up on disconnect', () => {
-		const events: string[] = []
-		const Ctor = defineComponent(uniqueName(), ({ run }) => {
-			// Bare call, no return — the case LT-010 exists to unblock: a raw
-			// descriptor wrapping a non-le-truc primitive (e.g. IntersectionObserver).
-			run(() => {
-				events.push('setup')
-				return () => {
-					events.push('cleanup')
-				}
-			})
-		})!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-		expect(events).toEqual(['setup'])
-		instance.disconnectedCallback()
-		expect(events).toEqual(['setup', 'cleanup'])
-	})
-
-	test('run() called with no active collector throws NoActiveCollectorError', async () => {
-		let thrown: unknown
-		const Ctor = defineComponent(uniqueName(), ({ run }) => {
-			Promise.resolve().then(() => {
-				try {
-					run(() => {})
-				} catch (e) {
-					thrown = e
-				}
-			})
-		})!
-		const instance = new Ctor() as any
-		instance.connectedCallback()
-		await new Promise(r => setTimeout(r, 0))
-		expect(thrown).toBeInstanceOf(NoActiveCollectorError)
-	})
 })

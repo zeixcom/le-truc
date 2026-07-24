@@ -2053,10 +2053,7 @@ class InvalidPassPropertyError extends TypeError {
 class NoActiveCollectorError extends Error {
   constructor(host, helper) {
     const where = host ? ` in component ${elementName(host)}` : "";
-    let message = `${helper}() called outside synchronous factory or each() callback execution${where}.`;
-    if (false)
-      ;
-    super(message);
+    super(`${helper}() called outside synchronous factory, each() callback, or reconcile() bindItem execution${where}.`);
     this.name = "NoActiveCollectorError";
   }
 }
@@ -2373,10 +2370,6 @@ var makeWatch = (host) => {
   }
   return watch;
 };
-var makeRun = (host) => (rawDescriptor) => {
-  const descriptor = () => createScope(rawDescriptor);
-  pushDescriptor(host, "run", descriptor);
-};
 var makePass = (host) => {
   const swapSlots = (target, props) => createScope(() => {
     if (!isCustomElement(target))
@@ -2460,77 +2453,92 @@ function reconcile(container, template, source, bindItem) {
         node = node.nextElementSibling;
       return node;
     };
+    const classify = (keySet) => {
+      const current = new Map;
+      const adopted = new Set;
+      const pinned = new Set;
+      const leavers = [];
+      for (const child of Array.from(container.children)) {
+        if (child.hasAttribute("data-unreconciled")) {
+          const key2 = keyOf.get(child);
+          if (key2 !== undefined && keySet.has(key2)) {
+            current.set(key2, child);
+            pinned.add(key2);
+          }
+          continue;
+        }
+        const key = keyOf.get(child);
+        if (key !== undefined) {
+          if (keySet.has(key))
+            current.set(key, child);
+          else
+            leavers.push(child);
+          continue;
+        }
+        const harvested = child.getAttribute("data-key");
+        if (harvested !== null && keySet.has(harvested) && !current.has(harvested)) {
+          keyOf.set(child, harvested);
+          current.set(harvested, child);
+          adopted.add(harvested);
+          continue;
+        }
+        if (false)
+          ;
+        child.remove();
+      }
+      return { current, adopted, pinned, leavers };
+    };
+    const leave = (keySet, leavers) => {
+      for (const [key, dispose] of disposers) {
+        if (keySet.has(key))
+          continue;
+        dispose();
+        disposers.delete(key);
+      }
+      for (const el of leavers)
+        el.remove();
+    };
+    const enter = (keys, current, adopted, pinned) => {
+      let prev = null;
+      for (const key of keys) {
+        let el = current.get(key);
+        let mount = adopted.has(key);
+        if (!el) {
+          el = itemRoot.cloneNode(true);
+          el.setAttribute("data-key", key);
+          keyOf.set(el, key);
+          mount = true;
+        }
+        if (mount) {
+          disposers.get(key)?.();
+          const item = source.byKey(key);
+          if (item) {
+            const element = el;
+            disposers.set(key, createScope(() => {
+              const collected = [];
+              const cleanup = withCollector(collected, () => bindItem(element, item, key));
+              activateResult(collected);
+              return cleanup;
+            }, {
+              root: true
+            }));
+          }
+        }
+        if (pinned.has(key))
+          continue;
+        if (nextKeyed(prev) !== el)
+          container.insertBefore(el, prev ? prev.nextElementSibling : container.firstElementChild);
+        prev = el;
+      }
+    };
     createScope(() => {
       createEffect(() => {
         const keys = Array.from(source.keys());
         untrack(() => {
           const keySet = new Set(keys);
-          const current = new Map;
-          const adopted = new Set;
-          const pinned = new Set;
-          const leavers = [];
-          for (const child of Array.from(container.children)) {
-            if (child.hasAttribute("data-unreconciled")) {
-              const key2 = keyOf.get(child);
-              if (key2 !== undefined && keySet.has(key2)) {
-                current.set(key2, child);
-                pinned.add(key2);
-              }
-              continue;
-            }
-            const key = keyOf.get(child);
-            if (key !== undefined) {
-              if (keySet.has(key))
-                current.set(key, child);
-              else
-                leavers.push(child);
-              continue;
-            }
-            const harvested = child.getAttribute("data-key");
-            if (harvested !== null && keySet.has(harvested) && !current.has(harvested)) {
-              keyOf.set(child, harvested);
-              current.set(harvested, child);
-              adopted.add(harvested);
-              continue;
-            }
-            if (false)
-              ;
-            child.remove();
-          }
-          for (const [key, dispose] of disposers) {
-            if (keySet.has(key))
-              continue;
-            dispose();
-            disposers.delete(key);
-          }
-          for (const el of leavers)
-            el.remove();
-          let prev = null;
-          for (const key of keys) {
-            let el = current.get(key);
-            let mount = adopted.has(key);
-            if (!el) {
-              el = itemRoot.cloneNode(true);
-              el.setAttribute("data-key", key);
-              keyOf.set(el, key);
-              mount = true;
-            }
-            if (mount) {
-              disposers.get(key)?.();
-              const item = source.byKey(key);
-              if (item) {
-                const element = el;
-                disposers.set(key, createScope(() => bindItem(element, item, key), {
-                  root: true
-                }));
-              }
-            }
-            if (pinned.has(key))
-              continue;
-            if (nextKeyed(prev) !== el)
-              container.insertBefore(el, prev ? prev.nextElementSibling : container.firstElementChild);
-            prev = el;
-          }
+          const { current, adopted, pinned, leavers } = classify(keySet);
+          leave(keySet, leavers);
+          enter(keys, current, adopted, pinned);
         });
       });
       return () => {
@@ -2883,8 +2891,7 @@ function defineComponent(name, factory, options) {
           on: makeOn(host),
           pass: makePass(host),
           provideContexts: makeProvideContexts(host),
-          requestContext: makeRequestContext(host),
-          run: makeRun(host)
+          requestContext: makeRequestContext(host)
         };
         const collector = [];
         const result = withCollector(collector, () => factory(context));

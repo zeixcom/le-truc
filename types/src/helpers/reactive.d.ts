@@ -1,5 +1,5 @@
 import { type Collection, type List, type MaybeCleanup, type MaybePromise, type Memo, type MutableSignal, type Signal, type SingleMatchHandlers, type SlotDescriptor } from '@zeix/cause-effect';
-import type { ComponentProps, EffectDescriptor, FactoryResult, Falsy } from '../types';
+import type { ComponentProp, ComponentProps, EffectDescriptor, FactoryResult, Falsy } from '../types';
 /**
  * A reactive value that drives a DOM update or a slot injection.
  *
@@ -16,12 +16,20 @@ type Reactive<T, P extends ComponentProps> = keyof P | Signal<T & {}> | (() => T
  * A map of child component property names to the reactive values to inject into them.
  * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
  *
+ * `Q`'s own bound is only `HTMLElement` — not `ComponentProps` — because a target's
+ * element type (e.g. `FormAssociatedElement & FormTextboxProps`) may mix in
+ * interfaces with nullable native members (`form: HTMLFormElement | null`), which
+ * would make the whole intersection fail a `Record<string, {}>`-style constraint.
+ * Instead, `keyof Q & ComponentProp` does the filtering: it keeps only the
+ * author-exposed reactive props (excluding native `HTMLElement` members and
+ * reserved words) regardless of what else `Q` mixes in.
+ *
  * Prefer the read-only thunk (`() => host.prop`) and the mediated
  * `{ get, set }` descriptor forms. The property-key and bare-writable-signal
  * forms are deprecated; they warn in DEV_MODE and will be removed in the next major.
  */
-type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
-    [K in keyof Q & string]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>;
+type PassedProps<P extends ComponentProps, Q extends HTMLElement> = {
+    [K in keyof Q & ComponentProp]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>;
 };
 /**
  * The `watch` helper type in `FactoryContext`.
@@ -64,8 +72,8 @@ type WatchHelper<P extends ComponentProps> = {
  * Both deprecated forms are removed in the next major.
  */
 type PassHelper<P extends ComponentProps> = {
-    <Q extends ComponentProps>(target: (HTMLElement & Q) | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
-    <Q extends ComponentProps>(target: Memo<(HTMLElement & Q)[]> | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
+    <Q extends HTMLElement>(target: Q | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
+    <Q extends HTMLElement>(target: Memo<Q[]> | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
 };
 /**
  * Recursively activate a `FactoryResult` array of effect descriptors.
@@ -132,40 +140,6 @@ declare const keyedScopes: <E extends object>(memo: Memo<E[]>, mount: (element: 
  */
 declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => WatchHelper<P>;
 /**
- * The `run` helper type in `FactoryContext`.
- *
- * Registers a hand-authored `EffectDescriptor` — a thunk not produced by
- * `watch()`, `on()`, `pass()`, `each()`, or `provideContexts()` — into the
- * ambient collector, the same way those helpers already do internally. For
- * wrapping native APIs (`IntersectionObserver`, etc.) or composed cause-effect
- * primitives that need deferred activation and automatic disconnect cleanup.
- */
-type RunHelper = (descriptor: EffectDescriptor) => void;
-/**
- * Create a `run` helper bound to a specific component host.
- *
- * `run` pushes a hand-authored `EffectDescriptor` into the ambient collector.
- * It is the registration path for effects that don't fit `watch()`/`on()`/
- * `pass()`/`each()`/`provideContexts()` — e.g. a raw `IntersectionObserver`
- * wrapped in a thunk that returns its own cleanup.
- *
- * Wraps `rawDescriptor` in `createScope()` rather than pushing it directly:
- * the activation loop that calls every collected descriptor (`activateResult`)
- * discards each call's return value — `watch()`/`on()`/`pass()` are unaffected
- * because they call `createEffect()`/`createScope()` internally, which
- * self-register onto the active owner regardless of what the outer caller
- * does with the return value, but a raw thunk that just returns a bare
- * cleanup has no such internal registration. `createScope()` picks up
- * `rawDescriptor`'s returned cleanup and registers it on whatever owner is
- * active when the wrapped descriptor runs (the component's root scope during
- * normal activation), so it actually runs on disconnect.
- *
- * @since 2.3
- * @param {HTMLElement & P} host - The component host element
- * @returns {RunHelper} Bound `run` function for the given host
- */
-declare const makeRun: <P extends ComponentProps>(host: HTMLElement & P) => RunHelper;
-/**
  * Create a `pass` helper bound to a specific component host.
  *
  * `pass` passes reactive values to a descendant Le Truc component by swapping
@@ -194,22 +168,14 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => Pas
 /**
  * Create per-element reactive effects from a `Memo<Element[]>`.
  *
- * When elements enter the collection, their effects are created in a per-element
- * scope; when they leave, their effects are disposed with that scope.
+ * Elements entering the collection get their own scope; when they leave,
+ * that scope — and everything registered in it — is disposed.
  *
- * As of v2.3, the callback can call `watch()`/`on()`/`pass()` directly without
- * returning them — each call registers into a collector local to that element's
- * `mount`, established for the duration of the callback (see ADR 0018). Nesting
- * is unbounded: a callback that calls `each()` again (e.g. a grid of rows
- * containing columns) gets its own nested collector the same way.
- *
- * Descriptors produced by `watch()`/`on()`/`pass()` inside the callback are
- * picked up via the implicit collector regardless of whether the callback also
- * `return`s them — an old-style `return [watch(...)]` still works, activated
- * exactly once, not twice (see `forEachUnseen()`). A manually-constructed
- * `EffectDescriptor` that bypasses every helper is only reachable via `return`
- * and is still activated, since the public `FactoryResult` type has always
- * allowed authoring one directly.
+ * The callback can call `watch()`, `on()`, and `pass()` directly instead of
+ * returning them; each call registers against that element's scope. A
+ * callback that calls `each()` again (e.g. rows containing columns) gets its
+ * own nested scope the same way. Returning descriptors still works and isn't
+ * double-activated if you also call them directly.
  *
  * @since 2.0
  */
@@ -217,46 +183,37 @@ declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E)
 /**
  * Sync a keyed reactive data source to a container's children.
  *
- * For every key in the source (in source order), the container holds one
- * element carrying `data-key`: entering keys clone the `<template>`'s single
- * root element, leaving keys dispose their scope and remove their element,
- * and surviving elements are moved with `insertBefore()` — always reused,
- * never recreated. The sync is strictly one-way, data → DOM: `reconcile()`
- * never reads item data back from the DOM; event handlers that mutate the
- * source are the legitimate path to change structural state.
+ * For every key in `source` (in source order), the container holds one
+ * element carrying `data-key`: entering keys clone `template`'s root
+ * element, leaving keys are disposed and removed, surviving elements are
+ * reused and repositioned. The sync is one-way, data → DOM — `reconcile()`
+ * never reads item data back out; mutate `source` (e.g. from an event
+ * handler) to change structure.
  *
- * On the first run, existing children carrying `data-key` are **adopted** if
- * their key is present in the source (`bindItem` is mounted for them too —
- * it is responsible for its own idempotency against server-rendered content);
- * keyed children whose key is absent are removed (DEV_MODE warning), and all
- * other unkeyed children are removed (self-cleaning container).
+ * On first run, existing children whose `data-key` matches a source key are
+ * adopted (`bindItem` runs for them too, so make it idempotent against
+ * server-rendered content); everything else is removed. Children carrying
+ * `data-unreconciled` are left alone entirely — never removed, repositioned,
+ * or bound, even if `reconcile()` itself originally placed them.
  *
- * Children carrying `data-unreconciled` are exempt from reconciliation:
- * never removed, never repositioned, no `bindItem`. An element that
- * `reconcile()` itself placed and that later gains the attribute (e.g. a
- * mid-drag item) still claims its key, so no duplicate clone is created for
- * it while it is exempt. Keyed elements are positioned relative to the
- * **keyed subset** (after the previous keyed sibling, or at the head if
- * first), so unmanaged elements interspersed in the container do not drift
- * keyed positions.
+ * `bindItem` is called once per entering element, with the same collector
+ * support as `each()`'s callback: `watch()`, `on()`, `pass()`, and
+ * `provideContexts()` can be called directly inside it, scoped to that item
+ * rather than the driving structural effect. A returned
+ * `MaybeCleanup` runs when the key leaves the source or the component
+ * disconnects.
  *
- * `bindItem` is called once per entering element inside a root-keyed scope;
- * a returned cleanup registers on that scope, which is disposed when the key
- * leaves the source or the component disconnects. The driving effect tracks
- * *structural* changes only (the source's keys); per-item value changes flow
- * through the `byKey` signal passed to `bindItem` and never trigger
- * structural work.
- *
- * Throws `InvalidTemplateError` at activation if the template content does
- * not contain exactly one root element. See ADR 0017.
+ * See ADR 0017 for the full rationale (SSR adoption, unreconciled pinning,
+ * keyed-relative positioning).
  *
  * @since 2.3
  * @param {Element} container - Container element whose children are reconciled
  * @param {HTMLTemplateElement} template - Template whose single root element is cloned for entering keys
  * @param {List<T> | Collection<T>} source - Keyed reactive data source
- * @param {(element: HTMLElement, item: Signal<T>, key: string) => MaybeCleanup} bindItem - Mounted once per entering element in its own scope
+ * @param {(element: HTMLElement, item: Signal<T>, key: string) => MaybeCleanup} bindItem - Mounted once per entering element inside an ambient collector; collected descriptors activate against the per-item scope, and any returned cleanup is that scope's teardown
  * @returns {EffectDescriptor} Effect descriptor to include in the component's factory result
+ * @throws {InvalidTemplateError} if the template content does not contain exactly one root element
  */
 declare function reconcile<T extends {}, S extends MutableSignal<T>>(container: Element, template: HTMLTemplateElement, source: List<T, S>, bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup): EffectDescriptor;
 declare function reconcile<T extends {}, S extends Signal<T>>(container: Element, template: HTMLTemplateElement, source: Collection<T, S>, bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup): EffectDescriptor;
-export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, forEachUnseen, keyedScopes, makePass, makeRun, makeWatch, type PassedProps, type PassHelper, type Reactive, type RunHelper, reconcile, type WatchHelper, };
+export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, forEachUnseen, keyedScopes, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, reconcile, type WatchHelper, };
