@@ -2981,19 +2981,21 @@ var resolveAnchor = (host) => host.querySelector(FOCUSABLE_FORM_CONTROL_SELECTOR
 var managedSetCustomValidity = (internals, host, message) => {
   internals.setValidity({ customError: !!message }, message || undefined, resolveAnchor(host));
 };
-var formResetCallback = function() {
-  const initializer = retainedInitializers.get(this)?.["value"];
+var makeResetCallback = (prop) => function() {
+  const initializer = retainedInitializers.get(this)?.[prop];
   if (initializer === undefined)
     return;
   if (isParser(initializer)) {
     const parse = initializer;
-    const result = parse(this.getAttribute("value"));
+    const result = parse(this.getAttribute(prop));
     if (result != null)
-      this.value = result;
+      this[prop] = result;
   } else if (!isSignal(initializer) && !isFunction(initializer)) {
-    this.value = initializer;
+    this[prop] = initializer;
   }
 };
+var formResetCallback = makeResetCallback("value");
+var checkboxResetCallback = makeResetCallback("checked");
 var formStateRestoreCallback = function(state, _mode) {
   if (typeof state !== "string")
     return;
@@ -3010,6 +3012,9 @@ var formStateRestoreCallback = function(state, _mode) {
   } else {
     this.value = state;
   }
+};
+var checkboxFormStateRestoreCallback = function(state, _mode) {
+  this.checked = typeof state === "string";
 };
 var formDisabledCallback = function(disabled) {
   const signals = getSignals(this);
@@ -3039,9 +3044,33 @@ var installFormAssociatedMembers = (proto) => {
     }
   });
 };
+var installFormAssociatedCheckboxMembers = (proto) => {
+  Object.defineProperties(proto, HOST_CONTRACT_DESCRIPTORS);
+  Object.defineProperties(proto, {
+    formResetCallback: {
+      value: checkboxResetCallback,
+      writable: true,
+      configurable: true
+    },
+    formStateRestoreCallback: {
+      value: checkboxFormStateRestoreCallback,
+      writable: true,
+      configurable: true
+    },
+    formDisabledCallback: {
+      value: formDisabledCallback,
+      writable: true,
+      configurable: true
+    }
+  });
+};
 var managedValueSyncDescriptor = (instance, internals) => () => createEffect(() => {
   const v = instance.value;
   internals.setFormValue(typeof v === "string" ? v : String(v ?? ""));
+});
+var checkedValueSyncDescriptor = (instance, internals, submitValue) => () => createEffect(() => {
+  const checked = instance.checked;
+  internals.setFormValue(checked ? submitValue : null);
 });
 var createManagedDisabledProperty = (instance) => {
   const initial = instance.hasAttribute("disabled");
@@ -3077,8 +3106,25 @@ var formAssociated = () => ({
     return [managedValueSyncDescriptor(instance, internals)];
   }
 });
+var formAssociatedCheckbox = () => ({
+  name: "formAssociatedCheckbox",
+  __kind: "form-associated-checkbox",
+  staticProps: { formAssociated: true },
+  reservedMembers: MANAGED_FORM_MEMBERS,
+  installOnPrototype: installFormAssociatedCheckboxMembers,
+  onConnect: (instance, internals) => {
+    if (!internals)
+      return;
+    const hasCheckedSignal = "checked" in instance && getSignals(instance).checked;
+    if (false)
+      ;
+    const submitValue = instance.getAttribute("value") ?? "on";
+    createManagedDisabledProperty(instance);
+    return [checkedValueSyncDescriptor(instance, internals, submitValue)];
+  }
+});
 // src/parsers/boolean.ts
-var asBoolean = () => asParser((value) => value != null && value.toLowerCase() !== "false");
+var asBoolean = (fallback = false) => asParser((value) => value != null ? value.toLowerCase() !== "false" : fallback);
 // src/parsers/json.ts
 var asJSON = (fallback) => asParser((value) => {
   if ((value ?? fallback) == null)
@@ -3158,6 +3204,7 @@ export {
   isComputed,
   isCollection,
   isAsyncFunction,
+  formAssociatedCheckbox,
   formAssociated,
   escapeHTML,
   each,

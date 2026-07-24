@@ -121,6 +121,18 @@ declare const managedSetCustomValidity: (internals: ElementInternals, host: HTML
  * @param proto - The prototype to install members on
  */
 declare const installFormAssociatedMembers: (proto: HTMLElement) => void;
+/**
+ * Install the native-parity host contract and managed form lifecycle
+ * callbacks for a checkbox-shaped component (`formAssociatedCheckbox()`):
+ * same host contract as {@link installFormAssociatedMembers}, but
+ * `formResetCallback`/`formStateRestoreCallback` target `checked` instead of
+ * `value`.
+ *
+ * @since 2.3
+ * @internal
+ * @param proto - The prototype to install members on
+ */
+declare const installFormAssociatedCheckboxMembers: (proto: HTMLElement) => void;
 /** Brand distinguishing the form-associated extension at the type level. */
 type FormAssociatedTag = {
     readonly __kind: 'form-associated';
@@ -141,4 +153,39 @@ type FormAssociatedExtension = ComponentExtension & FormAssociatedTag;
  * @since 2.3
  */
 declare const formAssociated: () => FormAssociatedExtension;
-export { EMPTY_NODELIST, EMPTY_VALIDITY_STATE, FOCUSABLE_FORM_CONTROL_SELECTOR, type FormAssociatedExtension, type FormAssociatedTag, formAssociated, HOST_CONTRACT_DESCRIPTORS, installFormAssociatedMembers, MANAGED_FORM_MEMBERS, managedSetCustomValidity, resolveAnchor, };
+/** Brand distinguishing the checkbox-shaped form-associated extension. */
+type FormAssociatedCheckboxTag = {
+    readonly __kind: 'form-associated-checkbox';
+};
+/** The `ComponentExtension` returned by {@link formAssociatedCheckbox}. */
+type FormAssociatedCheckboxExtension = ComponentExtension & FormAssociatedCheckboxTag;
+/**
+ * Extension enabling the managed checkbox-shaped form-control convention:
+ * native-parity host contract (`form`, `name`, `labels`, `validity`, ...),
+ * managed `disabled`, value sync to `internals.setFormValue` (submitting
+ * nothing when unchecked, matching native `<input type="checkbox">`), reset,
+ * and state restore, keyed on a reactive `checked: boolean` prop instead of
+ * `formAssociated()`'s `value`. Pass to `defineComponent`'s third parameter:
+ * `defineComponent(name, factory, [formAssociatedCheckbox()])`.
+ *
+ * Covers checkbox-*shaped* controls generically (a switch/toggle is not a
+ * distinct native form control — it's always a styled checkbox), not radio
+ * groups or multi-select lists: those aggregate many children's boolean
+ * state into one string `value` and already fit `formAssociated()` (see
+ * `form-radiogroup`, `form-listbox`).
+ *
+ * Only referenced by consumers who call this function — `component.ts` never
+ * imports this module at the value level, so a consumer who doesn't use
+ * `formAssociatedCheckbox()` never bundles this code.
+ *
+ * **Do not combine with `formAssociated()` on the same component** — both
+ * declare the same `staticProps.formAssociated` key, so DEV_MODE throws
+ * `ExtensionCollisionError`; in production, whichever extension is later in
+ * the array silently wins `installOnPrototype` while the earlier one wins
+ * `staticProps`, an inconsistent, undocumented-by-design split (see ADR
+ * 0019's Consequences).
+ *
+ * @since 2.3
+ */
+declare const formAssociatedCheckbox: () => FormAssociatedCheckboxExtension;
+export { EMPTY_NODELIST, EMPTY_VALIDITY_STATE, FOCUSABLE_FORM_CONTROL_SELECTOR, type FormAssociatedCheckboxExtension, type FormAssociatedCheckboxTag, type FormAssociatedExtension, type FormAssociatedTag, formAssociated, formAssociatedCheckbox, HOST_CONTRACT_DESCRIPTORS, installFormAssociatedCheckboxMembers, installFormAssociatedMembers, MANAGED_FORM_MEMBERS, managedSetCustomValidity, resolveAnchor, };

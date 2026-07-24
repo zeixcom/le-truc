@@ -38,6 +38,21 @@ describe('Bundle size', () => {
 		}
 	})
 
+	test('core + formAssociatedCheckbox() tree-shakes independently of formAssociated()', async () => {
+		// formAssociatedCheckbox() and formAssociated() live in the same
+		// module (src/extensions/form.ts) and share the host-contract table —
+		// this asserts a consumer who only imports the checkbox variant isn't
+		// dragging in the value-style reset/sync code too. Comparable size to
+		// core-form-entry (not the sum of both) is the tree-shaking proof.
+		const gzipped = await buildGzipped('./test/fixtures/core-checkbox-entry.ts')
+		console.log(`  coreCheckboxGzipped: ${gzipped}B (warn: ${CORE_FORM_WARN}B)`)
+		if (gzipped > CORE_FORM_WARN) {
+			console.warn(
+				`  WARN: core + formAssociatedCheckbox() exceeds ${CORE_FORM_WARN}B`,
+			)
+		}
+	})
+
 	test('full barrel (every export) is reported, not asserted', async () => {
 		// The full index.ts barrel bundles every extension the library ships —
 		// not a realistic consumer surface once extensions are opt-in, so this

@@ -59,6 +59,17 @@ describe('asBoolean', () => {
 		expect(parser(' false')).toBe(true) // has leading space
 		expect(parser('not-false')).toBe(true)
 	})
+
+	test('uses the fallback when the attribute is absent', () => {
+		expect(asBoolean(true)(null)).toBe(true)
+		expect(asBoolean(true)(undefined)).toBe(true)
+		expect(asBoolean(false)(null)).toBe(false)
+	})
+
+	test('an explicit attribute value still overrides the fallback', () => {
+		expect(asBoolean(true)('false')).toBe(false)
+		expect(asBoolean(false)('true')).toBe(true)
+	})
 })
 
 /* === parsers/string.ts === */

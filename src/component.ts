@@ -15,7 +15,10 @@ import {
 } from '@zeix/cause-effect'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
 import { type ComponentExtension, mergeExtensions } from './extension'
-import type { FormAssociatedExtension } from './extensions/form'
+import type {
+	FormAssociatedCheckboxExtension,
+	FormAssociatedExtension,
+} from './extensions/form'
 import {
 	makeProvideContexts,
 	makeRequestContext,
@@ -165,13 +168,21 @@ type FormFactoryContext<P extends ComponentProps> = Omit<
  * @since 2.0
  * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
  * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
- * @param {ComponentExtension[]} [extensions] - Dependency-injected features (e.g. `[formAssociated()]`, `[observedAttributes([...])]`). Bundled extensions are tree-shaken away unless imported and used. `formAssociated()`, if present, must be the first element — that's what widens the factory's context type to `FormFactoryContext`.
+ * @param {ComponentExtension[]} [extensions] - Dependency-injected features (e.g. `[formAssociated()]`, `[formAssociatedCheckbox()]`, `[observedAttributes([...])]`). Bundled extensions are tree-shaken away unless imported and used. `formAssociated()`/`formAssociatedCheckbox()`, if present, must be the first element — that's what widens the factory's context type to `FormFactoryContext`.
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
 function defineComponent<P extends ComponentProps & { value: string | number }>(
 	name: string,
 	factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void,
 	extensions: readonly [FormAssociatedExtension, ...ComponentExtension[]],
+): CustomElementConstructor | undefined
+function defineComponent<P extends ComponentProps & { checked: boolean }>(
+	name: string,
+	factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void,
+	extensions: readonly [
+		FormAssociatedCheckboxExtension,
+		...ComponentExtension[],
+	],
 ): CustomElementConstructor | undefined
 function defineComponent<P extends ComponentProps>(
 	name: string,

@@ -46,7 +46,7 @@ form-checkbox {
 		}
 	}
 
-	&.checkbox[checked] label {
+	&.checkbox:has(input:checked) label {
 		&::before {
 			color: var(--color-text-inverted);
 			background-color: var(--color-selection-selected);
@@ -94,7 +94,7 @@ form-checkbox {
 		}
 	}
 
-	&.todo[checked] label {
+	&.todo:has(input:checked) label {
 		opacity: var(--opacity-translucent);
 
 		& span {
@@ -162,7 +162,7 @@ form-checkbox {
 		}
 	}
 
-	&.toggle[checked] label {
+	&.toggle:has(input:checked) label {
 		&::before {
 			background-color: var(--color-selection-selected);
 			border-color: var(--color-selection-active);

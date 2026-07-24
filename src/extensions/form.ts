@@ -146,14 +146,6 @@ const MANAGED_FORM_MEMBERS: ReadonlySet<string> = new Set([
 const FOCUSABLE_FORM_CONTROL_SELECTOR =
 	'input, select, textarea, button, [tabindex]'
 
-/* === Types === */
-
-/** The `this` type for form lifecycle callbacks — has the managed `value`. */
-type FormAssociatedHost = HTMLElement & {
-	value: unknown
-	disabled: boolean
-}
-
 /* === Internal Helpers === */
 
 /**
@@ -194,25 +186,34 @@ const managedSetCustomValidity = (
 /* === Form Lifecycle Callbacks === */
 
 /**
- * Managed reset: restore `value` to its default by re-running the retained
- * initializer — re-parse the current `value` attribute for a Parser (native
- * defaultValue semantics), or restore a static value. No-op if signals are not
- * yet initialized or no value initializer was retained (e.g. value was
- * pre-set on the instance before upgrade).
+ * Build a managed `formResetCallback` for the given reactive prop: restore it
+ * to its default by re-running the retained initializer — re-parse the prop's
+ * same-named attribute for a Parser (native `defaultValue`/`defaultChecked`
+ * semantics), or restore a static value. No-op if signals are not yet
+ * initialized or no initializer was retained (e.g. the prop was pre-set on
+ * the instance before upgrade).
+ *
+ * Shared by `formAssociated()` (`prop: 'value'`) and `formAssociatedCheckbox()`
+ * (`prop: 'checked'`) — the reset mechanics are identical, only the target
+ * prop differs.
  */
-const formResetCallback = function (this: FormAssociatedHost) {
-	const initializer = retainedInitializers.get(this as HTMLElement)?.['value']
-	if (initializer === undefined) return
-	if (isParser(initializer)) {
-		const parse = initializer as (
-			v: string | null | undefined,
-		) => NonNullable<unknown>
-		const result = parse(this.getAttribute('value'))
-		if (result != null) this.value = result
-	} else if (!isSignal(initializer) && !isFunction(initializer)) {
-		this.value = initializer
+const makeResetCallback = (prop: string) =>
+	function (this: HTMLElement) {
+		const initializer = retainedInitializers.get(this)?.[prop]
+		if (initializer === undefined) return
+		if (isParser(initializer)) {
+			const parse = initializer as (
+				v: string | null | undefined,
+			) => NonNullable<unknown>
+			const result = parse(this.getAttribute(prop))
+			if (result != null) (this as any)[prop] = result
+		} else if (!isSignal(initializer) && !isFunction(initializer)) {
+			;(this as any)[prop] = initializer
+		}
 	}
-}
+
+const formResetCallback = makeResetCallback('value')
+const checkboxResetCallback = makeResetCallback('checked')
 
 /**
  * Managed state restore: the browser always restores what `setFormValue`
@@ -223,12 +224,12 @@ const formResetCallback = function (this: FormAssociatedHost) {
  * form-spinbutton), or assign as-is for string-valued components.
  */
 const formStateRestoreCallback = function (
-	this: FormAssociatedHost,
+	this: HTMLElement & { value: unknown },
 	state: unknown,
 	_mode: string,
 ) {
 	if (typeof state !== 'string') return
-	const initializer = retainedInitializers.get(this as HTMLElement)?.['value']
+	const initializer = retainedInitializers.get(this)?.['value']
 	if (isParser(initializer)) {
 		const parse = initializer as (
 			v: string | null | undefined,
@@ -244,15 +245,30 @@ const formStateRestoreCallback = function (
 }
 
 /**
+ * Managed state restore for checkbox-shaped controls: `setFormValue` was
+ * called with either a string (checked) or `null` (unchecked, submits
+ * nothing) — restoring is just the inverse: a string state means it was
+ * checked.
+ */
+const checkboxFormStateRestoreCallback = function (
+	this: HTMLElement & { checked: boolean },
+	state: unknown,
+	_mode: string,
+) {
+	this.checked = typeof state === 'string'
+}
+
+/**
  * Managed: write the effective disabled state into the `disabled` signal.
  * Covers both own `disabled` attribute and ancestor `<fieldset disabled>`
- * (which never touches the element's attribute).
+ * (which never touches the element's attribute). Shape-agnostic — shared by
+ * `formAssociated()` and `formAssociatedCheckbox()`.
  */
 const formDisabledCallback = function (
-	this: FormAssociatedHost,
+	this: HTMLElement & { disabled: boolean },
 	disabled: boolean,
 ) {
-	const signals = getSignals(this as HTMLElement)
+	const signals = getSignals(this)
 	const slot = signals['disabled']
 	if (isSlot(slot)) slot.set(disabled)
 	else this.disabled = disabled
@@ -297,6 +313,38 @@ const installFormAssociatedMembers = (proto: HTMLElement): void => {
 }
 
 /**
+ * Install the native-parity host contract and managed form lifecycle
+ * callbacks for a checkbox-shaped component (`formAssociatedCheckbox()`):
+ * same host contract as {@link installFormAssociatedMembers}, but
+ * `formResetCallback`/`formStateRestoreCallback` target `checked` instead of
+ * `value`.
+ *
+ * @since 2.3
+ * @internal
+ * @param proto - The prototype to install members on
+ */
+const installFormAssociatedCheckboxMembers = (proto: HTMLElement): void => {
+	Object.defineProperties(proto, HOST_CONTRACT_DESCRIPTORS)
+	Object.defineProperties(proto, {
+		formResetCallback: {
+			value: checkboxResetCallback,
+			writable: true,
+			configurable: true,
+		},
+		formStateRestoreCallback: {
+			value: checkboxFormStateRestoreCallback,
+			writable: true,
+			configurable: true,
+		},
+		formDisabledCallback: {
+			value: formDisabledCallback,
+			writable: true,
+			configurable: true,
+		},
+	})
+}
+
+/**
  * Build the managed form-control value-sync effect descriptor. Returns an
  * `EffectDescriptor` (a thunk) that activates after dependency resolution in
  * the same pipeline as author effects. Watches `value` and calls
@@ -311,6 +359,27 @@ const managedValueSyncDescriptor =
 		createEffect(() => {
 			const v = (instance as any).value
 			internals.setFormValue(typeof v === 'string' ? v : String(v ?? ''))
+		})
+
+/**
+ * Build the managed value-sync effect descriptor for checkbox-shaped
+ * components. Watches `checked` and calls `internals.setFormValue(checked ?
+ * submitValue : null)` — native checkboxes submit nothing when unchecked,
+ * unlike `formAssociated()`'s always-on `setFormValue`. `submitValue` is the
+ * host's own `value` attribute (default `'on'`, matching native
+ * `<input type="checkbox">`), read once at connect — not reactive, since
+ * native checkbox `.value` is a static identifier, not the commit signal.
+ */
+const checkedValueSyncDescriptor =
+	(
+		instance: HTMLElement,
+		internals: ElementInternals,
+		submitValue: string,
+	): (() => MaybeCleanup) =>
+	() =>
+		createEffect(() => {
+			const checked = (instance as any).checked
+			internals.setFormValue(checked ? submitValue : null)
 		})
 
 /**
@@ -378,14 +447,75 @@ const formAssociated = (): FormAssociatedExtension => ({
 	},
 })
 
+/** Brand distinguishing the checkbox-shaped form-associated extension. */
+type FormAssociatedCheckboxTag = {
+	readonly __kind: 'form-associated-checkbox'
+}
+
+/** The `ComponentExtension` returned by {@link formAssociatedCheckbox}. */
+type FormAssociatedCheckboxExtension = ComponentExtension &
+	FormAssociatedCheckboxTag
+
+/**
+ * Extension enabling the managed checkbox-shaped form-control convention:
+ * native-parity host contract (`form`, `name`, `labels`, `validity`, ...),
+ * managed `disabled`, value sync to `internals.setFormValue` (submitting
+ * nothing when unchecked, matching native `<input type="checkbox">`), reset,
+ * and state restore, keyed on a reactive `checked: boolean` prop instead of
+ * `formAssociated()`'s `value`. Pass to `defineComponent`'s third parameter:
+ * `defineComponent(name, factory, [formAssociatedCheckbox()])`.
+ *
+ * Covers checkbox-*shaped* controls generically (a switch/toggle is not a
+ * distinct native form control — it's always a styled checkbox), not radio
+ * groups or multi-select lists: those aggregate many children's boolean
+ * state into one string `value` and already fit `formAssociated()` (see
+ * `form-radiogroup`, `form-listbox`).
+ *
+ * Only referenced by consumers who call this function — `component.ts` never
+ * imports this module at the value level, so a consumer who doesn't use
+ * `formAssociatedCheckbox()` never bundles this code.
+ *
+ * **Do not combine with `formAssociated()` on the same component** — both
+ * declare the same `staticProps.formAssociated` key, so DEV_MODE throws
+ * `ExtensionCollisionError`; in production, whichever extension is later in
+ * the array silently wins `installOnPrototype` while the earlier one wins
+ * `staticProps`, an inconsistent, undocumented-by-design split (see ADR
+ * 0019's Consequences).
+ *
+ * @since 2.3
+ */
+const formAssociatedCheckbox = (): FormAssociatedCheckboxExtension => ({
+	name: 'formAssociatedCheckbox',
+	__kind: 'form-associated-checkbox',
+	staticProps: { formAssociated: true },
+	reservedMembers: MANAGED_FORM_MEMBERS,
+	installOnPrototype: installFormAssociatedCheckboxMembers,
+	onConnect: (instance, internals): FactoryResult | void => {
+		if (!internals) return
+		const hasCheckedSignal =
+			'checked' in instance && getSignals(instance).checked
+		if (process.env.DEV_MODE === 'true' && !hasCheckedSignal)
+			console.warn(
+				`form-associated-checkbox component ${elementName(instance)} did not expose a reactive 'checked' property. The managed checkbox convention requires a reactive 'checked' for form value sync, reset, and state restore.`,
+			)
+		const submitValue = instance.getAttribute('value') ?? 'on'
+		createManagedDisabledProperty(instance)
+		return [checkedValueSyncDescriptor(instance, internals, submitValue)]
+	},
+})
+
 export {
 	EMPTY_NODELIST,
 	EMPTY_VALIDITY_STATE,
 	FOCUSABLE_FORM_CONTROL_SELECTOR,
+	type FormAssociatedCheckboxExtension,
+	type FormAssociatedCheckboxTag,
 	type FormAssociatedExtension,
 	type FormAssociatedTag,
 	formAssociated,
+	formAssociatedCheckbox,
 	HOST_CONTRACT_DESCRIPTORS,
+	installFormAssociatedCheckboxMembers,
 	installFormAssociatedMembers,
 	MANAGED_FORM_MEMBERS,
 	managedSetCustomValidity,

@@ -4,11 +4,11 @@ module-todo {
 	gap: var(--space-l);
 	container-type: inline-size;
 
-	&[filter="completed"] [data-container] li:not(:has([checked])) {
+	&[filter="completed"] [data-container] li:not(:has(input:checked)) {
 		display: none;
 	}
 
-	&[filter="active"] [data-container] li:has([checked]) {
+	&[filter="active"] [data-container] li:has(input:checked) {
 		display: none;
 	}
 
