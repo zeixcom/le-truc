@@ -2053,7 +2053,7 @@ class InvalidPassPropertyError extends TypeError {
 class NoActiveCollectorError extends Error {
   constructor(host, helper) {
     const where = host ? ` in component ${elementName(host)}` : "";
-    let message = `${helper}() called outside synchronous factory or each() callback execution${where}.`;
+    let message = `${helper}() called outside synchronous factory, each() callback, or reconcile() bindItem execution${where}.`;
     if (false)
       ;
     super(message);
@@ -2520,7 +2520,12 @@ function reconcile(container, template, source, bindItem) {
               const item = source.byKey(key);
               if (item) {
                 const element = el;
-                disposers.set(key, createScope(() => bindItem(element, item, key), {
+                disposers.set(key, createScope(() => {
+                  const collected = [];
+                  const cleanup = withCollector(collected, () => bindItem(element, item, key));
+                  activateResult(collected);
+                  return cleanup;
+                }, {
                   root: true
                 }));
               }

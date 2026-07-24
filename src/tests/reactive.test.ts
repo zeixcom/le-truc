@@ -85,7 +85,7 @@ describe('implicit effect collection (ADR 0018)', () => {
 		const host = stubHost() as unknown as HTMLElement & ComponentProps
 		const watch = makeWatch(host)
 		expect(() => watch(createState('x'), () => {})).toThrow(
-			'watch() called outside synchronous factory or each() callback execution',
+			'watch() called outside synchronous factory, each() callback, or reconcile() bindItem execution',
 		)
 	})
 
@@ -117,7 +117,7 @@ describe('implicit effect collection (ADR 0018)', () => {
 		const host = stubHost() as unknown as HTMLElement & ComponentProps
 		const run = makeRun(host)
 		expect(() => run(() => {})).toThrow(
-			'run() called outside synchronous factory or each() callback execution',
+			'run() called outside synchronous factory, each() callback, or reconcile() bindItem execution',
 		)
 	})
 })

@@ -107,15 +107,11 @@ const withCollector = <T>(collector: EffectDescriptor[], fn: () => T): T => {
 /**
  * Push an effect descriptor into the currently active collector.
  *
- * Throws `NoActiveCollectorError` if no collector is active — i.e. the helper
- * was not called synchronously during factory setup or an `each()` callback
- * (for example: after an `await`, inside a detached `setTimeout`, or from an
- * event handler defined during setup).
- *
  * @since 2.3
- * @param {HTMLElement | undefined} host - The component host, used for the error message if no collector is active. `each()` has no bound host, so it passes `undefined`.
+ * @param {HTMLElement | undefined} host - The component host, used for the error message if no collector is active. `each()` and `reconcile()` have no bound host, so they pass `undefined`.
  * @param {string} helper - Name of the calling helper (`'watch'`, `'on'`, `'pass'`, `'each'`, `'provideContexts'`), used for the error message
  * @param {EffectDescriptor} descriptor - The effect descriptor to collect
+ * @throws {NoActiveCollectorError} If no collector is active - i.e. the helper was not called synchronously during factory setup, an `each()` callback, or a `reconcile()` bindItem
  */
 const pushDescriptor = (
 	host: HTMLElement | undefined,

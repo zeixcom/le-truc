@@ -1,6 +1,5 @@
 import {
 	bindText,
-	createEffect,
 	createList,
 	createMemo,
 	createStore,
@@ -123,66 +122,64 @@ export default defineComponent(
 			if (amountInput) amountInput.value = String(item.amount.get())
 			if (priceInput) priceInput.value = item.pricePerUnit.get().toFixed(2)
 			const priceSignal = rowPrices.byKey(key)
+			if (priceOutput && priceSignal)
+				watch(priceSignal, price => {
+					priceOutput.textContent = formatter.format(price)
+				})
 
-			// Reactive price output
-			if (priceOutput && priceSignal) createEffect(() => {
-				priceOutput.textContent = formatter.format(priceSignal.get())
+			// Live sync as the user types — per-row listeners live inside the
+			// row's own scope now, so no container-level delegation or key
+			// re-derivation from the DOM is needed.
+			on(descriptionInput, 'input', e =>
+				item.description.set((e.target as HTMLInputElement).value),
+			)
+			on(amountInput, 'input', e =>
+				item.amount.set(
+					clamp(
+						(e.target as HTMLInputElement).valueAsNumber || 0,
+						MIN_AMOUNT,
+						MAX_AMOUNT,
+					),
+				),
+			)
+			on(priceInput, 'input', e =>
+				item.pricePerUnit.set(
+					clamp(
+						(e.target as HTMLInputElement).valueAsNumber || 0,
+						MIN_PRICE,
+						MAX_PRICE,
+					),
+				),
+			)
+
+			// Per-row commit: clamp/reformat, remove zero-amount rows.
+			on(amountInput, 'change', e => {
+				const target = e.target as HTMLInputElement
+				const amount = clamp(
+					target.valueAsNumber || 0,
+					MIN_AMOUNT,
+					MAX_AMOUNT,
+				)
+				target.value = String(amount)
+				item.amount.set(amount)
+				if (amount === 0) list.remove(key)
+			})
+			on(priceInput, 'change', e => {
+				const target = e.target as HTMLInputElement
+				const price = clamp(target.valueAsNumber || 0, MIN_PRICE, MAX_PRICE)
+				target.value = price.toFixed(2)
+				item.pricePerUnit.set(price)
 			})
 		})
 
-		// Live sync: keep computed price and totals current as the user types.
-		// Only targets existing (keyed) rows — the entry row is handled on commit.
-		// Single-element on() doesn't delegate — read event.target, not the
-		// second callback argument (which is always `container` here).
-		on(container, 'input', e => {
-			const target = e.target
-			if (!(target instanceof HTMLInputElement)) return
-			const row = target.closest<HTMLElement>('tr[data-key]')
-			const key = row?.dataset.key
-			const item = key ? list.byKey(key) : undefined
-			if (!item) return
-			if (target.classList.contains('description'))
-				item.description.set(target.value)
-			else if (target.classList.contains('amount'))
-				item.amount.set(
-					clamp(target.valueAsNumber || 0, MIN_AMOUNT, MAX_AMOUNT),
-				)
-			else if (target.classList.contains('price-per-unit'))
-				item.pricePerUnit.set(
-					clamp(target.valueAsNumber || 0, MIN_PRICE, MAX_PRICE),
-				)
-		})
-
-		// Commit: clamp/reformat, remove zero-amount rows, and create a new row
-		// from the entry row once description, amount, and price/unit are set.
+		// Entry-row commit (container-scoped): create a new row once the
+		// `data-unreconciled` entry row has description, amount, and price/unit.
 		on(container, 'change', e => {
 			const target = e.target
 			if (!(target instanceof HTMLInputElement)) return
 			const row = target.closest<HTMLElement>('tr')
-			if (!row) return
-			const key = row.dataset.key
-
-			if (key) {
-				const item = list.byKey(key)
-				if (!item) return
-				if (target.classList.contains('amount')) {
-					const amount = clamp(
-						target.valueAsNumber || 0,
-						MIN_AMOUNT,
-						MAX_AMOUNT,
-					)
-					target.value = String(amount)
-					item.amount.set(amount)
-					if (amount === 0) list.remove(key)
-				} else if (target.classList.contains('price-per-unit')) {
-					const price = clamp(target.valueAsNumber || 0, MIN_PRICE, MAX_PRICE)
-					target.value = price.toFixed(2)
-					item.pricePerUnit.set(price)
-				}
-				return
-			}
-
 			if (row !== entryRow) return
+
 			const descriptionInput =
 				entryRow.querySelector<HTMLInputElement>('input.description')
 			const amountInput =

@@ -8,7 +8,6 @@ module-calctable {
 	}
 
 	& tbody {
-
 		& tr:last-child {
 			border-bottom-color: var(--color-border);
 		}

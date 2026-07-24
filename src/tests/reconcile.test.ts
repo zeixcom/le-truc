@@ -15,12 +15,13 @@ import {
 	createCollection,
 	createList,
 	createScope,
+	createState,
 	type Signal,
 } from '@zeix/cause-effect'
 import { InvalidTemplateError } from '../errors'
-import { reconcile } from '../helpers/reactive'
+import { makeWatch, reconcile } from '../helpers/reactive'
 import { installActiveCollector, restoreActiveCollector } from '../internal'
-import type { EffectDescriptor } from '../types'
+import type { ComponentProps, EffectDescriptor } from '../types'
 
 // reconcile() pushes into the currently active effect-descriptor collector
 // (ADR 0018) and throws NoActiveCollectorError if none is active. These
@@ -557,4 +558,110 @@ describe('reconcile — Collection source', () => {
 		expect(disposed).toEqual(['x'])
 		dispose()
 	})
+})
+
+// bindItem runs inside an ambient effect-descriptor collector, so watch()/on()/
+// pass()/provideContexts()/run() can be called inside it directly. Collected
+// descriptors activate against the per-item { root: true } scope, NOT the
+// driving structural effect, so item-level watch(item, …) must not re-trigger
+// structural work.
+describe('reconcile — collector parity with each() (ADR 0017)', () => {
+	const stubHost = () => ({}) as unknown as HTMLElement & ComponentProps
+
+	test('a bare watch(item, …) inside bindItem reacts to item-value changes', async () => {
+		type Item = { id: string; label: string }
+		const container = new FakeElement('ul')
+		const list = createList<Item>([{ id: 'x', label: 'X' }], {
+			keyConfig: item => item.id,
+		})
+		const host = stubHost()
+		const watch = makeWatch(host)
+
+		const seen: string[] = []
+		const dispose = createScope(() =>
+			reconcile(
+				container as unknown as Element,
+				makeTemplate(),
+				list,
+				(_element, item) => {
+					watch(item, ({ label }) => {
+						seen.push(label)
+					})
+				},
+			)(),
+		)
+
+		expect(seen).toEqual(['X'])
+
+		list.replace('x', { id: 'x', label: 'X-updated' })
+		await tick()
+
+		expect(seen).toEqual(['X', 'X-updated'])
+		dispose()
+	})
+
+	test('a MaybeCleanup returned from bindItem runs when the key leaves', async () => {
+		const container = new FakeElement('ul')
+		const list = createList<string>(['a', 'b'], { keyConfig: 'item' })
+		const cleanedUp: string[] = []
+
+		const dispose = createScope(() =>
+			reconcile(
+				container as unknown as Element,
+				makeTemplate(),
+				list,
+				(_element, _item, key) => () => {
+					cleanedUp.push(key)
+				},
+			)(),
+		)
+
+		expect(cleanedUp).toEqual([])
+
+		list.remove('item0')
+		await tick()
+
+		expect(cleanedUp).toEqual(['item0'])
+		dispose()
+	})
+
+	test('the driving structural effect does not depend on item signals', async () => {
+		// Guards the { root: true } scope invariant: an item-value mutation
+		// (not a keys change) must not re-run structural work.
+		type Item = { id: string; label: string }
+		const container = new FakeElement('ul')
+		const list = createList<Item>(
+			[
+				{ id: 'x', label: 'X' },
+				{ id: 'y', label: 'Y' },
+			],
+			{ keyConfig: item => item.id },
+		)
+		const mountCount = { value: 0 }
+		const host = stubHost()
+		const watch = makeWatch(host)
+
+		const dispose = createScope(() =>
+			reconcile(container as unknown as Element, makeTemplate(), list, () => {
+				mountCount.value++
+				// If the structural effect shared this dependency, every item
+				// mutation would re-run structural work and re-mount items.
+				watch(createState('sentinel'), () => {})
+			})(),
+		)
+		const mountsAfterInitial = mountCount.value
+		expect(mountsAfterInitial).toBe(2)
+
+		list.replace('x', { id: 'x', label: 'X-updated' })
+		await tick()
+
+		expect(mountCount.value).toBe(mountsAfterInitial)
+		dispose()
+	})
+
+	// The synchronous-only collector invariant (watch()/on()/pass() called after
+	// an `await` inside bindItem throws NoActiveCollectorError) isn't retested
+	// here: this file's beforeEach installs a file-level ambient collector so
+	// reconcile() can be called outside a factory, which would mask the throw.
+	// It's guarded at the component level in component.test.ts instead.
 })

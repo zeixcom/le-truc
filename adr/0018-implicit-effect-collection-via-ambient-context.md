@@ -15,7 +15,7 @@ The explicit-return contract also forces awkward control flow for conditional re
 Exploration (this ADR's design) confirmed:
 - `each()`'s existing per-element scope mechanism (`keyedScopes` in `src/helpers/reactive.ts`) already invokes its `mount(element)` callback synchronously inside a nested `createScope`, which itself pushes/pops cause-effect's `activeOwner` context. This recurses cleanly for arbitrarily deep nested structures (e.g. a grid: rows containing columns) — it is not a depth-limited mechanism, so an analogous descriptor-collector stack can piggyback on the same synchronous call structure without a new depth constraint.
 - The factory return type is already `FactoryResult | Falsy | void` (`component.ts`), so a factory that returns nothing has always been valid — implicit collection is additive to the existing type surface, not a signature break.
-- Seven example components (`form-radiogroup`, `form-listbox`, `form-colorgraph`, `module-carousel`, `module-todo`, `module-ticker`, `test-each`) rely on `each()`'s per-element scoped lifecycle (auto-teardown on element removal, auto-setup on entry). `each()` itself is not replaceable by plain `for...of` control flow — it is a keyed reconciliation primitive, not sugar for iteration — so it is retained unchanged in this decision.
+- Components that iterate DOM-driven collections rely on `each()`'s per-element scoped lifecycle (auto-teardown on element removal, auto-setup on entry). `each()` itself is not replaceable by plain `for...of` control flow — it is a keyed reconciliation primitive, not sugar for iteration — so it is retained unchanged in this decision.
 
 ## Decision
 

@@ -7,14 +7,15 @@
 ## Context
 
 Data-driven lists (add/remove/reorder interfaces) require syncing a keyed
-reactive data source to a container's children. The pattern exists hand-written
-in `examples/module/list/module-list.ts` and `examples/module/todo/module-todo.ts`:
-a `watch()` on the source's keys that harvests `data-key` children, removes
-leavers, clones a `<template>` for enterers, and repositions by absolute child
-index. It is too brittle to ask authors to write — the two copies already
-diverge (one-off `querySelector('slot')?.replaceWith(…)` fill conventions,
-index-based positioning that breaks with any unmanaged child in the container),
-and neither mounts per-item bindings in disposable scopes.
+reactive data source to a container's children. Authors who need this today
+hand-roll the same pattern: a `watch()` on the source's keys that harvests
+`data-key` children, removes leavers, clones a `<template>` for enterers, and
+repositions by absolute child index. It is too brittle to ask authors to write
+— hand-written copies of this pattern tend to diverge (ad hoc fill
+conventions for populating cloned content, index-based positioning that
+breaks with any unmanaged child in the container), and none mount per-item
+bindings in disposable scopes, so per-item reactivity and event handlers leak
+on every removal.
 
 Le Truc's existing collection helpers don't cover this. `each()` enhances DOM
 the component does **not** own: it is DOM-driven, keyed by element identity
@@ -85,6 +86,23 @@ reconcile<T>(
   (`source.keys()` read inside the `createEffect`); per-item value changes flow
   through the `byKey` signal passed to `bindItem` and never trigger structural
   work.
+- **Collector parity with `each()`.** `bindItem` runs inside an ambient
+  effect-descriptor collector, exactly like `each()`'s callback: the call is
+  wrapped in `withCollector(collected, ...)`, then `activateResult(collected)`
+  activates every descriptor the helpers pushed, and the callback's returned
+  `MaybeCleanup` is handed to the per-item `createScope`. This is deliberate
+  parity — `bindItem`'s job is "mount this item's DOM and reactivity," the
+  same job `each()`'s callback does, and withholding the collector would hand
+  authors the full reactive vocabulary at one mount seam while withholding it
+  at the other. The collected descriptors activate against the per-item
+  `{ root: true }` scope (not the driving structural effect), so item-level
+  `watch(item, …)` does not make the structural effect depend on item signals.
+  **No `forEachUnseen` reconciliation of the return value:** `reconcile()` is
+  new in 2.3 with no backward-compat constraint, and `forEachUnseen` itself is
+  v3.0 cleanup. The return value is a teardown, captured by `createScope` —
+  not a descriptor. (`each()` keeps `forEachUnseen` only to remain
+  non-breaking through the v2.3 → v3.0 window, since it shipped before ADR
+  0018's ambient collection.)
 - **Ownership** carries over ADR 0014's two load-bearing details: per-item
   scopes are created with `{ root: true }` so effect re-runs don't dispose them
   wholesale, and an outer `createScope` registers the teardown-all cleanup on
@@ -109,6 +127,12 @@ reconcile<T>(
 - **Structural `KeyedSignals<T>` interface** (accept anything with
   `keys()`/`byKey()`): rejected — `Store<T>` would satisfy it accidentally with
   non-homomorphic items; branding the parameter keeps the contract honest.
+- **Collector-free `bindItem`**: rejected — it is the same job as `each()`'s callback at the same
+  kind of seam, and withholding the collector forced every consumer to either
+  drop to a raw `createEffect` for any per-item reactivity or push all
+  interactivity out to container-level `on()` event delegation. The collected descriptors
+  activate against the per-item scope, so the structural effect never depends
+  on item signals; parity is free.
 - **`moveBefore()` for state-preserving moves**: deferred, not rejected —
   landing it later is a pure UX improvement as browser support solidifies and
   requires no API migration. Likewise deferred: built-in empty-state handling
@@ -119,16 +143,21 @@ reconcile<T>(
 
 **Good:**
 
-- The hand-written reconciliation blocks in `module-list` and `module-todo` are
-  deleted; the pattern becomes a tested library primitive with per-item scope
-  lifecycle (O(changed) per mutation, as in ADR 0014).
-- Per-item bindings get proper disposal on leave and on disconnect — the
-  hand-written versions never disposed anything.
+- Hand-written reconciliation blocks become unnecessary; the pattern becomes
+  a tested library primitive with per-item scope lifecycle (O(changed) per
+  mutation, as in ADR 0014).
+- Per-item bindings get proper disposal on leave and on disconnect — hand-rolled
+  versions of this pattern typically never dispose anything.
 - The `data-unreconciled` contract gives SSR streaming and transient
   interaction state (DnD markers) a first-class, documented escape hatch.
 - `each()` and `reconcile()` compose: `all()`'s lazy MutationObserver fires on
   reconcile-driven mutations, so `each()`-mounted scopes on reconciled
   descendants dispose correctly.
+- **Collector parity with `each()`:** authors use the full reactive vocabulary
+  (`watch`, `on`, `pass`, `provideContexts`) inside `bindItem` as they already
+  do inside `each()`'s callback. Per-item reactivity no longer requires a raw
+  `createEffect`, and per-item events no longer require container-level
+  delegation, eliminating a class of workarounds authors otherwise reach for.
 
 **Bad / accepted tradeoffs:**
 
@@ -142,6 +171,9 @@ reconcile<T>(
 - Naive single-pass `insertBefore()` positioning can move more nodes than the
   theoretical minimum on some permutations (no LIS optimization) — accepted;
   same behavior class as the hand-written code it replaces.
+- Collector parity means `watch()`/`on()`/`pass()`/`each()`/`provideContexts()`/
+  `run()` now activate inside `bindItem`; the `NoActiveCollectorError` message
+  (`src/errors.ts`) mentions `each()` and `reconcile()`.
 
 ## Related
 

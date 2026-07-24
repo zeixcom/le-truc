@@ -46,10 +46,10 @@ const oklchConverter = converter('oklch')
 export default defineComponent<ModuleColoreditorProps>(
 	'module-coloreditor',
 	({ expose, first, host, on, pass }) => {
-		const textbox = first('form-textbox')
-		const colorgraph = first('form-colorgraph')
-		const colorscale = first('card-colorscale')
-		const colorinfoBase = first('module-colorinfo.base')
+		const textbox = first('form-textbox', 'Needed to enter a CSS color.')
+		const colorgraph = first('form-colorgraph', 'Needed to pick a color in lightness-chroma graph and hue slider.')
+		const colorscale = first('card-colorscale', 'Needed to preview color scale.')
+		const colorinfoBase = first('module-colorinfo.base', 'module-colorinfo.base is required')
 
 		expose({
 			color: asOklch(),
@@ -65,44 +65,43 @@ export default defineComponent<ModuleColoreditorProps>(
 			if (target instanceof HTMLInputElement && target.name === 'name')
 				return { name: target.value }
 		})
-		if (textbox)
-			pass(textbox as HTMLElement & { value: string; description: string }, {
-				value: { get: () => host.name, set: (v: string) => (host.name = v) },
-				description: () => `Nearest named CSS color: ${host.nearest}`,
-			})
-		if (colorgraph)
-			pass(colorgraph as HTMLElement & { value: string }, {
-				// form-colorgraph exposes `value: string` (CSS color), while
-				// module-coloreditor works in Oklch objects — bridge the gap.
-				value: {
-					get: () => formatCss(host.color),
-					set: (v: string) => {
-						const parsed = oklchConverter(v)
-						if (parsed) host.color = parsed as Oklch
-					},
+		pass(textbox, {
+			value: {
+				get: () => host.name,
+				set: (v: string) => {
+					host.name = v
 				},
-			})
-		if (colorscale)
-			pass(colorscale, {
-				color: () => host.color,
-				name: () => host.name,
-			})
-		if (colorinfoBase)
-			pass(colorinfoBase, {
-				color: () => host.color,
-				name: () => `${host.name} 500`,
-			})
+			},
+			description: () => `Nearest named CSS color: ${host.nearest}`,
+		})
+		pass(colorgraph, {
+			// form-colorgraph exposes `value: string` (CSS color), while
+			// module-coloreditor works in Oklch objects — bridge the gap.
+			value: {
+				get: () => formatCss(host.color),
+				set: (v: string) => {
+					const parsed = oklchConverter(v)
+					if (parsed) host.color = parsed as Oklch
+				},
+			},
+		})
+		pass(colorscale, {
+			color: () => host.color,
+			name: () => host.name,
+		})
+		pass(colorinfoBase, {
+			color: () => host.color,
+			name: () => `${host.name} 500`,
+		})
 
 		for (let i = 1; i < 5; i++) {
-			const infoLighten = first(`module-colorinfo.lighten${(5 - i) * 20}`)
-			pass(infoLighten, {
+			pass(first(`module-colorinfo.lighten${(5 - i) * 20}`), {
 				color: () => getStepColor(host.color, 1 - i / 10),
 				name: () => `${host.name} ${i * 100}`,
 			})
 		}
 		for (let i = 1; i < 5; i++) {
-			const infoDarken = first(`module-colorinfo.darken${i * 20}`)
-			pass(infoDarken, {
+			pass(first(`module-colorinfo.darken${i * 20}`), {
 				color: () => getStepColor(host.color, 1 - (i + 5) / 10),
 				name: () => `${host.name} ${(i + 5) * 100}`,
 			})

@@ -6,12 +6,12 @@
 
 ## Context
 
-Le Truc components cannot participate in HTML forms as first-class controls. Today, components that need form integration resort to workarounds. A survey of the example components in `examples/` found:
+Le Truc components cannot participate in HTML forms as first-class controls. Today, components that need form integration resort to workarounds:
 
-- **`form-listbox`** embeds a hidden `<input type="hidden">` and manually keeps it in sync with the component's value, including dispatching a synthetic `change` event (`input.dispatchEvent(new Event('change', { bubbles: true }))`). It has a **latent form-reset bug**: on `<form reset()>`, the hidden input reverts but nothing propagates back to the component's state.
-- **`form-colorgraph`** submits one logical color value through three separate named `<input>` elements (`lightness`, `chroma`, `hue`), because the custom element itself is not a form control.
-- **`form-spinbutton`** uses a hidden or disabled `<input type="number">` as a serialization vessel while real interaction happens via +/- buttons.
-- **`form-textbox`**, **`form-combobox`**, and **`form-colorgraph`** all repeat a manual validity relay: `checkValidity()` → `host.error` property → `setAttribute('aria-invalid')` → `setAttribute('aria-errormessage')`. This is a tax that native Constraint Validation integration would eliminate.
+- Embedding a hidden `<input type="hidden">` (or several, one per sub-value) and manually keeping it in sync with the component's value, including dispatching a synthetic `change` event. This pattern carries a **latent form-reset bug**: on `<form reset()>`, the hidden input reverts but nothing propagates back to the component's state.
+- Submitting one logical value through multiple separate named `<input>` elements, because the custom element itself is not a form control.
+- Using a hidden or disabled native input purely as a serialization vessel while real interaction happens through custom controls.
+- Hand-rolling a manual validity relay — `checkValidity()` → a component-owned error property → `setAttribute('aria-invalid')` → `setAttribute('aria-errormessage')` — a tax that native Constraint Validation integration would eliminate.
 
 ElementInternals — now baseline across evergreen browsers — is the standard Web Components API for the *implicit* behavior of custom elements: form association (`setFormValue`, lifecycle callbacks, Constraint Validation), custom `:state()` pseudo-classes, and ARIA reflection. It is the platform mechanism for exactly these concerns.
 
@@ -112,7 +112,7 @@ Custom `:state()` pseudo-classes get one convenience binding, `bindState(interna
 watch(overflowEnd, bindState(internals, 'overflow-end'))
 ```
 
-`value=true` adds the token to `internals.states`, `value=false` removes it; a `null` internals makes it a no-op (graceful degradation). Custom states are the right primitive for **component-owned** styling hooks — unlike a class, a state cannot be clobbered by consumer code or frameworks rewriting the host's `class` attribute. They work on *any* component (internals is attached unconditionally, §1), not only form-associated ones. `module-scrollarea` is the reference example (`:state(overflow)`, `:state(overflow-start)`, `:state(overflow-end)`).
+`value=true` adds the token to `internals.states`, `value=false` removes it; a `null` internals makes it a no-op (graceful degradation). Custom states are the right primitive for **component-owned** styling hooks — unlike a class, a state cannot be clobbered by consumer code or frameworks rewriting the host's `class` attribute. They work on *any* component (internals is attached unconditionally, §1), not only form-associated ones.
 
 This is a deliberate carve-out from the bind-helper rejection below: `internals.states` is Baseline across evergreen browsers and — unlike ARIA reflection — has no accessibility-tooling gap, and the per-token signature adds real symmetry with `bindClass` rather than renaming a platform API.
 
@@ -140,15 +140,15 @@ This is a deliberate carve-out from the bind-helper rejection below: `internals.
 
 - **A typical form component writes zero ElementInternals code.** It exposes `value` (usually with a parser) and gets form participation, native reset semantics, disabled handling, and state restore for free. Compare: the draft-helper design required every component to hand-wire `watch('value', v => internals?.setFormValue(v))` plus an `onFormReset` handler.
 - **Native contract in both directions.** Outside code can call `checkValidity()` / `reportValidity()`, read `validity` / `validationMessage`, and call `setCustomValidity()` on a Le Truc form component exactly as on `<input>`. CSS can use `:disabled`, `:invalid`, `:user-invalid` natively.
-- Form participation without nested hidden inputs; `form-listbox`'s hidden-input hack and its latent form-reset bug are eliminated; `form-colorgraph` submits one serialized value; `form-spinbutton` drops its vestigial input.
-- The manual validity relay (`checkValidity()` → `host.error` → `aria-invalid`/`aria-errormessage`) is genuinely retired, not relocated — styling hooks move to native `:invalid` / `:user-invalid` on the host.
-- Custom `:state()` pseudo-classes come for free via `internals.states`, with `bindState(internals, token)` as the `bindClass`-symmetric binding for component-owned styling hooks (demonstrated by `module-scrollarea`).
+- Form participation without nested hidden inputs; the hidden-input hack and its latent form-reset bug are eliminated; a single serialized value replaces multiple sub-value inputs; vestigial serialization inputs can be dropped.
+- The manual validity relay (`checkValidity()` → a component-owned error property → `aria-invalid`/`aria-errormessage`) is genuinely retired, not relocated — styling hooks move to native `:invalid` / `:user-invalid` on the host.
+- Custom `:state()` pseudo-classes come for free via `internals.states`, with `bindState(internals, token)` as the `bindClass`-symmetric binding for component-owned styling hooks.
 - **The convention is type-checked and collision-safe.** The `{ formAssociated: true }` overload enforces the `value` prop at compile time; `FormAssociatedElement` gives consumers native-control typing; managed-name collisions in `expose()` fail loudly with `InvalidPropertyNameError` instead of being silently skipped by the `prop in this` guard.
 - Smaller API surface than the draft: no `onForm*` helpers on `FactoryContext`, no public `FormState` type.
 
 **Bad / trade-offs:**
 
-- **The convention prescribes `value` (and reserves `disabled`).** Components whose canonical state is not a string must expose a string `value` and derive their internal representation from it (e.g. `form-colorgraph` refactors from `color: Oklch` to `value: string` + internal Oklch memo). This is a real constraint, accepted deliberately: it is the same constraint native form controls live with, and it is what makes the managed layer possible.
+- **The convention prescribes `value` (and reserves `disabled`).** Components whose canonical state is not a string must expose a string `value` and derive their internal representation from it (e.g. a structured value refactored to a string `value` plus an internal memo of the richer representation). This is a real constraint, accepted deliberately: it is the same constraint native form controls live with, and it is what makes the managed layer possible.
 - **Managed behavior has gaps by design**: File/FormData form values, custom two-argument `setFormValue` state, and non-string state restore are not managed — components use `internals` directly, and a restore/reset hook can be added later if a concrete need surfaces.
 - **The anchor heuristic can guess wrong.** First-focusable-descendant is right for the current examples but is a heuristic; the documented override is calling `internals.setValidity(flags, message, anchor)` directly.
 - **ARIA reflection tooling gap (significant).** `internals.role` and `internals.aria*` are not reliably visible to accessibility testing tools. axe-core produces documented false positives ([#4259](https://github.com/dequelabs/axe-core/issues/4259), [#4659](https://github.com/dequelabs/axe-core/issues/4659)); Chromium does not reliably update the accessibility tree from `internals.aria*` ([#40810268](https://issues.chromium.org/issues/40810268)); the W3C has not resolved the spec gap ([aria #2663](https://github.com/w3c/aria/issues/2663)). The nested-element trap is concrete: if `<basic-button>` set `internals.role = 'button'` and dropped its inner `<button>`, static tools would not flag invalid button nesting — a regression in the safety net. **Mitigation**: ARIA reflection rides along on the exposed `internals` object (cannot be withheld), but is not promoted — no helpers, no examples, and an active advisory in the docs to keep explicit `aria-*` attributes and native semantic elements until the platform catches up.

@@ -46,16 +46,15 @@ const observeOverflow =
  * @demo {./docs/examples/module-scrollarea.html} Interactive preview and usage examples */
 export default defineComponent(
 	'module-scrollarea',
-	({ first, host, internals, on, run, watch }) => {
+	({ host, internals, on, run, watch }) => {
 		const child = host.firstElementChild
 		if (!child) return
 
 		const overflowStart = createState(false)
 		const overflowEnd = createState(false)
-		const isHorizontal = host.getAttribute('orientation') === 'horizontal'
 		const hasOverflow = () => overflowStart.get() || overflowEnd.get()
 
-		const scrollCallback = isHorizontal
+		const scrollCallback = host.getAttribute('orientation') === 'horizontal'
 			? () => {
 					overflowStart.set(host.scrollLeft > 0)
 					overflowEnd.set(host.scrollLeft < host.scrollWidth - host.offsetWidth)
