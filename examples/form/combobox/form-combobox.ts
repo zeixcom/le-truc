@@ -7,6 +7,7 @@ import {
 	defineComponent,
 	defineMethod,
 	type FormAssociatedElement,
+	formAssociated,
 } from '../../..'
 import { relayValidity } from '../../_common/relayValidity'
 import type { FormListboxProps } from '../listbox/form-listbox'
@@ -32,7 +33,7 @@ declare global {
  * A combobox (searchable select) that combines a text input with a filterable listbox popup.
  * Use it for searchable selection — provides ARIA roles for the combobox pattern,
  * keyboard interaction (type to filter, Escape to close, Enter to select), and focus management.
- * Form participation and validity are via ElementInternals (`formAssociated: true`).
+ * Form participation and validity are via ElementInternals (`formAssociated()`).
  * External consumers read `host.validationMessage` / `host.validity` like on a native input.
  * @demo {./docs/examples/form-combobox.html} Interactive preview and usage examples */
 export default defineComponent<FormComboboxProps>(
@@ -90,7 +91,7 @@ export default defineComponent<FormComboboxProps>(
 				relayValidity(textbox, host, error)
 				showPopup.set(true)
 			})
-		}),
+		})
 		on(textbox, 'keydown', ({ key, altKey }) => {
 			if (key === 'ArrowDown') {
 				if (altKey) showPopup.set(true)
@@ -125,5 +126,5 @@ export default defineComponent<FormComboboxProps>(
 		})
 		if (clearBtn) watch(length, bindVisible(clearBtn))
 	},
-	{ formAssociated: true },
+	[formAssociated()],
 )

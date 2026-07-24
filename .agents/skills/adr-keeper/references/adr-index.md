@@ -23,8 +23,9 @@ This file is auto-generated. Do not edit manually.
 | [0016](0016-element-internals-for-form-association-and-states.md) | ElementInternals for Form Association and Custom States | ✅ Accepted | M1, §4 |
 | [0017](0017-keyed-template-clone-reconciliation-for-lists.md) | Keyed Template-Clone Reconciliation for Lists | ✅ Accepted | M5, M6, §1, §4, §6 |
 | [0018](0018-implicit-effect-collection-via-ambient-context.md) | Implicit Effect Collection via Ambient Context | ✅ Accepted | M8, M5, M6 |
+| [0019](0019-extension-based-dependency-injection-for-definecomponent.md) | Extension-Based Dependency Injection for `defineComponent()` | ✅ Accepted | M1, X1, N1, §4 |
 
 ---
 
 **Last updated:** 2026-07-24
-**Total ADRs:** 18 (excluding template)
+**Total ADRs:** 19 (excluding template)

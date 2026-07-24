@@ -1,7 +1,13 @@
-import { asJSON, defineComponent } from '../../..'
+import { asJSON, asNumber, defineComponent, observedAttributes } from '../../..'
 
 export type BasicGaugeProps = {
-	/** Current gauge value in the range [0, meter.max]. */
+	/**
+	 * Current gauge value in the range [0, meter.max]. Read from the `value`
+	 * attribute at connect time (falling back to the inner `<meter>`'s value
+	 * for markup that only sets it there), and re-parsed on later `value`
+	 * attribute mutations — e.g. from frameworks like React that set DOM
+	 * attributes rather than properties.
+	 */
 	value: number
 }
 
@@ -24,6 +30,9 @@ declare global {
  * The `value` must be a number within the range defined by the thresholds.
  * Thresholds should be ordered by `min` value for correct color assignment.
  * Thresholds are read from the `thresholds` attribute as a JSON array.
+ * The `value` attribute is observed post-connect, so setting it at runtime
+ * (e.g. `gauge.setAttribute('value', '0.5')`) updates the gauge too, not just
+ * the initial `value` property.
  * @cssprop --basic-gauge-degree - Rotation angle of the gauge needle (set reactively).
  * @cssprop --basic-gauge-color - Active threshold color (set reactively).
  * @demo {./docs/examples/basic-gauge.html} Interactive preview and usage examples */
@@ -40,7 +49,7 @@ export default defineComponent<BasicGaugeProps>(
 			'Add an element to display the qualification label',
 		)
 
-		expose({ value: meter.value })
+		expose({ value: asNumber(meter.value) })
 
 		const thresholds = asJSON<BasicGaugeThreshold[]>([])(
 			host.getAttribute('thresholds'),
@@ -67,4 +76,5 @@ export default defineComponent<BasicGaugeProps>(
 			},
 		)
 	},
+	[observedAttributes(['value'])],
 )

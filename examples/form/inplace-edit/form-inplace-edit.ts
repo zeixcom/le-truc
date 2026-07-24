@@ -1,4 +1,11 @@
-import { asBoolean, bindText, defineComponent } from '../../..'
+import {
+	asBoolean,
+	bindProperty,
+	bindText,
+	defineComponent,
+	type FormAssociatedElement,
+	formAssociated,
+} from '../../..'
 
 export type FormInplaceEditProps = {
 	/** Whether the component is currently in edit mode. Read from the `editing` attribute at connect time. */
@@ -9,7 +16,7 @@ export type FormInplaceEditProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-inplace-edit': HTMLElement & FormInplaceEditProps
+		'form-inplace-edit': FormAssociatedElement & FormInplaceEditProps
 	}
 }
 
@@ -18,7 +25,9 @@ let idCounter = 0
 /**
  * An inline text field that switches between display and edit mode on click or double-click.
  * Use it for editable labels or inline content — provides ARIA-labelled toggle buttons,
- * keyboard interaction (Enter to confirm, Escape to cancel), and focus management.
+ * keyboard interaction (Enter to confirm, Escape to cancel), and focus management. Form
+ * participation is via ElementInternals (`formAssociated()`) with the managed form-control
+ * convention — value sync, reset, and disabled propagation to the edit button are library-managed.
  * @demo {./docs/examples/form-inplace-edit.html} Interactive preview and usage examples */
 export default defineComponent<FormInplaceEditProps>(
 	'form-inplace-edit',
@@ -49,7 +58,10 @@ export default defineComponent<FormInplaceEditProps>(
 				}
 			else host.editing = !host.editing
 		})
-		on(textEl, 'dblclick', () => ({ editing: true }))
+		on(textEl, 'dblclick', () => {
+			if (host.disabled) return
+			return { editing: true }
+		})
 		on(host, 'keydown', e => {
 			if (!host.editing) return
 			if (e.key !== 'Escape' && e.key !== 'Enter') return
@@ -72,6 +84,7 @@ export default defineComponent<FormInplaceEditProps>(
 		})
 
 		watch('value', bindText(textEl))
+		watch('disabled', bindProperty(editBtn, 'disabled'))
 		watch('editing', editing => {
 			host.toggleAttribute('editing', editing)
 			if (editing) {
@@ -100,4 +113,5 @@ export default defineComponent<FormInplaceEditProps>(
 			}
 		})
 	},
+	[formAssociated()],
 )

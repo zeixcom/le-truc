@@ -1,4 +1,14 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Locator, test } from '@playwright/test'
+
+/**
+ * Check a form-checkbox's `:has(input:checked)` CSS hook — reads the native
+ * checkbox's real `:checked` state directly, no JS state reflection
+ * involved. Evaluated in the browser because Playwright's own selector
+ * engine does not parse `:has()`.
+ */
+function isHostChecked(element: Locator): Promise<boolean> {
+	return element.evaluate((el: Element) => el.matches(':has(input:checked)'))
+}
 
 /**
  * Test Suite: module-todo Component
@@ -169,7 +179,7 @@ test.describe('module-todo component', () => {
 			await expect(checkbox).not.toBeChecked()
 		})
 
-		test('checkbox state affects form-checkbox attributes', async ({
+		test('checkbox state affects form-checkbox :has(input:checked)', async ({
 			page,
 		}) => {
 			const todo = page.locator('module-todo')
@@ -185,20 +195,20 @@ test.describe('module-todo component', () => {
 			const formCheckbox = item.locator('form-checkbox')
 			const checkboxLabel = item.locator('form-checkbox label')
 
-			// Initially should not have checked attribute
-			await expect(formCheckbox).not.toHaveAttribute('checked')
+			// Initially should not be in the checked state
+			expect(await isHostChecked(formCheckbox)).toBe(false)
 
 			// Check the item by clicking the label
 			await checkboxLabel.click()
 
-			// Wait for attribute to update
-			await expect(formCheckbox).toHaveAttribute('checked')
+			// Wait for the state to update
+			expect(await isHostChecked(formCheckbox)).toBe(true)
 
 			// Uncheck the item
 			await checkboxLabel.click()
 
-			// Should not have checked attribute
-			await expect(formCheckbox).not.toHaveAttribute('checked')
+			// Should no longer be in the checked state
+			expect(await isHostChecked(formCheckbox)).toBe(false)
 		})
 	})
 
@@ -600,7 +610,7 @@ test.describe('module-todo component', () => {
 			await expect(count.locator('.count')).toHaveText('1')
 		})
 
-		test('B4: form-checkbox gets checked attribute when item is marked complete', async ({
+		test('B4: form-checkbox enters :has(input:checked) when item is marked complete', async ({
 			page,
 		}) => {
 			// Verifies the watch('checked', ...) effect inside form-checkbox runs
@@ -617,13 +627,13 @@ test.describe('module-todo component', () => {
 			await expect(items).toHaveCount(2)
 
 			// Check item 2 — verifies both the setter (updates list) and the getter
-			// (watch inside form-checkbox sets the attribute).
+			// (watch inside form-checkbox syncs the native checkbox's checked state).
 			await items.nth(1).locator('form-checkbox label').click()
-			await expect(items.nth(1).locator('form-checkbox')).toHaveAttribute(
-				'checked',
+			expect(await isHostChecked(items.nth(1).locator('form-checkbox'))).toBe(
+				true,
 			)
-			await expect(items.nth(0).locator('form-checkbox')).not.toHaveAttribute(
-				'checked',
+			expect(await isHostChecked(items.nth(0).locator('form-checkbox'))).toBe(
+				false,
 			)
 		})
 
@@ -647,11 +657,11 @@ test.describe('module-todo component', () => {
 
 			await items.nth(0).locator('form-checkbox label').click()
 			await expect(count.locator('.count')).toHaveText('1')
-			await expect(items.nth(0).locator('form-checkbox')).toHaveAttribute(
-				'checked',
+			expect(await isHostChecked(items.nth(0).locator('form-checkbox'))).toBe(
+				true,
 			)
-			await expect(items.nth(1).locator('form-checkbox')).not.toHaveAttribute(
-				'checked',
+			expect(await isHostChecked(items.nth(1).locator('form-checkbox'))).toBe(
+				false,
 			)
 		})
 
@@ -709,8 +719,8 @@ test.describe('module-todo component', () => {
 
 			// After reorder, the item that was second is now first; it should still be checked
 			await expect(count.locator('.count')).toHaveText('1')
-			await expect(items.nth(0).locator('form-checkbox')).toHaveAttribute(
-				'checked',
+			expect(await isHostChecked(items.nth(0).locator('form-checkbox'))).toBe(
+				true,
 			)
 		})
 

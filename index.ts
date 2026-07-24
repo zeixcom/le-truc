@@ -92,7 +92,6 @@ export {
 	setTextPreservingComments,
 } from './src/bindings'
 export {
-	type ComponentOptions,
 	defineComponent,
 	type FactoryContext,
 	type FormAssociatedElement,
@@ -101,6 +100,7 @@ export {
 } from './src/component'
 export {
 	DependencyTimeoutError,
+	ExtensionCollisionError,
 	InvalidComponentNameError,
 	InvalidCustomElementError,
 	InvalidPassPropertyError,
@@ -111,6 +111,15 @@ export {
 	MissingElementError,
 	NoActiveCollectorError,
 } from './src/errors'
+export { type ComponentExtension } from './src/extension'
+export { observedAttributes } from './src/extensions/attributes'
+export {
+	FOCUSABLE_FORM_CONTROL_SELECTOR,
+	type FormAssociatedCheckboxExtension,
+	type FormAssociatedExtension,
+	formAssociated,
+	formAssociatedCheckbox,
+} from './src/extensions/form'
 export {
 	CONTEXT_REQUEST,
 	type Context,
@@ -138,13 +147,12 @@ export {
 	type TrimWhitespace,
 } from './src/helpers/dom'
 export type { EventType, OnEventHandler, OnHelper } from './src/helpers/events'
-export { FOCUSABLE_FORM_CONTROL_SELECTOR } from './src/helpers/form'
 export {
 	each,
 	type PassedProps,
 	type PassHelper,
-	reconcile,
 	type Reactive,
+	reconcile,
 	type WatchHelper,
 } from './src/helpers/reactive'
 export { asBoolean } from './src/parsers/boolean'

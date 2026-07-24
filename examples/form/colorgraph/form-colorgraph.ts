@@ -10,6 +10,7 @@ import {
 	defineMethod,
 	each,
 	type FormAssociatedElement,
+	formAssociated,
 	type State,
 	throttle,
 } from '../../..'
@@ -550,5 +551,5 @@ export default defineComponent<FormColorgraphProps>(
 		// the initial CSS color string, replacing the hand-rolled
 		// initialColor capture from the previous design).
 	},
-	{ formAssociated: true },
+	[formAssociated()],
 )

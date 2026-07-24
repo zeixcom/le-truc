@@ -155,11 +155,7 @@ export default defineComponent(
 			// Per-row commit: clamp/reformat, remove zero-amount rows.
 			on(amountInput, 'change', e => {
 				const target = e.target as HTMLInputElement
-				const amount = clamp(
-					target.valueAsNumber || 0,
-					MIN_AMOUNT,
-					MAX_AMOUNT,
-				)
+				const amount = clamp(target.valueAsNumber || 0, MIN_AMOUNT, MAX_AMOUNT)
 				target.value = String(amount)
 				item.amount.set(amount)
 				if (amount === 0) list.remove(key)

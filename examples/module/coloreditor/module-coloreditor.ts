@@ -47,9 +47,15 @@ export default defineComponent<ModuleColoreditorProps>(
 	'module-coloreditor',
 	({ expose, first, host, on, pass }) => {
 		const textbox = first('form-textbox', 'Needed to enter a CSS color.')
-		const colorgraph = first('form-colorgraph', 'Needed to pick a color in lightness-chroma graph and hue slider.')
-		const colorscale = first('card-colorscale', 'Needed to preview color scale.')
-		const colorinfoBase = first('module-colorinfo.base', 'module-colorinfo.base is required')
+		const colorgraph = first(
+			'form-colorgraph',
+			'Needed to pick a color in lightness-chroma graph and hue slider.',
+		)
+		const colorscale = first(
+			'card-colorscale',
+			'Needed to preview the color scale.',
+		)
+		const colorinfoBase = first('module-colorinfo.base')
 
 		expose({
 			color: asOklch(),

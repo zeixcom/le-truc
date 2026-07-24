@@ -26,25 +26,25 @@ Relevant requirements: [M1](../REQUIREMENTS.md#m1-component-definition-via-a-sin
 
 ## Decision
 
-Support form association via a third `options` parameter on `defineComponent` and a **managed form-control convention**: a form-associated component exposes a reactive `value` property, and the library owns everything mechanical — form value sync, the form lifecycle callbacks (reset, disabled, state restore), and a native-parity validity contract on the host. The `ElementInternals` object is exposed on the `FactoryContext` as the escape hatch for typed validity flags, custom `:state()` pseudo-classes, and the two-argument `setFormValue(value, state)` form. **No `onForm*()` lifecycle helpers and no reactive abstraction layer** — a typical form component writes zero ElementInternals code.
+Support form association via the `formAssociated()` extension, passed in `defineComponent`'s third `extensions` parameter (see [ADR 0019](0019-extension-based-dependency-injection-for-definecomponent.md)), and a **managed form-control convention**: a form-associated component exposes a reactive `value` property, and the library owns everything mechanical — form value sync, the form lifecycle callbacks (reset, disabled, state restore), and a native-parity validity contract on the host. The `ElementInternals` object is exposed on the `FactoryContext` as the escape hatch for typed validity flags, custom `:state()` pseudo-classes, and the two-argument `setFormValue(value, state)` form. **No `onForm*()` lifecycle helpers and no reactive abstraction layer** — a typical form component writes zero ElementInternals code.
 
 ### 1. `attachInternals()` in the constructor
 
 The `Truc` class calls `this.attachInternals()` unconditionally in its constructor and stores the result on a private field. This is the only valid call site: `attachInternals()` can be called once per element, and the constructor is the only lifecycle callback that runs exactly once. Calling it in `connectedCallback` would throw on reconnect. The call is guarded by a try/catch — `attachInternals()` throws `NotSupportedError` for pre-upgrade instances or parser-ordering edge cases; the component degrades gracefully (internals is `null`, a DEV_MODE warning fires on first access).
 
-### 2. `options` parameter for `formAssociated`
+### 2. `formAssociated()` extension for `defineComponent`
 
-A third parameter on `defineComponent` carries static class-level configuration:
+A third parameter on `defineComponent` carries an `extensions` array — a dependency-injection mechanism (see [ADR 0019](0019-extension-based-dependency-injection-for-definecomponent.md)) rather than a static options object:
 
 ```ts
-defineComponent<Props>(name, factory, options?)
+defineComponent<Props>(name, factory, extensions?: readonly ComponentExtension[])
 ```
 
-`options.formAssociated` (default `false`) sets `static formAssociated = true` on the generated class and enables the managed form-control behavior below. This is additive and non-breaking — existing two-argument calls are unaffected.
+Passing `[formAssociated()]` (`src/extensions/form.ts`) sets `static formAssociated = true` on the generated class and enables the managed form-control behavior below. This supersedes an earlier `options.formAssociated: boolean` design from this ADR's initial draft: that flag forced `component.ts` to unconditionally import form-association code for every consumer, whether or not they used it. The extension form fixes that — a consumer who never calls `formAssociated()` never bundles this ADR's code at all. Both forms are additive and non-breaking relative to a bare two-argument `defineComponent` call; only the shape of the third argument changed before this ADR reached `main`.
 
 ### 3. Managed form-control convention
 
-A component defined with `{ formAssociated: true }` follows a prescribed convention, mirroring native form controls:
+A component defined with `[formAssociated()]` follows a prescribed convention, mirroring native form controls:
 
 - **It exposes a reactive `value` property** (string, or coerced with `String()`). A DEV_MODE warning fires if the factory completes without exposing `value`.
 - **The `value` attribute is the default value** — like native `defaultValue`. Components must not reflect the current value back into the attribute.
@@ -72,7 +72,7 @@ Form-associated hosts get a library-managed reactive `disabled: boolean` propert
 
 ### 5. Native-parity host contract
 
-The generated class, when `formAssociated: true`, defines the standard form-control members on the host, delegating to `internals`:
+The generated class, when defined with `[formAssociated()]`, defines the standard form-control members on the host, delegating to `internals`:
 
 `form`, `name` (attribute-reflecting), `labels`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`, `reportValidity()`, and `setCustomValidity(message)` — the last implemented as `internals.setValidity(message ? { customError: true } : {}, message || undefined, anchor)`.
 
@@ -87,7 +87,7 @@ With this contract, the `host.error` reactive-property convention in the form ex
 Two complementary pieces:
 
 - **Exported `FormAssociatedElement` interface** — `HTMLElement` plus the managed members (§4–5). Authors use it in the declarations the library cannot write for them, chiefly the tag-name map: `'my-input': FormAssociatedElement & MyProps`. `value` is deliberately not included — it is component-exposed (string for textbox, number for spinbutton) and belongs in the author's own props type.
-- **`defineComponent` overload keyed on the options literal** — when the third argument is the inline literal `{ formAssociated: true }`, the factory context types `host` as `FormAssociatedElement & P`, requires `P extends { value: string | number }` (managed sync coerces with `String()`), lets `watch('disabled', …)` typecheck, and excludes the managed member names from `expose`'s initializer type. A widened `boolean` falls back to the plain signature — degraded typing, identical runtime. The DEV_MODE runtime warning for a missing `value` remains, for JS users the overload cannot reach.
+- **`defineComponent` overload keyed on the extensions array shape** — when the third argument's type is the tuple `readonly [FormAssociatedExtension, ...ComponentExtension[]]` (i.e. `[formAssociated()]` or `[formAssociated(), ...]`, with `formAssociated()` leading), the factory context types `host` as `FormAssociatedElement & P`, requires `P extends { value: string | number }` (managed sync coerces with `String()`), lets `watch('disabled', …)` typecheck, and excludes the managed member names from `expose`'s initializer type. Any other extensions array (or none) falls back to the plain signature — degraded typing, identical runtime. The DEV_MODE runtime warning for a missing `value` remains, for JS users the overload cannot reach. This typing mechanism, and the reason it is two overloads rather than a single generic function, is specified in full in [ADR 0019](0019-extension-based-dependency-injection-for-definecomponent.md).
 
 ### 7. `internals` on the `FactoryContext`
 
@@ -128,7 +128,7 @@ This is a deliberate carve-out from the bind-helper rejection below: `internals.
 
 - **`bindFormValue(internals)` / `bindValidity(internals, anchor)` / `bindAria(internals, name)` helpers.** Rejected. Most wrap a single imperative statement without making it shorter or clearer, and they hide standard ElementInternals method names behind Le-Truc-specific names. The managed convention goes the other way: instead of renaming the low-level API, it removes the need to call it at all in the common case. A whole-set `bindStates(internals)` was rejected on the same grounds, but a **per-token `bindState(internals, token)` is accepted** (see §8): it mirrors the existing `bindClass(element, token)` signature exactly, so it hides nothing — and unlike ARIA reflection, `internals.states` is stable across evergreen browsers and has no tooling-gap problem, so the original reason for withholding helpers does not apply to custom states.
 
-- **Separate `defineFormComponent()` function.** Rejected. It keeps `defineComponent`'s signature untouched but creates two parallel registration paths and duplicates the entire component-definition logic. An options parameter is the standard way to carry class-level configuration.
+- **Separate `defineFormComponent()` function.** Rejected. It keeps `defineComponent`'s signature untouched but creates two parallel registration paths and duplicates the entire component-definition logic. A third parameter carrying opt-in, composable configuration — settled by [ADR 0019](0019-extension-based-dependency-injection-for-definecomponent.md) as an `extensions` array rather than a flat options object — is the chosen way to carry this kind of class-level configuration without a second entry point.
 
 - **Always set `formAssociated: true` on every `Truc` class.** Rejected. Every component would get form participation whether it needs it or not — surprising behavior (elements unexpectedly serialized into `<form>` data) and a prescribed `value`/`disabled` convention imposed on non-form components.
 
@@ -143,7 +143,7 @@ This is a deliberate carve-out from the bind-helper rejection below: `internals.
 - Form participation without nested hidden inputs; the hidden-input hack and its latent form-reset bug are eliminated; a single serialized value replaces multiple sub-value inputs; vestigial serialization inputs can be dropped.
 - The manual validity relay (`checkValidity()` → a component-owned error property → `aria-invalid`/`aria-errormessage`) is genuinely retired, not relocated — styling hooks move to native `:invalid` / `:user-invalid` on the host.
 - Custom `:state()` pseudo-classes come for free via `internals.states`, with `bindState(internals, token)` as the `bindClass`-symmetric binding for component-owned styling hooks.
-- **The convention is type-checked and collision-safe.** The `{ formAssociated: true }` overload enforces the `value` prop at compile time; `FormAssociatedElement` gives consumers native-control typing; managed-name collisions in `expose()` fail loudly with `InvalidPropertyNameError` instead of being silently skipped by the `prop in this` guard.
+- **The convention is type-checked and collision-safe.** The `[formAssociated()]` overload enforces the `value` prop at compile time; `FormAssociatedElement` gives consumers native-control typing; managed-name collisions in `expose()` fail loudly with `InvalidPropertyNameError` instead of being silently skipped by the `prop in this` guard.
 - Smaller API surface than the draft: no `onForm*` helpers on `FactoryContext`, no public `FormState` type.
 
 **Bad / trade-offs:**
@@ -157,7 +157,7 @@ This is a deliberate carve-out from the bind-helper rejection below: `internals.
 
 **Compatibility:**
 
-- Non-breaking, additive change. Existing `defineComponent(name, factory)` calls are unaffected. The third `options` parameter is optional. Targets v2.3 as a minor release.
+- Non-breaking, additive change. Existing `defineComponent(name, factory)` calls are unaffected. The third `extensions` parameter is optional. Targets v2.3 as a minor release.
 - M1 (component definition via `defineComponent`) is extended, not changed — the signature gains an optional third parameter.
 - §4 Accessibility: the feature *enables* better form accessibility (native validation, form participation, native pseudo-classes) while the ARIA-reflection sub-feature stays unpromoted per the advisory above.
 
@@ -168,4 +168,5 @@ This is a deliberate carve-out from the bind-helper rejection below: `internals.
 - Related: [ADR-0002](0002-factory-form-over-builder-pattern.md) — the factory form; this ADR extends the factory context with `internals`
 - Related: [ADR-0007](0007-effect-descriptors-with-deferred-activation.md) — deferred activation; both author `internals.*` calls and the managed value-sync effect run in effects that activate after dependency resolution
 - Related: [ADR-0013](0013-cem-plugin-for-le-truc-factory-pattern.md) — the CEM plugin will be extended to emit `formAssociated`
+- Amended by: [ADR 0019](0019-extension-based-dependency-injection-for-definecomponent.md) — moves `formAssociated` from a flat `options.formAssociated: boolean` (this ADR's original third-parameter design) to the `formAssociated()` extension in the `extensions` array, so `component.ts` no longer unconditionally imports form-association code for every consumer. The managed form-control convention itself (§3–8) is unchanged.
 - Supersedes: None

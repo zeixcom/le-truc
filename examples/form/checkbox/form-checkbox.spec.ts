@@ -1,4 +1,14 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Locator, test } from '@playwright/test'
+
+/**
+ * Check the host's `:has(input:checked)` CSS hook — reads the native
+ * checkbox's real `:checked` state directly, no JS state reflection
+ * involved. Evaluated in the browser because Playwright's own selector
+ * engine does not parse `:has()`.
+ */
+function isHostChecked(element: Locator): Promise<boolean> {
+	return element.evaluate((el: Element) => el.matches(':has(input:checked)'))
+}
 
 test.describe('form-checkbox component', () => {
 	test.beforeEach(async ({ page }) => {
@@ -17,7 +27,7 @@ test.describe('form-checkbox component', () => {
 
 		// Should not be checked initially
 		await expect(checkbox).not.toBeChecked()
-		await expect(checkboxComponent).not.toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(false)
 
 		// Should display correct label text
 		await expect(label).toHaveText('Checkbox')
@@ -29,17 +39,17 @@ test.describe('form-checkbox component', () => {
 
 		// Initially unchecked
 		await expect(checkbox).not.toBeChecked()
-		await expect(checkboxComponent).not.toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(false)
 
 		// Click to check
 		await checkbox.click()
 		await expect(checkbox).toBeChecked()
-		await expect(checkboxComponent).toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(true)
 
 		// Click to uncheck
 		await checkbox.click()
 		await expect(checkbox).not.toBeChecked()
-		await expect(checkboxComponent).not.toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(false)
 	})
 
 	test('syncs checked property with checkbox clicks', async ({ page }) => {
@@ -61,7 +71,7 @@ test.describe('form-checkbox component', () => {
 			return element.checked
 		})
 		expect(isChecked).toBe(true)
-		await expect(checkboxComponent).toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(true)
 
 		// Click checkbox to uncheck
 		await checkbox.click()
@@ -71,7 +81,7 @@ test.describe('form-checkbox component', () => {
 			return element.checked
 		})
 		expect(isChecked).toBe(false)
-		await expect(checkboxComponent).not.toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(false)
 	})
 
 	test('updates label text when changed programmatically', async ({ page }) => {
@@ -116,23 +126,23 @@ test.describe('form-checkbox component', () => {
 		// Check first checkbox only
 		await firstInput.click()
 		await expect(firstInput).toBeChecked()
-		await expect(firstCheckbox).toHaveAttribute('checked')
+		expect(await isHostChecked(firstCheckbox)).toBe(true)
 		await expect(secondInput).not.toBeChecked()
-		await expect(secondCheckbox).not.toHaveAttribute('checked')
+		expect(await isHostChecked(secondCheckbox)).toBe(false)
 
 		// Check second checkbox using label click (for the visually hidden checkbox)
 		await secondCheckbox.locator('label').click()
 		await expect(firstInput).toBeChecked()
-		await expect(firstCheckbox).toHaveAttribute('checked')
+		expect(await isHostChecked(firstCheckbox)).toBe(true)
 		await expect(secondInput).toBeChecked()
-		await expect(secondCheckbox).toHaveAttribute('checked')
+		expect(await isHostChecked(secondCheckbox)).toBe(true)
 
 		// Uncheck first, keep second checked
 		await firstInput.click()
 		await expect(firstInput).not.toBeChecked()
-		await expect(firstCheckbox).not.toHaveAttribute('checked')
+		expect(await isHostChecked(firstCheckbox)).toBe(false)
 		await expect(secondInput).toBeChecked()
-		await expect(secondCheckbox).toHaveAttribute('checked')
+		expect(await isHostChecked(secondCheckbox)).toBe(true)
 	})
 
 	test('handles keyboard interaction (space key)', async ({ page }) => {
@@ -149,12 +159,12 @@ test.describe('form-checkbox component', () => {
 		// Press space to toggle
 		await checkbox.press('Space')
 		await expect(checkbox).toBeChecked()
-		await expect(checkboxComponent).toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(true)
 
 		// Press space again to toggle back
 		await checkbox.press('Space')
 		await expect(checkbox).not.toBeChecked()
-		await expect(checkboxComponent).not.toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(false)
 	})
 
 	test('handles clicking on label to toggle checkbox', async ({ page }) => {
@@ -168,12 +178,12 @@ test.describe('form-checkbox component', () => {
 		// Click on label should toggle checkbox
 		await labelElement.click()
 		await expect(checkbox).toBeChecked()
-		await expect(checkboxComponent).toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(true)
 
 		// Click label again to uncheck
 		await labelElement.click()
 		await expect(checkbox).not.toBeChecked()
-		await expect(checkboxComponent).not.toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(false)
 	})
 
 	test('maintains state during label changes', async ({ page }) => {
@@ -184,7 +194,7 @@ test.describe('form-checkbox component', () => {
 		// Check the checkbox
 		await checkbox.click()
 		await expect(checkbox).toBeChecked()
-		await expect(checkboxComponent).toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(true)
 
 		// Modify label without affecting checked state
 		await page.evaluate(() => {
@@ -194,7 +204,7 @@ test.describe('form-checkbox component', () => {
 
 		// Checkbox should still be checked and label should be updated
 		await expect(checkbox).toBeChecked()
-		await expect(checkboxComponent).toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(true)
 		await expect(label).toHaveText('Modified Label')
 	})
 
@@ -232,18 +242,16 @@ test.describe('form-checkbox component', () => {
 	})
 
 	test('handles form integration', async ({ page }) => {
-		// Add a form wrapper and test form data
+		// Add a form wrapper. The host itself carries name="agree" (see
+		// form-checkbox.html) and submits via ElementInternals
+		// (formAssociatedCheckbox()) — the inner native checkbox is
+		// presentational only, no name of its own.
 		await page.evaluate(() => {
 			const form = document.createElement('form')
 			const checkbox = document.querySelector('form-checkbox')
 			if (checkbox) {
 				checkbox.parentNode?.insertBefore(form, checkbox)
 				form.appendChild(checkbox)
-				// Give the checkbox input a name for form submission
-				const input = checkbox.querySelector(
-					'input[type="checkbox"]',
-				) as HTMLInputElement
-				if (input) input.name = 'testCheckbox'
 			}
 		})
 
@@ -251,19 +259,156 @@ test.describe('form-checkbox component', () => {
 			.locator('form-checkbox input[type="checkbox"]')
 			.first()
 
+		// Unchecked submits nothing, matching native <input type="checkbox">
+		let formData = await page.evaluate(() => {
+			const form = document.querySelector('form')
+			if (!form) return null
+			return Object.fromEntries(new FormData(form).entries())
+		})
+		expect(formData).toEqual({})
+
 		// Check the checkbox
 		await checkbox.click()
 		await expect(checkbox).toBeChecked()
 
-		// Test form data includes the checkbox
-		const formData = await page.evaluate(() => {
+		formData = await page.evaluate(() => {
 			const form = document.querySelector('form')
 			if (!form) return null
-			const data = new FormData(form)
-			return Object.fromEntries(data.entries())
+			return Object.fromEntries(new FormData(form).entries())
+		})
+		expect(formData).toEqual({ agree: 'on' })
+	})
+
+	test('submits the host value attribute instead of "on" when set', async ({
+		page,
+	}) => {
+		// submitValue is read once at connect time, so the value attribute
+		// must be present *before* the element connects — unlike the other
+		// tests, this needs a fresh element rather than mutating the one
+		// already on the page.
+		await page.evaluate(() => {
+			const form = document.createElement('form')
+			const checkbox = document.createElement('form-checkbox') as any
+			checkbox.setAttribute('value', 'yes-please')
+			checkbox.setAttribute('name', 'test')
+			checkbox.id = 'value-override-test'
+			const input = document.createElement('input')
+			input.type = 'checkbox'
+			checkbox.append(input)
+			form.append(checkbox)
+			document.body.append(form)
 		})
 
-		expect(formData).toEqual({ testCheckbox: 'on' })
+		await page.locator('#value-override-test input[type="checkbox"]').click()
+
+		const formData = await page.evaluate(() => {
+			const checkbox = document.getElementById('value-override-test')
+			const form = checkbox?.closest('form')
+			if (!form) return null
+			return Object.fromEntries(new FormData(form).entries())
+		})
+		expect(formData).toEqual({ test: 'yes-please' })
+	})
+
+	test('restores the default checked state on form reset', async ({ page }) => {
+		await page.evaluate(() => {
+			const form = document.createElement('form')
+			const checkbox = document.querySelector('form-checkbox')
+			if (checkbox) {
+				checkbox.parentNode?.insertBefore(form, checkbox)
+				form.appendChild(checkbox)
+			}
+		})
+
+		const checkboxComponent = page.locator('form-checkbox').first()
+		const checkbox = checkboxComponent.locator('input[type="checkbox"]')
+
+		await checkbox.click()
+		await expect(checkbox).toBeChecked()
+
+		await page.evaluate(() => document.querySelector('form')?.reset())
+
+		await expect(checkbox).not.toBeChecked()
+		const checked = await checkboxComponent.evaluate(
+			(node: any) => node.checked,
+		)
+		expect(checked).toBe(false)
+	})
+
+	test('a checked attribute on the host initialises checked to true', async ({
+		page,
+	}) => {
+		// checked is read from <form-checkbox checked>, not the inner input.
+		const checkboxComponent = page.locator('form-checkbox.toggle[checked]')
+		const checkbox = checkboxComponent.locator('input[type="checkbox"]')
+
+		await expect(checkbox).toBeChecked()
+		const checked = await checkboxComponent.evaluate(
+			(node: any) => node.checked,
+		)
+		expect(checked).toBe(true)
+	})
+
+	test('restores a true default (host checked attribute) on form reset', async ({
+		page,
+	}) => {
+		await page.evaluate(() => {
+			const form = document.createElement('form')
+			const checkbox = document.querySelector('form-checkbox.toggle[checked]')
+			if (checkbox) {
+				checkbox.parentNode?.insertBefore(form, checkbox)
+				form.appendChild(checkbox)
+			}
+		})
+
+		const checkboxComponent = page.locator('form-checkbox.toggle[checked]')
+		const checkbox = checkboxComponent.locator('input[type="checkbox"]')
+
+		// The input is visually hidden — click the label, as other tests do.
+		await checkboxComponent.locator('label').click()
+		await expect(checkbox).not.toBeChecked()
+
+		await page.evaluate(() => document.querySelector('form')?.reset())
+
+		await expect(checkbox).toBeChecked()
+		const checked = await checkboxComponent.evaluate(
+			(node: any) => node.checked,
+		)
+		expect(checked).toBe(true)
+	})
+
+	test('disabling the host propagates to the native checkbox', async ({
+		page,
+	}) => {
+		const checkboxComponent = page.locator('form-checkbox').first()
+		const checkbox = checkboxComponent.locator('input[type="checkbox"]')
+
+		await checkboxComponent.evaluate((node: any) => {
+			node.disabled = true
+		})
+
+		await expect(checkbox).toBeDisabled()
+	})
+
+	test('a disabled ancestor fieldset disables the native checkbox and syncs host.disabled', async ({
+		page,
+	}) => {
+		const checkboxComponent = page.locator('form-checkbox').first()
+		const checkbox = checkboxComponent.locator('input[type="checkbox"]')
+
+		await page.evaluate(() => {
+			const el = document.querySelector('form-checkbox')
+			const fieldset = document.createElement('fieldset')
+			fieldset.disabled = true
+			el?.parentNode?.insertBefore(fieldset, el)
+			fieldset.appendChild(el!)
+		})
+
+		const hostDisabled = await checkboxComponent.evaluate(
+			(node: any) => node.disabled,
+		)
+		expect(hostDisabled).toBe(true)
+		await expect(checkbox).toBeDisabled()
 	})
 
 	test('checked property is mutable (controlled + uncontrolled)', async ({
@@ -319,7 +464,7 @@ test.describe('form-checkbox component', () => {
 
 		// Component should reflect the change
 		await expect(checkbox).toBeChecked()
-		await expect(checkboxComponent).toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(true)
 
 		const checkedProperty = await page.evaluate(() => {
 			const element = document.querySelector('form-checkbox') as any
@@ -339,7 +484,7 @@ test.describe('form-checkbox component', () => {
 
 		// Should end up checked
 		await expect(checkbox).toBeChecked()
-		await expect(checkboxComponent).toHaveAttribute('checked')
+		expect(await isHostChecked(checkboxComponent)).toBe(true)
 
 		const finalCheckedState = await page.evaluate(() => {
 			const element = document.querySelector('form-checkbox') as any

@@ -2065,6 +2065,13 @@ class InvalidTemplateError extends TypeError {
   }
 }
 
+class ExtensionCollisionError extends Error {
+  constructor(component, key, first, second) {
+    super(`Extension collision for component <${component}>: both '${first}' and '${second}' declare staticProps key "${key}". The '${second}' declaration is ignored.`);
+    this.name = "ExtensionCollisionError";
+  }
+}
+
 class InvalidSelectorError extends TypeError {
   constructor(parent, selector, cause) {
     const where = typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
@@ -2073,12 +2080,46 @@ class InvalidSelectorError extends TypeError {
   }
 }
 
+// src/extension.ts
+var mergeExtensions = (component, extensions) => {
+  const staticProps = {};
+  const owners = {};
+  const observedAttributes = [];
+  const reservedMembers = new Set;
+  const reservedMemberOwners = new Map;
+  for (const ext of extensions) {
+    for (const key of Object.keys(ext.staticProps ?? {})) {
+      if (key in staticProps) {
+        if (false)
+          ;
+        continue;
+      }
+      staticProps[key] = ext.staticProps[key];
+      owners[key] = ext.name;
+    }
+    for (const attr of ext.observedAttributes ?? [])
+      if (!observedAttributes.includes(attr))
+        observedAttributes.push(attr);
+    for (const member of ext.reservedMembers ?? []) {
+      reservedMembers.add(member);
+      if (!reservedMemberOwners.has(member))
+        reservedMemberOwners.set(member, ext.name);
+    }
+  }
+  return {
+    staticProps,
+    observedAttributes,
+    reservedMembers,
+    reservedMemberOwners
+  };
+};
+
 // src/internal.ts
 var DEPENDENCY_TIMEOUT = 200;
 var CONTEXT_RETRY_DELAY = DEPENDENCY_TIMEOUT + 10;
 var componentSignals = new WeakMap;
 var internalsMap = new WeakMap;
-var initialValueInitializers = new WeakMap;
+var retainedInitializers = new WeakMap;
 var getSignals = (el) => {
   let signals = componentSignals.get(el);
   if (!signals) {
@@ -2683,7 +2724,164 @@ var isReservedWord = (name) => RESERVED_WORDS.has(name);
 var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
 var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 
-// src/helpers/form.ts
+// src/component.ts
+function defineComponent(name, factory, extensions) {
+  if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
+    throw new InvalidComponentNameError(name);
+  const exts = extensions ?? [];
+  const merged = mergeExtensions(name, exts);
+
+  class Truc extends HTMLElement {
+    static formAssociated = false;
+    static observedAttributes = merged.observedAttributes;
+    #initialized = false;
+    #setup = [];
+    #cleanup;
+    #internalsAccessed = false;
+    constructor() {
+      super();
+      try {
+        internalsMap.set(this, this.attachInternals());
+      } catch {
+        internalsMap.set(this, null);
+      }
+    }
+    connectedCallback() {
+      const runSetup = () => {
+        this.#cleanup = createScope(() => {
+          activateResult(this.#setup);
+        }, {
+          root: true
+        });
+      };
+      if (this.#initialized) {
+        if (isFunction(this.#cleanup))
+          this.#cleanup();
+        runSetup();
+      } else {
+        const instance = this;
+        const host = this;
+        const [elementQueries, resolveDependencies] = makeElementQueries(host);
+        const context = {
+          expose: this.#initSignals.bind(this),
+          host,
+          ...elementQueries,
+          get internals() {
+            const internals2 = internalsMap.get(instance) ?? null;
+            if (false) {}
+            return internals2;
+          },
+          watch: makeWatch(host),
+          on: makeOn(host),
+          pass: makePass(host),
+          provideContexts: makeProvideContexts(host),
+          requestContext: makeRequestContext(host)
+        };
+        const collector = [];
+        const result = withCollector(collector, () => factory(context));
+        this.#setup = collector;
+        if (result) {
+          const seen = new Set(collector);
+          forEachUnseen(result, seen, (d) => this.#setup.push(d));
+        }
+        const internals = internalsMap.get(this) ?? null;
+        for (const ext of exts) {
+          const extra = ext.onConnect?.(this, internals);
+          if (extra) {
+            const seen = new Set(this.#setup);
+            forEachUnseen(extra, seen, (d) => this.#setup.push(d));
+          }
+        }
+        this.#initialized = true;
+        if (!this.#setup.length)
+          return;
+        resolveDependencies(runSetup);
+      }
+    }
+    attributeChangedCallback(attrName, oldValue, newValue) {
+      for (const ext of exts)
+        ext.onAttributeChanged?.(this, attrName, oldValue, newValue);
+    }
+    disconnectedCallback() {
+      if (isFunction(this.#cleanup))
+        this.#cleanup();
+    }
+    #initSignals(instanceProps) {
+      const createReactiveProperty = (key, initializer) => {
+        if (isParser(initializer)) {
+          const result = initializer(this.getAttribute(key));
+          if (result != null)
+            this.#setAccessor(key, result);
+        } else if (isMethodProducer(initializer)) {
+          this[key] = initializer;
+        } else {
+          const value = initializer;
+          if (value != null)
+            this.#setAccessor(key, value);
+        }
+      };
+      for (const [prop, initializer] of Object.entries(instanceProps)) {
+        if (initializer == null)
+          continue;
+        if (isReservedWord(prop))
+          throw new InvalidPropertyNameError(this.localName, prop, "reserved word or Object builtin — cannot be used as a reactive property");
+        if (merged.reservedMembers.has(prop)) {
+          let reason = "is a member reserved by an extension";
+          if (false)
+            ;
+          throw new InvalidPropertyNameError(this.localName, prop, reason);
+        }
+        if (prop in this)
+          continue;
+        let retained = retainedInitializers.get(this);
+        if (!retained) {
+          retained = {};
+          retainedInitializers.set(this, retained);
+        }
+        retained[prop] = initializer;
+        createReactiveProperty(prop, initializer);
+      }
+    }
+    #setAccessor(key, value) {
+      const signal = isSignal(value) ? value : isFunction(value) ? createComputed(value) : createState(value);
+      const signals = getSignals(this);
+      const k = key;
+      const prev = signals[k];
+      if (isSlot(prev)) {
+        prev.replace(signal);
+      } else if (isMutableSignal(signal)) {
+        const slot = createSlot(signal);
+        signals[k] = slot;
+        Object.defineProperty(this, key, slot);
+      } else {
+        signals[k] = signal;
+        Object.defineProperty(this, key, {
+          get: signal.get,
+          enumerable: true
+        });
+      }
+    }
+  }
+  Object.assign(Truc, merged.staticProps);
+  for (const ext of exts)
+    ext.installOnPrototype?.(Truc.prototype);
+  customElements.define(name, Truc);
+  return customElements.get(name);
+}
+// src/extensions/attributes.ts
+var observedAttributes = (names) => ({
+  name: "observedAttributes",
+  observedAttributes: names,
+  onAttributeChanged: (instance, name, _oldValue, newValue) => {
+    const initializer = retainedInitializers.get(instance)?.[name];
+    if (!isParser(initializer))
+      return;
+    const result = initializer(newValue);
+    if (result != null)
+      instance[name] = result;
+  }
+});
+// src/extensions/form.ts
 var EMPTY_NODELIST = typeof document !== "undefined" ? document.createDocumentFragment().childNodes : [];
 var EMPTY_VALIDITY_STATE = {
   valueMissing: false,
@@ -2783,23 +2981,25 @@ var resolveAnchor = (host) => host.querySelector(FOCUSABLE_FORM_CONTROL_SELECTOR
 var managedSetCustomValidity = (internals, host, message) => {
   internals.setValidity({ customError: !!message }, message || undefined, resolveAnchor(host));
 };
-var formResetCallback = function() {
-  const initializer = initialValueInitializers.get(this);
+var makeResetCallback = (prop) => function() {
+  const initializer = retainedInitializers.get(this)?.[prop];
   if (initializer === undefined)
     return;
   if (isParser(initializer)) {
     const parse = initializer;
-    const result = parse(this.getAttribute("value"));
+    const result = parse(this.getAttribute(prop));
     if (result != null)
-      this.value = result;
+      this[prop] = result;
   } else if (!isSignal(initializer) && !isFunction(initializer)) {
-    this.value = initializer;
+    this[prop] = initializer;
   }
 };
+var formResetCallback = makeResetCallback("value");
+var checkboxResetCallback = makeResetCallback("checked");
 var formStateRestoreCallback = function(state, _mode) {
   if (typeof state !== "string")
     return;
-  const initializer = initialValueInitializers.get(this);
+  const initializer = retainedInitializers.get(this)?.["value"];
   if (isParser(initializer)) {
     const parse = initializer;
     const result = parse(state);
@@ -2812,6 +3012,9 @@ var formStateRestoreCallback = function(state, _mode) {
   } else {
     this.value = state;
   }
+};
+var checkboxFormStateRestoreCallback = function(state, _mode) {
+  this.checked = typeof state === "string";
 };
 var formDisabledCallback = function(disabled) {
   const signals = getSignals(this);
@@ -2841,169 +3044,87 @@ var installFormAssociatedMembers = (proto) => {
     }
   });
 };
-
-// src/component.ts
-function defineComponent(name, factory, options) {
-  if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
-    throw new InvalidComponentNameError(name);
-  const formAssociated = options?.formAssociated ?? false;
-
-  class Truc extends HTMLElement {
-    static formAssociated = formAssociated;
-    #initialized = false;
-    #setup = [];
-    #cleanup;
-    #internalsAccessed = false;
-    constructor() {
-      super();
-      try {
-        internalsMap.set(this, this.attachInternals());
-      } catch {
-        internalsMap.set(this, null);
-      }
+var installFormAssociatedCheckboxMembers = (proto) => {
+  Object.defineProperties(proto, HOST_CONTRACT_DESCRIPTORS);
+  Object.defineProperties(proto, {
+    formResetCallback: {
+      value: checkboxResetCallback,
+      writable: true,
+      configurable: true
+    },
+    formStateRestoreCallback: {
+      value: checkboxFormStateRestoreCallback,
+      writable: true,
+      configurable: true
+    },
+    formDisabledCallback: {
+      value: formDisabledCallback,
+      writable: true,
+      configurable: true
     }
-    connectedCallback() {
-      const runSetup = () => {
-        this.#cleanup = createScope(() => {
-          activateResult(this.#setup);
-        }, {
-          root: true
-        });
-      };
-      if (this.#initialized) {
-        if (isFunction(this.#cleanup))
-          this.#cleanup();
-        runSetup();
-      } else {
-        const instance = this;
-        const host = this;
-        const [elementQueries, resolveDependencies] = makeElementQueries(host);
-        const context = {
-          expose: this.#initSignals.bind(this),
-          host,
-          ...elementQueries,
-          get internals() {
-            const internals2 = internalsMap.get(instance) ?? null;
-            if (false) {}
-            return internals2;
-          },
-          watch: makeWatch(host),
-          on: makeOn(host),
-          pass: makePass(host),
-          provideContexts: makeProvideContexts(host),
-          requestContext: makeRequestContext(host)
-        };
-        const collector = [];
-        const result = withCollector(collector, () => factory(context));
-        this.#setup = collector;
-        if (result) {
-          const seen = new Set(collector);
-          forEachUnseen(result, seen, (d) => this.#setup.push(d));
-        }
-        const internals = internalsMap.get(this);
-        if (formAssociated && internals) {
-          const hasValueSignal = "value" in this && getSignals(this).value;
-          if (false)
-            ;
-          this.#createManagedDisabledProperty();
-          this.#setup.push(this.#managedValueSyncDescriptor(internals));
-        }
-        this.#initialized = true;
-        if (!this.#setup.length)
-          return;
-        resolveDependencies(runSetup);
-      }
-    }
-    disconnectedCallback() {
-      if (isFunction(this.#cleanup))
-        this.#cleanup();
-    }
-    #managedValueSyncDescriptor(internals) {
-      const instance = this;
-      return () => createEffect(() => {
-        const v = instance.value;
-        internals.setFormValue(typeof v === "string" ? v : String(v ?? ""));
-      });
-    }
-    #createManagedDisabledProperty() {
-      const initial = this.hasAttribute("disabled");
-      const slot = createSlot(createState(initial));
-      const signals = getSignals(this);
-      signals["disabled"] = slot;
-      const host = this;
-      Object.defineProperty(this, "disabled", {
-        get: () => slot.get(),
-        set: (v) => {
-          slot.set(v);
-          if (v)
-            host.setAttribute("disabled", "");
-          else
-            host.removeAttribute("disabled");
-        },
-        enumerable: true,
-        configurable: true
-      });
-    }
-    #initSignals(instanceProps) {
-      const createReactiveProperty = (key, initializer) => {
-        if (isParser(initializer)) {
-          const result = initializer(this.getAttribute(key));
-          if (result != null)
-            this.#setAccessor(key, result);
-        } else if (isMethodProducer(initializer)) {
-          this[key] = initializer;
-        } else {
-          const value = initializer;
-          if (value != null)
-            this.#setAccessor(key, value);
-        }
-      };
-      for (const [prop, initializer] of Object.entries(instanceProps)) {
-        if (initializer == null)
-          continue;
-        if (isReservedWord(prop))
-          throw new InvalidPropertyNameError(this.localName, prop, "reserved word or Object builtin — cannot be used as a reactive property");
-        if (formAssociated && MANAGED_FORM_MEMBERS.has(prop)) {
-          let reason = "is a managed form-control member on form-associated components";
-          if (false)
-            ;
-          throw new InvalidPropertyNameError(this.localName, prop, reason);
-        }
-        if (prop in this)
-          continue;
-        if (formAssociated && prop === "value")
-          initialValueInitializers.set(this, initializer);
-        createReactiveProperty(prop, initializer);
-      }
-    }
-    #setAccessor(key, value) {
-      const signal = isSignal(value) ? value : isFunction(value) ? createComputed(value) : createState(value);
-      const signals = getSignals(this);
-      const k = key;
-      const prev = signals[k];
-      if (isSlot(prev)) {
-        prev.replace(signal);
-      } else if (isMutableSignal(signal)) {
-        const slot = createSlot(signal);
-        signals[k] = slot;
-        Object.defineProperty(this, key, slot);
-      } else {
-        signals[k] = signal;
-        Object.defineProperty(this, key, {
-          get: signal.get,
-          enumerable: true
-        });
-      }
-    }
+  });
+};
+var managedValueSyncDescriptor = (instance, internals) => () => createEffect(() => {
+  const v = instance.value;
+  internals.setFormValue(typeof v === "string" ? v : String(v ?? ""));
+});
+var checkedValueSyncDescriptor = (instance, internals, submitValue) => () => createEffect(() => {
+  const checked = instance.checked;
+  internals.setFormValue(checked ? submitValue : null);
+});
+var createManagedDisabledProperty = (instance) => {
+  const initial = instance.hasAttribute("disabled");
+  const slot = createSlot(createState(initial));
+  const signals = getSignals(instance);
+  signals["disabled"] = slot;
+  Object.defineProperty(instance, "disabled", {
+    get: () => slot.get(),
+    set: (v) => {
+      slot.set(v);
+      if (v)
+        instance.setAttribute("disabled", "");
+      else
+        instance.removeAttribute("disabled");
+    },
+    enumerable: true,
+    configurable: true
+  });
+};
+var formAssociated = () => ({
+  name: "formAssociated",
+  __kind: "form-associated",
+  staticProps: { formAssociated: true },
+  reservedMembers: MANAGED_FORM_MEMBERS,
+  installOnPrototype: installFormAssociatedMembers,
+  onConnect: (instance, internals) => {
+    if (!internals)
+      return;
+    const hasValueSignal = "value" in instance && getSignals(instance).value;
+    if (false)
+      ;
+    createManagedDisabledProperty(instance);
+    return [managedValueSyncDescriptor(instance, internals)];
   }
-  if (formAssociated) {
-    installFormAssociatedMembers(Truc.prototype);
+});
+var formAssociatedCheckbox = () => ({
+  name: "formAssociatedCheckbox",
+  __kind: "form-associated-checkbox",
+  staticProps: { formAssociated: true },
+  reservedMembers: MANAGED_FORM_MEMBERS,
+  installOnPrototype: installFormAssociatedCheckboxMembers,
+  onConnect: (instance, internals) => {
+    if (!internals)
+      return;
+    const hasCheckedSignal = "checked" in instance && getSignals(instance).checked;
+    if (false)
+      ;
+    const submitValue = instance.getAttribute("value") ?? "on";
+    createManagedDisabledProperty(instance);
+    return [checkedValueSyncDescriptor(instance, internals, submitValue)];
   }
-  customElements.define(name, Truc);
-  return customElements.get(name);
-}
+});
 // src/parsers/boolean.ts
-var asBoolean = () => asParser((value) => value != null && value.toLowerCase() !== "false");
+var asBoolean = (fallback = false) => asParser((value) => value != null ? value.toLowerCase() !== "false" : fallback);
 // src/parsers/json.ts
 var asJSON = (fallback) => asParser((value) => {
   if ((value ?? fallback) == null)
@@ -3064,6 +3185,7 @@ export {
   schedule,
   safeSetAttribute,
   reconcile,
+  observedAttributes,
   match,
   isTask,
   isStore,
@@ -3082,6 +3204,8 @@ export {
   isComputed,
   isCollection,
   isAsyncFunction,
+  formAssociatedCheckbox,
+  formAssociated,
   escapeHTML,
   each,
   defineMethod,
@@ -3137,6 +3261,7 @@ export {
   InvalidComponentNameError,
   InvalidCallbackError,
   FOCUSABLE_FORM_CONTROL_SELECTOR,
+  ExtensionCollisionError,
   EffectConvergenceError,
   DuplicateKeyError,
   DependencyTimeoutError,

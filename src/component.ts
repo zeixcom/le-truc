@@ -1,6 +1,5 @@
 import {
 	createComputed,
-	createEffect,
 	createScope,
 	createSlot,
 	createState,
@@ -15,6 +14,11 @@ import {
 	type TaskCallback,
 } from '@zeix/cause-effect'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
+import { type ComponentExtension, mergeExtensions } from './extension'
+import type {
+	FormAssociatedCheckboxExtension,
+	FormAssociatedExtension,
+} from './extensions/form'
 import {
 	makeProvideContexts,
 	makeRequestContext,
@@ -23,10 +27,6 @@ import {
 } from './helpers/context'
 import { type ElementQueries, makeElementQueries } from './helpers/dom'
 import { makeOn, type OnHelper } from './helpers/events'
-import {
-	installFormAssociatedMembers,
-	MANAGED_FORM_MEMBERS,
-} from './helpers/form'
 import {
 	activateResult,
 	type EffectDescriptor,
@@ -40,8 +40,8 @@ import {
 } from './helpers/reactive'
 import {
 	getSignals,
-	initialValueInitializers,
 	internalsMap,
+	retainedInitializers,
 	withCollector,
 } from './internal'
 import {
@@ -81,23 +81,6 @@ type MaybeSignal<T extends {}> =
  */
 type Initializers<P extends ComponentProps> = {
 	[K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K]> | MethodProducer
-}
-
-/**
- * Static class-level configuration for a component.
- *
- * Passed as the third (optional) argument to `defineComponent`. Currently
- * carries only `formAssociated`, but is extensible for future class-level
- * options without further signature changes.
- */
-type ComponentOptions = {
-	/**
-	 * When `true`, the generated class gets `static formAssociated = true`, the
-	 * managed form-control behavior (value sync, reset, state restore, disabled,
-	 * native-parity host contract). The browser treats the element as a
-	 * form-associated custom element (FACE). Default: `false`.
-	 */
-	formAssociated?: boolean
 }
 
 /**
@@ -185,29 +168,43 @@ type FormFactoryContext<P extends ComponentProps> = Omit<
  * @since 2.0
  * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
  * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
- * @param {ComponentOptions} [options] - Static class-level configuration (e.g. `{ formAssociated: true }`)
+ * @param {ComponentExtension[]} [extensions] - Dependency-injected features (e.g. `[formAssociated()]`, `[formAssociatedCheckbox()]`, `[observedAttributes([...])]`). Bundled extensions are tree-shaken away unless imported and used. `formAssociated()`/`formAssociatedCheckbox()`, if present, must be the first element — that's what widens the factory's context type to `FormFactoryContext`.
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
 function defineComponent<P extends ComponentProps & { value: string | number }>(
 	name: string,
 	factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void,
-	options: ComponentOptions & { formAssociated: true },
+	extensions: readonly [FormAssociatedExtension, ...ComponentExtension[]],
+): CustomElementConstructor | undefined
+function defineComponent<P extends ComponentProps & { checked: boolean }>(
+	name: string,
+	factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void,
+	extensions: readonly [
+		FormAssociatedCheckboxExtension,
+		...ComponentExtension[],
+	],
 ): CustomElementConstructor | undefined
 function defineComponent<P extends ComponentProps>(
 	name: string,
 	factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void,
-	options?: ComponentOptions,
+	extensions?: readonly ComponentExtension[],
 ): CustomElementConstructor | undefined
 function defineComponent<P extends ComponentProps>(
 	name: string,
 	factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void,
-	options?: ComponentOptions,
+	extensions?: readonly ComponentExtension[],
 ): CustomElementConstructor | undefined {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
-	const formAssociated = options?.formAssociated ?? false
+	const exts: readonly ComponentExtension[] = extensions ?? []
+	const merged = mergeExtensions(name, exts)
 	class Truc extends HTMLElement {
-		static formAssociated = formAssociated
+		// Concrete boolean default (not left `undefined`) so `Truc.formAssociated`
+		// always reads as a real boolean, matching native custom element
+		// classes that never opt in. formAssociated() overrides this to `true`
+		// via the staticProps merge below, before customElements.define.
+		static formAssociated = false
+		static observedAttributes = merged.observedAttributes
 
 		#initialized = false
 		#setup: FactoryResult = []
@@ -254,6 +251,14 @@ function defineComponent<P extends ComponentProps>(
 				const instance = this
 				const host = this as unknown as HTMLElement & P
 				const [elementQueries, resolveDependencies] = makeElementQueries(host)
+				// Structurally just FactoryContext<P> here; the first overload
+				// above widens the public factory type to FormFactoryContext<P>
+				// when `formAssociated()` leads the extensions array. The extra
+				// host members it promises (form, name, labels, …) are installed
+				// on the prototype by that extension's installOnPrototype before
+				// any instance connects, so the promise holds despite the narrower
+				// type used internally — the same escape hatch TS overloads
+				// always allow between public signatures and the implementation.
 				const context: FactoryContext<P> = {
 					expose: this.#initSignals.bind(this),
 					host,
@@ -297,25 +302,16 @@ function defineComponent<P extends ComponentProps>(
 					forEachUnseen(result, seen, d => this.#setup.push(d))
 				}
 
-				// Managed form-control behavior: register the library-internal
-				// value-sync effect in the same deferred-activation pipeline as
-				// author effects. A DEV_MODE warning fires if the factory completed
-				// without exposing a reactive `value` (required by the convention).
-				const internals = internalsMap.get(this)
-				if (formAssociated && internals) {
-					const hasValueSignal = 'value' in this && getSignals(this).value
-					if (process.env.DEV_MODE === 'true' && !hasValueSignal)
-						console.warn(
-							`form-associated component ${elementName(host)} did not expose a reactive 'value' property. The managed form-control convention requires a reactive 'value' for form value sync, reset, and state restore.`,
-						)
-					// Create the managed `disabled` reactive property (Slot-backed
-					// so formDisabledCallback can write to it). The property
-					// setter reflects to the `disabled` content attribute, giving
-					// native FACE behavior for free (:disabled, barred from
-					// validation/submission). formDisabledCallback writes the
-					// effective state (including fieldset inheritance) into this.
-					this.#createManagedDisabledProperty()
-					this.#setup.push(this.#managedValueSyncDescriptor(internals))
+				// Give every extension a chance to register extra effects (e.g.
+				// formAssociated()'s managed value-sync) in the same
+				// deferred-activation pipeline as author effects, in array order.
+				const internals = internalsMap.get(this) ?? null
+				for (const ext of exts) {
+					const extra = ext.onConnect?.(this, internals)
+					if (extra) {
+						const seen = new Set(this.#setup as EffectDescriptor[])
+						forEachUnseen(extra, seen, d => this.#setup.push(d))
+					}
 				}
 
 				this.#initialized = true
@@ -325,59 +321,25 @@ function defineComponent<P extends ComponentProps>(
 		}
 
 		/**
+		 * Native callback when an observed attribute changes. Only actually
+		 * invoked by the browser for attributes named in `static
+		 * observedAttributes` (the merged union of every extension's
+		 * `observedAttributes`) — dispatches to each extension in array order.
+		 */
+		attributeChangedCallback(
+			attrName: string,
+			oldValue: string | null,
+			newValue: string | null,
+		) {
+			for (const ext of exts)
+				ext.onAttributeChanged?.(this, attrName, oldValue, newValue)
+		}
+
+		/**
 		 * Native callback when the custom element is disconnected from the document
 		 */
 		disconnectedCallback() {
 			if (isFunction(this.#cleanup)) this.#cleanup()
-		}
-
-		/**
-		 * Build the managed form-control value-sync effect descriptor. Returns an
-		 * `EffectDescriptor` (a thunk) that activates after dependency resolution
-		 * in the same pipeline as author effects. Watches `value` and calls
-		 * `internals.setFormValue(String(value))`.
-		 */
-		#managedValueSyncDescriptor(
-			internals: ElementInternals,
-		): () => MaybeCleanup {
-			const instance = this
-			// Thunk — activated lazily inside the component scope, like author
-			// effect descriptors. Reading `(instance as any).value` inside
-			// createEffect registers the Slot-backed accessor as a dependency.
-			return () =>
-				createEffect(() => {
-					const v = (instance as any).value
-					internals.setFormValue(typeof v === 'string' ? v : String(v ?? ''))
-				})
-		}
-
-		/**
-		 * Create the managed `disabled` reactive property on this form-associated
-		 * host. Slot-backed so `formDisabledCallback` can write the effective
-		 * disabled state (including `<fieldset disabled>` inheritance). The
-		 * property getter and setter go through the Slot (not the raw backing
-		 * signal) so that `pass()` replacing the Slot's delegate stays
-		 * consistent — `host.disabled`, `watch('disabled')`, and
-		 * `formDisabledCallback` all read and write the same source of truth.
-		 * The setter also reflects to the `disabled` content attribute so FACE
-		 * gives native `:disabled` / barred-from-validation for free.
-		 */
-		#createManagedDisabledProperty(): void {
-			const initial = this.hasAttribute('disabled')
-			const slot = createSlot(createState(initial))
-			const signals = getSignals(this)
-			signals['disabled'] = slot
-			const host = this as unknown as HTMLElement
-			Object.defineProperty(this, 'disabled', {
-				get: () => slot.get(),
-				set: (v: boolean) => {
-					slot.set(v)
-					if (v) host.setAttribute('disabled', '')
-					else host.removeAttribute('disabled')
-				},
-				enumerable: true,
-				configurable: true,
-			})
 		}
 
 		/**
@@ -417,30 +379,34 @@ function defineComponent<P extends ComponentProps>(
 						prop,
 						'reserved word or Object builtin — cannot be used as a reactive property',
 					)
-				// On form-associated components, reject managed member names
-				// (form, name, labels, validity, validationMessage, willValidate,
-				// checkValidity, reportValidity, setCustomValidity, disabled).
+				// Reject member names reserved by an extension (e.g. form,
+				// name, labels, validity, ... reserved by formAssociated()).
 				// These are prototype-defined, so the `prop in this` guard below
 				// would otherwise *silently skip* the colliding initializer — the
-				// worst failure mode. `value` is the deliberate exception: the
-				// component must expose it. This check runs before that guard.
-				if (formAssociated && MANAGED_FORM_MEMBERS.has(prop)) {
-					let reason =
-						'is a managed form-control member on form-associated components'
+				// worst failure mode. `value` is the deliberate exception on
+				// form-associated components: the component must expose it.
+				// This check runs before that guard.
+				if (merged.reservedMembers.has(prop)) {
+					let reason = 'is a member reserved by an extension'
 					// Remediation guidance is DEV-only; the guard folds away
 					// under the build define.
 					if (process.env.DEV_MODE === 'true')
-						reason +=
-							' — use the native-parity host contract instead; expose `value` for the form value'
+						reason += ` ('${merged.reservedMemberOwners.get(prop)}') — it is managed automatically and cannot be set via expose()`
 					throw new InvalidPropertyNameError(this.localName, prop, reason)
 				}
 				// Skip properties already set on the host (explicit DOM value wins).
 				if (prop in this) continue
-				// Retain the `value` initializer for managed formResetCallback
-				// (native defaultValue-style reset). Captured verbatim before
-				// createReactiveProperty consumes it.
-				if (formAssociated && prop === 'value')
-					initialValueInitializers.set(this, initializer)
+				// Retain every initializer verbatim, keyed by prop name, before
+				// createReactiveProperty consumes it — extensions read these back
+				// out (formAssociated()'s managed formResetCallback re-runs the
+				// retained `value` initializer; observedAttributes() re-runs a
+				// retained Parser when its attribute mutates post-connect).
+				let retained = retainedInitializers.get(this)
+				if (!retained) {
+					retained = {}
+					retainedInitializers.set(this, retained)
+				}
+				retained[prop] = initializer
 				createReactiveProperty(prop as keyof P & string, initializer)
 			}
 		}
@@ -479,22 +445,25 @@ function defineComponent<P extends ComponentProps>(
 		}
 	}
 
-	// Install the native-parity host contract and managed form lifecycle
-	// callbacks on the prototype only for form-associated components. The
-	// descriptors and reserved-name set are driven from one table in
-	// helpers/form.ts — see installFormAssociatedMembers. Defining these
-	// unconditionally would shadow same-named reactive props on non-form-
-	// associated components (the `prop in this` guard would silently skip them).
-	if (formAssociated) {
-		installFormAssociatedMembers(Truc.prototype as unknown as HTMLElement)
-	}
+	// Static class properties (e.g. formAssociated() contributing `static
+	// formAssociated = true`) are installed before customElements.define, since
+	// the browser reads them once at definition time.
+	Object.assign(Truc, merged.staticProps)
+
+	// Let each extension install its own prototype members (e.g.
+	// formAssociated()'s native-parity host contract and managed form
+	// lifecycle callbacks). Unconditional for every component would shadow
+	// same-named reactive props (the `prop in this` guard would silently
+	// skip them) — that's exactly why this is opt-in per extension, not
+	// baked into the core class body.
+	for (const ext of exts)
+		ext.installOnPrototype?.(Truc.prototype as unknown as HTMLElement)
 
 	customElements.define(name, Truc)
 	return customElements.get(name)
 }
 
 export {
-	type ComponentOptions,
 	defineComponent,
 	type FactoryContext,
 	type FormAssociatedElement,

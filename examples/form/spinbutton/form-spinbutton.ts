@@ -4,6 +4,7 @@ import {
 	createMemo,
 	defineComponent,
 	type FormAssociatedElement,
+	formAssociated,
 } from '../../..'
 
 export type FormSpinbuttonProps = {
@@ -23,7 +24,7 @@ declare global {
  * A numeric spinbutton with increment/decrement buttons and keyboard support.
  * Use it for numeric input within a bounded range — provides ARIA spinbutton
  * semantics and Arrow key support for incrementing and decrementing the value.
- * Form participation and range validation are via ElementInternals (`formAssociated: true`,
+ * Form participation and range validation are via ElementInternals (`formAssociated()`,
  * `setFormValue`, `setValidity`).
  * @demo {./docs/examples/form-spinbutton.html} Interactive preview and usage examples */
 export default defineComponent<FormSpinbuttonProps>(
@@ -121,5 +122,5 @@ export default defineComponent<FormSpinbuttonProps>(
 			},
 		)
 	},
-	{ formAssociated: true },
+	[formAssociated()],
 )
