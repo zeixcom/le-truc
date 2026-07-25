@@ -264,14 +264,14 @@ Here's how everything comes together:
 
 ## Managing Dynamic Lists
 
-The coordination patterns above assume a fixed set of children. When a list grows and shrinks at runtime, you need a different approach: a reactive **list of keyed items** holds the data, a `watch()` reconciler keeps the DOM in sync, and a **`<template>`** provides the markup for each item.
+The coordination patterns above assume a fixed set of children. When a list grows and shrinks at runtime, you need a different approach: a reactive **list of keyed items** holds the data, **`reconcile()`** keeps the DOM in sync, and a **`<template>`** provides the markup for each item.
 
 ### The Container, Template, and List
 
 The component owns a `createList()` — a reactive ordered collection where each item is a signal and items are identified by stable string keys. The HTML provides a container and an inert template:
 
 ```js#module-list.js
-defineComponent('module-list', ({ first, host, on, pass, watch }) => {
+defineComponent('module-list', ({ first, host, on, pass }) => {
   const form = first('form', 'Add a form element to enter a new list item.')
   const textbox = first('form-textbox', 'Add <form-textbox> to enter a new item.')
   const submit = first('basic-button.submit', 'Add <basic-button.submit> to add items.')
@@ -284,7 +284,7 @@ defineComponent('module-list', ({ first, host, on, pass, watch }) => {
   const list = createList([], { keyConfig: 'item' })
 
   return [
-    watch(() => Array.from(list.keys()), keys => { /* reconcile DOM */ }),
+    reconcile(container, template, list, (element, item) => { /* fill content */ }),
     on(form, 'submit', e => { /* add item */ }),
     on(host, 'click', e => { /* remove item by delegation */ }),
     pass(submit, { disabled: () => !textbox.length }),
@@ -294,45 +294,25 @@ defineComponent('module-list', ({ first, host, on, pass, watch }) => {
 
 The `keyConfig` option controls how keys are generated. A string prefix produces auto-incrementing keys (`'item'` → `item0`, `item1`, …). A function `(item) => string` derives the key from item content — required when the same item can reappear and must keep its identity. Without `keyConfig`, Le Truc falls back to position-based auto-increment.
 
-### Reconciling the DOM with watch()
+### Reconciling the DOM with reconcile()
 
-The heart of the pattern is a single `watch()` that reads `list.keys()` and mirrors that order into the container. It runs once at connect and again whenever items are added or removed:
+`reconcile(container, template, source, bindItem)` syncs the source's keys to the container's children in one declarative call. It runs once at connect and again whenever keys are added, removed, or reordered:
 
 ```js
-watch(() => Array.from(list.keys()), keys => {
-  const current = new Map<string, HTMLElement>()
-  for (const child of container.children) {
-    const el = child as HTMLElement
-    if (el.dataset.key) current.set(el.dataset.key, el)
-  }
-
-  const keysSet = new Set(keys)
-
-  // Drop children whose key is no longer in the list.
-  for (const [key, el] of current) {
-    if (!keysSet.has(key)) el.remove()
-  }
-
-  // Insert new keys (cloning the template) and move every child into its
-  // target position. Existing nodes are reused, not recreated.
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i]
-    let el = key && current.get(key)
-    if (key && !el) {
-      const fragment = template.content.cloneNode(true) as DocumentFragment
-      el = fragment.firstElementChild as HTMLElement
-      el.dataset.key = key
-      el.querySelector('slot')?.replaceWith(
-        document.createTextNode(list.byKey(key)?.get() ?? ''),
-      )
-    }
-    const currentAtI = container.children[i]
-    if (el && currentAtI !== el) container.insertBefore(el, currentAtI ?? null)
-  }
-})
+reconcile(container, template, list, (element, item) => {
+  element
+    .querySelector('slot')
+    ?.replaceWith(document.createTextNode(item.get()))
+}),
 ```
 
-This reconciler handles three cases in one pass: removal (the node's key vanished), creation (a key has no node yet — clone the template and stamp it with `data-key`), and reorder (the node exists but sits at the wrong position — `insertBefore` moves it). Items already present in the container on first render are matched by their `data-key` and preserved.
+For every key in source order, the container holds one element stamped with `data-key`. Entering keys clone the template's single root element and mount `bindItem(element, item, key)` in its own scope; leaving keys dispose that scope and remove their element; surviving elements are moved with `insertBefore()` — always reused, never recreated. Per-item value changes flow through the `item` signal and never trigger structural work.
+
+`bindItem` does all content work — there is no default fill convention. A returned cleanup runs when the key leaves the list or the component disconnects. It also runs for **adopted** elements: children already in the container at connect time (server-rendered) are matched to source keys by their `data-key` attribute and kept; keyed children not in the source and all unkeyed children are removed. So `bindItem` should be idempotent against server-rendered content — in the example above, an adopted item has no `<slot>` left to replace, so the fill is naturally a no-op.
+
+Two escape hatches keep `reconcile()` composable: children carrying `data-unreconciled` are exempt from reconciliation entirely (never removed, never repositioned — for drag-and-drop markers or server-streamed content arriving mid-interaction), and keyed elements are positioned relative to the keyed subset, not by absolute index, so such unmanaged elements don't drift keyed positions. The sync is strictly one-way, data → DOM: to change the list's structure, mutate the list in an event handler and let `reconcile()` write the DOM.
+
+`bindItem` has **collector parity with `each()`'s callback**: `watch()`, `on()`, `pass()`, and `each()` can be called inside it directly, and the collected descriptors activate against that per-item scope rather than the driving structural effect — so an item-level `watch(item, …)` never makes structural work depend on item signals. For static items a one-time fill (as above) is enough; for items whose displayed content depends on signals that change after creation, call `watch()` inside `bindItem` instead.
 
 ### Adding and Removing Items
 

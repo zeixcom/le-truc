@@ -138,9 +138,12 @@ my-button {
 {% section %}
 ## Reactive Styles
 
-CSS class variants become interactive when JavaScript toggles them in response to state. The contract is simple: **the class name in CSS must exactly match the token passed to `bindClass()`**.
+Styles become interactive when JavaScript toggles a styling hook in response to state. Which hook depends on who owns the state:
 
-The `module-scrollarea` component demonstrates this clearly. The CSS defines what the shadow looks like when overflow is present:
+- **Classes** are author-controlled. Use `watch()` + `bindClass()` when the toggled token belongs to the same vocabulary as the variant classes above — the consumer could also set or remove it by hand. The contract is simple: **the class name in CSS must exactly match the token passed to `bindClass()`**.
+- **Custom states** are component-owned. Use `watch()` + `bindState()` when the state is something only the component itself can know — it is exposed to CSS via the `:state()` pseudo-class (backed by ElementInternals) and cannot be clobbered by consumer code or frameworks rewriting the `class` attribute.
+
+The `module-scrollarea` component demonstrates the custom-state case: whether content overflows is runtime knowledge the component derives from scroll position — nothing an author would ever set. The CSS defines what the shadow looks like when overflow is present:
 
 ```css
 module-scrollarea {
@@ -150,23 +153,23 @@ module-scrollarea {
     /* gradient shadow rendered here */
   }
 
-  &.overflow-end::after {
-    opacity: 1; /* fades in when JS adds the class */
+  &:state(overflow-end)::after {
+    opacity: 1; /* fades in when the component sets the state */
   }
 }
 ```
 
-The component's factory creates a local signal and passes it to `watch()` + `bindClass()`:
+The component's factory creates a local signal and passes it to `watch()` + `bindState()`, using the `internals` object from the factory context:
 
 ```js
 const overflowEnd = createState(false)
 
 return [
-  watch(overflowEnd, bindClass(host, 'overflow-end')),
+  watch(overflowEnd, bindState(internals, 'overflow-end')),
 ]
 ```
 
-When `overflowEnd` becomes `true`, Le Truc adds `overflow-end` to the host element. The CSS rule activates, and the shadow fades in. When it becomes `false`, the class is removed and the shadow fades out — no inline styles, no manual DOM manipulation.
+When `overflowEnd` becomes `true`, Le Truc adds `overflow-end` to the element's custom state set. The `:state(overflow-end)` rule activates, and the shadow fades in. When it becomes `false`, the state is removed and the shadow fades out — no inline styles, no manual DOM manipulation, and no class token an outside script could accidentally wipe.
 
 The full example is a scroll container that shows fade shadows at either edge when content overflows: [Scrollarea example](./examples/module-scrollarea.html).
 

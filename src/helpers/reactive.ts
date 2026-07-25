@@ -1,4 +1,6 @@
 import {
+	type Cleanup,
+	type Collection,
 	createComputed,
 	createEffect,
 	createMemo,
@@ -8,9 +10,11 @@ import {
 	isMemo,
 	isRecord,
 	isSlot,
+	type List,
 	type MaybeCleanup,
 	type MaybePromise,
 	type Memo,
+	type MutableSignal,
 	match,
 	type Signal,
 	type SingleMatchHandlers,
@@ -22,15 +26,17 @@ import {
 	InvalidCustomElementError,
 	InvalidPassPropertyError,
 	InvalidReactivesError,
+	InvalidTemplateError,
 } from '../errors'
-import { getSignals } from '../internal'
+import { getSignals, pushDescriptor, withCollector } from '../internal'
 import type {
+	ComponentProp,
 	ComponentProps,
 	EffectDescriptor,
 	FactoryResult,
 	Falsy,
 } from '../types'
-import { DEV_MODE, elementName, isCustomElement } from '../util'
+import { elementName, isCustomElement } from '../util'
 
 /* === Types === */
 
@@ -54,12 +60,20 @@ type Reactive<T, P extends ComponentProps> =
  * A map of child component property names to the reactive values to inject into them.
  * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
  *
+ * `Q`'s own bound is only `HTMLElement` — not `ComponentProps` — because a target's
+ * element type (e.g. `FormAssociatedElement & FormTextboxProps`) may mix in
+ * interfaces with nullable native members (`form: HTMLFormElement | null`), which
+ * would make the whole intersection fail a `Record<string, {}>`-style constraint.
+ * Instead, `keyof Q & ComponentProp` does the filtering: it keeps only the
+ * author-exposed reactive props (excluding native `HTMLElement` members and
+ * reserved words) regardless of what else `Q` mixes in.
+ *
  * Prefer the read-only thunk (`() => host.prop`) and the mediated
  * `{ get, set }` descriptor forms. The property-key and bare-writable-signal
  * forms are deprecated; they warn in DEV_MODE and will be removed in the next major.
  */
-type PassedProps<P extends ComponentProps, Q extends ComponentProps> = {
-	[K in keyof Q & string]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>
+type PassedProps<P extends ComponentProps, Q extends HTMLElement> = {
+	[K in keyof Q & ComponentProp]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>
 }
 
 /**
@@ -125,12 +139,12 @@ type WatchHelper<P extends ComponentProps> = {
  * Both deprecated forms are removed in the next major.
  */
 type PassHelper<P extends ComponentProps> = {
-	<Q extends ComponentProps>(
-		target: (HTMLElement & Q) | Falsy,
+	<Q extends HTMLElement>(
+		target: Q | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
-	<Q extends ComponentProps>(
-		target: Memo<(HTMLElement & Q)[]> | Falsy,
+	<Q extends HTMLElement>(
+		target: Memo<Q[]> | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
 }
@@ -150,6 +164,38 @@ const activateResult = (result: FactoryResult): void => {
 	for (const descriptor of result) {
 		if (Array.isArray(descriptor)) activateResult(descriptor)
 		else if (descriptor) descriptor()
+	}
+}
+
+/**
+ * Recursively flatten a `FactoryResult` (or a single descriptor, or a falsy
+ * value), invoking `visit` for each descriptor not already present in `seen`
+ * (checked by reference).
+ *
+ * Reconciles the legacy explicit-`return` form with descriptors already
+ * pushed into the active collector by `watch()`/`on()`/`pass()`/`each()`
+ * (ADR 0018) — a descriptor produced by one of those helpers is pushed
+ * whether or not it's also `return`ed, so it must only be visited once. A
+ * manually-constructed `EffectDescriptor` that bypasses every helper (never
+ * pushed anywhere) is not in `seen` and is still visited — the explicit
+ * `FactoryResult` return type has always allowed authoring one directly,
+ * without going through `watch()`/`on()`/`pass()`/`each()`, so this remains
+ * the one path such a descriptor can be picked up by.
+ *
+ * @since 2.3
+ * @param {FactoryResult | EffectDescriptor | Falsy} result - Flat or nested array, single descriptor, or falsy value to reconcile
+ * @param {ReadonlySet<EffectDescriptor>} seen - Descriptors already accounted for (by reference) — skipped
+ * @param {(descriptor: EffectDescriptor) => void} visit - Called once per not-yet-seen descriptor, in encounter order
+ */
+const forEachUnseen = (
+	result: FactoryResult | EffectDescriptor | Falsy,
+	seen: ReadonlySet<EffectDescriptor>,
+	visit: (descriptor: EffectDescriptor) => void,
+): void => {
+	if (Array.isArray(result)) {
+		for (const item of result) forEachUnseen(item, seen, visit)
+	} else if (typeof result === 'function' && !seen.has(result)) {
+		visit(result)
 	}
 }
 
@@ -291,7 +337,7 @@ const makeWatch = <P extends ComponentProps>(
 			| ((value: any) => MaybePromise<MaybeCleanup>)
 			| SingleMatchHandlers<any>,
 	): EffectDescriptor {
-		return () => {
+		const descriptor: EffectDescriptor = () => {
 			if (Array.isArray(source)) {
 				const signals = source.map(s => toSignal(host, s))
 				const handler = handlerOrHandlers as (
@@ -311,6 +357,8 @@ const makeWatch = <P extends ComponentProps>(
 			}
 			return createEffect(() => match(signal, handlerOrHandlers))
 		}
+		pushDescriptor(host, 'watch', descriptor)
+		return descriptor
 	}
 	return watch
 }
@@ -347,8 +395,8 @@ const makePass = <P extends ComponentProps>(
 	 * Perform the slot-swap for a single target element.
 	 * Returns a cleanup that restores all original slot signals.
 	 */
-	const swapSlots = <Q extends ComponentProps>(
-		target: HTMLElement & Q,
+	const swapSlots = <Q extends HTMLElement>(
+		target: Q,
 		props: PassedProps<P, Q>,
 	): (() => void) | undefined =>
 		createScope(() => {
@@ -388,7 +436,7 @@ const makePass = <P extends ComponentProps>(
 				// in DEV_MODE. Detection is reversed — allow what is provably
 				// read-only, warn on everything else.
 				if (
-					DEV_MODE &&
+					process.env.DEV_MODE === 'true' &&
 					!isComputed(signal) &&
 					!(
 						signal &&
@@ -428,21 +476,21 @@ const makePass = <P extends ComponentProps>(
 				}
 		})
 
-	function pass<Q extends ComponentProps>(
-		target: (HTMLElement & Q) | Falsy,
+	function pass<Q extends HTMLElement>(
+		target: Q | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
-	function pass<Q extends ComponentProps>(
-		target: Memo<(HTMLElement & Q)[]> | Falsy,
+	function pass<Q extends HTMLElement>(
+		target: Memo<Q[]> | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
-	function pass<Q extends ComponentProps>(
-		target: (HTMLElement & Q) | Memo<(HTMLElement & Q)[]> | Falsy,
+	function pass<Q extends HTMLElement>(
+		target: Q | Memo<Q[]> | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor {
-		return () => {
+		const descriptor: EffectDescriptor = () => {
 			if (!target) return
-			if (isMemo<(HTMLElement & Q)[]>(target)) {
+			if (isMemo<Q[]>(target)) {
 				// Memo target: keyed per-element lifecycle
 				keyedScopes(target, el => swapSlots(el, props))
 			} else {
@@ -450,6 +498,8 @@ const makePass = <P extends ComponentProps>(
 				swapSlots(target, props)
 			}
 		}
+		pushDescriptor(host, 'pass', descriptor)
+		return descriptor
 	}
 	return pass
 }
@@ -457,12 +507,14 @@ const makePass = <P extends ComponentProps>(
 /**
  * Create per-element reactive effects from a `Memo<Element[]>`.
  *
- * When elements enter the collection, their effects are created in a per-element
- * scope; when they leave, their effects are disposed with that scope.
+ * Elements entering the collection get their own scope; when they leave,
+ * that scope — and everything registered in it — is disposed.
  *
- * The callback receives a single element and returns a `FactoryResult` (array of
- * `EffectDescriptor`s) or a single `EffectDescriptor` (single-descriptor shortcut).
- * Falsy values can also be returned to skip conditionally.
+ * The callback can call `watch()`, `on()`, and `pass()` directly instead of
+ * returning them; each call registers against that element's scope. A
+ * callback that calls `each()` again (e.g. rows containing columns) gets its
+ * own nested scope the same way. Returning descriptors still works and isn't
+ * double-activated if you also call them directly.
  *
  * @since 2.0
  */
@@ -470,13 +522,228 @@ function each<E extends Element>(
 	memo: Memo<E[]>,
 	callback: (element: E) => FactoryResult | EffectDescriptor | Falsy,
 ): EffectDescriptor {
-	return () => {
+	const descriptor: EffectDescriptor = () => {
 		keyedScopes(memo, element => {
-			const result = callback(element)
-			if (Array.isArray(result)) activateResult(result)
-			else if (typeof result === 'function') result()
+			const collected: EffectDescriptor[] = []
+			const result = withCollector(collected, () => callback(element))
+			activateResult(collected)
+			forEachUnseen(result, new Set(collected), d => d())
 		})
 	}
+	pushDescriptor(undefined, 'each', descriptor)
+	return descriptor
+}
+
+/**
+ * Sync a keyed reactive data source to a container's children.
+ *
+ * For every key in `source` (in source order), the container holds one
+ * element carrying `data-key`: entering keys clone `template`'s root
+ * element, leaving keys are disposed and removed, surviving elements are
+ * reused and repositioned. The sync is one-way, data → DOM — `reconcile()`
+ * never reads item data back out; mutate `source` (e.g. from an event
+ * handler) to change structure.
+ *
+ * On first run, existing children whose `data-key` matches a source key are
+ * adopted (`bindItem` runs for them too, so make it idempotent against
+ * server-rendered content); everything else is removed. Children carrying
+ * `data-unreconciled` are left alone entirely — never removed, repositioned,
+ * or bound, even if `reconcile()` itself originally placed them.
+ *
+ * `bindItem` is called once per entering element, with the same collector
+ * support as `each()`'s callback: `watch()`, `on()`, `pass()`, and
+ * `provideContexts()` can be called directly inside it, scoped to that item
+ * rather than the driving structural effect. A returned
+ * `MaybeCleanup` runs when the key leaves the source or the component
+ * disconnects.
+ *
+ * See ADR 0017 for the full rationale (SSR adoption, unreconciled pinning,
+ * keyed-relative positioning).
+ *
+ * @since 2.3
+ * @param {Element} container - Container element whose children are reconciled
+ * @param {HTMLTemplateElement} template - Template whose single root element is cloned for entering keys
+ * @param {List<T> | Collection<T>} source - Keyed reactive data source
+ * @param {(element: HTMLElement, item: Signal<T>, key: string) => MaybeCleanup} bindItem - Mounted once per entering element inside an ambient collector; collected descriptors activate against the per-item scope, and any returned cleanup is that scope's teardown
+ * @returns {EffectDescriptor} Effect descriptor to include in the component's factory result
+ * @throws {InvalidTemplateError} if the template content does not contain exactly one root element
+ */
+function reconcile<T extends {}, S extends MutableSignal<T>>(
+	container: Element,
+	template: HTMLTemplateElement,
+	source: List<T, S>,
+	bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup,
+): EffectDescriptor
+function reconcile<T extends {}, S extends Signal<T>>(
+	container: Element,
+	template: HTMLTemplateElement,
+	source: Collection<T, S>,
+	bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup,
+): EffectDescriptor
+function reconcile<T extends {}>(
+	container: Element,
+	template: HTMLTemplateElement,
+	source: List<T> | Collection<T>,
+	bindItem: (
+		element: HTMLElement,
+		item: Signal<T>,
+		key: string,
+	) => MaybeCleanup,
+): EffectDescriptor {
+	const descriptor: EffectDescriptor = () => {
+		if (template.content.childElementCount !== 1)
+			throw new InvalidTemplateError(
+				container,
+				template.content.childElementCount,
+			)
+		const itemRoot = template.content.firstElementChild as HTMLElement
+
+		// WeakMap is the runtime element→key bookkeeping; `data-key` stays on the
+		// DOM for SSR adoption harvest and event-delegation ergonomics (ADR 0017).
+		const keyOf = new WeakMap<Element, string>()
+		const disposers = new Map<string, Cleanup>()
+
+		// Next reconciled element after `after` in document order — skips
+		// `data-unreconciled` elements, which are invisible to positioning.
+		const nextKeyed = (after: Element | null): Element | null => {
+			let node = after ? after.nextElementSibling : container.firstElementChild
+			while (
+				node &&
+				(!keyOf.has(node) || node.hasAttribute('data-unreconciled'))
+			)
+				node = node.nextElementSibling
+			return node
+		}
+
+		// Scan: classify children. Survivors are kept, unknown children with
+		// a matching unclaimed `data-key` are adopted, everything else
+		// (leavers, unmatched keys, unkeyed children) is removed.
+		const classify = (keySet: Set<string>) => {
+			const current = new Map<string, HTMLElement>()
+			const adopted = new Set<string>()
+			const pinned = new Set<string>()
+			const leavers: Element[] = []
+			for (const child of Array.from(container.children)) {
+				if (child.hasAttribute('data-unreconciled')) {
+					// A previously reconciled element that turned unreconciled
+					// (e.g. a mid-drag item) still claims its key: it must not be
+					// duplicated by a clone, but is never moved or re-mounted.
+					const key = keyOf.get(child)
+					if (key !== undefined && keySet.has(key)) {
+						current.set(key, child as HTMLElement)
+						pinned.add(key)
+					}
+					continue
+				}
+				const key = keyOf.get(child)
+				if (key !== undefined) {
+					if (keySet.has(key)) current.set(key, child as HTMLElement)
+					else leavers.push(child)
+					continue
+				}
+				const harvested = child.getAttribute('data-key')
+				if (
+					harvested !== null &&
+					keySet.has(harvested) &&
+					!current.has(harvested)
+				) {
+					keyOf.set(child, harvested)
+					current.set(harvested, child as HTMLElement)
+					adopted.add(harvested)
+					continue
+				}
+				if (process.env.DEV_MODE === 'true' && harvested !== null)
+					console.warn(
+						`reconcile() removed child with data-key="${harvested}" from ${elementName(container)} — key not present in the source.`,
+					)
+				child.remove()
+			}
+			return { current, adopted, pinned, leavers }
+		}
+
+		// Dispose leaving scopes before removing their elements, and both
+		// before mounting enterers (teardown-before-setup, as in
+		// keyedScopes). Also reaps scopes whose element vanished through
+		// external DOM mutation.
+		const leave = (keySet: Set<string>, leavers: Element[]) => {
+			for (const [key, dispose] of disposers) {
+				if (keySet.has(key)) continue
+				dispose()
+				disposers.delete(key)
+			}
+			for (const el of leavers) el.remove()
+		}
+
+		// Enter, mount, and position in source key order.
+		const enter = (
+			keys: string[],
+			current: Map<string, HTMLElement>,
+			adopted: Set<string>,
+			pinned: Set<string>,
+		) => {
+			let prev: Element | null = null
+			for (const key of keys) {
+				let el = current.get(key)
+				let mount = adopted.has(key)
+				if (!el) {
+					el = itemRoot.cloneNode(true) as HTMLElement
+					el.setAttribute('data-key', key)
+					keyOf.set(el, key)
+					mount = true
+				}
+				if (mount) {
+					// A stale scope survives only if the element was replaced
+					// behind our back (removed externally, or re-adopted).
+					disposers.get(key)?.()
+					const item = source.byKey(key)
+					if (item) {
+						const element = el
+						disposers.set(
+							key,
+							createScope(
+								() => {
+									const collected: EffectDescriptor[] = []
+									const cleanup = withCollector(collected, () =>
+										bindItem(element, item, key),
+									)
+									activateResult(collected)
+									return cleanup
+								},
+								{
+									root: true,
+								},
+							),
+						)
+					}
+				}
+				if (pinned.has(key)) continue
+				if (nextKeyed(prev) !== el)
+					container.insertBefore(
+						el,
+						prev ? prev.nextElementSibling : container.firstElementChild,
+					)
+				prev = el
+			}
+		}
+
+		createScope(() => {
+			createEffect(() => {
+				const keys = Array.from(source.keys())
+				untrack(() => {
+					const keySet = new Set(keys)
+					const { current, adopted, pinned, leavers } = classify(keySet)
+					leave(keySet, leavers)
+					enter(keys, current, adopted, pinned)
+				})
+			})
+			return () => {
+				for (const dispose of disposers.values()) dispose()
+				disposers.clear()
+			}
+		})
+	}
+	pushDescriptor(undefined, 'reconcile', descriptor)
+	return descriptor
 }
 
 export {
@@ -485,11 +752,13 @@ export {
 	each,
 	type FactoryResult,
 	type Falsy,
+	forEachUnseen,
 	keyedScopes,
 	makePass,
 	makeWatch,
 	type PassedProps,
 	type PassHelper,
 	type Reactive,
+	reconcile,
 	type WatchHelper,
 }

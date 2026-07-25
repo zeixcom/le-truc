@@ -8,9 +8,9 @@ import {
 	isFunction,
 	type Signal,
 } from '@zeix/cause-effect'
-import { CONTEXT_RETRY_DELAY } from '../internal'
+import { CONTEXT_RETRY_DELAY, pushDescriptor } from '../internal'
 import type { ComponentProps, EffectDescriptor } from '../types'
-import { DEV_MODE, elementName } from '../util'
+import { elementName } from '../util'
 
 /* === Types === */
 
@@ -150,35 +150,38 @@ const createContext = <V>(key: string): Context<string, V> =>
  */
 const makeProvideContexts =
 	<P extends ComponentProps>(host: HTMLElement & P): ProvideContextsHelper<P> =>
-	(contexts: Array<keyof P>): EffectDescriptor =>
-	() =>
-		createScope(() => {
-			const listener = (e: ContextRequestEvent<UnknownContext>) => {
-				const { context, callback } = e
-				if (
-					typeof context === 'string' &&
-					contexts.includes(context as unknown as Extract<keyof P, string>) &&
-					isFunction(callback)
-				) {
-					e.stopImmediatePropagation()
-					callback(() => {
-						try {
-							return host[context as keyof P]
-						} catch (error) {
-							if (DEV_MODE)
-								console.warn(
-									'provideContexts: getter threw',
-									elementName(host),
-									error,
-								)
-							return undefined
-						}
-					})
+	(contexts: Array<keyof P>): EffectDescriptor => {
+		const descriptor: EffectDescriptor = () =>
+			createScope(() => {
+				const listener = (e: ContextRequestEvent<UnknownContext>) => {
+					const { context, callback } = e
+					if (
+						typeof context === 'string' &&
+						contexts.includes(context as unknown as Extract<keyof P, string>) &&
+						isFunction(callback)
+					) {
+						e.stopImmediatePropagation()
+						callback(() => {
+							try {
+								return host[context as keyof P]
+							} catch (error) {
+								if (process.env.DEV_MODE === 'true')
+									console.warn(
+										'provideContexts: getter threw',
+										elementName(host),
+										error,
+									)
+								return undefined
+							}
+						})
+					}
 				}
-			}
-			host.addEventListener(CONTEXT_REQUEST, listener)
-			return () => host.removeEventListener(CONTEXT_REQUEST, listener)
-		})
+				host.addEventListener(CONTEXT_REQUEST, listener)
+				return () => host.removeEventListener(CONTEXT_REQUEST, listener)
+			})
+		pushDescriptor(host, 'provideContexts', descriptor)
+		return descriptor
+	}
 
 /**
  * Create a `requestContext` helper bound to a specific component host.
@@ -249,7 +252,7 @@ const makeRequestContext =
 			setTimeout(() => {
 				if (!answered && host.isConnected) {
 					dispatch()
-					if (!answered && DEV_MODE)
+					if (process.env.DEV_MODE === 'true' && !answered)
 						console.warn(
 							`requestContext: no provider answered for '${String(context)}' on ${elementName(host)}; using fallback`,
 						)

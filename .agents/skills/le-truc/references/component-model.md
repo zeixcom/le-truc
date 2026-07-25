@@ -13,7 +13,7 @@ defineComponent<P extends ComponentProps>(name, factory)
 | Argument | Type | Purpose |
 |---|---|---|
 | `name` | `string` | Tag name — lowercase, must contain hyphen |
-| `factory` | `(context: FactoryContext<P>) => FactoryResult` | Called at connect time; queries elements, calls `expose()`, returns effect descriptors |
+| `factory` | `(context: FactoryContext<P>) => FactoryResult \| Falsy \| void` | Called at connect time; queries elements, calls `expose()`, calls effect helpers |
 
 ### Factory Context Helpers
 
@@ -23,11 +23,13 @@ defineComponent<P extends ComponentProps>(name, factory)
 | `all(selector, required?)` | Return `Memo<E[]>` backed by lazy `MutationObserver`; throws `MissingElementError` if `required` string given and no elements match |
 | `host` | Component host element, typed as `HTMLElement & P` |
 | `expose(props)` | Declare reactive properties — call once, imperatively, inside factory body |
-| `watch(source, handler)` | Create reactive effect descriptor |
-| `on(target, type, handler, options?)` | Create event listener descriptor |
-| `pass(target, props)` | Create slot-swap descriptor for Le Truc child |
-| `provideContexts(contexts)` | Create context-provider descriptor |
+| `watch(source, handler)` | Create and register a reactive effect descriptor |
+| `on(target, type, handler, options?)` | Create and register an event listener descriptor |
+| `pass(target, props)` | Create and register a slot-swap descriptor for a Le Truc child |
+| `provideContexts(contexts)` | Create and register a context-provider descriptor |
 | `requestContext(context, fallback)` | Return `Signal<T>` (backed by a `Slot`) for use inside `expose()` |
+
+For a raw hand-authored `EffectDescriptor` not produced by any of the above (e.g. wrapping `IntersectionObserver`), register it via `watch(() => true, descriptor)` — `() => true` has no signal dependency, so the effect runs its setup once, on connect, and `watch()`'s internal `createEffect()` call registers the descriptor's returned cleanup for disconnect.
 
 ### Example
 
@@ -43,14 +45,16 @@ defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) =>
     label: asString(label?.textContent ?? button.textContent ?? ''),
   })
 
-  // 3. Return effect descriptors (nested arrays OK, falsy guards filtered)
-  return [
-    on(button, 'click', () => { /* ... */ }),
-    watch('disabled', bindProperty(button, 'disabled')),
-    label && watch('label', bindText(label)),  // falsy guard for optional element
-  ]
+  // 3. Call effect helpers — each registers itself, no return needed
+  on(button, 'click', () => { /* ... */ })
+  watch('disabled', bindProperty(button, 'disabled'))
+  if (label) watch('label', bindText(label))  // guard for optional element
 })
 ```
+
+`watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` register their descriptor in an ambient collector the moment they're called — the factory doesn't collect or return anything. Calling one of these helpers outside synchronous factory (or `each()` callback) execution — after an `await`, in a detached `setTimeout` — throws `NoActiveCollectorError` immediately, rather than silently doing nothing.
+
+Explicit `return [...]` of the same descriptors still works (dual support in v2.3, deprecated as of v3.0) — see ADR 0018.
 
 ---
 
@@ -60,8 +64,7 @@ defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) =>
 - `defineComponent` never registers `observedAttributes` — `attributeChangedCallback` support was dropped entirely in v2.0
 - Parsers in `expose()` called **once at connect time** — HTML authors configure via attributes in server-rendered markup
 - Attribute changes after connect **are not re-parsed** — reactive state flows through property interface only
-- Factory result type: `FactoryResult` = `Array<EffectDescriptor | FactoryResult | Falsy>`
-- Nested arrays flattened; falsy values filtered before activation — enabling `element && watch(...)` pattern
+- Effect helpers register themselves when called — no `return` needed. Explicit `return [...]` of a `FactoryResult` (`Array<EffectDescriptor | FactoryResult | Falsy>`) still works (deprecated as of v3.0); nested arrays are flattened and falsy values filtered, so the legacy `element && watch(...)` pattern still works too, but prefer `if (element) watch(...)` in new code
 
 ---
 
@@ -89,7 +92,7 @@ expose({
 
 ## `watch(source, handler | handlers)` — Reactive Effects
 
-`watch` returns an `EffectDescriptor`. Drives reactive effect from explicitly declared source — only source triggers re-runs.
+`watch` creates an `EffectDescriptor`, registers it automatically, and returns it (the return value is rarely used directly). Drives reactive effect from explicitly declared source — only source triggers re-runs.
 
 ```typescript
 // String prop name — reads host.disabled
@@ -127,7 +130,7 @@ type SingleMatchHandlers<T> = {
 
 ## `on(target, type, handler, options?)` — Event Listeners
 
-`on` returns an `EffectDescriptor`. Handler receives `(event, element)`.
+`on` creates an `EffectDescriptor` and registers it automatically. Handler receives `(event, element)`.
 
 ```typescript
 // Single element

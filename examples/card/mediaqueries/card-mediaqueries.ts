@@ -26,11 +26,9 @@ export default defineComponent(
 		const viewport = requestContext(MEDIA_VIEWPORT, 'unknown')
 		const orientation = requestContext(MEDIA_ORIENTATION, 'unknown')
 
-		return [
-			motionEl && watch(motion, bindText(motionEl)),
-			themeEl && watch(theme, bindText(themeEl)),
-			viewportEl && watch(viewport, bindText(viewportEl)),
-			orientationEl && watch(orientation, bindText(orientationEl)),
-		]
+		if (motionEl) watch(motion, bindText(motionEl))
+		if (themeEl) watch(theme, bindText(themeEl))
+		if (viewportEl) watch(viewport, bindText(viewportEl))
+		if (orientationEl) watch(orientation, bindText(orientationEl))
 	},
 )

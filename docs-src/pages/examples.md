@@ -38,6 +38,7 @@ layout: 'page'
   - [Spinbutton](./examples/form-spinbutton.html)
   - [Textbox](./examples/form-textbox.html)
 - Module
+  - [Calctable](./examples/module-calctable.html)
   - [Carousel](./examples/module-carousel.html)
   - [Catalog](./examples/module-catalog.html)
   - [Codeblock](./examples/module-codeblock.html)

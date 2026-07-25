@@ -25,17 +25,33 @@ In `DEV_MODE`, using an unbranded function that resembles a parser triggers `con
 
 **Always wrap method producer initializers with `defineMethod()`.** The function IS the method — it is installed directly as `host[key] = fn`.
 
-`provideContexts([...])` returns an `EffectDescriptor` — include it in the return array.
+`provideContexts([...])` creates an `EffectDescriptor` and pushes it into the ambient collector (ADR 0018) — no `return` needed as of v2.3, though returning it still works (dual support, deprecated in v3.0).
 
 ## `watch()` Requires `createEffect` Internally
 
-`watch()` (via `makeWatch` in `src/helpers/reactive.ts`) wraps `match()` inside `createEffect()`. This is why `watch()` returns an `EffectDescriptor` — the `createEffect` only runs after dependency resolution, inside the `createScope` created in `connectedCallback`. Calling `match()` without `createEffect` would track dependencies synchronously and not re-run.
+`watch()` (via `makeWatch` in `src/helpers/reactive.ts`) wraps `match()` inside `createEffect()`. This is why `watch()`'s descriptor is deferred — the `createEffect` only runs after dependency resolution, inside the `createScope` created in `connectedCallback`. Calling `match()` without `createEffect` would track dependencies synchronously and not re-run. `watch()` also pushes its descriptor into the factory's ambient collector (`pushDescriptor`, `src/internal.ts`) when called — this is separate from and unrelated to `createEffect`'s own owner-registration; both happen, for different reasons (collector = when the descriptor activates; `createEffect`'s owner = where its cleanup lives once activated).
+
+## A Hand-Authored `EffectDescriptor` Needs `watch(() => true, …)` (or an Internal `createEffect`/`createScope` Call) to Actually Clean Up
+
+`activateResult()` (`src/helpers/reactive.ts`) discards the return value of every descriptor it calls during activation. `watch()`/`on()`/`pass()` are unaffected because they call `createEffect()`/`createScope()` *inside* their own descriptor body, which self-registers cleanup onto the active owner regardless of what the outer caller does with the return value. A raw hand-authored descriptor — `() => { setup(); return cleanup }`, with no internal `createEffect`/`createScope` call — has **no such registration**: if it's called via `activateResult` directly (i.e. `return`ed from the factory with no wrapping), its cleanup is silently dropped and never runs on disconnect. This was a real, previously-shipping bug in several example components (found during LT-010; see NOTES.md history), fixed by wrapping the raw descriptor in `watch(() => true, descriptor)` — `() => true` has no signal dependency so it runs once, and `watch()`'s internal `createEffect()` call self-registers the descriptor's returned cleanup. Always register hand-authored descriptors this way, not bare `return`, in new code.
 
 ## `all()` MutationObserver is Lazy
 
 The observer in `src/helpers/dom.ts` only activates when the `Memo` is **read inside a reactive effect**. If no effect reads the Memo, mutations are not tracked. This is intentional (avoids unnecessary observers) but can look like a bug.
 
 The observer watches only mutations implied by the CSS selector (class, ID, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the memo's `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
+
+## `reconcile()` Owns the Container; `each()` Does Not
+
+`reconcile(container, template, source, bindItem)` (src/helpers/reactive.ts) is data-driven and owns the container's children — the opposite ownership of `each()`, which enhances DOM the component doesn't own. Non-obvious details (see ADR 0017):
+
+- The source parameter is the **branded** union `List<T> | Collection<T>`, not a structural interface — `Store<T>` satisfies the shape but is deliberately excluded (its items are not homomorphic).
+- First run **adopts** existing children by `data-key` and removes everything else, including unkeyed children (self-cleaning). `bindItem` runs for adopted elements too and must be idempotent against server-rendered content.
+- Children with `data-unreconciled` are structurally invisible: never removed, never repositioned, no `bindItem`. But an element `reconcile()` itself placed that later gains the attribute (mid-drag pin) still **claims its key** — otherwise a re-run would clone a duplicate for it.
+- Positioning is keyed-relative (after the previous keyed sibling), not absolute-index, so unmanaged elements never drift keyed positions.
+- Internal element→key bookkeeping is a `WeakMap`; `data-key` on the DOM exists for SSR adoption and event delegation — complementary, not either/or.
+- The driving effect reads `source.keys()` only; everything after is wrapped in `untrack()`, so signal reads inside `bindItem` do not become structural dependencies.
+- Ownership follows `keyedScopes`: per-item scopes are `{ root: true }`, an outer `createScope` registers teardown-all on the component scope, and leavers are disposed before their elements are removed and before enterers mount.
 
 ## `pass()` Scope is Le Truc Components Only
 
@@ -71,7 +87,7 @@ If an event handler in `src/helpers/events.ts` returns `{ prop: value }`, all re
 
 ## Context Protocol is the Web Components Community Protocol
 
-`provideContexts` / `requestContext` implement the [webcomponents-cg context spec](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md), not a custom protocol. `provideContexts([...])` returns an `EffectDescriptor` used in the return array; `requestContext(context, fallback)` returns a `Signal<T>` backed by a `Slot`, used directly in `expose()`. The Slot serves `fallback` until a provider answers; a provider that misses the initial synchronous dispatch is caught by two re-dispatches — once on a microtask and once after `CONTEXT_RETRY_DELAY` (~210 ms) — after which the fallback is permanent for that connection (ADR 0015). Providers are stable single sources of truth: removing one does not revert connected consumers to their fallback.
+`provideContexts` / `requestContext` implement the [webcomponents-cg context spec](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md), not a custom protocol. `provideContexts([...])` registers an `EffectDescriptor` automatically (ADR 0018) — call it directly, `return` is not required; `requestContext(context, fallback)` returns a `Signal<T>` backed by a `Slot`, used directly in `expose()`. The Slot serves `fallback` until a provider answers; a provider that misses the initial synchronous dispatch is caught by two re-dispatches — once on a microtask and once after `CONTEXT_RETRY_DELAY` (~210 ms) — after which the fallback is permanent for that connection (ADR 0015). Providers are stable single sources of truth: removing one does not revert connected consumers to their fallback.
 
 ## `bindVisible` is the Inverse of `el.hidden`
 
@@ -89,14 +105,14 @@ When the reactive value is boolean, `toggleAttribute` is called — the attribut
 
 When the reactive is nil, `el.style.removeProperty(prop)` is called, restoring whatever value the CSS cascade provides. Setting the reactive back to a string re-applies the inline style.
 
-## Debug Mode
+## Debug Mode Guards Must Stay in Foldable Form
 
-`DEV_MODE` is the only debug mode — build with `process.env.DEV_MODE=true` for enhanced errors and unbranded-parser warnings. There is no per-instance debug flag.
+Dev mode is the only debug mode — there is no per-instance debug flag. As of v2.3 there is **no `DEV_MODE` const** in `util.ts`: every DEV-gated diagnostic is guarded inline by `process.env.DEV_MODE === 'true'` at its use site. This exact form is load-bearing: Bun's minifier does no cross-reference constant propagation (an imported `const DEV_MODE = false` — and even `var o = !1; if (o) …` — survives minification), but it does fold a same-type literal comparison in an `if` condition. The build therefore defines the **string** `'"false"'` (prod) or `'"true"'` (dev) — a bare boolean define produces `false === 'true'`, which Bun does *not* fold, silently shipping all DEV code again (this was a real ~450B-gzipped regression). In `&&` chains, keep the env check in first position. `test/regression-bundle.test.ts` asserts known DEV-only strings are absent from the prod bundle.
 
 ## Event-Driven Read-Only Props
 
 Expose `state.get` (not the full `State`) to make a prop readable but not settable by consumers. Update the value in an `on()` handler. To watch the prop inside the factory, pass the signal directly: `watch(length, bindVisible(clearBtn))`.
 
-## Testing a DEV_MODE-Gated Branch Requires `mock.module`, and a Snapshot
+## Testing a DEV-Gated Branch: Flip the Env Var, No Module Mocking
 
-`DEV_MODE` (`src/util.ts`) is a module-level `const` captured at import time, so setting `process.env.DEV_MODE` from a test has no effect on already-loaded consumers (`helpers/context.ts`, `helpers/events.ts`, `helpers/dom.ts`, …). `bun:test`'s `mock.module('../util', factory)` does retroactively patch the live binding in already-imported consumers — but it mutates the module's namespace object **in place**. A captured `import * as ns from '../util'` reference is therefore not a stable snapshot: after the first `mock.module` call, `ns.DEV_MODE` reflects the mock, not the original. Restoring with `mock.module('../util', () => ns)` just re-feeds the already-mutated values, permanently corrupting `DEV_MODE` for the rest of the `bun test` process (confirmed: produced a real cross-file leak into unrelated tests). Fix: spread the namespace into a plain object (`const realUtil = { ...ns }`) once, before any mocking, and restore from that snapshot — never from the live namespace. Keep the whole mock→assert→restore sequence synchronous (no `await` in between); an `await` point lets `bun:test` interleave other files' tests while the mock is still active. See `src/tests/context.test.ts` and `src/tests/events.test.ts` for the pattern.
+Since v2.3, DEV guards read `process.env.DEV_MODE` at call time (no import-time const), so a test exercises a DEV branch by setting `process.env.DEV_MODE = 'true'` around the call and restoring the previous value in a `finally` (see `withDevMode` in `src/tests/context.test.ts`, and the inline pattern in `events.test.ts` / `reactive.test.ts`). The historical `mock.module('../util', …)` + namespace-snapshot dance is gone — do not reintroduce it. One residual caveat: the env var is process-global, so while an `await` is pending inside a DEV-enabled window, guards in interleaved tests from other files also see it. That only produces extra `console.warn` calls; keep warn-counting assertions inside the same file (bun runs a file's tests sequentially) and this stays benign.

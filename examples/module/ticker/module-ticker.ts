@@ -4,6 +4,7 @@ import {
 	bindText,
 	createList,
 	createMemo,
+	createSensor,
 	defineComponent,
 	each,
 } from '../../..'
@@ -82,6 +83,7 @@ export default defineComponent<ModuleTickerProps>(
 		const template = first('template') as HTMLTemplateElement | null
 		const table = host.querySelector('table')
 		const rows = all('tr[data-symbol]')
+		const blocks = all('tbody')
 
 		// Read initial state from server-rendered HTML rows
 		const initial: TickerItem[] = Array.from(
@@ -146,23 +148,6 @@ export default defineComponent<ModuleTickerProps>(
 			// each(rows, …) tears down their watch effects automatically.
 		}
 
-		// One shared IntersectionObserver for all blocks. rootMargin pre-loads
-		// blocks just before they scroll into view, hiding the swap latency.
-		const blockObserver = new IntersectionObserver(
-			entries => {
-				for (const entry of entries) {
-					const tbody = entry.target as HTMLTableSectionElement
-					const isVirtualized = !tbody.querySelector('tr[data-symbol]')
-					if (entry.isIntersecting && isVirtualized) materializeBlock(tbody)
-					else if (!entry.isIntersecting && !isVirtualized)
-						virtualizeBlock(tbody)
-				}
-			},
-			{ rootMargin: '400px' },
-		)
-
-		if (block0) blockObserver.observe(block0)
-
 		// Random-walk tick: updates a random subset of symbols each interval.
 		// Virtualized rows have no active watch effects, so signal updates for
 		// them are cheap (no downstream DOM work until the block re-materializes).
@@ -185,102 +170,114 @@ export default defineComponent<ModuleTickerProps>(
 			fraction: asNumber(0.1),
 		})
 
-		return [
-			// Disconnect the block observer when the component disconnects.
-			() => () => blockObserver.disconnect(),
+		// One IntersectionObserver sensor per block, discovered via each().
+		// rootMargin pre-loads blocks just before they scroll into view,
+		// hiding the swap latency. The sensor connects its own observer
+		// lazily when watch() first reads it and disconnects automatically
+		// when the block's <tbody> is removed and each() tears the effect down.
+		each(blocks, tbody => {
+			const section = tbody as HTMLTableSectionElement
+			const visible = createSensor(
+				set => {
+					// Only ever observes `section`, so entries always has exactly one entry.
+					const io = new IntersectionObserver(
+						entries => set(entries[0]!.isIntersecting),
+						{ rootMargin: '400px' },
+					)
+					io.observe(section)
+					return () => io.disconnect()
+				},
+				{ value: true }, // assume visible until the first callback corrects it
+			)
 
-			on(toggleBtn, 'click', () => ({ running: !host.running })),
-			pass(toggleBtn, {
-				label: () => (host.running ? '⏸️ Pause' : '▶️ Resume'),
-			}),
+			watch(
+				() => visible.get(),
+				isVisible => {
+					const isVirtualized = !section.querySelector('tr[data-symbol]')
+					if (isVisible && isVirtualized) materializeBlock(section)
+					else if (!isVisible && !isVirtualized) virtualizeBlock(section)
+				},
+			)
+		})
 
-			// Intentionally stupid: signal updates every 10ms, far faster than
-			// any display can show.
-			watch('running', v => {
-				if (!v) return
-				const id = setInterval(tick, 10)
-				return () => clearInterval(id)
-			}),
+		on(toggleBtn, 'click', () => ({ running: !host.running }))
+		pass(toggleBtn, {
+			label: () => (host.running ? '⏸️ Pause' : '▶️ Resume'),
+		})
 
-			// Per-row effects: only wired for materialized rows (tr[data-symbol]
-			// in DOM). each() auto-tears-down when a row is virtualized and
-			// auto-sets-up when it re-materializes. The row.isConnected guard
-			// covers the brief window between DOM removal and MutationObserver
-			// firing where the row is detached but the effect hasn't cleaned up.
-			each(rows, row => {
-				const symbol = row.dataset.symbol ?? ''
-				const item = tickers.byKey(symbol)
-				if (!item || !row.isConnected) return
+		// Intentionally stupid: signal updates every 10ms, far faster than
+		// any display can show.
+		watch('running', v => {
+			if (!v) return
+			const id = setInterval(tick, 10)
+			return () => clearInterval(id)
+		})
 
-				const priceEl = row.querySelector('.price')
-				const changeEl = row.querySelector('.change')
-				const volumeEl = row.querySelector('.volume')
-				if (!priceEl || !changeEl || !volumeEl) return
+		// Per-row effects: only wired for materialized rows (tr[data-symbol]
+		// in DOM). each() auto-tears-down when a row is virtualized and
+		// auto-sets-up when it re-materializes. The row.isConnected guard
+		// covers the brief window between DOM removal and MutationObserver
+		// firing where the row is detached but the effect hasn't cleaned up.
+		each(rows, row => {
+			const symbol = row.dataset.symbol ?? ''
+			const item = tickers.byKey(symbol)
+			if (!item || !row.isConnected) return
 
-				const changeMemo = createMemo(() => {
-					const { open, price } = item.get()
-					return (price - open) / open
-				})
+			const priceEl = row.querySelector('.price')
+			const changeEl = row.querySelector('.change')
+			const volumeEl = row.querySelector('.volume')
+			if (!priceEl || !changeEl || !volumeEl) return
 
-				return [
-					watch(() => priceFormat.format(item.get().price), bindText(priceEl)),
-					watch(
-						() => changeFormat.format(changeMemo.get()),
-						bindText(changeEl),
-					),
-					watch(
-						() => {
-							const change = changeMemo.get()
-							return change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
-						},
-						bindProperty(row.dataset, 'direction'),
-					),
-					watch(
-						() => volumeFormat.format(item.get().volume),
-						bindText(volumeEl),
-					),
-				]
-			}),
+			const changeMemo = createMemo(() => {
+				const { open, price } = item.get()
+				return (price - open) / open
+			})
 
-			// Batch-add one full block: update tickers list first so each() finds
-			// the new State signals when the MutationObserver fires for the
-			// newly appended template clones. Each click creates its own <tbody>
-			// so the IntersectionObserver can virtualize it independently.
-			on(addRowsBtn, 'click', () => {
-				if (!template || !table) return
-				const newItems: TickerItem[] = Array.from(
-					{ length: BLOCK_SIZE },
-					() => {
-						const symbol = nextSymbol()
-						const price = Math.round((10 + Math.random() * 1000) * 100) / 100
-						return { symbol, open: price, price, volume: 0 }
-					},
-				)
-				// Batch data update first — each() will find byKey() populated
-				// when the MutationObserver fires for the new rows.
-				tickers.splice(tickers.length, 0, ...newItems)
-				const newTbody = document.createElement('tbody')
-				blockSymbols.set(
-					newTbody,
-					newItems.map(i => i.symbol),
-				)
-				const fragment = document.createDocumentFragment()
-				for (const { symbol, price } of newItems) {
-					const clone = template.content.cloneNode(true) as DocumentFragment
-					const tr = clone.firstElementChild as HTMLTableRowElement
-					tr.dataset.symbol = symbol
-					const th = tr.querySelector('th')
-					const priceEl = tr.querySelector('.price')
-					if (th) th.textContent = symbol
-					if (priceEl) priceEl.textContent = priceFormat.format(price)
-					fragment.append(tr)
-				}
-				newTbody.append(fragment)
-				table.append(newTbody)
-				// Start observing — if the new block is off-screen the observer
-				// will fire immediately and virtualize it.
-				blockObserver.observe(newTbody)
-			}),
-		]
+			watch(() => priceFormat.format(item.get().price), bindText(priceEl))
+			watch(() => changeFormat.format(changeMemo.get()), bindText(changeEl))
+			watch(
+				() => {
+					const change = changeMemo.get()
+					return change > 0 ? 'up' : change < 0 ? 'down' : 'flat'
+				},
+				bindProperty(row.dataset, 'direction'),
+			)
+			watch(() => volumeFormat.format(item.get().volume), bindText(volumeEl))
+		})
+
+		// Batch-add one full block: update tickers list first so each() finds
+		// the new State signals when the MutationObserver fires for the
+		// newly appended template clones. Each click creates its own <tbody>;
+		// each(blocks, …) picks it up via MutationObserver and wires its own
+		// sensor + watch effect, so it virtualizes independently.
+		on(addRowsBtn, 'click', () => {
+			if (!template || !table) return
+			const newItems: TickerItem[] = Array.from({ length: BLOCK_SIZE }, () => {
+				const symbol = nextSymbol()
+				const price = Math.round((10 + Math.random() * 1000) * 100) / 100
+				return { symbol, open: price, price, volume: 0 }
+			})
+			// Batch data update first — each() will find byKey() populated
+			// when the MutationObserver fires for the new rows.
+			tickers.splice(tickers.length, 0, ...newItems)
+			const newTbody = document.createElement('tbody')
+			blockSymbols.set(
+				newTbody,
+				newItems.map(i => i.symbol),
+			)
+			const fragment = document.createDocumentFragment()
+			for (const { symbol, price } of newItems) {
+				const clone = template.content.cloneNode(true) as DocumentFragment
+				const tr = clone.firstElementChild as HTMLTableRowElement
+				tr.dataset.symbol = symbol
+				const th = tr.querySelector('th')
+				const priceEl = tr.querySelector('.price')
+				if (th) th.textContent = symbol
+				if (priceEl) priceEl.textContent = priceFormat.format(price)
+				fragment.append(tr)
+			}
+			newTbody.append(fragment)
+			table.append(newTbody)
+		})
 	},
 )

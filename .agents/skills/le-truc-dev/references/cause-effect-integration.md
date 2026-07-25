@@ -47,6 +47,8 @@ For event-driven component props, use `createState` + `on` instead — the setup
 
 `pass()` and `on()` also use `createScope()` for their own cleanup, nested within the component scope. This ensures event listeners and signal subscriptions are correctly torn down when the component disconnects.
 
+A raw hand-authored descriptor with no internal `createEffect`/`createScope` call would otherwise never get its returned cleanup registered anywhere — `activateResult()` discards each descriptor's return value directly. `watch(() => true, rawDescriptor)` fixes this: `watch()` wraps its handler call in `createEffect()`, which self-registers the returned cleanup on the active owner (see non-obvious.md).
+
 ## createEffect — Reactive DOM Updates
 
 `watch()` (via `makeWatch`) wraps `match()` inside `createEffect()`. The `createEffect` is nested inside the `createScope` created in `connectedCallback`. This is why `watch` returns an `EffectDescriptor` — the effect is deferred until after dependency resolution.

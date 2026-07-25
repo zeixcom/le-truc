@@ -1,5 +1,6 @@
 import { clampChroma, formatCss, inGamut, type Oklch } from 'culori/fn'
 import {
+	asString,
 	batch,
 	bindStyle,
 	bindText,
@@ -8,15 +9,19 @@ import {
 	defineComponent,
 	defineMethod,
 	each,
+	type FormAssociatedElement,
+	formAssociated,
+	type State,
 	throttle,
 } from '../../..'
-import { asOklch } from '../../_common/asOklch.ts'
+import { asOklch } from '../../_common/asOklch'
 import { getStepColor } from '../../_common/getStepColor.ts'
 
 export type FormColorgraphAxis = 'l' | 'c' | 'h'
 
 export type FormColorgraphProps = {
-	color: Oklch
+	/** Current color as a CSS string (e.g. `oklch(0.48 0.23 263)`). Form value. */
+	value: string
 	readonly lightness: number
 	readonly chroma: number
 	readonly hue: number
@@ -26,9 +31,11 @@ export type FormColorgraphProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-colorgraph': HTMLElement & FormColorgraphProps
+		'form-colorgraph': FormAssociatedElement & FormColorgraphProps
 	}
 }
+
+const parseOklch = asOklch()
 
 const inP3Gamut = inGamut('p3')
 const inRGBGamut = inGamut('rgb')
@@ -50,6 +57,7 @@ const getStep = (axis: FormColorgraphAxis, shiftKey: boolean) =>
  * slider axis, with live preview of the resulting color and out-of-gamut warnings.
  * Out-of-gamut colors should be handled with a fallback, as display coverage varies.
  * Chroma values must stay within the Oklch gamut; extreme values are clamped automatically.
+ * Form participation submits one serialized CSS color value via ElementInternals.
  * @demo {./docs/examples/form-colorgraph.html} Interactive preview and usage examples */
 export default defineComponent<FormColorgraphProps>(
 	'form-colorgraph',
@@ -57,16 +65,16 @@ export default defineComponent<FormColorgraphProps>(
 		// Required elements
 		const inputs = {
 			l: first(
-				'input[name="lightness"]',
-				'Add an <input[name="lightness"]> element to control the lightness of the color.',
+				'input#lightness',
+				'Add an <input id="lightness"> element to control the lightness of the color.',
 			),
 			c: first(
-				'input[name="chroma"]',
-				'Add an <input[name="chroma"]> element to control the chroma of the color.',
+				'input#chroma',
+				'Add an <input id="chroma"> element to control the chroma of the color.',
 			),
 			h: first(
-				'input[name="hue"]',
-				'Add an <input[name="hue"]> element to control the hue of the color.',
+				'input#hue',
+				'Add an <input id="hue"> element to control the hue of the color.',
 			),
 		}
 		const graphEl = first(
@@ -110,11 +118,34 @@ export default defineComponent<FormColorgraphProps>(
 		// Internal states
 		const canvasSize = createState(graphEl.getBoundingClientRect().width)
 		const trackWidth = createMemo(() => canvasSize.get() - 2 * TRACK_OFFSET)
-		const errors = {
+		// Per-axis error states — a gamut error on one axis must only display
+		// under that axis, not under all three. Each `.error` element binds to
+		// its own axis's state.
+		const errors: Record<FormColorgraphAxis, State<string>> = {
 			l: createState(''),
 			c: createState(''),
 			h: createState(''),
 		}
+		const clearErrors = () => {
+			batch(() => {
+				errors.l.set('')
+				errors.c.set('')
+				errors.h.set('')
+			})
+		}
+		const setError = (axis: FormColorgraphAxis, msg: string) => {
+			batch(() => {
+				errors.l.set('')
+				errors.c.set('')
+				errors.h.set('')
+				errors[axis].set(msg)
+			})
+		}
+
+		// Internal Oklch memo derived from the string value (the form value).
+		// `value` is the source of truth; `color` is the parsed representation
+		// the UI derives from. Interactions write serialized strings back to value.
+		const color = createMemo<Oklch>(() => parseOklch(host.value))
 
 		// Helper functions
 		const formatNumber = (axis: FormColorgraphAxis, value: number) => {
@@ -153,55 +184,53 @@ export default defineComponent<FormColorgraphProps>(
 			target.style.setProperty('top', `${y}px`)
 		}
 		const getHueFromPosition = (x: number): Oklch => {
-			const newColor = { ...host.color, h: x * AXIS_MAX.h }
+			const newColor = { ...color.get(), h: x * AXIS_MAX.h }
 			if (inRGBGamut(newColor)) return newColor
 			if (inP3Gamut(newColor)) newColor.alpha = 0.5
 			else newColor.alpha = 0
 			return newColor
 		}
-		const commit = (color: Oklch) => {
+		// Commit writes a serialized CSS color string to host.value (the form value).
+		const commit = (c: Oklch) => {
 			batch(() => {
-				host.color = color
-				for (const key of ['l', 'c', 'h'])
-					errors[key as keyof typeof errors].set('')
+				host.value = formatCss(c)
+				clearErrors()
 			})
 		}
-		const getValue = (axis: FormColorgraphAxis) =>
-			axis === 'l' ? host.lightness : axis === 'c' ? host.chroma : host.hue
+		const getValue = (axis: FormColorgraphAxis) => {
+			const c = color.get()
+			return axis === 'l' ? c.l : axis === 'c' ? c.c : (c.h ?? 0)
+		}
 		const setToNearestStep = (axis: FormColorgraphAxis, value: number) => {
 			const nearest = Math.round(value / AXIS_STEP[axis]) * AXIS_STEP[axis]
 			if (nearest < 0 || nearest > AXIS_MAX[axis]) return
-			const color = { ...host.color, [axis]: nearest }
-			if (inP3Gamut(color)) {
-				commit(color)
-			} else {
-				inputs[axis].setCustomValidity('Color out of gamut')
-				errors[axis].set(inputs[axis].validationMessage)
-			}
+			const c = { ...color.get(), [axis]: nearest }
+			if (inP3Gamut(c)) commit(c)
+			else setError(axis, 'Color out of gamut')
 		}
 		const moveKnob = throttle(
 			(x: number, y: number, top: number, left: number, size: number) => {
-				const color = {
-					...host.color,
+				const c = {
+					...color.get(),
 					c: Math.min(Math.max((x - left) / size, 0), 1) * AXIS_MAX.c,
 					l: 1 - Math.min(Math.max((y - top) / size, 0), 1),
 				}
-				if (inP3Gamut(color)) commit(color)
+				if (inP3Gamut(c)) commit(c)
 			},
 		)
 		const moveThumb = throttle((x: number, left: number, width: number) => {
-			const color = {
-				...host.color,
+			const c = {
+				...color.get(),
 				h: Math.min(Math.max((x - left) / width, 0), 1) * AXIS_MAX.h,
 			}
-			if (inP3Gamut(color)) commit(color)
+			if (inP3Gamut(c)) commit(c)
 		})
 
 		expose({
-			color: asOklch(),
-			lightness: () => host.color.l,
-			chroma: () => host.color.c,
-			hue: () => host.color.h ?? 0,
+			value: asString('oklch(0.48 0.23 263)'),
+			lightness: () => color.get().l,
+			chroma: () => color.get().c,
+			hue: () => color.get().h ?? 0,
 			stepDown: defineMethod((axis: FormColorgraphAxis, bigStep = false) => {
 				setToNearestStep(axis, getValue(axis) - getStep(axis, bigStep))
 			}),
@@ -210,327 +239,317 @@ export default defineComponent<FormColorgraphProps>(
 			}),
 		})
 
-		const effects = [
-			// ResizeObserver — runs once at connect, cleanup at disconnect
-			watch(
-				() => graphEl,
-				() => {
-					const setCanvasSize = throttle((w: number) => {
-						canvasSize.set(w)
-					})
-					const resizeObserver = new ResizeObserver(() => {
-						setCanvasSize(graphEl.clientWidth)
-					})
-					resizeObserver.observe(graphEl)
-					return () => {
-						resizeObserver.disconnect()
-						setCanvasSize.cancel()
-					}
-				},
-			),
+		// ResizeObserver — runs once at connect, cleanup at disconnect
+		watch(
+			() => graphEl,
+			() => {
+				const setCanvasSize = throttle((w: number) => {
+					canvasSize.set(w)
+				})
+				const resizeObserver = new ResizeObserver(() => {
+					setCanvasSize(graphEl.clientWidth)
+				})
+				resizeObserver.observe(graphEl)
+				return () => {
+					resizeObserver.disconnect()
+					setCanvasSize.cancel()
+				}
+			},
+		)
 
-			// Host CSS variable
-			watch(() => formatCss(host.color), bindStyle(host, '--color-base')),
+		// Host CSS variable
+		watch(() => formatCss(color.get()), bindStyle(host, '--color-base'))
 
-			// Input per-element effects
-			each(allInputs, input => {
-				const axis = getAxis(input)
-				return [
-					axis &&
-						watch(errors[axis], error => {
-							input.ariaInvalid = String(!!error)
-							if (error && input.id)
-								input.setAttribute('aria-errormessage', `${input.id}-error`)
-							else input.removeAttribute('aria-errormessage')
-						}),
-					watch('color', color => {
-						if (axis) input.value = formatNumber(axis, color[axis] ?? 0)
-					}),
-					on(input, 'change', () => {
-						if (!axis) return
-						const value = input.valueAsNumber
-						const newColor = {
-							...host.color,
-							[axis]: axis === 'l' ? value / 100 : value,
-						}
-						if (inP3Gamut(newColor)) {
-							commit(newColor)
-						} else {
-							input.setCustomValidity('Color out of gamut')
-							errors[axis].set(input.validationMessage)
-						}
-					}),
+		// Input per-element effects
+		each(allInputs, input => {
+			const axis = getAxis(input)
+			watch(color, c => {
+				if (axis) input.value = formatNumber(axis, c[axis] ?? 0)
+			})
+			on(input, 'change', () => {
+				if (!axis) return
+				const value = input.valueAsNumber
+				const c = {
+					...color.get(),
+					[axis]: axis === 'l' ? value / 100 : value,
+				}
+				if (inP3Gamut(c)) commit(c)
+				else setError(axis, 'Color out of gamut')
+			})
+		})
+
+		// Error text — per-axis: each .error element binds to its own axis
+		each(allErrors, errorEl => {
+			const axis = getAxis(errorEl)
+			if (!axis) return
+			watch(errors[axis], bindText(errorEl))
+		})
+
+		// Graph pointer interaction + canvas size CSS variable
+		on(graphEl, 'pointerdown', event => {
+			const { top, left } = canvas.getBoundingClientRect()
+			const size = canvasSize.get()
+			knob.ariaPressed = 'true'
+			graphEl.setPointerCapture(event.pointerId)
+			const handleMove = (e: PointerEvent) => {
+				const last = (e.getCoalescedEvents?.() || []).pop() || e
+				moveKnob(last.clientX, last.clientY, top, left, size)
+			}
+			const handleUp = () => {
+				graphEl.removeEventListener('pointermove', handleMove)
+				graphEl.removeEventListener('pointerup', handleUp)
+				moveKnob.cancel()
+				knob.ariaPressed = 'false'
+			}
+			graphEl.addEventListener('pointermove', handleMove, { passive: true })
+			graphEl.addEventListener('pointerup', handleUp)
+		})
+		watch(() => `${canvasSize.get()}px`, bindStyle(graphEl, '--canvas-size'))
+
+		// Graph canvas: redraw on hue or size change
+		watch(
+			() => ({ hue: color.get().h ?? 0, n: Math.round(canvasSize.get()) }),
+			({ hue, n }) => {
+				canvas.width = n
+				canvas.height = n
+				const ctx = canvas.getContext('2d', { colorSpace: 'display-p3' })
+				if (!ctx) return
+				const maxChroma = (l: number, gamut: 'rgb' | 'p3' = 'rgb') =>
+					clampChroma(
+						{ mode: 'oklch', l, c: AXIS_MAX.c, h: hue },
+						'oklch',
+						gamut,
+					).c / AXIS_MAX.c
+				const gradientStops = (
+					minX: number,
+					maxX: number,
+					y: number,
+					alpha: number = 1,
+				): [string, string] => [
+					getColorFromPosition(minX, y, hue, alpha),
+					getColorFromPosition(maxX, y, hue, alpha),
 				]
-			}),
-
-			// Error text per-element effects
-			each(allErrors, errorEl => {
-				const axis = getAxis(errorEl as HTMLElement)
-				return [axis ? watch(errors[axis], bindText(errorEl)) : false]
-			}),
-
-			// Graph pointer interaction + canvas size CSS variable
-			on(graphEl, 'pointerdown', event => {
-				const { top, left } = canvas.getBoundingClientRect()
-				const size = canvasSize.get()
-				knob.ariaPressed = 'true'
-				graphEl.setPointerCapture(event.pointerId)
-				const handleMove = (e: PointerEvent) => {
-					const last = (e.getCoalescedEvents?.() || []).pop() || e
-					moveKnob(last.clientX, last.clientY, top, left, size)
-				}
-				const handleUp = () => {
-					graphEl.removeEventListener('pointermove', handleMove)
-					graphEl.removeEventListener('pointerup', handleUp)
-					moveKnob.cancel()
-					knob.ariaPressed = 'false'
-				}
-				graphEl.addEventListener('pointermove', handleMove, { passive: true })
-				graphEl.addEventListener('pointerup', handleUp)
-			}),
-			watch(() => `${canvasSize.get()}px`, bindStyle(graphEl, '--canvas-size')),
-
-			// Graph canvas: redraw on hue or size change
-			watch(
-				() => ({ hue: host.hue, n: Math.round(canvasSize.get()) }),
-				({ hue, n }) => {
-					canvas.width = n
-					canvas.height = n
-					const ctx = canvas.getContext('2d', { colorSpace: 'display-p3' })
-					if (!ctx) return
-					const maxChroma = (l: number, gamut: 'rgb' | 'p3' = 'rgb') =>
-						clampChroma(
-							{ mode: 'oklch', l, c: AXIS_MAX.c, h: hue },
-							'oklch',
-							gamut,
-						).c / AXIS_MAX.c
-					const gradientStops = (
-						minX: number,
-						maxX: number,
-						y: number,
-						alpha: number = 1,
-					): [string, string] => [
-						getColorFromPosition(minX, y, hue, alpha),
-						getColorFromPosition(maxX, y, hue, alpha),
-					]
-					const drawGradient = (
-						minX: number,
-						y: number,
-						gamut: 'rgb' | 'p3' = 'rgb',
-					): [number, string] => {
-						const maxX = maxChroma(1 - y / n, gamut) * n
-						const gradient = ctx.createLinearGradient(minX, 0, maxX, 0)
-						const stops = gradientStops(
-							minX / n,
-							maxX / n,
-							y / n,
-							gamut === 'p3' ? 0.5 : 1,
-						)
-						gradient.addColorStop(0, stops[0])
-						gradient.addColorStop(1, stops[1])
-						ctx.fillStyle = gradient
-						ctx.fillRect(minX, y, maxX - minX, 1)
-						return [maxX, stops[1]]
-					}
-					ctx.clearRect(0, 0, n, n)
-					for (let y = 0; y < n; y++) {
-						const [maxRgbX, maxRgbColor] = drawGradient(0, y)
-						if (inP3Gamut(maxRgbColor)) drawGradient(maxRgbX, y, 'p3')
-					}
-				},
-			),
-
-			// Knob position
-			watch(
-				() => ({
-					l: host.lightness,
-					c: host.chroma,
-					size: canvasSize.get(),
-				}),
-				({ l, c, size }) => {
-					knob.style.setProperty('top', `${Math.round((1 - l) * size)}px`)
-					knob.style.setProperty(
-						'left',
-						`${Math.round((c * size) / AXIS_MAX.c)}px`,
+				const drawGradient = (
+					minX: number,
+					y: number,
+					gamut: 'rgb' | 'p3' = 'rgb',
+				): [number, string] => {
+					const maxX = maxChroma(1 - y / n, gamut) * n
+					const gradient = ctx.createLinearGradient(minX, 0, maxX, 0)
+					const stops = gradientStops(
+						minX / n,
+						maxX / n,
+						y / n,
+						gamut === 'p3' ? 0.5 : 1,
 					)
-					knob.style.setProperty(
-						'--color-border',
-						l > CONTRAST_THRESHOLD ? 'black' : 'white',
-					)
-				},
-			),
-
-			// Slider pointer interaction + ARIA + CSS variable
-			on(sliderEl, 'pointerdown', event => {
-				const left = track.getBoundingClientRect().left
-				const width = trackWidth.get()
-				thumb.ariaPressed = 'true'
-				sliderEl.setPointerCapture(event.pointerId)
-				const handleMove = (e: PointerEvent) => {
-					const last = (e.getCoalescedEvents?.() || []).pop() || e
-					moveThumb(last.clientX, left, width)
+					gradient.addColorStop(0, stops[0])
+					gradient.addColorStop(1, stops[1])
+					ctx.fillStyle = gradient
+					ctx.fillRect(minX, y, maxX - minX, 1)
+					return [maxX, stops[1]]
 				}
-				const handleUp = () => {
-					sliderEl.removeEventListener('pointermove', handleMove)
-					sliderEl.removeEventListener('pointerup', handleUp)
-					moveThumb.cancel()
-					thumb.ariaPressed = 'false'
+				ctx.clearRect(0, 0, n, n)
+				for (let y = 0; y < n; y++) {
+					const [maxRgbX, maxRgbColor] = drawGradient(0, y)
+					if (inP3Gamut(maxRgbColor)) drawGradient(maxRgbX, y, 'p3')
 				}
-				sliderEl.addEventListener('pointermove', handleMove, { passive: true })
-				sliderEl.addEventListener('pointerup', handleUp)
+			},
+		)
+
+		// Knob position
+		watch(
+			() => ({
+				l: color.get().l,
+				c: color.get().c,
+				size: canvasSize.get(),
 			}),
-			watch(
-				() => `${trackWidth.get()}px`,
-				bindStyle(sliderEl, '--track-width'),
-			),
-			watch('hue', hue => {
-				sliderEl.setAttribute('aria-valuenow', String(hue))
-				sliderEl.setAttribute('aria-valuetext', `${formatNumber('h', hue)}°`)
-			}),
-
-			// Track canvas: redraw on color or track width change
-			watch(
-				() => ({ color: host.color, n: Math.round(trackWidth.get()) }),
-				({ n }) => {
-					track.width = n
-					const ctx = track.getContext('2d', { colorSpace: 'display-p3' })
-					if (!ctx) return
-					ctx.clearRect(0, 0, n, 1)
-					for (let x = 0; x < n; x++) {
-						ctx.fillStyle = formatCss(getHueFromPosition(x / n))
-						ctx.fillRect(x, 0, 1, 1)
-					}
-				},
-			),
-
-			// Thumb position
-			watch(
-				() => ({
-					hue: host.hue,
-					l: host.lightness,
-					tw: trackWidth.get(),
-				}),
-				({ hue, l, tw }) => {
-					thumb.style.setProperty(
-						'left',
-						`${Math.round((hue * tw) / AXIS_MAX.h) + TRACK_OFFSET}px`,
-					)
-					thumb.style.setProperty(
-						'--color-border',
-						l > CONTRAST_THRESHOLD ? 'black' : 'white',
-					)
-				},
-			),
-
-			// Decrement buttons
-			each(decrementBtns, btn => {
-				const axis = getAxis(btn)
-				return [
-					on(btn, 'click', event => {
-						if (axis) host.stepDown(axis, (event as MouseEvent).shiftKey)
-					}),
-					watch('color', color => {
-						if (!axis) {
-							btn.disabled = true
-							return
-						}
-						btn.disabled = (color[axis] ?? 0) <= 0
-					}),
-				]
-			}),
-
-			// Increment buttons
-			each(incrementBtns, btn => {
-				const axis = getAxis(btn)
-				return [
-					on(btn, 'click', event => {
-						if (axis) host.stepUp(axis, (event as MouseEvent).shiftKey)
-					}),
-					watch('color', color => {
-						if (!axis) {
-							btn.disabled = true
-							return
-						}
-						btn.disabled = (color[axis] ?? 0) >= AXIS_MAX[axis]
-					}),
-				]
-			}),
-
-			// Keyboard navigation
-			on(host, 'keydown', event => {
-				const { key, shiftKey } = event as KeyboardEvent
-				const target = (event as KeyboardEvent).target as HTMLElement | null
-				if (
-					!target ||
-					(target.localName === 'input' &&
-						(key === 'ArrowLeft' || key === 'ArrowRight'))
+			({ l, c, size }) => {
+				knob.style.setProperty('top', `${Math.round((1 - l) * size)}px`)
+				knob.style.setProperty(
+					'left',
+					`${Math.round((c * size) / AXIS_MAX.c)}px`,
 				)
+				knob.style.setProperty(
+					'--color-border',
+					l > CONTRAST_THRESHOLD ? 'black' : 'white',
+				)
+			},
+		)
+
+		// Slider pointer interaction + ARIA + CSS variable
+		on(sliderEl, 'pointerdown', event => {
+			const left = track.getBoundingClientRect().left
+			const width = trackWidth.get()
+			thumb.ariaPressed = 'true'
+			sliderEl.setPointerCapture(event.pointerId)
+			const handleMove = (e: PointerEvent) => {
+				const last = (e.getCoalescedEvents?.() || []).pop() || e
+				moveThumb(last.clientX, left, width)
+			}
+			const handleUp = () => {
+				sliderEl.removeEventListener('pointermove', handleMove)
+				sliderEl.removeEventListener('pointerup', handleUp)
+				moveThumb.cancel()
+				thumb.ariaPressed = 'false'
+			}
+			sliderEl.addEventListener('pointermove', handleMove, { passive: true })
+			sliderEl.addEventListener('pointerup', handleUp)
+		})
+		watch(() => `${trackWidth.get()}px`, bindStyle(sliderEl, '--track-width'))
+		watch(color, c => {
+			const hue = c.h ?? 0
+			sliderEl.setAttribute('aria-valuenow', String(hue))
+			sliderEl.setAttribute('aria-valuetext', `${formatNumber('h', hue)}°`)
+		})
+
+		// Track canvas: redraw on color or track width change
+		watch(
+			() => ({ c: color.get(), n: Math.round(trackWidth.get()) }),
+			({ n }) => {
+				track.width = n
+				const ctx = track.getContext('2d', { colorSpace: 'display-p3' })
+				if (!ctx) return
+				ctx.clearRect(0, 0, n, 1)
+				for (let x = 0; x < n; x++) {
+					ctx.fillStyle = formatCss(getHueFromPosition(x / n))
+					ctx.fillRect(x, 0, 1, 1)
+				}
+			},
+		)
+
+		// Thumb position
+		watch(
+			() => ({
+				hue: color.get().h ?? 0,
+				l: color.get().l,
+				tw: trackWidth.get(),
+			}),
+			({ hue, l, tw }) => {
+				thumb.style.setProperty(
+					'left',
+					`${Math.round((hue * tw) / AXIS_MAX.h) + TRACK_OFFSET}px`,
+				)
+				thumb.style.setProperty(
+					'--color-border',
+					l > CONTRAST_THRESHOLD ? 'black' : 'white',
+				)
+			},
+		)
+
+		// Decrement buttons
+		each(decrementBtns, btn => {
+			const axis = getAxis(btn)
+			on(btn, 'click', event => {
+				if (axis) host.stepDown(axis, (event as MouseEvent).shiftKey)
+			})
+			watch(color, c => {
+				if (!axis) {
+					btn.disabled = true
 					return
-				if (key.substring(0, 5) === 'Arrow' || ['+', '-'].includes(key)) {
-					event.preventDefault()
-					event.stopPropagation()
-					const axis = getAxis(target)
-					if (axis) {
-						if (key === 'ArrowLeft' || key === 'ArrowDown' || key === '-')
-							host.stepDown(axis, shiftKey)
-						else if (key === 'ArrowRight' || key === 'ArrowUp' || key === '+')
-							host.stepUp(axis, shiftKey)
-					} else if (target.role === 'slider') {
-						if (key === 'ArrowLeft' || key === 'ArrowDown' || key === '-')
-							host.stepDown('h', shiftKey)
-						else if (key === 'ArrowRight' || key === 'ArrowUp' || key === '+')
-							host.stepUp('h', shiftKey)
-					} else {
-						switch (key) {
-							case 'ArrowDown':
-								host.stepDown('l', shiftKey)
-								break
-							case 'ArrowUp':
-								host.stepUp('l', shiftKey)
-								break
-							case 'ArrowLeft':
-								host.stepDown('c', shiftKey)
-								break
-							case 'ArrowRight':
-								host.stepUp('c', shiftKey)
-								break
-							case '-':
-								host.stepDown('h')
-								break
-							case '+':
-								host.stepUp('h')
-								break
-						}
+				}
+				btn.disabled = (c[axis] ?? 0) <= 0
+			})
+		})
+
+		// Increment buttons
+		each(incrementBtns, btn => {
+			const axis = getAxis(btn)
+			on(btn, 'click', event => {
+				if (axis) host.stepUp(axis, (event as MouseEvent).shiftKey)
+			})
+			watch(color, c => {
+				if (!axis) {
+					btn.disabled = true
+					return
+				}
+				btn.disabled = (c[axis] ?? 0) >= AXIS_MAX[axis]
+			})
+		})
+
+		// Keyboard navigation
+		on(host, 'keydown', event => {
+			const { key, shiftKey } = event as KeyboardEvent
+			const target = (event as KeyboardEvent).target as HTMLElement | null
+			if (
+				!target ||
+				(target.localName === 'input' &&
+					(key === 'ArrowLeft' || key === 'ArrowRight'))
+			)
+				return
+			if (key.substring(0, 5) === 'Arrow' || ['+', '-'].includes(key)) {
+				event.preventDefault()
+				event.stopPropagation()
+				const axis = getAxis(target)
+				if (axis) {
+					if (key === 'ArrowLeft' || key === 'ArrowDown' || key === '-')
+						host.stepDown(axis, shiftKey)
+					else if (key === 'ArrowRight' || key === 'ArrowUp' || key === '+')
+						host.stepUp(axis, shiftKey)
+				} else if (target.role === 'slider') {
+					if (key === 'ArrowLeft' || key === 'ArrowDown' || key === '-')
+						host.stepDown('h', shiftKey)
+					else if (key === 'ArrowRight' || key === 'ArrowUp' || key === '+')
+						host.stepUp('h', shiftKey)
+				} else {
+					switch (key) {
+						case 'ArrowDown':
+							host.stepDown('l', shiftKey)
+							break
+						case 'ArrowUp':
+							host.stepUp('l', shiftKey)
+							break
+						case 'ArrowLeft':
+							host.stepDown('c', shiftKey)
+							break
+						case 'ArrowRight':
+							host.stepUp('c', shiftKey)
+							break
+						case '-':
+							host.stepDown('h')
+							break
+						case '+':
+							host.stepUp('h')
+							break
 					}
 				}
-			}),
-		]
+			}
+		})
 
 		for (let i = 1; i < 5; i++) {
 			const li = first(`li.lighten${(5 - i) * 20}`)
 			if (li)
-				effects.push(
-					watch(
-						() => ({ color: host.color, size: canvasSize.get() }),
-						({ color }) => {
-							setStepPosition(li, getStepColor(color, 1 - i / 10))
-						},
-					),
+				watch(
+					() => ({ c: color.get(), size: canvasSize.get() }),
+					({ c }) => {
+						setStepPosition(li, getStepColor(c, 1 - i / 10))
+					},
 				)
 		}
 		for (let i = 1; i < 5; i++) {
 			const li = first(`li.darken${i * 20}`)
 			if (li)
-				effects.push(
-					watch(
-						() => ({ color: host.color, size: canvasSize.get() }),
-						({ color }) => {
-							setStepPosition(li, getStepColor(color, 1 - (i + 5) / 10))
-						},
-					),
+				watch(
+					() => ({ c: color.get(), size: canvasSize.get() }),
+					({ c }) => {
+						setStepPosition(li, getStepColor(c, 1 - (i + 5) / 10))
+					},
 				)
 		}
 
-		return effects
+		// Host-level validity from any axis error. Goes through the managed
+		// host.setCustomValidity() so the validation anchor (first focusable
+		// descendant) is resolved for focus-on-blocked-submission — consistent
+		// with the other form examples.
+		watch(
+			() => errors.l.get() || errors.c.get() || errors.h.get(),
+			err => {
+				host.setCustomValidity(err)
+			},
+		)
+		// Form value sync: managed (value → setFormValue via ElementInternals)
+		// Form reset: managed (value attribute is the default — restores
+		// the initial CSS color string, replacing the hand-rolled
+		// initialColor capture from the previous design).
 	},
+	[formAssociated()],
 )

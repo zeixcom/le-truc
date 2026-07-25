@@ -29,12 +29,12 @@ This skill provides **authoritative guidance** for developing components with `@
 defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) => {
   const button = first('button', 'Add a native <button>.')
   expose({ disabled: asBoolean() })
-  return [
-    on(button, 'click', () => { /* ... */ }),
-    watch('disabled', bindProperty(button, 'disabled')),
-  ]
+  on(button, 'click', () => { /* ... */ })
+  watch('disabled', bindProperty(button, 'disabled'))
 })
 ```
+
+`watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` register their effect automatically when called — no `return` needed. Explicit `return [...]` of the same descriptors still works (deprecated as of v3.0). For a hand-authored `EffectDescriptor` not produced by any of these — e.g. wrapping a native `IntersectionObserver` — register it via `watch(() => true, descriptor)` (see the Factory Context table below).
 
 ### Factory Context
 
@@ -80,6 +80,7 @@ Binding helpers connect signals to DOM properties/attributes:
 | `bindProperty(el, key)` | Set DOM property |
 | `bindAttribute(el, name)` | Set/remove attribute with security validation |
 | `bindClass(el, token)` | Toggle CSS class |
+| `bindState(internals, token)` | Toggle custom `:state()` pseudo-class — prefer over `bindClass(host, token)` for host state |
 | `bindStyle(el, prop)` | Set/remove inline style |
 | `bindVisible(el)` | Control `hidden` attribute |
 
@@ -91,6 +92,7 @@ Binding helpers connect signals to DOM properties/attributes:
 | Ancestor → descendant (any depth) | `provideContexts` / `requestContext` |
 | Parent → bubbled events | `on(host, type, handler)` |
 | Parent → dynamic descendants | `all(selector)` + `each()` |
+| Keyed data → container children | `createList()` + `reconcile()` — data-driven |
 | Sibling → sibling | **Not supported** — lift to common ancestor |
 
 ---
@@ -104,7 +106,7 @@ Binding helpers connect signals to DOM properties/attributes:
 | **Custom Element** | DOM element defined via `customElements.define()` | Web Component (API), tag |
 | **Factory** | Function passed to `defineComponent()` | builder, constructor |
 | **Factory Context** | Object passed to factory with helpers | component context |
-| **Effect Descriptor** | Thunk returned by `watch()`, `on()`, `pass()` | effect, reaction |
+| **Effect Descriptor** | Thunk produced by `watch()`, `on()`, `pass()`, `each()`, `provideContexts()`, or hand-authored and registered via `watch(() => true, descriptor)` — auto-registered when produced by a helper, no `return` needed | effect, reaction |
 | **Signal** | Reactive primitive from `@zeix/cause-effect` | state, observable |
 | **Slot** | Wrapper enabling signal swapping for `pass()` and `requestContext()` | container, wrapper |
 | **Parser** | Transforms HTML attribute string to typed value | converter, decoder |

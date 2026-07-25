@@ -1,11 +1,3 @@
-/* === Constants === */
-
-// Strict equality with 'true' ensures the string "false" (env vars are strings)
-// is falsy. Without it, `process.env.DEV_MODE && …` returns "false" (truthy) in
-// any runtime without the build-time `--define` replacement (tests, no-build CDN).
-const DEV_MODE =
-	typeof process !== 'undefined' && process.env.DEV_MODE === 'true'
-
 /* === Exported Functions === */
 
 /**
@@ -43,4 +35,4 @@ const elementName = /*#__PURE__*/ (el: Element | undefined | null): string => {
 	return `<${el.localName}${id}${classes}>`
 }
 
-export { DEV_MODE, elementName, isCustomElement, isNotYetDefinedComponent }
+export { elementName, isCustomElement, isNotYetDefinedComponent }

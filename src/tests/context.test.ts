@@ -2,7 +2,7 @@
  * Unit tests for context helpers in src/helpers/context.ts
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { createEffect, createScope } from '@zeix/cause-effect'
 import {
 	CONTEXT_REQUEST,
@@ -11,14 +11,28 @@ import {
 	makeProvideContexts,
 	makeRequestContext,
 } from '../helpers/context'
-import type { ComponentProps } from '../types'
-// `mock.module` mutates the live module namespace in place, so a captured
-// `import * as ns` reference reflects whatever the mock last set — it is NOT
-// a stable snapshot. Spread it into a plain object at file-load time, before
-// any `mock.module('../util', …)` call below, and restore from that snapshot.
-import * as realUtilNamespace from '../util'
+import { installActiveCollector, restoreActiveCollector } from '../internal'
+import type { ComponentProps, EffectDescriptor } from '../types'
 
-const realUtil = { ...realUtilNamespace }
+// DEV guards read `process.env.DEV_MODE` at call time, so tests exercise DEV
+// branches by flipping the env var around the call — no module mocking needed.
+// The env var is process-global: while an async `run` is awaited, guards in
+// concurrently interleaved tests would also see the flipped value. That only
+// produces extra console.warn calls, which no other file's test counts.
+const withDevMode = async <T>(
+	value: string | undefined,
+	run: () => T | Promise<T>,
+): Promise<T> => {
+	const prev = process.env.DEV_MODE
+	if (value === undefined) delete process.env.DEV_MODE
+	else process.env.DEV_MODE = value
+	try {
+		return await run()
+	} finally {
+		if (prev === undefined) delete process.env.DEV_MODE
+		else process.env.DEV_MODE = prev
+	}
+}
 
 /* === Test Types === */
 
@@ -67,6 +81,18 @@ const createEventListenerMap = () => {
 	}
 	return { listeners, addEventListener, removeEventListener, dispatchEvent }
 }
+
+// provideContexts() pushes into the currently active effect-descriptor
+// collector (ADR 0018) and throws NoActiveCollectorError if none is active.
+// These tests call it directly, outside `defineComponent`'s factory
+// execution, so install a throwaway collector for the duration of the file.
+let previousCollector: EffectDescriptor[] | undefined
+beforeEach(() => {
+	previousCollector = installActiveCollector([])
+})
+afterEach(() => {
+	restoreActiveCollector(previousCollector)
+})
 
 /* === ContextRequestEvent Tests === */
 
@@ -141,6 +167,15 @@ describe('makeProvideContexts', () => {
 	afterEach(() => {
 		// Clean up any remaining listeners
 		for (const [, ls] of eventMap.listeners) ls.length = 0
+	})
+
+	test('pushes its descriptor into the active collector (ADR 0018)', () => {
+		const provideContexts = makeProvideContexts(host)
+		const collector: EffectDescriptor[] = []
+		const previous = installActiveCollector(collector)
+		const descriptor = provideContexts(['theme'])
+		restoreActiveCollector(previous)
+		expect(collector).toEqual([descriptor])
 	})
 
 	test('returns a function that accepts contexts array', () => {
@@ -310,49 +345,41 @@ describe('makeProvideContexts', () => {
 		cleanup?.()
 	})
 
-	test('logs a DEV_MODE warning naming the host when the getter throws', () => {
-		// DEV_MODE is a module-level const captured at import time from
-		// `../util`, so flipping `process.env.DEV_MODE` here has no effect on
-		// the already-loaded binding. `mock.module` patches the live binding
-		// in place (including in already-imported consumers like context.ts),
-		// so it's the only way to exercise this branch from a unit test.
-		// Deliberately synchronous (no `await`) — bun:test can interleave other
-		// files' tests across an `await` point, which would leak this mock into
-		// unrelated tests for the window before it's restored. The restore
-		// itself uses the `realUtil` snapshot above, not a live import — see
-		// that declaration for why a live reference can't be used to restore.
+	test('logs a DEV_MODE warning naming the host when the getter throws', async () => {
 		const originalWarn = console.warn
 		const warnings: unknown[][] = []
 		console.warn = (...args: unknown[]) => warnings.push(args)
 
 		try {
-			mock.module('../util', () => ({ ...realUtil, DEV_MODE: true }))
+			await withDevMode('true', () => {
+				const throwingHost = {
+					...createTestHost(),
+					addEventListener: eventMap.addEventListener,
+					removeEventListener: eventMap.removeEventListener,
+				} as unknown as TestHost
+				Object.defineProperty(throwingHost, 'theme', {
+					get() {
+						throw new Error('boom')
+					},
+				})
 
-			const throwingHost = {
-				...createTestHost(),
-				addEventListener: eventMap.addEventListener,
-				removeEventListener: eventMap.removeEventListener,
-			} as unknown as TestHost
-			Object.defineProperty(throwingHost, 'theme', {
-				get() {
-					throw new Error('boom')
-				},
+				const provideContexts = makeProvideContexts(throwingHost)
+				const cleanup = provideContexts(['theme'])()
+
+				let receivedGetter: (() => string) | null = null
+				const context = createContext<() => string>('theme')
+				const event = new ContextRequestEvent(
+					context,
+					(getter: () => string) => {
+						receivedGetter = getter
+					},
+				)
+				eventMap.dispatchEvent(event)
+				receivedGetter!()
+
+				cleanup?.()
 			})
-
-			const provideContexts = makeProvideContexts(throwingHost)
-			const cleanup = provideContexts(['theme'])()
-
-			let receivedGetter: (() => string) | null = null
-			const context = createContext<() => string>('theme')
-			const event = new ContextRequestEvent(context, (getter: () => string) => {
-				receivedGetter = getter
-			})
-			eventMap.dispatchEvent(event)
-			receivedGetter!()
-
-			cleanup?.()
 		} finally {
-			mock.module('../util', () => realUtil)
 			console.warn = originalWarn
 		}
 
@@ -584,20 +611,19 @@ describe('makeRequestContext late-provider resolution', () => {
 		console.warn = (...args: unknown[]) => warnings.push(args)
 
 		try {
-			mock.module('../util', () => ({ ...realUtil, DEV_MODE: true }))
+			await withDevMode('true', async () => {
+				const requestContext = makeRequestContext(host)
+				const context = createContext<() => string>('theme')
+				const memo = requestContext(context, 'fallback-value')
 
-			const requestContext = makeRequestContext(host)
-			const context = createContext<() => string>('theme')
-			const memo = requestContext(context, 'fallback-value')
+				await new Promise(r => setTimeout(r, 260))
 
-			await new Promise(r => setTimeout(r, 260))
-
-			expect(memo.get()).toBe('fallback-value')
-			expect(warnings).toHaveLength(1)
-			expect(String(warnings[0])).toContain('requestContext')
-			expect(String(warnings[0])).toContain('theme')
+				expect(memo.get()).toBe('fallback-value')
+				expect(warnings).toHaveLength(1)
+				expect(String(warnings[0])).toContain('requestContext')
+				expect(String(warnings[0])).toContain('theme')
+			})
 		} finally {
-			mock.module('../util', () => realUtil)
 			console.warn = originalWarn
 		}
 	})
@@ -608,18 +634,17 @@ describe('makeRequestContext late-provider resolution', () => {
 		console.warn = (...args: unknown[]) => warnings.push(args)
 
 		try {
-			mock.module('../util', () => ({ ...realUtil, DEV_MODE: false }))
+			await withDevMode(undefined, async () => {
+				const requestContext = makeRequestContext(host)
+				const context = createContext<() => string>('theme')
+				const memo = requestContext(context, 'fallback-value')
 
-			const requestContext = makeRequestContext(host)
-			const context = createContext<() => string>('theme')
-			const memo = requestContext(context, 'fallback-value')
+				await new Promise(r => setTimeout(r, 260))
 
-			await new Promise(r => setTimeout(r, 260))
-
-			expect(memo.get()).toBe('fallback-value')
-			expect(warnings).toHaveLength(0)
+				expect(memo.get()).toBe('fallback-value')
+				expect(warnings).toHaveLength(0)
+			})
 		} finally {
-			mock.module('../util', () => realUtil)
 			console.warn = originalWarn
 		}
 	})

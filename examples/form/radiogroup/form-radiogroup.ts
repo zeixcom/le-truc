@@ -1,4 +1,10 @@
-import { defineComponent, each } from '../../..'
+import {
+	bindProperty,
+	defineComponent,
+	each,
+	type FormAssociatedElement,
+	formAssociated,
+} from '../../..'
 
 export type FormRadiogroupProps = {
 	/** Value of the currently selected radio button. */
@@ -7,7 +13,7 @@ export type FormRadiogroupProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-radiogroup': HTMLElement & FormRadiogroupProps
+		'form-radiogroup': FormAssociatedElement & FormRadiogroupProps
 	}
 }
 
@@ -26,7 +32,9 @@ const getIndex = (radios: HTMLInputElement[]) =>
 /**
  * A radio group with roving tabindex keyboard navigation and reactive value tracking.
  * Use it for single-choice selection — provides ARIA radiogroup semantics, Arrow/Home/End
- * key support, and focus management across the radio options.
+ * key support, and focus management across the radio options. Form participation and
+ * validity are via ElementInternals (`formAssociated()`) — set `name` on the host, not
+ * the individual radios, which are presentational only.
  * @demo {./docs/examples/form-radiogroup.html} Interactive preview and usage examples */
 export default defineComponent<FormRadiogroupProps>(
 	'form-radiogroup',
@@ -41,45 +49,45 @@ export default defineComponent<FormRadiogroupProps>(
 
 		expose({ value: radios.get()[focusIndex]?.value ?? '' })
 
-		return [
-			on(radios, 'change', (_e, el) => ({ value: el.value })),
-			on(host, 'click', ({ target }) => {
-				if (!(target instanceof HTMLElement)) return
-				if (target.hasAttribute('value'))
-					focusIndex = radios.get().indexOf(target as HTMLInputElement)
-			}),
-			on(host, 'keydown', e => {
-				const { key } = e as KeyboardEvent
-				if (!HANDLED_KEYS.includes(key)) return
+		on(radios, 'change', (_e, el) => ({ value: el.value }))
+		on(host, 'click', ({ target }) => {
+			if (!(target instanceof HTMLElement)) return
+			if (target.hasAttribute('value'))
+				focusIndex = radios.get().indexOf(target as HTMLInputElement)
+		})
+		on(host, 'keydown', e => {
+			const { key } = e as KeyboardEvent
+			if (!HANDLED_KEYS.includes(key)) return
 
-				const elements = radios.get()
-				e.preventDefault()
-				e.stopPropagation()
-				if (key === FIRST_KEY) focusIndex = 0
-				else if (key === LAST_KEY) focusIndex = elements.length - 1
-				else
-					focusIndex =
-						(focusIndex +
-							(INCREMENT_KEYS.includes(key) ? 1 : -1) +
-							elements.length) %
-						elements.length
-				elements[focusIndex]?.focus()
-			}),
-			on(host, 'keyup', ({ key }) => {
-				if (key !== ENTER_KEY) return
-				radios.get()[focusIndex]?.click()
-			}),
+			const elements = radios.get()
+			e.preventDefault()
+			e.stopPropagation()
+			if (key === FIRST_KEY) focusIndex = 0
+			else if (key === LAST_KEY) focusIndex = elements.length - 1
+			else
+				focusIndex =
+					(focusIndex +
+						(INCREMENT_KEYS.includes(key) ? 1 : -1) +
+						elements.length) %
+					elements.length
+			elements[focusIndex]?.focus()
+		})
+		on(host, 'keyup', ({ key }) => {
+			if (key !== ENTER_KEY) return
+			radios.get()[focusIndex]?.click()
+		})
 
-			each(radios, radio =>
-				watch(
-					() => radio.value === host.value,
-					isChecked => {
-						radio.checked = isChecked
-						radio.tabIndex = isChecked ? 0 : -1
-						radio.closest('label')?.classList.toggle('selected', isChecked)
-					},
-				),
-			),
-		]
+		each(radios, radio => {
+			watch(
+				() => radio.value === host.value,
+				isChecked => {
+					radio.checked = isChecked
+					radio.tabIndex = isChecked ? 0 : -1
+					radio.closest('label')?.classList.toggle('selected', isChecked)
+				},
+			)
+			watch('disabled', bindProperty(radio, 'disabled'))
+		})
 	},
+	[formAssociated()],
 )

@@ -13,6 +13,7 @@ import {
 	bindAttribute,
 	bindClass,
 	bindProperty,
+	bindState,
 	bindStyle,
 	bindText,
 	bindVisible,
@@ -463,6 +464,39 @@ describe('bindClass', () => {
 		const el = new FakeElement('div')
 		bindClass<number>(el as unknown as Element, 'has-items')(3)
 		expect(el.classList.contains('has-items')).toBe(true)
+	})
+})
+
+describe('bindState', () => {
+	// A real Set matches the add/delete surface of CustomStateSet.
+	const fakeInternals = () => {
+		const states = new Set<string>()
+		return { states, internals: { states } as unknown as ElementInternals }
+	}
+
+	test('adds the state token when value is true', () => {
+		const { states, internals } = fakeInternals()
+		bindState(internals, 'overflow-end')(true)
+		expect(states.has('overflow-end')).toBe(true)
+	})
+
+	test('removes the state token when value is false', () => {
+		const { states, internals } = fakeInternals()
+		states.add('overflow-end')
+		bindState(internals, 'overflow-end')(false)
+		expect(states.has('overflow-end')).toBe(false)
+	})
+
+	test('coerces truthy non-boolean values', () => {
+		const { states, internals } = fakeInternals()
+		bindState<number>(internals, 'has-items')(3)
+		expect(states.has('has-items')).toBe(true)
+	})
+
+	test('is a no-op when internals is null', () => {
+		expect(() => {
+			bindState(null, 'overflow-end')(true)
+		}).not.toThrow()
 	})
 })
 

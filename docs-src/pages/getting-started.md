@@ -64,19 +64,19 @@ import { asString, bindText, defineComponent } from '@zeix/le-truc'
 ```
 
 {% callout .tip title="Enabling dev-mode warnings" %}
-When bundling from source, `DEV_MODE` defaults to `false` and all debug output is stripped. To enable enhanced warnings during development — including alerts about unbranded parsers and API misuse — define `process.env.DEV_MODE` in your bundler config:
+When bundling from source, dev mode defaults to off and all debug output is stripped. To enable enhanced warnings during development — including alerts about unbranded parsers and API misuse — define `process.env.DEV_MODE` as the **string** `"true"` in your bundler config (the guards check `process.env.DEV_MODE === 'true'`, so a bare boolean `true` will not enable them):
 
 **Vite** (`vite.config.js`):
 ```js
-define: { 'process.env.DEV_MODE': 'true' }
+define: { 'process.env.DEV_MODE': '"true"' }
 ```
 
 **Bun / Rollup** (CLI flag):
 ```sh
---define process.env.DEV_MODE=true
+--define process.env.DEV_MODE='"true"'
 ```
 
-Set the value to `false` (or omit it) for production builds to ensure dead code is eliminated.
+Set the value to the string `"false"` (or omit the define) for production builds — the string comparison is constant-folded, so every dev-mode branch is eliminated as dead code.
 {% /callout %}
 
 {% /section %}
@@ -154,10 +154,8 @@ Add the following inside a `<script type="module">` tag, or in an external modul
 
     expose({ name: output.textContent ?? '' })
 
-    return [
-      on(input, 'input', () => ({ name: input.value || fallback })),
-      watch('name', bindText(output)),
-    ]
+    on(input, 'input', () => ({ name: input.value || fallback }))
+    watch('name', bindText(output))
   })
 </script>
 ```

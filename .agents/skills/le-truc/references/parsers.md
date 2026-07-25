@@ -109,11 +109,9 @@ expose({
   length: length.get,  // getter only — consumers cannot set this prop
 })
 
-return [
-  on(textbox, 'input', () => {
-    length.set(textbox.value.length)
-  }),
-]
+on(textbox, 'input', () => {
+  length.set(textbox.value.length)
+})
 ```
 
 Write-protection comes from exposing `state.get` — a plain reactive function — rather than full `State`. Consumers see reactive getter with no setter.

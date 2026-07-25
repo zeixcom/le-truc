@@ -107,6 +107,24 @@ declare const bindProperty: <O extends object, K extends keyof O & string>(objec
  */
 declare const bindClass: <T = boolean>(element: Element, token: string) => ((value: T) => void);
 /**
+ * Returns a function that toggles a custom state on an element's `ElementInternals`.
+ *
+ * `value=true` adds the state; `value=false` removes it. Consumers match it in
+ * CSS with the `:state(token)` pseudo-class. Unlike a class token, a custom
+ * state is owned by the component — it cannot be clobbered by author code or
+ * frameworks rewriting the host's `class` attribute.
+ *
+ * Accepts `null` for graceful degradation: the factory context's `internals`
+ * is `null` when `attachInternals()` failed, in which case the returned
+ * function is a no-op.
+ *
+ * @since 2.3
+ * @param internals - The component's `ElementInternals` (or `null`)
+ * @param token - Custom state token to toggle (matched via `:state(token)`)
+ * @returns Function that toggles the custom state
+ */
+declare const bindState: <T = boolean>(internals: ElementInternals | null, token: string) => ((value: T) => void);
+/**
  * Returns a function that controls element visibility via `el.hidden = !value`.
  *
  * `value=true` makes the element visible; `value=false` hides it.
@@ -185,4 +203,4 @@ declare const bindStyle: (element: HTMLElement | SVGElement | MathMLElement, pro
  * @returns Match handlers that schedule the innerHTML mutation
  */
 declare const dangerouslyBindInnerHTML: (element: Element, options?: DangerouslyBindInnerHTMLOptions) => SingleMatchHandlers<string>;
-export { bindAttribute, bindClass, bindProperty, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, safeSetAttribute, setTextPreservingComments, };
+export { bindAttribute, bindClass, bindProperty, bindState, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, safeSetAttribute, setTextPreservingComments, };

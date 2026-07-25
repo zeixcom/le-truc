@@ -133,6 +133,6 @@ export default defineComponent<ContextMediaProps>(
 			),
 		})
 
-		return [provideContexts(['motion', 'theme', 'viewport', 'orientation'])]
+		provideContexts(['motion', 'theme', 'viewport', 'orientation'])
 	},
 )

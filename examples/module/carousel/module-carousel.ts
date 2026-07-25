@@ -38,8 +38,11 @@ export default defineComponent<ModuleCarouselProps>(
 			),
 		})
 
-		return [
-			// Set up IntersectionObserver to detect scroll-based navigation
+		// Set up IntersectionObserver to detect scroll-based navigation.
+		// No signal dependency — watch(() => true, …) runs the setup once on
+		// connect and its returned cleanup disconnects the observer on disconnect.
+		watch(
+			() => true,
 			() => {
 				const observer = new IntersectionObserver(
 					entries => {
@@ -63,89 +66,89 @@ export default defineComponent<ModuleCarouselProps>(
 				for (const slide of slides.get()) observer.observe(slide)
 				return () => observer.disconnect()
 			},
+		)
 
-			// Scroll to slide when index changes (skip if IO already scrolled there)
-			watch('index', idx => {
-				if (lastScrolled < 0) {
-					lastScrolled = idx
-					return
-				}
-				if (lastScrolled !== idx) {
-					lastScrolled = idx
-					isNavigating = true
-					slides
-						.get()
-						[idx]!.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-				}
-			}),
+		// Scroll to slide when index changes (skip if IO already scrolled there)
+		watch('index', idx => {
+			if (lastScrolled < 0) {
+				lastScrolled = idx
+				return
+			}
+			if (lastScrolled !== idx) {
+				lastScrolled = idx
+				isNavigating = true
+				slides
+					.get()
+					[idx]!.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+			}
+		})
 
-			// Prev button: move focus to next when hidden
-			on(prev, 'click', () => {
-				const newIndex = clamp(host.index - 1, slides.get().length)
-				host.index = newIndex
-				if (newIndex === 0) next.focus()
-			}),
+		// Prev button: move focus to next when hidden
+		on(prev, 'click', () => {
+			const newIndex = clamp(host.index - 1, slides.get().length)
+			host.index = newIndex
+			if (newIndex === 0) next.focus()
+		})
 
-			// Next button: move focus to prev when hidden
-			on(next, 'click', () => {
-				const newIndex = clamp(host.index + 1, slides.get().length)
-				host.index = newIndex
-				if (newIndex === slides.get().length - 1) prev.focus()
-			}),
+		// Next button: move focus to prev when hidden
+		on(next, 'click', () => {
+			const newIndex = clamp(host.index + 1, slides.get().length)
+			host.index = newIndex
+			if (newIndex === slides.get().length - 1) prev.focus()
+		})
 
-			// Dot navigation
-			on(dots, 'click', (_e, target) => {
-				host.index = parseInt(target.dataset.index || '0')
-			}),
+		// Dot navigation
+		on(dots, 'click', (_e, target) => {
+			host.index = parseInt(target.dataset.index || '0')
+		})
 
-			// Keyboard navigation for all nav buttons (prev, next, dots)
-			on(buttons, 'keyup', e => {
-				const { key } = e
-				if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return
-				e.preventDefault()
-				e.stopPropagation()
+		// Keyboard navigation for all nav buttons (prev, next, dots)
+		on(buttons, 'keyup', e => {
+			const { key } = e
+			if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return
+			e.preventDefault()
+			e.stopPropagation()
 
-				const length = slides.get().length
-				const newIndex =
-					key === 'Home'
-						? 0
-						: key === 'End'
-							? length - 1
-							: clamp(host.index + (key === 'ArrowLeft' ? -1 : 1), length)
-				host.index = newIndex
-				if (newIndex === 0 && document.activeElement === prev) {
-					next.focus()
-				} else if (newIndex === length - 1 && document.activeElement === next) {
-					prev.focus()
-				} else if (document.activeElement) {
-					const dotElements = dots.get()
-					if (dotElements.includes(document.activeElement as HTMLButtonElement))
-						dotElements[newIndex]!.focus()
-				}
-			}),
+			const length = slides.get().length
+			const newIndex =
+				key === 'Home'
+					? 0
+					: key === 'End'
+						? length - 1
+						: clamp(host.index + (key === 'ArrowLeft' ? -1 : 1), length)
+			host.index = newIndex
+			if (newIndex === 0 && document.activeElement === prev) {
+				next.focus()
+			} else if (newIndex === length - 1 && document.activeElement === next) {
+				prev.focus()
+			} else if (document.activeElement) {
+				const dotElements = dots.get()
+				if (dotElements.includes(document.activeElement as HTMLButtonElement))
+					dotElements[newIndex]!.focus()
+			}
+		})
 
-			// Effects for slides
-			each(slides, slide =>
-				watch(
-					() => String(slide.id === slides.get()[host.index]?.id),
-					bindProperty(slide, 'ariaCurrent'),
-				),
+		// Effects for slides
+		each(slides, slide =>
+			watch(
+				() => String(slide.id === slides.get()[host.index]?.id),
+				bindProperty(slide, 'ariaCurrent'),
 			),
+		)
 
-			// Effects for dot navigation
-			each(dots, dot =>
-				watch(
-					() => dot.dataset.index === String(host.index),
-					selected => {
-						dot.ariaSelected = String(selected)
-						dot.tabIndex = selected ? 0 : -1
-					},
-				),
+		// Effects for dot navigation
+		each(dots, dot =>
+			watch(
+				() => dot.dataset.index === String(host.index),
+				selected => {
+					dot.ariaSelected = String(selected)
+					dot.tabIndex = selected ? 0 : -1
+				},
 			),
+		)
 
-			// Effects for prev/next navigation
-			watch(() => host.index > 0, bindVisible(prev)),
-			watch(() => host.index < slides.get().length - 1, bindVisible(next)),
-		]
+		// Effects for prev/next navigation
+		watch(() => host.index > 0, bindVisible(prev))
+		watch(() => host.index < slides.get().length - 1, bindVisible(next))
 	},
 )

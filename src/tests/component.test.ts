@@ -13,9 +13,13 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { createEffect } from '@zeix/cause-effect'
+import { createEffect, createState, createTask } from '@zeix/cause-effect'
 import { defineComponent } from '../component'
-import { InvalidComponentNameError, InvalidPropertyNameError } from '../errors'
+import {
+	InvalidComponentNameError,
+	InvalidPropertyNameError,
+	NoActiveCollectorError,
+} from '../errors'
 import { asParser, defineMethod } from '../types'
 
 /* === Fake customElements registry + HTMLElement base === */
@@ -24,6 +28,9 @@ class FakeHTMLElement {
 	#attrs = new Map<string, string>()
 	localName = 'fake-element'
 	shadowRoot: null = null
+	formAssociated = false
+	#internals: FakeElementInternals | null = null
+
 	getAttribute(name: string): string | null {
 		return this.#attrs.has(name) ? this.#attrs.get(name)! : null
 	}
@@ -40,6 +47,69 @@ class FakeHTMLElement {
 	removeEventListener() {}
 	dispatchEvent() {
 		return true
+	}
+	attachInternals() {
+		if (!this.#internals) this.#internals = new FakeElementInternals()
+		return this.#internals
+	}
+}
+
+/** Mutable ValidityState — the real DOM type has readonly fields. */
+type MutableValidityState = {
+	-readonly [K in keyof ValidityState]: boolean
+}
+
+/**
+ * Minimal ElementInternals stub for unit tests.
+ * Stores form value, validity, and states for assertion.
+ */
+class FakeElementInternals {
+	formValue: string | File | FormData | null = null
+	validity: MutableValidityState = {
+		valueMissing: false,
+		typeMismatch: false,
+		patternMismatch: false,
+		tooLong: false,
+		tooShort: false,
+		rangeUnderflow: false,
+		rangeOverflow: false,
+		stepMismatch: false,
+		badInput: false,
+		customError: false,
+		valid: true,
+	}
+	validationMessage = ''
+	states = new Set<string>()
+	willValidate = true
+
+	setFormValue(value: string | File | FormData | null) {
+		this.formValue = value
+	}
+	setValidity(
+		flags: ValidityStateFlags,
+		message?: string,
+		anchor?: HTMLElement,
+	) {
+		Object.assign(this.validity, flags)
+		// Recompute valid: true only if no error flag is set
+		this.validity.valid =
+			!this.validity.valueMissing &&
+			!this.validity.typeMismatch &&
+			!this.validity.patternMismatch &&
+			!this.validity.tooLong &&
+			!this.validity.tooShort &&
+			!this.validity.rangeUnderflow &&
+			!this.validity.rangeOverflow &&
+			!this.validity.stepMismatch &&
+			!this.validity.badInput &&
+			!this.validity.customError
+		this.validationMessage = message ?? ''
+	}
+	checkValidity() {
+		return this.validity.valid
+	}
+	reportValidity() {
+		return this.validity.valid
 	}
 }
 
@@ -303,5 +373,92 @@ describe('reserved word guard', () => {
 		)!
 		const instance = new Ctor() as any
 		expect(() => instance.connectedCallback()).toThrow(InvalidPropertyNameError)
+	})
+})
+
+/* === LT-006: implicit effect collection regression tests (ADR 0018) === */
+
+describe('implicit effect collection — regression (ADR 0018)', () => {
+	test('watch(task, fn) called as a bare statement (no return) still activates and runs the Task', async () => {
+		const ranWith: string[] = []
+		const Ctor = defineComponent<{ city: string }>(
+			uniqueName(),
+			({ expose, host, watch }) => {
+				expose({ city: 'A' })
+				const task = createTask(async () => host.city)
+				// Bare call, no return — this is the exact shape from the original
+				// bug report: watch(task, fn) silently never ran the Task.
+				watch(task, c => {
+					ranWith.push(c)
+				})
+			},
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		await new Promise(r => setTimeout(r, 0))
+		expect(ranWith).toEqual(['A'])
+	})
+
+	test('mixed bare and returned helper calls in one factory each activate exactly once', () => {
+		const runs: string[] = []
+		const Ctor = defineComponent<{ count: number }>(
+			uniqueName(),
+			({ expose, watch }) => {
+				expose({ count: 1 })
+				// Bare call — registers only via the implicit collector.
+				watch('count', v => {
+					runs.push(`bare:${v}`)
+				})
+				// Explicit return — already pushed into the collector too; must not
+				// activate twice.
+				return [
+					watch('count', v => {
+						runs.push(`returned:${v}`)
+					}),
+				]
+			},
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		expect(runs).toEqual(['bare:1', 'returned:1'])
+	})
+
+	// each() with implicit collection nested 2+ levels deep is covered by the
+	// `each — implicit collection (ADR 0018)` describe block in
+	// reactive.test.ts, including a 3-level (row/col/cell) grid test — not
+	// duplicated here.
+
+	test('watch() called after an await inside the factory throws NoActiveCollectorError immediately', async () => {
+		let thrown: unknown
+		const Ctor = defineComponent(uniqueName(), ({ watch }) => {
+			Promise.resolve().then(() => {
+				try {
+					watch(createState('x'), () => {})
+				} catch (e) {
+					thrown = e
+				}
+			})
+		})!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		await new Promise(r => setTimeout(r, 0))
+		expect(thrown).toBeInstanceOf(NoActiveCollectorError)
+	})
+
+	test('watch() called inside a detached setTimeout scheduled during factory setup throws immediately', async () => {
+		let thrown: unknown
+		const Ctor = defineComponent(uniqueName(), ({ watch }) => {
+			setTimeout(() => {
+				try {
+					watch(createState('x'), () => {})
+				} catch (e) {
+					thrown = e
+				}
+			}, 0)
+		})!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		await new Promise(r => setTimeout(r, 10))
+		expect(thrown).toBeInstanceOf(NoActiveCollectorError)
 	})
 })

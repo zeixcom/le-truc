@@ -21,7 +21,11 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          # Pinned (not "latest"): the bundle-size regression test runs the
+          # minifier against a hard ceiling (REQUIREMENTS.md §4) with only a
+          # ~100B margin. Bun version drift changes minifier output by enough
+          # to flip that assertion — pin so CI matches what's tested locally.
+          bun-version: 1.3.11
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies

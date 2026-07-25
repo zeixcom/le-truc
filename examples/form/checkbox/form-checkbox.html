@@ -1,4 +1,4 @@
-<form-checkbox>
+<form-checkbox name="agree">
 	<label>
 		<input type="checkbox">
 		<span class="label">Checkbox</span>
@@ -25,7 +25,16 @@
 
 <form-checkbox class="toggle">
 	<label>
-		<input type="checkbox" class="visually-hidden">
+		<input type="checkbox" class="visually-hidden" role="switch">
 		<span class="label">Toggle Switch</span>
+	</label>
+</form-checkbox>
+
+<hr>
+
+<form-checkbox class="toggle" checked>
+	<label>
+		<input type="checkbox" class="visually-hidden" role="switch">
+		<span class="label">Toggle Switch (initially checked)</span>
 	</label>
 </form-checkbox>

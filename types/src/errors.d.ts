@@ -89,6 +89,52 @@ declare class InvalidPassPropertyError extends TypeError {
     constructor(host: HTMLElement, target: HTMLElement, reasons: Map<string, string>);
 }
 /**
+ * Error thrown when `watch()`, `on()`, `pass()`, `each()`, or `provideContexts()`
+ * is called with no active effect-descriptor collector — i.e. not synchronously
+ * during factory setup, an `each()` callback, or a `reconcile()` `bindItem`.
+ * Common causes: calling the helper after an `await`, inside a detached
+ * `setTimeout`, or from an event handler defined during setup. See ADR 0018.
+ *
+ * @since 2.3.0
+ */
+declare class NoActiveCollectorError extends Error {
+    /**
+     * @param {HTMLElement | undefined} host - Host component the helper was called for, if known (`each()` and `reconcile()` aren't host-bound, so they have none)
+     * @param {string} helper - Name of the helper that was called (e.g. `'watch'`)
+     */
+    constructor(host: HTMLElement | undefined, helper: string);
+}
+/**
+ * Error thrown when the template passed to `reconcile()` does not contain
+ * exactly one root element in its content
+ *
+ * @since 2.3.0
+ */
+declare class InvalidTemplateError extends TypeError {
+    /**
+     * @param {Element} container - Container element the template was meant to fill
+     * @param {number} count - Number of root elements found in the template content
+     */
+    constructor(container: Element, count: number);
+}
+/**
+ * Error thrown in DEV_MODE when two extensions passed to `defineComponent()`
+ * declare the same `staticProps` key. In production the first extension to
+ * declare the key wins and the rest are silently ignored — see ADR on the
+ * `ComponentExtension` mechanism.
+ *
+ * @since 2.3
+ */
+declare class ExtensionCollisionError extends Error {
+    /**
+     * @param {string} component - Component name
+     * @param {string} key - The colliding `staticProps` key
+     * @param {string} first - Name of the extension that first declared `key`
+     * @param {string} second - Name of the extension whose declaration was ignored
+     */
+    constructor(component: string, key: string, first: string, second: string);
+}
+/**
  * Error thrown when a CSS selector passed to `all()` is malformed
  *
  * @since 2.0.4
@@ -101,4 +147,4 @@ declare class InvalidSelectorError extends TypeError {
      */
     constructor(parent: ParentNode, selector: string, cause: unknown);
 }
-export { DependencyTimeoutError, InvalidComponentNameError, InvalidCustomElementError, InvalidPassPropertyError, InvalidPropertyNameError, InvalidReactivesError, InvalidSelectorError, MissingElementError, };
+export { DependencyTimeoutError, ExtensionCollisionError, InvalidComponentNameError, InvalidCustomElementError, InvalidPassPropertyError, InvalidPropertyNameError, InvalidReactivesError, InvalidSelectorError, InvalidTemplateError, MissingElementError, NoActiveCollectorError, };

@@ -2,7 +2,7 @@
 
 ## Status
 
-✅ Accepted
+🗑️ Superseded by [ADR-0018](0018-implicit-effect-collection-via-ambient-context.md)
 
 ## Context
 
@@ -36,3 +36,4 @@ The factory function returns a flat `FactoryResult` array of these effect descri
 - Requirements: [M8](../REQUIREMENTS.md#m8-dependency-resolution-for-nested-custom-elements)
 - Architecture: [Lifecycle](../ARCHITECTURE.md#lifecycle), [Effect Descriptors](../ARCHITECTURE.md#effect-descriptors)
 - Supersedes: None
+- Superseded by: [ADR-0018](0018-implicit-effect-collection-via-ambient-context.md)

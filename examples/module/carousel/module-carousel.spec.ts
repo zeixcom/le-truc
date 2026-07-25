@@ -357,6 +357,48 @@ test.describe('module-carousel component', () => {
 		})
 	})
 
+	test.describe('Cleanup', () => {
+		// Regression test for the disconnect-cleanup bug found during LT-010:
+		// the scroll-navigation IntersectionObserver was set up via a raw
+		// returned-cleanup descriptor with no watch()/createEffect()/createScope()
+		// wrapping — activateResult() discards descriptor return values, so the
+		// observer was never actually disconnected. Wrapping it in
+		// watch(() => true, …) (LT-012) fixes it, since watch() calls
+		// createEffect() internally and that self-registers the returned cleanup
+		// on the active owner. This test instruments
+		// IntersectionObserver.prototype.disconnect before the component
+		// connects, so it fails again if the fix regresses.
+		test('disconnects the scroll-navigation IntersectionObserver when the component disconnects', async ({
+			page,
+		}) => {
+			await page.addInitScript(() => {
+				const realDisconnect = IntersectionObserver.prototype.disconnect
+				;(window as any).__disconnectCalls = 0
+				IntersectionObserver.prototype.disconnect = function (
+					this: IntersectionObserver,
+				) {
+					;(window as any).__disconnectCalls += 1
+					return realDisconnect.call(this)
+				}
+			})
+			await page.goto('http://localhost:3000/test/module-carousel')
+			await page.waitForSelector('module-carousel')
+
+			const before = await page.evaluate(
+				() => (window as any).__disconnectCalls,
+			)
+			expect(before).toBe(0)
+
+			await page.evaluate(() => {
+				document.querySelector('module-carousel')!.remove()
+			})
+			await page.waitForTimeout(50)
+
+			const after = await page.evaluate(() => (window as any).__disconnectCalls)
+			expect(after).toBeGreaterThan(0)
+		})
+	})
+
 	test.describe('Component Properties', () => {
 		test('index property is writable and reactive', async ({ page }) => {
 			const carousel = page.locator('module-carousel')

@@ -1,6 +1,6 @@
 ### Basic Button
 
-A reusable button component designed to be controlled by a parent component via `pass()`. Demonstrates `asBoolean()` and `asString()` parsers — including a reader fallback that reads the initial label from the DOM — and shows how optional UI elements (`span.label`, `span.badge`) are handled gracefully: when absent, the corresponding `setText()` and `setProperty()` effects simply have no target.
+A reusable button component designed to be controlled by a parent component via `pass()`. Demonstrates initialising reactive properties by reading DOM state directly in `expose()` (`button.disabled`, `span.label` text content), and shows how optional descendant elements (`span.label`, `span.badge`) are handled gracefully: when absent, the corresponding `watch()` calls are guarded with `if (el)` and never attach.
 
 #### Preview
 

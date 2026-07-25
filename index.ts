@@ -1,4 +1,4 @@
-// Le Truc 2.2.0
+// Le Truc 2.3.0
 
 // From Cause & Effect
 export {
@@ -81,6 +81,7 @@ export {
 	bindAttribute,
 	bindClass,
 	bindProperty,
+	bindState,
 	bindStyle,
 	bindText,
 	bindVisible,
@@ -93,19 +94,32 @@ export {
 export {
 	defineComponent,
 	type FactoryContext,
+	type FormAssociatedElement,
 	type Initializers,
 	type MaybeSignal,
 } from './src/component'
 export {
 	DependencyTimeoutError,
+	ExtensionCollisionError,
 	InvalidComponentNameError,
 	InvalidCustomElementError,
 	InvalidPassPropertyError,
 	InvalidPropertyNameError,
 	InvalidReactivesError,
 	InvalidSelectorError,
+	InvalidTemplateError,
 	MissingElementError,
+	NoActiveCollectorError,
 } from './src/errors'
+export { type ComponentExtension } from './src/extension'
+export { observedAttributes } from './src/extensions/attributes'
+export {
+	FOCUSABLE_FORM_CONTROL_SELECTOR,
+	type FormAssociatedCheckboxExtension,
+	type FormAssociatedExtension,
+	formAssociated,
+	formAssociatedCheckbox,
+} from './src/extensions/form'
 export {
 	CONTEXT_REQUEST,
 	type Context,
@@ -138,6 +152,7 @@ export {
 	type PassedProps,
 	type PassHelper,
 	type Reactive,
+	reconcile,
 	type WatchHelper,
 } from './src/helpers/reactive'
 export { asBoolean } from './src/parsers/boolean'

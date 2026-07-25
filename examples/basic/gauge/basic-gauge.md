@@ -1,6 +1,6 @@
 ### Basic Gauge
 
-A visual level indicator that reads its initial value from a `<meter>` element using `asNumber()`, then drives a conic-gradient dial via `setStyle()` on the host. Demonstrates `createMemo()` to derive a qualification label and accent color from a reactive `thresholds` property (JSON array, parsed via `asJSON()`), and `pass()` to forward the value to a child `<basic-number>` component, which handles locale-aware number formatting via its `options` attribute. The `<meter>` element is kept in sync via `setProperty()`.
+A visual level indicator that reads its `value` attribute at connect time via `asNumber()` (falling back to the inner `<meter>` element's `.value` for markup that only sets it there), then drives a conic-gradient dial by setting a CSS custom property on the host inside a `watch('value')` handler. Demonstrates `asJSON()` to parse a `thresholds` attribute (read once at connect), a reactive thunk that finds the active threshold and updates a label plus `--basic-gauge-color`, and `pass()` to forward the value to a child `<basic-number>` component, which handles locale-aware number formatting via its `options` attribute. The `<meter>` element is kept in sync inside the same `watch`. Also demonstrates `observedAttributes()` — the opt-in extension that re-parses `value` whenever the attribute mutates after connect, not just at connect time (see [ADR 0019](../../../adr/0019-extension-based-dependency-injection-for-definecomponent.md)).
 
 #### Preview
 
@@ -25,7 +25,7 @@ A visual level indicator that reads its initial value from a `<meter>` element u
 - `value`
 - `number` (float)
 - `0`
-- Current gauge value; initialised from `<meter value="…">` at connect time
+- Current gauge value; read from the `value` attribute (falling back to `<meter value="…">`) at connect time, and re-parsed on later `value` attribute mutations via `observedAttributes()`
 ---
 - `thresholds`
 - `BasicGaugeThreshold[]`
@@ -46,7 +46,7 @@ A visual level indicator that reads its initial value from a `<meter>` element u
 - `first('meter')`
 - `HTMLMeterElement`
 - **required**
-- Native meter element; its `value` seeds `host.value` at initialisation and stays in sync via `setProperty()`
+- Native meter element; its `value` seeds `host.value` at initialisation and stays in sync inside `watch('value')`
 ---
 - `first('basic-number')`
 - `HTMLElementTagNameMap['basic-number']`

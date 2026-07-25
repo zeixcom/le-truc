@@ -1,6 +1,5 @@
 <form>
-	<form-listbox id="timezone" src="./test/form-listbox/mocks/timezones.json">
-		<input type="hidden" name="timezone">
+	<form-listbox id="timezone" name="timezone" src="./test/form-listbox/mocks/timezones.json">
 		<card-callout>
 			<p class="loading" role="status">Loading...</p>
 			<p class="error" role="alert" aria-live="assertive" hidden></p>
@@ -15,8 +14,7 @@
 
 <!-- Declarative inline HTML example -->
 <form>
-	<form-listbox id="colors">
-		<input type="hidden" name="color">
+	<form-listbox id="colors" name="color">
 		<div role="listbox" aria-label="Colors">
 			<button type="button" role="option" tabindex="-1" value="red">Red</button>
 			<button type="button" role="option" tabindex="-1" value="green">
@@ -39,8 +37,7 @@
 
 <!-- Declarative inline HTML example with groups and filter -->
 <form>
-	<form-listbox id="fruits">
-		<input type="hidden" name="fruit">
+	<form-listbox id="fruits" name="fruit">
 		<label for="fruits-filter" class="visually-hidden">Filter fruits</label>
 		<div class="input">
 			<input

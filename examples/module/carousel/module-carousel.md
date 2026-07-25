@@ -1,6 +1,6 @@
 ### Module Carousel
 
-A scroll-snap carousel with dot navigation and keyboard controls. Demonstrates using raw effect functions on `host` — returning custom cleanup functions — to integrate native browser APIs (`IntersectionObserver`, `createEffect`) alongside standard Le Truc effects. `asInteger()` with a reader fallback initialises `index` from the DOM. The `all()` Memo targets (`dots`, `slides`, `buttons`) show how `setProperty()` and `on()` effects automatically iterate over dynamic element collections.
+A scroll-snap carousel with dot navigation and keyboard controls. Demonstrates integrating a native browser API (`IntersectionObserver`) via `watch(() => true, …)` — a hand-authored effect with no signal dependency, run once on connect, whose returned cleanup disconnects the observer on disconnect. `index` is initialised from the slide marked `aria-current="true"` in `expose()`. The `all()` Memo targets (`dots`, `slides`, `buttons`) show how `on()` automatically iterates over dynamic element collections, and `each()` drives per-slide/per-dot `watch()` effects.
 
 #### Preview
 

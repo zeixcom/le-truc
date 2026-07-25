@@ -18,23 +18,21 @@
 
 ## `pass(target, props)` — Parent Controls Le Truc Child
 
-Replaces backing `Slot` signal of descendant Le Truc component's prop with signal from parent. Child's prop then tracks parent signal directly — zero intermediate effect. Returns `EffectDescriptor`.
+Replaces backing `Slot` signal of descendant Le Truc component's prop with signal from parent. Child's prop then tracks parent signal directly — zero intermediate effect. Creates and registers an `EffectDescriptor`.
 
 ```typescript
 defineComponent<ParentProps>('parent-el', ({ expose, first, pass }) => {
   const child = first('child-el') as HTMLElement & ChildProps
   expose({ disabled: false })
-  return [
-    pass(child, {
-      disabled: () => host.disabled,   // thunk — read-only
-      label: readonlyMemo,             // read-only signal (Memo/Task)
-      // SlotDescriptor — mediated writable (also for type conversion):
-      progress: {
-        get: () => host.value / host.max,             // normalize to 0-1
-        set: (v: number) => { host.value = v * host.max },
-      },
-    }),
-  ]
+  pass(child, {
+    disabled: () => host.disabled,   // thunk — read-only
+    label: readonlyMemo,             // read-only signal (Memo/Task)
+    // SlotDescriptor — mediated writable (also for type conversion):
+    progress: {
+      get: () => host.value / host.max,             // normalize to 0-1
+      set: (v: number) => { host.value = v * host.max },
+    },
+  })
 })
 ```
 
@@ -60,9 +58,7 @@ defineComponent<ThemeProps>('theme-provider', ({ expose, provideContexts }) => {
     theme: asString('light'),
     locale: asString('en'),
   })
-  return [
-    provideContexts(['theme', 'locale']),  // EffectDescriptor — include in return array
-  ]
+  provideContexts(['theme', 'locale'])  // registers itself, no return needed
 })
 ```
 
@@ -76,9 +72,7 @@ defineComponent<MyProps>('my-consumer', ({ expose, requestContext, watch }) => {
   expose({
     theme: requestContext(THEME_CONTEXT, 'light'),  // Signal<string> — fallback if no provider
   })
-  return [
-    watch('theme', value => { /* react to theme */ }),
-  ]
+  watch('theme', value => { /* react to theme */ })
 })
 ```
 
@@ -95,11 +89,9 @@ Use for: data-fetch scopes, auth state, locale, theme, any value shared across u
 ```typescript
 defineComponent<Props>('parent-el', ({ expose, host, on }) => {
   expose({ selectedId: '' })
-  return [
-    on(host, 'item-selected', (e: CustomEvent<{ id: string }>, el) => ({
-      selectedId: e.detail.id,
-    })),
-  ]
+  on(host, 'item-selected', (e: CustomEvent<{ id: string }>, el) => ({
+    selectedId: e.detail.id,
+  }))
 })
 ```
 
@@ -115,16 +107,14 @@ Use when: parent needs to respond to any child of particular type without knowin
 defineComponent<Props>('list-el', ({ all, expose, host, on, watch }) => {
   const items = all('[role="option"]')
   expose({ selectedId: '' })
-  return [
-    // Delegated click on all items
-    on(items, 'click', (event, item) => ({
-      selectedId: item.id,
-    })),
-    // Per-element reactive class with own scope
-    each(items, item => [
-      watch('selectedId', bindClass(item, 'selected', id => id === item.id)),
-    ]),
-  ]
+  // Delegated click on all items
+  on(items, 'click', (event, item) => ({
+    selectedId: item.id,
+  }))
+  // Per-element reactive class with own scope
+  each(items, item => {
+    watch('selectedId', bindClass(item, 'selected', id => id === item.id))
+  })
 })
 ```
 

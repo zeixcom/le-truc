@@ -728,7 +728,6 @@ function createList(value, options) {
     signals.set(key, itemFactory(val));
   }
   node.value = value;
-  node.flags = 0;
   const list = {
     [Symbol.toStringTag]: TYPE_LIST,
     [Symbol.isConcatSpreadable]: true,
@@ -748,14 +747,13 @@ function createList(value, options) {
       subscribe();
       if (node.sources) {
         if (node.flags) {
-          const relink = node.flags & FLAG_RELINK;
-          node.value = untrack(buildValue);
-          if (relink) {
+          if (node.flags & FLAG_RELINK) {
             node.flags = FLAG_DIRTY;
             refresh(node);
             if (node.error)
               throw node.error;
           } else {
+            node.value = untrack(buildValue);
             node.flags = FLAG_CLEAN;
           }
         }
@@ -1103,13 +1101,14 @@ function deriveCollection(source, callback) {
   function ensureFresh() {
     if (node.sources) {
       if (node.flags) {
-        node.value = untrack(buildValue);
+        const result = untrack(buildValue);
         if (node.flags & FLAG_RELINK) {
           node.flags = FLAG_DIRTY;
           refresh(node);
           if (node.error)
             throw node.error;
         } else {
+          node.value = result;
           node.flags = FLAG_CLEAN;
         }
       }
@@ -1310,14 +1309,13 @@ function createCollection(watched, options) {
       subscribe();
       if (node.sources) {
         if (node.flags) {
-          const relink = node.flags & FLAG_RELINK;
-          node.value = untrack(buildValue);
-          if (relink) {
+          if (node.flags & FLAG_RELINK) {
             node.flags = FLAG_DIRTY;
             refresh(node);
             if (node.error)
               throw node.error;
           } else {
+            node.value = untrack(buildValue);
             node.flags = FLAG_CLEAN;
           }
         }
@@ -1585,14 +1583,13 @@ function createStore(value, options) {
       subscribe();
       if (node.sources) {
         if (node.flags) {
-          const relink = node.flags & FLAG_RELINK;
-          node.value = untrack(buildValue);
-          if (relink) {
+          if (node.flags & FLAG_RELINK) {
             node.flags = FLAG_DIRTY;
             refresh(node);
             if (node.error)
               throw node.error;
           } else {
+            node.value = untrack(buildValue);
             node.flags = FLAG_CLEAN;
           }
         }
@@ -1912,6 +1909,14 @@ var bindProperty = (object, key) => (value) => {
 var bindClass = (element, token) => (value) => {
   element.classList.toggle(token, Boolean(value));
 };
+var bindState = (internals, token) => (value) => {
+  if (!internals)
+    return;
+  if (value)
+    internals.states.add(token);
+  else
+    internals.states.delete(token);
+};
 var bindVisible = (element) => (value) => {
   element.hidden = !value;
 };
@@ -1984,7 +1989,6 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
   };
 };
 // src/util.ts
-var DEV_MODE = typeof process !== "undefined" && false === "true";
 var isCustomElement = (element) => element.localName.includes("-");
 var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
 var elementName = (el) => {
@@ -2046,6 +2050,28 @@ class InvalidPassPropertyError extends TypeError {
   }
 }
 
+class NoActiveCollectorError extends Error {
+  constructor(host, helper) {
+    const where = host ? ` in component ${elementName(host)}` : "";
+    super(`${helper}() called outside synchronous factory, each() callback, or reconcile() bindItem execution${where}.`);
+    this.name = "NoActiveCollectorError";
+  }
+}
+
+class InvalidTemplateError extends TypeError {
+  constructor(container, count) {
+    super(`Invalid template for reconcile() into ${elementName(container)}. Expected exactly 1 root element in the template content, found ${count}.`);
+    this.name = "InvalidTemplateError";
+  }
+}
+
+class ExtensionCollisionError extends Error {
+  constructor(component, key, first, second) {
+    super(`Extension collision for component <${component}>: both '${first}' and '${second}' declare staticProps key "${key}". The '${second}' declaration is ignored.`);
+    this.name = "ExtensionCollisionError";
+  }
+}
+
 class InvalidSelectorError extends TypeError {
   constructor(parent, selector, cause) {
     const where = typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
@@ -2054,10 +2080,46 @@ class InvalidSelectorError extends TypeError {
   }
 }
 
+// src/extension.ts
+var mergeExtensions = (component, extensions) => {
+  const staticProps = {};
+  const owners = {};
+  const observedAttributes = [];
+  const reservedMembers = new Set;
+  const reservedMemberOwners = new Map;
+  for (const ext of extensions) {
+    for (const key of Object.keys(ext.staticProps ?? {})) {
+      if (key in staticProps) {
+        if (false)
+          ;
+        continue;
+      }
+      staticProps[key] = ext.staticProps[key];
+      owners[key] = ext.name;
+    }
+    for (const attr of ext.observedAttributes ?? [])
+      if (!observedAttributes.includes(attr))
+        observedAttributes.push(attr);
+    for (const member of ext.reservedMembers ?? []) {
+      reservedMembers.add(member);
+      if (!reservedMemberOwners.has(member))
+        reservedMemberOwners.set(member, ext.name);
+    }
+  }
+  return {
+    staticProps,
+    observedAttributes,
+    reservedMembers,
+    reservedMemberOwners
+  };
+};
+
 // src/internal.ts
 var DEPENDENCY_TIMEOUT = 200;
 var CONTEXT_RETRY_DELAY = DEPENDENCY_TIMEOUT + 10;
 var componentSignals = new WeakMap;
+var internalsMap = new WeakMap;
+var retainedInitializers = new WeakMap;
 var getSignals = (el) => {
   let signals = componentSignals.get(el);
   if (!signals) {
@@ -2065,6 +2127,21 @@ var getSignals = (el) => {
     componentSignals.set(el, signals);
   }
   return signals;
+};
+var activeCollector;
+var withCollector = (collector, fn) => {
+  const previous = activeCollector;
+  activeCollector = collector;
+  try {
+    return fn();
+  } finally {
+    activeCollector = previous;
+  }
+};
+var pushDescriptor = (host, helper, descriptor) => {
+  if (!activeCollector)
+    throw new NoActiveCollectorError(host, helper);
+  activeCollector.push(descriptor);
 };
 
 // src/helpers/context.ts
@@ -2085,25 +2162,29 @@ class ContextRequestEvent extends Event {
   }
 }
 var createContext = (key) => key;
-var makeProvideContexts = (host) => (contexts) => () => createScope(() => {
-  const listener = (e) => {
-    const { context, callback } = e;
-    if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
-      e.stopImmediatePropagation();
-      callback(() => {
-        try {
-          return host[context];
-        } catch (error) {
-          if (DEV_MODE)
-            console.warn("provideContexts: getter threw", elementName(host), error);
-          return;
-        }
-      });
-    }
-  };
-  host.addEventListener(CONTEXT_REQUEST, listener);
-  return () => host.removeEventListener(CONTEXT_REQUEST, listener);
-});
+var makeProvideContexts = (host) => (contexts) => {
+  const descriptor = () => createScope(() => {
+    const listener = (e) => {
+      const { context, callback } = e;
+      if (typeof context === "string" && contexts.includes(context) && isFunction(callback)) {
+        e.stopImmediatePropagation();
+        callback(() => {
+          try {
+            return host[context];
+          } catch (error) {
+            if (false)
+              ;
+            return;
+          }
+        });
+      }
+    };
+    host.addEventListener(CONTEXT_REQUEST, listener);
+    return () => host.removeEventListener(CONTEXT_REQUEST, listener);
+  });
+  pushDescriptor(host, "provideContexts", descriptor);
+  return descriptor;
+};
 var makeRequestContext = (host) => (context, fallback) => {
   const slot = createSlot(createState(fallback));
   let answered = false;
@@ -2122,8 +2203,8 @@ var makeRequestContext = (host) => (context, fallback) => {
     setTimeout(() => {
       if (!answered && host.isConnected) {
         dispatch();
-        if (!answered && DEV_MODE)
-          console.warn(`requestContext: no provider answered for '${String(context)}' on ${elementName(host)}; using fallback`);
+        if (false)
+          ;
       }
     }, CONTEXT_RETRY_DELAY);
   }
@@ -2240,8 +2321,8 @@ var makeElementQueries = (host) => {
             }, DEPENDENCY_TIMEOUT);
           })
         ]).then(callback).catch((error) => {
-          if (DEV_MODE)
-            console.warn(error);
+          if (false)
+            ;
           callback();
         });
       });
@@ -2259,6 +2340,14 @@ var activateResult = (result) => {
       activateResult(descriptor);
     else if (descriptor)
       descriptor();
+  }
+};
+var forEachUnseen = (result, seen, visit) => {
+  if (Array.isArray(result)) {
+    for (const item of result)
+      forEachUnseen(item, seen, visit);
+  } else if (typeof result === "function" && !seen.has(result)) {
+    visit(result);
   }
 };
 var keyedScopes = (memo, mount) => {
@@ -2303,7 +2392,7 @@ var toSignal = (host, source) => {
 };
 var makeWatch = (host) => {
   function watch(source, handlerOrHandlers) {
-    return () => {
+    const descriptor = () => {
       if (Array.isArray(source)) {
         const signals = source.map((s) => toSignal(host, s));
         const handler = handlerOrHandlers;
@@ -2317,6 +2406,8 @@ var makeWatch = (host) => {
       }
       return createEffect(() => match(signal, handlerOrHandlers));
     };
+    pushDescriptor(host, "watch", descriptor);
+    return descriptor;
   }
   return watch;
 };
@@ -2342,9 +2433,7 @@ var makePass = (host) => {
         failures.set(prop, "could not be resolved to a signal");
         continue;
       }
-      if (DEV_MODE && !isComputed(signal) && !(signal && typeof signal === "object" && ("get" in signal) && !(Symbol.toStringTag in signal))) {
-        console.warn(`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`);
-      }
+      if (false) {}
       const slot = signals[prop];
       if (!isSlot(slot)) {
         failures.set(prop, `is not Slot-backed on ${targetName} (read-only property, or target is not a Le Truc component)`);
@@ -2366,7 +2455,7 @@ var makePass = (host) => {
       };
   });
   function pass(target, props) {
-    return () => {
+    const descriptor = () => {
       if (!target)
         return;
       if (isMemo(target)) {
@@ -2375,19 +2464,133 @@ var makePass = (host) => {
         swapSlots(target, props);
       }
     };
+    pushDescriptor(host, "pass", descriptor);
+    return descriptor;
   }
   return pass;
 };
 function each(memo, callback) {
-  return () => {
+  const descriptor = () => {
     keyedScopes(memo, (element) => {
-      const result = callback(element);
-      if (Array.isArray(result))
-        activateResult(result);
-      else if (typeof result === "function")
-        result();
+      const collected = [];
+      const result = withCollector(collected, () => callback(element));
+      activateResult(collected);
+      forEachUnseen(result, new Set(collected), (d) => d());
     });
   };
+  pushDescriptor(undefined, "each", descriptor);
+  return descriptor;
+}
+function reconcile(container, template, source, bindItem) {
+  const descriptor = () => {
+    if (template.content.childElementCount !== 1)
+      throw new InvalidTemplateError(container, template.content.childElementCount);
+    const itemRoot = template.content.firstElementChild;
+    const keyOf = new WeakMap;
+    const disposers = new Map;
+    const nextKeyed = (after) => {
+      let node = after ? after.nextElementSibling : container.firstElementChild;
+      while (node && (!keyOf.has(node) || node.hasAttribute("data-unreconciled")))
+        node = node.nextElementSibling;
+      return node;
+    };
+    const classify = (keySet) => {
+      const current = new Map;
+      const adopted = new Set;
+      const pinned = new Set;
+      const leavers = [];
+      for (const child of Array.from(container.children)) {
+        if (child.hasAttribute("data-unreconciled")) {
+          const key2 = keyOf.get(child);
+          if (key2 !== undefined && keySet.has(key2)) {
+            current.set(key2, child);
+            pinned.add(key2);
+          }
+          continue;
+        }
+        const key = keyOf.get(child);
+        if (key !== undefined) {
+          if (keySet.has(key))
+            current.set(key, child);
+          else
+            leavers.push(child);
+          continue;
+        }
+        const harvested = child.getAttribute("data-key");
+        if (harvested !== null && keySet.has(harvested) && !current.has(harvested)) {
+          keyOf.set(child, harvested);
+          current.set(harvested, child);
+          adopted.add(harvested);
+          continue;
+        }
+        if (false)
+          ;
+        child.remove();
+      }
+      return { current, adopted, pinned, leavers };
+    };
+    const leave = (keySet, leavers) => {
+      for (const [key, dispose] of disposers) {
+        if (keySet.has(key))
+          continue;
+        dispose();
+        disposers.delete(key);
+      }
+      for (const el of leavers)
+        el.remove();
+    };
+    const enter = (keys, current, adopted, pinned) => {
+      let prev = null;
+      for (const key of keys) {
+        let el = current.get(key);
+        let mount = adopted.has(key);
+        if (!el) {
+          el = itemRoot.cloneNode(true);
+          el.setAttribute("data-key", key);
+          keyOf.set(el, key);
+          mount = true;
+        }
+        if (mount) {
+          disposers.get(key)?.();
+          const item = source.byKey(key);
+          if (item) {
+            const element = el;
+            disposers.set(key, createScope(() => {
+              const collected = [];
+              const cleanup = withCollector(collected, () => bindItem(element, item, key));
+              activateResult(collected);
+              return cleanup;
+            }, {
+              root: true
+            }));
+          }
+        }
+        if (pinned.has(key))
+          continue;
+        if (nextKeyed(prev) !== el)
+          container.insertBefore(el, prev ? prev.nextElementSibling : container.firstElementChild);
+        prev = el;
+      }
+    };
+    createScope(() => {
+      createEffect(() => {
+        const keys = Array.from(source.keys());
+        untrack(() => {
+          const keySet = new Set(keys);
+          const { current, adopted, pinned, leavers } = classify(keySet);
+          leave(keySet, leavers);
+          enter(keys, current, adopted, pinned);
+        });
+      });
+      return () => {
+        for (const dispose of disposers.values())
+          dispose();
+        disposers.clear();
+      };
+    });
+  };
+  pushDescriptor(undefined, "reconcile", descriptor);
+  return descriptor;
 }
 
 // src/helpers/events.ts
@@ -2454,7 +2657,7 @@ var attachListener = (host, target, type, handler, options) => {
 };
 var makeOn = (host) => {
   function on(target, type, handler, options = {}) {
-    return () => {
+    const descriptor = () => {
       if (!target)
         return;
       if (!("passive" in options)) {
@@ -2462,9 +2665,7 @@ var makeOn = (host) => {
       }
       if (isMemo(target)) {
         if (NON_BUBBLING_EVENTS.has(type)) {
-          if (DEV_MODE) {
-            console.warn(`on(): '${type}' does not bubble — prefer each() + on() for per-element listeners in ${elementName(host)}`);
-          }
+          if (false) {}
           return keyedScopes(target, (el) => attachListener(host, el, type, handler, options));
         }
         const root = host.shadowRoot ?? host;
@@ -2496,6 +2697,8 @@ var makeOn = (host) => {
       }
       createScope(() => attachListener(host, target, type, handler, options));
     };
+    pushDescriptor(host, "on", descriptor);
+    return descriptor;
   }
   return on;
 };
@@ -2522,14 +2725,27 @@ var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
 var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 
 // src/component.ts
-function defineComponent(name, factory) {
+function defineComponent(name, factory, extensions) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
+  const exts = extensions ?? [];
+  const merged = mergeExtensions(name, exts);
 
   class Truc extends HTMLElement {
+    static formAssociated = false;
+    static observedAttributes = merged.observedAttributes;
     #initialized = false;
     #setup = [];
     #cleanup;
+    #internalsAccessed = false;
+    constructor() {
+      super();
+      try {
+        internalsMap.set(this, this.attachInternals());
+      } catch {
+        internalsMap.set(this, null);
+      }
+    }
     connectedCallback() {
       const runSetup = () => {
         this.#cleanup = createScope(() => {
@@ -2543,26 +2759,48 @@ function defineComponent(name, factory) {
           this.#cleanup();
         runSetup();
       } else {
+        const instance = this;
         const host = this;
         const [elementQueries, resolveDependencies] = makeElementQueries(host);
         const context = {
           expose: this.#initSignals.bind(this),
           host,
           ...elementQueries,
+          get internals() {
+            const internals2 = internalsMap.get(instance) ?? null;
+            if (false) {}
+            return internals2;
+          },
           watch: makeWatch(host),
           on: makeOn(host),
           pass: makePass(host),
           provideContexts: makeProvideContexts(host),
           requestContext: makeRequestContext(host)
         };
-        const result = factory(context);
-        if (result)
-          this.#setup = result;
+        const collector = [];
+        const result = withCollector(collector, () => factory(context));
+        this.#setup = collector;
+        if (result) {
+          const seen = new Set(collector);
+          forEachUnseen(result, seen, (d) => this.#setup.push(d));
+        }
+        const internals = internalsMap.get(this) ?? null;
+        for (const ext of exts) {
+          const extra = ext.onConnect?.(this, internals);
+          if (extra) {
+            const seen = new Set(this.#setup);
+            forEachUnseen(extra, seen, (d) => this.#setup.push(d));
+          }
+        }
         this.#initialized = true;
         if (!this.#setup.length)
           return;
         resolveDependencies(runSetup);
       }
+    }
+    attributeChangedCallback(attrName, oldValue, newValue) {
+      for (const ext of exts)
+        ext.onAttributeChanged?.(this, attrName, oldValue, newValue);
     }
     disconnectedCallback() {
       if (isFunction(this.#cleanup))
@@ -2587,8 +2825,20 @@ function defineComponent(name, factory) {
           continue;
         if (isReservedWord(prop))
           throw new InvalidPropertyNameError(this.localName, prop, "reserved word or Object builtin — cannot be used as a reactive property");
+        if (merged.reservedMembers.has(prop)) {
+          let reason = "is a member reserved by an extension";
+          if (false)
+            ;
+          throw new InvalidPropertyNameError(this.localName, prop, reason);
+        }
         if (prop in this)
           continue;
+        let retained = retainedInitializers.get(this);
+        if (!retained) {
+          retained = {};
+          retainedInitializers.set(this, retained);
+        }
+        retained[prop] = initializer;
         createReactiveProperty(prop, initializer);
       }
     }
@@ -2612,11 +2862,269 @@ function defineComponent(name, factory) {
       }
     }
   }
+  Object.assign(Truc, merged.staticProps);
+  for (const ext of exts)
+    ext.installOnPrototype?.(Truc.prototype);
   customElements.define(name, Truc);
   return customElements.get(name);
 }
+// src/extensions/attributes.ts
+var observedAttributes = (names) => ({
+  name: "observedAttributes",
+  observedAttributes: names,
+  onAttributeChanged: (instance, name, _oldValue, newValue) => {
+    const initializer = retainedInitializers.get(instance)?.[name];
+    if (!isParser(initializer))
+      return;
+    const result = initializer(newValue);
+    if (result != null)
+      instance[name] = result;
+  }
+});
+// src/extensions/form.ts
+var EMPTY_NODELIST = typeof document !== "undefined" ? document.createDocumentFragment().childNodes : [];
+var EMPTY_VALIDITY_STATE = {
+  valueMissing: false,
+  typeMismatch: false,
+  patternMismatch: false,
+  tooLong: false,
+  tooShort: false,
+  rangeUnderflow: false,
+  rangeOverflow: false,
+  stepMismatch: false,
+  badInput: false,
+  customError: false,
+  valid: true
+};
+var HOST_CONTRACT_DESCRIPTORS = {
+  form: {
+    get() {
+      return internalsMap.get(this)?.form ?? null;
+    },
+    enumerable: true,
+    configurable: true
+  },
+  name: {
+    get() {
+      return this.getAttribute("name") ?? "";
+    },
+    set(v) {
+      if (v == null)
+        this.removeAttribute("name");
+      else
+        this.setAttribute("name", v);
+    },
+    enumerable: true,
+    configurable: true
+  },
+  labels: {
+    get() {
+      return internalsMap.get(this)?.labels ?? EMPTY_NODELIST;
+    },
+    enumerable: true,
+    configurable: true
+  },
+  validity: {
+    get() {
+      return internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE;
+    },
+    enumerable: true,
+    configurable: true
+  },
+  validationMessage: {
+    get() {
+      return internalsMap.get(this)?.validationMessage ?? "";
+    },
+    enumerable: true,
+    configurable: true
+  },
+  willValidate: {
+    get() {
+      return internalsMap.get(this)?.willValidate ?? false;
+    },
+    enumerable: true,
+    configurable: true
+  },
+  checkValidity: {
+    value() {
+      return internalsMap.get(this)?.checkValidity() ?? true;
+    },
+    enumerable: true,
+    configurable: true,
+    writable: true
+  },
+  reportValidity: {
+    value() {
+      return internalsMap.get(this)?.reportValidity() ?? true;
+    },
+    enumerable: true,
+    configurable: true,
+    writable: true
+  },
+  setCustomValidity: {
+    value(message) {
+      const internals = internalsMap.get(this);
+      if (internals)
+        managedSetCustomValidity(internals, this, message);
+    },
+    enumerable: true,
+    configurable: true,
+    writable: true
+  }
+};
+var MANAGED_FORM_MEMBERS = new Set([
+  ...Object.keys(HOST_CONTRACT_DESCRIPTORS),
+  "disabled"
+]);
+var FOCUSABLE_FORM_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
+var resolveAnchor = (host) => host.querySelector(FOCUSABLE_FORM_CONTROL_SELECTOR) ?? host;
+var managedSetCustomValidity = (internals, host, message) => {
+  internals.setValidity({ customError: !!message }, message || undefined, resolveAnchor(host));
+};
+var makeResetCallback = (prop) => function() {
+  const initializer = retainedInitializers.get(this)?.[prop];
+  if (initializer === undefined)
+    return;
+  if (isParser(initializer)) {
+    const parse = initializer;
+    const result = parse(this.getAttribute(prop));
+    if (result != null)
+      this[prop] = result;
+  } else if (!isSignal(initializer) && !isFunction(initializer)) {
+    this[prop] = initializer;
+  }
+};
+var formResetCallback = makeResetCallback("value");
+var checkboxResetCallback = makeResetCallback("checked");
+var formStateRestoreCallback = function(state, _mode) {
+  if (typeof state !== "string")
+    return;
+  const initializer = retainedInitializers.get(this)?.["value"];
+  if (isParser(initializer)) {
+    const parse = initializer;
+    const result = parse(state);
+    if (result != null)
+      this.value = result;
+  } else if (typeof this.value === "number") {
+    const n = Number(state);
+    if (!Number.isNaN(n))
+      this.value = n;
+  } else {
+    this.value = state;
+  }
+};
+var checkboxFormStateRestoreCallback = function(state, _mode) {
+  this.checked = typeof state === "string";
+};
+var formDisabledCallback = function(disabled) {
+  const signals = getSignals(this);
+  const slot = signals["disabled"];
+  if (isSlot(slot))
+    slot.set(disabled);
+  else
+    this.disabled = disabled;
+};
+var installFormAssociatedMembers = (proto) => {
+  Object.defineProperties(proto, HOST_CONTRACT_DESCRIPTORS);
+  Object.defineProperties(proto, {
+    formResetCallback: {
+      value: formResetCallback,
+      writable: true,
+      configurable: true
+    },
+    formStateRestoreCallback: {
+      value: formStateRestoreCallback,
+      writable: true,
+      configurable: true
+    },
+    formDisabledCallback: {
+      value: formDisabledCallback,
+      writable: true,
+      configurable: true
+    }
+  });
+};
+var installFormAssociatedCheckboxMembers = (proto) => {
+  Object.defineProperties(proto, HOST_CONTRACT_DESCRIPTORS);
+  Object.defineProperties(proto, {
+    formResetCallback: {
+      value: checkboxResetCallback,
+      writable: true,
+      configurable: true
+    },
+    formStateRestoreCallback: {
+      value: checkboxFormStateRestoreCallback,
+      writable: true,
+      configurable: true
+    },
+    formDisabledCallback: {
+      value: formDisabledCallback,
+      writable: true,
+      configurable: true
+    }
+  });
+};
+var managedValueSyncDescriptor = (instance, internals) => () => createEffect(() => {
+  const v = instance.value;
+  internals.setFormValue(typeof v === "string" ? v : String(v ?? ""));
+});
+var checkedValueSyncDescriptor = (instance, internals, submitValue) => () => createEffect(() => {
+  const checked = instance.checked;
+  internals.setFormValue(checked ? submitValue : null);
+});
+var createManagedDisabledProperty = (instance) => {
+  const initial = instance.hasAttribute("disabled");
+  const slot = createSlot(createState(initial));
+  const signals = getSignals(instance);
+  signals["disabled"] = slot;
+  Object.defineProperty(instance, "disabled", {
+    get: () => slot.get(),
+    set: (v) => {
+      slot.set(v);
+      if (v)
+        instance.setAttribute("disabled", "");
+      else
+        instance.removeAttribute("disabled");
+    },
+    enumerable: true,
+    configurable: true
+  });
+};
+var formAssociated = () => ({
+  name: "formAssociated",
+  __kind: "form-associated",
+  staticProps: { formAssociated: true },
+  reservedMembers: MANAGED_FORM_MEMBERS,
+  installOnPrototype: installFormAssociatedMembers,
+  onConnect: (instance, internals) => {
+    if (!internals)
+      return;
+    const hasValueSignal = "value" in instance && getSignals(instance).value;
+    if (false)
+      ;
+    createManagedDisabledProperty(instance);
+    return [managedValueSyncDescriptor(instance, internals)];
+  }
+});
+var formAssociatedCheckbox = () => ({
+  name: "formAssociatedCheckbox",
+  __kind: "form-associated-checkbox",
+  staticProps: { formAssociated: true },
+  reservedMembers: MANAGED_FORM_MEMBERS,
+  installOnPrototype: installFormAssociatedCheckboxMembers,
+  onConnect: (instance, internals) => {
+    if (!internals)
+      return;
+    const hasCheckedSignal = "checked" in instance && getSignals(instance).checked;
+    if (false)
+      ;
+    const submitValue = instance.getAttribute("value") ?? "on";
+    createManagedDisabledProperty(instance);
+    return [checkedValueSyncDescriptor(instance, internals, submitValue)];
+  }
+});
 // src/parsers/boolean.ts
-var asBoolean = () => asParser((value) => value != null && value.toLowerCase() !== "false");
+var asBoolean = (fallback = false) => asParser((value) => value != null ? value.toLowerCase() !== "false" : fallback);
 // src/parsers/json.ts
 var asJSON = (fallback) => asParser((value) => {
   if ((value ?? fallback) == null)
@@ -2676,6 +3184,8 @@ export {
   setTextPreservingComments,
   schedule,
   safeSetAttribute,
+  reconcile,
+  observedAttributes,
   match,
   isTask,
   isStore,
@@ -2694,6 +3204,8 @@ export {
   isComputed,
   isCollection,
   isAsyncFunction,
+  formAssociatedCheckbox,
+  formAssociated,
   escapeHTML,
   each,
   defineMethod,
@@ -2717,6 +3229,7 @@ export {
   bindVisible,
   bindText,
   bindStyle,
+  bindState,
   bindProperty,
   bindClass,
   bindAttribute,
@@ -2735,7 +3248,9 @@ export {
   ReadonlySignalError,
   PromiseValueError,
   NullishSignalValueError,
+  NoActiveCollectorError,
   MissingElementError,
+  InvalidTemplateError,
   InvalidStoreMutationError,
   InvalidSignalValueError,
   InvalidSelectorError,
@@ -2745,6 +3260,8 @@ export {
   InvalidCustomElementError,
   InvalidComponentNameError,
   InvalidCallbackError,
+  FOCUSABLE_FORM_CONTROL_SELECTOR,
+  ExtensionCollisionError,
   EffectConvergenceError,
   DuplicateKeyError,
   DependencyTimeoutError,

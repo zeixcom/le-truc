@@ -5,16 +5,11 @@
  * The element is a plain object stub — no real DOM required.
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { createMemo, createState, type Memo } from '@zeix/cause-effect'
 import { makeOn } from '../helpers/events'
-// `mock.module` mutates the live module namespace in place, so a captured
-// `import * as ns` reference reflects whatever the mock last set — it is NOT
-// a stable snapshot. Spread it into a plain object at file-load time, before
-// any `mock.module('../util', …)` call below, and restore from that snapshot.
-import * as realUtilNamespace from '../util'
-
-const realUtil = { ...realUtilNamespace }
+import { installActiveCollector, restoreActiveCollector } from '../internal'
+import type { EffectDescriptor } from '../types'
 
 /* === RAF Mock === */
 
@@ -22,22 +17,48 @@ type RafCb = (timestamp: number) => void
 
 let rafCallbacks: RafCb[] = []
 
+// on() pushes into the currently active effect-descriptor collector
+// (ADR 0018) and throws NoActiveCollectorError if none is active. These
+// tests call it directly, outside `defineComponent`'s factory execution, so
+// install a throwaway collector for the duration of each test.
+let previousCollector: EffectDescriptor[] | undefined
+
 beforeEach(() => {
 	rafCallbacks = []
 	;(globalThis as any).requestAnimationFrame = (cb: RafCb) => {
 		rafCallbacks.push(cb)
 		return rafCallbacks.length
 	}
+	previousCollector = installActiveCollector([])
 })
 
 afterEach(() => {
 	flushRAF()
+	restoreActiveCollector(previousCollector)
 })
 
 const flushRAF = () => {
 	const cbs = rafCallbacks.splice(0)
 	for (const cb of cbs) cb(0)
 }
+
+describe('makeOn — implicit collection (ADR 0018)', () => {
+	test('on() pushes its descriptor into the active collector', () => {
+		const host = { count: 0, shadowRoot: null } as unknown as HTMLElement & {
+			count: number
+		}
+		const target = {
+			addEventListener: () => {},
+			removeEventListener: () => {},
+		} as unknown as Element
+		const on = makeOn(host)
+		const collector: EffectDescriptor[] = []
+		const previous = installActiveCollector(collector)
+		const descriptor = on(target, 'click', () => {})
+		restoreActiveCollector(previous)
+		expect(collector).toEqual([descriptor])
+	})
+})
 
 /* === makeOn — async handler === */
 
@@ -268,22 +289,23 @@ describe('makeOn Memo target dispatch', () => {
 	})
 
 	test('per-element fallback logs a DEV_MODE warning pointing at each() + on()', () => {
-		// Deliberately synchronous (no `await`) — see context.test.ts's
-		// DEV_MODE test for why an `await` here would risk leaking the mock
-		// into other files' tests via bun:test interleaving.
+		// DEV guards read `process.env.DEV_MODE` at call time, so flipping the
+		// env var around the call is enough — no module mocking required.
 		const originalWarn = console.warn
 		const warnings: unknown[][] = []
 		console.warn = (...args: unknown[]) => warnings.push(args)
+		const prevDevMode = process.env.DEV_MODE
 
 		try {
-			mock.module('../util', () => ({ ...realUtil, DEV_MODE: true }))
+			process.env.DEV_MODE = 'true'
 			const el1 = makeFakeElement()
 			const host = makeHost()
 			const memo = createMemo(() => [el1]) as unknown as Memo<Element[]>
 			const on = makeOn(host)
 			on(memo, 'focus', () => {})()
 		} finally {
-			mock.module('../util', () => realUtil)
+			if (prevDevMode === undefined) delete process.env.DEV_MODE
+			else process.env.DEV_MODE = prevDevMode
 			console.warn = originalWarn
 		}
 

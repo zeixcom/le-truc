@@ -12,13 +12,15 @@ The single external dependency is `@zeix/cause-effect`, which provides the react
 defineComponent('my-element', ({ expose, first, watch }) => {
   const input = first('input')
   expose({ value: input.value })
-  return [watch('value', v => { /* ... */ })]
+  watch('value', v => { /* ... */ })
 })
 ```
 
+As of v2.3, `watch()` and the other factory context helpers register into an ambient per-instance collector as they're called — the factory doesn't need to `return` anything (see [ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md)). Explicitly returning a `FactoryResult` array (`return [watch(...), ...]`) still works for backward compatibility but is deprecated as of v3.0 (see [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md), superseded).
+
 ### Lifecycle
 
-- **`connectedCallback`**: Queries DOM, creates signals from parsers, collects effect descriptors, waits for child element definitions, then activates effects in a scope
+- **`connectedCallback`**: Queries DOM, creates signals from parsers, runs the factory (collecting effect descriptors into the ambient collector as `watch`/`on`/`pass`/`each`/`provideContexts` are called), waits for child element definitions, then activates effects in a scope
 - **`disconnectedCallback`**: Tears down all effects and event listeners via the scope cleanup
 
 ### Signals and Properties
@@ -34,7 +36,9 @@ Mutable signals are wrapped in a `Slot` to enable signal swapping for `pass()` (
 
 ### Effect Descriptors
 
-`watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` return effect descriptors (thunks) that are activated after dependency resolution (see [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md)). This ensures child components are defined before effects run.
+`watch()`, `on()`, `pass()`, `each()`, `reconcile()`, and `provideContexts()` produce effect descriptors (thunks) that are activated after dependency resolution. This ensures child components are defined before effects run.
+
+As of v2.3, each helper pushes its descriptor into an ambient collector rather than relying on the factory to `return` it: each component instance has a closure-scoped collector (created in `connectedCallback`), and `each()`'s per-element `mount` callback pushes its own nested collector for the duration of the callback (popped in a `try`/`finally`), supporting arbitrarily nested per-element structures (e.g. grids). Calling a helper with no active collector — outside synchronous factory/callback execution, such as after an `await` or inside a detached `setTimeout` — throws immediately rather than silently doing nothing. Explicit `return` of a `FactoryResult` array is still supported: descriptors produced by `watch()`/`on()`/`pass()`/`each()`/`provideContexts()` are already in the collector by the time they're returned, so returning them is redundant, not required. The return value isn't simply discarded, though — it's reconciled against the collector (`forEachUnseen()` in `helpers/reactive.ts`, dedup by reference) so a hand-authored `EffectDescriptor` that bypasses every helper is still picked up if returned. For a component that needs to wrap a native API (`IntersectionObserver`, etc.) or a raw cause-effect primitive without a `return`, `watch(() => true, descriptor)` registers it the same way: `createComputed(() => true)` has no signal dependencies so it never reruns, and `watch()`'s internal `createEffect()` call self-registers the descriptor's returned cleanup on the active owner. This dual-support `return` path is deprecated as of v3.0, when explicit `return` will be removed and the return type narrows to `void`. See [ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md), superseding [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md).
 
 ### DOM Binding Helpers
 
@@ -53,6 +57,12 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 ### Event Binding
 
 `on(target, type, handler)` binds events with unified `(event, target)` signature. For `Memo<Element[]>` targets, uses event delegation with fallback to per-element listeners for non-bubbling events. Per-element lifecycles over `Memo<Element[]>` collections — `each()`, `pass()` with a Memo target, and the non-bubbling `on()` fallback — share the internal `keyedScopes` helper, which keys scopes by element identity so collection changes only mount entering elements and dispose leaving ones, leaving survivors untouched (see [ADR 0014](adr/0014-keyed-per-element-scopes-for-memo-collections.md)).
+
+### List Reconciliation
+
+`reconcile(container, template, source, bindItem)` syncs a keyed reactive data source (`List<T>` or `Collection<T>` from cause-effect) to a container's children — Le Truc's only data-driven DOM creation (see [ADR 0017](adr/0017-keyed-template-clone-reconciliation-for-lists.md)). It is the ownership complement of `each()`: `each()` enhances DOM the component doesn't own (DOM-driven, keyed by element identity), `reconcile()` owns the container's children (data-driven, keyed by the source's string keys). Entering keys clone the `<template>`'s single root element (`InvalidTemplateError` if the template doesn't have exactly one), leaving keys dispose their scope and get removed, survivors are moved with `insertBefore()` — always reused. The first run adopts server-rendered children carrying `data-key`; children carrying `data-unreconciled` are exempt from reconciliation entirely (public SSR contract). Per-item bindings mount via `bindItem` in root-keyed scopes reusing the `keyedScopes` ownership discipline (ADR 0014), and the driving effect tracks structural changes (source keys) only.
+
+**`bindItem` has collector parity with `each()`'s callback.** Both run inside an ambient effect-descriptor collector: the callback is wrapped in `withCollector(collected, ...)`, then `activateResult(collected)` activates every descriptor the helpers pushed, and any returned `Cleanup` is captured by the per-item `createScope`. So `watch()`/`on()`/`pass()`/`provideContexts()` are all usable inside `bindItem` exactly as inside `each()`'s callback — per-item reactivity no longer requires a raw `createEffect`, and per-item events no longer require container-level delegation. Collected descriptors activate against the per-item `{ root: true }` scope (not the driving structural effect), so item-level `watch(item, …)` does not make the structural effect depend on item signals. Unlike `each()`, `reconcile()` does **not** apply `forEachUnseen` to the return value: `reconcile()` is new in 2.3 (no backward-compat constraint), the return is a teardown not a descriptor, and `forEachUnseen` itself is v3.0 cleanup.
 
 ## Query System
 

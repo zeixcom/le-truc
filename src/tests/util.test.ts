@@ -5,12 +5,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import {
-	DEV_MODE,
-	elementName,
-	isCustomElement,
-	isNotYetDefinedComponent,
-} from '../util'
+import { elementName, isCustomElement, isNotYetDefinedComponent } from '../util'
 
 /* === Helper to create mock DOMTokenList === */
 
@@ -145,59 +140,5 @@ describe('elementName', () => {
 
 	test('returns "<unknown>" for undefined element', () => {
 		expect(elementName(undefined)).toBe('<unknown>')
-	})
-})
-
-/* === DEV_MODE === */
-//
-// DEV_MODE gates enhanced diagnostics and warnings. It is a module-level const
-// captured at import time from `process.env.DEV_MODE === 'true'`. The build
-// replaces `process.env.DEV_MODE` with a boolean literal via `--define`, so the
-// runtime equality check only matters for the no-define path (tests, CDN, raw
-// source). The regression below locks the strict-equality behavior: previously
-// `&& process.env.DEV_MODE` returned the *string* "false" (truthy) when the env
-// was "false", silently enabling dev-mode branches in non-build runtimes.
-
-describe('DEV_MODE', () => {
-	// Helper: re-import the util module under a controlled env, bypassing the
-	// module cache so the const is re-evaluated for each value.
-	const loadDevModeWith = async (value: string | undefined) => {
-		const prev = process.env.DEV_MODE
-		if (value === undefined) delete process.env.DEV_MODE
-		else process.env.DEV_MODE = value
-		try {
-			const mod = await import(
-				`../util?t=${Date.now()}-${Math.random().toString(36).slice(2)}`
-			)
-			return mod.DEV_MODE as boolean
-		} finally {
-			if (prev === undefined) delete process.env.DEV_MODE
-			else process.env.DEV_MODE = prev
-		}
-	}
-
-	test('is a boolean (never a truthy string)', () => {
-		expect(typeof DEV_MODE).toBe('boolean')
-	})
-
-	test('is false when process.env.DEV_MODE is unset', async () => {
-		expect(await loadDevModeWith(undefined)).toBe(false)
-	})
-
-	test('is true when process.env.DEV_MODE is "true"', async () => {
-		expect(await loadDevModeWith('true')).toBe(true)
-	})
-
-	test('is false when process.env.DEV_MODE is "false"', async () => {
-		// The bug: "false" is a non-empty string and was therefore truthy.
-		expect(await loadDevModeWith('false')).toBe(false)
-	})
-
-	test('is false when process.env.DEV_MODE is "1"', async () => {
-		expect(await loadDevModeWith('1')).toBe(false)
-	})
-
-	test('is false when process.env.DEV_MODE is empty string', async () => {
-		expect(await loadDevModeWith('')).toBe(false)
 	})
 })

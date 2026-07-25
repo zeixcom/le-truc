@@ -14,6 +14,11 @@ import {
 	type TaskCallback,
 } from '@zeix/cause-effect'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
+import { type ComponentExtension, mergeExtensions } from './extension'
+import type {
+	FormAssociatedCheckboxExtension,
+	FormAssociatedExtension,
+} from './extensions/form'
 import {
 	makeProvideContexts,
 	makeRequestContext,
@@ -24,14 +29,21 @@ import { type ElementQueries, makeElementQueries } from './helpers/dom'
 import { makeOn, type OnHelper } from './helpers/events'
 import {
 	activateResult,
+	type EffectDescriptor,
 	type FactoryResult,
 	type Falsy,
+	forEachUnseen,
 	makePass,
 	makeWatch,
 	type PassHelper,
 	type WatchHelper,
 } from './helpers/reactive'
-import { getSignals } from './internal'
+import {
+	getSignals,
+	internalsMap,
+	retainedInitializers,
+	withCollector,
+} from './internal'
 import {
 	type ComponentProps,
 	isMethodProducer,
@@ -40,6 +52,7 @@ import {
 	type MethodProducer,
 	type Parser,
 } from './types'
+import { elementName } from './util'
 
 /* === Types === */
 
@@ -71,18 +84,72 @@ type Initializers<P extends ComponentProps> = {
 }
 
 /**
+ * The native form-control members the generated class defines on the host when
+ * `formAssociated: true`, delegating to `internals`. Authors use this interface
+ * in the declarations the library cannot write for them, chiefly the tag-name
+ * map: `'my-input': FormAssociatedElement & MyProps`.
+ *
+ * `value` is deliberately **not** part of this interface: it is component-exposed
+ * (string for textbox, number for spinbutton) and belongs in the author's props
+ * type.
+ */
+interface FormAssociatedElement extends HTMLElement {
+	readonly form: HTMLFormElement | null
+	name: string
+	disabled: boolean
+	readonly labels: NodeList
+	readonly validity: ValidityState
+	readonly validationMessage: string
+	readonly willValidate: boolean
+	checkValidity(): boolean
+	reportValidity(): boolean
+	setCustomValidity(message: string): void
+}
+
+/**
  * The context object passed to the v2.x factory function.
  *
  * Components destructure only what they need.
  */
 type FactoryContext<P extends ComponentProps> = ElementQueries & {
 	host: HTMLElement & P
+	/**
+	 * The `ElementInternals` object, or `null` if `attachInternals()` failed
+	 * (pre-upgrade / parser-ordering edge case). Use imperatively inside
+	 * `watch()` for typed validity flags
+	 * — e.g. `watch('value', v => { internals?.setValidity({ rangeOverflow: v > max }, msg) })` —
+	 * or with `bindState()` for custom `:state()` pseudo-classes
+	 * — e.g. `watch(overflowEnd, bindState(internals, 'overflow-end'))`.
+	 * Note: form value sync (`setFormValue`) is managed automatically —
+	 * do NOT call `internals?.setFormValue(v)` from a `watch('value', …)`.
+	 * The optional chaining is the graceful-degradation guard.
+	 */
+	internals: ElementInternals | null
 	expose: (props: Initializers<P>) => void
 	watch: WatchHelper<P>
 	on: OnHelper<P>
 	pass: PassHelper<P>
 	provideContexts: ProvideContextsHelper<P>
 	requestContext: RequestContextHelper
+}
+
+/**
+ * The factory context for form-associated components. Extends `FactoryContext`
+ * with `host` typed as `FormAssociatedElement & P` (the native-parity members)
+ * and `watch`/`on`/`pass` accepting the managed `disabled` reactive prop in
+ * addition to the author's `P`.
+ *
+ * `expose` is deliberately typed over `Initializers<P>` (not the widened
+ * `P & { disabled: boolean }`) so `expose({ disabled: … })` is a type error —
+ * `disabled` is managed by the library and `expose()` throws
+ * `InvalidPropertyNameError` for it at runtime.
+ */
+type FormFactoryContext<P extends ComponentProps> = Omit<
+	FactoryContext<P & { disabled: boolean }>,
+	'host' | 'expose'
+> & {
+	host: FormAssociatedElement & P
+	expose: (props: Initializers<P>) => void
 }
 
 /* === Exported Functions === */
@@ -101,18 +168,61 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  * @since 2.0
  * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
  * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
+ * @param {ComponentExtension[]} [extensions] - Dependency-injected features (e.g. `[formAssociated()]`, `[formAssociatedCheckbox()]`, `[observedAttributes([...])]`). Bundled extensions are tree-shaken away unless imported and used. `formAssociated()`/`formAssociatedCheckbox()`, if present, must be the first element — that's what widens the factory's context type to `FormFactoryContext`.
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
+function defineComponent<P extends ComponentProps & { value: string | number }>(
+	name: string,
+	factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void,
+	extensions: readonly [FormAssociatedExtension, ...ComponentExtension[]],
+): CustomElementConstructor | undefined
+function defineComponent<P extends ComponentProps & { checked: boolean }>(
+	name: string,
+	factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void,
+	extensions: readonly [
+		FormAssociatedCheckboxExtension,
+		...ComponentExtension[],
+	],
+): CustomElementConstructor | undefined
 function defineComponent<P extends ComponentProps>(
 	name: string,
 	factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void,
+	extensions?: readonly ComponentExtension[],
+): CustomElementConstructor | undefined
+function defineComponent<P extends ComponentProps>(
+	name: string,
+	factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void,
+	extensions?: readonly ComponentExtension[],
 ): CustomElementConstructor | undefined {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
+	const exts: readonly ComponentExtension[] = extensions ?? []
+	const merged = mergeExtensions(name, exts)
 	class Truc extends HTMLElement {
+		// Concrete boolean default (not left `undefined`) so `Truc.formAssociated`
+		// always reads as a real boolean, matching native custom element
+		// classes that never opt in. formAssociated() overrides this to `true`
+		// via the staticProps merge below, before customElements.define.
+		static formAssociated = false
+		static observedAttributes = merged.observedAttributes
+
 		#initialized = false
 		#setup: FactoryResult = []
 		#cleanup: MaybeCleanup
+		#internalsAccessed = false
+
+		constructor() {
+			super()
+			try {
+				internalsMap.set(this, this.attachInternals())
+			} catch {
+				// attachInternals() throws NotSupportedError for pre-upgrade
+				// instances or parser-ordering edge cases. The component
+				// degrades gracefully — internals is null, a DEV_MODE warning
+				// fires on first access.
+				internalsMap.set(this, null)
+			}
+		}
 
 		/**
 		 * Native callback when the custom element is first connected to the document
@@ -138,12 +248,35 @@ function defineComponent<P extends ComponentProps>(
 				if (isFunction(this.#cleanup)) this.#cleanup()
 				runSetup()
 			} else {
+				const instance = this
 				const host = this as unknown as HTMLElement & P
 				const [elementQueries, resolveDependencies] = makeElementQueries(host)
+				// Structurally just FactoryContext<P> here; the first overload
+				// above widens the public factory type to FormFactoryContext<P>
+				// when `formAssociated()` leads the extensions array. The extra
+				// host members it promises (form, name, labels, …) are installed
+				// on the prototype by that extension's installOnPrototype before
+				// any instance connects, so the promise holds despite the narrower
+				// type used internally — the same escape hatch TS overloads
+				// always allow between public signatures and the implementation.
 				const context: FactoryContext<P> = {
 					expose: this.#initSignals.bind(this),
 					host,
 					...elementQueries,
+					get internals() {
+						const internals = internalsMap.get(instance) ?? null
+						if (
+							process.env.DEV_MODE === 'true' &&
+							internals === null &&
+							!instance.#internalsAccessed
+						) {
+							instance.#internalsAccessed = true
+							console.warn(
+								`internals is null — attachInternals() failed in ${elementName(host)}. The component works but cannot participate in form association, custom states, or ARIA reflection.`,
+							)
+						}
+						return internals
+					},
 					watch: makeWatch(host),
 					on: makeOn(host),
 					pass: makePass(host),
@@ -151,12 +284,55 @@ function defineComponent<P extends ComponentProps>(
 					requestContext: makeRequestContext(host),
 				}
 
-				const result = factory(context)
-				if (result) this.#setup = result
+				// watch()/on()/pass()/each()/provideContexts() already pushed their
+				// descriptors into this collector when called, whether or not the
+				// factory also `return`s them — an old-style `return [...]` is
+				// redundant for those, not required. But the factory's return value
+				// is still reconciled (not ignored outright): the public
+				// `FactoryResult` type has always allowed authoring a raw
+				// `EffectDescriptor` by hand, bypassing every helper, and such a
+				// descriptor is never pushed anywhere — `return` is the only path
+				// that can pick it up. `forEachUnseen` skips anything already in the
+				// collector by reference, so nothing activates twice. See ADR 0018.
+				const collector: EffectDescriptor[] = []
+				const result = withCollector(collector, () => factory(context))
+				this.#setup = collector
+				if (result) {
+					const seen = new Set(collector)
+					forEachUnseen(result, seen, d => this.#setup.push(d))
+				}
+
+				// Give every extension a chance to register extra effects (e.g.
+				// formAssociated()'s managed value-sync) in the same
+				// deferred-activation pipeline as author effects, in array order.
+				const internals = internalsMap.get(this) ?? null
+				for (const ext of exts) {
+					const extra = ext.onConnect?.(this, internals)
+					if (extra) {
+						const seen = new Set(this.#setup as EffectDescriptor[])
+						forEachUnseen(extra, seen, d => this.#setup.push(d))
+					}
+				}
+
 				this.#initialized = true
 				if (!this.#setup.length) return
 				resolveDependencies(runSetup)
 			}
+		}
+
+		/**
+		 * Native callback when an observed attribute changes. Only actually
+		 * invoked by the browser for attributes named in `static
+		 * observedAttributes` (the merged union of every extension's
+		 * `observedAttributes`) — dispatches to each extension in array order.
+		 */
+		attributeChangedCallback(
+			attrName: string,
+			oldValue: string | null,
+			newValue: string | null,
+		) {
+			for (const ext of exts)
+				ext.onAttributeChanged?.(this, attrName, oldValue, newValue)
 		}
 
 		/**
@@ -203,8 +379,34 @@ function defineComponent<P extends ComponentProps>(
 						prop,
 						'reserved word or Object builtin — cannot be used as a reactive property',
 					)
+				// Reject member names reserved by an extension (e.g. form,
+				// name, labels, validity, ... reserved by formAssociated()).
+				// These are prototype-defined, so the `prop in this` guard below
+				// would otherwise *silently skip* the colliding initializer — the
+				// worst failure mode. `value` is the deliberate exception on
+				// form-associated components: the component must expose it.
+				// This check runs before that guard.
+				if (merged.reservedMembers.has(prop)) {
+					let reason = 'is a member reserved by an extension'
+					// Remediation guidance is DEV-only; the guard folds away
+					// under the build define.
+					if (process.env.DEV_MODE === 'true')
+						reason += ` ('${merged.reservedMemberOwners.get(prop)}') — it is managed automatically and cannot be set via expose()`
+					throw new InvalidPropertyNameError(this.localName, prop, reason)
+				}
 				// Skip properties already set on the host (explicit DOM value wins).
 				if (prop in this) continue
+				// Retain every initializer verbatim, keyed by prop name, before
+				// createReactiveProperty consumes it — extensions read these back
+				// out (formAssociated()'s managed formResetCallback re-runs the
+				// retained `value` initializer; observedAttributes() re-runs a
+				// retained Parser when its attribute mutates post-connect).
+				let retained = retainedInitializers.get(this)
+				if (!retained) {
+					retained = {}
+					retainedInitializers.set(this, retained)
+				}
+				retained[prop] = initializer
 				createReactiveProperty(prop as keyof P & string, initializer)
 			}
 		}
@@ -243,6 +445,20 @@ function defineComponent<P extends ComponentProps>(
 		}
 	}
 
+	// Static class properties (e.g. formAssociated() contributing `static
+	// formAssociated = true`) are installed before customElements.define, since
+	// the browser reads them once at definition time.
+	Object.assign(Truc, merged.staticProps)
+
+	// Let each extension install its own prototype members (e.g.
+	// formAssociated()'s native-parity host contract and managed form
+	// lifecycle callbacks). Unconditional for every component would shadow
+	// same-named reactive props (the `prop in this` guard would silently
+	// skip them) — that's exactly why this is opt-in per extension, not
+	// baked into the core class body.
+	for (const ext of exts)
+		ext.installOnPrototype?.(Truc.prototype as unknown as HTMLElement)
+
 	customElements.define(name, Truc)
 	return customElements.get(name)
 }
@@ -250,6 +466,7 @@ function defineComponent<P extends ComponentProps>(
 export {
 	defineComponent,
 	type FactoryContext,
+	type FormAssociatedElement,
 	type Initializers,
 	type MaybeSignal,
 }

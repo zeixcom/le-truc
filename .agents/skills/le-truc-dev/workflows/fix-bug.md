@@ -33,7 +33,8 @@ Use references/source-map.md to find the file. Read it fully before changing any
 ### Step 4: Trace Through the Code
 
 For effect bugs — trace through `makeWatch` / `makeOn` / `makePass` in `src/helpers/reactive.ts` and `src/helpers/events.ts`:
-- Is the `EffectDescriptor` included in the factory return array?
+- Was the helper actually called synchronously during factory/`each()` execution? (a call after an `await` or in a detached `setTimeout` throws `NoActiveCollectorError` — check for that first, it's the modern equivalent of a silently-dropped descriptor)
+- If it's a hand-authored `EffectDescriptor` (not produced by `watch`/`on`/`pass`/`each`/`provideContexts`): was it registered via `watch(() => true, descriptor)`? A bare `return`ed descriptor with no internal `createEffect`/`createScope` call has its cleanup silently discarded by `activateResult()` — see non-obvious.md's hand-authored-descriptor entry
 - Is the source signal correctly resolved by `toSignal()`?
 - Is the `bind*` handler receiving the right element?
 

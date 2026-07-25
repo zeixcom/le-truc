@@ -19,7 +19,7 @@ Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built
 A Le Truc component **wraps existing server-rendered content**. The HTML inside the custom element is the starting point — visible before JavaScript runs. See [Progressive Enhancement](getting-started.html#progressive-enhancement) for how this works.
 {% /callout %}
 
-Components are created with the `defineComponent()` function, which takes a valid custom element tag name (two or more words joined with `-`) and a factory function:
+Components are created with the `defineComponent()` function, which takes a valid custom element tag name (two or more words joined with `-`), a factory function, and an optional array of [extensions](#extensions):
 
 ```js
 defineComponent('my-component', ({ expose, first, all, watch, on }) => {
@@ -27,15 +27,21 @@ defineComponent('my-component', ({ expose, first, all, watch, on }) => {
   const el = first('selector')
   // Declare reactive properties
   expose({ /* ... */ })
-  // Return a flat array of effect descriptors
-  return [
-    watch(/* source */, /* handler */),
-    on(el, /* type */, /* handler */),
-  ]
+  // Call watch(), on(), each(), pass(), or provideContexts()
+  watch(/* source */, /* handler */)
+  on(el, /* type */, /* handler */)
 })
 ```
 
-The factory receives a `FactoryContext` with helpers for querying descendant elements, declaring reactive properties, and returning effect descriptors — each covered in the sections below.
+The factory receives a `FactoryContext` with helpers for querying descendant elements, declaring reactive properties, and registering effects — each covered in the sections below. The optional third argument augments the component with opt-in capabilities like [form participation](#form-association) or [attribute-driven reactivity](#attribute-driven-reactivity); each bundled extension is tree-shaken away unless imported and used.
+
+{% callout .tip title="Explicit return still works, but is deprecated" %}
+`watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` register their effects automatically when called — no `return` needed. Returning a `FactoryResult` array of the same descriptors (`return [watch(...), on(...)]`) still works for backward compatibility but is deprecated and will be removed in the next major version. See [ADR 0018](https://github.com/zeixcom/le-truc/blob/main/adr/0018-implicit-effect-collection-via-ambient-context.md).
+{% /callout %}
+
+{% callout .caution title="Declare props with type, not interface" %}
+`defineComponent<P>` constrains `P` to `ComponentProps`, an indexed record. TypeScript infers an index signature for object type **literals** (`type FooProps = { … }`) but never for **interfaces**, since interfaces can be declaration-merged. Always declare component props with `type` — an `interface` won't compile against the constraint.
+{% /callout %}
 
 ### Using the Custom Element in HTML
 
@@ -54,30 +60,34 @@ Le Truc manages the **Web Component lifecycle** from creation to removal. Here's
 
 ### Connected to the DOM
 
-The factory function runs inside `connectedCallback()`. Element queries, `expose()`, and the returned effect descriptors all execute at this point — the factory is the component's setup phase, not its constructor. If the component disconnects and reconnects, the factory runs again with a fresh closure. See [Managing State with Signals](#managing-state-with-signals) for the ways to initialize reactive properties.
+The factory function runs inside `connectedCallback()`. Element queries, `expose()`, and the registered effects all execute at this point — the factory is the component's setup phase, not its constructor. If the component disconnects and reconnects, the factory runs again with a fresh closure. See [Managing State with Signals](#managing-state-with-signals) for the ways to initialize reactive properties.
 
 ### Disconnected from the DOM
 
 In the `disconnectedCallback()` Le Truc runs all cleanup functions returned by effects during the setup phase in `connectedCallback()`. This will remove all event listeners and unsubscribe all signals the component is subscribed to, so you don't need to worry about memory leaks.
 
-If you subscribe to **external APIs** that live outside the component's reactive scope, return a cleanup function from the effect descriptor:
+If you subscribe to **external APIs** that live outside the component's reactive scope — a native `IntersectionObserver`, `ResizeObserver`, or similar — wrap the setup and its cleanup in a hand-authored `EffectDescriptor` and register it with `watch(() => true, …)`:
 
 ```js
-defineComponent('my-component', ({ host }) => {
-  return [
-    () => {
-      // Setup logic
-      const observer = new IntersectionObserver(([entry]) => {
-        // Do something
-      })
-      observer.observe(host)
+defineComponent('my-component', ({ host, watch }) => {
+  watch(() => true, () => {
+    // Setup logic
+    const observer = new IntersectionObserver(([entry]) => {
+      // Do something
+    })
+    observer.observe(host)
 
-      // Cleanup logic
-      return () => observer.disconnect()
-    },
-  ]
+    // Cleanup logic
+    return () => observer.disconnect()
+  })
 })
 ```
+
+`() => true` has no signal dependency, so this effect runs its setup exactly once, on connect — `watch()` registers the descriptor's returned cleanup the same way it does for a normal reactive source.
+
+{% callout .tip title="A returned cleanup only runs if it's registered" %}
+Returning the descriptor from the factory (`return [() => { ...; return cleanup }]`) still works, but a bare thunk you neither `return` nor pass to a helper never runs its cleanup — there's no path for `disconnectedCallback()` to find it. `watch(() => true, descriptor)` is the direct replacement for `return` here, and explicit `return` is deprecated as of v3.0 alongside the other helpers' explicit-return form.
+{% /callout %}
 
 {% /section %}
 
@@ -136,7 +146,7 @@ defineComponent('my-component', ({ expose }) => {
 ```
 
 {% callout .note title="Parsers run once at connect time" %}
-The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser — use event handlers or direct property writes to update state post-connect.
+The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser — use event handlers or direct property writes to update state post-connect. To make a Parser-backed prop re-parse on attribute mutations (e.g. for frameworks like React that set attributes rather than properties), pass the [`observedAttributes()`](#attribute-driven-reactivity) extension to `defineComponent()`.
 {% /callout %}
 
 ### Bundled Attribute Parsers
@@ -202,7 +212,7 @@ Event listeners respond to user interactions. They are the main cause for change
 
 ### on() — Event Handling
 
-`on(target, type, handler)` is called from the factory context with an explicit target element or `Memo<E[]>` collection, and returned in the effect array:
+`on(target, type, handler)` is called from the factory context with an explicit target element or `Memo<E[]>` collection:
 
 ```js
 defineComponent('my-component', ({ all, expose, first, host, on }) => {
@@ -211,15 +221,13 @@ defineComponent('my-component', ({ all, expose, first, host, on }) => {
 
   expose({ active: 0, value: '' })
 
-  return [
-    on(buttons, 'click', (_e, target) => {
-      // Set 'active' signal to value of data-index attribute of button
-      const index = parseInt(target.dataset.index ?? '0', 10)
-      host.active = Number.isInteger(index) ? index : 0
-    }),
-    // Set 'value' signal to value of input element
-    on(input, 'change', () => ({ value: input.value })),
-  ]
+  on(buttons, 'click', (_e, target) => {
+    // Set 'active' signal to value of data-index attribute of button
+    const index = parseInt(target.dataset.index ?? '0', 10)
+    host.active = Number.isInteger(index) ? index : 0
+  })
+  // Set 'value' signal to value of input element
+  on(input, 'change', () => ({ value: input.value }))
 })
 ```
 
@@ -248,11 +256,9 @@ defineComponent('my-input', ({ expose, first, on }) => {
     length: length.get,  // read-only — consumers can read, not set
   })
 
-  return [
-    on(textbox, 'input', () => {
-      length.set(textbox.value.length)
-    }),
-  ]
+  on(textbox, 'input', () => {
+    length.set(textbox.value.length)
+  })
 })
 ```
 
@@ -281,10 +287,8 @@ defineComponent('form-textbox', ({ expose, first, host, on, watch }) => {
     }),
   })
 
-  return [
-    on(textbox, 'change', () => ({ value: textbox.value })),
-    watch('value', bindProperty(textbox, 'value')),
-  ]
+  on(textbox, 'change', () => ({ value: textbox.value }))
+  watch('value', bindProperty(textbox, 'value'))
 })
 ```
 
@@ -303,17 +307,15 @@ Effects **automatically update the DOM** when signals change, avoiding manual DO
 
 ### Applying Effects
 
-The factory returns a flat array of `EffectDescriptor`s. Each one is created by `watch()`, `on()`, `each()`, `pass()`, `provideContexts()`, or a plain thunk. The `watch(source, handler)` helper drives a DOM update from a declared reactive source:
+`watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` each produce an `EffectDescriptor` and register it automatically when called — no `return` needed. A hand-authored descriptor you write by hand instead of using one of these five is registered the same way, via `watch(() => true, descriptor)` — see [Disconnected from the DOM](#disconnected-from-the-dom) for when you need it. The `watch(source, handler)` helper drives a DOM update from a declared reactive source:
 
 ```js
-return [
-  watch('open', bindAttribute(host, 'open')), // set attribute from 'open' signal
-  watch('count', bindText(count)),            // update text from 'count' signal
-  watch('isEven', bindClass(count, 'even')),  // toggle class from 'isEven' signal
-]
+watch('open', bindAttribute(host, 'open')) // set attribute from 'open' signal
+watch('count', bindText(count))            // update text from 'count' signal
+watch('isEven', bindClass(count, 'even'))  // toggle class from 'isEven' signal
 ```
 
-The order of descriptors does not matter.
+The order of calls does not matter.
 
 {% callout .note title="CSS must define what the class or attribute does" %}
 `bindClass(el, 'even')` adds or removes the `even` class — but nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `bindAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
@@ -331,24 +333,26 @@ defineComponent('module-carousel', ({ all, expose, host, watch }) => {
 
   expose({ index: 0 })
 
-  return [
-    each(dots, dot =>
-      watch(
-        () => dot.dataset.index === String(host.index),
-        selected => {
-          dot.ariaSelected = String(selected)
-          dot.tabIndex = selected ? 0 : -1
-        },
-      ),
+  each(dots, dot =>
+    watch(
+      () => dot.dataset.index === String(host.index),
+      selected => {
+        dot.ariaSelected = String(selected)
+        dot.tabIndex = selected ? 0 : -1
+      },
     ),
-  ]
+  )
 })
 ```
 
-The callback receives a single element and returns either a single `EffectDescriptor` or a `FactoryResult` array. `each()` itself returns an `EffectDescriptor` to include in the factory return array.
+The callback receives a single element and returns either a single `EffectDescriptor` or a `FactoryResult` array — or it can call `watch()`, `on()`, or a nested `each()` directly, the same as the factory itself.
 
 {% callout .tip title="each() vs on() with a Memo target" %}
 Use `on(memo, type, handler)` when a single delegated listener on the host is enough — one click handler for all tabs, for example. Use `each(memo, callback)` when you need per-element reactive effects that depend on both the element and a signal — like updating `ariaSelected` on every dot when the selected index changes.
+{% /callout %}
+
+{% callout .tip title="each() nests to any depth" %}
+`each()` callbacks can call another `each()` — for a grid, rows containing columns containing cells — with no limit on depth. Ordinary inline arrow handlers work at any nesting level. If `watch()` reports a confusing "no overload matches" error, the usual cause is a handler body that returns a value instead of `void` (e.g. a one-line `array.push(...)`).
 {% /callout %}
 
 ### DOM Binding Helpers
@@ -368,11 +372,9 @@ defineComponent('my-component', ({ first, on, watch }) => {
   const countState = createState(0)
   const doubleState = createMemo(() => countState.get() * 2)
 
-  return [
-    on(increment, 'click', () => { countState.update(v => ++v) }),
-    watch(countState, bindText(count)),
-    watch(doubleState, bindText(double)),
-  ]
+  on(increment, 'click', () => { countState.update(v => ++v) })
+  watch(countState, bindText(count))
+  watch(doubleState, bindText(double))
 })
 ```
 
@@ -389,10 +391,8 @@ defineComponent('my-component', ({ expose, first, host, watch }) => {
 
   expose({ count: 0 })
 
-  return [
-    watch(() => !(host.count % 2), bindClass(count, 'even')),
-    watch(() => String(host.count * 2), bindText(double)),
-  ]
+  watch(() => !(host.count % 2), bindClass(count, 'even'))
+  watch(() => String(host.count * 2), bindText(double))
 })
 ```
 
@@ -416,12 +416,10 @@ defineComponent('form-checkbox', ({ expose, first, host, on, watch }) => {
     checked: checkbox.checked,
   })
 
-  return [
-    // Capture user interaction → update signal
-    on(checkbox, 'change', () => ({ checked: checkbox.checked })),
-    // Sync signal → drive native element property
-    watch('checked', bindProperty(checkbox, 'checked')),
-  ]
+  // Capture user interaction → update signal
+  on(checkbox, 'change', () => ({ checked: checkbox.checked }))
+  // Sync signal → drive native element property
+  watch('checked', bindProperty(checkbox, 'checked'))
 })
 ```
 
@@ -438,5 +436,100 @@ This creates a full cycle: DOM → signal → DOM, with the signal as the single
 
 Use `bindProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, `ariaDisabled`.
 {% /callout %}
+
+{% /section %}
+
+{% section %}
+## Extensions
+
+The third argument to `defineComponent()` is an optional array of **extensions** — small, tree-shakable modules that augment a component with opt-in capabilities without bloating the core. `component.ts` never statically imports feature-specific code, so a consumer who never calls an extension never bundles it.
+
+Each extension implements the `ComponentExtension` interface: a `name`, a set of `staticProps` to install on the generated class (e.g. `static formAssociated = true`), `observedAttributes` and `reservedMembers` it contributes, and optional lifecycle hooks (`installOnPrototype`, `onConnect`, `onAttributeChanged`). `defineComponent()` folds the array once at class-definition time. `staticProps` collisions throw `ExtensionCollisionError` in dev mode (first declaration wins in production); `observedAttributes` and `reservedMembers` are unions across all extensions.
+
+```js
+defineComponent('my-element', factory, [formAssociated()])
+```
+
+Le Truc ships three extensions, each imported separately:
+
+| Extension | Purpose |
+|---|---|
+| [`formAssociated()`](#form-association) | Form participation via `ElementInternals` — value sync, reset, state restore, disabled, native-parity host contract |
+| [`formAssociatedCheckbox()`](#checkbox-shaped-controls) | Form participation keyed on a `checked: boolean` prop — submits nothing when unchecked |
+| [`observedAttributes()`](#attribute-driven-reactivity) | Re-parses Parser-backed props when their attribute mutates after connect |
+
+### Form Association
+
+The `formAssociated()` extension adapts a component to the [form-associated custom element](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-face-example) convention. Pass it as the first element of the extensions array, and the factory's context widens to expose the `internals` object alongside the usual helpers:
+
+```js#form-textbox.js
+defineComponent<FormTextboxProps>(
+  'form-textbox',
+  ({ expose, first, host, internals, on, watch }) => {
+    const textbox = first('input, textarea')
+
+    expose({ value: textbox.value })
+
+    // Typed validity flags via the internals escape hatch
+    watch(
+      () => ({ value: host.value, max: host.maxLength }),
+      ({ value, max }) => {
+        internals?.setValidity(
+          { tooLong: value.length > max },
+          value.length > max ? `Max ${max} characters` : '',
+        )
+      },
+    )
+  },
+  [formAssociated()],
+)
+```
+
+With `[formAssociated()]`, Le Truc manages form value sync, reset, state restore, and a `<fieldset disabled>`-aware `disabled` property for you. The host gains a native-parity contract delegating to `internals` — `form`, `name`, `labels`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`, `reportValidity()`, `setCustomValidity()` — so external consumers read them as on a native input. The convention requires a reactive `value` property; expose it and sync it to the underlying native control as usual. `expose()` throws `InvalidPropertyNameError` for any reserved member name managed by the extension.
+
+The `internals` object on the context (`null` only if `attachInternals()` failed) is the escape hatch for typed validity flags and custom `:state()` pseudo-classes. The rule: use `internals?.setFormValue()` indirectly through the managed convention (set `value`, it syncs), but call `internals?.setValidity()` directly when you need flags beyond a simple custom-error message.
+
+### Checkbox-Shaped Controls
+
+A checkbox's primary state is `checked: boolean`, and it submits nothing when unchecked — different from `formAssociated()`'s always-on string `value`. The `formAssociatedCheckbox()` extension handles this shape. It shares the same host contract and `disabled` management as `formAssociated()`, but the value-sync, reset, and state-restore mechanics target a `checked` prop instead of `value`:
+
+```js#form-checkbox.js
+defineComponent<FormCheckboxProps>(
+  'form-checkbox',
+  ({ expose, first, on, watch }) => {
+    const checkbox = first('input[type="checkbox"]')
+
+    expose({ checked: asBoolean() })
+
+    on(checkbox, 'change', () => ({ checked: checkbox.checked }))
+    watch('checked', bindProperty(checkbox, 'checked'))
+  },
+  [formAssociatedCheckbox()],
+)
+```
+
+`internals.setFormValue()` receives the host's own `value` attribute when checked (default `'on'`, matching native `<input type="checkbox">`) and `null` when unchecked. The convention requires a reactive `checked` property.
+
+{% callout .caution title="Do not combine the two form extensions" %}
+Both `formAssociated()` and `formAssociatedCheckbox()` declare the same `staticProps.formAssociated` key. Combining them on one component throws `ExtensionCollisionError` in dev mode. Radio groups and listboxes don't need `formAssociatedCheckbox()` — their selection aggregates into one string `value` on the container, which fits `formAssociated()`.
+{% /callout %}
+
+### Attribute-Driven Reactivity
+
+Properties are the primary reactive interface. By design, a `Parser` passed to `expose()` reads its attribute once, at connect time — attribute changes after connect do not re-run it. The `observedAttributes()` extension is the opt-in escape hatch for when you need the parser to fire again on later attribute mutations. This matters chiefly for frameworks like React that set DOM attributes on custom elements rather than properties:
+
+```js#basic-gauge.js
+defineComponent<BasicGaugeProps>(
+  'basic-gauge',
+  ({ expose, first, host, watch }) => {
+    expose({ value: asNumber() })
+
+    watch('value', v => { /* update the gauge */ })
+  },
+  [observedAttributes(['value'])],
+)
+```
+
+Named attributes are added to the class's `static observedAttributes`. On each mutation, the extension re-runs the same retained `Parser` against the attribute's new string value and writes the result to the prop. Props whose initializer is not a branded `Parser` are left untouched. Use this sparingly — for most components, event handlers or direct property writes are the right way to update state post-connect.
 
 {% /section %}

@@ -29,10 +29,7 @@ export default defineComponent<BasicCounterProps>(
 
 		expose({ count: Number.parseInt(count.textContent || '0') })
 
-		return [
-			on(increment, 'click', () => ({ count: host.count + 1 })),
-
-			watch('count', bindText(count)),
-		]
+		on(increment, 'click', () => ({ count: host.count + 1 }))
+		watch('count', bindText(count))
 	},
 )

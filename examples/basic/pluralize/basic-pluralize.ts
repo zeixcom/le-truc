@@ -57,22 +57,15 @@ export default defineComponent<BasicPluralizeProps>(
 			other,
 		}
 
-		const categories = pluralizer.resolvedOptions().pluralCategories
+		if (count) watch('count', bindText(count))
+		if (none) watch(() => host.count === 0, bindVisible(none))
+		if (some) watch(() => host.count !== 0, bindVisible(some))
 
-		return [
-			count && watch('count', bindText(count)),
-			none && watch(() => host.count === 0, bindVisible(none)),
-			some && watch(() => host.count !== 0, bindVisible(some)),
-			...categories.map(category => {
-				const el = categoryElements[category]
-				return (
-					el &&
-					watch(
-						() => pluralizer.select(host.count) === category,
-						bindVisible(el),
-					)
-				)
-			}),
-		]
+		const categories = pluralizer.resolvedOptions().pluralCategories
+		for (const category of categories) {
+			const el = categoryElements[category]
+			if (el)
+				watch(() => pluralizer.select(host.count) === category, bindVisible(el))
+		}
 	},
 )

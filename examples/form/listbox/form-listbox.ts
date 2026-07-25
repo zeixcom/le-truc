@@ -7,6 +7,8 @@ import {
 	defineComponent,
 	each,
 	escapeHTML,
+	type FormAssociatedElement,
+	formAssociated,
 	schedule,
 } from '../../..'
 import {
@@ -43,7 +45,7 @@ export type FormListboxProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-listbox': HTMLElement & FormListboxProps
+		'form-listbox': FormAssociatedElement & FormListboxProps
 	}
 }
 
@@ -59,15 +61,11 @@ const HANDLED_KEYS = [...DECREMENT_KEYS, ...INCREMENT_KEYS, FIRST_KEY, LAST_KEY]
 /**
  * A filterable listbox that loads options from a remote JSON source and integrates with HTML forms.
  * Use it for searchable, single-select option lists — provides ARIA listbox semantics,
- * keyboard navigation (Arrow, Home, End), accessibility, and automatic form value synchronization via a hidden input.
+ * keyboard navigation (Arrow, Home, End), accessibility, and form participation via ElementInternals.
  * @demo {./docs/examples/form-listbox.html} Interactive preview and usage examples */
 export default defineComponent<FormListboxProps>(
 	'form-listbox',
 	({ all, expose, first, host, on, watch }) => {
-		const input = first(
-			'input[type="hidden"]',
-			'Needed to store the selected value.',
-		) as HTMLInputElement
 		const filterEl = first('input.filter') as HTMLInputElement | undefined
 		const clearBtn = first('button.clear')
 		const callout = first('card-callout')
@@ -152,105 +150,104 @@ export default defineComponent<FormListboxProps>(
 			src: asString(),
 		})
 
-		return [
-			on(filterEl, 'input', (_e, el) => ({ filter: el.value ?? '' })),
-			on(clearBtn, 'click', () => ({ filter: '' })),
-			// Focus management on listbox
-			on(listbox, 'click', ({ target }) => {
-				const option = (target as HTMLElement).closest(
-					'[role="option"]',
-				) as HTMLButtonElement
-				if (option && option.value !== host.value) {
-					host.value = option.value
-					input.dispatchEvent(new Event('change', { bubbles: true }))
-				}
-			}),
-			on(listbox, 'keydown', e => {
-				const { key } = e as KeyboardEvent
-				if (!HANDLED_KEYS.includes(key)) return
+		on(filterEl, 'input', (_e, el) => ({ filter: el.value ?? '' }))
+		on(clearBtn, 'click', () => ({ filter: '' }))
+		// Focus management on listbox
+		on(listbox, 'click', ({ target }) => {
+			const option = (target as HTMLElement).closest(
+				'[role="option"]',
+			) as HTMLButtonElement
+			if (option && option.value !== host.value) {
+				host.value = option.value
+				// Native-parity commit event — dispatches from the host so
+				// composing components (form-combobox) can listen without
+				// reaching into the listbox's DOM.
+				host.dispatchEvent(new Event('change', { bubbles: true }))
+			}
+		})
+		on(listbox, 'keydown', e => {
+			const { key } = e as KeyboardEvent
+			if (!HANDLED_KEYS.includes(key)) return
 
-				const elements = getVisibleOptions()
-				e.preventDefault()
-				e.stopPropagation()
-				if (key === FIRST_KEY) focusIndex = 0
-				else if (key === LAST_KEY) focusIndex = elements.length - 1
-				else
-					focusIndex =
-						(focusIndex +
-							(INCREMENT_KEYS.includes(key) ? 1 : -1) +
-							elements.length) %
-						elements.length
-				elements[focusIndex]?.focus()
-			}),
-			on(listbox, 'keyup', ({ key }) => {
-				if (key !== ENTER_KEY) return
-				getVisibleOptions()[focusIndex]?.click()
-			}),
+			const elements = getVisibleOptions()
+			e.preventDefault()
+			e.stopPropagation()
+			if (key === FIRST_KEY) focusIndex = 0
+			else if (key === LAST_KEY) focusIndex = elements.length - 1
+			else
+				focusIndex =
+					(focusIndex +
+						(INCREMENT_KEYS.includes(key) ? 1 : -1) +
+						elements.length) %
+					elements.length
+			elements[focusIndex]?.focus()
+		})
+		on(listbox, 'keyup', ({ key }) => {
+			if (key !== ENTER_KEY) return
+			getVisibleOptions()[focusIndex]?.click()
+		})
 
-			watch('value', value => {
-				host.setAttribute('value', value)
-				input.value = value
-			}),
-			host.src &&
-				watch(content, {
-					nil: () => {
-						if (callout) callout.hidden = false
-						if (loading) {
+		// Form value sync: managed (value → setFormValue via ElementInternals)
+		// Form reset: managed (value attribute is the default)
+		// Disabled, state restore: managed
+		if (host.src)
+			watch(content, {
+				nil: () => {
+					if (callout) callout.hidden = false
+					if (loading) {
+						loading.hidden = false
+						return () => {
 							loading.hidden = false
-							return () => {
-								loading.hidden = false
-							}
 						}
-					},
-					ok: html => {
-						if (callout) callout.hidden = true
-						if (loading) loading.hidden = true
-						if (errorEl) errorEl.hidden = true
-						listbox.hidden = false
-						schedule(listbox, () => {
-							listbox.innerHTML = html
-						})
-						return () => {
-							listbox.hidden = true
-						}
-					},
-					err: error => {
-						if (callout) {
-							callout.hidden = false
-							callout.classList.add('danger')
-						}
+					}
+				},
+				ok: html => {
+					if (callout) callout.hidden = true
+					if (loading) loading.hidden = true
+					if (errorEl) errorEl.hidden = true
+					listbox.hidden = false
+					schedule(listbox, () => {
+						listbox.innerHTML = html
+					})
+					return () => {
+						listbox.hidden = true
+					}
+				},
+				err: error => {
+					if (callout) {
+						callout.hidden = false
+						callout.classList.add('danger')
+					}
+					if (errorEl) {
+						errorEl.hidden = false
+						errorEl.textContent = error.message
+					}
+					return () => {
+						if (callout) callout.classList.remove('danger')
 						if (errorEl) {
-							errorEl.hidden = false
-							errorEl.textContent = error.message
+							errorEl.hidden = true
+							errorEl.textContent = ''
 						}
-						return () => {
-							if (callout) callout.classList.remove('danger')
-							if (errorEl) {
-								errorEl.hidden = true
-								errorEl.textContent = ''
-							}
-						}
-					},
-				}),
+					}
+				},
+			})
 
-			// Per-option reactive effects
-			each(options, option => {
-				const textContent = option.textContent
-				const lowerText = textContent?.trim().toLowerCase()
-				return [
-					watch(lowerFilter, filterText => {
-						option.hidden = !lowerText?.includes(filterText)
-						option.innerHTML = highlightMatch(textContent, filterText)
-					}),
-					watch('value', () => {
-						const isSelected = host.value === option.value
-						option.tabIndex = isSelected ? 0 : -1
-						option.ariaSelected = String(isSelected)
-					}),
-				]
-			}),
+		// Per-option reactive effects
+		each(options, option => {
+			const textContent = option.textContent
+			const lowerText = textContent?.trim().toLowerCase()
+			watch(lowerFilter, filterText => {
+				option.hidden = !lowerText?.includes(filterText)
+				option.innerHTML = highlightMatch(textContent, filterText)
+			})
+			watch('value', () => {
+				const isSelected = host.value === option.value
+				option.tabIndex = isSelected ? 0 : -1
+				option.ariaSelected = String(isSelected)
+			})
+		})
 
-			clearBtn && watch(lowerFilter, bindVisible(clearBtn)),
-		]
+		if (clearBtn) watch(lowerFilter, bindVisible(clearBtn))
 	},
+	[formAssociated()],
 )

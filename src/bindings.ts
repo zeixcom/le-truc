@@ -223,6 +223,34 @@ const bindClass =
 	}
 
 /**
+ * Returns a function that toggles a custom state on an element's `ElementInternals`.
+ *
+ * `value=true` adds the state; `value=false` removes it. Consumers match it in
+ * CSS with the `:state(token)` pseudo-class. Unlike a class token, a custom
+ * state is owned by the component — it cannot be clobbered by author code or
+ * frameworks rewriting the host's `class` attribute.
+ *
+ * Accepts `null` for graceful degradation: the factory context's `internals`
+ * is `null` when `attachInternals()` failed, in which case the returned
+ * function is a no-op.
+ *
+ * @since 2.3
+ * @param internals - The component's `ElementInternals` (or `null`)
+ * @param token - Custom state token to toggle (matched via `:state(token)`)
+ * @returns Function that toggles the custom state
+ */
+const bindState =
+	<T = boolean>(
+		internals: ElementInternals | null,
+		token: string,
+	): ((value: T) => void) =>
+	(value: T) => {
+		if (!internals) return
+		if (value) internals.states.add(token)
+		else internals.states.delete(token)
+	}
+
+/**
  * Returns a function that controls element visibility via `el.hidden = !value`.
  *
  * `value=true` makes the element visible; `value=false` hides it.
@@ -399,6 +427,7 @@ export {
 	bindAttribute,
 	bindClass,
 	bindProperty,
+	bindState,
 	bindStyle,
 	bindText,
 	bindVisible,

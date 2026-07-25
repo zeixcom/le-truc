@@ -33,3 +33,4 @@ Attributes drive state only at connect time via parsers; `static observedAttribu
 - Requirements: [M3](../REQUIREMENTS.md#m3-attribute--property-initialisation-via-parsers), [X1](../REQUIREMENTS.md#x1-observedattributes--attributechangedcallback-for-reactive-state)
 - Architecture: [Lifecycle](../ARCHITECTURE.md#lifecycle)
 - Supersedes: None
+- Amended by: [ADR 0019](0019-extension-based-dependency-injection-for-definecomponent.md) — ships the escape hatch this ADR reserved ("it can be added as an optional third parameter to `defineComponent` in a future release") as the opt-in `observedAttributes()` extension. This decision's default — attributes drive state at connect time only — is unchanged; `observedAttributes()` is additive, not a reversal.

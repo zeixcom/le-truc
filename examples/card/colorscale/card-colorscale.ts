@@ -53,29 +53,27 @@ export default defineComponent<CardColorscaleProps>(
 			color: asOklch(),
 		})
 
-		return [
-			watch('name', bindText(labelStrong)),
-			watch('color', color => {
-				labelSmall.textContent = formatHex(color)
-				const props = new Map<string, string>()
-				const isLight = color.l > CONTRAST_THRESHOLD
-				const softStep = isLight ? 0.1 : 0.9
-				props.set('base', formatCss(color))
-				props.set('text', isLight ? 'black' : 'white')
-				props.set('text-soft', formatCss(getStepColor(color, softStep)))
-				for (let i = 4; i > 0; i--)
-					props.set(
-						`lighten${i * 20}`,
-						formatCss(getStepColor(color, (5 + i) / 10)),
-					)
-				for (let i = 1; i < 5; i++)
-					props.set(
-						`darken${i * 20}`,
-						formatCss(getStepColor(color, (5 - i) / 10)),
-					)
-				for (const [key, value] of props)
-					host.style.setProperty(`--color-${key}`, value)
-			}),
-		]
+		watch('name', bindText(labelStrong))
+		watch('color', color => {
+			labelSmall.textContent = formatHex(color)
+			const props = new Map<string, string>()
+			const isLight = color.l > CONTRAST_THRESHOLD
+			const softStep = isLight ? 0.1 : 0.9
+			props.set('base', formatCss(color))
+			props.set('text', isLight ? 'black' : 'white')
+			props.set('text-soft', formatCss(getStepColor(color, softStep)))
+			for (let i = 4; i > 0; i--)
+				props.set(
+					`lighten${i * 20}`,
+					formatCss(getStepColor(color, (5 + i) / 10)),
+				)
+			for (let i = 1; i < 5; i++)
+				props.set(
+					`darken${i * 20}`,
+					formatCss(getStepColor(color, (5 - i) / 10)),
+				)
+			for (const [key, value] of props)
+				host.style.setProperty(`--color-${key}`, value)
+		})
 	},
 )

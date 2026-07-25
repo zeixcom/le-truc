@@ -5,7 +5,7 @@ import {
 	MissingElementError,
 } from '../errors'
 import { DEPENDENCY_TIMEOUT } from '../internal'
-import { DEV_MODE, isNotYetDefinedComponent } from '../util'
+import { isNotYetDefinedComponent } from '../util'
 
 /* === Types === */
 
@@ -360,7 +360,7 @@ const makeElementQueries = (
 				])
 					.then(callback)
 					.catch((error: unknown) => {
-						if (DEV_MODE) console.warn(error)
+						if (process.env.DEV_MODE === 'true') console.warn(error)
 						callback()
 					})
 			})

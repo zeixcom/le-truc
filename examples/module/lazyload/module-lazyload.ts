@@ -66,48 +66,46 @@ export default defineComponent<ModuleLazyloadProps>(
 		// so this scroll task doesn't clobber the pending innerHTML write.
 		const scrollTask = {}
 
-		return [
-			watch(content, {
-				ok: content => {
-					callout.hidden = true
-					loading.hidden = true
-					contentEl.hidden = false
-					setHTML(content)
+		watch(content, {
+			ok: content => {
+				callout.hidden = true
+				loading.hidden = true
+				contentEl.hidden = false
+				setHTML(content)
 
-					if (hasLoaded) {
-						schedule(scrollTask, () => {
-							contentEl
-								.querySelector('h1, h2, h3, h4, h5, h6')
-								?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-						})
-					}
-					hasLoaded = true
-				},
-				nil: () => {
-					callout.hidden = false
-					loading.hidden = false
-					contentEl.hidden = true
-				},
-				stale: () => {
-					contentEl.style.setProperty('opacity', 'var(--opacity-dimmed)')
-					return () => {
-						contentEl.style.removeProperty('opacity')
-					}
-				},
-				err: error => {
-					callout.hidden = false
-					callout.classList.add('danger')
-					loading.hidden = true
-					errorEl.hidden = false
-					errorEl.textContent = error.message
-					contentEl.hidden = true
-					return () => {
-						callout.classList.remove('danger')
-						errorEl.hidden = true
-						errorEl.textContent = ''
-					}
-				},
-			}),
-		]
+				if (hasLoaded) {
+					schedule(scrollTask, () => {
+						contentEl
+							.querySelector('h1, h2, h3, h4, h5, h6')
+							?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+					})
+				}
+				hasLoaded = true
+			},
+			nil: () => {
+				callout.hidden = false
+				loading.hidden = false
+				contentEl.hidden = true
+			},
+			stale: () => {
+				contentEl.style.setProperty('opacity', 'var(--opacity-dimmed)')
+				return () => {
+					contentEl.style.removeProperty('opacity')
+				}
+			},
+			err: error => {
+				callout.hidden = false
+				callout.classList.add('danger')
+				loading.hidden = true
+				errorEl.hidden = false
+				errorEl.textContent = error.message
+				contentEl.hidden = true
+				return () => {
+					callout.classList.remove('danger')
+					errorEl.hidden = true
+					errorEl.textContent = ''
+				}
+			},
+		})
 	},
 )

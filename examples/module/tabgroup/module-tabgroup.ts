@@ -51,49 +51,47 @@ export default defineComponent<ModuleTabgroupProps>(
 
 		expose({ selected: selectedState.get })
 
-		return [
-			on(tabs, 'click', (_e, target) => {
-				selectedState.set(getAriaControls(target))
-			}),
-			on(tabs, 'keyup', (e, target) => {
-				const key = e.key
-				if (
-					[
-						'ArrowLeft',
-						'ArrowRight',
-						'ArrowUp',
-						'ArrowDown',
-						'Home',
-						'End',
-					].includes(key)
-				) {
-					e.preventDefault()
-					e.stopPropagation()
-					const tabsList = tabs.get()
-					const next =
-						key === 'Home'
-							? getAriaControls(tabsList[0]!)
-							: key === 'End'
-								? getAriaControls(tabsList[tabsList.length - 1]!)
-								: getSelected(
-										tabsList,
-										tab => tab === target,
-										key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1,
-									)
-					tabsList.filter(tab => getAriaControls(tab) === next)[0]!.focus()
-					selectedState.set(next)
-				}
-			}),
+		on(tabs, 'click', (_e, target) => {
+			selectedState.set(getAriaControls(target))
+		})
+		on(tabs, 'keyup', (e, target) => {
+			const key = e.key
+			if (
+				[
+					'ArrowLeft',
+					'ArrowRight',
+					'ArrowUp',
+					'ArrowDown',
+					'Home',
+					'End',
+				].includes(key)
+			) {
+				e.preventDefault()
+				e.stopPropagation()
+				const tabsList = tabs.get()
+				const next =
+					key === 'Home'
+						? getAriaControls(tabsList[0]!)
+						: key === 'End'
+							? getAriaControls(tabsList[tabsList.length - 1]!)
+							: getSelected(
+									tabsList,
+									tab => tab === target,
+									key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1,
+								)
+				tabsList.filter(tab => getAriaControls(tab) === next)[0]!.focus()
+				selectedState.set(next)
+			}
+		})
 
-			watch('selected', () => {
-				for (const tab of tabs.get()) {
-					tab.ariaSelected = String(isCurrentTab(tab))
-					tab.tabIndex = isCurrentTab(tab) ? 0 : -1
-				}
-				for (const panel of panels.get()) {
-					panel.hidden = host.selected !== panel.id
-				}
-			}),
-		]
+		watch('selected', () => {
+			for (const tab of tabs.get()) {
+				tab.ariaSelected = String(isCurrentTab(tab))
+				tab.tabIndex = isCurrentTab(tab) ? 0 : -1
+			}
+			for (const panel of panels.get()) {
+				panel.hidden = host.selected !== panel.id
+			}
+		})
 	},
 )
