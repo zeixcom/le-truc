@@ -152,16 +152,52 @@ const methodsTable = (members: CemMember[]): Tag =>
 		]),
 	)
 
-const attributesTable = (attributes: CemAttribute[]): Tag =>
+/**
+ * Attributes are always parsed from a plain string (or presence/absence, for
+ * booleans) — an inferred parser type like `number` or an enum union is a
+ * property of the reactive field the attribute is reflected to, not of the
+ * attribute itself, so showing it in a "Type" column would misrepresent what
+ * the DOM attribute actually accepts. We show the true wire type here and
+ * push the parser detail into the description instead.
+ */
+/**
+ * Appends the parser's fallback value (as extracted by @zeix/cem-plugin-le-truc
+ * from the `as*()` call's literal arguments) to a description, as a trailing
+ * clause rather than a separate table column — most attributes reuse the
+ * same handful of defaults, so a column would mostly be empty or redundant.
+ */
+const withDefault = (description: string, defaultValue?: string): string => {
+	if (defaultValue == null) return description
+	const suffix = `defaults to \`${defaultValue}\` if omitted`
+	return description
+		? `${description.replace(/\.\s*$/, '')}, ${suffix}.`
+		: `Defaults to \`${defaultValue}\` if omitted.`
+}
+
+const attributesTable = (
+	attributes: CemAttribute[],
+	fields: CemMember[],
+): Tag =>
 	dataTable(
-		['Name', 'Field Name', 'Type', 'Default', 'Description'],
-		attributes.map(a => [
-			td([code(a.name)]),
-			td(a.fieldName ? [code(a.fieldName)] : []),
-			td(a.type?.text ? [code(a.type.text)] : []),
-			td(a.default != null ? [code(a.default)] : []),
-			td(parseDescription(a.description ?? '')),
-		]),
+		['Name', 'Type', 'Description'],
+		attributes.map(a => {
+			const field = fields.find(f => f.name === a.fieldName)
+			const parsedType = field?.type?.text
+			const wireType =
+				(parsedType ?? a.type?.text) === 'boolean' ? 'boolean' : 'string'
+			const baseDescription =
+				a.description ||
+				(field
+					? `Reflected as reactive property, parsed as \`${parsedType}\`.`
+					: '')
+			const description = withDefault(baseDescription, a.default)
+
+			return [
+				td([code(a.name)]),
+				td([code(wireType)]),
+				td(parseDescription(description)),
+			]
+		}),
 	)
 
 const namedItemsTable = (items: CemNamedItem[]): Tag =>
@@ -264,7 +300,10 @@ const buildCard = (declaration: CemDeclaration): Tag => {
 	if (methods.length)
 		tabs.push({ label: 'Methods', content: methodsTable(methods) })
 	if (attributes.length)
-		tabs.push({ label: 'Attributes', content: attributesTable(attributes) })
+		tabs.push({
+			label: 'Attributes',
+			content: attributesTable(attributes, fields),
+		})
 	if (cssProperties.length)
 		tabs.push({
 			label: 'CSS Properties',
@@ -303,6 +342,33 @@ const buildCard = (declaration: CemDeclaration): Tag => {
 	])
 
 	return new Tag('card-collapsible', {}, [details])
+}
+
+/* === Filter Helper === */
+
+const buildFilter = (src: string): Tag => {
+	const inputId = `cem-list-filter-input_${src.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+	return new Tag('form-textbox', { name: 'filter', clearable: '' }, [
+		new Tag('label', { for: inputId }, ['Filter']),
+		new Tag('div', { class: 'input' }, [
+			new Tag('input', {
+				type: 'text',
+				id: inputId,
+				autocomplete: 'off',
+				placeholder: 'Filter by name, tag, or description',
+			}),
+			new Tag(
+				'button',
+				{
+					type: 'button',
+					class: 'clear',
+					'aria-label': 'Clear filter',
+					hidden: '',
+				},
+				['✕'],
+			),
+		]),
+	])
 }
 
 /* === Schema === */
@@ -348,7 +414,10 @@ const cemList: Schema = {
 			])
 		}
 
-		return new Tag('module-cem-list', {}, declarations.map(buildCard))
+		return new Tag('module-cem-list', {}, [
+			buildFilter(src),
+			...declarations.map(buildCard),
+		])
 	},
 }
 

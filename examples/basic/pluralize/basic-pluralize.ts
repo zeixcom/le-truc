@@ -22,7 +22,8 @@ declare global {
  * Use it for internationalised prose where the correct plural form must be shown —
  * accessibility tools and screen readers benefit from grammatically correct output.
  * Reveal children by class: `.none` (0), `.some` (>0), and `.zero/.one/.two/.few/.many/.other` per CLDR plural rules.
- * Add the `ordinal` attribute to use ordinal plural rules.
+ * @attribute {string} [lang] - BCP 47 locale tag (e.g. `ar`). Falls back to the nearest ancestor's `lang` attribute, or `en` if none is set. Read once at connect time.
+ * @attribute {boolean} [ordinal=false] - Use ordinal plural rules (1st, 2nd, 3rd, ...) instead of cardinal. Presence-only; read once at connect time.
  * @demo {./docs/examples/basic-pluralize.html} Interactive preview and usage examples */
 export default defineComponent<BasicPluralizeProps>(
 	'basic-pluralize',

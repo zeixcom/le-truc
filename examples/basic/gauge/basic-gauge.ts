@@ -29,10 +29,10 @@ declare global {
  * to reflect the current value and the color indicates which threshold applies.
  * The `value` must be a number within the range defined by the thresholds.
  * Thresholds should be ordered by `min` value for correct color assignment.
- * Thresholds are read from the `thresholds` attribute as a JSON array.
  * The `value` attribute is observed post-connect, so setting it at runtime
  * (e.g. `gauge.setAttribute('value', '0.5')`) updates the gauge too, not just
  * the initial `value` property.
+ * @attribute {BasicGaugeThreshold[]} thresholds - Color-coded thresholds as a JSON array, e.g. `[{"min":0,"label":"Low","color":"red"}]`. Defaults to an empty array (no color/label applied) if omitted. Read once at connect time.
  * @cssprop --basic-gauge-degree - Rotation angle of the gauge needle (set reactively).
  * @cssprop --basic-gauge-color - Active threshold color (set reactively).
  * @demo {./docs/examples/basic-gauge.html} Interactive preview and usage examples */

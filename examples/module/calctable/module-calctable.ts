@@ -38,8 +38,10 @@ const clamp = (value: number, min: number, max: number): number =>
  * initial list so they aren't stripped on first run. A trailing entry row
  * (marked `data-unreconciled`, exempt from reconciliation) creates a new row
  * once its description, amount, and price/unit are all filled; setting an
- * existing row's amount to 0 removes it. Currency formatting is configured via
- * the `options` attribute, parsed the same way as `<basic-number>`.
+ * existing row's amount to 0 removes it. Currency formatting is parsed the
+ * same way as `<basic-number>`.
+ * @attribute {string} [lang] - BCP 47 locale tag (e.g. `de-CH`). Falls back to the nearest ancestor's `lang` attribute, or `en` if none is set. Read once at connect time.
+ * @attribute {Intl.NumberFormatOptions} [options={}] - `Intl.NumberFormat` options as a JSON object, e.g. `{"style":"currency","currency":"EUR"}`. Read once at connect time.
  * @demo {./docs/examples/module-calctable.html} Interactive preview and usage examples */
 export default defineComponent(
 	'module-calctable',

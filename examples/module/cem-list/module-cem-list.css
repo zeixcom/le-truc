@@ -1,6 +1,11 @@
 module-cem-list {
 	display: block;
 
+	& form-textbox {
+		display: block;
+		margin: 0 0 var(--space-l);
+	}
+
 	& card-collapsible summary {
 		flex-wrap: wrap;
 
