@@ -1,0 +1,33 @@
+<card-collapsible>
+	<details>
+		<summary>
+			<span class="description">
+				Click to expand and read the rest of this card — the summary text
+				is truncated with an ellipsis while collapsed.
+			</span>
+		</summary>
+		<div class="content">
+			<p>
+				This is the full body content of the card. It is only visible once
+				the card is expanded, and the summary text above wraps normally
+				instead of being truncated.
+			</p>
+		</div>
+	</details>
+</card-collapsible>
+
+<hr>
+
+<card-collapsible>
+	<details open>
+		<summary>
+			<span class="description">This card starts open.</span>
+		</summary>
+		<div class="content">
+			<p>
+				Set the <code>open</code> attribute on the descendant
+				<code>&lt;details&gt;</code> element to render it expanded by default.
+			</p>
+		</div>
+	</details>
+</card-collapsible>

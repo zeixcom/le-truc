@@ -73,11 +73,11 @@ const mergeDefinedInIntoBlockquote = (
 		const node = root.children[i]!
 		const next = root.children[i + 1]
 		if (
-			Tag.isTag(node)
-			&& node.name === 'blockquote'
-			&& Tag.isTag(next)
-			&& next.name === 'p'
-			&& firstTextContent(next).startsWith('Defined in:')
+			Tag.isTag(node) &&
+			node.name === 'blockquote' &&
+			Tag.isTag(next) &&
+			next.name === 'p' &&
+			firstTextContent(next).startsWith('Defined in:')
 		) {
 			children.push(
 				new Tag('blockquote', node.attributes, [
@@ -358,8 +358,8 @@ const makeHeadingIdsUnique = (
 		}
 
 		while (
-			ancestors.length
-			&& ancestors[ancestors.length - 1]!.level >= level
+			ancestors.length &&
+			ancestors[ancestors.length - 1]!.level >= level
 		) {
 			ancestors.pop()
 		}
@@ -415,9 +415,9 @@ const processApiFile = async (file: FileInfo): Promise<void> => {
 	// Skip index files — only process individual API entries
 	const filename = relativePath.split('/').pop() || ''
 	if (
-		filename === 'globals.md'
-		|| filename === 'README.md'
-		|| filename.startsWith('_')
+		filename === 'globals.md' ||
+		filename === 'README.md' ||
+		filename.startsWith('_')
 	) {
 		return
 	}

@@ -441,7 +441,8 @@ p code,
 li code,
 dt code,
 dd code,
-td code {
+td code,
+summary code {
 	background-color: rgb(0, 0, 0, 0.1);
 	border-radius: var(--space-xxs);
 	padding: 2px var(--space-xxs);
