@@ -81,7 +81,7 @@ Full documentation with live examples is at **[zeixcom.github.io/le-truc](https:
 - ⚡️ **Pinpoint effects** — only the exact DOM nodes that changed are touched
 - 🧩 **Composable** — build behaviour from small, reusable parsers and effect functions
 - 🌐 **Context support** — share state across components without prop drilling
-- 🪶 **Tiny** — ≤10 kB gzipped, tree-shakeable
+- 🪶 **Tiny** — core under 8 kB gzipped, tree-shakeable extensions add only what you use
 - 🛡️ **Type-safe** — full TypeScript inference from selector strings to property types
 
 Le Truc uses [Cause & Effect](https://github.com/zeixcom/cause-effect) for its reactive primitives.
