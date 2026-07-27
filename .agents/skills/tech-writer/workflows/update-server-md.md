@@ -1,7 +1,8 @@
 # Update Server MD
 
 ## Required Reading
-Read the relevant source files in `server/` and then read the current `server/SERVER.md` before making any changes.
+1. references/ste100-style.md — sentence and vocabulary rules
+2. The relevant source files in `server/`, then the current `server/SERVER.md` before making any changes.
 
 ## Process
 

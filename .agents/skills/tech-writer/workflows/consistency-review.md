@@ -1,7 +1,8 @@
 # Consistency Review
 
 ## Required Reading
-references/document-map.md — consistency checks for every document
+- references/document-map.md — consistency checks for every document
+- references/ste100-style.md — sentence and vocabulary rules to spot-check against (all documents except blog)
 
 ## Process
 A consistency review checks that all authored documents accurately reflect the current state of the source code and examples. Work through each document in order.
@@ -72,7 +73,11 @@ For the most recently changed source files:
 - No `@param` tags reference removed parameters
 - `@since` tags present on all public functions
 
-### Step 7: Report findings
+### Step 7: Spot-check ASD-STE100 compliance
+
+For each document except the blog, scan for: sentences over ~20 words, passive voice, gerund-noun phrasing, and inconsistent synonyms for the same `CONTEXT.md` domain term (e.g., "binding" and "connection" used for the same concept). See references/ste100-style.md.
+
+### Step 8: Report findings
 
 Summarise in three categories:
 - **Outdated**: content that no longer reflects the current source (must fix)
