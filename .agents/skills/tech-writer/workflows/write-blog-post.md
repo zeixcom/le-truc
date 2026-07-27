@@ -1,5 +1,7 @@
 # Write Blog Post
 
+Blog posts are exempt from references/ste100-style.md. Keep the narrative, conversational register below — do not apply STE100 sentence-length or vocabulary rules here.
+
 ## Required Reading
 1. references/tone-guide.md → `<blog>` section — read before writing a single word
 2. references/markdoc-tags.md — frontmatter format and `{% section %}` tag

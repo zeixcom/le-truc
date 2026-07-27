@@ -3,7 +3,8 @@
 ## Required Reading
 1. references/document-map.md → `<ARCHITECTURE_md>`
 2. references/tone-guide.md → `<ARCHITECTURE>` section
-3. The relevant source file(s) in `src/` — read before writing
+3. references/ste100-style.md — sentence and vocabulary rules
+4. The relevant source file(s) in `src/` — read before writing
 
 ## Process
 
