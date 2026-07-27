@@ -19,10 +19,9 @@ declare global {
 export default defineComponent(
 	'module-cem-list',
 	({ all, first, on, watch }) => {
-		const filterEl = first(
-			'form-textbox',
-			'Add a <form-textbox> element for filtering cards by name, tag, or description.',
-		)
+		const filterEl = first('form-textbox')
+		if (!filterEl) return
+
 		const cards = all('card-collapsible')
 
 		const filterText = createState('')

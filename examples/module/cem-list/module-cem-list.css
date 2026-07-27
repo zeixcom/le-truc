@@ -15,13 +15,9 @@ module-cem-list {
 			gap: var(--space-s);
 			flex: none;
 		}
-
-		& .description {
-			flex: 1 1 100%;
-		}
 	}
 
-	& .demo-link a {
+	.demo-link a {
 		text-decoration: none;
 
 		&:hover {

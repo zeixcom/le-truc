@@ -33,8 +33,14 @@ declare global {
  * (e.g. `gauge.setAttribute('value', '0.5')`) updates the gauge too, not just
  * the initial `value` property.
  * @attribute {BasicGaugeThreshold[]} thresholds - Color-coded thresholds as a JSON array, e.g. `[{"min":0,"label":"Low","color":"red"}]`. Defaults to an empty array (no color/label applied) if omitted. Read once at connect time.
- * @cssprop --basic-gauge-degree - Rotation angle of the gauge needle (set reactively).
- * @cssprop --basic-gauge-color - Active threshold color (set reactively).
+ * @cssprop --basic-gauge-background - Background color behind the ring. Defaults to `--color-background`.
+ * @cssprop --basic-gauge-label-color - Text color of the qualification label. Defaults to `--color-text-soft`.
+ * @cssprop --basic-gauge-label-font-size - Font size of the qualification label. Defaults to `--font-size-s`.
+ * @cssprop --basic-gauge-metric-color - Text color of the numeric value. Defaults to `--color-text`.
+ * @cssprop --basic-gauge-metric-font-size - Font size of the numeric value. Defaults to `--font-size-xl`.
+ * @cssprop --basic-gauge-ring-width - Ring thickness. Accepts any CSS length; defaults to `--space-xs`.
+ * @cssprop --basic-gauge-size - Overall gauge diameter. Accepts any CSS length; defaults to `8rem`.
+ * @cssprop --basic-gauge-track-color - Background color of the unfilled ring track. Defaults to `--color-secondary`.
  * @demo {./docs/examples/basic-gauge.html} Interactive preview and usage examples */
 export default defineComponent<BasicGaugeProps>(
 	'basic-gauge',

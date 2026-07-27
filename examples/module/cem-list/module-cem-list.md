@@ -22,7 +22,7 @@ None. Filtering is implemented as local state inside the component (not an expos
 
 Card content is generated server-side by the `{% cem-list %}` Markdoc tag, one `card-collapsible` per custom-element declaration in the manifest, with tabs for whichever of Fields / Methods / Attributes / CSS Properties / CSS Parts / Slots are non-empty.
 
-A `form-textbox` descendant (name `filter`) filters the cards live as you type: each keystroke is matched as a case-insensitive substring against every card's full text content (name, tag name, description, and members), so a search term can match on any of those. A future iteration adds multi-select category filtering by tag-name group prefix (`basic-`, `card-`, `context-`, `form-`, `module-`, `section-`) alongside this text filter.
+An optional `form-textbox` descendant (name `filter`) filters the cards live as you type: each keystroke is matched as a case-insensitive substring against every card's full text content (name, tag name, description, and members), so a search term can match on any of those.
 
 #### Full Component Catalog
 
