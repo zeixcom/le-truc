@@ -10,14 +10,8 @@ declare const DEPENDENCY_TIMEOUT = 200;
  * How long (ms) to wait before the final `context-request` re-dispatch.
  *
  * **Invariant: must strictly exceed {@link DEPENDENCY_TIMEOUT}**, enforced by
- * deriving it from that constant. The retry fires *after* the
- * dependency-resolution window closes, so a provider whose own
- * `provideContexts` listener activated late (it waited on
- * `customElements.whenDefined()` for a slow child) still catches the retry.
- * If this dropped below `DEPENDENCY_TIMEOUT`, late providers would be missed
- * and consumers would permanently lock in their fallback (see ADR-0015).
- * The 10 ms margin covers event-loop scheduling jitter between the dependency
- * timeout firing and the provider's listener activating.
+ * deriving it from that constant (see ADR-0015). The 10 ms margin
+ * covers event-loop scheduling jitter.
  */
 declare const CONTEXT_RETRY_DELAY: number;
 /**
@@ -32,18 +26,13 @@ declare const internalsMap: WeakMap<HTMLElement, ElementInternals | null>;
  * Module-internal map from component instances to their retained property
  * initializers, keyed by prop name — the original value passed to
  * `expose({ [prop]: ... })`, captured verbatim before `#initSignals` consumes
- * it. Populated for every prop (not just extension-reserved ones); cheap
- * (a plain object assignment already inside the per-prop loop) and keeps
- * `component.ts` generic — which props are actually read back out of this map
- * is entirely up to whichever extension wants them, not something core needs
- * to know about.
+ * it. Populated for every prop, keeping `component.ts` generic: which props
+ * get read back out is up to whichever extension wants them.
  *
  * Consumers: `formAssociated()`'s managed `formResetCallback` re-runs the
- * retained `value` initializer (a `Parser` is re-parsed against the current
- * `value` attribute; a static value is restored directly) for native
- * `defaultValue`-style reset semantics. `observedAttributes()` re-runs a
- * retained `Parser` for an observed prop when its attribute mutates
- * post-connect.
+ * retained `value` initializer for native `defaultValue`-style reset
+ * semantics. `observedAttributes()` re-runs a retained `Parser` for an
+ * observed prop when its attribute mutates post-connect.
  */
 declare const retainedInitializers: WeakMap<HTMLElement, Record<string, unknown>>;
 /** Get the signals map for a component, creating it if needed. */

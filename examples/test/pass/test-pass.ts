@@ -30,12 +30,10 @@ export default defineComponent<TestPassProps>(
 
 		expose({ count: 0 })
 
-		return [
-			watch('count', n => {
-				output.textContent = String(n)
-			}),
-			pass(single, { value: () => host.count }),
-			pass(group, { value: () => host.count }),
-		]
+		watch('count', n => {
+			output.textContent = String(n)
+		})
+		pass(single, { value: () => host.count })
+		pass(group, { value: () => host.count })
 	},
 )

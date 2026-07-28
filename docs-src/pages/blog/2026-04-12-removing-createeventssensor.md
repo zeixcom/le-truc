@@ -46,12 +46,10 @@ expose({
   length: length.get,  // expose the getter, not the state — consumers cannot set it
 })
 
-return [
-  on(textbox, 'input', () => {
-    length.set(textbox.value.length)
-  }),
-  clearBtn && watch(length, bindVisible(clearBtn)),
-]
+on(textbox, 'input', () => {
+  length.set(textbox.value.length)
+})
+if (clearBtn) watch(length, bindVisible(clearBtn))
 ```
 
 The write protection comes from exposing `length.get` — a plain function — rather than the full `State<number>`. Consumers see a reactive getter with no corresponding setter. The `on` handler updates `length` directly, synchronously, with no delegation or laziness involved.

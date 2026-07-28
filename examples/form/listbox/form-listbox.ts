@@ -128,7 +128,7 @@ export default defineComponent<FormListboxProps>(
 
 		const lowerFilter = createMemo(() => host.filter.toLowerCase())
 
-		// Roving tabindex focus management for listbox (inlined from manageFocus)
+		// Roving tabindex focus management for listbox
 		const getVisibleOptions = () =>
 			Array.from(
 				listbox.querySelectorAll<HTMLButtonElement>(

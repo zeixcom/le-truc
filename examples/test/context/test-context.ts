@@ -24,9 +24,8 @@ export const TestContextProvider = defineComponent<TestContextProviderProps>(
 	'test-context-provider',
 	({ expose, provideContexts }) => {
 		expose({ count: 0 })
-		return [provideContexts(['count'])]
-	},
-)
+		provideContexts(['count'])
+	})
 
 /* === Consumer === */
 
@@ -47,10 +46,8 @@ export const TestContextConsumer = defineComponent<TestContextConsumerProps>(
 			count: requestContext(TEST_COUNT_CONTEXT, -1),
 		})
 
-		return [
-			watch('count', n => {
-				output.textContent = String(n)
-			}),
-		]
+		watch('count', n => {
+			output.textContent = String(n)
+		})
 	},
 )

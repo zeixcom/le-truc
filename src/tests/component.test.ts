@@ -265,7 +265,6 @@ describe('#initSignals dispatch order', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ label: upper })
-				return []
 			},
 		)!
 		const instance = new Ctor() as any
@@ -282,7 +281,6 @@ describe('#initSignals dispatch order', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ greet })
-				return []
 			},
 		)!
 		const instance = new Ctor() as any
@@ -296,7 +294,6 @@ describe('#initSignals dispatch order', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ count: 5 })
-				return []
 			},
 		)!
 		const instance = new Ctor() as any
@@ -317,7 +314,6 @@ describe('#initSignals dispatch order', () => {
 			count: number
 		}>(uniqueName(), ({ expose }) => {
 			expose({ label: upper, greet, count: 5 })
-			return []
 		})!
 		const instance = new Ctor() as any
 		instance.setAttribute('label', 'world')
@@ -338,7 +334,6 @@ describe('prop in this guard', () => {
 				// `localName` already exists on the HTMLElement instance — the
 				// guard must skip it rather than overwrite it with a signal.
 				expose({ localName: 'should-be-ignored' })
-				return []
 			},
 		)!
 		const instance = new Ctor() as any
@@ -351,7 +346,6 @@ describe('prop in this guard', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ totallyNewProp: 42 })
-				return []
 			},
 		)!
 		const instance = new Ctor() as any
@@ -368,7 +362,6 @@ describe('reserved word guard', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ constructor: 'evil' } as any)
-				return []
 			},
 		)!
 		const instance = new Ctor() as any

@@ -169,10 +169,7 @@ The component's factory creates a local signal and passes it to `watch()` + `bin
 
 ```js
 const overflowEnd = createState(false)
-
-return [
-  watch(overflowEnd, bindState(internals, 'overflow-end')),
-]
+watch(overflowEnd, bindState(internals, 'overflow-end'))
 ```
 
 When `overflowEnd` becomes `true`, Le Truc adds `overflow-end` to the element's custom state set. The `:state(overflow-end)` rule activates. The shadow fades in. When `overflowEnd` becomes `false`, Le Truc removes the state and the shadow fades out. This approach needs:
@@ -197,14 +194,12 @@ module-tabgroup {
 ```
 
 ```js
-return [
-  watch('selected', () => {
-    for (const tab of tabs.get()) {
-      tab.setAttribute('aria-selected',
-        String(host.selected === tab.getAttribute('aria-controls')))
-    }
-  }),
-]
+watch('selected', () => {
+  for (const tab of tabs.get()) {
+    tab.setAttribute('aria-selected',
+      String(host.selected === tab.getAttribute('aria-controls')))
+  }
+})
 ```
 
 Prefer attributes over classes when the value has semantic meaning. Screen readers and assistive technology understand `aria-selected`, `aria-expanded`, `disabled`, and similar attributes.

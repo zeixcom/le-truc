@@ -64,7 +64,7 @@ Explicit `return [...]` of the same descriptors still works (dual support in v2.
 - `defineComponent` never registers `observedAttributes` — `attributeChangedCallback` support was dropped entirely in v2.0
 - Parsers in `expose()` called **once at connect time** — HTML authors configure via attributes in server-rendered markup
 - Attribute changes after connect **are not re-parsed** — reactive state flows through property interface only
-- Effect helpers register themselves when called — no `return` needed. Explicit `return [...]` of a `FactoryResult` (`Array<EffectDescriptor | FactoryResult | Falsy>`) still works (deprecated as of v3.0); nested arrays are flattened and falsy values filtered, so the legacy `element && watch(...)` pattern still works too, but prefer `if (element) watch(...)` in new code
+- Effect helpers register themselves when called — no `return` needed. Explicit `return [...]` of a `FactoryResult` (`Array<EffectDescriptor | FactoryResult | Falsy>`) still works but is deprecated; nested arrays are flattened and falsy values filtered, so the legacy `element && watch(...)` pattern still works too, but prefer `if (element) watch(...)` in new code
 
 ---
 

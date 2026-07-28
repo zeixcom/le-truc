@@ -34,7 +34,7 @@ The **parent component (`ModuleCatalog`) knows about its children**. It can **re
 
 ```js#module-catalog.js
 defineComponent('module-catalog', ({ all, first, pass }) => {
-  const button = first('basic-button', 'Add a button to go to the Shopping Cart')
+  const button = first('basic-button', 'Add a button to go to the shopping cart')
   const spinbuttons = all(
     'form-spinbutton',
     'Add spinbutton components to calculate sum from.',
@@ -43,12 +43,10 @@ defineComponent('module-catalog', ({ all, first, pass }) => {
     spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
   )
 
-  return [
-    pass(button, {
-      disabled: () => !total.get(),
-      badge: () => (total.get() > 0 ? String(total.get()) : ''),
-    }),
-  ]
+  pass(button, {
+    disabled: () => !total.get(),
+    badge: () => (total.get() > 0 ? String(total.get()) : ''),
+  })
 })
 ```
 
@@ -74,11 +72,9 @@ defineComponent('basic-button', ({ expose, first, watch }) => {
     badge: badge?.textContent ?? '',
   })
 
-  return [
-    watch('disabled', bindProperty(button, 'disabled')),
-    label && watch('label', bindText(label)),
-    badge && watch('badge', bindText(badge)),
-  ]
+  watch('disabled', bindProperty(button, 'disabled'))
+  if (label) watch('label', bindText(label))
+  if (badge) watch('badge', bindText(badge))
 })
 ```
 
@@ -107,51 +103,49 @@ defineComponent('form-spinbutton', ({ all, expose, first, host, on, watch }) => 
     max: Number.parseInt(input.max) || 10,
   })
 
-  return [
-    on(controls, 'change', (_e, target) => {
-      if (!(target instanceof HTMLInputElement)) return
-      const next = Number(target.value)
-      if (!Number.isInteger(next)) {
-        target.value = String(host.value)
-        target.checkValidity()
-        return
-      }
-      const clamped = Math.min(host.max, Math.max(0, next))
-      if (next !== clamped) {
-        target.value = String(clamped)
-        target.checkValidity()
-      }
-      host.value = clamped
-    }),
-    on(controls, 'click', (_e, el) => {
-      if (el.classList.contains('decrement')) {
-        host.value = Math.max(0, host.value - 1)
-      } else if (el.classList.contains('increment')) {
-        host.value = Math.min(host.max, host.value + 1)
-      }
-    }),
-    on(controls, 'keydown', (e) => {
-      const { key } = e
-      if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
-        e.stopPropagation()
-        e.preventDefault()
-        const delta = key === 'ArrowDown' || key === '-' ? -1 : 1
-        host.value = Math.min(host.max, Math.max(0, host.value + delta))
-      }
-    }),
-    watch(nonZero, nz => {
-      input.hidden = !nz
-      decrement.hidden = !nz
-    }),
-    zero && watch(nonZero, nz => {
-      zero.hidden = nz
-      increment.ariaLabel = nz ? incrementLabel : zero.textContent
-    }),
-    other && watch(nonZero, bindVisible(other)),
-    watch(() => String(host.value), bindProperty(input, 'value')),
-    watch(() => String(host.max), bindProperty(input, 'max')),
-    watch(() => host.value >= host.max, bindProperty(increment, 'disabled')),
-  ]
+  on(controls, 'change', (_e, target) => {
+    if (!(target instanceof HTMLInputElement)) return
+    const next = Number(target.value)
+    if (!Number.isInteger(next)) {
+      target.value = String(host.value)
+      target.checkValidity()
+      return
+    }
+    const clamped = Math.min(host.max, Math.max(0, next))
+    if (next !== clamped) {
+      target.value = String(clamped)
+      target.checkValidity()
+    }
+    host.value = clamped
+  })
+  on(controls, 'click', (_e, el) => {
+    if (el.classList.contains('decrement')) {
+      host.value = Math.max(0, host.value - 1)
+    } else if (el.classList.contains('increment')) {
+      host.value = Math.min(host.max, host.value + 1)
+    }
+  })
+  on(controls, 'keydown', (e) => {
+    const { key } = e
+    if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
+      e.stopPropagation()
+      e.preventDefault()
+      const delta = key === 'ArrowDown' || key === '-' ? -1 : 1
+      host.value = Math.min(host.max, Math.max(0, host.value + delta))
+    }
+  })
+  watch(nonZero, nz => {
+    input.hidden = !nz
+    decrement.hidden = !nz
+  })
+  if (zero) watch(nonZero, nz => {
+    zero.hidden = nz
+    increment.ariaLabel = nz ? incrementLabel : zero.textContent
+  })
+  if (other) watch(nonZero, bindVisible(other))
+  watch(() => String(host.value), bindProperty(input, 'value'))
+  watch(() => String(host.max), bindProperty(input, 'max'))
+  watch(() => host.value >= host.max, bindProperty(increment, 'disabled'))
 })
 ```
 
@@ -289,12 +283,10 @@ defineComponent('module-list', ({ first, host, on, pass }) => {
   // removal target the right item even as the list reorders.
   const list = createList([], { keyConfig: 'item' })
 
-  return [
-    reconcile(container, template, list, (element, item) => { /* fill content */ }),
-    on(form, 'submit', e => { /* add item */ }),
-    on(host, 'click', e => { /* remove item by delegation */ }),
-    pass(submit, { disabled: () => !textbox.length }),
-  ]
+  reconcile(container, template, list, (element, item) => { /* fill content */ })
+  on(form, 'submit', e => { /* add item */ })
+  on(host, 'click', e => { /* remove item by delegation */ })
+  pass(submit, { disabled: () => !textbox.length })
 })
 ```
 
@@ -459,7 +451,7 @@ export default defineComponent<ContextMediaProps>(
       ),
     })
 
-    return [provideContexts(['motion', 'theme'])]
+    provideContexts(['motion', 'theme'])
   },
 )
 ```
@@ -509,10 +501,8 @@ export default defineComponent(
     const motion = requestContext(MEDIA_MOTION, 'unknown')
     const theme = requestContext(MEDIA_THEME, 'unknown')
 
-    return [
-      motionEl && watch(motion, bindText(motionEl)),
-      themeEl && watch(theme, bindText(themeEl)),
-    ]
+    if (motionEl) watch(motion, bindText(motionEl))
+    if (themeEl) watch(theme, bindText(themeEl))
   },
 )
 ```
@@ -574,30 +564,28 @@ defineComponent('module-lazyload', ({ expose, first, host, watch }) => {
 
   expose({ src: asString() })
 
-  return [
-    watch(content, {
-      ok: html => {
-        loading.hidden = true
-        contentEl.hidden = false
-        contentEl.innerHTML = html
-      },
-      nil: () => {
-        loading.hidden = false
-        contentEl.hidden = true
-      },
-      stale: () => {
-        contentEl.style.setProperty('opacity', 'var(--opacity-dimmed)')
-        return () => contentEl.style.removeProperty('opacity') // reset on next dispatch
-      },
-      err: error => {
-        loading.hidden = true
-        errorEl.hidden = false
-        errorEl.textContent = error.message
-        contentEl.hidden = true
-        return () => { errorEl.hidden = true; errorEl.textContent = '' }
-      },
-    }),
-  ]
+  watch(content, {
+    ok: html => {
+      loading.hidden = true
+      contentEl.hidden = false
+      contentEl.innerHTML = html
+    },
+    nil: () => {
+      loading.hidden = false
+      contentEl.hidden = true
+    },
+    stale: () => {
+      contentEl.style.setProperty('opacity', 'var(--opacity-dimmed)')
+      return () => contentEl.style.removeProperty('opacity') // reset on next dispatch
+    },
+    err: error => {
+      loading.hidden = true
+      errorEl.hidden = false
+      errorEl.textContent = error.message
+      contentEl.hidden = true
+      return () => { errorEl.hidden = true; errorEl.textContent = '' }
+    },
+  })
 })
 ```
 

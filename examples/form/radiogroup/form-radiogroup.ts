@@ -44,7 +44,7 @@ export default defineComponent<FormRadiogroupProps>(
 			'Add at least two native radio buttons.',
 		)
 
-		// Roving tabindex focus management (inlined from manageFocus)
+		// Roving tabindex focus management
 		let focusIndex = getIndex(radios.get())
 
 		expose({ value: radios.get()[focusIndex]?.value ?? '' })
