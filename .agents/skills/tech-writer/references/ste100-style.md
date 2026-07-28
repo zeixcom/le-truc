@@ -18,7 +18,7 @@ STE100 controls grammar and vocabulary so a technical sentence has exactly one r
 - **Present tense for facts and behavior.** "`watch()` re-runs when the signal changes," not "will re-run" or "would re-run."
 - **Imperative mood for instructions.** "Read the source before writing" not "You should read the source before writing."
 - **No gerund nouns.** Write "to update the DOM" not "for updating the DOM." Write "when the signal changes" not "on signal change" or "signal changing."
-- **Keep articles in Pages, README, ARCHITECTURE, and JSDoc.** Do not drop "a," "an," "the" for a telegraphic style in these documents. STE100 requires complete grammar; density comes from cutting words, not cutting grammar.
+- **Keep articles in Pages, README, ARCHITECTURE, and code comments.** Do not drop "a," "an," "the" for a telegraphic style in these documents. STE100 requires complete grammar; density comes from cutting words, not cutting grammar.
 - **`AGENTS.md` and skill files may drop articles for brevity.** These are AI-inference-time documents (see references/tone-guide.md `<AGENTS.md>`), where token cost outweighs strict grammar. Dropping "a"/"an"/"the" is acceptable there; the rest of STE100 (one idea per sentence, active voice, one word per concept) still applies.
 - **No stacked nouns.** Rewrite "component effect descriptor collection" as "the collection of effect descriptors for a component." Use prepositions to show the relationship instead of piling nouns together.
 
@@ -45,4 +45,4 @@ Describe the API as it is now. Do not describe what it was, why it changed, or w
 
 - Document register (tutorial-friendly Pages, terse `AGENTS.md`, technical `ARCHITECTURE.md`) is set by references/tone-guide.md, not by this file. STE100 is a grammar and vocabulary layer on top of that register.
 - Blog posts. See references/tone-guide.md `<blog>` for the narrative style that applies there instead.
-- Code, code comments other than JSDoc, and Markdoc tag syntax.
+- Code, and Markdoc tag syntax.

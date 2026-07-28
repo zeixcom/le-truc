@@ -79,16 +79,12 @@ const CONTEXT_REQUEST = 'context-request'
 /* === Exported Class and Functions === */
 
 /**
- * Class for context-request events
+ * Event fired by a context requester to signal it wants a named context.
  *
- * An event fired by a context requester to signal it desires a named context.
- *
- * A provider should inspect the `context` property of the event to determine if it has a value that can
- * satisfy the request, calling the `callback` with the requested value if so.
- *
- * If the requested context event contains a truthy `subscribe` value, then a provider can call the callback
- * multiple times if the value is changed, if this is the case the provider should pass an `unsubscribe`
- * function to the callback which requesters can invoke to indicate they no longer wish to receive these updates.
+ * A provider inspects `context` to determine whether it can satisfy the
+ * request, then calls `callback` with the value. If `subscribe` is truthy,
+ * the provider may call `callback` again on later changes, passing an
+ * `unsubscribe` function the requester can call to stop receiving updates.
  *
  * @class ContextRequestEvent
  * @extends {Event}
@@ -192,25 +188,23 @@ const makeProvideContexts =
  * `expose()` as a property initializer.
  *
  * A provider may miss the initial synchronous dispatch if its
- * `customElements.define()` runs after the consumer's (bundle ordering,
- * code-splitting, deferred script) or its own `provideContexts` listener hasn't
- * activated yet (descriptors activate after dependency resolution — see ADR
- * 0007). The request is therefore re-dispatched once on a microtask (covers
- * providers upgraded later in the same bundle) and once after
- * {@link CONTEXT_RETRY_DELAY} (covers providers whose effect activation waited
- * on `customElements.whenDefined()`). When a provider answers late, the Slot's
- * backing signal is swapped (`slot.replace(createMemo(getter))`), so the
- * consumer's value switches from `fallback` to the provided value reactively —
- * no consumer code change required. If no provider ever answers, `fallback` is
- * permanent for that connection (and a `DEV_MODE` warning names the context
- * and host).
+ * `customElements.define()` runs after the consumer's, or if its own
+ * `provideContexts` listener has not activated yet (descriptors activate
+ * after dependency resolution — see ADR 0007). The request is therefore
+ * re-dispatched once on a microtask (covers providers upgraded later in the
+ * same bundle) and once after {@link CONTEXT_RETRY_DELAY} (covers providers
+ * whose effect activation waited on `customElements.whenDefined()`). When a
+ * provider answers late, the Slot's backing signal is swapped
+ * (`slot.replace(createMemo(getter))`), so the consumer's value switches
+ * from `fallback` to the provided value reactively. If no provider ever
+ * answers, `fallback` is permanent for that connection, and a `DEV_MODE`
+ * warning names the context and host.
  *
  * The `Slot` is the same primitive `pass()` uses to override a child
- * component's reactive property: the backing signal is overridable, and
- * `replace()` invalidates all downstream subscribers without breaking existing
- * edges. The Slot's computation reads the delegated signal inside a tracking
- * context, so both the late-binding swap and the provider's live value updates
- * propagate from a single `slot.get()`.
+ * component's reactive property: its backing signal is overridable, and
+ * `replace()` invalidates all downstream subscribers without breaking
+ * existing edges. Both the late-binding swap and the provider's live value
+ * updates propagate from a single `slot.get()`.
  *
  * Resolved once per component lifetime, at first connect: `connectedCallback`
  * re-activates cached descriptors on reconnect but does not re-run the factory.
@@ -222,12 +216,9 @@ const makeProvideContexts =
 const makeRequestContext =
 	<P extends ComponentProps>(host: HTMLElement & P): RequestContextHelper =>
 	<T extends {}>(context: Context<string, () => T>, fallback: T): Signal<T> => {
-		// A Slot is a forwarding signal whose backing signal can be swapped via
-		// replace(). It starts delegating to a State holding the fallback; when a
-		// provider answers, its getter () => host[context] is wrapped in a Memo
-		// (so the provider's underlying signal is tracked) and swapped in. The
-		// Slot's own computation reads the delegate inside a tracking context, so
-		// a single slot.get() tracks both the swap and the provider's live value.
+		// The Slot delegates to a State holding the fallback until a provider
+		// answers, then swaps in a Memo wrapping the provider's getter — a
+		// single slot.get() tracks both the swap and the provider's live value.
 		const slot = createSlot(createState(fallback))
 		let answered = false
 
