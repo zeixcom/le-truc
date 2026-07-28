@@ -3,6 +3,7 @@
 ## Required Reading
 1. references/document-map.md → `<jsdoc_in_src>`
 2. references/tone-guide.md → `<jsdoc>` section
+3. references/ste100-style.md — sentence and vocabulary rules
 
 ## Process
 
@@ -33,6 +34,7 @@ Rules:
 - `@since`: the version the function was introduced; do not update this when modifying the function
 - `@throws`: only for errors that occur in correct usage (not programmer-error throws)
 - `@example`: only when usage pattern is non-obvious
+- Follow references/ste100-style.md: one short sentence per line, active voice, present tense, `CONTEXT.md` domain terms
 
 ### Step 3: Update `@param` names to match the current signature
 

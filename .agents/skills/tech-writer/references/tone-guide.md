@@ -7,10 +7,11 @@ These rules apply to every document without exception:
 
 - **Concise over comprehensive.** Every sentence must add information the reader needs. Cut throat-clearing, transitional padding, and restatements of what the code already shows.
 - **Technically accurate over reassuring.** Do not soften edge cases, paper over constraints, or omit behavior that is surprising but correct.
-- **No changelog language in documentation.** Documents state current truth. Never write "previously", "as of version X", "we changed", or "now supports". Those belong in `CHANGELOG.md`.
+- **Describe only the current API shape.** Documents state current truth: what the API is, not what it was, why it changed, or what it may become. Never write "previously", "as of version X", "we changed", "now supports", "will eventually", or "the reason for this is…". The only exceptions are `CHANGELOG.md` (kept by the `changelog-keeper` skill) and ADRs (kept by the `adr-keeper` skill) — both exist specifically to record history and rationale.
 - **No meta-commentary.** Do not write "This section explains…" or "See below for…". Say the thing directly.
 - **Backtick all code.** Every API name, file name, type name, option key, tag name, and shell command is wrapped in backticks, even mid-sentence.
 - **Surgical edits only.** Update what changed. Do not rewrite accurate sections.
+- **Simplified Technical English (ASD-STE100).** Every document below except Blog follows the sentence and vocabulary rules in references/ste100-style.md: short single-idea sentences, active voice, present tense, one word per concept using the `CONTEXT.md` domain vocabulary. This applies within each document's register — it doesn't override the register.
 
 ## Pages
 **Primary audience varies by page** (see references/document-map.md), but the shared register across all pages is:
@@ -75,6 +76,8 @@ These rules apply to every document without exception:
 - "Note that…", "Keep in mind…", "Be aware that…" — state it directly
 
 ## Blog
+**Exempt from references/ste100-style.md.** The blog keeps the narrative, conversational register below, including contractions and figurative language where they read naturally. Do not apply STE100 sentence-length or vocabulary rules here — apply the jargon table instead (see workflows/write-blog-post.md).
+
 **Primary audience:** Developers who have found their way to the blog — curious about the project's history, design decisions, or how it compares to alternatives. They are technically capable but not necessarily Le Truc users yet.
 
 **Register:** Plain, direct, conversational. Write the way a knowledgeable colleague explains something over coffee — not a sales deck, not a whitepaper. First person plural ("we") is fine for posts about the team's experience. Present tense for general claims; past tense for things that happened.
@@ -94,6 +97,8 @@ These rules apply to every document without exception:
 - Any sentence the reader could have written themselves after reading the previous one
 
 ## JSDoc
+Follows references/ste100-style.md: one short sentence per summary line, active voice, present tense, `CONTEXT.md` domain terms.
+
 **Primary audience:** Developers reading function signatures in an IDE or in the TypeDoc-generated API pages.
 
 **Register:** Brief, typed, precise. One-line summaries. No narrative. Fragments are acceptable if they read naturally as a tooltip.

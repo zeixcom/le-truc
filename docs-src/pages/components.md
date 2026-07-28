@@ -7,19 +7,22 @@ description: 'Anatomy, lifecycle, signals, effects'
 {% hero %}
 # 🏗️ Components
 
-**Create lightweight, self-contained Web Components with built-in reactivity**. Le Truc lets you define custom elements that manage state efficiently, update the DOM automatically, and enhance server-rendered pages without an SPA framework.
+**Create lightweight, self-contained Web Components with built-in reactivity.** Le Truc lets you define custom elements that manage state efficiently and update the DOM automatically. Components enhance server-rendered pages without an SPA framework.
 {% /hero %}
 
 {% section %}
-## Defining a Component
+## Define a Component
 
-Le Truc builds on **Web Components**, extending `HTMLElement` to provide **built-in state management and reactive updates**.
+Le Truc builds on **Web Components**. It extends `HTMLElement` to provide **built-in state management and reactive updates**.
 
-{% callout .note title="Le Truc enhances HTML — it doesn't replace it" %}
-A Le Truc component **wraps existing server-rendered content**. The HTML inside the custom element is the starting point — visible before JavaScript runs. See [Progressive Enhancement](getting-started.html#progressive-enhancement) for how this works.
+{% callout .note title="Le Truc enhances HTML — it does not replace it" %}
+A Le Truc component **wraps existing server-rendered content**. The HTML inside the custom element is the starting point. It is visible before JavaScript runs. See [Progressive Enhancement](getting-started.html#progressive-enhancement) for how this works.
 {% /callout %}
 
-Components are created with the `defineComponent()` function, which takes a valid custom element tag name (two or more words joined with `-`), a factory function, and an optional array of [extensions](#extensions):
+Create components with the `defineComponent()` function. It takes:
+- A valid custom element tag name (two or more words joined with `-`)
+- A factory function
+- An optional array of [extensions](#extensions)
 
 ```js
 defineComponent('my-component', ({ expose, first, all, watch, on }) => {
@@ -33,19 +36,19 @@ defineComponent('my-component', ({ expose, first, all, watch, on }) => {
 })
 ```
 
-The factory receives a `FactoryContext` with helpers for querying descendant elements, declaring reactive properties, and registering effects — each covered in the sections below. The optional third argument augments the component with opt-in capabilities like [form participation](#form-association) or [attribute-driven reactivity](#attribute-driven-reactivity); each bundled extension is tree-shaken away unless imported and used.
+The factory receives a `FactoryContext`. Its helpers query descendant elements, declare reactive properties, and register effects. Later sections cover each helper. The optional third argument augments the component with opt-in capabilities like [form participation](#form-association) or [attribute-driven reactivity](#attribute-driven-reactivity). Each bundled extension is tree-shaken away unless imported and used.
 
 {% callout .tip title="Explicit return still works, but is deprecated" %}
-`watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` register their effects automatically when called — no `return` needed. Returning a `FactoryResult` array of the same descriptors (`return [watch(...), on(...)]`) still works for backward compatibility but is deprecated and will be removed in the next major version. See [ADR 0018](https://github.com/zeixcom/le-truc/blob/main/adr/0018-implicit-effect-collection-via-ambient-context.md).
+`watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` register their effects automatically when called. You do not need `return`. Returning a `FactoryResult` array of the same descriptors (`return [watch(...), on(...)]`) still works but is deprecated. See [ADR 0018](https://github.com/zeixcom/le-truc/blob/main/adr/0018-implicit-effect-collection-via-ambient-context.md) for details.
 {% /callout %}
 
 {% callout .caution title="Declare props with type, not interface" %}
-`defineComponent<P>` constrains `P` to `ComponentProps`, an indexed record. TypeScript infers an index signature for object type **literals** (`type FooProps = { … }`) but never for **interfaces**, since interfaces can be declaration-merged. Always declare component props with `type` — an `interface` won't compile against the constraint.
+`defineComponent<P>` constrains `P` to `ComponentProps`, an indexed record. TypeScript infers an index signature for object type **literals** (`type FooProps = { … }`). It never infers one for **interfaces**, because interfaces can be declaration-merged. Always declare component props with `type`. An `interface` does not compile against the constraint.
 {% /callout %}
 
-### Using the Custom Element in HTML
+### Use the Custom Element in HTML
 
-Once registered, the component can be used like any native HTML element:
+Once registered, you can use the component like any native HTML element:
 
 ```html
 <my-component>Content goes here</my-component>
@@ -56,17 +59,17 @@ Once registered, the component can be used like any native HTML element:
 {% section %}
 ## Component Lifecycle
 
-Le Truc manages the **Web Component lifecycle** from creation to removal. Here's what happens.
+Le Truc manages the **Web Component lifecycle** from creation to removal. Here is what happens.
 
 ### Connected to the DOM
 
-The factory function runs inside `connectedCallback()`. Element queries, `expose()`, and the registered effects all execute at this point — the factory is the component's setup phase, not its constructor. If the component disconnects and reconnects, the factory runs again with a fresh closure. See [Managing State with Signals](#managing-state-with-signals) for the ways to initialize reactive properties.
+The factory function runs inside `connectedCallback()`. Element queries, `expose()`, and the registered effects all execute at this point. The factory is the component's setup phase, not its constructor. If the component disconnects and reconnects, the factory runs again with a fresh closure. See [Manage State with Signals](#manage-state-with-signals) to learn how to initialize reactive properties.
 
 ### Disconnected from the DOM
 
-In the `disconnectedCallback()` Le Truc runs all cleanup functions returned by effects during the setup phase in `connectedCallback()`. This will remove all event listeners and unsubscribe all signals the component is subscribed to, so you don't need to worry about memory leaks.
+In `disconnectedCallback()`, Le Truc runs all cleanup functions returned by effects during the setup phase in `connectedCallback()`. This removes all event listeners and unsubscribes all signals the component is subscribed to. You do not need to worry about memory leaks.
 
-If you subscribe to **external APIs** that live outside the component's reactive scope — a native `IntersectionObserver`, `ResizeObserver`, or similar — wrap the setup and its cleanup in a hand-authored `EffectDescriptor` and register it with `watch(() => true, …)`:
+If you subscribe to **external APIs** that live outside the component's reactive scope — a native `IntersectionObserver`, `ResizeObserver`, or similar — wrap the setup and its cleanup in a hand-authored `EffectDescriptor`. Register it with `watch(() => true, …)`:
 
 ```js
 defineComponent('my-component', ({ host, watch }) => {
@@ -83,18 +86,18 @@ defineComponent('my-component', ({ host, watch }) => {
 })
 ```
 
-`() => true` has no signal dependency, so this effect runs its setup exactly once, on connect — `watch()` registers the descriptor's returned cleanup the same way it does for a normal reactive source.
+`() => true` has no signal dependency. This effect runs its setup exactly once, on connect. `watch()` registers the descriptor's returned cleanup the same way it does for a normal reactive source.
 
 {% callout .tip title="A returned cleanup only runs if it's registered" %}
-Returning the descriptor from the factory (`return [() => { ...; return cleanup }]`) still works, but a bare thunk you neither `return` nor pass to a helper never runs its cleanup — there's no path for `disconnectedCallback()` to find it. `watch(() => true, descriptor)` is the direct replacement for `return` here, and explicit `return` is deprecated as of v3.0 alongside the other helpers' explicit-return form.
+Returning the descriptor from the factory (`return [() => { ...; return cleanup }]`) still works. A bare thunk you neither `return` nor pass to a helper never runs its cleanup. There is no path for `disconnectedCallback()` to find it. `watch(() => true, descriptor)` is the direct replacement for `return` here.
 {% /callout %}
 
 {% /section %}
 
 {% section %}
-## Managing State with Signals
+## Manage State with Signals
 
-Le Truc manages state using **signals** — reactive values that propagate changes automatically. Signals are exposed as regular JavaScript properties on the component host:
+Le Truc manages state using **signals**. Signals are reactive values that propagate changes automatically. They are exposed as regular JavaScript properties on the component host:
 
 ```js
 console.log('count' in el) // Check if the signal exists
@@ -117,11 +120,11 @@ Le Truc re-exports the reactive primitives from [`@zeix/cause-effect`](https://g
 | [`Collection`](./api.html#functions/createCollection) | Reactive collection | Externally-driven streams (WebSocket, SSE) or derived pipelines |
 | [`Effect`](./api.html#functions/createEffect) | Side-effect sink | Terminal consumer for work outside the graph. Inside a component, prefer the factory's `watch()` / `on()` over a bare `createEffect()` |
 
-`Slot` is an integration primitive used internally by `pass()` to swap a child's backing signal; you rarely create one directly.
+`Slot` is an integration primitive used internally by `pass()` to swap a child's backing signal. You rarely create one directly.
 
 ### Characteristics and Special Values
 
-Signals are **statically typed** and **non-nullable** — no null-checks needed inside effects.
+Signals are **statically typed** and **non-nullable**. Effects need no null-checks.
 
 - With **TypeScript**, assigning `null`, `undefined`, or a wrong type to a signal property is a compile-time error.
 - With vanilla **JavaScript**, setting a signal to `null` or `undefined` throws a `NullishSignalValueError` at runtime. Type mismatches are not caught.
@@ -132,9 +135,9 @@ When a `watch()` reactive source produces `null` or `undefined`, the `nil` branc
 - **`bindStyle(el, prop)`** nil branch: calls `el.style.removeProperty(prop)` — restores the CSS cascade value
 - Plain function handlers (`bindText`, `bindProperty`, `bindClass`, `bindVisible`) have no nil branch — a nil source leaves the DOM unchanged
 
-### Initializing State from Attributes
+### Initialize State from Attributes
 
-The standard way to set initial state is via **server-rendered attributes** on the component element. Pass a `Parser` function to `expose()` — Le Truc calls it with the attribute value at connect time. Bundled parsers cover common types; `asParser()` wraps any custom parser function.
+The standard way to set initial state is via **server-rendered attributes** on the component element. Pass a `Parser` function to `expose()`. Le Truc calls it with the attribute value at connect time. Bundled parsers cover common types. `asParser()` wraps any custom parser function.
 
 ```js
 defineComponent('my-component', ({ expose }) => {
@@ -146,7 +149,7 @@ defineComponent('my-component', ({ expose }) => {
 ```
 
 {% callout .note title="Parsers run once at connect time" %}
-The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser — use event handlers or direct property writes to update state post-connect. To make a Parser-backed prop re-parse on attribute mutations (e.g. for frameworks like React that set attributes rather than properties), pass the [`observedAttributes()`](#attribute-driven-reactivity) extension to `defineComponent()`.
+The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser. Use event handlers or direct property writes to update state after connect. To make a Parser-backed prop re-parse on attribute mutations, pass the [`observedAttributes()`](#attribute-driven-reactivity) extension to `defineComponent()`. This matters for frameworks like React, which set attributes rather than properties.
 {% /callout %}
 
 ### Bundled Attribute Parsers
@@ -156,13 +159,13 @@ Le Truc provides several built-in parsers for common attribute types. See the [P
 {% /section %}
 
 {% section %}
-## Selecting Elements
+## Select Elements
 
 Use the provided selector utilities to find descendant elements within your component:
 
 ### first()
 
-Selects the first matching element:
+`first()` selects the first matching element:
 
 ```js
 defineComponent('basic-counter', ({ expose, first, host, on, watch }) => {
@@ -177,7 +180,7 @@ defineComponent('basic-counter', ({ expose, first, host, on, watch }) => {
 
 ### all()
 
-Selects all matching elements as a `Memo<E[]>`:
+`all()` selects all matching elements as a `Memo<E[]>`:
 
 ```js
 defineComponent('module-tabgroup', ({ all, expose, on, watch }) => {
@@ -193,11 +196,11 @@ defineComponent('module-tabgroup', ({ all, expose, on, watch }) => {
 })
 ```
 
-Without a hint string (second argument), `first()` returns `undefined` if no match is found and effects for that key are silently skipped. With a hint string, `first()` throws a `MissingElementError` if the element is missing — use this when the element is truly required for the component to function.
+Without a hint string (second argument), `first()` returns `undefined` if no match is found. Effects for that key are silently skipped. With a hint string, `first()` throws a `MissingElementError` if the element is missing. Use this when the element is truly required for the component to function.
 
-The `all()` function returns a `Memo<E[]>` — a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. Because it's reactive, effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM. A malformed selector throws `InvalidSelectorError` immediately, at the `all()` call site.
+The `all()` function returns a `Memo<E[]>`, a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. The signal is reactive. Effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM. A malformed selector throws `InvalidSelectorError` immediately, at the `all()` call site.
 
-If a queried element is a custom element that has not been defined yet, Le Truc waits up to 200 ms for it to be defined before running effects. This ensures child components are always ready before parent effects activate.
+If a queried custom element is not yet defined, Le Truc waits up to 200 ms before running effects. This ensures child components are always ready before parent effects activate.
 
 {% callout .tip %}
 `all()` observes structural changes and re-runs effects accordingly. Prefer `first()` when targeting a single element known to be present at connection time.
@@ -206,13 +209,13 @@ If a queried element is a custom element that has not been defined yet, Le Truc 
 {% /section %}
 
 {% section %}
-## Adding Event Listeners
+## Add Event Listeners
 
-Event listeners respond to user interactions. They are the main cause for changes in component state.
+Event listeners respond to user interactions. They are the main cause of changes in component state.
 
 ### on() — Event Handling
 
-`on(target, type, handler)` is called from the factory context with an explicit target element or `Memo<E[]>` collection:
+Call `on(target, type, handler)` from the factory context with an explicit target element or `Memo<E[]>` collection:
 
 ```js
 defineComponent('my-component', ({ all, expose, first, host, on }) => {
@@ -231,7 +234,7 @@ defineComponent('my-component', ({ all, expose, first, host, on }) => {
 })
 ```
 
-The handler receives `(event, element)` — for `Memo` targets, `element` is the matched item from the collection. The handler can also **return an object** to batch-update multiple host properties at once:
+The handler receives `(event, element)`. For `Memo` targets, `element` is the matched item from the collection. The handler can also **return an object** to batch-update multiple host properties at once:
 
 ```js
 on(button, 'click', () => ({
@@ -240,11 +243,11 @@ on(button, 'click', () => ({
 }))
 ```
 
-`on()` returns an `EffectDescriptor` that is activated inside a reactive scope, so event listeners are automatically removed when the component disconnects.
+`on()` returns an `EffectDescriptor` that activates inside a reactive scope. Event listeners are automatically removed when the component disconnects.
 
 ### Read-Only Event-Driven Properties
 
-To expose a property that consumers can read but never directly set, create a `State` in the factory closure and expose only its getter. The `on()` handler updates the value:
+To expose a property that consumers can read but never set, create a `State` in the factory closure. Expose only its getter. The `on()` handler updates the value:
 
 ```js#my-input.ts
 defineComponent('my-input', ({ expose, first, on }) => {
@@ -262,15 +265,15 @@ defineComponent('my-input', ({ expose, first, on }) => {
 })
 ```
 
-Exposing `state.get` rather than the full `State` is what makes the property read-only. When watching this property inside the same factory, pass the signal directly instead of a string prop name — it skips the host slot lookup:
+You make the property read-only by exposing `state.get` rather than the full `State`. To watch this property inside the same factory, pass the signal directly instead of a string prop name. This skips the host slot lookup:
 
 ```js
 watch(length, bindVisible(clearBtn))
 ```
 
-### Exposing Imperative Methods
+### Expose Imperative Methods
 
-Not every property is a value you read or watch. Some are **commands** — functions a consumer calls imperatively from event handlers, like `reset()`, `stepUp()` / `stepDown()`, or `clear()`. Wrap the function in `defineMethod()` and pass it to `expose()`:
+Not every property is a value you read or watch. Some are **commands**: functions a consumer calls imperatively from event handlers, like `reset()`, `stepUp()` / `stepDown()`, or `clear()`. Wrap the function in `defineMethod()`. Pass it to `expose()`:
 
 ```js#form-textbox.js
 defineComponent('form-textbox', ({ expose, first, host, on, watch }) => {
@@ -292,22 +295,22 @@ defineComponent('form-textbox', ({ expose, first, host, on, watch }) => {
 })
 ```
 
-`defineMethod()` brands the function so Le Truc installs it as a callable method on the host. Use methods if you need to expose a function to other components that operates on the host while hiding implementation details. You can expose both reactive values (`value`) and methods (`clear`) side by side.
+Use methods to expose a function to other components. The function operates on the host and hides implementation details. You can expose both reactive values (`value`) and methods (`clear`) side by side.
 
 {% callout .tip title="Always use defineMethod(), never a plain function" %}
-Le Truc identifies method producers by a brand symbol attached by `defineMethod()`. An unbranded function passed to `expose()` is treated as a thunk instead, creating a computed reactive property.
+Le Truc identifies method producers by a brand symbol that `defineMethod()` attaches. Le Truc treats an unbranded function passed to `expose()` as a thunk instead. This creates a computed reactive property.
 {% /callout %}
 
 {% /section %}
 
 {% section %}
-## Synchronizing State with Effects
+## Synchronize State with Effects
 
-Effects **automatically update the DOM** when signals change, avoiding manual DOM manipulation.
+Effects **automatically update the DOM** when signals change. You do not need manual DOM manipulation.
 
-### Applying Effects
+### Apply Effects
 
-`watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` each produce an `EffectDescriptor` and register it automatically when called — no `return` needed. A hand-authored descriptor you write by hand instead of using one of these five is registered the same way, via `watch(() => true, descriptor)` — see [Disconnected from the DOM](#disconnected-from-the-dom) for when you need it. The `watch(source, handler)` helper drives a DOM update from a declared reactive source:
+`watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` each produce an `EffectDescriptor` and register it automatically when called. You do not need `return`. If you write a hand-authored descriptor instead of using one of these five helpers, register it the same way, via `watch(() => true, descriptor)`. See [Disconnected from the DOM](#disconnected-from-the-dom) for details. The `watch(source, handler)` helper drives a DOM update from a declared reactive source:
 
 ```js
 watch('open', bindAttribute(host, 'open')) // set attribute from 'open' signal
@@ -318,14 +321,14 @@ watch('isEven', bindClass(count, 'even'))  // toggle class from 'isEven' signal
 The order of calls does not matter.
 
 {% callout .note title="CSS must define what the class or attribute does" %}
-`bindClass(el, 'even')` adds or removes the `even` class — but nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `bindAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
+`bindClass(el, 'even')` adds or removes the `even` class. Nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `bindAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
 
 See [Reactive Styles](styling.html#reactive-styles) for examples of how CSS and effects work together.
 {% /callout %}
 
 ### Per-element Effects with each()
 
-When you have a `Memo<E[]>` collection and need different effects for each element — not just one delegated listener — use `each(memo, callback)`. It creates a per-element reactive scope: effects activate when elements enter the collection and are disposed when they leave.
+Use `each(memo, callback)` when you have a `Memo<E[]>` collection and need different effects for each element, not just one delegated listener. It creates a per-element reactive scope. Effects activate when elements enter the collection. They are disposed when elements leave.
 
 ```js
 defineComponent('module-carousel', ({ all, expose, host, watch }) => {
@@ -345,21 +348,22 @@ defineComponent('module-carousel', ({ all, expose, host, watch }) => {
 })
 ```
 
-The callback receives a single element and returns either a single `EffectDescriptor` or a `FactoryResult` array — or it can call `watch()`, `on()`, or a nested `each()` directly, the same as the factory itself.
+The callback receives a single element. It returns either a single `EffectDescriptor` or a `FactoryResult` array. Alternatively, it can call `watch()`, `on()`, or a nested `each()` directly, the same as the factory itself.
 
 {% callout .tip title="each() vs on() with a Memo target" %}
-Use `on(memo, type, handler)` when a single delegated listener on the host is enough — one click handler for all tabs, for example. Use `each(memo, callback)` when you need per-element reactive effects that depend on both the element and a signal — like updating `ariaSelected` on every dot when the selected index changes.
+Use `on(memo, type, handler)` when a single delegated listener on the host is enough. For example, use one click handler for all tabs.
+Use `each(memo, callback)` when you need per-element reactive effects that depend on both the element and a signal. For example, update `ariaSelected` on every dot when the selected index changes.
 {% /callout %}
 
 {% callout .tip title="each() nests to any depth" %}
-`each()` callbacks can call another `each()` — for a grid, rows containing columns containing cells — with no limit on depth. Ordinary inline arrow handlers work at any nesting level. If `watch()` reports a confusing "no overload matches" error, the usual cause is a handler body that returns a value instead of `void` (e.g. a one-line `array.push(...)`).
+`each()` callbacks can call another `each()`, for example rows containing columns containing cells in a grid. There is no limit on depth. Ordinary inline arrow handlers work at any nesting level. If `watch()` reports a confusing "no overload matches" error, check the handler body. The usual cause is a handler that returns a value instead of `void` (e.g. a one-line `array.push(...)`).
 {% /callout %}
 
 ### DOM Binding Helpers
 
 Le Truc provides `bind*` helpers for common DOM update patterns. Each returns a handler (or `SingleMatchHandlers` object) to pass to `watch()`. See the [Helpers section](api.html#helpers) in the API reference for descriptions and usage examples.
 
-### Using Local Signals for Private State
+### Use Local Signals for Private State
 
 Local signals are useful for state that should not be exposed outside the component. Create them in the factory closure:
 
@@ -380,7 +384,7 @@ defineComponent('my-component', ({ first, on, watch }) => {
 
 Outside components cannot access the `countState` or `doubleState` signals.
 
-### Using Functions for Ad-hoc Derived State
+### Use Functions for Ad-hoc Derived State
 
 Instead of a named signal, you can **pass a thunk** as the `watch` source to derive a value inline:
 
@@ -403,7 +407,7 @@ defineComponent('my-component', ({ expose, first, host, watch }) => {
 
 ### Bidirectional Binding with Native Elements
 
-Some native elements — checkboxes, text inputs, selects — hold state in **JS properties** that are not reflected by HTML attributes at runtime. `input.checked` and `input.value` are the canonical examples: the attribute only sets the initial state, but the property tracks the live state. To keep a signal in sync with a native element, you need to both read from it and write back to it.
+Some native elements (checkboxes, text inputs, selects) hold state in **JS properties** not reflected by HTML attributes at runtime. `input.checked` and `input.value` are the canonical examples. The attribute sets only the initial state. The property tracks the live state. To keep a signal in sync with a native element, you need to both read from it and write back to it.
 
 The `form-checkbox` component shows this pattern in full:
 
@@ -432,7 +436,7 @@ Three pieces work together:
 This creates a full cycle: DOM → signal → DOM, with the signal as the single source of truth.
 
 {% callout .tip title="`bindProperty()` vs `bindAttribute()`" %}
-`bindAttribute(el, 'checked')` sets the HTML attribute, which only controls the checkbox's *default* state and has no effect on the live `.checked` property once the page has loaded. `bindProperty(el, 'checked')` assigns to the element's JS property directly — the only reliable way to update native form element state at runtime.
+`bindAttribute(el, 'checked')` sets the HTML attribute. This only controls the checkbox's *default* state. It has no effect on the live `.checked` property once the page has loaded. `bindProperty(el, 'checked')` assigns to the element's JS property directly. This is the only reliable way to update native form element state at runtime.
 
 Use `bindProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, `ariaDisabled`.
 {% /callout %}
@@ -442,9 +446,15 @@ Use `bindProperty()` for properties that diverge from their attribute equivalent
 {% section %}
 ## Extensions
 
-The third argument to `defineComponent()` is an optional array of **extensions** — small, tree-shakable modules that augment a component with opt-in capabilities without bloating the core. `component.ts` never statically imports feature-specific code, so a consumer who never calls an extension never bundles it.
+The third argument to `defineComponent()` is an optional array of **extensions**. Extensions are small, tree-shakable modules that augment a component with opt-in capabilities without bloating the core. `component.ts` never statically imports feature-specific code, so a consumer who never calls an extension never bundles it.
 
-Each extension implements the `ComponentExtension` interface: a `name`, a set of `staticProps` to install on the generated class (e.g. `static formAssociated = true`), `observedAttributes` and `reservedMembers` it contributes, and optional lifecycle hooks (`installOnPrototype`, `onConnect`, `onAttributeChanged`). `defineComponent()` folds the array once at class-definition time. `staticProps` collisions throw `ExtensionCollisionError` in dev mode (first declaration wins in production); `observedAttributes` and `reservedMembers` are unions across all extensions.
+Each extension implements the `ComponentExtension` interface:
+- A `name`
+- A set of `staticProps` to install on the generated class (e.g. `static formAssociated = true`)
+- `observedAttributes` and `reservedMembers` it contributes
+- Optional lifecycle hooks (`installOnPrototype`, `onConnect`, `onAttributeChanged`)
+
+`defineComponent()` folds the array once at class-definition time. `staticProps` collisions throw `ExtensionCollisionError` in dev mode (first declaration wins in production). `observedAttributes` and `reservedMembers` are unions across all extensions.
 
 ```js
 defineComponent('my-element', factory, [formAssociated()])
@@ -460,7 +470,7 @@ Le Truc ships three extensions, each imported separately:
 
 ### Form Association
 
-The `formAssociated()` extension adapts a component to the [form-associated custom element](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-face-example) convention. Pass it as the first element of the extensions array, and the factory's context widens to expose the `internals` object alongside the usual helpers:
+The `formAssociated()` extension adapts a component to the [form-associated custom element](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-face-example) convention. Pass it as the first element of the extensions array. The factory's context then widens to expose the `internals` object alongside the usual helpers:
 
 ```js#form-textbox.js
 defineComponent<FormTextboxProps>(
@@ -485,13 +495,19 @@ defineComponent<FormTextboxProps>(
 )
 ```
 
-With `[formAssociated()]`, Le Truc manages form value sync, reset, state restore, and a `<fieldset disabled>`-aware `disabled` property for you. The host gains a native-parity contract delegating to `internals` — `form`, `name`, `labels`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`, `reportValidity()`, `setCustomValidity()` — so external consumers read them as on a native input. The convention requires a reactive `value` property; expose it and sync it to the underlying native control as usual. `expose()` throws `InvalidPropertyNameError` for any reserved member name managed by the extension.
+With `[formAssociated()]`, Le Truc manages for you:
+- Form value sync
+- Reset
+- State restore
+- A `<fieldset disabled>`-aware `disabled` property
 
-The `internals` object on the context (`null` only if `attachInternals()` failed) is the escape hatch for typed validity flags and custom `:state()` pseudo-classes. The rule: use `internals?.setFormValue()` indirectly through the managed convention (set `value`, it syncs), but call `internals?.setValidity()` directly when you need flags beyond a simple custom-error message.
+The host gains a native-parity contract delegating to `internals`: `form`, `name`, `labels`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`, `reportValidity()`, `setCustomValidity()`. External consumers read them as on a native input. The convention requires a reactive `value` property. Expose it and sync it to the underlying native control as usual. `expose()` throws `InvalidPropertyNameError` for any reserved member name managed by the extension.
+
+The `internals` object on the context (`null` only if `attachInternals()` failed) is the escape hatch for typed validity flags and custom `:state()` pseudo-classes. Follow this rule: use `internals?.setFormValue()` indirectly through the managed convention. Set `value`, and it syncs automatically. Call `internals?.setValidity()` directly when you need flags beyond a simple custom-error message.
 
 ### Checkbox-Shaped Controls
 
-A checkbox's primary state is `checked: boolean`, and it submits nothing when unchecked — different from `formAssociated()`'s always-on string `value`. The `formAssociatedCheckbox()` extension handles this shape. It shares the same host contract and `disabled` management as `formAssociated()`, but the value-sync, reset, and state-restore mechanics target a `checked` prop instead of `value`:
+A checkbox's primary state is `checked: boolean`. It submits nothing when unchecked, unlike `formAssociated()`'s always-on string `value`. The `formAssociatedCheckbox()` extension handles this shape. It shares the same host contract and `disabled` management as `formAssociated()`. Its value-sync, reset, and state-restore mechanics target a `checked` prop instead of `value`:
 
 ```js#form-checkbox.js
 defineComponent<FormCheckboxProps>(
@@ -511,12 +527,12 @@ defineComponent<FormCheckboxProps>(
 `internals.setFormValue()` receives the host's own `value` attribute when checked (default `'on'`, matching native `<input type="checkbox">`) and `null` when unchecked. The convention requires a reactive `checked` property.
 
 {% callout .caution title="Do not combine the two form extensions" %}
-Both `formAssociated()` and `formAssociatedCheckbox()` declare the same `staticProps.formAssociated` key. Combining them on one component throws `ExtensionCollisionError` in dev mode. Radio groups and listboxes don't need `formAssociatedCheckbox()` — their selection aggregates into one string `value` on the container, which fits `formAssociated()`.
+Both `formAssociated()` and `formAssociatedCheckbox()` declare the same `staticProps.formAssociated` key. Combining them on one component throws `ExtensionCollisionError` in dev mode. Radio groups and listboxes do not need `formAssociatedCheckbox()`. Their selection aggregates into one string `value` on the container, which fits `formAssociated()`.
 {% /callout %}
 
 ### Attribute-Driven Reactivity
 
-Properties are the primary reactive interface. By design, a `Parser` passed to `expose()` reads its attribute once, at connect time — attribute changes after connect do not re-run it. The `observedAttributes()` extension is the opt-in escape hatch for when you need the parser to fire again on later attribute mutations. This matters chiefly for frameworks like React that set DOM attributes on custom elements rather than properties:
+Properties are the primary reactive interface. By design, a `Parser` passed to `expose()` reads its attribute once, at connect time. Attribute changes after connect do not re-run it. The `observedAttributes()` extension is the opt-in escape hatch. Use it when you need the parser to fire again on later attribute mutations. This matters chiefly for frameworks like React that set DOM attributes on custom elements rather than properties:
 
 ```js#basic-gauge.js
 defineComponent<BasicGaugeProps>(
@@ -530,6 +546,6 @@ defineComponent<BasicGaugeProps>(
 )
 ```
 
-Named attributes are added to the class's `static observedAttributes`. On each mutation, the extension re-runs the same retained `Parser` against the attribute's new string value and writes the result to the prop. Props whose initializer is not a branded `Parser` are left untouched. Use this sparingly — for most components, event handlers or direct property writes are the right way to update state post-connect.
+Le Truc adds named attributes to the class's `static observedAttributes`. On each mutation, the extension re-runs the same retained `Parser` against the attribute's new string value. It writes the result to the prop. Props whose initializer is not a branded `Parser` are left untouched. Use this sparingly. For most components, event handlers or direct property writes are the right way to update state after connect.
 
 {% /section %}
