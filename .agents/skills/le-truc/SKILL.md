@@ -34,7 +34,7 @@ defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) =>
 })
 ```
 
-`watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` register their effect automatically when called — no `return` needed. Explicit `return [...]` of the same descriptors still works (deprecated as of v3.0). For a hand-authored `EffectDescriptor` not produced by any of these — e.g. wrapping a native `IntersectionObserver` — register it via `watch(() => true, descriptor)` (see the Factory Context table below).
+`watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` register their effect automatically when called — no `return` needed. Explicit `return [...]` of the same descriptors still works but is deprecated. For a hand-authored `EffectDescriptor` not produced by any of these — e.g. wrapping a native `IntersectionObserver` — register it via `watch(() => true, descriptor)` (see the Factory Context table below).
 
 ### Factory Context
 

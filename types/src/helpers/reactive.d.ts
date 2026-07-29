@@ -16,17 +16,14 @@ type Reactive<T, P extends ComponentProps> = keyof P | Signal<T & {}> | (() => T
  * A map of child component property names to the reactive values to inject into them.
  * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
  *
- * `Q`'s own bound is only `HTMLElement` — not `ComponentProps` — because a target's
- * element type (e.g. `FormAssociatedElement & FormTextboxProps`) may mix in
- * interfaces with nullable native members (`form: HTMLFormElement | null`), which
- * would make the whole intersection fail a `Record<string, {}>`-style constraint.
- * Instead, `keyof Q & ComponentProp` does the filtering: it keeps only the
- * author-exposed reactive props (excluding native `HTMLElement` members and
- * reserved words) regardless of what else `Q` mixes in.
+ * `Q` is bound to `HTMLElement`, not `ComponentProps`, because native members
+ * mixed into a target's element type (e.g. `form: HTMLFormElement | null`)
+ * can fail a `Record<string, {}>`-style constraint. `keyof Q & ComponentProp`
+ * filters to the author-exposed reactive props instead.
  *
  * Prefer the read-only thunk (`() => host.prop`) and the mediated
  * `{ get, set }` descriptor forms. The property-key and bare-writable-signal
- * forms are deprecated; they warn in DEV_MODE and will be removed in the next major.
+ * forms are deprecated and warn in DEV_MODE.
  */
 type PassedProps<P extends ComponentProps, Q extends HTMLElement> = {
     [K in keyof Q & ComponentProp]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>;
@@ -69,7 +66,6 @@ type WatchHelper<P extends ComponentProps> = {
  * ```
  *
  * For read-only access use the thunk: `pass(child, { value: () => host.value })`.
- * Both deprecated forms are removed in the next major.
  */
 type PassHelper<P extends ComponentProps> = {
     <Q extends HTMLElement>(target: Q | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
@@ -92,13 +88,10 @@ declare const activateResult: (result: FactoryResult) => void;
  *
  * Reconciles the legacy explicit-`return` form with descriptors already
  * pushed into the active collector by `watch()`/`on()`/`pass()`/`each()`
- * (ADR 0018) — a descriptor produced by one of those helpers is pushed
- * whether or not it's also `return`ed, so it must only be visited once. A
- * manually-constructed `EffectDescriptor` that bypasses every helper (never
- * pushed anywhere) is not in `seen` and is still visited — the explicit
- * `FactoryResult` return type has always allowed authoring one directly,
- * without going through `watch()`/`on()`/`pass()`/`each()`, so this remains
- * the one path such a descriptor can be picked up by.
+ * (ADR 0018). A descriptor from one of those helpers is pushed whether or
+ * not it is also `return`ed, so it must only be visited once. A manually
+ * constructed `EffectDescriptor` that bypasses every helper is never pushed,
+ * so it is still visited here — the only path that picks it up.
  *
  * @since 2.3
  * @param {FactoryResult | EffectDescriptor | Falsy} result - Flat or nested array, single descriptor, or falsy value to reconcile
@@ -109,18 +102,17 @@ declare const forEachUnseen: (result: FactoryResult | EffectDescriptor | Falsy, 
 /**
  * Drive per-element scopes from a `Memo<E[]>` with element-identity keying.
  *
- * Elements entering the collection get a scope created by `mount`; elements
- * leaving get exactly their own scope disposed. Surviving elements are
- * untouched across re-runs. All remaining scopes are disposed when the
- * enclosing owner (component scope) is disposed.
+ * Entering elements get a scope created by `mount`; leaving elements get
+ * exactly their own scope disposed. Surviving elements are untouched across
+ * re-runs. All remaining scopes are disposed when the enclosing component
+ * scope is disposed.
  *
- * Two ownership details are load-bearing:
- * - Per-element scopes use `{ root: true }` — a plain `createScope` inside the
+ * Two details matter for correctness:
+ * - Per-element scopes use `{ root: true }`. A plain `createScope` inside the
  *   effect would register its dispose on the effect, which runs all cleanups
- *   before every re-run, silently reproducing wholesale rebuild.
+ *   before every re-run — a wholesale rebuild instead of a keyed diff.
  * - The outer `createScope` wrapper registers on the component scope; its
- *   returned cleanup is the only thing that tears down still-live root-scoped
- *   element scopes on component disconnect.
+ *   cleanup is what tears down still-live element scopes on disconnect.
  *
  * @since 2.2
  * @param {Memo<E[]>} memo - Memo of the current element collection
@@ -149,16 +141,15 @@ declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => Wa
  * For Memo targets, uses per-element lifecycle: signals are swapped when elements
  * enter the collection and restored when they leave.
  *
- * The property-key and bare-writable-signal short forms are deprecated:
- * They grant the child unrestricted `.set()` on the parent's signal.
- * In DEV_MODE `pass()` emits a warning for each writable binding:
+ * The property-key and bare-writable-signal short forms are deprecated —
+ * they grant the child unrestricted `.set()` on the parent's signal. In
+ * DEV_MODE `pass()` warns for each writable binding:
  *
  * > `pass() received a writable signal for '<prop>'. Use () => host.<prop> for read-only access, or { get, set } to mediate writes.`
  *
- * The migration is behavior-preserving:
- * `pass(child, { value: sig })` → `pass(child, { value: { get: sig.get, set: sig.set } })`,
- * or for read-only access `pass(child, { value: () => host.value })`. The
- * deprecated forms are removed in the next major.
+ * Migrate with `pass(child, { value: sig })` →
+ * `pass(child, { value: { get: sig.get, set: sig.set } })`, or for
+ * read-only access `pass(child, { value: () => host.value })`.
  *
  * @since 2.0
  * @param {HTMLElement & P} host - The component host element
@@ -168,13 +159,13 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => Pas
 /**
  * Create per-element reactive effects from a `Memo<Element[]>`.
  *
- * Elements entering the collection get their own scope; when they leave,
- * that scope — and everything registered in it — is disposed.
+ * Entering elements get their own scope; when they leave, that scope — and
+ * everything registered in it — is disposed.
  *
  * The callback can call `watch()`, `on()`, and `pass()` directly instead of
  * returning them; each call registers against that element's scope. A
  * callback that calls `each()` again (e.g. rows containing columns) gets its
- * own nested scope the same way. Returning descriptors still works and isn't
+ * own nested scope. Returning descriptors still works and is not
  * double-activated if you also call them directly.
  *
  * @since 2.0
@@ -184,26 +175,24 @@ declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E)
  * Sync a keyed reactive data source to a container's children.
  *
  * For every key in `source` (in source order), the container holds one
- * element carrying `data-key`: entering keys clone `template`'s root
- * element, leaving keys are disposed and removed, surviving elements are
- * reused and repositioned. The sync is one-way, data → DOM — `reconcile()`
- * never reads item data back out; mutate `source` (e.g. from an event
- * handler) to change structure.
+ * element carrying `data-key`. Entering keys clone `template`'s root
+ * element; leaving keys are disposed and removed; surviving elements are
+ * reused and repositioned. The sync is one-way, data → DOM — mutate
+ * `source` (e.g. from an event handler) to change structure.
  *
  * On first run, existing children whose `data-key` matches a source key are
  * adopted (`bindItem` runs for them too, so make it idempotent against
- * server-rendered content); everything else is removed. Children carrying
+ * server-rendered content). Everything else is removed. Children carrying
  * `data-unreconciled` are left alone entirely — never removed, repositioned,
- * or bound, even if `reconcile()` itself originally placed them.
+ * or bound.
  *
  * `bindItem` is called once per entering element, with the same collector
  * support as `each()`'s callback: `watch()`, `on()`, `pass()`, and
- * `provideContexts()` can be called directly inside it, scoped to that item
- * rather than the driving structural effect. A returned
- * `MaybeCleanup` runs when the key leaves the source or the component
- * disconnects.
+ * `provideContexts()` can be called directly inside it, scoped to that item.
+ * A returned `MaybeCleanup` runs when the key leaves the source or the
+ * component disconnects.
  *
- * See ADR 0017 for the full rationale (SSR adoption, unreconciled pinning,
+ * See ADR 0017 for full rationale (SSR adoption, unreconciled pinning,
  * keyed-relative positioning).
  *
  * @since 2.3

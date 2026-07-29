@@ -58,14 +58,12 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
     host: HTMLElement & P;
     /**
      * The `ElementInternals` object, or `null` if `attachInternals()` failed
-     * (pre-upgrade / parser-ordering edge case). Use imperatively inside
-     * `watch()` for typed validity flags
-     * — e.g. `watch('value', v => { internals?.setValidity({ rangeOverflow: v > max }, msg) })` —
-     * or with `bindState()` for custom `:state()` pseudo-classes
-     * — e.g. `watch(overflowEnd, bindState(internals, 'overflow-end'))`.
-     * Note: form value sync (`setFormValue`) is managed automatically —
-     * do NOT call `internals?.setFormValue(v)` from a `watch('value', …)`.
-     * The optional chaining is the graceful-degradation guard.
+     * (pre-upgrade / parser-ordering edge case). Use it inside `watch()` for
+     * typed validity flags — e.g. `watch('value', v => internals?.setValidity({ rangeOverflow: v > max }, msg))` —
+     * or with `bindState()` for custom `:state()` pseudo-classes — e.g.
+     * `watch(overflowEnd, bindState(internals, 'overflow-end'))`.
+     * Form value sync (`setFormValue`) is managed automatically; do not call
+     * `internals?.setFormValue(v)` from a `watch('value', …)`.
      */
     internals: ElementInternals | null;
     expose: (props: Initializers<P>) => void;
@@ -77,13 +75,12 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 };
 /**
  * The factory context for form-associated components. Extends `FactoryContext`
- * with `host` typed as `FormAssociatedElement & P` (the native-parity members)
- * and `watch`/`on`/`pass` accepting the managed `disabled` reactive prop in
- * addition to the author's `P`.
+ * with `host` typed as `FormAssociatedElement & P` and `watch`/`on`/`pass`
+ * accepting the managed `disabled` reactive prop in addition to `P`.
  *
- * `expose` is deliberately typed over `Initializers<P>` (not the widened
- * `P & { disabled: boolean }`) so `expose({ disabled: … })` is a type error —
- * `disabled` is managed by the library and `expose()` throws
+ * `expose` stays typed over `Initializers<P>`, not the widened
+ * `P & { disabled: boolean }`, so `expose({ disabled: … })` is a type error.
+ * `disabled` is managed by the library; `expose()` throws
  * `InvalidPropertyNameError` for it at runtime.
  */
 type FormFactoryContext<P extends ComponentProps> = Omit<FactoryContext<P & {
@@ -106,7 +103,7 @@ type FormFactoryContext<P extends ComponentProps> = Omit<FactoryContext<P & {
  * @since 2.0
  * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
  * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
- * @param {ComponentExtension[]} [extensions] - Dependency-injected features (e.g. `[formAssociated()]`, `[formAssociatedCheckbox()]`, `[observedAttributes([...])]`). Bundled extensions are tree-shaken away unless imported and used. `formAssociated()`/`formAssociatedCheckbox()`, if present, must be the first element — that's what widens the factory's context type to `FormFactoryContext`.
+ * @param {ComponentExtension[]} [extensions] - Dependency-injected features, e.g. `[formAssociated()]`, `[formAssociatedCheckbox()]`, `[observedAttributes([...])]`. Bundled extensions tree-shake away unless imported and used. `formAssociated()`/`formAssociatedCheckbox()`, if present, must be first — that widens the factory's context type to `FormFactoryContext`.
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
 declare function defineComponent<P extends ComponentProps & {

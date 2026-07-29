@@ -25,6 +25,7 @@ layout: 'page'
   - [Blogmeta](./examples/card-blogmeta.html)
   - [Blogpost](./examples/card-blogpost.html)
   - [Callout](./examples/card-callout.html)
+  - [Collapsible](./examples/card-collapsible.html)
   - [Colorscale](./examples/card-colorscale.html)
 - Context
   - [Media](./examples/context-media.html)
@@ -41,6 +42,7 @@ layout: 'page'
   - [Calctable](./examples/module-calctable.html)
   - [Carousel](./examples/module-carousel.html)
   - [Catalog](./examples/module-catalog.html)
+  - [Cem List](./examples/module-cem-list.html)
   - [Codeblock](./examples/module-codeblock.html)
   - [Coloreditor](./examples/module-coloreditor.html)
   - [Colorinfo](./examples/module-colorinfo.html)

@@ -115,7 +115,6 @@ describe('extension composition', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ foo: 'x' })
-				return []
 			},
 			[a, b],
 		)!
@@ -172,7 +171,6 @@ describe('observedAttributes()', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ variant: asParser(v => v ?? 'default') })
-				return []
 			},
 			[observedAttributes(['variant'])],
 		)!
@@ -189,7 +187,6 @@ describe('observedAttributes()', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ variant: 'static' })
-				return []
 			},
 			[observedAttributes(['variant'])],
 		)!

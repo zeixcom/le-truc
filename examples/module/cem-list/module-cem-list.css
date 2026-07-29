@@ -1,0 +1,32 @@
+module-cem-list {
+	display: block;
+
+	& form-textbox {
+		display: block;
+		margin: 0 0 var(--space-l);
+	}
+
+	& card-collapsible summary {
+		flex-wrap: wrap;
+
+		& .header {
+			display: flex;
+			align-items: baseline;
+			gap: var(--space-s);
+			flex: none;
+		}
+	}
+
+	.demo-link a {
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
+
+	& module-tabgroup {
+		display: block;
+		margin: var(--space-s) 0 0;
+	}
+}

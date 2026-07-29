@@ -27,7 +27,7 @@ declare global {
  * Use it for lazy-loading content on demand — the `src` attribute should point to a
  * same-origin URL; cross-origin or `javascript:` URLs are rejected for security.
  * Untrusted HTML must be sanitised server-side; set `allow-scripts` only when required.
- * Set `allow-scripts` attribute to permit inline scripts in the fetched content.
+ * @attribute {boolean} [allow-scripts=false] - Permit inline scripts in the fetched content. Presence-only; read once at connect time.
  * @demo {./docs/examples/module-lazyload.html} Interactive preview and usage examples */
 export default defineComponent<ModuleLazyloadProps>(
 	'module-lazyload',

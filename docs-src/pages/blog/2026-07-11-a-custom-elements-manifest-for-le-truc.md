@@ -30,7 +30,7 @@ Standard CEM tooling looks for class declarations: `class MyCounter extends HTML
 ```typescript
 export default defineComponent<CounterProps>('basic-counter', ({ expose }) => {
   expose({ count: asInteger() })
-  return []
+  /* effects */
 })
 ```
 

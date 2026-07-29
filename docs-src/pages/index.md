@@ -22,7 +22,7 @@ description: 'Overview and key benefits of Le Truc'
 - Use any server-side technology to render HTML
 - Type-safe reactive components
 - Fine-grained DOM updates — no VDOM, no diffing
-- Under 10 kB gzipped, tree-shakeable
+- Core under 8 kB gzipped, tree-shakeable extensions
 {% /slide %}
 
 {% slide title="HTML First." class="pink" %}
@@ -63,7 +63,7 @@ The component is a native Custom Element. Its `name` property is reactive. Readi
 {% /slide %}
 
 {% slide title="Minimal Size." class="blue" %}
-Le Truc adds few abstractions, so the library stays small (under 10 kB gzipped, tree-shakeable).
+Le Truc adds few abstractions, so the library stays small. The core is under 8 kB gzipped. Extensions are fully tree-shakeable.
 
 HTML, CSS, and JavaScript already solve most of the problem. Le Truc adds what is missing: component boundaries, compile-time type safety, and predictable reactive updates without tight coupling.
 {% /slide %}

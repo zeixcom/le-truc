@@ -38,10 +38,6 @@ defineComponent('my-component', ({ expose, first, all, watch, on }) => {
 
 The factory receives a `FactoryContext`. Its helpers query descendant elements, declare reactive properties, and register effects. Later sections cover each helper. The optional third argument augments the component with opt-in capabilities like [form participation](#form-association) or [attribute-driven reactivity](#attribute-driven-reactivity). Each bundled extension is tree-shaken away unless imported and used.
 
-{% callout .tip title="Explicit return still works, but is deprecated" %}
-`watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` register their effects automatically when called. You do not need `return`. Returning a `FactoryResult` array of the same descriptors (`return [watch(...), on(...)]`) still works but is deprecated. See [ADR 0018](https://github.com/zeixcom/le-truc/blob/main/adr/0018-implicit-effect-collection-via-ambient-context.md) for details.
-{% /callout %}
-
 {% callout .caution title="Declare props with type, not interface" %}
 `defineComponent<P>` constrains `P` to `ComponentProps`, an indexed record. TypeScript infers an index signature for object type **literals** (`type FooProps = { … }`). It never infers one for **interfaces**, because interfaces can be declaration-merged. Always declare component props with `type`. An `interface` does not compile against the constraint.
 {% /callout %}
@@ -87,11 +83,6 @@ defineComponent('my-component', ({ host, watch }) => {
 ```
 
 `() => true` has no signal dependency. This effect runs its setup exactly once, on connect. `watch()` registers the descriptor's returned cleanup the same way it does for a normal reactive source.
-
-{% callout .tip title="A returned cleanup only runs if it's registered" %}
-Returning the descriptor from the factory (`return [() => { ...; return cleanup }]`) still works. A bare thunk you neither `return` nor pass to a helper never runs its cleanup. There is no path for `disconnectedCallback()` to find it. `watch(() => true, descriptor)` is the direct replacement for `return` here.
-{% /callout %}
-
 {% /section %}
 
 {% section %}

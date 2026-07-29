@@ -156,10 +156,8 @@ const attachListener = <P extends ComponentProps, E extends Element>(
  *
  * ```ts
  * const trigger = createState<FormData | null>(null)
- * return [
- *   on(form, 'submit', e => { e.preventDefault(); trigger.set(new FormData(form)) }),
- *   watch(createTask(async () => { ... trigger.get() ... }), { ok: ..., err: ... }),
- * ]
+ * on(form, 'submit', e => { e.preventDefault(); trigger.set(new FormData(form)) })
+ * watch(createTask(async () => { ... trigger.get() ... }), { ok: ..., err: ... })
  * ```
  *
  * For `Memo<E[]>` targets, uses event delegation (one listener on the shadow root or host).

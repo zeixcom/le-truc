@@ -5,6 +5,7 @@
 @import "./card/blogmeta/card-blogmeta.css";
 @import "./card/blogpost/card-blogpost.css";
 @import "./card/callout/card-callout.css";
+@import "./card/collapsible/card-collapsible.css";
 @import "./card/colorscale/card-colorscale.css";
 @import "./form/checkbox/form-checkbox.css";
 @import "./form/colorgraph/form-colorgraph.css";
@@ -17,6 +18,7 @@
 @import "./module/calctable/module-calctable.css";
 @import "./module/carousel/module-carousel.css";
 @import "./module/catalog/module-catalog.css";
+@import "./module/cem-list/module-cem-list.css";
 @import "./module/codeblock/module-codeblock.css";
 @import "./module/coloreditor/module-coloreditor.css";
 @import "./module/colorinfo/module-colorinfo.css";

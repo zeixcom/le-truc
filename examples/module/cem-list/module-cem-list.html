@@ -1,0 +1,166 @@
+<module-cem-list>
+	<form-textbox name="filter" clearable>
+		<label for="module-cem-list-demo-filter-input">Filter</label>
+		<div class="input">
+			<input
+				type="text"
+				id="module-cem-list-demo-filter-input"
+				autocomplete="off"
+				placeholder="Filter by name, tag, or description"
+			>
+			<button type="button" class="clear" aria-label="Clear filter" hidden>
+				✕
+			</button>
+		</div>
+	</form-textbox>
+
+	<card-collapsible>
+		<details>
+			<summary>
+				<span class="header">
+					<strong class="name">BasicHello</strong>
+					<code>basic-hello</code>
+				</span>
+				<span class="description">
+					A hello-world component that greets a name entered via an input
+					field. Use it as a starting point for learning
+					<code>@zeix/le-truc</code>.
+				</span>
+			</summary>
+			<div class="content">
+				<p class="demo-link"><a href="../examples.html#basic-hello">View live demo →</a></p>
+				<module-tabgroup>
+					<div role="tablist">
+						<button
+							role="tab"
+							id="trigger_panel_basic-hello_fields"
+							aria-controls="panel_basic-hello_fields"
+							aria-selected="true"
+							tabindex="0"
+						>
+							Fields
+						</button>
+					</div>
+					<div
+						role="tabpanel"
+						id="panel_basic-hello_fields"
+						aria-labelledby="trigger_panel_basic-hello_fields"
+					>
+						<module-scrollarea orientation="horizontal">
+							<table>
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Type</th>
+										<th>Description</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td><code>name</code></td>
+										<td><code>string</code></td>
+										<td>The name to greet.</td>
+									</tr>
+								</tbody>
+							</table>
+						</module-scrollarea>
+					</div>
+				</module-tabgroup>
+			</div>
+		</details>
+	</card-collapsible>
+
+	<card-collapsible>
+		<details>
+			<summary>
+				<span class="header">
+					<strong class="name">FormCheckbox</strong>
+					<code>form-checkbox</code>
+				</span>
+				<span class="description">
+					A styled checkbox component that syncs its state with a native
+					checkbox input. Form participation is via
+					<code>ElementInternals</code>.
+				</span>
+			</summary>
+			<div class="content">
+				<p class="demo-link">
+					<a href="../examples.html#form-checkbox">View live demo →</a>
+				</p>
+				<module-tabgroup>
+					<div role="tablist">
+						<button
+							role="tab"
+							id="trigger_panel_form-checkbox_fields"
+							aria-controls="panel_form-checkbox_fields"
+							aria-selected="true"
+							tabindex="0"
+						>
+							Fields
+						</button>
+						<button
+							role="tab"
+							id="trigger_panel_form-checkbox_methods"
+							aria-controls="panel_form-checkbox_methods"
+							aria-selected="false"
+							tabindex="-1"
+						>
+							Methods
+						</button>
+					</div>
+					<div
+						role="tabpanel"
+						id="panel_form-checkbox_fields"
+						aria-labelledby="trigger_panel_form-checkbox_fields"
+					>
+						<module-scrollarea orientation="horizontal">
+							<table>
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Type</th>
+										<th>Description</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td><code>checked</code></td>
+										<td><code>boolean</code></td>
+										<td>Whether the checkbox is checked.</td>
+									</tr>
+								</tbody>
+							</table>
+						</module-scrollarea>
+					</div>
+					<div
+						role="tabpanel"
+						id="panel_form-checkbox_methods"
+						aria-labelledby="trigger_panel_form-checkbox_methods"
+						hidden
+					>
+						<module-scrollarea orientation="horizontal">
+							<table>
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Parameters</th>
+										<th>Return</th>
+										<th>Description</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td><code>checkValidity()</code></td>
+										<td></td>
+										<td><code>boolean</code></td>
+										<td>Checks the validity of the form control.</td>
+									</tr>
+								</tbody>
+							</table>
+						</module-scrollarea>
+					</div>
+				</module-tabgroup>
+			</div>
+		</details>
+	</card-collapsible>
+</module-cem-list>

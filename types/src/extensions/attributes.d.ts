@@ -1,13 +1,11 @@
 /**
- * Opt-in attribute-driven reactivity — the escape hatch ADR 0003 reserved
- * for interop when v2.0 dropped `observedAttributes`/`attributeChangedCallback`
- * in favor of properties as the reactive interface (REQUIREMENTS.md X1,
- * motivated chiefly by frameworks like React that set DOM attributes on
- * custom elements rather than properties).
+ * Opt-in attribute-driven reactivity — the interop escape hatch ADR 0003
+ * reserved after properties became the primary reactive interface (motivated
+ * chiefly by frameworks like React that set DOM attributes rather than
+ * properties).
  *
- * Properties remain the primary reactive interface; this only re-parses an
- * already-`expose()`d Parser-backed prop when its attribute mutates after
- * connect. Only referenced by consumers who call `observedAttributes()` —
+ * Properties remain primary; this only re-parses an already-`expose()`d
+ * Parser-backed prop when its attribute mutates after connect.
  * `component.ts` never imports this module at the value level.
  */
 import type { ComponentExtension } from '../extension';
