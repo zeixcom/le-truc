@@ -132,3 +132,129 @@ describe('resolveDependencies timeout path', () => {
 		}
 	}, 1000)
 })
+
+describe('resolveDependencies defers for a registered-but-uninitialized child', () => {
+	// Regression for the detached-subtree timing bug: when a whole nested
+	// parent+child subtree is built detached then appended in one operation
+	// (e.g. lit-html/Storybook's render path), the browser queues the
+	// connectedCallbacks in tree order — the parent's fires first. The child
+	// is already `:defined` (its class is registered) but its own
+	// connectedCallback — and therefore its expose()/Slot setup — hasn't run
+	// yet. If `resolveDependencies` runs the parent's setup (which calls
+	// `pass()` → `swapSlots`) synchronously, `pass()` throws
+	// `InvalidPassPropertyError` because `'prop' in child` is still false.
+	//
+	// Fix: when `first()`/`all()` query any `:defined` custom-element child,
+	// `resolveDependencies` must defer setup to a microtask so the child's
+	// queued connectedCallback drains first. No real DOM is available under
+	// `bun test`, so this verifies the deferral *mechanism*: a queried
+	// `:defined` custom element makes the callback run on a microtask, not
+	// synchronously. End-to-end browser verification was done separately.
+	test('defers the callback to a microtask when first() matches a defined custom element', async () => {
+		const originalCustomElements = (globalThis as any).customElements
+		;(globalThis as any).customElements = {
+			// The child's class IS registered (the precondition for the bug).
+			get: (_name: string) => function DefinedChild() {},
+			whenDefined: (_name: string) => Promise.resolve(),
+		}
+
+		try {
+			// A custom element that matches `:defined` (class registered) but
+			// whose own setup hasn't run yet — exactly the race window.
+			const definedChild = {
+				localName: 'defined-child',
+				matches: (selector: string) => selector !== ':not(:defined)',
+			} as unknown as Element
+			const host = {
+				localName: 'parent-host',
+				shadowRoot: null,
+				querySelector: (_selector: string) => definedChild,
+			} as unknown as HTMLElement
+
+			const [{ first }, resolveDependencies] = makeElementQueries(host)
+			first('defined-child')
+
+			const calls: string[] = []
+			resolveDependencies(() => calls.push('callback'))
+
+			// The callback must NOT have run synchronously — it must be
+			// deferred so the child's queued connectedCallback can drain first.
+			expect(calls).toEqual([])
+
+			// After the microtask drains, the callback runs exactly once.
+			await Promise.resolve()
+			expect(calls).toEqual(['callback'])
+		} finally {
+			;(globalThis as any).customElements = originalCustomElements
+		}
+	})
+
+	test('defers the callback to a microtask when all() matches a defined custom element', async () => {
+		const originalCustomElements = (globalThis as any).customElements
+		;(globalThis as any).customElements = {
+			get: (_name: string) => function DefinedChild() {},
+			whenDefined: (_name: string) => Promise.resolve(),
+		}
+
+		try {
+			const definedChild = {
+				localName: 'defined-child',
+				matches: (selector: string) => selector !== ':not(:defined)',
+				// createElementsMemo walks the parent via querySelectorAll
+				querySelector: () => null,
+				querySelectorAll: () => [] as unknown as NodeListOf<Element>,
+			} as unknown as Element
+			const host = {
+				localName: 'parent-host',
+				shadowRoot: null,
+				querySelector: () => null,
+				querySelectorAll: () =>
+					[definedChild] as unknown as NodeListOf<Element>,
+			} as unknown as HTMLElement
+
+			const [{ all }, resolveDependencies] = makeElementQueries(host)
+			all('defined-child')
+
+			const calls: string[] = []
+			resolveDependencies(() => calls.push('callback'))
+
+			expect(calls).toEqual([])
+			await Promise.resolve()
+			expect(calls).toEqual(['callback'])
+		} finally {
+			;(globalThis as any).customElements = originalCustomElements
+		}
+	})
+
+	test('runs the callback synchronously when no custom-element child was queried', () => {
+		// A plain (non-custom) element must not trigger the deferral.
+		const originalCustomElements = (globalThis as any).customElements
+		;(globalThis as any).customElements = {
+			get: (_name: string) => undefined,
+			whenDefined: (_name: string) => Promise.resolve(),
+		}
+
+		try {
+			const plainElement = {
+				localName: 'div', // not a custom element
+				matches: () => false,
+			} as unknown as Element
+			const host = {
+				localName: 'parent-host',
+				shadowRoot: null,
+				querySelector: (_selector: string) => plainElement,
+			} as unknown as HTMLElement
+
+			const [{ first }, resolveDependencies] = makeElementQueries(host)
+			first('div')
+
+			const calls: string[] = []
+			resolveDependencies(() => calls.push('callback'))
+
+			// No custom-element child → no deferral → synchronous.
+			expect(calls).toEqual(['callback'])
+		} finally {
+			;(globalThis as any).customElements = originalCustomElements
+		}
+	})
+})

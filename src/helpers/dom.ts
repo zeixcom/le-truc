@@ -5,7 +5,7 @@ import {
 	MissingElementError,
 } from '../errors'
 import { DEPENDENCY_TIMEOUT } from '../internal'
-import { isNotYetDefinedComponent } from '../util'
+import { isCustomElement, isNotYetDefinedComponent } from '../util'
 
 /* === Types === */
 
@@ -244,6 +244,15 @@ const makeElementQueries = (
 ): [ElementQueries, (run: () => void) => void] => {
 	const root = host.shadowRoot ?? host
 	const dependencies: Set<string> = new Set()
+	// True when `first()`/`all()` matched any `:defined` custom-element
+	// descendant. The element's class is already registered, but when a whole
+	// nested subtree is connected in one operation (e.g. a framework building
+	// it detached then appending), the browser queues each element's
+	// connectedCallback in tree order — the parent's runs first, before the
+	// child's own setup (expose()/Slot accessors) has run. Deferring setup by
+	// one microtask lets the child's queued connectedCallback drain first, so
+	// `pass()` → `swapSlots` finds the child's properties ready.
+	let queriedDefinedCustomChild = false
 
 	/**
 	 * Return the first descendant element matching a CSS selector.
@@ -277,6 +286,7 @@ const makeElementQueries = (
 		// Only add to dependencies if element is a custom element that's not yet defined
 		if (target && isNotYetDefinedComponent(target))
 			dependencies.add(target.localName)
+		else if (target && isCustomElement(target)) queriedDefinedCustomChild = true
 		return target ?? undefined
 	}
 
@@ -314,6 +324,7 @@ const makeElementQueries = (
 			for (const target of current) {
 				// Only add to dependencies if element is a custom element that's not yet defined
 				if (isNotYetDefinedComponent(target)) dependencies.add(target.localName)
+				else if (isCustomElement(target)) queriedDefinedCustomChild = true
 			}
 		return targets
 	}
@@ -321,9 +332,15 @@ const makeElementQueries = (
 	/**
 	 * Wait for all collected custom element dependencies to be defined, then run `callback`.
 	 *
-	 * If no dependencies were collected, `callback` runs synchronously. Otherwise, a
-	 * microtask filters out already-defined elements, then `Promise.all` awaits the rest
-	 * with a 200 ms timeout (see `DEPENDENCY_TIMEOUT`).
+	 * If no dependencies were collected and no `:defined` custom-element child was queried,
+	 * `callback` runs synchronously. Otherwise, a microtask filters out already-defined
+	 * elements, then `Promise.all` awaits the rest with a 200 ms timeout
+	 * (see `DEPENDENCY_TIMEOUT`). The microtask deferral also covers the case where a
+	 * `:defined` custom-element child was queried: its class is registered but its own
+	 * `connectedCallback` may not have run yet when a nested subtree is connected in one
+	 * operation (parent's callback fires first, in tree order). Letting the microtask
+	 * drain first ensures the child's `expose()`/Slot setup is complete before the
+	 * parent's effects (e.g. `pass()` → `swapSlots`) read the child's properties.
 	 *
 	 * On timeout, a `DependencyTimeoutError` is logged in DEV_MODE and `callback` runs
 	 * anyway — effects proceed in a degraded-but-functional state. A single undefined
@@ -333,7 +350,7 @@ const makeElementQueries = (
 	 * @param {() => void} callback - Function to run once dependencies are resolved (or timed out)
 	 */
 	const resolveDependencies = (callback: () => void) => {
-		if (dependencies.size) {
+		if (dependencies.size || queriedDefinedCustomChild) {
 			// Defer to microtask to filter out components that get defined
 			// synchronously after queries ran (e.g. co-bundled components
 			// whose define() calls execute later in the same script).

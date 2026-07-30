@@ -2285,12 +2285,15 @@ function createElementsMemo(parent, selector) {
 var makeElementQueries = (host) => {
   const root = host.shadowRoot ?? host;
   const dependencies = new Set;
+  let queriedDefinedCustomChild = false;
   function first(selector, required) {
     const target = root.querySelector(selector);
     if (required != null && !target)
       throw new MissingElementError(host, selector, required);
     if (target && isNotYetDefinedComponent(target))
       dependencies.add(target.localName);
+    else if (target && isCustomElement(target))
+      queriedDefinedCustomChild = true;
     return target ?? undefined;
   }
   function all(selector, required) {
@@ -2302,11 +2305,13 @@ var makeElementQueries = (host) => {
       for (const target of current) {
         if (isNotYetDefinedComponent(target))
           dependencies.add(target.localName);
+        else if (isCustomElement(target))
+          queriedDefinedCustomChild = true;
       }
     return targets;
   }
   const resolveDependencies = (callback) => {
-    if (dependencies.size) {
+    if (dependencies.size || queriedDefinedCustomChild) {
       queueMicrotask(() => {
         const deps = Array.from(dependencies).filter((dep) => !customElements.get(dep));
         if (!deps.length) {
