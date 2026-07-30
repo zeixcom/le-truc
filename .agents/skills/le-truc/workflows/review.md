@@ -30,7 +30,8 @@ Work through `references/anti-patterns.md` and flag any violations. Also verify:
 - **Props type:** every reactive property explicitly typed; no implicit `any`
 - **Initializers:** attribute-driven props use correct parsers (`asString`, `asBoolean`, `asInteger`, `asNumber`, `asEnum`, `asJSON`); DOM-derived initial values read directly before `expose()`; custom parsers wrapped with `asParser()`; method props wrapped with `defineMethod()`
 - **`expose()` called once:** all props declared in single `expose()` call before any effects
-- **Return array:** every `watch()`, `on()`, `pass()`, `each()`, `provideContexts()` in returned array; optional elements use `el && watch(...)` guard (note: `on(el, ...)` and `pass(el, ...)` handle falsy targets internally — no guard required)
+- **Effect registration:** every `watch()`, `on()`, `pass()`, `each()`, `provideContexts()` call registers itself — no `return` needed (a `return [...]` of the same descriptors still works but is deprecated); optional elements use `if (el) watch(...)` guard (`on(el, ...)` and `pass(el, ...)` handle falsy targets internally — no guard required)
+- **Statement layout:** each `first()`/`all()` sits directly above the effect(s) that consume it, grouped by concern, not hoisted in one block — except queries that seed `expose()` or feed several concerns, which stay hoisted near the top (see `references/effects.md`)
 - **`on()` handlers:** return `{ prop: value }` when updating host props; return `void` for side-effects only
 - **Custom `watch` handlers:** return cleanup function if they set up listeners or timers
 - **Reactivity:** DOM values read inside reactive thunks stay current — prefer live DOM APIs (`element.children`, `getElementsByTagName`) over snapshot APIs (`querySelectorAll`, `Array.from`); or use `createElementsMemo` for signal-backed collection
