@@ -40,9 +40,11 @@ const clamp = (value: number, min: number, max: number): number =>
  * once its description, amount, and price/unit are all filled; setting an
  * existing row's amount to 0 removes it. Currency formatting is parsed the
  * same way as `<basic-number>`.
+ *
  * @attribute {string} [lang] - BCP 47 locale tag (e.g. `de-CH`). Falls back to the nearest ancestor's `lang` attribute, or `en` if none is set. Read once at connect time.
  * @attribute {Intl.NumberFormatOptions} [options={}] - `Intl.NumberFormat` options as a JSON object, e.g. `{"style":"currency","currency":"EUR"}`. Read once at connect time.
- * @demo {./docs/examples/module-calctable.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-calctable} Interactive preview and usage examples
+ **/
 export default defineComponent(
 	'module-calctable',
 	({ first, host, on, watch }) => {
@@ -54,14 +56,6 @@ export default defineComponent(
 		const entryRow = first(
 			'tbody[data-container] > tr[data-unreconciled]',
 			'Add a trailing <tr data-unreconciled> row for entering new items.',
-		)
-		const amountTotalEl = first(
-			'tfoot .amount',
-			'Add a <tfoot> cell with class "amount" for the amount total.',
-		)
-		const priceTotalEl = first(
-			'tfoot .price',
-			'Add a <tfoot> cell with class "price" for the price total.',
 		)
 
 		const formatter = getNumberFormatter(
@@ -212,7 +206,16 @@ export default defineComponent(
 			descriptionInput.focus()
 		})
 
+		const amountTotalEl = first(
+			'tfoot .amount',
+			'Add a <tfoot> cell with class "amount" for the amount total.',
+		)
 		watch(amountTotal, bindText(amountTotalEl))
+
+		const priceTotalEl = first(
+			'tfoot .price',
+			'Add a <tfoot> cell with class "price" for the price total.',
+		)
 		watch(() => formatter.format(priceTotal.get()), bindText(priceTotalEl))
 	},
 )

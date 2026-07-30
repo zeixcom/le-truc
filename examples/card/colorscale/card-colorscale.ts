@@ -24,28 +24,15 @@ const CONTRAST_THRESHOLD = 0.71 // lightness
  * Use it for previewing a color palette — provides lightness tints and shades
  * for when you need to evaluate contrast and accessibility of a base color.
  * The `color` attribute must be a valid Oklch color string.
- * @cssprop --color-base - The base color in CSS format.
- * @cssprop --color-text - Foreground color (black or white) chosen for contrast.
- * @cssprop --color-text-soft - Muted foreground color.
- * @cssprop --color-lighten20 - 20% lighter step.
- * @cssprop --color-lighten40 - 40% lighter step.
- * @cssprop --color-lighten60 - 60% lighter step.
- * @cssprop --color-lighten80 - 80% lighter step.
- * @cssprop --color-darken20 - 20% darker step.
- * @cssprop --color-darken40 - 40% darker step.
- * @cssprop --color-darken60 - 60% darker step.
- * @cssprop --color-darken80 - 80% darker step.
- * @demo {./docs/examples/card-colorscale.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#card-colorscale} Interactive preview and usage examples
+ **/
 export default defineComponent<CardColorscaleProps>(
 	'card-colorscale',
 	({ expose, first, host, watch }) => {
 		const labelStrong = first(
 			'.label strong',
 			'Add a <strong> element inside .label.',
-		)
-		const labelSmall = first(
-			'.label small',
-			'Add a <small> element inside .label.',
 		)
 
 		expose({
@@ -54,6 +41,11 @@ export default defineComponent<CardColorscaleProps>(
 		})
 
 		watch('name', bindText(labelStrong))
+
+		const labelSmall = first(
+			'.label small',
+			'Add a <small> element inside .label.',
+		)
 		watch('color', color => {
 			labelSmall.textContent = formatHex(color)
 			const props = new Map<string, string>()
@@ -73,7 +65,7 @@ export default defineComponent<CardColorscaleProps>(
 					formatCss(getStepColor(color, (5 - i) / 10)),
 				)
 			for (const [key, value] of props)
-				host.style.setProperty(`--color-${key}`, value)
+				host.style.setProperty(`--card-colorscale-color-${key}`, value)
 		})
 	},
 )

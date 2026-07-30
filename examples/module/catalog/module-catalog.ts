@@ -12,12 +12,9 @@ declare global {
  * values change, the aggregated total updates the cart button reactively.
  * Each product row should contain a `<form-spinbutton>` for quantity input;
  * the cart button must have class `cart` for the total binding to attach.
- * @demo {./docs/examples/module-catalog.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-catalog} Interactive preview and usage examples
+ **/
 export default defineComponent('module-catalog', ({ all, first, pass }) => {
-	const button = first(
-		'basic-button',
-		'Add a button to go to the Shopping Cart',
-	)
 	const spinbuttons = all(
 		'form-spinbutton',
 		'Add spinbutton components to calculate sum from.',
@@ -26,6 +23,10 @@ export default defineComponent('module-catalog', ({ all, first, pass }) => {
 		spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
 	)
 
+	const button = first(
+		'basic-button',
+		'Add a button to go to the Shopping Cart',
+	)
 	pass(button, {
 		disabled: () => !total.get(),
 		badge: () => (total.get() > 0 ? String(total.get()) : ''),

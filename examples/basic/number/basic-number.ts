@@ -19,17 +19,18 @@ declare global {
  * Invalid `options` JSON falls back to defaults; `style: "unit"` requires a valid `unit`.
  * @attribute {string} [lang] - BCP 47 locale tag (e.g. `de-CH`). Falls back to the nearest ancestor's `lang` attribute, or `en` if none is set. Read once at connect time.
  * @attribute {Intl.NumberFormatOptions} [options={}] - `Intl.NumberFormat` options as a JSON object, e.g. `{"style":"currency","currency":"EUR"}`. Read once at connect time.
- * @demo {./docs/examples/basic-number.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#basic-number} Interactive preview and usage examples
+ * */
 export default defineComponent<BasicNumberProps>(
 	'basic-number',
 	({ expose, host, watch }) => {
+		expose({ value: asNumber() })
+
 		const formatter = getNumberFormatter(
 			getLocale(host),
 			host.getAttribute('options'),
 		)
-
-		expose({ value: asNumber() })
-
 		watch(() => formatter.format(host.value), bindText(host))
 	},
 )

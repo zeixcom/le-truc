@@ -35,11 +35,13 @@ export const MEDIA_ORIENTATION =
  * to react when the user changes reduced-motion, dark/light theme, or viewport breakpoint.
  * Breakpoint attributes must be valid CSS lengths (e.g. `sm="600px"`).
  * Breakpoints (sm, md, lg, xl) can be overridden via attributes of the same name (e.g. `sm="600px"`).
+ *
  * @attribute {string} [sm=32em] - Small breakpoint as a CSS length in `px` or `em` (e.g. `600px`). Read once at connect time.
  * @attribute {string} [md=48em] - Medium breakpoint as a CSS length in `px` or `em`. Read once at connect time.
  * @attribute {string} [lg=72em] - Large breakpoint as a CSS length in `px` or `em`. Read once at connect time.
  * @attribute {string} [xl=104em] - Extra-large breakpoint as a CSS length in `px` or `em`. Read once at connect time.
- * @demo {./docs/examples/context-media.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#context-media} Interactive preview and usage examples
+ **/
 export default defineComponent<ContextMediaProps>(
 	'context-media',
 	({ expose, host, provideContexts }) => {
@@ -87,29 +89,31 @@ export default defineComponent<ContextMediaProps>(
 
 			// Context for screen viewport size
 			viewport: (() => {
-				const mqlSM = matchMedia(`(min-width: ${getBreakpoint('sm', '32em')})`)
-				const mqlMD = matchMedia(`(min-width: ${getBreakpoint('md', '48em')})`)
-				const mqlLG = matchMedia(`(min-width: ${getBreakpoint('lg', '72em')})`)
-				const mqlXL = matchMedia(`(min-width: ${getBreakpoint('xl', '104em')})`)
+				const breakpoints: [ContextMediaViewport, string][] = [
+					['sm', getBreakpoint('sm', '32em')],
+					['md', getBreakpoint('md', '48em')],
+					['lg', getBreakpoint('lg', '72em')],
+					['xl', getBreakpoint('xl', '104em')],
+				]
+				const mqls = new Map<ContextMediaViewport, MediaQueryList>(
+					breakpoints.map(([name, size]) => [
+						name,
+						matchMedia(`(min-width: ${size})`),
+					]),
+				)
 				const getViewport = (): ContextMediaViewport => {
-					if (mqlXL.matches) return 'xl'
-					if (mqlLG.matches) return 'lg'
-					if (mqlMD.matches) return 'md'
-					if (mqlSM.matches) return 'sm'
-					return 'xs'
+					let viewport: ContextMediaViewport = 'xs'
+					for (const [name, mql] of mqls) if (mql.matches) viewport = name
+					return viewport
 				}
 				return createSensor<ContextMediaViewport>(
 					set => {
 						const listener = () => set(getViewport())
-						mqlSM.addEventListener('change', listener)
-						mqlMD.addEventListener('change', listener)
-						mqlLG.addEventListener('change', listener)
-						mqlXL.addEventListener('change', listener)
+						for (const mql of mqls.values())
+							mql.addEventListener('change', listener)
 						return () => {
-							mqlSM.removeEventListener('change', listener)
-							mqlMD.removeEventListener('change', listener)
-							mqlLG.removeEventListener('change', listener)
-							mqlXL.removeEventListener('change', listener)
+							for (const mql of mqls.values())
+								mql.removeEventListener('change', listener)
 						}
 					},
 					{ value: getViewport() },

@@ -22,7 +22,8 @@ const STEP = 0.05
  * Set `orientation="vertical"` for a top/bottom split.
  * @attribute {'horizontal'|'vertical'} [orientation=horizontal] - Layout direction of the split. Read once at connect time; not a reactive property.
  * @cssprop --split - The split ratio as a CSS percentage (e.g. `50.00%`), set reactively.
- * @demo {./docs/examples/module-splitview.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-splitview} Interactive preview and usage examples
+ **/
 export default defineComponent<ModuleSplitviewProps>(
 	'module-splitview',
 	({ expose, first, host, on, watch }) => {

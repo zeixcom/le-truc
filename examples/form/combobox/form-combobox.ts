@@ -35,7 +35,9 @@ declare global {
  * keyboard interaction (type to filter, Escape to close, Enter to select), and focus management.
  * Form participation and validity are via ElementInternals (`formAssociated()`).
  * External consumers read `host.validationMessage` / `host.validity` like on a native input.
- * @demo {./docs/examples/form-combobox.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#form-combobox} Interactive preview and usage examples
+ **/
 export default defineComponent<FormComboboxProps>(
 	'form-combobox',
 	({ expose, first, host, on, pass, watch }) => {
@@ -44,8 +46,6 @@ export default defineComponent<FormComboboxProps>(
 			'form-listbox',
 			'Needed to display options.',
 		)
-		const clearBtn = first('button.clear')
-		const errorEl = first('form-combobox > .error')
 		const descriptionEl = first('.description')
 
 		const descriptionId = descriptionEl?.id
@@ -98,6 +98,7 @@ export default defineComponent<FormComboboxProps>(
 				if (isExpanded.get()) listbox.options[0]?.focus()
 			}
 		})
+
 		// Listen to listbox's host change event (native-parity commit event)
 		// instead of reaching into its DOM with closest('[role="option"]').
 		on(listbox, 'change', () => {
@@ -110,6 +111,8 @@ export default defineComponent<FormComboboxProps>(
 				textbox.focus()
 			})
 		})
+
+		const clearBtn = first('button.clear')
 		on(clearBtn, 'click', () => {
 			host.clear()
 		})
@@ -118,8 +121,10 @@ export default defineComponent<FormComboboxProps>(
 		// Form reset: managed (value attribute is the default)
 		// Validity: host.setCustomValidity() drives native :invalid /
 		// :user-invalid + host.validationMessage for external consumers.
+		const errorEl = first('form-combobox > .error')
 		if (errorEl) watch(error, bindText(errorEl))
 		if (descriptionEl) watch('description', bindText(descriptionEl))
+
 		watch(isExpanded, expanded => {
 			listbox.hidden = !expanded
 			textbox.ariaExpanded = String(expanded)

@@ -35,7 +35,9 @@ declare global {
  * and validity are via ElementInternals (`formAssociated()`).
  * External consumers read `host.validationMessage` / `host.validity` like on a
  * native input; inline error display binds to component-internal state.
- * @demo {./docs/examples/form-textbox.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#form-textbox} Interactive preview and usage examples
+ **/
 export default defineComponent<FormTextboxProps>(
 	'form-textbox',
 	({ expose, first, host, on, watch }) => {
@@ -43,14 +45,9 @@ export default defineComponent<FormTextboxProps>(
 			'input, textarea',
 			'Add a native input or textarea as descendant element.',
 		)
-		const clearBtn = first('button.clear')
-		const errorEl = first('.error')
-		const descriptionEl = first('.description')
-
-		const descriptionId = descriptionEl?.id
-		if (descriptionId) textbox.setAttribute('aria-describedby', descriptionId)
 
 		// Reactive description: tracks remaining character count if template is present
+		const descriptionEl = first('.description')
 		const descriptionMemo =
 			descriptionEl && textbox.maxLength > 0 && descriptionEl.dataset.remaining
 				? createMemo(() =>
@@ -62,9 +59,6 @@ export default defineComponent<FormTextboxProps>(
 				: null
 
 		const length = createState(textbox.value.length)
-		// Internal error state — not a public prop. External consumers read
-		// host.validationMessage / host.validity (native parity).
-		const error = createState('')
 
 		expose({
 			value: textbox.value,
@@ -81,6 +75,7 @@ export default defineComponent<FormTextboxProps>(
 			}),
 		})
 
+		const error = createState('')
 		on(textbox, 'change', () => {
 			relayValidity(textbox, host, error)
 			return { value: textbox.value }
@@ -88,16 +83,24 @@ export default defineComponent<FormTextboxProps>(
 		on(textbox, 'input', () => {
 			length.set(textbox.value.length)
 		})
-		on(clearBtn, 'click', () => {
-			host.clear()
-		})
+		watch('value', bindProperty(textbox, 'value'))
 
-		watch('value', v => {
-			bindProperty(textbox, 'value')(v)
-		})
+		const clearBtn = first('button.clear')
+		if (clearBtn) {
+			on(clearBtn, 'click', () => {
+				host.clear()
+			})
+			watch(length, bindVisible(clearBtn))
+		}
+
+		if (descriptionEl) {
+			const descriptionId = descriptionEl?.id
+			if (descriptionId) textbox.setAttribute('aria-describedby', descriptionId)
+			watch('description', bindText(descriptionEl))
+		}
+
+		const errorEl = first('.error')
 		if (errorEl) watch(error, bindText(errorEl))
-		if (descriptionEl) watch('description', bindText(descriptionEl))
-		if (clearBtn) watch(length, bindVisible(clearBtn))
 	},
 	[formAssociated()],
 )

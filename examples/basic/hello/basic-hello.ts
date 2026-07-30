@@ -1,8 +1,8 @@
 import { bindText, defineComponent } from '../../..'
 
 export type BasicHelloProps = {
-	/** The name to greet. Updated reactively as the user types in the input. */
-	name: string
+	/** The subject to greet. Updated reactively as the user types in the input. */
+	subject: string
 }
 
 declare global {
@@ -12,22 +12,24 @@ declare global {
 }
 
 /**
- * A hello-world component that greets a name entered via an input field.
+ * A hello-world component that greets a subject entered via an input field.
  * Use it as a starting point for learning Le Truc — it provides a minimal
  * example of a reactive property updating the DOM as the user types.
  * The host element should contain a `<label>`, `<input>`, and `<output>`; the input
- * must have `name="name"` for the greeting to update reactively.
- * @demo {./docs/examples/basic-hello.html} Interactive preview and usage examples */
+ * must have `name="subject"` for the greeting to update reactively.
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#basic-hello} Interactive preview and usage examples
+ **/
 export default defineComponent<BasicHelloProps>(
 	'basic-hello',
 	({ expose, first, on, watch }) => {
-		const input = first('input', 'Needed to enter the name.')
-		const output = first('output', 'Needed to display the name.')
+		const output = first('output', 'Needed to display the subject.')
 		const fallback = output.textContent || ''
 
-		expose({ name: output.textContent ?? '' })
+		expose({ subject: fallback })
 
-		on(input, 'input', () => ({ name: input.value || fallback }))
-		watch('name', bindText(output))
+		const input = first('input', 'Needed to enter the subject.')
+		on(input, 'input', () => ({ subject: input.value || fallback }))
+		watch('subject', bindText(output))
 	},
 )

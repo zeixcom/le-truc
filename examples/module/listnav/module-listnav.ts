@@ -68,7 +68,8 @@ const valueToHash = (value: string, listbox: HTMLElement): string => {
  * selection and the selection state syncs to the URL for deep linking.
  * Listbox option values must be relative paths (starting with `./`);
  * the lazyload panel should have an `id` matching the hash target for scroll restoration.
- * @demo {./docs/examples/module-listnav.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-listnav} Interactive preview and usage examples
+ **/
 export default defineComponent('module-listnav', ({ first, pass, watch }) => {
 	const listbox = first('form-listbox', 'Required to select a partial to load')
 	const lazyload = first('module-lazyload', 'Required to load a partial into')

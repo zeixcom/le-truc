@@ -43,7 +43,8 @@ const observeOverflow =
  * `:state()` pseudo-classes (via ElementInternals) that update as the user scrolls,
  * useful for custom scroll UI that should respect reduced-motion accessibility preferences.
  * @attribute {'vertical'|'horizontal'} [orientation=vertical] - Scroll axis to detect overflow on. Read once at connect time.
- * @demo {./docs/examples/module-scrollarea.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-scrollarea} Interactive preview and usage examples
+ **/
 export default defineComponent(
 	'module-scrollarea',
 	({ host, internals, on, watch }) => {

@@ -22,7 +22,8 @@ declare global {
  * A pagination control with prev/next buttons, a direct page input, and keyboard navigation.
  * Use it for navigating paged data — provides ARIA navigation semantics, keyboard
  * focus management, and Enter key support on the page input field.
- * @demo {./docs/examples/module-pagination.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-pagination} Interactive preview and usage examples
+ **/
 export default defineComponent<ModulePaginationProps>(
 	'module-pagination',
 	({ expose, first, host, on, watch }) => {
@@ -38,8 +39,6 @@ export default defineComponent<ModulePaginationProps>(
 			'button.next',
 			'Add a <button.next> to go to the next page.',
 		)
-		const valueEl = first('.value')
-		const maxEl = first('.max')
 
 		expose({
 			max: asClampedInteger(Number(input.max) ?? 1),
@@ -87,7 +86,9 @@ export default defineComponent<ModulePaginationProps>(
 			input.max = String(max)
 		})
 		watch(() => host.value >= host.max, bindProperty(next, 'disabled'))
+		const valueEl = first('.value')
 		if (valueEl) watch('value', bindText(valueEl))
+		const maxEl = first('.max')
 		if (maxEl) watch('max', bindText(maxEl))
 	},
 )
