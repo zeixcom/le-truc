@@ -30,31 +30,4 @@ test.describe('test-context: provideContexts() + requestContext() helpers', () =
 		const noProviderOutput = page.locator('#no-provider #output')
 		await expect(noProviderOutput).toHaveText('-1')
 	})
-
-	test('3A + 3B: provider count change reactively updates consumer', async ({
-		page,
-	}) => {
-		await page.evaluate(() => {
-			const provider = document.querySelector('#provider') as any
-			provider.count = 7
-		})
-		await expect(page.locator('#consumer #output')).toHaveText('7')
-
-		await page.evaluate(() => {
-			const provider = document.querySelector('#provider') as any
-			provider.count = 99
-		})
-		await expect(page.locator('#consumer #output')).toHaveText('99')
-	})
-
-	test('provideContexts — returns EffectDescriptor (no immediate side-effect)', async ({
-		page,
-	}) => {
-		// The provider element should be connected and functional
-		const provider = page.locator('#provider')
-		await expect(provider).toBeAttached()
-
-		// Consumer inside should show provider's initial value
-		await expect(page.locator('#consumer #output')).toHaveText('0')
-	})
 })

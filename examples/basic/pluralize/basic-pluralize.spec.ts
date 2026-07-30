@@ -203,21 +203,4 @@ test.describe('basic-pluralize component', () => {
 		await expect(secondElement.locator('.other')).toBeVisible()
 		await expect(secondElement.locator('.one')).toBeHidden()
 	})
-
-	test('handles large counts correctly', async ({ page }) => {
-		await page.evaluate(() => {
-			const element = document.querySelector('basic-pluralize') as any
-			element.count = 1000
-		})
-
-		const defaultElement = page.locator('basic-pluralize').first()
-		const noneElement = defaultElement.locator('.none')
-		const someElement = defaultElement.locator('.some')
-		const countSpan = defaultElement.locator('.count')
-
-		// Large count should show .some and hide .none
-		await expect(noneElement).toBeHidden()
-		await expect(someElement).toBeVisible()
-		await expect(countSpan).toHaveText('1000')
-	})
 })

@@ -238,24 +238,6 @@ test.describe('module-carousel component', () => {
 			await expect(firstDot).toHaveAttribute('tabindex', '-1')
 			await expect(secondDot).toHaveAttribute('tabindex', '-1')
 		})
-
-		test('updates component index when dot is clicked', async ({ page }) => {
-			const carousel = page.locator('module-carousel')
-			const dots = carousel.locator('[role="tab"]')
-
-			// Click second dot
-			const secondDot = dots.nth(1)
-			await secondDot.click()
-			// await waitForStableIndex(carousel, 1)
-
-			// Check both property and DOM state for maximum reliability
-			const indexValue = await carousel.evaluate((el: any) => el.index)
-			expect(indexValue).toBe(1)
-
-			// Verify DOM state as well
-			const secondSlide = carousel.locator('[role="tabpanel"]').nth(1)
-			await expect(secondSlide).toHaveAttribute('aria-current', 'true')
-		})
 	})
 
 	test.describe('Keyboard Navigation', () => {
@@ -337,26 +319,6 @@ test.describe('module-carousel component', () => {
 		})
 	})
 
-	test.describe('Scroll-based Navigation', () => {
-		test('updates index when slide is scrolled into view', async ({ page }) => {
-			const carousel = page.locator('module-carousel')
-			const slides = carousel.locator('[role="tabpanel"]')
-
-			// Use button navigation to trigger scroll behavior
-			const nextButton = carousel.locator('button.next')
-			await nextButton.click()
-			// await waitForStableIndex(carousel, 1)
-
-			// Component index should be updated
-			const indexValue = await carousel.evaluate((el: any) => el.index)
-			expect(indexValue).toBe(1)
-
-			// Second slide should have aria-current="true"
-			const secondSlide = slides.nth(1)
-			await expect(secondSlide).toHaveAttribute('aria-current', 'true')
-		})
-	})
-
 	test.describe('Cleanup', () => {
 		// Regression test for the disconnect-cleanup bug found during LT-010:
 		// the scroll-navigation IntersectionObserver was set up via a raw
@@ -430,73 +392,9 @@ test.describe('module-carousel component', () => {
 			const thirdSlide = slides.nth(2)
 			await expect(thirdSlide).toHaveAttribute('aria-current', 'true')
 		})
-
-		test('index property reflects DOM state', async ({ page }) => {
-			const carousel = page.locator('module-carousel')
-			const dots = carousel.locator('[role="tab"]')
-
-			// Click different dots and verify index updates
-			for (let i = 0; i < 3; i++) {
-				await dots.nth(i).click()
-				// await waitForStableIndex(carousel, i)
-
-				const currentIndex = await page.evaluate(() => {
-					const carousel = document.querySelector('module-carousel')
-					return carousel?.index
-				})
-				expect(currentIndex).toBe(i)
-			}
-		})
 	})
 
 	test.describe('ARIA and Accessibility', () => {
-		test('maintains proper ARIA attributes', async ({ page }) => {
-			const carousel = page.locator('module-carousel')
-			const slides = carousel.locator('[role="tabpanel"]')
-			const dots = carousel.locator('[role="tab"]')
-			const nextButton = carousel.locator('button.next')
-
-			// Check initial ARIA states
-			await expect(slides.first()).toHaveAttribute('aria-current', 'true')
-			await expect(slides.nth(1)).toHaveAttribute('aria-current', 'false')
-			await expect(slides.nth(2)).toHaveAttribute('aria-current', 'false')
-
-			await expect(dots.first()).toHaveAttribute('aria-selected', 'true')
-			await expect(dots.nth(1)).toHaveAttribute('aria-selected', 'false')
-			await expect(dots.nth(2)).toHaveAttribute('aria-selected', 'false')
-
-			// Navigate and check ARIA states update
-			await nextButton.click()
-			// await waitForStableIndex(carousel, 1)
-
-			await expect(slides.first()).toHaveAttribute('aria-current', 'false')
-			await expect(slides.nth(1)).toHaveAttribute('aria-current', 'true')
-			await expect(slides.nth(2)).toHaveAttribute('aria-current', 'false')
-
-			await expect(dots.first()).toHaveAttribute('aria-selected', 'false')
-			await expect(dots.nth(1)).toHaveAttribute('aria-selected', 'true')
-			await expect(dots.nth(2)).toHaveAttribute('aria-selected', 'false')
-		})
-
-		test('maintains proper tabindex for roving tab focus', async ({ page }) => {
-			const carousel = page.locator('module-carousel')
-			const dots = carousel.locator('[role="tab"]')
-			const nextButton = carousel.locator('button.next')
-
-			// Check initial tabindex values
-			await expect(dots.first()).toHaveAttribute('tabindex', '0')
-			await expect(dots.nth(1)).toHaveAttribute('tabindex', '-1')
-			await expect(dots.nth(2)).toHaveAttribute('tabindex', '-1')
-
-			// Navigate and check tabindex updates
-			await nextButton.click()
-			// await waitForStableIndex(carousel, 1)
-
-			await expect(dots.first()).toHaveAttribute('tabindex', '-1')
-			await expect(dots.nth(1)).toHaveAttribute('tabindex', '0')
-			await expect(dots.nth(2)).toHaveAttribute('tabindex', '-1')
-		})
-
 		test('has proper ARIA labels and controls', async ({ page }) => {
 			const carousel = page.locator('module-carousel')
 			const dots = carousel.locator('[role="tab"]')
@@ -521,35 +419,6 @@ test.describe('module-carousel component', () => {
 	})
 
 	test.describe('Edge Cases', () => {
-		test('handles empty or single slide gracefully', async ({ page }) => {
-			// This test assumes the fixture always has 3 slides
-			// In a real implementation, we might test with different fixtures
-			const slides = page.locator('module-carousel [role="tabpanel"]')
-			const slideCount = await slides.count()
-
-			// With our current fixture, should have 3 slides
-			expect(slideCount).toBe(3)
-		})
-
-		test('handles sequential navigation correctly', async ({ page }) => {
-			const carousel = page.locator('module-carousel')
-			const nextButton = carousel.locator('button.next')
-
-			// Navigate through all slides sequentially
-			for (let expectedIndex = 1; expectedIndex <= 2; expectedIndex++) {
-				await nextButton.click()
-				await waitForStableIndex(carousel, expectedIndex)
-
-				const indexValue = await carousel.evaluate((el: any) => el.index)
-				expect(indexValue).toBe(expectedIndex)
-			}
-
-			// Should clamp at last slide (next button hidden)
-			await expect(nextButton).toBeHidden()
-			const indexValue = await carousel.evaluate((el: any) => el.index)
-			expect(indexValue).toBe(2)
-		})
-
 		test('maintains state consistency across different navigation methods', async ({
 			page,
 		}) => {

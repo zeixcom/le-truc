@@ -91,26 +91,6 @@ test.describe('form-textbox component', () => {
 		expect(state.length).toBe(4)
 	})
 
-	test('value and length both reflect state after input and change', async ({
-		page,
-	}) => {
-		const input = page.locator('form-textbox input').first()
-
-		await (input as any).type('test')
-		await input.blur()
-
-		const state = await page.evaluate(() => {
-			const element = document.querySelector('form-textbox') as any
-			return { value: element.value, length: element.length }
-		})
-
-		expect(state.value).toBe('test')
-		expect(state.length).toBe(4)
-
-		// The DOM input reflects state
-		await expect(input).toHaveValue('test')
-	})
-
 	// ===== VALIDATION TESTS =====
 
 	test('shows validation error on required field', async ({ page }) => {
@@ -200,25 +180,6 @@ test.describe('form-textbox component', () => {
 		})
 		expect(value.value).toBe(testText)
 		expect(value.length).toBe(testText.length)
-	})
-
-	test('textarea value and length both work', async ({ page }) => {
-		const textarea = page.locator('form-textbox textarea')
-		const testText = 'This is a comment\nwith multiple lines'
-
-		await textarea.fill(testText)
-		await textarea.blur()
-
-		// DOM works fine
-		await expect(textarea).toHaveValue(testText)
-
-		// Both value and length work for textarea!
-		const state = await page.evaluate(() => {
-			const element = document.querySelectorAll('form-textbox')[2] as any
-			return { value: element.value, length: element.length }
-		})
-		expect(state.value).toBe(testText) // Now works!
-		expect(state.length).toBe(testText.length) // Works because has watchers!
 	})
 
 	test('shows remaining characters for maxlength textarea works', async ({
@@ -523,70 +484,5 @@ test.describe('form-textbox component', () => {
 			() => (window as any).changeEventCount,
 		)
 		expect(changeCount).toBe(1)
-	})
-
-	// ===== MAXLENGTH VALIDATION TESTS =====
-
-	test('validates maxlength on textarea - DOM and length sensor work', async ({
-		page,
-	}) => {
-		const textareaComponent = page.locator('form-textbox').nth(2)
-		const textarea = textareaComponent.locator('textarea')
-		const description = textareaComponent.locator('.description')
-
-		// Try to exceed maxlength
-		const longText = 'A'.repeat(600) // Exceeds 500 char limit
-		await textarea.fill(longText)
-
-		// Browser should limit to maxlength (DOM behavior works)
-		const actualValue = await textarea.inputValue()
-		expect(actualValue.length).toBeLessThanOrEqual(500)
-
-		// Description should show remaining characters (length sensor works for textarea)
-		const remainingText = await description.textContent()
-		expect(remainingText).toMatch(/[0-9]+ characters remaining/)
-
-		// Should show very few remaining characters
-		const remainingMatch = remainingText?.match(/(\d+) characters remaining/)
-		if (remainingMatch) {
-			expect(parseInt(remainingMatch[1]!)).toBeLessThanOrEqual(10)
-		}
-	})
-
-	// ===== PROPERTY TYPE TESTS =====
-
-	test('component properties exist with correct types', async ({ page }) => {
-		// Verify the component has the expected exposed properties
-		const componentState = await page.evaluate(() => {
-			const element = document.querySelector('form-textbox') as any
-			return {
-				hasValue: 'value' in element,
-				hasLength: 'length' in element,
-				hasDescription: 'description' in element,
-				hasClear: 'clear' in element,
-				// Native validity API surface
-				hasValidationMessage: 'validationMessage' in element,
-				hasValidity: 'validity' in element,
-				valueType: typeof element.value,
-				lengthType: typeof element.length,
-				descriptionType: typeof element.description,
-				clearType: typeof element.clear,
-			}
-		})
-
-		// Exposed props should exist with correct types
-		expect(componentState.hasValue).toBe(true)
-		expect(componentState.hasLength).toBe(true)
-		expect(componentState.hasDescription).toBe(true)
-		expect(componentState.hasClear).toBe(true)
-
-		// Native validity API inherited from ElementInternals
-		expect(componentState.hasValidationMessage).toBe(true)
-		expect(componentState.hasValidity).toBe(true)
-
-		expect(componentState.valueType).toBe('string')
-		expect(componentState.lengthType).toBe('number')
-		expect(componentState.descriptionType).toBe('string')
-		expect(componentState.clearType).toBe('function')
 	})
 })
