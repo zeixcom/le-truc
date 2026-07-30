@@ -26,34 +26,23 @@ declare global {
  * semantics and Arrow key support for incrementing and decrementing the value.
  * Form participation and range validation are via ElementInternals (`formAssociated()`,
  * `setFormValue`, `setValidity`).
- * @demo {./docs/examples/form-spinbutton.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#form-spinbutton} Interactive preview and usage examples
+ **/
 export default defineComponent<FormSpinbuttonProps>(
 	'form-spinbutton',
 	({ all, expose, first, host, internals, on, watch }) => {
-		const controls = all('button, input:not([disabled])')
-		const increment = first(
-			'button.increment',
-			'Add a native button to increment the value',
-		)
-		const decrement = first(
-			'button.decrement',
-			'Add a native button to decrement the value',
-		)
 		const input = first(
 			'input.value',
 			'Add a native input to display the value',
 		)
-		const zero = first('.zero')
-		const other = first('.other')
-
-		const nonZero = createMemo(() => host.value !== 0)
-		const incrementLabel = increment.ariaLabel || 'Increment'
 
 		expose({
 			value: Number.parseInt(input.value) || 0,
 			max: Number.parseInt(input.max) || 10,
 		})
 
+		const controls = all('button, input:not([disabled])')
 		on(controls, 'change', (_e, target) => {
 			if (!(target instanceof HTMLInputElement)) return
 
@@ -86,16 +75,31 @@ export default defineComponent<FormSpinbuttonProps>(
 			}
 		})
 
+		const decrement = first(
+			'button.decrement',
+			'Add a native button to decrement the value',
+		)
+		const nonZero = createMemo(() => host.value !== 0)
 		watch(nonZero, nz => {
 			input.hidden = !nz
 			decrement.hidden = !nz
 		})
+
+		const zero = first('.zero')
+		const increment = first(
+			'button.increment',
+			'Add a native button to increment the value',
+		)
+		const incrementLabel = increment.ariaLabel || 'Increment'
 		if (zero)
 			watch(nonZero, nz => {
 				zero.hidden = nz
 				increment.ariaLabel = nz ? incrementLabel : zero.textContent
 			})
+
+		const other = first('.other')
 		if (other) watch(nonZero, bindVisible(other))
+
 		watch(() => String(host.value), bindProperty(input, 'value'))
 		watch(() => String(host.max), bindProperty(input, 'max'))
 		watch(() => host.value >= host.max, bindProperty(increment, 'disabled'))

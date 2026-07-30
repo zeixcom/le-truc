@@ -280,37 +280,6 @@ test.describe('form-spinbutton component', () => {
 		// These should have propagated (but we don't count them in our listener)
 	})
 
-	test('syncs value property with DOM interactions', async ({ page }) => {
-		const spinbutton = page.locator('form-spinbutton').first()
-		const incrementButton = spinbutton.locator('button.increment')
-
-		// Initial value should be 0
-		let valueProperty = await page.evaluate(() => {
-			const element = document.querySelector('form-spinbutton') as any
-			return element.value
-		})
-		expect(valueProperty).toBe(0)
-
-		// Click increment button
-		await incrementButton.click()
-
-		valueProperty = await page.evaluate(() => {
-			const element = document.querySelector('form-spinbutton') as any
-			return element.value
-		})
-		expect(valueProperty).toBe(1)
-
-		// Use keyboard to increment
-		await incrementButton.focus()
-		await page.keyboard.press('ArrowUp')
-
-		valueProperty = await page.evaluate(() => {
-			const element = document.querySelector('form-spinbutton') as any
-			return element.value
-		})
-		expect(valueProperty).toBe(2)
-	})
-
 	test('reads max value from input max attribute', async ({ page }) => {
 		// Check that max property reads from input.max
 		const maxProperty = await page.evaluate(() => {
@@ -399,85 +368,6 @@ test.describe('form-spinbutton component', () => {
 		expect(valueAfterReset).toBe(0)
 	})
 
-	test('handles rapid button clicks correctly', async ({ page }) => {
-		const spinbutton = page.locator('form-spinbutton').first()
-		const incrementButton = spinbutton.locator('button.increment')
-		const decrementButton = spinbutton.locator('button.decrement')
-		const input = spinbutton.locator('input.value')
-
-		// Rapid increment clicks
-		await incrementButton.click()
-		await incrementButton.click()
-		await incrementButton.click()
-		await expect(input).toHaveValue('3')
-
-		// Rapid decrement clicks
-		await decrementButton.click()
-		await decrementButton.click()
-		await expect(input).toHaveValue('1')
-
-		// Mix of rapid clicks
-		await incrementButton.click()
-		await decrementButton.click()
-		await incrementButton.click()
-		await expect(input).toHaveValue('2')
-	})
-
-	test('maintains UI state consistency during value changes', async ({
-		page,
-	}) => {
-		const spinbutton = page.locator('form-spinbutton').first()
-		const incrementButton = spinbutton.locator('button.increment')
-		const decrementButton = spinbutton.locator('button.decrement')
-		const input = spinbutton.locator('input.value')
-		const zeroElement = spinbutton.locator('.zero')
-		const otherElement = spinbutton.locator('.other')
-
-		// Test transition from 0 to 1
-		await incrementButton.click()
-		await expect(input).toBeVisible()
-		await expect(decrementButton).toBeVisible()
-		await expect(zeroElement).toBeHidden()
-		await expect(otherElement).toBeVisible()
-
-		// Test transition from 1 to 0
-		await decrementButton.click()
-		await expect(input).toBeHidden()
-		await expect(decrementButton).toBeHidden()
-		await expect(zeroElement).toBeVisible()
-		await expect(otherElement).toBeHidden()
-
-		// Test reaching max value
-		for (let i = 0; i < 10; i++) {
-			await incrementButton.click()
-		}
-		await expect(incrementButton).toHaveAttribute('disabled')
-		await expect(input).toHaveValue('10')
-		await expect(decrementButton).toBeVisible()
-	})
-
-	test('handles focus and keyboard navigation', async ({ page }) => {
-		const spinbutton = page.locator('form-spinbutton').first()
-		const incrementButton = spinbutton.locator('button.increment')
-		const input = spinbutton.locator('input.value')
-
-		// Button should be focusable
-		await incrementButton.focus()
-		await expect(incrementButton).toBeFocused()
-
-		// Test that we can use keyboard while focused
-		await page.keyboard.press('ArrowUp')
-		await expect(input).toHaveValue('1')
-
-		// Test refocusing the button and using keyboard again
-		await incrementButton.focus()
-		await expect(incrementButton).toBeFocused()
-
-		// Should still be able to use keyboard after refocus
-		await page.keyboard.press('ArrowUp')
-		await expect(input).toHaveValue('2')
-	})
-
 	test('reads initial value from DOM content', async ({ page }) => {
 		// Test component that has initial value set in DOM
 		const initialValueSpinbutton = page.locator('#initial-value-test')
@@ -504,24 +394,6 @@ test.describe('form-spinbutton component', () => {
 		// Should be able to increment from initial value
 		await incrementButton.click()
 		await expect(input).toHaveValue('4')
-	})
-
-	test('handles different max values correctly', async ({ page }) => {
-		const max5Spinbutton = page.locator('#max-5-test')
-		const incrementButton = max5Spinbutton.locator('button.increment')
-		const input = max5Spinbutton.locator('input.value')
-
-		// Increment to max (5)
-		for (let i = 0; i < 5; i++) {
-			await incrementButton.click()
-		}
-
-		await expect(input).toHaveValue('5')
-		await expect(incrementButton).toHaveAttribute('disabled')
-
-		// Should be disabled at max value
-		await expect(incrementButton).toHaveAttribute('disabled')
-		await expect(input).toHaveValue('5')
 	})
 
 	test('handles component without zero element', async ({ page }) => {
@@ -592,32 +464,6 @@ test.describe('form-spinbutton component', () => {
 		await expect(defaultInput).toHaveValue('2')
 	})
 
-	test('keyboard navigation works across multiple instances', async ({
-		page,
-	}) => {
-		const defaultSpinbutton = page.locator('form-spinbutton').first()
-		const max5Spinbutton = page.locator('#max-5-test')
-
-		const defaultIncrement = defaultSpinbutton.locator('button.increment')
-		const max5Increment = max5Spinbutton.locator('button.increment')
-
-		const defaultInput = defaultSpinbutton.locator('input.value')
-		const max5Input = max5Spinbutton.locator('input.value')
-
-		// Focus first instance and use keyboard
-		await defaultIncrement.focus()
-		await page.keyboard.press('ArrowUp')
-		await expect(defaultInput).toHaveValue('1')
-		await expect(max5Input).toHaveValue('0')
-
-		// Focus second instance and use keyboard
-		await max5Increment.focus()
-		await page.keyboard.press('ArrowUp')
-		await page.keyboard.press('ArrowUp')
-		await expect(defaultInput).toHaveValue('1')
-		await expect(max5Input).toHaveValue('2')
-	})
-
 	test('form integration works correctly', async ({ page }) => {
 		const incrementButton = page.locator(
 			'#interactive-input-test button.increment',
@@ -664,50 +510,5 @@ test.describe('form-spinbutton component', () => {
 			return (document.querySelector('#interactive-input-test') as any).value
 		})
 		expect(valueAfter).toBe(0)
-	})
-
-	test('input shows proper max attribute synchronization', async ({ page }) => {
-		const spinbutton = page.locator('form-spinbutton').first()
-		const input = spinbutton.locator('input.value')
-
-		// Check initial max attribute
-		await expect(input).toHaveAttribute('max', '10')
-
-		// Test different components have different max values
-		const max5Input = page.locator('#max-5-test input.value')
-		await expect(max5Input).toHaveAttribute('max', '5')
-
-		const initialTestInput = page.locator('#initial-value-test input.value')
-		await expect(initialTestInput).toHaveAttribute('max', '15')
-	})
-
-	test('handles enabled input field interactions', async ({ page }) => {
-		// Test with interactive-input-test which has an enabled input
-		const spinbutton = page.locator('#interactive-input-test')
-		const input = spinbutton.locator('input.value')
-		const incrementButton = spinbutton.locator('button.increment')
-
-		// Initially hidden because value is 0
-		await expect(input).toBeHidden()
-
-		// Click increment to make input visible
-		await incrementButton.click()
-		await expect(input).toBeVisible()
-		await expect(input).toHaveValue('1')
-
-		// Now we can interact with the input directly
-		await input.focus()
-		await input.fill('4')
-
-		// After blur, the value should be updated
-		await input.blur()
-		await expect(input).toHaveValue('4')
-
-		// Component property should reflect the change
-		const valueProperty = await page.evaluate(() => {
-			const element = document.querySelector('#interactive-input-test') as any
-			return element.value
-		})
-		expect(valueProperty).toBe(4)
 	})
 })

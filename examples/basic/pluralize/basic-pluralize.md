@@ -1,6 +1,6 @@
 ### Basic Pluralize
 
-A locale-aware pluralisation component driven by `Intl.PluralRules`. Demonstrates `asClampedInteger()` to initialise the `count` property as a non-negative integer from the attribute, `bindVisible()` for conditional visibility of plural-form elements, and `bindText()` for the count display. Effects are attached dynamically — only for the plural categories the host locale actually uses — showing that factory helpers are plain values that can be composed programmatically.
+A locale-aware pluralisation component driven by `Intl.PluralRules`.
 
 #### Preview
 

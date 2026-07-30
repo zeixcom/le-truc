@@ -28,17 +28,14 @@ const getSelected = (
  * An accessible tab group with keyboard navigation (Arrow, Home, End keys) and reactive panel switching.
  * Use it for tabbed interfaces — provides ARIA tab/tabpanel semantics, focus management
  * with roving tabindex, and keyboard accessibility per the WAI-ARIA tabs pattern.
- * @demo {./docs/examples/module-tabgroup.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-tabgroup} Interactive preview and usage examples
+ **/
 export default defineComponent<ModuleTabgroupProps>(
 	'module-tabgroup',
 	({ all, expose, host, on, watch }) => {
 		const tabs = all(
 			'button[role="tab"]',
 			'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
-		)
-		const panels = all(
-			'[role="tabpanel"]',
-			'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
 		)
 
 		const isCurrentTab = (tab: HTMLButtonElement) =>
@@ -84,6 +81,10 @@ export default defineComponent<ModuleTabgroupProps>(
 			}
 		})
 
+		const panels = all(
+			'[role="tabpanel"]',
+			'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
+		)
 		watch('selected', () => {
 			for (const tab of tabs.get()) {
 				tab.ariaSelected = String(isCurrentTab(tab))

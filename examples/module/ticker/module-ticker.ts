@@ -74,16 +74,15 @@ const BLOCK_SIZE = 100
  * A high-performance stock ticker with virtualized rows, random-walk price simulation, and pause/resume control.
  * Use it for demonstrating the `each()` helper with large dynamic collections — rows are
  * virtualized for performance and the data updates should be throttled to avoid jank.
- * @demo {./docs/examples/module-ticker.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-ticker} Interactive preview and usage examples
+ **/
 export default defineComponent<ModuleTickerProps>(
 	'module-ticker',
 	({ all, expose, first, host, on, pass, watch }) => {
-		const toggleBtn = first('basic-button.toggle')
-		const addRowsBtn = first('basic-button.add-rows')
-		const template = first('template') as HTMLTemplateElement | null
-		const table = host.querySelector('table')
-		const rows = all('tr[data-symbol]')
-		const blocks = all('tbody')
+		expose({
+			running: true,
+			fraction: asNumber(0.1),
+		})
 
 		// Read initial state from server-rendered HTML rows
 		const initial: TickerItem[] = Array.from(
@@ -105,11 +104,14 @@ export default defineComponent<ModuleTickerProps>(
 			keyConfig: item => item.symbol,
 		})
 
+		const template = first('template') as HTMLTemplateElement | null
+		const table = first('table')
+
 		// Block registry: each <tbody> holds BLOCK_SIZE rows (materialized) or
 		// a single placeholder <tr> (virtualized). The Map tracks which symbols
 		// belong to each block so we can re-clone rows on materialization.
 		const blockSymbols = new Map<HTMLTableSectionElement, string[]>()
-		const block0 = host.querySelector('tbody') as HTMLTableSectionElement | null
+		const block0 = first('tbody')
 		if (block0)
 			blockSymbols.set(
 				block0,
@@ -165,16 +167,12 @@ export default defineComponent<ModuleTickerProps>(
 			}
 		}
 
-		expose({
-			running: true,
-			fraction: asNumber(0.1),
-		})
-
 		// One IntersectionObserver sensor per block, discovered via each().
 		// rootMargin pre-loads blocks just before they scroll into view,
 		// hiding the swap latency. The sensor connects its own observer
 		// lazily when watch() first reads it and disconnects automatically
 		// when the block's <tbody> is removed and each() tears the effect down.
+		const blocks = all('tbody')
 		each(blocks, tbody => {
 			const section = tbody as HTMLTableSectionElement
 			const visible = createSensor(
@@ -200,6 +198,7 @@ export default defineComponent<ModuleTickerProps>(
 			)
 		})
 
+		const toggleBtn = first('basic-button.toggle')
 		on(toggleBtn, 'click', () => ({ running: !host.running }))
 		pass(toggleBtn, {
 			label: () => (host.running ? '⏸️ Pause' : '▶️ Resume'),
@@ -218,6 +217,7 @@ export default defineComponent<ModuleTickerProps>(
 		// auto-sets-up when it re-materializes. The row.isConnected guard
 		// covers the brief window between DOM removal and MutationObserver
 		// firing where the row is detached but the effect hasn't cleaned up.
+		const rows = all('tr[data-symbol]')
 		each(rows, row => {
 			const symbol = row.dataset.symbol ?? ''
 			const item = tickers.byKey(symbol)
@@ -250,6 +250,7 @@ export default defineComponent<ModuleTickerProps>(
 		// newly appended template clones. Each click creates its own <tbody>;
 		// each(blocks, …) picks it up via MutationObserver and wires its own
 		// sensor + watch effect, so it virtualizes independently.
+		const addRowsBtn = first('basic-button.add-rows')
 		on(addRowsBtn, 'click', () => {
 			if (!template || !table) return
 			const newItems: TickerItem[] = Array.from({ length: BLOCK_SIZE }, () => {

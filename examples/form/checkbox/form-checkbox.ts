@@ -39,11 +39,11 @@ declare global {
  * rather than reflecting to a `[checked]` attribute (which would corrupt the
  * `checked` *attribute*'s role as the reset default — native `defaultChecked`
  * semantics).
- * @demo {./docs/examples/form-checkbox.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#form-checkbox} Interactive preview and usage examples
+ **/
 export default defineComponent<FormCheckboxProps>(
 	'form-checkbox',
 	({ expose, first, on, watch }) => {
-		const checkbox = first('input[type="checkbox"]', 'Add a native checkbox.')
 		const label = first('.label') ?? first('label')
 
 		expose({
@@ -51,10 +51,11 @@ export default defineComponent<FormCheckboxProps>(
 			label: label?.textContent ?? '',
 		})
 
+		const checkbox = first('input[type="checkbox"]', 'Add a native checkbox.')
 		on(checkbox, 'change', () => ({ checked: checkbox.checked }))
-
 		watch('checked', bindProperty(checkbox, 'checked'))
 		watch('disabled', bindProperty(checkbox, 'disabled'))
+
 		if (label) watch('label', bindText(label))
 	},
 	[formAssociatedCheckbox()],

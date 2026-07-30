@@ -188,6 +188,37 @@ pass(add, {
 
 ---
 
+### Querying Inside Effect or Event Callbacks
+
+`first()` and `all()` run once, at connect time. They also register any undefined custom element in the host's dependency set — this drives the 200ms upgrade-wait.
+
+A query inside a callback body breaks both guarantees:
+- An `on()` handler runs on every event.
+- A `watch()` effect re-runs on every signal change.
+- Either way, the query repeats, and the connect-time dependency registration is lost.
+
+```typescript
+// ❌ Re-queries the DOM on every click; dependency registration skipped
+on(host, 'click', () => {
+  first('button')?.focus()
+})
+
+// ❌ Re-queries on every signal change
+watch('count', () => {
+  first('.badge')?.textContent = String(host.count)
+})
+
+// ✅ Query once in the factory body, capture in a const, use to guard the effect
+const badge = first('.badge')
+if (badge) watch('count', () => {
+  badge.textContent = String(host.count)
+})
+```
+
+`on()` and `pass()` skip gracefully when the target is falsy. Inlining a query as a call argument (`on(first('button'), 'click', …)`) works, but it hides the timing from readers and mixes two intents in one expression. Declare the query on its own line, directly above the effect it feeds — see "Statement Layout: Group by Concern" in `effects.md`.
+
+---
+
 ## HTML Anti-Patterns
 
 ### Empty Custom Element
@@ -310,6 +341,7 @@ Every component docs file must include:
 | TypeScript | Props as `interface` | Declare props with `type` |
 | TypeScript | God component | Split into focused components |
 | TypeScript | Snapshot DOM in reactive | Use live DOM APIs |
+| TypeScript | Query inside effect/event callback | Query once in factory body |
 | HTML | Empty custom element | Add content |
 | HTML | Non-semantic elements | Use native elements |
 | HTML | Inline styles/handlers | Use classes |

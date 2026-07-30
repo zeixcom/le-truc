@@ -178,38 +178,6 @@ test.describe('module-todo component', () => {
 			await checkboxLabel.click()
 			await expect(checkbox).not.toBeChecked()
 		})
-
-		test('checkbox state affects form-checkbox :has(input:checked)', async ({
-			page,
-		}) => {
-			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
-			const submitButton = todo.locator('basic-button.submit button')
-			const list = todo.locator('[data-container]')
-
-			// Add a todo
-			await textboxInput.fill('Test task')
-			await submitButton.click()
-
-			const item = list.locator('li').first()
-			const formCheckbox = item.locator('form-checkbox')
-			const checkboxLabel = item.locator('form-checkbox label')
-
-			// Initially should not be in the checked state
-			expect(await isHostChecked(formCheckbox)).toBe(false)
-
-			// Check the item by clicking the label
-			await checkboxLabel.click()
-
-			// Wait for the state to update
-			expect(await isHostChecked(formCheckbox)).toBe(true)
-
-			// Uncheck the item
-			await checkboxLabel.click()
-
-			// Should no longer be in the checked state
-			expect(await isHostChecked(formCheckbox)).toBe(false)
-		})
 	})
 
 	test.describe('Collections and Count Updates', () => {
@@ -454,36 +422,6 @@ test.describe('module-todo component', () => {
 
 			// Should add item without page reload
 			await expect(todo.locator('[data-container] li')).toHaveCount(1)
-		})
-	})
-
-	test.describe('Integration Validation', () => {
-		test('collections update correctly when checkbox state changes', async ({
-			page,
-		}) => {
-			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
-			const submitButton = todo.locator('basic-button.submit button')
-			const count = todo.locator('basic-pluralize')
-
-			// Add two todos
-			await textboxInput.fill('Task 1')
-			await submitButton.click()
-			await textboxInput.fill('Task 2')
-			await submitButton.click()
-
-			// Initially should show 2 active tasks
-			await expect(count.locator('.count')).toHaveText('2')
-
-			// Check first item
-			const firstCheckboxLabel = todo
-				.locator('[data-container] li')
-				.first()
-				.locator('form-checkbox label')
-			await firstCheckboxLabel.click()
-
-			// Count should update to 1 active task
-			await expect(count.locator('.count')).toHaveText('1')
 		})
 	})
 

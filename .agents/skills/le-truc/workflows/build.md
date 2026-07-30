@@ -56,20 +56,23 @@ declare global {
 // 3. Component definition
 export default defineComponent<MyComponentProps>(
   'my-component',
-  ({ expose, first, watch }) => {
-    // Query descendants
+  ({ expose, first, host, on, watch }) => {
+    // Query the descendant that seeds expose()'s initial value.
     const button = first('button', 'Add a native <button> descendant.')
-    const label = first('span.label')
 
     // Declare reactive props — call expose() ONCE
     expose({
       disabled: asBoolean(),
-      label: asString(label?.textContent ?? button.textContent ?? ''),
+      label: asString(button.textContent ?? ''),
     })
 
-    // Call effect helpers directly — each registers itself, no return needed
+    // Button concern: click toggles disabled, disabled drives the property back
+    on(button, 'click', () => ({ disabled: !host.disabled }))
     watch('disabled', bindProperty(button, 'disabled'))
-    if (label) watch('label', bindText(label))  // guard for optional descendant
+
+    // Label concern: optional descendant
+    const label = first('span.label')
+    if (label) watch('label', bindText(label))
   },
 )
 ```
@@ -77,6 +80,8 @@ export default defineComponent<MyComponentProps>(
 **Rules:**
 - Only import what you use
 - Always provide `required` string to `first()` for essential elements
+- Group statements by concern: put each `first()`/`all()` directly above the effect(s) that use it. Queries that seed `expose()`, or that feed several concerns, stay hoisted near the top. See `references/effects.md`
+- Never call `first()`/`all()` inside an `on()`/`watch()` callback. Call them once in the factory body and capture the result in a `const`. See `references/anti-patterns.md`
 - Use `if (element) watch(...)` for optional descendants
 - Custom `watch` handlers with listeners/timers must return cleanup function
 - Mark props `readonly` only if sensor-driven (not settable from outside)

@@ -18,7 +18,9 @@ declare global {
  * Native disclosure semantics provide keyboard toggling (Enter/Space on the summary)
  * and find-in-page support for free; the `open` reactive property mirrors the
  * descendant `<details>` element's `open` state for programmatic read/control.
- * @demo {./docs/examples/card-collapsible.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#card-collapsible} Interactive preview and usage examples
+ **/
 export default defineComponent<CardCollapsibleProps>(
 	'card-collapsible',
 	({ expose, first, on, watch }) => {

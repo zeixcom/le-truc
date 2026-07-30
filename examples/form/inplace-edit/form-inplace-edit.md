@@ -1,6 +1,6 @@
 ### Form Inplace Edit
 
-A self-contained inline label editor. Wraps a `<span>` (label display) and an edit button; on double-click or edit-button click it switches the span to a `<form-textbox>`, letting the user type a new value. Accepting the edit (✓ button or Enter) returns `{ editing: false, value }` from the `on()` handler to update the host; cancelling (ESC or blur) restores the display span. The `value` prop is reactive — wire it via `pass()` from the coordinating component to keep the display in sync with external data changes. Form participation is via ElementInternals (`formAssociated()`) with the managed form-control convention — value sync and reset (back to the original `.text` content) are library-managed; the managed `disabled` property propagates to the edit button and blocks entering edit mode via double-click.
+A self-contained inline label editor. Wraps a `<span>` (label display) and an edit button; on double-click or edit-button click it switches the span to a `<form-textbox>`, letting the user type a new value.
 
 #### Preview
 

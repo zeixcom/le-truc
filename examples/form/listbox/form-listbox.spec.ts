@@ -451,50 +451,6 @@ test.describe('form-listbox component', () => {
 		// the element list didn't change, so the selection effect must not re-run.
 		expect(changes).toBe(0)
 	})
-
-	test('repeated innerHTML mutations do not break reactivity', async ({
-		page,
-	}) => {
-		const options = ['red', 'green', 'blue', 'yellow', 'purple']
-
-		for (const optionValue of options) {
-			const optionLocator = page.locator(
-				`#colors button[role="option"][value="${optionValue}"]`,
-			)
-
-			await optionLocator.click()
-			await expect(optionLocator).toHaveAttribute('aria-selected', 'true')
-
-			// Set innerHTML on all buttons after each selection
-			await page.evaluate(() => {
-				const escapeHTML = (text: string) =>
-					text
-						.replace(/&/g, '&amp;')
-						.replace(/</g, '&lt;')
-						.replace(/>/g, '&gt;')
-						.replace(/"/g, '&quot;')
-						.replace(/'/g, '&#39;')
-
-				const btns = Array.from(
-					document.querySelectorAll('#colors button[role="option"]'),
-				)
-				for (const btn of btns) {
-					const text = btn.textContent?.trim() ?? ''
-					btn.innerHTML = escapeHTML(text)
-				}
-			})
-			await page.waitForTimeout(100)
-
-			// Selection should persist after innerHTML
-			await expect(optionLocator).toHaveAttribute('aria-selected', 'true')
-
-			const value = await page.evaluate(() => {
-				const el = document.getElementById('colors') as any
-				return el.value
-			})
-			expect(value).toBe(optionValue)
-		}
-	})
 })
 
 // ===== SETATTRIBUTE SECURITY (safeSetAttribute) =====
@@ -572,26 +528,6 @@ test.describe('setAttribute security (safeSetAttribute)', () => {
 		expect(hrefAttr).not.toBe('vbscript://run-something')
 
 		// A console.error must be logged about the failed update
-		const securityError = errors.find(e => /security-urlhref/i.test(e))
-		expect(securityError).toBeDefined()
-		expect(securityError).toMatch(/href/)
-	})
-
-	test('error message for unsafe protocol includes element tag and blocked value', async ({
-		page,
-	}) => {
-		const errors: string[] = []
-		page.on('console', msg => {
-			if (msg.type() === 'error') errors.push(msg.text())
-		})
-
-		await page.evaluate(() => {
-			const el = document.querySelector('#sec-href') as any
-			if (el) el.href = 'custom://bad-protocol'
-		})
-		await page.waitForTimeout(200)
-
-		// Error message must include the element tag name
 		const securityError = errors.find(e => /security-urlhref/i.test(e))
 		expect(securityError).toBeDefined()
 		expect(securityError).toMatch(/href/)

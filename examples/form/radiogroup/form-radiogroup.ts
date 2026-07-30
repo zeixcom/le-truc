@@ -35,7 +35,9 @@ const getIndex = (radios: HTMLInputElement[]) =>
  * key support, and focus management across the radio options. Form participation and
  * validity are via ElementInternals (`formAssociated()`) — set `name` on the host, not
  * the individual radios, which are presentational only.
- * @demo {./docs/examples/form-radiogroup.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#form-radiogroup} Interactive preview and usage examples
+ **/
 export default defineComponent<FormRadiogroupProps>(
 	'form-radiogroup',
 	({ all, expose, host, on, watch }) => {

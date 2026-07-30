@@ -1,6 +1,6 @@
 ### Module Splitview
 
-A two-panel resizable container with a drag handle between the panels, supporting both horizontal and vertical orientations. Demonstrates reading orientation from an attribute at connect time (not reactively), using pointer capture for smooth drag interactions, and retaining split proportions on container resize via a CSS custom property (`--split`) on the host — no `ResizeObserver` needed.
+A two-panel resizable container with a drag handle between the panels, supporting both horizontal and vertical orientations.
 
 #### Preview
 

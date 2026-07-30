@@ -32,6 +32,7 @@ declare global {
  * The `value` attribute is observed post-connect, so setting it at runtime
  * (e.g. `gauge.setAttribute('value', '0.5')`) updates the gauge too, not just
  * the initial `value` property.
+ *
  * @attribute {BasicGaugeThreshold[]} thresholds - Color-coded thresholds as a JSON array, e.g. `[{"min":0,"label":"Low","color":"red"}]`. Defaults to an empty array (no color/label applied) if omitted. Read once at connect time.
  * @cssprop --basic-gauge-background - Background color behind the ring. Defaults to `--color-background`.
  * @cssprop --basic-gauge-label-color - Text color of the qualification label. Defaults to `--color-text-soft`.
@@ -41,19 +42,12 @@ declare global {
  * @cssprop --basic-gauge-ring-width - Ring thickness. Accepts any CSS length; defaults to `--space-xs`.
  * @cssprop --basic-gauge-size - Overall gauge diameter. Accepts any CSS length; defaults to `8rem`.
  * @cssprop --basic-gauge-track-color - Background color of the unfilled ring track. Defaults to `--color-secondary`.
- * @demo {./docs/examples/basic-gauge.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#basic-gauge} Interactive preview and usage examples
+ **/
 export default defineComponent<BasicGaugeProps>(
 	'basic-gauge',
 	({ expose, first, host, pass, watch }) => {
 		const meter = first('meter', 'Add a <meter> element to display the level')
-		const valueEl = first(
-			'basic-number',
-			'Add a <basic-number> element to display the value',
-		)
-		const labelEl = first(
-			'.label',
-			'Add an element to display the qualification label',
-		)
 
 		expose({ value: asNumber(meter.value) })
 
@@ -61,6 +55,10 @@ export default defineComponent<BasicGaugeProps>(
 			host.getAttribute('thresholds'),
 		)
 
+		const valueEl = first(
+			'basic-number',
+			'Add a <basic-number> element to display the value',
+		)
 		pass(valueEl, { value: () => host.value })
 
 		watch('value', value => {
@@ -70,6 +68,11 @@ export default defineComponent<BasicGaugeProps>(
 				`${(240 * value) / meter.max}deg`,
 			)
 		})
+
+		const labelEl = first(
+			'.label',
+			'Add an element to display the qualification label',
+		)
 		watch(
 			() =>
 				thresholds.find(threshold => host.value >= threshold.min) || {

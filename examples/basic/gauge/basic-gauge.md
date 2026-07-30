@@ -1,6 +1,6 @@
 ### Basic Gauge
 
-A visual level indicator that reads its `value` attribute at connect time via `asNumber()` (falling back to the inner `<meter>` element's `.value` for markup that only sets it there), then drives a conic-gradient dial by setting a CSS custom property on the host inside a `watch('value')` handler. Demonstrates `asJSON()` to parse a `thresholds` attribute (read once at connect), a reactive thunk that finds the active threshold and updates a label plus `--basic-gauge-color`, and `pass()` to forward the value to a child `<basic-number>` component, which handles locale-aware number formatting via its `options` attribute. The `<meter>` element is kept in sync inside the same `watch`. Also demonstrates `observedAttributes()` — the opt-in extension that re-parses `value` whenever the attribute mutates after connect, not just at connect time (see [ADR 0019](../../../adr/0019-extension-based-dependency-injection-for-definecomponent.md)).
+A visual gauge meter that parses the `thresholds` attribute which configures the gauge's threshold ranges and colors.
 
 #### Preview
 

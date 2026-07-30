@@ -1,4 +1,4 @@
-import { bindText, defineComponent } from '../../..'
+import { asInteger, bindText, defineComponent } from '../../..'
 
 export type BasicCounterProps = {
 	/** Current counter value. Increments on each button click. */
@@ -17,19 +17,18 @@ declare global {
  * increments when the button is activated via mouse or keyboard.
  * The host element should contain a `<button>` and a `<span>`; the button must
  * be a real `<button>` element for keyboard activation to work.
- * @demo {./docs/examples/basic-counter.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#basic-counter} Interactive preview and usage examples
+ **/
 export default defineComponent<BasicCounterProps>(
 	'basic-counter',
 	({ expose, first, host, on, watch }) => {
-		const increment = first(
-			'button',
-			'Add a native button element to increment the count.',
-		)
 		const count = first('span', 'Add a span to display the count.')
 
-		expose({ count: Number.parseInt(count.textContent || '0') })
+		expose({ count: asInteger()(count.textContent) })
 
-		on(increment, 'click', () => ({ count: host.count + 1 }))
+		const button = first('button', 'Add a native button element to increment the count.')
+		on(button, 'click', () => ({ count: host.count + 1 }))
 		watch('count', bindText(count))
 	},
 )

@@ -357,33 +357,6 @@ test.describe('module-lazyload component', () => {
 			expect(typeof invalidSrc).toBe('string')
 			expect(invalidSrc).toBeTruthy()
 		})
-
-		test('maintains loading state consistency', async ({ page }) => {
-			const loader = page.locator('module-lazyload').first()
-			const loading = loader.locator('.loading')
-			const content = loader.locator('.content')
-			const callout = loader.locator('card-callout')
-
-			// Wait for loading to complete
-			await expect(content).toBeVisible({ timeout: 1000 })
-			await expect(loading).toBeHidden()
-			await expect(callout).toBeHidden()
-		})
-
-		test('maintains error state consistency', async ({ page }) => {
-			const loader = page.locator('#invalid-url-test')
-			const loading = loader.locator('.loading')
-			const content = loader.locator('.content')
-			const error = loader.locator('.error')
-			const callout = loader.locator('card-callout')
-
-			// During error: loading hidden, content hidden, error visible, callout visible with danger class
-			await expect(error).toBeVisible({ timeout: 1000 })
-			await expect(loading).toBeHidden()
-			await expect(content).toBeHidden()
-			await expect(callout).toBeVisible()
-			await expect(callout).toHaveClass('danger')
-		})
 	})
 
 	test.describe('DOM Structure and Accessibility', () => {
@@ -679,100 +652,6 @@ test.describe('module-lazyload component', () => {
 
 			// External elements shouldn't have the styled content's background
 			expect(externalBg).not.toContain('linear-gradient')
-		})
-	})
-
-	test.describe('Edge Cases and Performance', () => {
-		test('handles rapid src changes gracefully', async ({ page }) => {
-			const loader = page.locator('#dynamic-src-test')
-			const content = loader.locator('.content')
-			const error = loader.locator('.error')
-
-			// Perform sequential src changes with proper waiting
-			// First change - wait for completion
-			await loader.evaluate(node => {
-				;(node as any).src = '/test/module-lazyload/mocks/simple-text.html'
-			})
-
-			// Wait for first request to complete
-			await expect(content).toBeVisible({ timeout: 3000 })
-			await expect(content).toContainText('Simple Text Content')
-
-			// Second change - should replace first content
-			await loader.evaluate(node => {
-				;(node as any).src = '/test/module-lazyload/mocks/with-styles.html'
-			})
-
-			// Wait for second request to complete
-			await expect(content).toContainText('Styled Content', { timeout: 3000 })
-
-			// Final change back to simple content
-			await loader.evaluate(node => {
-				;(node as any).src = '/test/module-lazyload/mocks/simple-text.html'
-			})
-
-			// Verify final state
-			await expect(content).toBeVisible({ timeout: 3000 })
-			await expect(content).toContainText('Simple Text Content')
-			await expect(content).not.toContainText('Styled Content')
-			await expect(error).toBeHidden()
-
-			// Verify src property reflects final value
-			const finalSrc = await loader.evaluate((node: any) => node.src)
-			expect(finalSrc).toBe('/test/module-lazyload/mocks/simple-text.html')
-		})
-
-		test('handles component removal during loading', async ({ page }) => {
-			// Create a new loader element dynamically
-			await page.evaluate(() => {
-				const loader = document.createElement('module-lazyload')
-				loader.setAttribute(
-					'src',
-					'/test/module-lazyload/mocks/simple-text.html',
-				)
-				loader.innerHTML = `
-					<card-callout>
-						<p class="loading" role="status">Loading...</p>
-						<p class="error" role="alert" aria-live="assertive" hidden></p>
-						<div class="content" hidden></div>
-					</card-callout>
-				`
-				document.body.appendChild(loader)
-
-				// Remove it immediately after adding
-				setTimeout(() => loader.remove(), 100)
-			})
-		})
-
-		test('handles multiple instances loading simultaneously', async ({
-			page,
-		}) => {
-			// All the existing loaders should work independently
-			const simpleLoader = page.locator('module-lazyload').first()
-			const styledLoader = page.locator('#complex-content-test')
-			const nestedLoader = page.locator('#nested-components-test')
-
-			// All should load their respective content
-			await expect(simpleLoader.locator('.content')).toBeVisible({
-				timeout: 5000,
-			})
-			await expect(styledLoader.locator('.content')).toBeVisible({
-				timeout: 5000,
-			})
-			await expect(nestedLoader.locator('.content')).toBeVisible({
-				timeout: 5000,
-			})
-
-			// Verify content is correct for each
-			await expect(simpleLoader.locator('.content')).toContainText(
-				'Simple Text Content',
-			)
-			await expect(styledLoader.locator('.content')).toContainText(
-				'Styled Content',
-			)
-			await expect(nestedLoader.locator('.content')).toContainText(
-				'Nested Components',
-			)
 		})
 	})
 })

@@ -18,18 +18,13 @@ const clamp = (index: number, total: number) =>
  * An accessible image carousel with dot navigation, prev/next buttons, and scroll-snap support.
  * Use it for image galleries or feature showcases — provides ARIA tabpanel semantics,
  * keyboard navigation (Arrow keys to move between slides), and focus management.
- * @demo {./docs/examples/module-carousel.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-carousel} Interactive preview and usage examples
+ **/
 export default defineComponent<ModuleCarouselProps>(
 	'module-carousel',
 	({ all, expose, first, host, on, watch }) => {
-		const dots = all('button[role="tab"]')
 		const slides = all('[role="tabpanel"]')
-		const buttons = all('nav button')
-		const prev = first('button.prev', 'Add a previous button')
-		const next = first('button.next', 'Add a next button')
-
-		let isNavigating = false
-		let lastScrolled = -1
 
 		expose({
 			index: Math.max(
@@ -37,6 +32,9 @@ export default defineComponent<ModuleCarouselProps>(
 				0,
 			),
 		})
+
+		let isNavigating = false
+		let lastScrolled = -1
 
 		// Set up IntersectionObserver to detect scroll-based navigation.
 		// No signal dependency — watch(() => true, …) runs the setup once on
@@ -84,6 +82,7 @@ export default defineComponent<ModuleCarouselProps>(
 		})
 
 		// Prev button: move focus to next when hidden
+		const prev = first('button.prev', 'Add a previous button')
 		on(prev, 'click', () => {
 			const newIndex = clamp(host.index - 1, slides.get().length)
 			host.index = newIndex
@@ -91,6 +90,7 @@ export default defineComponent<ModuleCarouselProps>(
 		})
 
 		// Next button: move focus to prev when hidden
+		const next = first('button.next', 'Add a next button')
 		on(next, 'click', () => {
 			const newIndex = clamp(host.index + 1, slides.get().length)
 			host.index = newIndex
@@ -98,11 +98,13 @@ export default defineComponent<ModuleCarouselProps>(
 		})
 
 		// Dot navigation
+		const dots = all('button[role="tab"]')
 		on(dots, 'click', (_e, target) => {
 			host.index = parseInt(target.dataset.index || '0')
 		})
 
 		// Keyboard navigation for all nav buttons (prev, next, dots)
+		const buttons = all('nav button')
 		on(buttons, 'keyup', e => {
 			const { key } = e
 			if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return

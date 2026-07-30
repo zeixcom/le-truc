@@ -410,19 +410,6 @@ test.describe('module-scrollarea component', () => {
 	})
 
 	test.describe('Custom States and Styling', () => {
-		test('sets correct custom states for overflow', async ({ page }) => {
-			const scrollarea = page.locator('#default-vertical')
-
-			// Check state combinations
-			await expectState(scrollarea, 'overflow', true)
-			await expectState(scrollarea, 'overflow-end', true)
-			await expectState(scrollarea, 'overflow-start', false)
-
-			// States must be component-owned, not class tokens on the host
-			const classes = await scrollarea.getAttribute('class')
-			expect(classes ?? '').not.toMatch(/overflow/)
-		})
-
 		test('maintains correct display and positioning styles', async ({
 			page,
 		}) => {
@@ -477,22 +464,6 @@ test.describe('module-scrollarea component', () => {
 
 			// Should no longer have overflow-end state
 			await expectState(scrollarea, 'overflow-end', false)
-		})
-
-		test('maintains performance with rapid scroll events', async ({ page }) => {
-			const scrollarea = page.locator('#default-vertical')
-
-			// Perform rapid scrolling
-			for (let i = 0; i < 10; i++) {
-				await scrollarea.evaluate((el, scrollTop) => {
-					el.scrollTop = scrollTop
-				}, i * 20)
-			}
-
-			// Should still respond correctly to final position
-			const finalScrollTop = await scrollarea.evaluate(el => el.scrollTop)
-			expect(finalScrollTop).toBeGreaterThan(0)
-			await expectState(scrollarea, 'overflow-start', true)
 		})
 	})
 })

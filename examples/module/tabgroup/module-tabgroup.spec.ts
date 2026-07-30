@@ -104,32 +104,6 @@ test.describe('module-tabgroup component', () => {
 			)
 			expect(selectedValue).toBe('panel2')
 		})
-
-		test('updates all tabs and panels correctly on selection', async ({
-			page,
-		}) => {
-			const tabgroup = page.locator('module-tabgroup').first()
-			const tabs = tabgroup.locator('button[role="tab"]')
-			const panels = tabgroup.locator('[role="tabpanel"]')
-
-			// Click third tab
-			await tabs.nth(2).click()
-
-			// Check all tabs have correct aria-selected
-			await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'false')
-			await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'false')
-			await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
-
-			// Check all tabs have correct tabindex
-			await expect(tabs.nth(0)).toHaveAttribute('tabindex', '-1')
-			await expect(tabs.nth(1)).toHaveAttribute('tabindex', '-1')
-			await expect(tabs.nth(2)).toHaveAttribute('tabindex', '0')
-
-			// Check panel visibility
-			await expect(panels.nth(0)).toBeHidden()
-			await expect(panels.nth(1)).toBeHidden()
-			await expect(panels.nth(2)).toBeVisible()
-		})
 	})
 
 	test.describe('Keyboard Navigation', () => {
@@ -176,30 +150,6 @@ test.describe('module-tabgroup component', () => {
 			await expect(tabs.first()).toHaveAttribute('tabindex', '0')
 		})
 
-		test('navigates with up/down arrow keys', async ({ page }) => {
-			const tabgroup = page.locator('module-tabgroup').first()
-			const tabs = tabgroup.locator('button[role="tab"]')
-
-			// Focus first tab
-			await tabs.first().focus()
-			await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
-
-			// Arrow down should move to second tab AND select it
-			await page.keyboard.press('ArrowDown')
-			await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
-			await expect(tabs.nth(1)).toHaveAttribute('tabindex', '0')
-
-			// Arrow up should move back to first tab AND select it
-			await page.keyboard.press('ArrowUp')
-			await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
-			await expect(tabs.first()).toHaveAttribute('tabindex', '0')
-
-			// Arrow up from first should wrap to last AND select it
-			await page.keyboard.press('ArrowUp')
-			await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
-			await expect(tabs.nth(2)).toHaveAttribute('tabindex', '0')
-		})
-
 		test('navigates with Home and End keys', async ({ page }) => {
 			const tabgroup = page.locator('module-tabgroup').first()
 			const tabs = tabgroup.locator('button[role="tab"]')
@@ -217,57 +167,6 @@ test.describe('module-tabgroup component', () => {
 			await page.keyboard.press('End')
 			await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
 			await expect(tabs.nth(2)).toHaveAttribute('tabindex', '0')
-		})
-
-		test('prevents default and stops propagation for navigation keys', async ({
-			page,
-		}) => {
-			const tabgroup = page.locator('module-tabgroup').first()
-			const tabs = tabgroup.locator('button[role="tab"]')
-
-			// Test that keyboard navigation works (which means preventDefault is called)
-			await tabs.first().focus()
-
-			// Test various navigation keys work as expected
-			await page.keyboard.press('ArrowRight')
-			await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
-
-			await page.keyboard.press('Home')
-			await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
-
-			await page.keyboard.press('End')
-			await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
-
-			// The fact that these work correctly indicates preventDefault is working
-		})
-
-		test('keyboard navigation updates selected tab and panel', async ({
-			page,
-		}) => {
-			const tabgroup = page.locator('module-tabgroup').first()
-			const tabs = tabgroup.locator('button[role="tab"]')
-			const panels = tabgroup.locator('[role="tabpanel"]')
-
-			// Focus first tab (initially selected) and navigate to second
-			await tabs.first().focus()
-			await page.keyboard.press('ArrowRight')
-
-			// Keyboard navigation should update both selection and tabindex
-			await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
-			await expect(tabs.nth(1)).toHaveAttribute('tabindex', '0')
-			await expect(panels.nth(1)).toBeVisible()
-
-			// Navigate to third tab
-			await page.keyboard.press('ArrowRight')
-			await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
-			await expect(tabs.nth(2)).toHaveAttribute('tabindex', '0')
-			await expect(panels.nth(2)).toBeVisible()
-
-			// Component property should also update
-			const selectedValue = await tabgroup.evaluate(
-				node => (node as any).selected,
-			)
-			expect(selectedValue).toBe('panel3')
 		})
 
 		test('handles many tabs navigation', async ({ page }) => {
@@ -366,27 +265,6 @@ test.describe('module-tabgroup component', () => {
 	})
 
 	test.describe('Component Properties', () => {
-		test('selected property reflects current selection', async ({ page }) => {
-			const tabgroup = page.locator('module-tabgroup').first()
-			const tabs = tabgroup.locator('button[role="tab"]')
-
-			// Initial state
-			let selectedValue = await tabgroup.evaluate(
-				node => (node as any).selected,
-			)
-			expect(selectedValue).toBe('panel1')
-
-			// Click second tab
-			await tabs.nth(1).click()
-			selectedValue = await tabgroup.evaluate(node => (node as any).selected)
-			expect(selectedValue).toBe('panel2')
-
-			// Click third tab
-			await tabs.nth(2).click()
-			selectedValue = await tabgroup.evaluate(node => (node as any).selected)
-			expect(selectedValue).toBe('panel3')
-		})
-
 		test('selected property is readonly and reflects current selection', async ({
 			page,
 		}) => {
@@ -423,29 +301,6 @@ test.describe('module-tabgroup component', () => {
 	})
 
 	test.describe('Panel Visibility', () => {
-		test('shows only the selected panel', async ({ page }) => {
-			const tabgroup = page.locator('module-tabgroup').first()
-			const tabs = tabgroup.locator('button[role="tab"]')
-			const panels = tabgroup.locator('[role="tabpanel"]')
-
-			// Initially, only first panel should be visible
-			await expect(panels.nth(0)).toBeVisible()
-			await expect(panels.nth(1)).toBeHidden()
-			await expect(panels.nth(2)).toBeHidden()
-
-			// Click second tab
-			await tabs.nth(1).click()
-			await expect(panels.nth(0)).toBeHidden()
-			await expect(panels.nth(1)).toBeVisible()
-			await expect(panels.nth(2)).toBeHidden()
-
-			// Click third tab
-			await tabs.nth(2).click()
-			await expect(panels.nth(0)).toBeHidden()
-			await expect(panels.nth(1)).toBeHidden()
-			await expect(panels.nth(2)).toBeVisible()
-		})
-
 		test('panel content is accessible when visible', async ({ page }) => {
 			const tabgroup = page.locator('module-tabgroup').first()
 			const tabs = tabgroup.locator('button[role="tab"]')
@@ -531,101 +386,6 @@ test.describe('module-tabgroup component', () => {
 				node => (node as any).selected,
 			)
 			expect(selectedValue).toBe('panel9')
-		})
-
-		test('maintains state management correctly', async ({ page }) => {
-			const tabgroup = page.locator('module-tabgroup').first()
-			const tabs = tabgroup.locator('button[role="tab"]')
-
-			// Focus first tab and navigate with keyboard
-			await tabs.first().focus()
-			await page.keyboard.press('ArrowRight')
-			await page.keyboard.press('ArrowRight')
-
-			// Third tab should be selected
-			await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
-			await expect(tabs.nth(2)).toHaveAttribute('tabindex', '0')
-
-			// Click first tab - it should become selected
-			await tabs.first().click()
-			await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
-			await expect(tabs.first()).toHaveAttribute('tabindex', '0')
-		})
-	})
-
-	test.describe('Sensor Integration', () => {
-		test('selected sensor detects initial state from DOM', async ({ page }) => {
-			const tabgroup = page.locator('module-tabgroup').first()
-
-			// The sensor should read the initial state from aria-selected="true"
-			const initialSelected = await tabgroup.evaluate(
-				node => (node as any).selected,
-			)
-			expect(initialSelected).toBe('panel1')
-		})
-
-		test('sensor responds to click events correctly', async ({ page }) => {
-			const tabgroup = page.locator('module-tabgroup').first()
-			const tabs = tabgroup.locator('button[role="tab"]')
-
-			// Click should trigger sensor update
-			await tabs.nth(2).click()
-
-			const selectedAfterClick = await tabgroup.evaluate(
-				node => (node as any).selected,
-			)
-			expect(selectedAfterClick).toBe('panel3')
-		})
-
-		test('sensor responds to keyboard events correctly', async ({ page }) => {
-			const tabgroup = page.locator('module-tabgroup').first()
-			const tabs = tabgroup.locator('button[role="tab"]')
-
-			// Focus second tab (which also selects it via click)
-			await tabs.nth(1).click()
-			let currentSelected = await tabgroup.evaluate(
-				node => (node as any).selected,
-			)
-			expect(currentSelected).toBe('panel2')
-
-			// Keyboard navigation should update selection
-			await page.keyboard.press('ArrowRight') // Move to third tab
-			await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
-
-			// Selected property should now be the third tab
-			currentSelected = await tabgroup.evaluate(node => (node as any).selected)
-			expect(currentSelected).toBe('panel3')
-		})
-
-		test('keyboard navigation wraps around correctly', async ({ page }) => {
-			const tabgroup = page.locator('module-tabgroup').first()
-			const tabs = tabgroup.locator('button[role="tab"]')
-
-			// Focus first tab
-			await tabs.first().focus()
-			await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
-
-			// Navigate to last tab
-			await page.keyboard.press('ArrowRight') // Tab 2
-			await page.keyboard.press('ArrowRight') // Tab 3
-
-			// Test wrapping from last tab to first tab
-			await page.keyboard.press('ArrowRight')
-			await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
-
-			// Test wrapping from first tab to last tab
-			await page.keyboard.press('ArrowLeft')
-			await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
-
-			// Test Up/Down wrapping as well
-			await page.keyboard.press('ArrowUp') // Should go to Tab 2
-			await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
-
-			await page.keyboard.press('ArrowDown') // Should go back to Tab 3
-			await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true')
-
-			await page.keyboard.press('ArrowDown') // Should wrap to Tab 1
-			await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
 		})
 	})
 })

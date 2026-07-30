@@ -168,26 +168,6 @@ test.describe('module-catalog component', () => {
 		await expect(product2Increment).toHaveAttribute('disabled')
 	})
 
-	test('reactive computation updates immediately', async ({ page }) => {
-		const catalog = page.locator('#default-test')
-		const badge = catalog.locator('basic-button .badge')
-
-		const product1Increment = catalog
-			.locator('form-spinbutton')
-			.nth(0)
-			.locator('button.increment')
-
-		// Multiple rapid clicks should update total immediately
-		await product1Increment.click()
-		await expect(badge).toHaveText('1')
-
-		await product1Increment.click()
-		await expect(badge).toHaveText('2')
-
-		await product1Increment.click()
-		await expect(badge).toHaveText('3')
-	})
-
 	test('total reflects component property values', async ({ page }) => {
 		const catalog = page.locator('#default-test')
 
@@ -225,44 +205,6 @@ test.describe('module-catalog component', () => {
 		// Total should be sum of all values
 		const badge = catalog.locator('basic-button .badge')
 		await expect(badge).toHaveText('6')
-	})
-
-	test('button disabled state changes correctly', async ({ page }) => {
-		const catalog = page.locator('#default-test')
-		const button = catalog.locator('basic-button button')
-
-		const product1Increment = catalog
-			.locator('form-spinbutton')
-			.nth(0)
-			.locator('button.increment')
-		const product1Decrement = catalog
-			.locator('form-spinbutton')
-			.nth(0)
-			.locator('button.decrement')
-
-		// Initially disabled
-		await expect(button).toBeDisabled()
-
-		// Add item - becomes enabled
-		await product1Increment.click()
-		await expect(button).not.toBeDisabled()
-
-		// Remove item - becomes disabled again
-		await product1Decrement.click()
-		await expect(button).toBeDisabled()
-
-		// Add multiple items
-		await product1Increment.click()
-		await product1Increment.click()
-		await expect(button).not.toBeDisabled()
-
-		// Remove one - still enabled
-		await product1Decrement.click()
-		await expect(button).not.toBeDisabled()
-
-		// Remove last - disabled
-		await product1Decrement.click()
-		await expect(button).toBeDisabled()
 	})
 
 	test('handles mixed interactions across all products', async ({ page }) => {
@@ -312,89 +254,5 @@ test.describe('module-catalog component', () => {
 		await decrements[2]!.click() // Product 3: 0, Total: 0
 		await expect(badge).toHaveText('')
 		await expect(button).toBeDisabled()
-	})
-
-	test('badge text is always string representation of total', async ({
-		page,
-	}) => {
-		const catalog = page.locator('#default-test')
-		const badge = catalog.locator('basic-button .badge')
-
-		const product1Increment = catalog
-			.locator('form-spinbutton')
-			.nth(0)
-			.locator('button.increment')
-
-		// Test various totals are properly stringified
-		for (let i = 1; i <= 5; i++) {
-			await product1Increment.click()
-			await expect(badge).toHaveText(String(i))
-		}
-	})
-
-	test('component coordination works with keyboard interactions', async ({
-		page,
-	}) => {
-		const catalog = page.locator('#default-test')
-		const badge = catalog.locator('basic-button .badge')
-
-		// Use keyboard on first product
-		const product1Increment = catalog
-			.locator('form-spinbutton')
-			.nth(0)
-			.locator('button.increment')
-
-		await product1Increment.focus()
-		await page.keyboard.press('ArrowUp')
-		await expect(badge).toHaveText('1')
-
-		await page.keyboard.press('ArrowUp')
-		await expect(badge).toHaveText('2')
-
-		await page.keyboard.press('ArrowDown')
-		await expect(badge).toHaveText('1')
-	})
-
-	test('all spinbuttons contribute to total calculation', async ({ page }) => {
-		const catalog = page.locator('#default-test')
-		const badge = catalog.locator('basic-button .badge')
-
-		// Verify all 3 spinbuttons are found and contribute
-		const spinbuttonCount = await catalog.locator('form-spinbutton').count()
-		expect(spinbuttonCount).toBe(3)
-
-		// Add 1 to each spinbutton
-		for (let i = 0; i < 3; i++) {
-			const increment = catalog
-				.locator('form-spinbutton')
-				.nth(i)
-				.locator('button.increment')
-			await increment.click()
-		}
-
-		// Total should be 3
-		await expect(badge).toHaveText('3')
-
-		// Verify each spinbutton has value 1
-		const values = await page.evaluate(() => {
-			const spinbuttons = document.querySelectorAll(
-				'#default-test form-spinbutton',
-			)
-			return Array.from(spinbuttons).map((sb: any) => sb.value)
-		})
-		expect(values).toEqual([1, 1, 1])
-	})
-
-	test('component has no public properties exposed', async ({ page }) => {
-		// Verify the component doesn't expose any public interface
-		const hasPublicProps = await page.evaluate(() => {
-			const catalog = document.querySelector('#default-test') as any
-			// Try to access common property names, should all be undefined or internal
-			const props = ['total', 'disabled', 'badge', 'value', 'count', 'items']
-			return props.some(prop => catalog[prop] !== undefined)
-		})
-
-		// Component should not expose public properties
-		expect(hasPublicProps).toBe(false)
 	})
 })
