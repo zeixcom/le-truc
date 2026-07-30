@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.1
+
+### Fixed
+
+- **`resolveDependencies` now defers setup when `first()`/`all()` queried a `:defined` custom-element child**: previously, dependency resolution deferred the callback only for *not-yet-defined* custom elements (those awaiting `customElements.whenDefined()`). But when a whole nested parent+child subtree is built detached and appended in a single operation, the browser queues each element's `connectedCallback` in tree order — the parent's fires *first*. The child is already `:defined` (its class is registered) yet its own `connectedCallback` — and therefore its `expose()`/Slot setup — has not run. When the parent's effects then ran synchronously, `pass()` → `swapSlots` threw `InvalidPassPropertyError` because `'prop' in child` was still `false`. `makeElementQueries` now tracks whether `first()`/`all()` matched any `:defined` custom-element descendant, and `resolveDependencies` defers the callback to a microtask whenever that flag is set, letting the child's queued `connectedCallback` drain first so its properties are ready before the parent reads them. Plain element children still resolve synchronously. This is distinct from the `DEPENDENCY_TIMEOUT` race — it covers a child that is *already* defined but not yet initialized.
+
 ## 2.3.0
 
 ### Added
