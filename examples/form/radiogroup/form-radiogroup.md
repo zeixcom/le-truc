@@ -1,6 +1,6 @@
 ### Form Radiogroup
 
-A roving-tabindex radio group that works both **controlled** and **uncontrolled**. Demonstrates initialising `value` from the currently checked radio in `expose()`, and `on('change', ...)` applied to the `radios` Memo so that user interaction propagates back to `host.value`. An `each(radios, ...)` block drives `checked`, `tabIndex`, the `selected` label class, and the managed `disabled` property (via `bindProperty(radio, 'disabled')`) from `host.value`/`host.disabled` via `watch()`, which means assigning `host.value = 'option'` programmatically is enough to move the selection — no event needed. Form participation is via ElementInternals (`formAssociated()`) with the managed form-control convention — set `name` on the host, not the individual radios, which are presentational only (their exclusivity is driven entirely by the `each()` watch, not native `name` grouping). Form reset and `<fieldset disabled>` inheritance are library-managed.
+A roving-tabindex radio group that works both controlled and uncontrolled.
 
 #### Preview
 

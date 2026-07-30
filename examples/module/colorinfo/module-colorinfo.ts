@@ -41,8 +41,8 @@ declare global {
  * Use it for inspecting a color's various representations — useful when you need
  * to evaluate contrast for accessibility or copy a specific format.
  * The `color` attribute must be a valid Oklch color string.
- * @cssprop --color-swatch - The CSS color string, set reactively from the `css` property.
- * @cssprop --color-fallback - The HEX color string, set reactively from the `hex` property.
+ *
+ * @cssprop --module-colorinfo-swatch-size - The size of the color swatch.
  * @demo {https://zeixcom.github.io/le-truc/examples.html#module-colorinfo} Interactive preview and usage examples
  **/
 export default defineComponent<ModuleColorinfoProps>(
@@ -72,8 +72,8 @@ export default defineComponent<ModuleColorinfoProps>(
 		pass(chromaEls, { value: () => host.chroma })
 		pass(hueEls, { value: () => host.hue })
 
-		watch('css', bindStyle(host, '--color-swatch'))
-		watch('hex', bindStyle(host, '--color-fallback'))
+		watch('css', bindStyle(host, '--module-colorinfo-color-swatch'))
+		watch('hex', bindStyle(host, '--module-colorinfo-color-fallback'))
 		watch('name', bindText(labelStrong))
 		const hexEl = first('.hex')
 		if (hexEl) watch('hex', bindText(hexEl))

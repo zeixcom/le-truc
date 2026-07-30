@@ -1,6 +1,6 @@
 ### Basic Number
 
-A locale-aware number display component that uses `Intl.NumberFormat` for decimals, units, and currencies. Demonstrates binding directly to `host` with `watch(() => formatter.format(host.value), bindText(host))` — no descendant elements needed — and shows how standard HTML attributes (`lang`, `options`) can be read once at connect to configure non-reactive formatting behaviour. `asNumber()` initialises the reactive `value` property from the attribute.
+A locale-aware number display component that uses `Intl.NumberFormat` for decimals, units, and currencies.
 
 #### Preview
 

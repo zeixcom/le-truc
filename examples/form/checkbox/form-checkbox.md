@@ -1,6 +1,6 @@
 ### Form Checkbox
 
-A wrapper for a native checkbox that initialises `checked` via `asBoolean()`, reading `<form-checkbox>`'s own `checked` attribute (not the inner native input's), and `label` from `.label`/`label` text content, uses `on('change')` returning `{ checked }` to sync host state with the native input. Styling hooks off the checked state use `:has(input:checked)` on the host, not a `[checked]` attribute selector or a `:state()` custom state — native `:checked` only applies to the descendant `<input>` directly, and reading it via `:has()` needs no JS reflection at all, while keeping the `checked` *attribute* free to mean only the reset default (native `defaultChecked` semantics). Form participation is via ElementInternals (`formAssociatedCheckbox()`) — submits nothing when unchecked, matching native `<input type="checkbox">`; set `name` and `value` on the host too (the inner input's own `name`/`value`, if any, are inert) — `value` overrides what's submitted instead of the native default `"on"`. Reset and disabled inheritance (propagated to the native checkbox) are library-managed. The `.toggle` variant adds `role="switch"` to the native checkbox — explicitly permitted on `<input type="checkbox">` per ARIA, with `aria-checked` state derived automatically from the input's own `checked` property.
+A styledwrapper for a native checkbox with todo item and toggle switch variants.
 
 #### Preview
 

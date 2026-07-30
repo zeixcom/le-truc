@@ -45,6 +45,7 @@ export default defineComponent<FormTextboxProps>(
 			'input, textarea',
 			'Add a native input or textarea as descendant element.',
 		)
+		const length = createState(textbox.value.length)
 
 		// Reactive description: tracks remaining character count if template is present
 		const descriptionEl = first('.description')
@@ -57,8 +58,6 @@ export default defineComponent<FormTextboxProps>(
 						),
 					)
 				: null
-
-		const length = createState(textbox.value.length)
 
 		expose({
 			value: textbox.value,

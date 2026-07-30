@@ -1,6 +1,6 @@
 ### Module List
 
-A dynamic list component that owns its data with a reactive `createList()` and keeps the DOM in sync by diffing the list's stable keys. Demonstrates the canonical pattern for managing collections that grow and shrink at runtime: a `watch()` reconciler that inserts, removes, and repositions cloned template nodes; `on(form, 'submit')` calling `list.add()` then a child method (`textbox.clear()`); event delegation on the host for removal via `list.remove(key)`; and `pass()` driving the submit button's `disabled` state from the textbox length.
+A dynamic list component that owns its data with a reactive `createList()` and keeps the DOM in sync by diffing the list's stable keys.
 
 #### Preview
 

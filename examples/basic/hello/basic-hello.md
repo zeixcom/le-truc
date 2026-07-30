@@ -1,6 +1,6 @@
 ### Basic Hello
 
-The Hello World example from the Quick Start guide. Shows the minimal Le Truc factory pattern: initialising `subject` by reading the `output` element's text content directly in `expose()`, `on('input')` returning `{ subject }` to update the host as the user types, and `watch('subject', bindText(output))` to keep the greeting in sync.
+The Hello World example from the Quick Start guide.
 
 #### Preview
 

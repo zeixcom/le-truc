@@ -1,40 +1,6 @@
 import { expect, test } from '@playwright/test'
 
 /**
- * Helper function to wait for carousel index to reach expected value.
- * With improved component logic, this should be much faster and more reliable.
- */
-async function waitForStableIndex(
-	carousel: any,
-	expectedIndex: number,
-	maxWait = 1000,
-) {
-	const startTime = Date.now()
-
-	while (Date.now() - startTime < maxWait) {
-		const currentIndex = await carousel.evaluate((el: any) => el.index)
-
-		// Also check DOM state for extra reliability
-		const slideAtIndex = carousel
-			.locator('[role="tabpanel"]')
-			.nth(expectedIndex)
-		const hasAriaCurrent = await slideAtIndex.getAttribute('aria-current')
-
-		if (currentIndex === expectedIndex && hasAriaCurrent === 'true') {
-			// Give one extra tick to ensure all updates are complete
-			await new Promise(resolve => setTimeout(resolve, 10))
-			return
-		}
-
-		await new Promise(resolve => setTimeout(resolve, 25))
-	}
-
-	throw new Error(
-		`Index did not stabilize at ${expectedIndex} within ${maxWait}ms`,
-	)
-}
-
-/**
  * Test Suite: module-carousel Component
  *
  * Comprehensive tests for the Le Truc module-carousel component, which provides

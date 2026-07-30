@@ -1,6 +1,6 @@
 ### Module Coloreditor
 
-A full-featured color editor that composes `card-colorscale`, `form-textbox`, `form-colorgraph`, and nine `module-colorinfo` elements into a single reactive unit. Demonstrates `pass()` to wire sibling Le Truc components — including passing computed values like `() => \`${host.name} 500\`` — and `on(host, 'change', ...)` returning `{ name: value }` to update the name from the embedded textbox without manual event forwarding.
+A full-featured color editor that composes `card-colorscale`, `form-textbox`, `form-colorgraph`, and nine `module-colorinfo` elements into a single reactive unit.
 
 #### Preview
 

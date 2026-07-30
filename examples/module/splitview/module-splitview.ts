@@ -21,21 +21,19 @@ const STEP = 0.05
  * ARIA separator semantics and Arrow key support on the divider for accessibility.
  * Set `orientation="vertical"` for a top/bottom split.
  * @attribute {'horizontal'|'vertical'} [orientation=horizontal] - Layout direction of the split. Read once at connect time; not a reactive property.
- * @cssprop --split - The split ratio as a CSS percentage (e.g. `50.00%`), set reactively.
  * @demo {https://zeixcom.github.io/le-truc/examples.html#module-splitview} Interactive preview and usage examples
  **/
 export default defineComponent<ModuleSplitviewProps>(
 	'module-splitview',
 	({ expose, first, host, on, watch }) => {
+		expose({ split: asNumber(0.5) })
+
 		const divider = first(
 			'button.divider',
 			'Add a button.divider resize handle.',
 		)
 		const isVertical = host.getAttribute('orientation') === 'vertical'
-
 		let dragging = false
-
-		expose({ split: asNumber(0.5) })
 
 		on(divider, 'pointerdown', event => {
 			dragging = true
@@ -68,7 +66,7 @@ export default defineComponent<ModuleSplitviewProps>(
 			if (key === 'End') return { split: MAX_SPLIT }
 		})
 		watch('split', split => {
-			host.style.setProperty('--split', `${(split * 100).toFixed(2)}%`)
+			host.style.setProperty('--module-splitview-ratio', `${(split * 100).toFixed(2)}%`)
 			divider.setAttribute('aria-valuenow', String(Math.round(split * 100)))
 		})
 	},

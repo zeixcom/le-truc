@@ -25,6 +25,8 @@ const CONTRAST_THRESHOLD = 0.71 // lightness
  * for when you need to evaluate contrast and accessibility of a base color.
  * The `color` attribute must be a valid Oklch color string.
  *
+ * @cssprop --card-colorscale-max-size - Maximum width/height of the card. Defaults to `18rem`.
+ * @cssprop --card-colorscale-padding - Inner padding of the card. Defaults to `0.5em`.
  * @demo {https://zeixcom.github.io/le-truc/examples.html#card-colorscale} Interactive preview and usage examples
  **/
 export default defineComponent<CardColorscaleProps>(
