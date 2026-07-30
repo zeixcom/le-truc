@@ -1,6 +1,6 @@
 module-colorinfo {
-	--swatch-size: var(--input-height);
-	--color-fallback: transparent;
+	--module-colorinfo-swatch-size: var(--input-height);
+	--module-colorinfo-color-fallback: transparent;
 
 	display: inline-flex;
 	gap: var(--space-l);
@@ -29,9 +29,9 @@ module-colorinfo {
 	.swatch {
 		position: relative;
 		display: inline-block;
-		background: var(--color-swatch);
-		width: var(--swatch-size);
-		height: var(--swatch-size);
+		background: var(--module-colorinfo-color-swatch);
+		width: var(--module-colorinfo-swatch-size);
+		height: var(--module-colorinfo-swatch-size);
 		border-radius: var(--space-xxs);
 		overflow: hidden;
 
@@ -41,8 +41,8 @@ module-colorinfo {
 			display: block;
 			width: 0;
 			height: 0;
-			border-left: var(--swatch-size) solid transparent;
-			border-bottom: var(--swatch-size) solid var(--color-fallback);
+			border-left: var(--module-colorinfo-swatch-size) solid transparent;
+			border-bottom: var(--module-colorinfo-swatch-size) solid var(--module-colorinfo-color-fallback);
 		}
 	}
 

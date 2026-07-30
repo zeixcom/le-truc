@@ -36,43 +36,19 @@ let idCounter = 0
  * A full-featured todo list with add, remove, complete, filter, and drag-and-drop reordering.
  * Use it as a reference example of a complete Le Truc application — keyboard accessible
  * controls and ARIA labelling should be considered when adapting it for production use.
- * @demo {./docs/examples/module-todo.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-todo} Interactive preview and usage examples
+ **/
 export default defineComponent(
 	'module-todo',
 	({ all, first, host, on, pass, watch }) => {
-		const form = first('form', 'Add a form element to enter a new todo item.')
-		const textbox = first(
-			'form-textbox',
-			'Add <form-textbox> component to enter a new todo item.',
-		)
-		const submit = first(
-			'basic-button.submit',
-			'Add <basic-button.submit> component to submit the form.',
-		)
 		const container = first(
 			'[data-container]',
 			'Add a container element for items.',
 		)
-		const template = first('template', 'Add a template element for items.')
 		const liveRegion = first(
 			'[role="status"]',
 			'Add a live region for status messages.',
 		)
-		const count = first(
-			'basic-pluralize',
-			'Add <basic-pluralize> component to display the number of todo items.',
-		)
-		const filter = first(
-			'form-radiogroup',
-			'Add <form-radiogroup> component to filter todo items.',
-		)
-		const clearCompleted = first(
-			'basic-button.clear-completed',
-			'Add <basic-button.clear-completed> component to clear completed todo items.',
-		)
-		const reorderButtons = all(REORDER_SELECTOR)
-		const checkboxComponents = all('form-checkbox')
-		const editComponents = all('form-inplace-edit')
 
 		const list = createList<TodoItem, Store<TodoItem>>([], {
 			keyConfig: item => item.id,
@@ -155,17 +131,43 @@ export default defineComponent(
 			})
 		}
 
+		const textbox = first(
+			'form-textbox',
+			'Add <form-textbox> component to enter a new todo item.',
+		)
+		const submit = first(
+			'basic-button.submit',
+			'Add <basic-button.submit> component to submit the form.',
+		)
 		pass(submit, { disabled: () => !textbox.length })
+
+		const count = first(
+			'basic-pluralize',
+			'Add <basic-pluralize> component to display the number of todo items.',
+		)
 		pass(count, { count: () => activeCount.get() })
+
+		const clearCompleted = first(
+			'basic-button.clear-completed',
+			'Add <basic-button.clear-completed> component to clear completed todo items.',
+		)
 		pass(clearCompleted, {
 			disabled: () => !completedCount.get(),
 			badge: () => (completedCount.get() ? String(completedCount.get()) : ''),
 		})
+		on(clearCompleted, 'click', () => {
+			for (let i = list.length - 1; i >= 0; i--) {
+				const key = list.keyAt(i)
+				if (key && list.byKey(key)?.completed.get()) list.remove(key)
+			}
+		})
 
+		const reorderButtons = all(REORDER_SELECTOR)
 		each(reorderButtons, button => {
 			watch(() => list.length === 1, bindProperty(button, 'disabled'))
 		})
 
+		const checkboxComponents = all('form-checkbox')
 		each(checkboxComponents, checkbox => {
 			const key = checkbox.closest<HTMLElement>('[data-key]')?.dataset.key
 			if (!key || !checkbox.isConnected) return
@@ -177,6 +179,7 @@ export default defineComponent(
 			})
 		})
 
+		const editComponents = all('form-inplace-edit')
 		each(editComponents, editEl => {
 			const key = editEl.closest<HTMLElement>('[data-key]')?.dataset.key
 			if (!key || !editEl.isConnected) return
@@ -191,6 +194,7 @@ export default defineComponent(
 		// Sync the container's children to the list. bindItem fills the cloned
 		// content — server-adopted items already carry ids and text, so the
 		// fill is naturally idempotent (no <slot> left to replace).
+		const template = first('template', 'Add a template element for items.')
 		reconcile(container, template, list, (element, item, key) => {
 			const id = `${key}-checkbox`
 			const checkbox = element.querySelector('input')
@@ -202,6 +206,7 @@ export default defineComponent(
 				?.replaceWith(document.createTextNode(item.label.get()))
 		})
 
+		const form = first('form', 'Add a form element to enter a new todo item.')
 		on(form, 'submit', e => {
 			e.preventDefault()
 			const label = textbox.value.trim()
@@ -340,14 +345,12 @@ export default defineComponent(
 			suppressNextClick = false
 		})
 
-		on(clearCompleted, 'click', () => {
-			for (let i = list.length - 1; i >= 0; i--) {
-				const key = list.keyAt(i)
-				if (key && list.byKey(key)?.completed.get()) list.remove(key)
-			}
-		})
-
+		const filter = first(
+			'form-radiogroup',
+			'Add <form-radiogroup> component to filter todo items.',
+		)
 		watch(() => filter.value || 'all', bindAttribute(host, 'filter'))
+
 		watch(status, bindText(liveRegion))
 	},
 )

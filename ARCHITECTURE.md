@@ -16,7 +16,7 @@ defineComponent('my-element', ({ expose, first, watch }) => {
 })
 ```
 
-As of v2.3, `watch()` and the other factory context helpers register into an ambient per-instance collector as they're called — the factory doesn't need to `return` anything (see [ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md)). Explicitly returning a `FactoryResult` array (`return [watch(...), ...]`) still works for backward compatibility but is deprecated as of v3.0 (see [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md), superseded).
+`watch()` and the other factory context helpers register into an ambient per-instance collector when called (see [ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md)). The factory does not need to `return` anything. Explicit `return` of a `FactoryResult` array still works but is deprecated (see [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md), superseded).
 
 ### Lifecycle
 
@@ -36,9 +36,17 @@ Mutable signals are wrapped in a `Slot` to enable signal swapping for `pass()` (
 
 ### Effect Descriptors
 
-`watch()`, `on()`, `pass()`, `each()`, `reconcile()`, and `provideContexts()` produce effect descriptors (thunks) that are activated after dependency resolution. This ensures child components are defined before effects run.
+`watch()`, `on()`, `pass()`, `each()`, `reconcile()`, and `provideContexts()` produce effect descriptors (thunks). Descriptors activate after dependency resolution, so child components are defined before effects run.
 
-As of v2.3, each helper pushes its descriptor into an ambient collector rather than relying on the factory to `return` it: each component instance has a closure-scoped collector (created in `connectedCallback`), and `each()`'s per-element `mount` callback pushes its own nested collector for the duration of the callback (popped in a `try`/`finally`), supporting arbitrarily nested per-element structures (e.g. grids). Calling a helper with no active collector — outside synchronous factory/callback execution, such as after an `await` or inside a detached `setTimeout` — throws immediately rather than silently doing nothing. Explicit `return` of a `FactoryResult` array is still supported: descriptors produced by `watch()`/`on()`/`pass()`/`each()`/`provideContexts()` are already in the collector by the time they're returned, so returning them is redundant, not required. The return value isn't simply discarded, though — it's reconciled against the collector (`forEachUnseen()` in `helpers/reactive.ts`, dedup by reference) so a hand-authored `EffectDescriptor` that bypasses every helper is still picked up if returned. For a component that needs to wrap a native API (`IntersectionObserver`, etc.) or a raw cause-effect primitive without a `return`, `watch(() => true, descriptor)` registers it the same way: `createComputed(() => true)` has no signal dependencies so it never reruns, and `watch()`'s internal `createEffect()` call self-registers the descriptor's returned cleanup on the active owner. This dual-support `return` path is deprecated as of v3.0, when explicit `return` will be removed and the return type narrows to `void`. See [ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md), superseding [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md).
+Each helper pushes its descriptor into an ambient collector instead of relying on the factory to `return` it (see [ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md), superseding [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md)):
+
+- Each component instance has a closure-scoped collector, created in `connectedCallback`.
+- `each()`'s per-element `mount` callback pushes its own nested collector for the callback's duration, popped in a `try`/`finally`. This supports arbitrarily nested per-element structures such as grids.
+- Calling a helper with no active collector — outside synchronous factory or callback execution, for example after an `await` or inside a detached `setTimeout` — throws immediately.
+
+Explicit `return` of a `FactoryResult` array still works but is deprecated. Descriptors from `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` are already in the collector by the time they're returned, so returning them is redundant, not required. The return value is not discarded: `forEachUnseen()` (in `helpers/reactive.ts`) reconciles it against the collector, deduping by reference, so a hand-authored `EffectDescriptor` that bypasses every helper is still picked up if returned.
+
+To wrap a native API (`IntersectionObserver`, etc.) or a raw cause-effect primitive without a `return`, use `watch(() => true, descriptor)`. `createComputed(() => true)` has no signal dependencies, so it never reruns. `watch()`'s internal `createEffect()` call self-registers the descriptor's returned cleanup on the active owner.
 
 ### DOM Binding Helpers
 
@@ -60,9 +68,32 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 
 ### List Reconciliation
 
-`reconcile(container, template, source, bindItem)` syncs a keyed reactive data source (`List<T>` or `Collection<T>` from cause-effect) to a container's children — Le Truc's only data-driven DOM creation (see [ADR 0017](adr/0017-keyed-template-clone-reconciliation-for-lists.md)). It is the ownership complement of `each()`: `each()` enhances DOM the component doesn't own (DOM-driven, keyed by element identity), `reconcile()` owns the container's children (data-driven, keyed by the source's string keys). Entering keys clone the `<template>`'s single root element (`InvalidTemplateError` if the template doesn't have exactly one), leaving keys dispose their scope and get removed, survivors are moved with `insertBefore()` — always reused. The first run adopts server-rendered children carrying `data-key`; children carrying `data-unreconciled` are exempt from reconciliation entirely (public SSR contract). Per-item bindings mount via `bindItem` in root-keyed scopes reusing the `keyedScopes` ownership discipline (ADR 0014), and the driving effect tracks structural changes (source keys) only.
+`reconcile(container, template, source, bindItem)` syncs a keyed reactive data source (`List<T>` or `Collection<T>` from cause-effect) to a container's children. This is Le Truc's only data-driven DOM creation (see [ADR 0017](adr/0017-keyed-template-clone-reconciliation-for-lists.md)).
 
-**`bindItem` has collector parity with `each()`'s callback.** Both run inside an ambient effect-descriptor collector: the callback is wrapped in `withCollector(collected, ...)`, then `activateResult(collected)` activates every descriptor the helpers pushed, and any returned `Cleanup` is captured by the per-item `createScope`. So `watch()`/`on()`/`pass()`/`provideContexts()` are all usable inside `bindItem` exactly as inside `each()`'s callback — per-item reactivity no longer requires a raw `createEffect`, and per-item events no longer require container-level delegation. Collected descriptors activate against the per-item `{ root: true }` scope (not the driving structural effect), so item-level `watch(item, …)` does not make the structural effect depend on item signals. Unlike `each()`, `reconcile()` does **not** apply `forEachUnseen` to the return value: `reconcile()` is new in 2.3 (no backward-compat constraint), the return is a teardown not a descriptor, and `forEachUnseen` itself is v3.0 cleanup.
+`reconcile()` is the ownership complement of `each()`:
+- `each()` enhances DOM the component doesn't own — DOM-driven, keyed by element identity.
+- `reconcile()` owns the container's children — data-driven, keyed by the source's string keys.
+
+On each run:
+- Entering keys clone the `<template>`'s single root element (`InvalidTemplateError` if the template doesn't have exactly one).
+- Leaving keys dispose their scope and are removed.
+- Survivors are always reused and moved with `insertBefore()`.
+
+The first run adopts server-rendered children that carry `data-key`. Children carrying `data-unreconciled` are exempt from reconciliation entirely — this is a public SSR contract.
+
+Per-item bindings mount via `bindItem` in root-keyed scopes, reusing the `keyedScopes` ownership discipline (ADR 0014). The driving effect tracks structural changes (source keys) only.
+
+**`bindItem` has collector parity with `each()`'s callback.** Both run inside an ambient effect-descriptor collector:
+
+- The callback is wrapped in `withCollector(collected, ...)`.
+- `activateResult(collected)` activates every descriptor the helpers pushed.
+- Any returned `Cleanup` is captured by the per-item `createScope`.
+
+So `watch()`, `on()`, `pass()`, and `provideContexts()` are all usable inside `bindItem`, exactly as inside `each()`'s callback. Per-item reactivity does not require a raw `createEffect`, and per-item events do not require container-level delegation.
+
+Collected descriptors activate against the per-item `{ root: true }` scope, not the driving structural effect. Item-level `watch(item, …)` therefore does not make the structural effect depend on item signals.
+
+Unlike `each()`, `reconcile()` does not apply `forEachUnseen` to the return value: the return is a teardown, not a descriptor.
 
 ## Query System
 
@@ -91,12 +122,25 @@ Parsers transform HTML attribute strings to typed values (see [ADR 0005](adr/000
 
 Implements the [Community Protocol for Context](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md) (see [ADR 0008](adr/0008-community-protocol-for-context.md)):
 
-- `provideContexts([...])`: Provider side, installs `context-request` listener; a throwing property getter is caught and degrades to `undefined` (logged in `DEV_MODE`) rather than throwing inside the consumer's `Slot`
-- `requestContext(context, fallback)`: Consumer side, dispatches `ContextRequestEvent`, returns a `Signal<T>` backed by a `Slot` (the same primitive `pass()` uses for overridable backing signals). A provider that upgrades *after* the consumer's synchronous dispatch (its `customElements.define()` runs later in the bundle, or its own `provideContexts` listener hasn't activated yet) is caught by two re-dispatches — once on a microtask and once after the 200 ms dependency-resolution window — so the `Slot` swaps its delegate from the fallback `State` to a `Memo` of the provider's getter, switching the value reactively with no consumer code change. Once a provider answers, the consumer retains its value for the lifetime of the connection — providers are stable single sources of truth that update *values*, not entities to be removed or swapped (that is an anti-pattern), so disconnecting a provider does not revert the consumer to `fallback` (see [ADR 0015](adr/0015-late-provider-retry-in-requestcontext.md))
+- `provideContexts([...])`: provider side. Installs a `context-request` listener. A throwing property getter is caught and degrades to `undefined` (logged in `DEV_MODE`) instead of throwing inside the consumer's `Slot`.
+- `requestContext(context, fallback)`: consumer side. Dispatches `ContextRequestEvent` and returns a `Signal<T>` backed by a `Slot` — the same primitive `pass()` uses for overridable backing signals.
+
+A provider can upgrade after the consumer's synchronous dispatch — for example if its `customElements.define()` runs later in the bundle, or its `provideContexts` listener hasn't activated yet. Two re-dispatches catch this case: one on a microtask, one after the 200 ms dependency-resolution window. Each re-dispatch lets the `Slot` swap its delegate from the fallback `State` to a `Memo` of the provider's getter, switching the value reactively with no consumer code change.
+
+Once a provider answers, the consumer retains its value for the lifetime of the connection. Providers are stable single sources of truth that update values, not entities to be removed or swapped — disconnecting a provider does not revert the consumer to `fallback` (see [ADR 0015](adr/0015-late-provider-retry-in-requestcontext.md)).
 
 ### Inter-Component Signal Sharing (Pass)
 
-`pass(target, props)` swaps Slot-backed signals for zero-overhead live **Signal** sharing between Le Truc **Component** instances. Every entry in `props` is a declared intent to bind a live signal: if a prop doesn't exist on the target, can't be resolved to a signal, or isn't Slot-backed (target is a non-Le-Truc custom element, or the prop is read-only/computed), `pass()` throws `InvalidPassPropertyError` naming every failing prop — validated eagerly before any signal is swapped, so a failure never leaves a partial bind. See [ADR 0011](adr/0011-throw-on-pass-binding-failure.md). The property-key and bare-writable-signal short forms — which grant the child unrestricted `.set()` on the parent's signal — are deprecated in favor of the thunk (read-only) and `{ get, set }` descriptor (mediated writable) forms; they warn in DEV_MODE and will be removed in the next major (see [ADR 0012](adr/0012-deprecate-unrestricted-write-short-forms-in-pass.md)).
+`pass(target, props)` swaps Slot-backed signals for zero-overhead live `Signal` sharing between Le Truc `Component` instances. Every entry in `props` is a declared intent to bind a live signal.
+
+`pass()` throws `InvalidPassPropertyError`, naming every failing prop, if a prop:
+- Doesn't exist on the target
+- Can't be resolved to a signal
+- Isn't Slot-backed — the target is a non-Le-Truc custom element, or the prop is read-only or computed
+
+Validation runs eagerly, before any signal is swapped, so a failure never leaves a partial bind (see [ADR 0011](adr/0011-throw-on-pass-binding-failure.md)).
+
+The property-key and bare-writable-signal short forms grant the child unrestricted `.set()` on the parent's signal. They are deprecated in favor of the thunk (read-only) and `{ get, set }` descriptor (mediated writable) forms, and warn in `DEV_MODE` (see [ADR 0012](adr/0012-deprecate-unrestricted-write-short-forms-in-pass.md)).
 
 ## Naming Conventions
 
@@ -121,7 +165,7 @@ Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestConte
 
 ### Custom Elements Manifest
 
-Le Truc example components are analysed by `@custom-elements-manifest/analyzer` using the `@zeix/cem-plugin-le-truc` plugin (see [ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md)). The plugin bridges the gap between Le Truc's factory pattern and the standard CEM ecosystem.
+Le Truc example components are analysed by `@custom-elements-manifest/analyzer` using the `@zeix/cem-plugin-le-truc` plugin (see [ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md)). The plugin adapts Le Truc's factory pattern to the standard CEM ecosystem.
 
 The generated `custom-elements.json` (repo root, referenced via `"customElements"` in `package.json`, gitignored) enables two **optional** tooling features — neither is required to build, test, or contribute to Le Truc:
 - **`cem lsp`**: Editor autocomplete, hover docs, and diagnostics in HTML templates (VS Code, Zed) — requires `@pwrs/cem` installed globally (see CONTRIBUTING.md); not a project dependency.

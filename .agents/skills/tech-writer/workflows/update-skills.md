@@ -1,7 +1,8 @@
 # Update Skills
 
 ## Required Reading
-Read the specific skill file(s) in question before making any changes.
+1. references/ste100-style.md — sentence and vocabulary rules (skill files under `.agents/skills/` are prose docs; the `tech-writer` skill's own workflow files, like this one, follow it too)
+2. The specific skill file(s) in question before making any changes.
 
 ## Process
 

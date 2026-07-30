@@ -1,6 +1,6 @@
 ### Module Calctable
 
-An editable calculation table — description, amount, and price/unit columns compute a per-row price, plus running totals in the footer. Rows are synced via `reconcile()`; server-rendered `<tr data-key>` rows are adopted into the initial list so they aren't stripped on first run. A trailing entry row (marked `data-unreconciled`, exempt from reconciliation) creates a new row once its description, amount, and price/unit are all filled; setting an existing row's amount to 0 removes it. Currency formatting is configured via the `options` attribute, parsed the same way as `<basic-number>`.
+An editable calculation table — description, amount, and price/unit columns compute a per-row price, plus running totals in the footer.
 
 #### Preview
 

@@ -1,6 +1,6 @@
 ### Basic Counter
 
-The canonical introductory example for Le Truc. Demonstrates initialising the reactive `count` property by reading `span` text content directly in `expose()`, `on('click')` returning `{ count }` to update the host, and `watch('count', bindText(span))` to keep the display in sync — the standard factory-form pattern for a property derived from existing DOM content.
+The canonical introductory counterexample for Le Truc.
 
 #### Preview
 

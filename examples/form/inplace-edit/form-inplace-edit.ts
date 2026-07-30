@@ -28,17 +28,15 @@ let idCounter = 0
  * keyboard interaction (Enter to confirm, Escape to cancel), and focus management. Form
  * participation is via ElementInternals (`formAssociated()`) with the managed form-control
  * convention — value sync, reset, and disabled propagation to the edit button are library-managed.
- * @demo {./docs/examples/form-inplace-edit.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#form-inplace-edit} Interactive preview and usage examples
+ **/
 export default defineComponent<FormInplaceEditProps>(
 	'form-inplace-edit',
 	({ expose, first, host, on, watch }) => {
 		const textEl = first(
 			'.text',
 			'Add an element with "text" class for label display.',
-		)
-		const editBtn = first(
-			'button',
-			'Add a <button> element for edit mode toggle.',
 		)
 
 		const editInputId = `form-inplace-edit-input${++idCounter}`
@@ -49,6 +47,10 @@ export default defineComponent<FormInplaceEditProps>(
 			value: textEl.textContent?.trim() ?? '',
 		})
 
+		const editBtn = first(
+			'button',
+			'Add a <button> element for edit mode toggle.',
+		)
 		on(editBtn, 'click', e => {
 			e.stopPropagation()
 			if (host.editing && input)
@@ -58,6 +60,11 @@ export default defineComponent<FormInplaceEditProps>(
 				}
 			else host.editing = !host.editing
 		})
+		on(editBtn, 'mousedown', e => {
+			e.preventDefault()
+		})
+		watch('disabled', bindProperty(editBtn, 'disabled'))
+
 		on(textEl, 'dblclick', () => {
 			if (host.disabled) return
 			return { editing: true }
@@ -73,9 +80,6 @@ export default defineComponent<FormInplaceEditProps>(
 				}
 			else host.editing = false
 		})
-		on(editBtn, 'mousedown', e => {
-			e.preventDefault()
-		})
 		on(host, 'focusout', e => {
 			if (!host.editing) return
 			const relatedTarget = e.relatedTarget as Element | null
@@ -84,7 +88,6 @@ export default defineComponent<FormInplaceEditProps>(
 		})
 
 		watch('value', bindText(textEl))
-		watch('disabled', bindProperty(editBtn, 'disabled'))
 		watch('editing', editing => {
 			host.toggleAttribute('editing', editing)
 			if (editing) {

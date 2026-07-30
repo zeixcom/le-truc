@@ -62,15 +62,13 @@ const HANDLED_KEYS = [...DECREMENT_KEYS, ...INCREMENT_KEYS, FIRST_KEY, LAST_KEY]
  * A filterable listbox that loads options from a remote JSON source and integrates with HTML forms.
  * Use it for searchable, single-select option lists — provides ARIA listbox semantics,
  * keyboard navigation (Arrow, Home, End), accessibility, and form participation via ElementInternals.
- * @demo {./docs/examples/form-listbox.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#form-listbox} Interactive preview and usage examples
+ **/
 export default defineComponent<FormListboxProps>(
 	'form-listbox',
 	({ all, expose, first, host, on, watch }) => {
-		const filterEl = first('input.filter') as HTMLInputElement | undefined
-		const clearBtn = first('button.clear')
-		const callout = first('card-callout')
-		const loading = first('.loading')
-		const errorEl = first('.error')
+		const filterEl = first('input.filter')
 		const listbox = first(
 			'[role="listbox"]',
 			'Needed to display list of options.',
@@ -128,7 +126,7 @@ export default defineComponent<FormListboxProps>(
 
 		const lowerFilter = createMemo(() => host.filter.toLowerCase())
 
-		// Roving tabindex focus management for listbox (inlined from manageFocus)
+		// Roving tabindex focus management for listbox
 		const getVisibleOptions = () =>
 			Array.from(
 				listbox.querySelectorAll<HTMLButtonElement>(
@@ -151,7 +149,10 @@ export default defineComponent<FormListboxProps>(
 		})
 
 		on(filterEl, 'input', (_e, el) => ({ filter: el.value ?? '' }))
+
+		const clearBtn = first('button.clear')
 		on(clearBtn, 'click', () => ({ filter: '' }))
+
 		// Focus management on listbox
 		on(listbox, 'click', ({ target }) => {
 			const option = (target as HTMLElement).closest(
@@ -190,7 +191,10 @@ export default defineComponent<FormListboxProps>(
 		// Form value sync: managed (value → setFormValue via ElementInternals)
 		// Form reset: managed (value attribute is the default)
 		// Disabled, state restore: managed
-		if (host.src)
+		if (host.src) {
+			const callout = first('card-callout')
+			const loading = first('.loading')
+			const errorEl = first('.error')
 			watch(content, {
 				nil: () => {
 					if (callout) callout.hidden = false
@@ -231,6 +235,7 @@ export default defineComponent<FormListboxProps>(
 					}
 				},
 			})
+		}
 
 		// Per-option reactive effects
 		each(options, option => {

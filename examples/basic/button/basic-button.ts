@@ -19,7 +19,8 @@ declare global {
  * A button that can be disabled, labelled, and badged via reactive properties.
  * Use it for triggering actions — it provides a native `<button>` with
  * ARIA-friendly labelling and activates on keyboard Space or Enter when focused.
- * @demo {./docs/examples/basic-button.html} Interactive preview with disabled, labelled, and badged variants
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#basic-button} Interactive preview with disabled, labelled, and badged variants
  */
 export default defineComponent<BasicButtonProps>(
 	'basic-button',

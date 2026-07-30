@@ -1,8 +1,24 @@
 // Fixture for the bundle-size regression test: the smallest realistic
-// consumer surface — `defineComponent` with no extensions. Proves that a
-// consumer who never imports an extension (`formAssociated()`,
-// `observedAttributes()`, ...) never bundles its module, since
-// `component.ts` only references the generic `ComponentExtension` shape at
-// the value level, never a concrete feature module. See ADR on the
-// `ComponentExtension` mechanism.
-export { defineComponent } from '../../src/component'
+// consumer surface — a component with one reactive property synced to a
+// DOM element, using no extensions. Proves that a consumer who never
+// imports an extension (`formAssociated()`, `observedAttributes()`, ...)
+// never bundles its module, since `component.ts` only references the
+// generic `ComponentExtension` shape at the value level, never a concrete
+// feature module. See ADR on the `ComponentExtension` mechanism.
+import { bindText } from '../../src/bindings'
+import { defineComponent } from '../../src/component'
+
+type MinimalCounterProps = { count: number }
+
+defineComponent<MinimalCounterProps>(
+	'minimal-counter',
+	({ expose, first, host, on, watch }) => {
+		const button = first('button', 'Needed to increment the count.')
+		const output = first('output', 'Needed to display the count.')
+
+		expose({ count: 0 })
+
+		on(button, 'click', () => ({ count: host.count + 1 }))
+		watch('count', bindText(output))
+	},
+)

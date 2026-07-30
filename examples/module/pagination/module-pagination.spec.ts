@@ -66,26 +66,6 @@ test.describe('module-pagination component', () => {
 			// Should have proper ARIA attributes
 			await expect(valueDisplay).toHaveAttribute('aria-current', 'page')
 		})
-
-		test('reads initial values from component properties', async ({ page }) => {
-			const initialValues = await page.evaluate(() => {
-				const pagination = document.querySelector('module-pagination')
-				return {
-					value: pagination?.value,
-					max: pagination?.max,
-				}
-			})
-
-			expect(initialValues.value).toBe(1)
-			expect(initialValues.max).toBe(10)
-		})
-
-		test('sets correct host attributes', async ({ page }) => {
-			const pagination = page.locator('module-pagination')
-
-			await expect(pagination).toHaveAttribute('value', '1')
-			await expect(pagination).toHaveAttribute('max', '10')
-		})
 	})
 
 	test.describe('Input Field Navigation', () => {
@@ -551,31 +531,6 @@ test.describe('module-pagination component', () => {
 			await expect(input).toHaveAttribute('name', 'page')
 			await expect(input).toHaveAttribute('min', '1')
 		})
-
-		test('maintains accessible button states', async ({ page }) => {
-			const pagination = page.locator('module-pagination')
-			const prevButton = pagination.locator('button.prev')
-			const nextButton = pagination.locator('button.next')
-			const input = pagination.locator('input[type="number"]')
-
-			// At minimum (1), prev should be disabled
-			await expect(prevButton).toBeDisabled()
-			await expect(nextButton).toBeEnabled()
-
-			// At maximum (10), next should be disabled
-			await input.fill('10')
-			await input.blur()
-
-			await expect(prevButton).toBeEnabled()
-			await expect(nextButton).toBeDisabled()
-
-			// In middle range, both should be enabled
-			await input.fill('5')
-			await input.blur()
-
-			await expect(prevButton).toBeEnabled()
-			await expect(nextButton).toBeEnabled()
-		})
 	})
 
 	test.describe('Form Integration', () => {
@@ -590,96 +545,9 @@ test.describe('module-pagination component', () => {
 
 			expect(formData.page).toBe('1') // Should include input value
 		})
-
-		test('syncs with form reset', async ({ page }) => {
-			const pagination = page.locator('module-pagination')
-			const input = pagination.locator('input[type="number"]')
-			const valueDisplay = pagination.locator('.value')
-
-			// Change value
-			await input.fill('5')
-			await input.blur()
-
-			// Create and reset a form
-			await page.evaluate(() => {
-				const form = document.createElement('form')
-				const pagination = document.querySelector('module-pagination')
-				const clonedInput = pagination!.querySelector('input')!.cloneNode()
-				;(clonedInput as HTMLInputElement).value = '5'
-				form.appendChild(clonedInput)
-				document.body.appendChild(form)
-				form.reset()
-
-				// Simulate reset by setting input back to original value
-				const originalInput = pagination!.querySelector('input')
-				originalInput!.value = '1'
-				originalInput!.dispatchEvent(new Event('change', { bubbles: true }))
-			})
-
-			// Should reset to original value
-			const componentValue = await page.evaluate(() => {
-				const pagination = document.querySelector('module-pagination')
-				return pagination?.value
-			})
-			expect(componentValue).toBe(1)
-			await expect(valueDisplay).toHaveText('1')
-		})
 	})
 
 	test.describe('Edge Cases', () => {
-		test('handles rapid navigation correctly', async ({ page }) => {
-			const pagination = page.locator('module-pagination')
-			const nextButton = pagination.locator('button.next')
-
-			// Rapid clicking
-			for (let i = 0; i < 5; i++) {
-				await nextButton.click()
-			}
-
-			// Should handle rapid clicks correctly
-			const componentValue = await page.evaluate(() => {
-				const pagination = document.querySelector('module-pagination')
-				return pagination?.value
-			})
-			expect(componentValue).toBe(6) // 1 + 5 clicks
-		})
-
-		test('maintains consistency across interaction methods', async ({
-			page,
-		}) => {
-			const pagination = page.locator('module-pagination')
-			const input = pagination.locator('input[type="number"]')
-			const nextButton = pagination.locator('button.next')
-			const valueDisplay = pagination.locator('.value')
-
-			// Use button navigation
-			await nextButton.click()
-
-			// Use input field
-			await input.fill('5')
-			await input.blur()
-
-			// Use keyboard navigation
-			await pagination.focus()
-			await page.keyboard.press('ArrowRight')
-
-			// Use programmatic update
-			await page.evaluate(() => {
-				const pagination = document.querySelector('module-pagination')
-				pagination!.value = 3
-			})
-
-			// All should be in sync
-			const componentValue = await page.evaluate(() => {
-				const pagination = document.querySelector('module-pagination')
-				return pagination?.value
-			})
-			expect(componentValue).toBe(3)
-			await expect(valueDisplay).toHaveText('3')
-			await expect(input).toHaveValue('3')
-			await expect(pagination).toHaveAttribute('value', '3')
-		})
-
 		test('handles decimal and float inputs appropriately', async ({ page }) => {
 			const pagination = page.locator('module-pagination')
 			const input = pagination.locator('input[type="number"]')

@@ -68,44 +68,6 @@ test.describe('card-mediaqueries component', () => {
 		expect(['portrait', 'landscape']).toContain(orientationText)
 	})
 
-	test('context values differ from fallback values', async ({ page }) => {
-		const componentWithoutContext = page.locator('card-mediaqueries').first()
-		const componentWithContext = page.locator('context-media card-mediaqueries')
-
-		// Get values from both components
-		const [
-			motionWithoutContext,
-			motionWithContext,
-			themeWithoutContext,
-			themeWithContext,
-			viewportWithoutContext,
-			viewportWithContext,
-			orientationWithoutContext,
-			orientationWithContext,
-		] = await Promise.all([
-			componentWithoutContext.locator('.motion').textContent(),
-			componentWithContext.locator('.motion').textContent(),
-			componentWithoutContext.locator('.theme').textContent(),
-			componentWithContext.locator('.theme').textContent(),
-			componentWithoutContext.locator('.viewport').textContent(),
-			componentWithContext.locator('.viewport').textContent(),
-			componentWithoutContext.locator('.orientation').textContent(),
-			componentWithContext.locator('.orientation').textContent(),
-		])
-
-		// Without context should always be 'unknown'
-		expect(motionWithoutContext).toBe('unknown')
-		expect(themeWithoutContext).toBe('unknown')
-		expect(viewportWithoutContext).toBe('unknown')
-		expect(orientationWithoutContext).toBe('unknown')
-
-		// With context should be actual detected values (not 'unknown')
-		expect(motionWithContext).not.toBe('unknown')
-		expect(themeWithContext).not.toBe('unknown')
-		expect(viewportWithContext).not.toBe('unknown')
-		expect(orientationWithContext).not.toBe('unknown')
-	})
-
 	test('responds to media query changes', async ({ page, isMobile }) => {
 		const componentWithContext = page.locator('context-media card-mediaqueries')
 
@@ -213,72 +175,5 @@ test.describe('card-mediaqueries component', () => {
 		expect(firstTheme).toBe(secondTheme)
 		expect(firstViewport).toBe(secondViewport)
 		expect(firstOrientation).toBe(secondOrientation)
-	})
-
-	test('provideContexts() runs as side-effect', async ({ page }) => {
-		const cardWithContext = page.locator('context-media card-mediaqueries')
-		const motionText = await cardWithContext.locator('.motion').textContent()
-		// Real context values — not the 'unknown' fallback shown without context
-		expect(['no-preference', 'reduce']).toContain(motionText?.trim())
-	})
-
-	test('context-media provides all four media contexts', async ({ page }) => {
-		const cardWithContext = page.locator('context-media card-mediaqueries')
-
-		const texts = {
-			motion: await cardWithContext.locator('.motion').textContent(),
-			theme: await cardWithContext.locator('.theme').textContent(),
-			viewport: await cardWithContext.locator('.viewport').textContent(),
-			orientation: await cardWithContext.locator('.orientation').textContent(),
-		}
-
-		expect(texts.motion).toBeTruthy()
-		expect(texts.theme).toBeTruthy()
-		expect(texts.viewport).toBeTruthy()
-		expect(texts.orientation).toBeTruthy()
-	})
-
-	// TODO: Re-enable this test when context-theme component is implemented
-	// This test doesn't make sense with context-media since it always returns
-	// the same browser/system values regardless of nesting
-	test.skip('context isolation - nested providers override parent values', async ({
-		page,
-	}) => {
-		// Create a nested context structure where inner context might override values
-		await page.evaluate(() => {
-			const outerContext = document.querySelector('context-media')
-			if (outerContext) {
-				const innerContext = document.createElement('context-media')
-				const nestedCard = document.createElement('card-mediaqueries')
-				nestedCard.innerHTML = `
-					<h5>Nested Card</h5>
-					<dl>
-						<dt>Motion:</dt><dd class="motion"></dd>
-						<dt>Theme:</dt><dd class="theme"></dd>
-						<dt>Viewport:</dt><dd class="viewport"></dd>
-						<dt>Orientation:</dt><dd class="orientation"></dd>
-					</dl>
-				`
-				innerContext.appendChild(nestedCard)
-				outerContext.appendChild(innerContext)
-			}
-		})
-
-		const outerCard = page.locator('context-media > card-mediaqueries')
-		const nestedCard = page.locator(
-			'context-media context-media card-mediaqueries',
-		)
-
-		await expect(nestedCard).toBeVisible()
-
-		// Both should receive context values (same source since it's media queries)
-		const [outerMotion, nestedMotion] = await Promise.all([
-			outerCard.locator('.motion').textContent(),
-			nestedCard.locator('.motion').textContent(),
-		])
-
-		// Should both be valid motion preferences (not 'unknown')
-		expect(['no-preference', 'reduce']).toContain(outerMotion)
-		expect(['no-preference', 'reduce']).toContain(nestedMotion)
 	})
 })

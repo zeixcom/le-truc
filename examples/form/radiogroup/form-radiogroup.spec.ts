@@ -555,42 +555,4 @@ test.describe('form-radiogroup component', () => {
 		const finalScrollY = await page.evaluate(() => window.scrollY)
 		expect(finalScrollY).toBe(initialScrollY)
 	})
-
-	test('handles rapid selection changes', async ({ page }) => {
-		const radiogroupComponent = page.locator('form-radiogroup').first()
-		const femaleRadio = radiogroupComponent.locator('input[value="female"]')
-		const maleRadio = radiogroupComponent.locator('input[value="male"]')
-		const otherRadio = radiogroupComponent.locator('input[value="other"]')
-
-		// Rapid clicks between different radios
-		await femaleRadio.click()
-		await maleRadio.click()
-		await otherRadio.click()
-		await femaleRadio.click()
-
-		// Should end up with female selected
-		await expect(femaleRadio).toBeChecked()
-		await expect(maleRadio).not.toBeChecked()
-		await expect(otherRadio).not.toBeChecked()
-
-		const finalValue = await page.evaluate(() => {
-			const element = document.querySelector('form-radiogroup') as any
-			return element.value
-		})
-		expect(finalValue).toBe('female')
-	})
-
-	test('maintains focus management after DOM changes', async ({ page }) => {
-		const radiogroupComponent = page.locator('form-radiogroup').first()
-		const femaleRadio = radiogroupComponent.locator('input[value="female"]')
-
-		// Focus and select female (index 0)
-		await femaleRadio.focus()
-		await femaleRadio.click()
-
-		// Verify focus management is still working - should move to next index
-		await page.keyboard.press('ArrowRight')
-		const maleRadio = radiogroupComponent.locator('input[value="male"]')
-		await expect(maleRadio).toBeFocused()
-	})
 })

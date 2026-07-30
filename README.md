@@ -2,20 +2,20 @@
 
 **Type-safe reactive Web Components — HTML-first, backend-agnostic**
 
-Le Truc adds a thin reactive layer to server-rendered HTML. You keep your existing backend (Java, PHP, Python, C#, static site generator — anything that outputs HTML). Le Truc wires fine-grained DOM updates to reactive component properties in the browser, without re-rendering whole subtrees and without requiring JavaScript on the server.
+Le Truc adds a thin reactive layer to HTML that your server renders. Your backend can be Java, PHP, Python, C#, a static site generator, or any tool that outputs HTML. Le Truc connects reactive component properties to specific DOM nodes in the browser and updates only these nodes. It does not re-render whole sections of the page. It does not need JavaScript on the server.
 
-The result is SolidJS-style reactivity packaged as standard Custom Elements: components are reusable across projects, type-safe, and carry no framework lock-in.
+The result is reactivity in the style of SolidJS, packaged as standard Custom Elements: reusable across projects, type-safe, no framework lock-in.
 
-## Why
+## Why use Le Truc
 
-Digital agencies building content-rich sites face a recurring choice: imperative JavaScript that becomes unmaintainable as complexity grows, or a SPA framework that takes over rendering and requires a JavaScript backend. Neither is a good fit when the backend is a CMS and the initial HTML is already correct.
+You often face this choice:
 
-Le Truc solves the specific problem of _stateful interactivity on server-rendered pages_:
+- Imperative JavaScript, which becomes hard to maintain as the code grows
+- An SPA framework, which takes control of rendering and needs a JavaScript backend for SSR
 
-- The server renders HTML — Le Truc never re-renders it
-- Reactive properties update only the DOM nodes that actually changed
-- Components are plain Custom Elements — they work in any host environment
-- TypeScript catches integration errors at compile time
+Neither choice is good when the backend is a CMS and the initial HTML is already correct.
+
+Le Truc solves one problem: how to add stateful interactivity to a page that the server has already rendered. See [Key features](#key-features) below.
 
 ## Installation
 
@@ -25,9 +25,9 @@ npm install @zeix/le-truc
 bun add @zeix/le-truc
 ```
 
-## Quick Start
+## Quick start
 
-1. Start with your server-rendered HTML:
+1. Start with server-rendered HTML:
 
 ```html
 <basic-hello>
@@ -43,8 +43,8 @@ bun add @zeix/le-truc
 import { bindText, defineComponent } from '@zeix/le-truc'
 
 defineComponent(
-  'basic-hello',                     // Component name (must contain a hyphen)
-  ({ expose, first, on, watch }) => { // Factory: query DOM, declare props, wire up effects
+  'basic-hello',                      // component name (must contain a hyphen)
+  ({ expose, first, on, watch }) => { // query DOM, declare props, wire up effects
     const input = first('input', 'Needed to enter the name.')
     const output = first('output', 'Needed to display the name.')
     const fallback = output.textContent || ''
@@ -57,13 +57,26 @@ defineComponent(
 )
 ```
 
-3. Import the module and watch it work.
+3. Import the module. The component now works.
 
-`defineComponent` registers the element via `customElements.define()`. `expose()` declares reactive properties, `watch()` wires up DOM updates that fire only when the tracked signal actually changes, `on()` binds event listeners.
+`defineComponent` registers the element with `customElements.define()`. `expose()` declares the reactive properties. `watch()` connects a DOM update to a signal; the update runs only when the signal changes. `on()` binds an event listener.
+
+## Key features
+
+- 🧱 **HTML-first** — enhances HTML that the server has already rendered and never re-renders it; no Virtual DOM, no hydration
+- 🔌 **Plain Custom Elements** — components work in any host environment
+- 🚦 **Reactive properties** — signals track their dependencies automatically
+- ⚡️ **Pinpoint effects** — changes only the exact DOM nodes that changed
+- 🛡️ **Type-safe** — TypeScript infers types from selector strings through to property types and finds integration errors when you compile the code
+- 🧩 **Composable** — build component behavior from small, reusable parser and effect functions
+- 🌐 **Context support** — components share state without you passing props through each level
+- 🪶 **Small size** — 10 kB or less when compressed with gzip; tree-shakeable
+
+Le Truc uses [Cause & Effect](https://github.com/zeixcom/cause-effect) for its reactive primitives.
 
 ## Documentation
 
-Full documentation with live examples is at **[zeixcom.github.io/le-truc](https://zeixcom.github.io/le-truc)**:
+Find the full documentation with live examples at **[zeixcom.github.io/le-truc](https://zeixcom.github.io/le-truc)**:
 
 - [Introduction](https://zeixcom.github.io/le-truc/index.html)
 - [Getting Started](https://zeixcom.github.io/le-truc/getting-started.html)
@@ -74,20 +87,8 @@ Full documentation with live examples is at **[zeixcom.github.io/le-truc](https:
 - [API](https://zeixcom.github.io/le-truc/api.html)
 - [About](https://zeixcom.github.io/le-truc/about.html)
 
-## Key Features
+## Contributing and license
 
-- 🧱 **HTML-first** — enhances server-rendered markup; no Virtual DOM, no hydration
-- 🚦 **Reactive properties** — signals with automatic dependency tracking and fine-grained updates
-- ⚡️ **Pinpoint effects** — only the exact DOM nodes that changed are touched
-- 🧩 **Composable** — build behaviour from small, reusable parsers and effect functions
-- 🌐 **Context support** — share state across components without prop drilling
-- 🪶 **Tiny** — ≤10 kB gzipped, tree-shakeable
-- 🛡️ **Type-safe** — full TypeScript inference from selector strings to property types
-
-Le Truc uses [Cause & Effect](https://github.com/zeixcom/cause-effect) for its reactive primitives.
-
-## Contributing & License
-
-Contributions, bug reports, and suggestions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+You can contribute code, report bugs, and send suggestions. See [CONTRIBUTING.md](CONTRIBUTING.md) for instructions.
 
 License: [MIT](LICENSE) — © 2026 [Zeix AG](https://zeix.com)

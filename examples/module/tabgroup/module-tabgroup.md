@@ -1,6 +1,6 @@
 ### Module Tabgroup
 
-A keyboard-accessible tab group. Demonstrates `createState()` with `on()` for the read-only `selected` property, separate `on()` handlers on a `Memo<HTMLButtonElement[]>` target for `click` and `keyup` with arrow-key and Home/End navigation, and a single `watch()` effect that keeps `ariaSelected`, `tabIndex`, and panel visibility in sync with the selected state.
+A keyboard-accessible tab group.
 
 #### Preview
 

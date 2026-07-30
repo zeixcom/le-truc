@@ -42,21 +42,11 @@ const oklchConverter = converter('oklch')
  * Use it for exploring and selecting colors — provides form inputs for Oklch channels
  * and should be paired with `module-colorinfo` for full color detail display.
  * The `color` attribute must be a valid Oklch color string; out-of-gamut values are clamped.
- * @demo {./docs/examples/module-coloreditor.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-coloreditor} Interactive preview and usage examples
+ **/
 export default defineComponent<ModuleColoreditorProps>(
 	'module-coloreditor',
 	({ expose, first, host, on, pass }) => {
-		const textbox = first('form-textbox', 'Needed to enter a CSS color.')
-		const colorgraph = first(
-			'form-colorgraph',
-			'Needed to pick a color in lightness-chroma graph and hue slider.',
-		)
-		const colorscale = first(
-			'card-colorscale',
-			'Needed to preview the color scale.',
-		)
-		const colorinfoBase = first('module-colorinfo.base')
-
 		expose({
 			color: asOklch(),
 			name: asString('Blue'),
@@ -71,6 +61,8 @@ export default defineComponent<ModuleColoreditorProps>(
 			if (target instanceof HTMLInputElement && target.name === 'name')
 				return { name: target.value }
 		})
+
+		const textbox = first('form-textbox', 'Needed to enter a CSS color.')
 		pass(textbox, {
 			value: {
 				get: () => host.name,
@@ -80,6 +72,11 @@ export default defineComponent<ModuleColoreditorProps>(
 			},
 			description: () => `Nearest named CSS color: ${host.nearest}`,
 		})
+
+		const colorgraph = first(
+			'form-colorgraph',
+			'Needed to pick a color in lightness-chroma graph and hue slider.',
+		)
 		pass(colorgraph, {
 			// form-colorgraph exposes `value: string` (CSS color), while
 			// module-coloreditor works in Oklch objects — bridge the gap.
@@ -91,10 +88,17 @@ export default defineComponent<ModuleColoreditorProps>(
 				},
 			},
 		})
+
+		const colorscale = first(
+			'card-colorscale',
+			'Needed to preview the color scale.',
+		)
 		pass(colorscale, {
 			color: () => host.color,
 			name: () => host.name,
 		})
+
+		const colorinfoBase = first('module-colorinfo.base')
 		pass(colorinfoBase, {
 			color: () => host.color,
 			name: () => `${host.name} 500`,

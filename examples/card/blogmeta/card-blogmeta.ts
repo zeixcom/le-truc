@@ -34,21 +34,23 @@ function formatLocalDate(
  * underlying `datetime` attributes change.
  * The `datetime` values must be valid date strings; missing attributes are skipped.
  * The host element should contain `<time class="published">` and `<time class="modified">` elements.
- * @demo {./docs/examples/card-blogmeta.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#card-blogmeta} Interactive preview and usage examples
+ **/
 export default defineComponent('card-blogmeta', ({ host, first }) => {
 	const published = first(
 		'time.published',
 		'Add a <time> element to display the publication date.',
 	)
-	const modifiedSpan = first('span.modified')
-	const modified = first('.modified time')
 	const locale = getLocale(host)
 
 	published.textContent = published.dateTime
 		? formatLocalDate(locale, published.dateTime)
 		: UNKNOWN_DATE
 
+	const modified = first('.modified time')
 	if (modified) {
+		const modifiedSpan = first('span.modified')
 		const modifiedDate = modified.dateTime
 			? formatLocalDate(locale, modified.dateTime)
 			: INVALID_DATE

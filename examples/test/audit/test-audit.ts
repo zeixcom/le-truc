@@ -37,7 +37,6 @@ defineComponent<ReservedProps>('audit-reserved-word', ({ expose }) => {
 	// `constructor` is a ReservedWord — normally rejected by the type system.
 	// The cast simulates an untyped/JSON-driven prop reaching the runtime.
 	expose({ constructor: 'blocked' } as unknown as { constructor: string })
-	return []
 })
 
 /* === Reconnect listener accounting === */
@@ -64,7 +63,7 @@ defineComponent<ReconnectProps>(
 		// Each click increments value by 1. If the reconnect-leak bug is present,
 		// every reparent cycle adds another listener on the same button, so a single
 		// click increments by N (one per accumulated listener) instead of 1.
-		return [on(btn, 'click', () => ({ value: host.value + 1 }))]
+		on(btn, 'click', () => ({ value: host.value + 1 }))
 	},
 )
 
@@ -100,12 +99,10 @@ const stripEventHandlers = (html: string): string => {
 defineComponent<SanitizeProps>('audit-sanitize', ({ expose, first, watch }) => {
 	const target = first('[data-target]', 'required')
 	expose({ content: '' })
-	return [
-		watch(
-			'content',
-			dangerouslyBindInnerHTML(target, { sanitize: stripEventHandlers }),
-		),
-	]
+	watch(
+		'content',
+		dangerouslyBindInnerHTML(target, { sanitize: stripEventHandlers }),
+	)
 })
 
 /* === Trusted Types compliance via the sanitize hook === */
@@ -158,12 +155,10 @@ defineComponent<TrustedHTMLProps>(
 	({ expose, first, watch }) => {
 		const target = first('[data-target]') as HTMLElement
 		expose({ content: '' })
-		return [
-			watch(
-				'content',
-				dangerouslyBindInnerHTML(target, { sanitize: sanitizeToTrustedHTML }),
-			),
-		]
+		watch(
+			'content',
+			dangerouslyBindInnerHTML(target, { sanitize: sanitizeToTrustedHTML }),
+		)
 	},
 )
 
@@ -191,14 +186,12 @@ defineComponent<DOMPurifyProps>(
 	({ expose, first, watch }) => {
 		const target = first('[data-target]') as HTMLElement
 		expose({ content: '' })
-		return [
-			watch(
-				'content',
-				dangerouslyBindInnerHTML(target, {
-					sanitize: (html: string) =>
-						DOMPurify.sanitize(html, { RETURN_TRUSTED_TYPE: true }),
-				}),
-			),
-		]
+		watch(
+			'content',
+			dangerouslyBindInnerHTML(target, {
+				sanitize: (html: string) =>
+					DOMPurify.sanitize(html, { RETURN_TRUSTED_TYPE: true }),
+			}),
+		)
 	},
 )

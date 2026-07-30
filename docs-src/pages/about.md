@@ -7,13 +7,13 @@ description: 'License, versioning, getting involved'
 {% hero %}
 # 🤝 About
 
-**Join the Le Truc community!** This page covers the people behind Le Truc, how you can contribute, versioning details, and licensing. Whether you're a developer, designer, or sponsor, there are many ways to get involved.
+**Join the Le Truc community.** Whether you are a developer, designer, or sponsor, there are many ways to get involved.
 {% /hero %}
 
 {% section %}
 ## Who's Behind Le Truc?
 
-Le Truc is an **open-source project**, actively developed by [Zeix AG](https://zeix.com), a Switzerland-based agency for User-Centered Design, committed to enhancing accessibility and usability in web technologies.
+Le Truc is an **open-source project**, actively developed by [Zeix AG](https://zeix.com). Zeix AG is a Switzerland-based agency for User-Centered Design. The agency is committed to accessibility and usability in web technologies.
 
 ### Core Team & Contributors
 
@@ -26,7 +26,7 @@ Le Truc is an **open-source project**, actively developed by [Zeix AG](https://z
 {% callout .note %}
 **Become a Sponsor**
 
-Le Truc is free and open-source. If your organization finds it valuable, consider [sponsoring its development](mailto:info@zeix.com) to help make web development **lightweight, accessible, and fun** again!
+Le Truc is free and open-source. If your organization finds it valuable, consider [sponsoring its development](mailto:info@zeix.com) to help keep web development **lightweight, accessible, and fun**.
 {% /callout %}
 
 {% /section %}
@@ -34,9 +34,9 @@ Le Truc is free and open-source. If your organization finds it valuable, conside
 {% section %}
 ## License
 
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT), which means you can **use, modify, and distribute** it freely – even in commercial projects.
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT). This means you can **use, modify, and distribute** it freely, even in commercial projects.
 
-A copy of the license can be found in the [LICENSE](https://github.com/zeixcom/le-truc/blob/main/LICENSE) file of the repository.
+Find a copy of the license in the [LICENSE](https://github.com/zeixcom/le-truc/blob/main/LICENSE) file of the repository.
 
 {% /section %}
 
@@ -54,7 +54,7 @@ Le Truc follows [Semantic Versioning](https://semver.org/) (SemVer), which is st
 - **MINOR**: New features that are backwards compatible.
 - **PATCH**: Bug fixes and performance improvements.
 
-### Previous Pre-Releases
+### Previous Releases
 
 View all releases and associated notes on [Github Releases](https://github.com/zeixcom/le-truc/releases).
 
@@ -63,7 +63,7 @@ View all releases and associated notes on [Github Releases](https://github.com/z
 {% section %}
 ## Getting Involved
 
-Le Truc is **an open-source project**, and contributions are always welcome! Whether you’re **reporting bugs, improving documentation, or suggesting features**, here's how you can help:
+Le Truc is **an open-source project**. Contributions are always welcome. Whether you are **reporting bugs, improving documentation, or suggesting features**, here is how you can help:
 
 - [Open an Issue](https://github.com/zeixcom/le-truc/issues) – Report bugs or suggest features.
 - [Submit a Pull Request](https://github.com/zeixcom/le-truc/blob/main/CONTRIBUTING.md) – Help improve Le Truc by fixing issues or adding new features.
@@ -72,10 +72,10 @@ Le Truc is **an open-source project**, and contributions are always welcome! Whe
 ### Contributing Code
 
 - Fork the repository, create a new branch, and submit a pull request.
-- Read the [Contributing Guidelines](https://github.com/zeixcom/le-truc/blob/main/CONTRIBUTING.md) for setting up a development environment and best practices.
+- Read the [Contributing Guidelines](https://github.com/zeixcom/le-truc/blob/main/CONTRIBUTING.md) to set up a development environment and learn best practices.
 
 ### Community Guidelines
 
-We strive for a welcoming and inclusive environment. Please follow our [Code of Conduct](https://github.com/zeixcom/le-truc/blob/main/CODE_OF_CONDUCT.md) when contributing.
+This project strives for a welcoming and inclusive environment. Follow the [Code of Conduct](https://github.com/zeixcom/le-truc/blob/main/CODE_OF_CONDUCT.md) when contributing.
 
 {% /section %}

@@ -1,6 +1,6 @@
 ### Card Colorscale
 
-A color scale card that displays a 9-step tonal palette derived from a single base OKLCH color. Demonstrates a custom `asOklch()` parser to initialise `color` from a CSS oklch string at connect time, `watch('color', ...)` to update all CSS custom properties (`--color-base`, `--color-lighten*`, `--color-darken*`, `--color-text`, `--color-text-soft`) and the hex label in a single effect, and `bindText()` for the `name` property.
+A color scale card that displays a 9-step tonal palette derived from a single base OKLCH color.
 
 #### Preview
 

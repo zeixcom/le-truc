@@ -27,17 +27,12 @@ declare global {
  * Use it for lazy-loading content on demand — the `src` attribute should point to a
  * same-origin URL; cross-origin or `javascript:` URLs are rejected for security.
  * Untrusted HTML must be sanitised server-side; set `allow-scripts` only when required.
- * Set `allow-scripts` attribute to permit inline scripts in the fetched content.
- * @demo {./docs/examples/module-lazyload.html} Interactive preview and usage examples */
+ * @attribute {boolean} [allow-scripts=false] - Permit inline scripts in the fetched content. Presence-only; read once at connect time.
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-lazyload} Interactive preview and usage examples
+ **/
 export default defineComponent<ModuleLazyloadProps>(
 	'module-lazyload',
 	({ expose, first, host, watch }) => {
-		const callout = first(
-			'card-callout',
-			'Needed to display loading state and error messages.',
-		)
-		const loading = first('.loading', 'Needed to display loading state.')
-		const errorEl = first('.error', 'Needed to display error messages.')
 		const contentEl = first('.content', 'Needed to display content.')
 
 		const content = createTask<string>(async (_prev, abort) => {
@@ -66,6 +61,12 @@ export default defineComponent<ModuleLazyloadProps>(
 		// so this scroll task doesn't clobber the pending innerHTML write.
 		const scrollTask = {}
 
+		const callout = first(
+			'card-callout',
+			'Needed to display loading state and error messages.',
+		)
+		const loading = first('.loading', 'Needed to display loading state.')
+		const errorEl = first('.error', 'Needed to display error messages.')
 		watch(content, {
 			ok: content => {
 				callout.hidden = true

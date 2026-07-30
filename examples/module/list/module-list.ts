@@ -12,28 +12,19 @@ declare global {
  * and removed via delegated click handling, with stable keys across reorders.
  * Each item must include a remove button with class `remove` for deletion to work;
  * the form should use a `<form-textbox>` for the new-item input.
- * @demo {./docs/examples/module-list.html} Interactive preview and usage examples */
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-list} Interactive preview and usage examples
+ **/
 export default defineComponent('module-list', ({ first, host, on, pass }) => {
-	const form = first('form', 'Add a form element to enter a new list item.')
-	const textbox = first(
-		'form-textbox',
-		'Add <form-textbox> component to enter a new list item.',
-	)
-	const submit = first(
-		'basic-button.submit',
-		'Add <basic-button.submit> component to submit the form.',
-	)
-	const container = first(
-		'[data-container]',
-		'Add a container element for items.',
-	)
-	const template = first('template', 'Add a template element for items.')
-
 	// Keyed reactive list of plain string items. The 'item' prefix feeds the
 	// auto-incrementing key generator (item0, item1, ...); keys are stable
 	// across reorders, which is what lets removal target the right item.
 	const list: List<string> = createList<string>([], { keyConfig: 'item' })
 
+	const container = first(
+		'[data-container]',
+		'Add a container element for items.',
+	)
+	const template = first('template', 'Add a template element for items.')
 	// Sync the container's children to the list: clones the template for
 	// entering keys, removes leavers, moves survivors. bindItem fills the
 	// cloned content — server-adopted items have no <slot> left, so the
@@ -44,6 +35,11 @@ export default defineComponent('module-list', ({ first, host, on, pass }) => {
 			?.replaceWith(document.createTextNode(item.get()))
 	})
 
+	const form = first('form', 'Add a form element to enter a new list item.')
+	const textbox = first(
+		'form-textbox',
+		'Add <form-textbox> component to enter a new list item.',
+	)
 	// Add on submit, then clear the input by calling the child's method.
 	on(form, 'submit', e => {
 		e.preventDefault()
@@ -65,6 +61,10 @@ export default defineComponent('module-list', ({ first, host, on, pass }) => {
 		if (key) list.remove(key)
 	})
 
+	const submit = first(
+		'basic-button.submit',
+		'Add <basic-button.submit> component to submit the form.',
+	)
 	// Disable the submit button while the textbox is empty.
 	pass(submit, { disabled: () => !textbox.length })
 })

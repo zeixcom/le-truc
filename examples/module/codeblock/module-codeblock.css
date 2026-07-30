@@ -1,12 +1,12 @@
 module-codeblock {
-	--color-shiki-monokai-bg: #272822;
+	--module-codeblock-color-background: #272822;
 	/* Shadow with reduced transparency for dark background used in code blocks */
 	--color-shadow: rgb(0 0 0 / 0.4);
 
 	position: relative;
 	display: block;
 	margin: 0 0 var(--space-l);
-	background: var(--color-shiki-monokai-bg);
+	background: var(--module-codeblock-color-background);
 	border-radius: var(--space-s);
 
 	.meta {

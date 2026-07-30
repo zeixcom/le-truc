@@ -46,7 +46,7 @@ const EMPTY_VALIDITY_STATE: ValidityState = {
  * contract installed on form-associated components. Each entry maps a member
  * name to its property descriptor. Driving both the reserved set and the
  * prototype install from one table makes "reserved but not installed"
- * impossible — the exact bug that caused `name` to go missing.
+ * impossible.
  *
  * `disabled` is managed separately (Slot-backed reactive property installed
  * per-instance, not per-prototype). `value` is the deliberate exception: the
@@ -385,13 +385,11 @@ const checkedValueSyncDescriptor =
 /**
  * Create the managed `disabled` reactive property on a form-associated host.
  * Slot-backed so `formDisabledCallback` can write the effective disabled
- * state (including `<fieldset disabled>` inheritance). The property getter
- * and setter go through the Slot (not the raw backing signal) so that
- * `pass()` replacing the Slot's delegate stays consistent — `host.disabled`,
- * `watch('disabled')`, and `formDisabledCallback` all read and write the
- * same source of truth. The setter also reflects to the `disabled` content
- * attribute so FACE gives native `:disabled` / barred-from-validation for
- * free.
+ * state (including `<fieldset disabled>` inheritance). The getter and setter
+ * go through the Slot, not the raw backing signal, so `host.disabled`,
+ * `watch('disabled')`, and `formDisabledCallback` stay consistent even after
+ * `pass()` replaces the Slot's delegate. The setter also reflects to the
+ * `disabled` content attribute, so FACE gives native `:disabled` for free.
  */
 const createManagedDisabledProperty = (instance: HTMLElement): void => {
 	const initial = instance.hasAttribute('disabled')
@@ -423,9 +421,9 @@ type FormAssociatedExtension = ComponentExtension & FormAssociatedTag
  * `defineComponent`'s third parameter: `defineComponent(name, factory,
  * [formAssociated()])`.
  *
- * Only referenced by consumers who call this function — `component.ts` never
- * imports this module at the value level, so a consumer who doesn't use
- * `formAssociated()` never bundles ElementInternals support.
+ * `component.ts` never imports this module at the value level, so a
+ * consumer who doesn't call `formAssociated()` never bundles ElementInternals
+ * support.
  *
  * @since 2.3
  */
@@ -465,15 +463,14 @@ type FormAssociatedCheckboxExtension = ComponentExtension &
  * `formAssociated()`'s `value`. Pass to `defineComponent`'s third parameter:
  * `defineComponent(name, factory, [formAssociatedCheckbox()])`.
  *
- * Covers checkbox-*shaped* controls generically (a switch/toggle is not a
- * distinct native form control — it's always a styled checkbox), not radio
- * groups or multi-select lists: those aggregate many children's boolean
- * state into one string `value` and already fit `formAssociated()` (see
+ * Covers checkbox-*shaped* controls generically (a switch/toggle is always a
+ * styled checkbox, not a distinct native form control), not radio groups or
+ * multi-select lists — those aggregate many children's boolean state into
+ * one string `value` and already fit `formAssociated()` (see
  * `form-radiogroup`, `form-listbox`).
  *
- * Only referenced by consumers who call this function — `component.ts` never
- * imports this module at the value level, so a consumer who doesn't use
- * `formAssociatedCheckbox()` never bundles this code.
+ * `component.ts` never imports this module at the value level, so a
+ * consumer who doesn't call `formAssociatedCheckbox()` never bundles this code.
  *
  * **Do not combine with `formAssociated()` on the same component** — both
  * declare the same `staticProps.formAssociated` key, so DEV_MODE throws

@@ -7,20 +7,26 @@ description: 'Scoped styles, CSS custom properties'
 {% hero %}
 # 🎨 Styling
 
-**Keep your components' styles self-contained while supporting shared design tokens.** Scope with the custom element name, expose customization via CSS custom properties, and let Le Truc toggle classes and attributes when state changes.
+**Keep your components' styles self-contained and support shared design tokens.** Scope styles with the custom element name and expose customization via CSS custom properties. Le Truc toggles classes and attributes for you when state changes.
 {% /hero %}
 
 {% section %}
 ## Design Principles
 
-Le Truc handles state management and reactivity — CSS handles everything visual. The key principles: **scope styles to the component**, **expose customization via CSS custom properties**, and **avoid reaching inside sub-components**. A parent may style the wrapper element of a known sub-component for layout, but styling its inner elements creates tight coupling.
+Le Truc handles state management and reactivity. CSS handles everything visual. Follow three key principles:
+
+- **Scope styles to the component**
+- **Expose customization via CSS custom properties**
+- **Avoid reaching inside sub-components**
+
+A parent may style the wrapper element of a known sub-component for layout. Styling its inner elements creates tight coupling.
 
 {% /section %}
 
 {% section %}
 ## Scope Styles to Custom Element
 
-Use the **custom element name** to scope component styles if **you control the page and the components within**. This protects against component styles leaking out while preserving the CSS cascade. No need for Shadow DOM, no duplicate style rules.
+Use the **custom element name** to scope component styles if **you control the page and the components within**. This protects against component styles leaking out. It preserves the CSS cascade. You need no Shadow DOM and no duplicate style rules.
 
 ```css
 my-component {
@@ -34,8 +40,8 @@ my-component {
 
 ### Advantages of Custom Element Names
 
-- By definition **unique within the document** with a descriptive name.
-- **Low specificity**, making it easy to override when you need to with a single class.
+- **Unique within the document** by definition, when given a descriptive name
+- **Low specificity** — override it easily with a single class when needed
 
 {% callout .tip title="When to use" %}
 **Best when** you control the page and need styles to cascade naturally.
@@ -47,7 +53,7 @@ my-component {
 {% section %}
 ## Encapsulate Styles with Shadow DOM
 
-Use **Shadow DOM** to encapsulate styles if your component is going to be used on pages where you don't control the styles. This way you make sure page styles don't leak in and component styles don't leak out.
+Use **Shadow DOM** to encapsulate styles when you do not control the page styles where the component appears. Page styles do not leak in. Component styles do not leak out.
 
 ```html
 <my-component>
@@ -65,7 +71,7 @@ Use **Shadow DOM** to encapsulate styles if your component is going to be used o
 ```
 
 {% callout .tip title="When to use" %}
-**Best when** your component is used in environments where you don’t control styles.
+**Best when** other pages use your component in environments you do not control.
 **Avoid if** you need global styles to apply inside the component.
 {% /callout %}
 
@@ -74,9 +80,9 @@ Use **Shadow DOM** to encapsulate styles if your component is going to be used o
 {% section %}
 ## Shared Design Tokens with CSS Custom Properties
 
-Web Components can't inherit global styles inside **Shadow DOM**, but CSS custom properties allow components to remain **flexible and themeable**.
+Web Components cannot inherit global styles inside **Shadow DOM**. CSS custom properties let components remain **flexible and themeable**.
 
-### Defining Design Tokens
+### Define Design Tokens
 
 Set global tokens in a stylesheet:
 
@@ -88,7 +94,7 @@ Set global tokens in a stylesheet:
 }
 ```
 
-### Using Tokens in a Component
+### Use Tokens in a Component
 
 ```css
 my-component {
@@ -110,7 +116,7 @@ my-component {
 {% section %}
 ## Defined Variants with Classes
 
-Use **classes** if your components can appear in a **limited set of specific manifestations**. For example, buttons could come in certain sizes and have primary, secondary and tertiary variants.
+Use **classes** if your components can appear in a **limited set of specific manifestations**. For example, buttons could come in certain sizes. They could also have primary, secondary, and tertiary variants.
 
 ```css
 my-button {
@@ -140,10 +146,10 @@ my-button {
 
 Styles become interactive when JavaScript toggles a styling hook in response to state. Which hook depends on who owns the state:
 
-- **Classes** are author-controlled. Use `watch()` + `bindClass()` when the toggled token belongs to the same vocabulary as the variant classes above — the consumer could also set or remove it by hand. The contract is simple: **the class name in CSS must exactly match the token passed to `bindClass()`**.
-- **Custom states** are component-owned. Use `watch()` + `bindState()` when the state is something only the component itself can know — it is exposed to CSS via the `:state()` pseudo-class (backed by ElementInternals) and cannot be clobbered by consumer code or frameworks rewriting the `class` attribute.
+- **Classes** are author-controlled. Use `watch()` + `bindClass()` when the toggled token belongs to the same vocabulary as the variant classes above. The consumer could also set or remove it by hand. The contract is simple: **the class name in CSS must exactly match the token passed to `bindClass()`**.
+- **Custom states** are component-owned. Use `watch()` + `bindState()` when the state is something only the component itself can know. It is exposed to CSS via the `:state()` pseudo-class (backed by ElementInternals). Consumer code or frameworks rewriting the `class` attribute cannot clobber it.
 
-The `module-scrollarea` component demonstrates the custom-state case: whether content overflows is runtime knowledge the component derives from scroll position — nothing an author would ever set. The CSS defines what the shadow looks like when overflow is present:
+The `module-scrollarea` component demonstrates the custom-state case. Whether content overflows is runtime knowledge the component derives from scroll position. It is nothing an author would ever set. The CSS defines what the shadow looks like when overflow is present:
 
 ```css
 module-scrollarea {
@@ -159,17 +165,18 @@ module-scrollarea {
 }
 ```
 
-The component's factory creates a local signal and passes it to `watch()` + `bindState()`, using the `internals` object from the factory context:
+The component's factory creates a local signal and passes it to `watch()` + `bindState()`. This uses the `internals` object from the factory context:
 
 ```js
 const overflowEnd = createState(false)
-
-return [
-  watch(overflowEnd, bindState(internals, 'overflow-end')),
-]
+watch(overflowEnd, bindState(internals, 'overflow-end'))
 ```
 
-When `overflowEnd` becomes `true`, Le Truc adds `overflow-end` to the element's custom state set. The `:state(overflow-end)` rule activates, and the shadow fades in. When it becomes `false`, the state is removed and the shadow fades out — no inline styles, no manual DOM manipulation, and no class token an outside script could accidentally wipe.
+When `overflowEnd` becomes `true`, Le Truc adds `overflow-end` to the element's custom state set. The `:state(overflow-end)` rule activates. The shadow fades in. When `overflowEnd` becomes `false`, Le Truc removes the state and the shadow fades out. This approach needs:
+
+- No inline styles
+- No manual DOM manipulation
+- No class token an outside script could accidentally wipe
 
 The full example is a scroll container that shows fade shadows at either edge when content overflows: [Scrollarea example](./examples/module-scrollarea.html).
 
@@ -187,28 +194,26 @@ module-tabgroup {
 ```
 
 ```js
-return [
-  watch('selected', () => {
-    for (const tab of tabs.get()) {
-      tab.setAttribute('aria-selected',
-        String(host.selected === tab.getAttribute('aria-controls')))
-    }
-  }),
-]
+watch('selected', () => {
+  for (const tab of tabs.get()) {
+    tab.setAttribute('aria-selected',
+      String(host.selected === tab.getAttribute('aria-controls')))
+  }
+})
 ```
 
-Prefer attributes over classes when the value has semantic meaning — screen readers and assistive technology understand `aria-selected`, `aria-expanded`, `disabled`, and similar attributes.
+Prefer attributes over classes when the value has semantic meaning. Screen readers and assistive technology understand `aria-selected`, `aria-expanded`, `disabled`, and similar attributes.
 
 The full example is a tab group that uses `aria-selected` to highlight the selected tab: [Tabgroup example](./examples/module-tabgroup.html).
 
 {% /section %}
 
 {% section %}
-## CSS-only Components
+## CSS-only Custom Elements
 
-Just because Le Truc is a JavaScript library doesn't mean you have to use JavaScript in every component. It's perfectly fine to use custom elements just for styling purposes.
+Le Truc is a JavaScript library, but that does not mean every custom element needs JavaScript. They work fine for styling alone.
 
-Here's the example of the `<card-callout>` we're using in this documentation:
+Here is the `<card-callout>` example this documentation uses:
 
 {% demo %}
 ```html
@@ -224,7 +229,7 @@ Here's the example of the `<card-callout>` we're using in this documentation:
 
 ### Register CSS-only Custom Elements
 
-If a Le Truc component queries for a CSS-only custom element (via `first()` or `all()`), it will detect the element as an unresolved dependency and wait for it to upgrade — causing an unnecessary delay before effects run.
+If a Le Truc component queries for a CSS-only custom element (via `first()` or `all()`), it detects the element as an unresolved dependency. It waits for the element to upgrade. This causes an unnecessary delay before effects run.
 
 To avoid this, register CSS-only custom elements with a trivial definition:
 
@@ -232,10 +237,10 @@ To avoid this, register CSS-only custom elements with a trivial definition:
 customElements.define('card-callout', class extends HTMLElement {})
 ```
 
-This tells the browser (and Le Truc) that the element is defined and ready. The registration has no runtime cost — the element simply upgrades to a plain `HTMLElement` immediately.
+This tells the browser (and Le Truc) that the element is defined and ready. The registration has no runtime cost. The element simply upgrades to a plain `HTMLElement` immediately.
 
 {% callout .caution title="Register every custom element tag" %}
-Every custom element tag you use in HTML should have a corresponding `customElements.define()` call. This is the web platform's contract: a hyphenated tag name is a custom element, and defining it — even with an empty class — ensures it upgrades correctly and doesn't block other components.
+Every custom element tag you use in HTML should have a corresponding `customElements.define()` call. This is the web platform's contract. A hyphenated tag name is a custom element. Defining it, even with an empty class, ensures it upgrades correctly and does not block other components.
 {% /callout %}
 
 {% /section %}

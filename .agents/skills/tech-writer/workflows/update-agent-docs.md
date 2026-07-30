@@ -3,7 +3,8 @@
 ## Required Reading
 1. references/document-map.md → `<AGENTS_md>`
 2. references/tone-guide.md → `<AGENTS.md>` section
-3. The relevant source file — read the current implementation before writing
+3. references/ste100-style.md — sentence and vocabulary rules
+4. The relevant source file — read the current implementation before writing
 
 ## Process
 

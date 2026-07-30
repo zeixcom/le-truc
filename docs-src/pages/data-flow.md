@@ -1,39 +1,40 @@
 ---
 title: 'Data Flow'
 emoji: '🔄'
-description: 'Passing state, events, context'
+description: 'Pass state, events, context'
 ---
 
 {% hero %}
 # 🔄 Data Flow
 
-**Learn how Le Truc components coordinate state.** Pass reactive signals from parent to child with `pass()`, manage dynamic lists, and share values across the component tree with context.
+**Learn how Le Truc components coordinate state.** Pass reactive signals from parent to child with `pass()`. Manage dynamic lists with `reconcile()`. Share values across the component tree with context.
 {% /hero %}
 
 {% section %}
 ## Component Coordination
 
-Let's consider a **product catalog** where users can add items to a shopping cart. We have **three independent components** that work together:
+Consider a **product catalog** where users can add items to a shopping cart. Three independent components work together:
 
 - `ModuleCatalog` **(Parent)**:
-  - **Tracks all `SpinButton` components** in its subtree and calculates the total count of items in the shopping cart.
+  - **Tracks all `SpinButton` components** in its subtree.
+  - **Calculates the total count** of items in the shopping cart.
   - **Passes that total** to a `BasicButton`.
 - `BasicButton` **(Child)**:
   - Displays a **badge** in the top-right corner when the `badge` property is set.
-  - **Does not track any state** – it simply renders whatever value is passed to it.
+  - **Does not track any state.** It simply renders whatever value is passed to it.
 - `FormSpinbutton` **(Child)**:
   - Displays an **Add to Cart** button initially.
   - When an item is added, it transforms into a **stepper** (increment/decrement buttons).
 
-Although `BasicButton` and `FormSpinbutton` are completely independent, they need to work together. So `ModuleCatalog` **coordinates the data flow between them**.
+Although `BasicButton` and `FormSpinbutton` are completely independent, they need to work together. `ModuleCatalog` **coordinates the data flow between them**.
 
 ### Parent Component: ModuleCatalog
 
-The **parent component (`ModuleCatalog`) knows about its children**, meaning it can **read state from and pass state to** them. It uses `all()` to observe all `FormSpinbutton` quantities reactively, then `pass()` to drive the `BasicButton`'s `badge` and `disabled` state:
+The **parent component (`ModuleCatalog`) knows about its children**. It can **read state from and pass state to** them. It uses `all()` to observe all `FormSpinbutton` quantities reactively. Then it uses `pass()` to drive the `BasicButton`'s `badge` and `disabled` state:
 
 ```js#module-catalog.js
 defineComponent('module-catalog', ({ all, first, pass }) => {
-  const button = first('basic-button', 'Add a button to go to the Shopping Cart')
+  const button = first('basic-button', 'Add a button to go to the shopping cart')
   const spinbuttons = all(
     'form-spinbutton',
     'Add spinbutton components to calculate sum from.',
@@ -42,16 +43,14 @@ defineComponent('module-catalog', ({ all, first, pass }) => {
     spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
   )
 
-  return [
-    pass(button, {
-      disabled: () => !total.get(),
-      badge: () => (total.get() > 0 ? String(total.get()) : ''),
-    }),
-  ]
+  pass(button, {
+    disabled: () => !total.get(),
+    badge: () => (total.get() > 0 ? String(total.get()) : ''),
+  })
 })
 ```
 
-Whenever any `<form-spinbutton>` value changes, `total` updates and the badge reflects the new count — no event listeners or manual wiring needed.
+Whenever any `<form-spinbutton>` value changes, `total` updates and the badge reflects the new count. This needs no event listeners or manual wiring.
 
 {% callout .caution title="pass() requires a Le Truc child" %}
 `pass()` swaps the child's backing signal directly, so it only works for Le Truc components whose properties are Slot-backed. For any other custom element (Lit, Stencil, plain HTML), drive the child's property reactively with `watch(source, bindProperty(el, key))` instead.
@@ -59,7 +58,7 @@ Whenever any `<form-spinbutton>` value changes, `total` updates and the badge re
 
 ### Child Component: BasicButton
 
-The `BasicButton` component **displays a badge when needed** – it does not know about any other component nor track state itself. It exposes reactive properties `disabled`, `label`, and `badge` and has effects to keep the DOM subtree in sync with those properties.
+The `BasicButton` component **displays a badge when needed**. It does not know about any other component, and it does not track state itself. It exposes reactive properties `disabled`, `label`, and `badge`. Its effects keep the DOM subtree in sync with those properties.
 
 ```js#basic-button.js
 defineComponent('basic-button', ({ expose, first, watch }) => {
@@ -73,21 +72,19 @@ defineComponent('basic-button', ({ expose, first, watch }) => {
     badge: badge?.textContent ?? '',
   })
 
-  return [
-    watch('disabled', bindProperty(button, 'disabled')),
-    label && watch('label', bindText(label)),
-    badge && watch('badge', bindText(badge)),
-  ]
+  watch('disabled', bindProperty(button, 'disabled'))
+  if (label) watch('label', bindText(label))
+  if (badge) watch('badge', bindText(badge))
 })
 ```
 
-- Whenever the `disabled` property is updated by a parent component, the button is disabled or enabled.
-- Whenever the `badge` property is updated by a parent component, the badge text updates.
-- If `badge` is an empty string, the badge indicator is hidden (via CSS).
+- When a parent component updates `disabled`, the button becomes disabled or enabled.
+- When a parent component updates `badge`, the badge text updates.
+- If `badge` is an empty string, CSS hides the badge indicator.
 
 ### Child Component: FormSpinbutton
 
-The `FormSpinbutton` component reacts to user interactions and exposes a reactive property `value` of type `number`. It updates its own internal DOM subtree, but doesn't know about any other component nor where the value is used.
+The `FormSpinbutton` component reacts to user interactions. It exposes a reactive property `value` of type `number`. It updates its own internal DOM subtree. It does not know about any other component or where the value is used.
 
 ```js#form-spinbutton.js
 defineComponent('form-spinbutton', ({ all, expose, first, host, on, watch }) => {
@@ -106,66 +103,65 @@ defineComponent('form-spinbutton', ({ all, expose, first, host, on, watch }) => 
     max: Number.parseInt(input.max) || 10,
   })
 
-  return [
-    on(controls, 'change', (_e, target) => {
-      if (!(target instanceof HTMLInputElement)) return
-      const next = Number(target.value)
-      if (!Number.isInteger(next)) {
-        target.value = String(host.value)
-        target.checkValidity()
-        return
-      }
-      const clamped = Math.min(host.max, Math.max(0, next))
-      if (next !== clamped) {
-        target.value = String(clamped)
-        target.checkValidity()
-      }
-      host.value = clamped
-    }),
-    on(controls, 'click', (_e, el) => {
-      if (el.classList.contains('decrement')) {
-        host.value = Math.max(0, host.value - 1)
-      } else if (el.classList.contains('increment')) {
-        host.value = Math.min(host.max, host.value + 1)
-      }
-    }),
-    on(controls, 'keydown', (e) => {
-      const { key } = e
-      if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
-        e.stopPropagation()
-        e.preventDefault()
-        const delta = key === 'ArrowDown' || key === '-' ? -1 : 1
-        host.value = Math.min(host.max, Math.max(0, host.value + delta))
-      }
-    }),
-    watch(nonZero, nz => {
-      input.hidden = !nz
-      decrement.hidden = !nz
-    }),
-    zero && watch(nonZero, nz => {
-      zero.hidden = nz
-      increment.ariaLabel = nz ? incrementLabel : zero.textContent
-    }),
-    other && watch(nonZero, bindVisible(other)),
-    watch(() => String(host.value), bindProperty(input, 'value')),
-    watch(() => String(host.max), bindProperty(input, 'max')),
-    watch(() => host.value >= host.max, bindProperty(increment, 'disabled')),
-  ]
+  on(controls, 'change', (_e, target) => {
+    if (!(target instanceof HTMLInputElement)) return
+    const next = Number(target.value)
+    if (!Number.isInteger(next)) {
+      target.value = String(host.value)
+      target.checkValidity()
+      return
+    }
+    const clamped = Math.min(host.max, Math.max(0, next))
+    if (next !== clamped) {
+      target.value = String(clamped)
+      target.checkValidity()
+    }
+    host.value = clamped
+  })
+  on(controls, 'click', (_e, el) => {
+    if (el.classList.contains('decrement')) {
+      host.value = Math.max(0, host.value - 1)
+    } else if (el.classList.contains('increment')) {
+      host.value = Math.min(host.max, host.value + 1)
+    }
+  })
+  on(controls, 'keydown', (e) => {
+    const { key } = e
+    if (['ArrowUp', 'ArrowDown', '-', '+'].includes(key)) {
+      e.stopPropagation()
+      e.preventDefault()
+      const delta = key === 'ArrowDown' || key === '-' ? -1 : 1
+      host.value = Math.min(host.max, Math.max(0, host.value + delta))
+    }
+  })
+  watch(nonZero, nz => {
+    input.hidden = !nz
+    decrement.hidden = !nz
+  })
+  if (zero) watch(nonZero, nz => {
+    zero.hidden = nz
+    increment.ariaLabel = nz ? incrementLabel : zero.textContent
+  })
+  if (other) watch(nonZero, bindVisible(other))
+  watch(() => String(host.value), bindProperty(input, 'value'))
+  watch(() => String(host.max), bindProperty(input, 'max'))
+  watch(() => host.value >= host.max, bindProperty(increment, 'disabled'))
 })
 ```
 
-- Whenever the user clicks a button or presses a handled key, the value property is updated.
-- The component sets hidden and disabled states of buttons and updates the text of the `input` element.
+- Whenever the user clicks a button or presses a handled key, the component updates the `value` property.
+- The component sets hidden and disabled states of buttons.
+- It updates the text of the `input` element.
 
 ### Full Catalog Example
 
-Here's how everything comes together:
+Here is how everything comes together:
 
 - Each `FormSpinbutton` tracks its own value.
 - The `ModuleCatalog` sums all quantities and passes the total to `BasicButton`.
-- The `BasicButton` displays the total if it's greater than zero.
+- The `BasicButton` displays the total if it is greater than zero.
 
-**No custom events are needed – state flows naturally!**
+**No custom events are needed. State flows naturally.**
 
 {% demo %}
 ```html
@@ -262,13 +258,17 @@ Here's how everything comes together:
 
 {% section %}
 
-## Managing Dynamic Lists
+## Manage Dynamic Lists
 
-The coordination patterns above assume a fixed set of children. When a list grows and shrinks at runtime, you need a different approach: a reactive **list of keyed items** holds the data, **`reconcile()`** keeps the DOM in sync, and a **`<template>`** provides the markup for each item.
+The coordination patterns above assume a fixed set of children. When a list grows and shrinks at runtime, you need a different approach:
+
+- A reactive **list of keyed items** holds the data
+- **`reconcile()`** keeps the DOM in sync
+- A **`<template>`** provides the markup for each item
 
 ### The Container, Template, and List
 
-The component owns a `createList()` — a reactive ordered collection where each item is a signal and items are identified by stable string keys. The HTML provides a container and an inert template:
+The component owns a `createList()`, a reactive ordered collection. Each item is a signal, identified by a stable string key. The HTML provides a container and an inert template:
 
 ```js#module-list.js
 defineComponent('module-list', ({ first, host, on, pass }) => {
@@ -283,18 +283,16 @@ defineComponent('module-list', ({ first, host, on, pass }) => {
   // removal target the right item even as the list reorders.
   const list = createList([], { keyConfig: 'item' })
 
-  return [
-    reconcile(container, template, list, (element, item) => { /* fill content */ }),
-    on(form, 'submit', e => { /* add item */ }),
-    on(host, 'click', e => { /* remove item by delegation */ }),
-    pass(submit, { disabled: () => !textbox.length }),
-  ]
+  reconcile(container, template, list, (element, item) => { /* fill content */ })
+  on(form, 'submit', e => { /* add item */ })
+  on(host, 'click', e => { /* remove item by delegation */ })
+  pass(submit, { disabled: () => !textbox.length })
 })
 ```
 
-The `keyConfig` option controls how keys are generated. A string prefix produces auto-incrementing keys (`'item'` → `item0`, `item1`, …). A function `(item) => string` derives the key from item content — required when the same item can reappear and must keep its identity. Without `keyConfig`, Le Truc falls back to position-based auto-increment.
+The `keyConfig` option controls key generation. A string prefix produces auto-incrementing keys (`'item'` → `item0`, `item1`, …). A function `(item) => string` derives the key from item content. Use this when the same item can reappear and must keep its identity. Without `keyConfig`, Le Truc falls back to position-based auto-increment.
 
-### Reconciling the DOM with reconcile()
+### Reconcile the DOM
 
 `reconcile(container, template, source, bindItem)` syncs the source's keys to the container's children in one declarative call. It runs once at connect and again whenever keys are added, removed, or reordered:
 
@@ -306,17 +304,21 @@ reconcile(container, template, list, (element, item) => {
 }),
 ```
 
-For every key in source order, the container holds one element stamped with `data-key`. Entering keys clone the template's single root element and mount `bindItem(element, item, key)` in its own scope; leaving keys dispose that scope and remove their element; surviving elements are moved with `insertBefore()` — always reused, never recreated. Per-item value changes flow through the `item` signal and never trigger structural work.
+For every key in source order, the container holds one element stamped with `data-key`. Entering keys clone the template's single root element and mount `bindItem(element, item, key)` in its own scope. Leaving keys dispose that scope and remove their element. Surviving elements move via `insertBefore()`, always reused, never recreated. Per-item value changes flow through the `item` signal and never trigger structural work.
 
-`bindItem` does all content work — there is no default fill convention. A returned cleanup runs when the key leaves the list or the component disconnects. It also runs for **adopted** elements: children already in the container at connect time (server-rendered) are matched to source keys by their `data-key` attribute and kept; keyed children not in the source and all unkeyed children are removed. So `bindItem` should be idempotent against server-rendered content — in the example above, an adopted item has no `<slot>` left to replace, so the fill is naturally a no-op.
+`bindItem` does all content work. There is no default fill convention. A returned cleanup runs when the key leaves the list or the component disconnects. It also runs for **adopted** elements: children already in the container at connect time (server-rendered). Le Truc matches them to source keys by their `data-key` attribute and keeps them. It removes keyed children not in the source and all unkeyed children. `bindItem` should be idempotent against server-rendered content. In the example above, an adopted item has no `<slot>` left to replace. The fill is naturally a no-op.
 
-Two escape hatches keep `reconcile()` composable: children carrying `data-unreconciled` are exempt from reconciliation entirely (never removed, never repositioned — for drag-and-drop markers or server-streamed content arriving mid-interaction), and keyed elements are positioned relative to the keyed subset, not by absolute index, so such unmanaged elements don't drift keyed positions. The sync is strictly one-way, data → DOM: to change the list's structure, mutate the list in an event handler and let `reconcile()` write the DOM.
+Two escape hatches keep `reconcile()` composable:
+- Children carrying `data-unreconciled` are exempt from reconciliation entirely. Le Truc never removes or repositions them, which suits drag-and-drop markers or server-streamed content arriving mid-interaction.
+- Keyed elements are positioned relative to the keyed subset, not by absolute index, so unmanaged elements do not drift keyed positions.
 
-`bindItem` has **collector parity with `each()`'s callback**: `watch()`, `on()`, `pass()`, and `each()` can be called inside it directly, and the collected descriptors activate against that per-item scope rather than the driving structural effect — so an item-level `watch(item, …)` never makes structural work depend on item signals. For static items a one-time fill (as above) is enough; for items whose displayed content depends on signals that change after creation, call `watch()` inside `bindItem` instead.
+The sync is strictly one-way, data → DOM. To change the list's structure, mutate the list in an event handler and let `reconcile()` write the DOM.
 
-### Adding and Removing Items
+`bindItem` has **collector parity with `each()`'s callback**. You can call `watch()`, `on()`, `pass()`, and `each()` inside it directly. The collected descriptors activate against that per-item scope, not the driving structural effect. An item-level `watch(item, …)` never makes structural work depend on item signals. For static items, a one-time fill (as above) is enough. For items whose displayed content depends on signals that change after creation, call `watch()` inside `bindItem` instead.
 
-Mutations go through the list — never touch the DOM directly. The reconciler reacts to the keys change and updates the container for you.
+### Add and Remove Items
+
+Mutations go through the list. Never touch the DOM directly. The reconciler reacts to changes in the keys and updates the container for you.
 
 ```js
 on(form, 'submit', e => {
@@ -340,7 +342,7 @@ on(host, 'click', e => {
 }),
 ```
 
-`list.add(value)` returns the new key; `list.remove(key)` takes one. `textbox.clear()` is a method property on the `form-textbox` child component. `pass(submit, { disabled: ... })` drives the submit button's `disabled` state reactively from the textbox length — the same `pass()` thread as the rest of this page, without the button knowing anything about the textbox.
+`list.add(value)` returns the new key. `list.remove(key)` takes one. `textbox.clear()` is a method property on the `form-textbox` child component. `pass(submit, { disabled: ... })` drives the submit button's `disabled` state reactively from the textbox length. This is the same `pass()` thread as the rest of this page. The button does not need to know anything about the textbox.
 
 ### Full List Example
 
@@ -387,9 +389,9 @@ on(host, 'click', e => {
 
 {% section %}
 
-## Providing Context
+## Provide Context
 
-Context allows **parent components to share state** with any descendant components in the DOM tree, **without prop drilling**. This is perfect for application-wide settings like user preferences, theme data, or authentication state.
+Context allows **parent components to share state** with any descendant components in the DOM tree, **without prop drilling**. Use it for application-wide settings like user preferences, theme data, or authentication state.
 
 ### Creating Context Keys
 
@@ -409,7 +411,7 @@ export const MEDIA_THEME = 'media-theme' as Context<
 
 ### Provider Component
 
-The **provider component** creates the shared state inside `expose()` and calls `provideContexts()` in the returned effect array. The example below is a simplified excerpt showing two of the four media contexts — see the full source for the complete implementation:
+The **provider component** creates the shared state inside `expose()`. It calls `provideContexts()` in the returned effect array. The example below is a simplified excerpt. It shows two of the four media contexts. See the full source for the complete implementation:
 
 ```ts#context-media.ts
 import { createContext, createSensor, defineComponent } from '@zeix/le-truc'
@@ -449,7 +451,7 @@ export default defineComponent<ContextMediaProps>(
       ),
     })
 
-    return [provideContexts(['motion', 'theme'])]
+    provideContexts(['motion', 'theme'])
   },
 )
 ```
@@ -478,13 +480,13 @@ The provider component wraps your entire application or a section that needs sha
 
 {% section %}
 
-## Consuming Context
+## Consume Context
 
-**Consumer components** use `requestContext()` to access shared state from ancestor providers. The returned `Signal<T>` is reactive — when the provider's signal updates, all consumers update automatically. It serves the `fallback` until a provider answers, and a provider that connects late (bundle ordering, code-splitting) is still picked up — the consumer switches from fallback to the provided value without any extra code.
+**Consumer components** use `requestContext()` to access shared state from ancestor providers. The returned `Signal<T>` is reactive. When the provider's signal updates, all consumers update automatically. It serves the `fallback` until a provider answers. Even a provider that connects late (bundle ordering, code-splitting) is picked up. The consumer switches from `fallback` to the provided value automatically, without any extra code.
 
 ### Consumer Component
 
-Here's a simple card that displays the current motion and theme preferences:
+Here is a simple card that displays the current motion and theme preferences:
 
 ```js#card-mediaqueries.js
 import { bindText, defineComponent } from '@zeix/le-truc'
@@ -499,10 +501,8 @@ export default defineComponent(
     const motion = requestContext(MEDIA_MOTION, 'unknown')
     const theme = requestContext(MEDIA_THEME, 'unknown')
 
-    return [
-      motionEl && watch(motion, bindText(motionEl)),
-      themeEl && watch(theme, bindText(themeEl)),
-    ]
+    if (motionEl) watch(motion, bindText(motionEl))
+    if (themeEl) watch(theme, bindText(themeEl))
   },
 )
 ```
@@ -536,7 +536,7 @@ export default defineComponent(
 {% section %}
 ## Async State with Tasks
 
-When a component needs to load data — `fetch` a fragment, import a module, run any async work — model it as a [`Task`](./api.html#functions/createTask). A `Task` is an async derivation that auto-cancels in-flight work when its dependencies change and exposes four states through `match()`: `ok`, `nil`, `stale`, and `err`.
+When a component needs to load data (fetch a fragment, import a module, run any async work), model it as a [`Task`](./api.html#functions/createTask). A `Task` is an async derivation. It auto-cancels in-flight work when its dependencies change. It exposes four states through `match()`: `ok`, `nil`, `stale`, and `err`.
 
 Routing precedence is `nil` > `err` > `stale` > `ok`:
 
@@ -545,7 +545,7 @@ Routing precedence is `nil` > `err` > `stale` > `ok`:
 - **`stale`** fires when the task has a retained value *and* is recomputing after a dependency change — use it to keep the old content visible while refreshing
 - **`ok`** fires with the resolved value
 
-The `module-lazyload` component shows the full pattern. It `fetch`es an HTML fragment, injects it into a content element, and drives separate loading, error, and content views from a single `Task`:
+The `module-lazyload` component shows the full pattern. It `fetch`es an HTML fragment and injects it into a content element. It drives separate loading, error, and content views from a single `Task`:
 
 ```js#module-lazyload.js
 defineComponent('module-lazyload', ({ expose, first, host, watch }) => {
@@ -564,34 +564,32 @@ defineComponent('module-lazyload', ({ expose, first, host, watch }) => {
 
   expose({ src: asString() })
 
-  return [
-    watch(content, {
-      ok: html => {
-        loading.hidden = true
-        contentEl.hidden = false
-        contentEl.innerHTML = html
-      },
-      nil: () => {
-        loading.hidden = false
-        contentEl.hidden = true
-      },
-      stale: () => {
-        contentEl.style.setProperty('opacity', 'var(--opacity-dimmed)')
-        return () => contentEl.style.removeProperty('opacity') // reset on next dispatch
-      },
-      err: error => {
-        loading.hidden = true
-        errorEl.hidden = false
-        errorEl.textContent = error.message
-        contentEl.hidden = true
-        return () => { errorEl.hidden = true; errorEl.textContent = '' }
-      },
-    }),
-  ]
+  watch(content, {
+    ok: html => {
+      loading.hidden = true
+      contentEl.hidden = false
+      contentEl.innerHTML = html
+    },
+    nil: () => {
+      loading.hidden = false
+      contentEl.hidden = true
+    },
+    stale: () => {
+      contentEl.style.setProperty('opacity', 'var(--opacity-dimmed)')
+      return () => contentEl.style.removeProperty('opacity') // reset on next dispatch
+    },
+    err: error => {
+      loading.hidden = true
+      errorEl.hidden = false
+      errorEl.textContent = error.message
+      contentEl.hidden = true
+      return () => { errorEl.hidden = true; errorEl.textContent = '' }
+    },
+  })
 })
 ```
 
-The HTML provides all three regions up front; the `watch` handler toggles their visibility as the `Task` moves through its states:
+The HTML provides all three regions up front. The `watch` handler toggles their visibility as the `Task` moves through its states:
 
 ```html
 <module-lazyload src="./fragments/details.html">
@@ -604,36 +602,36 @@ The HTML provides all three regions up front; the `watch` handler toggles their 
 ```
 
 {% callout .tip title="Return a cleanup from stale and err handlers" %}
-`stale` and `err` receive no arguments, but they may return a cleanup function that runs synchronously before the next dispatch. Use it to reset the DOM state you changed — removing a dimming class, clearing the error text — so the next `ok` or `stale` run starts clean.
+`stale` and `err` receive no arguments. They may return a cleanup function that runs synchronously before the next dispatch. Use it to reset DOM state you changed, such as removing a dimming class or clearing the error text. This way the next `ok` or `stale` run starts clean.
 {% /callout %}
 
 {% callout .caution title="The Task owns the async work" %}
-Don't `fetch` inside a plain `watch` callback. A `Task` receives an `AbortSignal` and is auto-cancelled when its dependencies change, so switching `src` aborts the in-flight request. Its pending and error states become first-class reactive values that compose through `match()`.
+Do not `fetch` inside a plain `watch` callback. A `Task` receives an `AbortSignal`. It auto-cancels when its dependencies change, so switching `src` aborts the in-flight request. Its pending and error states become first-class reactive values that compose through `match()`.
 {% /callout %}
 
 {% /section %}
 
 {% section %}
-## Choosing a Coordination Mechanism
+## Choose a Coordination Mechanism
 
-The coordination patterns above all assume you have already split your UI into components. That decision comes first, and it is a separate question from how the resulting pieces talk to each other.
+The coordination patterns above all assume you have already split your UI into components. That decision comes first. It is a separate question from how the resulting pieces talk to each other.
 
 ### Split first, then coordinate
 
 A component should encapsulate a design decision that is likely to change on its own. If two concerns will always change together, keep them in one component — splitting them only creates coupling you then have to bridge. Split when a part could be reused independently or could evolve on a different schedule than the rest.
 
-Inside one component, shared state is just a local signal — a `State` or `Memo` created in the factory closure and read by that component's own effects. No coordination mechanism is needed because there is no boundary to cross.
+Inside one component, shared state is just a local signal: a `State` or `Memo` created in the factory closure and read by that component's own effects. You need no coordination mechanism, because there is no boundary to cross.
 
-### Coordinating across boundaries
+### Coordinate across boundaries
 
 Once a boundary exists, choose the mechanism by the shape of the relationship across it:
 
 | Mechanism | Spans | Coupling | Use when |
 |-----------|-------|----------|----------|
 | `pass()` | parent → a specific child | parent names the child | A parent drives a named property on a direct child it already knows about — e.g. summing spinbutton values into a badge on its button |
-| `provideContexts()` / `requestContext()` | ancestor → any descendant | none (decoupled) | Many consumers need the same value and you don't want to know which ones — theme, locale, auth state. Provider and consumer never reference each other by tag name |
+| `provideContexts()` / `requestContext()` | ancestor → any descendant | none (decoupled) | Many consumers need the same value and you do not want to know which ones — theme, locale, auth state. Provider and consumer never reference each other by tag name |
 | `Task` + `match()` | component ↔ server / external API | none (async boundary) | The source of truth is outside the page — a `fetch`, dynamic import, or any async stream. The component coordinates with an external system, not another component |
 
-The first two move state *between* Le Truc components. A `Task` coordinates with the world outside the component tree — the server, a network endpoint, an async API. The boundary is different, but the question is the same: how does this component get a value it does not own?
+The first two move state *between* Le Truc components. A `Task` coordinates with the world outside the component tree: the server, a network endpoint, an async API. The boundary is different. The question is the same: how does this component get a value it does not own?
 
 {% /section %}

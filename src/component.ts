@@ -115,14 +115,12 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 	host: HTMLElement & P
 	/**
 	 * The `ElementInternals` object, or `null` if `attachInternals()` failed
-	 * (pre-upgrade / parser-ordering edge case). Use imperatively inside
-	 * `watch()` for typed validity flags
-	 * — e.g. `watch('value', v => { internals?.setValidity({ rangeOverflow: v > max }, msg) })` —
-	 * or with `bindState()` for custom `:state()` pseudo-classes
-	 * — e.g. `watch(overflowEnd, bindState(internals, 'overflow-end'))`.
-	 * Note: form value sync (`setFormValue`) is managed automatically —
-	 * do NOT call `internals?.setFormValue(v)` from a `watch('value', …)`.
-	 * The optional chaining is the graceful-degradation guard.
+	 * (pre-upgrade / parser-ordering edge case). Use it inside `watch()` for
+	 * typed validity flags — e.g. `watch('value', v => internals?.setValidity({ rangeOverflow: v > max }, msg))` —
+	 * or with `bindState()` for custom `:state()` pseudo-classes — e.g.
+	 * `watch(overflowEnd, bindState(internals, 'overflow-end'))`.
+	 * Form value sync (`setFormValue`) is managed automatically; do not call
+	 * `internals?.setFormValue(v)` from a `watch('value', …)`.
 	 */
 	internals: ElementInternals | null
 	expose: (props: Initializers<P>) => void
@@ -135,13 +133,12 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 
 /**
  * The factory context for form-associated components. Extends `FactoryContext`
- * with `host` typed as `FormAssociatedElement & P` (the native-parity members)
- * and `watch`/`on`/`pass` accepting the managed `disabled` reactive prop in
- * addition to the author's `P`.
+ * with `host` typed as `FormAssociatedElement & P` and `watch`/`on`/`pass`
+ * accepting the managed `disabled` reactive prop in addition to `P`.
  *
- * `expose` is deliberately typed over `Initializers<P>` (not the widened
- * `P & { disabled: boolean }`) so `expose({ disabled: … })` is a type error —
- * `disabled` is managed by the library and `expose()` throws
+ * `expose` stays typed over `Initializers<P>`, not the widened
+ * `P & { disabled: boolean }`, so `expose({ disabled: … })` is a type error.
+ * `disabled` is managed by the library; `expose()` throws
  * `InvalidPropertyNameError` for it at runtime.
  */
 type FormFactoryContext<P extends ComponentProps> = Omit<
@@ -168,7 +165,7 @@ type FormFactoryContext<P extends ComponentProps> = Omit<
  * @since 2.0
  * @param {string} name - Custom element name (must contain a hyphen and start with a lowercase letter)
  * @param {function} factory - Factory function that queries elements, calls expose(), and returns effect descriptors
- * @param {ComponentExtension[]} [extensions] - Dependency-injected features (e.g. `[formAssociated()]`, `[formAssociatedCheckbox()]`, `[observedAttributes([...])]`). Bundled extensions are tree-shaken away unless imported and used. `formAssociated()`/`formAssociatedCheckbox()`, if present, must be the first element — that's what widens the factory's context type to `FormFactoryContext`.
+ * @param {ComponentExtension[]} [extensions] - Dependency-injected features, e.g. `[formAssociated()]`, `[formAssociatedCheckbox()]`, `[observedAttributes([...])]`. Bundled extensions tree-shake away unless imported and used. `formAssociated()`/`formAssociatedCheckbox()`, if present, must be first — that widens the factory's context type to `FormFactoryContext`.
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name
  */
 function defineComponent<P extends ComponentProps & { value: string | number }>(
@@ -199,10 +196,9 @@ function defineComponent<P extends ComponentProps>(
 	const exts: readonly ComponentExtension[] = extensions ?? []
 	const merged = mergeExtensions(name, exts)
 	class Truc extends HTMLElement {
-		// Concrete boolean default (not left `undefined`) so `Truc.formAssociated`
-		// always reads as a real boolean, matching native custom element
-		// classes that never opt in. formAssociated() overrides this to `true`
-		// via the staticProps merge below, before customElements.define.
+		// Concrete boolean default so `Truc.formAssociated` always reads as a
+		// real boolean. formAssociated() overrides it to `true` via the
+		// staticProps merge below, before customElements.define.
 		static formAssociated = false
 		static observedAttributes = merged.observedAttributes
 
@@ -218,8 +214,8 @@ function defineComponent<P extends ComponentProps>(
 			} catch {
 				// attachInternals() throws NotSupportedError for pre-upgrade
 				// instances or parser-ordering edge cases. The component
-				// degrades gracefully — internals is null, a DEV_MODE warning
-				// fires on first access.
+				// degrades gracefully: internals is null, and a DEV_MODE
+				// warning fires on first access.
 				internalsMap.set(this, null)
 			}
 		}
@@ -240,11 +236,10 @@ function defineComponent<P extends ComponentProps>(
 			}
 
 			if (this.#initialized) {
-				// Re-connect: dispose the previous activation's scope (event listeners,
-				// pass() slot restores, each() per-element scopes, provideContexts
+				// Re-connect: dispose the previous scope (event listeners, pass()
+				// slot restores, each() per-element scopes, provideContexts
 				// listeners) before re-activating #setup in a fresh root scope.
-				// Without this, every reparent/reslot cycle accumulates effects and
-				// listeners — the prior cleanup was overwritten without running.
+				// Otherwise every reparent/reslot cycle leaks effects and listeners.
 				if (isFunction(this.#cleanup)) this.#cleanup()
 				runSetup()
 			} else {
@@ -256,9 +251,8 @@ function defineComponent<P extends ComponentProps>(
 				// when `formAssociated()` leads the extensions array. The extra
 				// host members it promises (form, name, labels, …) are installed
 				// on the prototype by that extension's installOnPrototype before
-				// any instance connects, so the promise holds despite the narrower
-				// type used internally — the same escape hatch TS overloads
-				// always allow between public signatures and the implementation.
+				// any instance connects, so the promise holds despite the
+				// narrower type used internally.
 				const context: FactoryContext<P> = {
 					expose: this.#initSignals.bind(this),
 					host,
@@ -285,15 +279,13 @@ function defineComponent<P extends ComponentProps>(
 				}
 
 				// watch()/on()/pass()/each()/provideContexts() already pushed their
-				// descriptors into this collector when called, whether or not the
-				// factory also `return`s them — an old-style `return [...]` is
-				// redundant for those, not required. But the factory's return value
-				// is still reconciled (not ignored outright): the public
-				// `FactoryResult` type has always allowed authoring a raw
+				// descriptors into this collector when called, so an old-style
+				// `return [...]` is redundant for those. But the return value is
+				// still reconciled: `FactoryResult` allows authoring a raw
 				// `EffectDescriptor` by hand, bypassing every helper, and such a
 				// descriptor is never pushed anywhere — `return` is the only path
-				// that can pick it up. `forEachUnseen` skips anything already in the
-				// collector by reference, so nothing activates twice. See ADR 0018.
+				// that picks it up. `forEachUnseen` skips anything already in the
+				// collector, so nothing activates twice. See ADR 0018.
 				const collector: EffectDescriptor[] = []
 				const result = withCollector(collector, () => factory(context))
 				this.#setup = collector
@@ -366,41 +358,35 @@ function defineComponent<P extends ComponentProps>(
 
 			for (const [prop, initializer] of Object.entries(instanceProps)) {
 				if (initializer == null) continue
-				// Reject reserved property names that the type-level ReservedWords
-				// exclusion can't catch at runtime (e.g. asJSON-parsed keys or
-				// Record<string, …> casts). This check must run BEFORE the
-				// `prop in this` guard below: every ReservedWord is an inherited
-				// own-property of Object (constructor, __proto__, toString, …), so
-				// `prop in this` is always true for them and would silently skip
-				// them instead of throwing a named, actionable error.
+				// Reject reserved names the type-level ReservedWords exclusion
+				// can't catch at runtime (e.g. asJSON-parsed keys). Must run
+				// before the `prop in this` guard below: every ReservedWord is
+				// an inherited own-property of Object (constructor, __proto__,
+				// toString, …), so that guard would otherwise silently skip them.
 				if (isReservedWord(prop))
 					throw new InvalidPropertyNameError(
 						this.localName,
 						prop,
 						'reserved word or Object builtin — cannot be used as a reactive property',
 					)
-				// Reject member names reserved by an extension (e.g. form,
-				// name, labels, validity, ... reserved by formAssociated()).
-				// These are prototype-defined, so the `prop in this` guard below
-				// would otherwise *silently skip* the colliding initializer — the
-				// worst failure mode. `value` is the deliberate exception on
-				// form-associated components: the component must expose it.
-				// This check runs before that guard.
+				// Reject names reserved by an extension (e.g. form, name,
+				// labels, validity reserved by formAssociated()). These are
+				// prototype-defined, so `prop in this` would otherwise silently
+				// skip the colliding initializer. `value` is the deliberate
+				// exception on form-associated components.
 				if (merged.reservedMembers.has(prop)) {
 					let reason = 'is a member reserved by an extension'
-					// Remediation guidance is DEV-only; the guard folds away
-					// under the build define.
 					if (process.env.DEV_MODE === 'true')
 						reason += ` ('${merged.reservedMemberOwners.get(prop)}') — it is managed automatically and cannot be set via expose()`
 					throw new InvalidPropertyNameError(this.localName, prop, reason)
 				}
 				// Skip properties already set on the host (explicit DOM value wins).
 				if (prop in this) continue
-				// Retain every initializer verbatim, keyed by prop name, before
-				// createReactiveProperty consumes it — extensions read these back
-				// out (formAssociated()'s managed formResetCallback re-runs the
-				// retained `value` initializer; observedAttributes() re-runs a
-				// retained Parser when its attribute mutates post-connect).
+				// Retain every initializer, keyed by prop name, before
+				// createReactiveProperty consumes it. Extensions read these
+				// back out (formAssociated()'s formResetCallback re-runs the
+				// retained `value`; observedAttributes() re-runs a retained
+				// Parser when its attribute mutates post-connect).
 				let retained = retainedInitializers.get(this)
 				if (!retained) {
 					retained = {}
@@ -452,10 +438,9 @@ function defineComponent<P extends ComponentProps>(
 
 	// Let each extension install its own prototype members (e.g.
 	// formAssociated()'s native-parity host contract and managed form
-	// lifecycle callbacks). Unconditional for every component would shadow
-	// same-named reactive props (the `prop in this` guard would silently
-	// skip them) — that's exactly why this is opt-in per extension, not
-	// baked into the core class body.
+	// lifecycle callbacks). Doing this unconditionally for every component
+	// would shadow same-named reactive props, so it stays opt-in per
+	// extension instead of baked into the core class body.
 	for (const ext of exts)
 		ext.installOnPrototype?.(Truc.prototype as unknown as HTMLElement)
 

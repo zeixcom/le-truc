@@ -1,6 +1,6 @@
 ### Module Carousel
 
-A scroll-snap carousel with dot navigation and keyboard controls. Demonstrates integrating a native browser API (`IntersectionObserver`) via `watch(() => true, …)` — a hand-authored effect with no signal dependency, run once on connect, whose returned cleanup disconnects the observer on disconnect. `index` is initialised from the slide marked `aria-current="true"` in `expose()`. The `all()` Memo targets (`dots`, `slides`, `buttons`) show how `on()` automatically iterates over dynamic element collections, and `each()` drives per-slide/per-dot `watch()` effects.
+A scroll-snap carousel with dot navigation and keyboard controls.
 
 #### Preview
 

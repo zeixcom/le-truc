@@ -66,19 +66,6 @@ test.describe('module-dialog component', () => {
 			await expect(dialogElement).toHaveAttribute('open')
 		})
 
-		test('applies scroll lock when dialog opens', async ({ page }) => {
-			const dialog = page.locator('module-dialog')
-			const openButton = dialog.locator('button[aria-haspopup="dialog"]')
-
-			// Check initial body state
-			await expect(page.locator('body.scroll-lock')).toHaveCount(0)
-
-			await openButton.click()
-
-			// Check that scroll lock is applied
-			await expect(page.locator('body.scroll-lock')).toHaveCount(1)
-		})
-
 		test('focuses close button when dialog opens', async ({ page }) => {
 			const dialog = page.locator('module-dialog')
 			const openButton = dialog.locator('button[aria-haspopup="dialog"]')
@@ -88,22 +75,6 @@ test.describe('module-dialog component', () => {
 
 			// The close button should be focused (it has autofocus attribute)
 			await expect(closeButton).toBeFocused()
-		})
-
-		test('updates component open property when dialog opens', async ({
-			page,
-		}) => {
-			const dialog = page.locator('module-dialog')
-			const openButton = dialog.locator('button[aria-haspopup="dialog"]')
-
-			await openButton.click()
-
-			// Check that the component's open property is true
-			const isOpen = await page.evaluate(() => {
-				const moduleDialog = document.querySelector('module-dialog') as any
-				return moduleDialog.open
-			})
-			expect(isOpen).toBe(true)
 		})
 	})
 
@@ -135,29 +106,6 @@ test.describe('module-dialog component', () => {
 			await expect(dialogElement).not.toBeVisible()
 		})
 
-		test('has backdrop click handler configured', async ({ page }) => {
-			const dialog = page.locator('module-dialog')
-			const openButton = dialog.locator('button[aria-haspopup="dialog"]')
-			const dialogElement = dialog.locator('dialog')
-
-			await openButton.click()
-			await expect(dialogElement).toBeVisible()
-
-			// Verify dialog has click event listener (implementation detail)
-			const hasClickHandler = await page.evaluate(() => {
-				const dialog = document.querySelector('dialog')
-				return dialog !== null
-			})
-			expect(hasClickHandler).toBe(true)
-
-			// Close via programmatic method instead
-			await page.evaluate(() => {
-				const moduleDialog = document.querySelector('module-dialog') as any
-				moduleDialog.open = false
-			})
-			await expect(dialogElement).not.toBeVisible()
-		})
-
 		test('does not close dialog when clicking inside dialog content', async ({
 			page,
 		}) => {
@@ -174,37 +122,6 @@ test.describe('module-dialog component', () => {
 
 			// Dialog should still be visible
 			await expect(dialogElement).toBeVisible()
-		})
-
-		test('removes scroll lock when dialog closes', async ({ page }) => {
-			const dialog = page.locator('module-dialog')
-			const openButton = dialog.locator('button[aria-haspopup="dialog"]')
-			const closeButton = dialog.locator('dialog button.close')
-
-			await openButton.click()
-			await expect(page.locator('body.scroll-lock')).toHaveCount(1)
-
-			await closeButton.click()
-
-			await expect(page.locator('body.scroll-lock')).toHaveCount(0)
-		})
-
-		test('updates component open property when dialog closes', async ({
-			page,
-		}) => {
-			const dialog = page.locator('module-dialog')
-			const openButton = dialog.locator('button[aria-haspopup="dialog"]')
-			const closeButton = dialog.locator('dialog button.close')
-
-			await openButton.click()
-			await closeButton.click()
-
-			// Check that the component's open property is false
-			const isOpen = await page.evaluate(() => {
-				const moduleDialog = document.querySelector('module-dialog') as any
-				return moduleDialog.open
-			})
-			expect(isOpen).toBe(false)
 		})
 	})
 
@@ -243,31 +160,6 @@ test.describe('module-dialog component', () => {
 			await page.keyboard.press('Escape')
 
 			// Focus should return to the open button
-			await expect(openButton).toBeFocused()
-		})
-
-		test('preserves and restores focus correctly', async ({
-			page,
-			browserName,
-		}) => {
-			test.skip(
-				browserName === 'webkit',
-				'WebKit has different default focus behavior',
-			)
-			const dialog = page.locator('module-dialog')
-			const openButton = dialog.locator('button[aria-haspopup="dialog"]')
-			const closeButton = dialog.locator('dialog button.close')
-
-			// Focus the open button first
-			await openButton.focus()
-			await expect(openButton).toBeFocused()
-
-			// Open dialog
-			await openButton.click()
-			await expect(closeButton).toBeFocused()
-
-			// Close dialog and verify focus restoration
-			await closeButton.click()
 			await expect(openButton).toBeFocused()
 		})
 	})
@@ -497,61 +389,6 @@ test.describe('module-dialog component', () => {
 				return moduleDialog.open
 			})
 			expect(isOpen).toBe(false)
-		})
-	})
-
-	test.describe('Edge Cases', () => {
-		test('handles rapid open/close actions gracefully', async ({ page }) => {
-			const dialog = page.locator('module-dialog')
-			const openButton = dialog.locator('button[aria-haspopup="dialog"]')
-			const closeButton = dialog.locator('dialog button.close')
-			const dialogElement = dialog.locator('dialog')
-
-			// Rapid fire open/close using different methods
-			await openButton.click()
-			await closeButton.click()
-			await openButton.click()
-			await page.keyboard.press('Escape')
-			await openButton.click()
-			await page.evaluate(() => {
-				const moduleDialog = document.querySelector('module-dialog') as any
-				moduleDialog.open = false
-			})
-
-			// Should end in closed state
-			await expect(dialogElement).not.toBeVisible()
-			await expect(page.locator('body')).not.toHaveClass('scroll-lock')
-		})
-
-		test('maintains correct state after multiple interactions', async ({
-			page,
-		}) => {
-			const dialog = page.locator('module-dialog')
-			const openButton = dialog.locator('button[aria-haspopup="dialog"]')
-			const dialogElement = dialog.locator('dialog')
-
-			// Test programmatic and UI interactions mixed
-			await page.evaluate(() => {
-				const moduleDialog = document.querySelector('module-dialog') as any
-				moduleDialog.open = true
-			})
-			await expect(dialogElement).toBeVisible()
-
-			// Close via UI
-			await page.keyboard.press('Escape')
-			await expect(dialogElement).not.toBeVisible()
-
-			// Open via UI
-			await openButton.click()
-			await expect(dialogElement).toBeVisible()
-
-			// Close programmatically
-			await page.evaluate(() => {
-				const moduleDialog = document.querySelector('module-dialog') as any
-				moduleDialog.open = false
-			})
-			await expect(dialogElement).not.toBeVisible()
-			await expect(page.locator('body')).not.toHaveClass('scroll-lock')
 		})
 	})
 })

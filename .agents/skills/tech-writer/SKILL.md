@@ -13,6 +13,7 @@ This skill maintains the **authored documentation** for the @zeix/le-truc librar
 - `docs-src/api/` — TypeDoc-generated from source; regenerate with `bun run build:docs` instead
 - `examples/*/` — component source files; use the `le-truc` or `le-truc-dev` skill instead
 - `CHANGELOG.md` — use the `changelog-keeper` skill instead
+- `adr/` — use the `adr-keeper` skill instead
 - Build scripts, server code, or test infrastructure (other than `server/SERVER.md`)
 
 ## Essential Principles
@@ -20,6 +21,8 @@ This skill maintains the **authored documentation** for the @zeix/le-truc librar
 **Read source before writing.** Always read the current state of the source file(s) and the target document before making any changes. Never update from memory.
 
 **Tone adapts to audience.** Each document has a distinct primary reader and register. See references/tone-guide.md. Violating the tone is as wrong as a factual error.
+
+**Prose docs and JSDoc follow ASD-STE100.** Pages, `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, JSDoc, `server/SERVER.md`, and skill files use Simplified Technical English sentence and vocabulary rules — see references/ste100-style.md. Domain terms use the definitions in `CONTEXT.md`. Blog posts are exempt; they keep the narrative register in references/tone-guide.md `<blog>`.
 
 **Concise over comprehensive.** Every sentence must justify its presence. Cut anything that does not add information the reader needs.
 
@@ -83,6 +86,7 @@ All in `references/`:
 | document-map.md | Each document's audience, scope, update triggers, and consistency checks |
 | tone-guide.md | Writing tone, register, and conciseness rules per document |
 | markdoc-tags.md | Markdoc authoring reference: frontmatter, available tags, and usage patterns |
+| ste100-style.md | Simplified Technical English (ASD-STE100) sentence and vocabulary rules for prose docs and JSDoc; blog is exempt |
 
 ## Workflows Index
 All in `workflows/`:

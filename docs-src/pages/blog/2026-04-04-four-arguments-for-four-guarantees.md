@@ -158,14 +158,12 @@ defineComponent<FormCheckboxProps>(
       label: label?.textContent ?? first('label')?.textContent ?? '',
     })
 
-    return [
-      on(checkbox, 'change', () => ({ checked: checkbox.checked })),
-      watch('checked', checked => {
-        checkbox.checked = checked
-        host.toggleAttribute('checked', checked)
-      }),
-      label && watch('label', bindText(label)),
-    ]
+    on(checkbox, 'change', () => ({ checked: checkbox.checked }))
+    watch('checked', checked => {
+      checkbox.checked = checked
+      host.toggleAttribute('checked', checked)
+    })
+    if (label) watch('label', bindText(label))
   },
 )
 ```

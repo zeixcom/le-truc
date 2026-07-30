@@ -58,7 +58,9 @@ const getStep = (axis: FormColorgraphAxis, shiftKey: boolean) =>
  * Out-of-gamut colors should be handled with a fallback, as display coverage varies.
  * Chroma values must stay within the Oklch gamut; extreme values are clamped automatically.
  * Form participation submits one serialized CSS color value via ElementInternals.
- * @demo {./docs/examples/form-colorgraph.html} Interactive preview and usage examples */
+ *
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#form-colorgraph} Interactive preview and usage examples
+ **/
 export default defineComponent<FormColorgraphProps>(
 	'form-colorgraph',
 	({ all, expose, first, host, on, watch }) => {
@@ -101,10 +103,6 @@ export default defineComponent<FormColorgraphProps>(
 			'.thumb',
 			'Add a <.thumb> element as a drag knob to control the hue.',
 		)
-		const allInputs = all('input')
-		const allErrors = all('.error')
-		const decrementBtns = all('button.decrement')
-		const incrementBtns = all('button.increment')
 
 		// Initialize
 		for (const [key, input] of Object.entries(inputs)) {
@@ -261,6 +259,7 @@ export default defineComponent<FormColorgraphProps>(
 		watch(() => formatCss(color.get()), bindStyle(host, '--color-base'))
 
 		// Input per-element effects
+		const allInputs = all('input')
 		each(allInputs, input => {
 			const axis = getAxis(input)
 			watch(color, c => {
@@ -279,6 +278,7 @@ export default defineComponent<FormColorgraphProps>(
 		})
 
 		// Error text — per-axis: each .error element binds to its own axis
+		const allErrors = all('.error')
 		each(allErrors, errorEl => {
 			const axis = getAxis(errorEl)
 			if (!axis) return
@@ -437,6 +437,7 @@ export default defineComponent<FormColorgraphProps>(
 		)
 
 		// Decrement buttons
+		const decrementBtns = all('button.decrement')
 		each(decrementBtns, btn => {
 			const axis = getAxis(btn)
 			on(btn, 'click', event => {
@@ -452,6 +453,7 @@ export default defineComponent<FormColorgraphProps>(
 		})
 
 		// Increment buttons
+		const incrementBtns = all('button.increment')
 		each(incrementBtns, btn => {
 			const axis = getAxis(btn)
 			on(btn, 'click', event => {

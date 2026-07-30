@@ -273,7 +273,6 @@ describe('each', () => {
 		const callbacks: Element[] = []
 		const descriptor = each(memo, (el: Element) => {
 			callbacks.push(el)
-			return []
 		})
 		// Need to run the descriptor in a scope
 		createScope(() => descriptor())

@@ -26,30 +26,28 @@ export default defineComponent<TestOnProps>(
 
 		expose({ count: 0, focused: false })
 
-		return [
-			// Element target: click handler returns { prop: value } to update host
-			on(btn, 'click', () => ({ count: 1 })),
+		// Element target: click handler returns { prop: value } to update host
+		on(btn, 'click', () => ({ count: 1 }))
 
-			// run to reflect count in DOM
-			watch('count', n => {
-				output.textContent = String(n)
-			}),
+		// run to reflect count in DOM
+		watch('count', n => {
+			output.textContent = String(n)
+		})
 
-			// Memo target: delegation — click on any input increments count
-			on(inputs, 'click', (_, el) => ({
-				count: Number(el.dataset.value ?? 0),
-			})),
+		// Memo target: delegation — click on any input increments count
+		on(inputs, 'click', (_, el) => ({
+			count: Number(el.dataset.value ?? 0),
+		}))
 
-			// Falsy return is allowed and ignored (e.g. conditionally set state)
-			on(inputs, 'keydown', ({ key }) => key === 'Enter' && { count: 100 }),
+		// Falsy return is allowed and ignored (e.g. conditionally set state)
+		on(inputs, 'keydown', ({ key }) => key === 'Enter' && { count: 100 })
 
-			// Non-bubbling event (focus) with Memo target — per-element fallback
-			on(inputs, 'focus', () => ({ focused: true })),
+		// Non-bubbling event (focus) with Memo target — per-element fallback
+		on(inputs, 'focus', () => ({ focused: true }))
 
-			// run to reflect focused in DOM
-			watch('focused', f => {
-				focusLog.textContent = f ? 'focused' : 'blurred'
-			}),
-		]
+		// run to reflect focused in DOM
+		watch('focused', f => {
+			focusLog.textContent = f ? 'focused' : 'blurred'
+		})
 	},
 )

@@ -4,6 +4,7 @@
 1. references/markdoc-tags.md — Markdoc tag reference before editing any page
 2. references/document-map.md → the entry for the specific page being updated
 3. references/tone-guide.md → `<pages>` section
+4. references/ste100-style.md — sentence and vocabulary rules (does not apply to `blog/` posts, see workflows/write-blog-post.md)
 
 ## Process
 

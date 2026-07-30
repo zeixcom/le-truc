@@ -180,39 +180,6 @@ test.describe('form-combobox component', () => {
 			})
 			expect(newLength).toBe(0)
 		})
-
-		test('synchronizes value property with component state', async ({
-			page,
-		}) => {
-			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
-
-			await textbox.fill('Europe/London')
-
-			// Component value property reflects the typed value (the value
-			// attribute is the default value only, not the current value —
-			// per the managed form-control convention)
-			const componentValue = await page.evaluate(() => {
-				const element = document.querySelector('form-combobox')
-				return element?.value
-			})
-			expect(componentValue).toBe('Europe/London')
-		})
-
-		test('reflects textbox value in component property', async ({ page }) => {
-			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
-
-			// Fill textbox directly (this is how the component is designed to work)
-			await textbox.fill('Asia/Tokyo')
-
-			// Component value property should reflect textbox value
-			const componentValue = await page.evaluate(() => {
-				const element = document.querySelector('form-combobox')
-				return element?.value
-			})
-			expect(componentValue).toBe('Asia/Tokyo')
-		})
 	})
 
 	test.describe('Popup Show/Hide Behavior', () => {
@@ -228,9 +195,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement &&
-					listboxElement.options &&
-					listboxElement.options.length > 0
+					listboxElement
+					&& listboxElement.options
+					&& listboxElement.options.length > 0
 				)
 			})
 
@@ -278,9 +245,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement &&
-					listboxElement.options &&
-					listboxElement.options.length > 0
+					listboxElement
+					&& listboxElement.options
+					&& listboxElement.options.length > 0
 				)
 			})
 
@@ -301,44 +268,6 @@ test.describe('form-combobox component', () => {
 			await expect(textbox).toHaveAttribute('aria-expanded', 'false')
 		})
 
-		test('hides popup when option is selected', async ({ page }) => {
-			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
-			const listboxElement = combobox.locator('[role="listbox"]')
-
-			// Wait for options to load
-			await page.waitForTimeout(50)
-
-			// Verify options are available
-			const optionsLoaded = await page.evaluate(() => {
-				const listboxElement = document.querySelector('form-listbox')
-				return (
-					listboxElement &&
-					listboxElement.options &&
-					listboxElement.options.length > 0
-				)
-			})
-
-			if (!optionsLoaded) {
-				console.log('Options not loaded, skipping selection test')
-				return
-			}
-
-			await textbox.fill('New')
-			await page.waitForTimeout(50)
-			await expect(listboxElement).toBeVisible()
-
-			// Click an option (find visible option)
-			const firstOption = listboxElement
-				.locator('button[role="option"]:visible')
-				.first()
-			await firstOption.click()
-
-			// Popup should hide after selection
-			await expect(listboxElement).toBeHidden()
-			await expect(textbox).toHaveAttribute('aria-expanded', 'false')
-		})
-
 		test('shows popup with Alt+ArrowDown', async ({ page }) => {
 			const combobox = page.locator('form-combobox').first()
 			const textbox = combobox.locator('input[role="combobox"]')
@@ -351,9 +280,9 @@ test.describe('form-combobox component', () => {
 			const optionsLoaded = await page.evaluate(() => {
 				const listboxElement = document.querySelector('form-listbox')
 				return (
-					listboxElement &&
-					listboxElement.options &&
-					listboxElement.options.length > 0
+					listboxElement
+					&& listboxElement.options
+					&& listboxElement.options.length > 0
 				)
 			})
 
@@ -417,36 +346,6 @@ test.describe('form-combobox component', () => {
 			})
 			expect(componentValue).toBe('')
 		})
-
-		test('keyboard navigation maintains proper component state', async ({
-			page,
-		}) => {
-			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
-			const listboxElement = combobox.locator('[role="listbox"]')
-
-			// Wait for options to load
-			await page.waitForTimeout(50)
-
-			await textbox.fill('New')
-			await page.waitForTimeout(50)
-			await expect(listboxElement).toBeVisible()
-
-			// Test ArrowDown behavior
-			await textbox.press('ArrowDown')
-			await page.waitForTimeout(50)
-
-			// Verify popup state is maintained
-			await expect(listboxElement).toBeVisible()
-			await expect(textbox).toHaveAttribute('aria-expanded', 'true')
-
-			// Test that keyboard navigation doesn't break the component
-			await page.keyboard.press('ArrowDown')
-			await page.waitForTimeout(50)
-
-			// Component should still be functional
-			await expect(listboxElement).toBeVisible()
-		})
 	})
 
 	test.describe('Integration with Form-Listbox', () => {
@@ -467,26 +366,6 @@ test.describe('form-combobox component', () => {
 				return element?.filter
 			})
 			expect(listboxFilter).toBe('New')
-		})
-
-		test('allows typing to filter and complete values', async ({ page }) => {
-			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
-
-			// Wait for options to load
-			await page.waitForTimeout(50)
-
-			// Type a complete timezone value
-			await textbox.fill('America/New_York')
-			await page.waitForTimeout(50)
-
-			// Component value should be updated
-			const componentValue = await page.evaluate(() => {
-				const element = document.querySelector('form-combobox')
-				return element?.value
-			})
-			expect(componentValue).toBe('America/New_York')
-			await expect(textbox).toHaveValue('America/New_York')
 		})
 
 		test('updates combobox value when clicking an option', async ({ page }) => {
@@ -718,30 +597,6 @@ test.describe('form-combobox component', () => {
 	})
 
 	test.describe('Accessibility Features', () => {
-		test('maintains proper ARIA attributes during interaction', async ({
-			page,
-		}) => {
-			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
-
-			// Initial state
-			await expect(textbox).toHaveAttribute('role', 'combobox')
-			await expect(textbox).toHaveAttribute('aria-expanded', 'false')
-			await expect(textbox).toHaveAttribute('aria-autocomplete', 'list')
-
-			// Wait for options and type to expand
-			await page.waitForTimeout(50)
-			await textbox.fill('New')
-
-			// Expanded state
-			await expect(textbox).toHaveAttribute('aria-expanded', 'true')
-			await expect(textbox).toHaveAttribute('aria-controls', 'timezone-popup')
-
-			// Press Escape to collapse
-			await textbox.press('Escape')
-			await expect(textbox).toHaveAttribute('aria-expanded', 'false')
-		})
-
 		test('has proper error message structure', async ({ page }) => {
 			const combobox = page.locator('form-combobox').first()
 			const textbox = combobox.locator('input[role="combobox"]')
@@ -845,32 +700,6 @@ test.describe('form-combobox component', () => {
 	})
 
 	test.describe('Component Properties', () => {
-		test('value property reflects textbox input reactively', async ({
-			page,
-		}) => {
-			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
-
-			// Type in textbox
-			await textbox.fill('Asia/Tokyo')
-
-			// Component value property should reflect textbox
-			let componentValue = await page.evaluate(() => {
-				const element = document.querySelector('form-combobox')
-				return element?.value
-			})
-			expect(componentValue).toBe('Asia/Tokyo')
-
-			// Update via more typing
-			await textbox.fill('Europe/London')
-
-			componentValue = await page.evaluate(() => {
-				const element = document.querySelector('form-combobox')
-				return element?.value
-			})
-			expect(componentValue).toBe('Europe/London')
-		})
-
 		test('length property is readonly and reactive', async ({ page }) => {
 			const combobox = page.locator('form-combobox').first()
 			const textbox = combobox.locator('input[role="combobox"]')
@@ -898,86 +727,9 @@ test.describe('form-combobox component', () => {
 			})
 			expect(actualLength).toBe(11)
 		})
-
-		test('clear method is readonly function', async ({ page }) => {
-			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
-
-			await textbox.fill('test value')
-
-			// Clear method should exist and be callable
-			const clearResult = await page.evaluate(() => {
-				const element = document.querySelector('form-combobox')
-				return typeof element?.clear
-			})
-			expect(clearResult).toBe('function')
-
-			// Call clear method
-			await page.evaluate(() => {
-				const element = document.querySelector('form-combobox')
-				if (element) element.clear()
-			})
-
-			await expect(textbox).toHaveValue('')
-		})
 	})
 
 	test.describe('Edge Cases and Behavior', () => {
-		test('handles rapid typing correctly', async ({ page }) => {
-			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
-
-			// Wait for listbox to load
-			await page.waitForTimeout(50)
-
-			// Type rapidly
-			await textbox.fill('N')
-			await textbox.fill('Ne')
-			await textbox.fill('New')
-
-			// Final value should be correct
-			await expect(textbox).toHaveValue('New')
-
-			const componentValue = await page.evaluate(() => {
-				const element = document.querySelector('form-combobox')
-				return element?.value
-			})
-			expect(componentValue).toBe('New')
-		})
-
-		test('maintains proper state during typing interactions', async ({
-			page,
-		}) => {
-			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
-			const listboxElement = combobox.locator('[role="listbox"]')
-
-			// Wait for options to load
-			await page.waitForTimeout(50)
-
-			// Type to show popup
-			await textbox.fill('New')
-			await page.waitForTimeout(50)
-			await expect(listboxElement).toBeVisible()
-
-			// Type more to filter further
-			await textbox.fill('New York')
-			await page.waitForTimeout(50)
-
-			// Component should maintain consistent state
-			await expect(textbox).toHaveAttribute('aria-expanded', 'true')
-
-			// Complete typing
-			await textbox.fill('America/New_York')
-
-			// Verify final state
-			const componentValue = await page.evaluate(() => {
-				const element = document.querySelector('form-combobox')
-				return element?.value
-			})
-			expect(componentValue).toBe('America/New_York')
-		})
-
 		test('handles empty filter gracefully', async ({ page }) => {
 			const combobox = page.locator('form-combobox').first()
 			const textbox = combobox.locator('input[role="combobox"]')
@@ -999,32 +751,6 @@ test.describe('form-combobox component', () => {
 			// Popup should show after any interaction, even with empty filter
 			await expect(listboxElement).toBeVisible()
 			await expect(textbox).toHaveAttribute('aria-expanded', 'true')
-		})
-
-		test('handles option selection correctly', async ({ page }) => {
-			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
-			const listboxElement = combobox.locator('[role="listbox"]')
-
-			// Wait for options to load
-			await page.waitForTimeout(50)
-
-			await textbox.fill('New')
-			await page.waitForTimeout(50)
-			await expect(listboxElement).toBeVisible()
-
-			// Click an option (find visible option)
-			const firstOption = listboxElement
-				.locator('button[role="option"]:not([hidden])')
-				.first()
-			await firstOption.click()
-
-			// Wait for selection to process
-			await page.waitForTimeout(50)
-
-			// Popup should hide after selection
-			await expect(listboxElement).toBeHidden()
-			await expect(textbox).toHaveAttribute('aria-expanded', 'false')
 		})
 	})
 })

@@ -21,6 +21,4 @@ export default defineComponent<TestExposeProps>('test-expose', ({ expose }) => {
 		greeting: 'Hello',
 		count: 0,
 	})
-
-	return []
 })

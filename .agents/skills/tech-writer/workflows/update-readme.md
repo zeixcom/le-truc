@@ -3,6 +3,7 @@
 ## Required Reading
 1. references/document-map.md → `<README_md>`
 2. references/tone-guide.md → `<README>` section
+3. references/ste100-style.md — sentence and vocabulary rules
 
 ## Process
 

@@ -174,7 +174,6 @@ describe('managed value sync', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: 'initial' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -189,7 +188,6 @@ describe('managed value sync', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: '' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -209,7 +207,6 @@ describe('managed value sync', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: 0 })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -231,7 +228,6 @@ describe('managed formResetCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: 'default' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -249,7 +245,6 @@ describe('managed formResetCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: asParser(v => v ?? '') })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -268,7 +263,6 @@ describe('managed formResetCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ foo: 'bar' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -286,7 +280,6 @@ describe('managed formStateRestoreCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: '' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -302,7 +295,6 @@ describe('managed formStateRestoreCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: 'keep' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -318,7 +310,6 @@ describe('managed formStateRestoreCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: 0 })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -338,7 +329,6 @@ describe('managed formStateRestoreCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: asParser(v => v === 'true') })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -361,7 +351,6 @@ describe('managed formDisabledCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: '' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -405,7 +394,6 @@ describe('managed formDisabledCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: '' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -438,7 +426,6 @@ describe('native-parity host contract', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: '' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -457,7 +444,6 @@ describe('native-parity host contract', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: '' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -475,7 +461,6 @@ describe('native-parity host contract', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: '' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -497,7 +482,6 @@ describe('native-parity host contract', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: '' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -522,7 +506,6 @@ describe('native-parity host contract', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: '' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -552,7 +535,6 @@ describe('native-parity host contract', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: '' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -570,7 +552,6 @@ describe('native-parity host contract', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: '' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -588,7 +569,6 @@ describe('managed-name collision guard', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ validity: 'evil' } as any)
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -601,7 +581,6 @@ describe('managed-name collision guard', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ disabled: true } as any)
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -614,7 +593,6 @@ describe('managed-name collision guard', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: 'ok' })
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -628,7 +606,6 @@ describe('managed-name collision guard', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ validity: 'fine' })
-				return []
 			},
 		)!
 		const instance = new Ctor() as any
@@ -647,7 +624,6 @@ describe('internals on FactoryContext', () => {
 			({ expose, internals }) => {
 				expose({ value: '' })
 				capturedInternals = internals
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -665,7 +641,6 @@ describe('internals on FactoryContext', () => {
 			({ expose, internals }) => {
 				expose({ value: '' })
 				capturedInternals = internals
-				return []
 			},
 			[formAssociated()],
 		)!
@@ -679,14 +654,12 @@ describe('internals on FactoryContext', () => {
 			uniqueName(),
 			({ expose, internals, watch }) => {
 				expose({ value: 0 })
-				return [
-					watch('value', v => {
-						internals?.setValidity(
-							{ rangeOverflow: v > 10 },
-							v > 10 ? 'Too high' : '',
-						)
-					}),
-				]
+				watch('value', v => {
+					internals?.setValidity(
+						{ rangeOverflow: v > 10 },
+						v > 10 ? 'Too high' : '',
+					)
+				})
 			},
 			[formAssociated()],
 		)!
@@ -741,7 +714,6 @@ describe('non-form-associated components', () => {
 			({ expose, internals }) => {
 				expose({ value: '' })
 				capturedInternals = internals
-				return []
 			},
 		)!
 		const instance = new Ctor() as any
@@ -754,7 +726,6 @@ describe('non-form-associated components', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: 'test' })
-				return []
 			},
 		)!
 		const instance = new Ctor() as any
@@ -769,7 +740,6 @@ describe('non-form-associated components', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ value: '' })
-				return []
 			},
 		)!
 		// The three form lifecycle callbacks live only on form-associated
@@ -788,7 +758,6 @@ describe('managed checkbox value sync', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ checked: false })
-				return []
 			},
 			[formAssociatedCheckbox()],
 		)!
@@ -808,7 +777,6 @@ describe('managed checkbox value sync', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ checked: true })
-				return []
 			},
 			[formAssociatedCheckbox()],
 		)!
@@ -827,7 +795,6 @@ describe('managed checkbox formResetCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ checked: true })
-				return []
 			},
 			[formAssociatedCheckbox()],
 		)!
@@ -845,7 +812,6 @@ describe('managed checkbox formResetCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ checked: asParser(v => v != null) })
-				return []
 			},
 			[formAssociatedCheckbox()],
 		)!
@@ -866,7 +832,6 @@ describe('managed checkbox formStateRestoreCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ checked: false })
-				return []
 			},
 			[formAssociatedCheckbox()],
 		)!
@@ -882,7 +847,6 @@ describe('managed checkbox formStateRestoreCallback', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ checked: true })
-				return []
 			},
 			[formAssociatedCheckbox()],
 		)!
@@ -907,7 +871,6 @@ describe('formAssociatedCheckbox() shares the generic managed layer', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ checked: false })
-				return []
 			},
 			[formAssociatedCheckbox()],
 		)!
@@ -924,7 +887,6 @@ describe('formAssociatedCheckbox() shares the generic managed layer', () => {
 			uniqueName(),
 			({ expose }) => {
 				expose({ checked: false, name: 'oops' })
-				return []
 			},
 			[formAssociatedCheckbox()],
 		)
@@ -961,7 +923,6 @@ describe('backward compatibility', () => {
 			({ expose }) => {
 				expose({ value: 'hello' })
 				ran = true
-				return []
 			},
 		)!
 		const instance = new Ctor() as any

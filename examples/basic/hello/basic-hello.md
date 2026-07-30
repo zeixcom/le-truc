@@ -1,6 +1,6 @@
 ### Basic Hello
 
-The Hello World example from the Quick Start guide. Shows the minimal Le Truc factory pattern: initialising `name` by reading the `output` element's text content directly in `expose()`, `on('input')` returning `{ name }` to update the host as the user types, and `watch('name', bindText(output))` to keep the greeting in sync.
+The Hello World example from the Quick Start guide.
 
 #### Preview
 
@@ -22,10 +22,10 @@ The Hello World example from the Quick Start guide. Shows the minimal Le Truc fa
 - Default
 - Description
 ---
-- `name`
+- `subject`
 - `string`
 - `''`
-- Name of the person to greet
+- Name of the subject to greet
 {% /table %}
 
 #### Descendant Elements
@@ -39,10 +39,10 @@ The Hello World example from the Quick Start guide. Shows the minimal Le Truc fa
 - `first('input')`
 - `HTMLInputElement`
 - **required**
-- Text field to enter the name
+- Text field to enter the subject
 ---
 - `first('output')`
 - `HTMLOutputElement`
 - **required**
-- Display the name
+- Display the subject
 {% /table %}

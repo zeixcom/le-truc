@@ -267,10 +267,19 @@ watch('error', bindClass(input, 'error', Boolean))
 
 ---
 
-## Conditional Effects for Optional Descendants
+## Statement Layout: Group by Concern
+
+Order factory statements so each query sits next to the effect(s) that consume it. Do not hoist every query into one block at the top. A concern is one query plus the `on()`/`watch()`/`pass()`/`each()` call(s) that use it — keep each concern self-contained.
+
+Exception: a query that seeds `expose()`'s initial value, or one shared by several concerns, stays hoisted near the top.
+
+For an optional descendant, the query and its guard form one concern:
 
 ```typescript
-const badge = first('span.badge')  // may return null
-
-if (badge) watch('count', bindText(badge))  // skipped if badge is null
+const badge = first('span.badge') // may return null
+if (badge) watch('count', bindText(badge)) // skipped if badge is null
 ```
+
+`on()` and `pass()` also skip a falsy target on their own — an absent optional element makes the effect a no-op, with no throw and no stray listener.
+
+`first()` and `all()` must run in the factory body, never inside a callback. See "Querying Inside Effect or Event Callbacks" in `anti-patterns.md`.
