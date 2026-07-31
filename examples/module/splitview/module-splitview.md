@@ -54,8 +54,8 @@ A two-panel resizable container with a drag handle between the panels, supportin
 - **required**
 - The resize handle; carries `role="separator"` and `aria-valuenow/min/max`
 ---
-- `.panel` (×2)
+- `module-scrollarea` (×2)
 - `HTMLElement`
 - **required**
-- The two resizable content areas; sized by the CSS grid via `--split`
+- The two resizable content areas; sized by the CSS grid via `--module-splitview-ratio`. Use a `module-scrollarea` for each panel so overflowing content stays keyboard-accessible.
 {% /table %}

@@ -1,6 +1,6 @@
 ### Module Scrollarea
 
-A scroll container that tracks overflow state using an`IntersectionObserver`, exposing component-owned custom states (`:state(overflow)`, `:state(overflow-start)`, `:state(overflow-end)`).
+A scroll container that tracks overflow state using an`IntersectionObserver`, exposing component-owned custom states (`:state(overflow)`, `:state(overflow-start)`, `:state(overflow-end)`). While content overflows, the host becomes keyboard-focusable (`tabindex="0"`) so it can be scrolled without a pointer; the attribute is removed again once overflow ends.
 
 #### Preview
 
