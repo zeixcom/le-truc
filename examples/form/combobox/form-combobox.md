@@ -38,6 +38,8 @@ An advanced form component that coordinates a text input with a popup `form-list
 - Assistive/help text shown in `.description`
 {% /table %}
 
+{% partial file="form-associated.md" /%}
+
 #### Methods
 
 {% table %}

@@ -1,6 +1,6 @@
 ### Form Textbox
 
-A general-purpose text field wrapper for `input` or `textarea` elements.
+A general-purpose text field wrapper for `input` or `textarea` elements. Sets the `:state(clearable)` custom state when a `button.clear` descendant is present, so CSS can reserve space for it.
 
 #### Preview
 
@@ -37,6 +37,8 @@ A general-purpose text field wrapper for `input` or `textarea` elements.
 - Text content of `.description`
 - Description/help text (or remaining characters when `data-remaining` is set)
 {% /table %}
+
+{% partial file="form-associated.md" /%}
 
 #### Methods
 

@@ -1,9 +1,11 @@
 <!-- Horizontal split (default) -->
 <module-splitview id="horizontal-splitview">
-	<div class="panel">
-		<p>Left panel</p>
-		<p>Drag the handle or focus it and use arrow keys to resize.</p>
-	</div>
+	<module-scrollarea>
+		<div>
+			<p>Left panel</p>
+			<p>Drag the handle or focus it and use arrow keys to resize.</p>
+		</div>
+	</module-scrollarea>
 	<button
 		type="button"
 		class="divider"
@@ -14,19 +16,23 @@
 		aria-valuemin="10"
 		aria-valuemax="90"
 	></button>
-	<div class="panel">
-		<p>Right panel</p>
-		<p>The proportions are kept when the container is resized.</p>
-	</div>
+	<module-scrollarea>
+		<div>
+			<p>Right panel</p>
+			<p>The proportions are kept when the container is resized.</p>
+		</div>
+	</module-scrollarea>
 </module-splitview>
 
 <hr>
 
 <!-- Pre-set split position via attribute -->
 <module-splitview id="preset-splitview" split="0.3">
-	<div class="panel">
-		<p>Narrow panel (30%)</p>
-	</div>
+	<module-scrollarea>
+		<div>
+			<p>Narrow panel (30%)</p>
+		</div>
+	</module-scrollarea>
 	<button
 		type="button"
 		class="divider"
@@ -37,18 +43,22 @@
 		aria-valuemin="10"
 		aria-valuemax="90"
 	></button>
-	<div class="panel">
-		<p>Wide panel (70%)</p>
-	</div>
+	<module-scrollarea>
+		<div>
+			<p>Wide panel (70%)</p>
+		</div>
+	</module-scrollarea>
 </module-splitview>
 
 <hr>
 
 <!-- Vertical split -->
 <module-splitview id="vertical-splitview" orientation="vertical">
-	<div class="panel">
-		<p>Top panel</p>
-	</div>
+	<module-scrollarea>
+		<div>
+			<p>Top panel</p>
+		</div>
+	</module-scrollarea>
 	<button
 		type="button"
 		class="divider"
@@ -59,7 +69,9 @@
 		aria-valuemin="10"
 		aria-valuemax="90"
 	></button>
-	<div class="panel">
-		<p>Bottom panel</p>
-	</div>
+	<module-scrollarea>
+		<div>
+			<p>Bottom panel</p>
+		</div>
+	</module-scrollarea>
 </module-splitview>

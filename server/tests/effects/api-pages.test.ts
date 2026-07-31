@@ -8,11 +8,16 @@
 import { describe, expect, test } from 'bun:test'
 import Markdoc from '@markdoc/markdoc'
 import {
+	collapseInheritedMembers,
 	convertParameterSectionsToTables,
+	linkAdrReferences,
 	linkExternalDefinedIn,
+	loadAdrSlugMap,
 	makeHeadingIdsUnique,
 	mergeDefinedInIntoBlockquote,
+	mergeOverloadCallSignatures,
 	stripBreadcrumbs,
+	wrapDeprecatedCallout,
 } from '../../effects/api-pages'
 import { highlightCodeBlocks } from '../../html-shaping'
 import markdocConfig from '../../markdoc.config'
@@ -36,6 +41,30 @@ const renderApiUniqueIds = (markdown: string): string => {
 const renderApiTables = (markdown: string): string => {
 	const ast = Markdoc.parse(markdown)
 	const transformed = convertParameterSectionsToTables(
+		Markdoc.transform(ast, markdocConfig),
+	)
+	return Markdoc.renderers.html(transformed)
+}
+
+const renderApiCallouts = (markdown: string): string => {
+	const ast = Markdoc.parse(markdown)
+	const transformed = wrapDeprecatedCallout(
+		Markdoc.transform(ast, markdocConfig),
+	)
+	return Markdoc.renderers.html(transformed)
+}
+
+const renderApiOverloads = (markdown: string): string => {
+	const ast = Markdoc.parse(markdown)
+	const transformed = mergeOverloadCallSignatures(
+		Markdoc.transform(ast, markdocConfig),
+	)
+	return Markdoc.renderers.html(transformed)
+}
+
+const renderApiInheritedMembers = (markdown: string): string => {
+	const ast = Markdoc.parse(markdown)
+	const transformed = collapseInheritedMembers(
 		Markdoc.transform(ast, markdocConfig),
 	)
 	return Markdoc.renderers.html(transformed)
@@ -513,6 +542,364 @@ describe('makeHeadingIdsUnique', () => {
 			'<a href="#properties-bubbles"><code>bubbles</code></a>',
 		)
 		expect(html).not.toContain('href="#bubbles"')
+	})
+})
+
+/* === wrapDeprecatedCallout Tests === */
+
+describe('wrapDeprecatedCallout', () => {
+	test('wraps Deprecated content in a caution callout with a title', () => {
+		const html = renderApiCallouts(`##### initEvent()
+
+###### Deprecated
+
+[MDN Reference](https://developer.mozilla.org/docs/Web/API/Event/initEvent)`)
+
+		expect(html).toContain('card-callout')
+		expect(html).toContain('caution')
+		expect(html).toContain('<strong>Deprecated</strong>')
+		expect(html).toContain('MDN Reference')
+		expect(html).not.toMatch(/<h6[^>]*>.*Deprecated.*<\/h6>/)
+	})
+
+	test('leaves Since untouched — card-callout has no quiet variant, so this stays plain text', () => {
+		const html = renderApiCallouts(`##### Since
+
+0.16.0`)
+
+		expect(html).not.toContain('card-callout')
+		expect(html).toMatch(/<h5[^>]*>.*Since.*<\/h5>/)
+		expect(html).toContain('0.16.0')
+	})
+
+	test('leaves a Deprecated heading with no body untouched', () => {
+		const html = renderApiCallouts(`##### Deprecated
+
+##### Throws
+
+If malformed`)
+
+		expect(html).not.toContain('card-callout')
+		expect(html).toMatch(/<h5[^>]*>.*Deprecated.*<\/h5>/)
+	})
+
+	test('leaves unrelated headings untouched', () => {
+		const html = renderApiCallouts(`##### Returns
+
+\`void\``)
+
+		expect(html).not.toContain('card-callout')
+	})
+})
+
+/* === mergeOverloadCallSignatures Tests === */
+
+describe('mergeOverloadCallSignatures', () => {
+	test('merges two Call Signature sections into a tab group', () => {
+		const html = renderApiOverloads(`### Function: createElementsMemo()
+
+#### Call Signature
+
+> **createElementsMemo**\\<\`S\`\\>(\`parent\`, \`selector\`)
+
+##### Returns
+
+\`Memo\`
+
+#### Call Signature
+
+> **createElementsMemo**\\<\`E\`\\>(\`parent\`, \`selector\`)
+
+##### Returns
+
+\`Memo\``)
+
+		expect(html).toContain('module-tabgroup')
+		expect(html).toContain('role="tablist"')
+		expect(html).toContain('Overload 1')
+		expect(html).toContain('Overload 2')
+		expect(html.match(/role="tabpanel"/g)).toHaveLength(2)
+		expect(html).not.toContain('Call Signature')
+	})
+
+	test('first tab is visible, subsequent tabs are hidden', () => {
+		const html = renderApiOverloads(`#### Call Signature
+
+Signature one
+
+#### Call Signature
+
+Signature two`)
+
+		const panels = [...html.matchAll(/<div role="tabpanel"[^>]*>/g)]
+		expect(panels).toHaveLength(2)
+		expect(panels[0]![0]).not.toContain('hidden')
+		expect(panels[1]![0]).toContain('hidden')
+	})
+
+	test('leaves a lone Call Signature (no overload) untouched', () => {
+		const html = renderApiOverloads(`### Function: foo()
+
+#### Call Signature
+
+> **foo**(): \`void\`
+
+##### Returns
+
+\`void\``)
+
+		expect(html).not.toContain('module-tabgroup')
+		expect(html).toContain('Call Signature')
+	})
+
+	test('handles an overload whose children clamp to a shallower level than the heading itself', () => {
+		// Mirrors composedPath() in ContextRequestEvent.md: an inherited DOM
+		// overload where "Call Signature" sits at h6 but its own "Returns"/
+		// "Inherited from" children render at h5 — shallower, not deeper.
+		const html = renderApiOverloads(`##### composedPath()
+
+###### Call Signature
+
+> **composedPath**(): \`EventTarget\`[]
+
+##### Returns
+
+\`EventTarget\`[]
+
+##### Inherited from
+
+\`Event.composedPath\`
+
+###### Call Signature
+
+> **composedPath**(): [\`EventTarget\`?]
+
+##### Returns
+
+[\`EventTarget\`?]
+
+##### Inherited from
+
+\`Event.composedPath\``)
+
+		expect(html).toContain('module-tabgroup')
+		expect(html.match(/role="tabpanel"/g)).toHaveLength(2)
+		expect(html).toContain('Inherited from')
+	})
+
+	test('gives distinct ids to tab groups from different overloaded methods on the same page', () => {
+		// A page with two separately-overloaded methods (e.g. ContextRequestEvent.md's
+		// composedPath() and preventDefault()) must not emit duplicate
+		// "panel_overload-1"/"panel_overload-2" ids across the two tab groups.
+		const html = renderApiOverloads(`##### composedPath()
+
+###### Call Signature
+
+Signature one
+
+###### Call Signature
+
+Signature two
+
+##### preventDefault()
+
+###### Call Signature
+
+Signature one
+
+###### Call Signature
+
+Signature two`)
+
+		const ids = [...html.matchAll(/id="([^"]+)"/g)].map(m => m[1])
+		expect(new Set(ids).size).toBe(ids.length)
+	})
+})
+
+/* === collapseInheritedMembers Tests === */
+
+describe('collapseInheritedMembers', () => {
+	test('splits inherited members into a collapsible, keeps own members inline', () => {
+		const html = renderApiInheritedMembers(`#### Properties
+
+##### context
+
+\`string\`
+
+The context key.
+
+##### bubbles
+
+\`boolean\`
+
+###### Inherited from
+
+\`Event.bubbles\``)
+
+		expect(html).toContain('card-collapsible')
+		expect(html).toContain('Inherited members (1)')
+		expect(html).toContain('The context key.')
+		// own member renders before the collapsible, inherited member inside it
+		const contextIndex = html.indexOf('context')
+		const collapsibleIndex = html.indexOf('card-collapsible')
+		expect(contextIndex).toBeLessThan(collapsibleIndex)
+		expect(html).toContain('bubbles')
+	})
+
+	test('leaves a section with no inherited members untouched', () => {
+		const html = renderApiInheritedMembers(`#### Properties
+
+##### context
+
+\`string\``)
+
+		expect(html).not.toContain('card-collapsible')
+	})
+
+	test('leaves sections other than Properties/Methods untouched', () => {
+		const html = renderApiInheritedMembers(`#### Extends
+
+- \`Error\``)
+
+		expect(html).not.toContain('card-collapsible')
+	})
+
+	test('finds inherited members nested inside an already-merged overload tab group', () => {
+		const merged = mergeOverloadCallSignatures(
+			Markdoc.transform(
+				Markdoc.parse(`#### Methods
+
+##### composedPath()
+
+###### Call Signature
+
+Signature one
+
+##### Inherited from
+
+\`Event.composedPath\`
+
+###### Call Signature
+
+Signature two
+
+##### Inherited from
+
+\`Event.composedPath\`
+
+##### own()
+
+Not inherited.`),
+				markdocConfig,
+			),
+		)
+		const transformed = collapseInheritedMembers(merged)
+		const html = Markdoc.renderers.html(transformed)
+
+		expect(html).toContain('card-collapsible')
+		expect(html).toContain('Inherited members (1)')
+		expect(html).toContain('module-tabgroup')
+		expect(html).toContain('Not inherited.')
+	})
+})
+
+/* === linkAdrReferences Tests === */
+
+describe('linkAdrReferences', () => {
+	test('links a known ADR reference', () => {
+		const content = 'isn’t Slot-backed. See ADR 0011.'
+		const result = linkAdrReferences(content, {
+			'0011': '0011-throw-on-pass-binding-failure',
+		})
+
+		expect(result).toBe(
+			'isn’t Slot-backed. See [ADR 0011](https://github.com/zeixcom/le-truc/blob/main/adr/0011-throw-on-pass-binding-failure.md).',
+		)
+	})
+
+	test('leaves an unknown ADR number untouched and warns', () => {
+		const warn = console.warn
+		let warned = false
+		console.warn = () => {
+			warned = true
+		}
+		try {
+			const content = 'See ADR 9999.'
+			expect(linkAdrReferences(content, {})).toBe(content)
+			expect(warned).toBe(true)
+		} finally {
+			console.warn = warn
+		}
+	})
+
+	test('links multiple references in the same document', () => {
+		const content = 'See ADR 0001. Elsewhere, See ADR 0002.'
+		const result = linkAdrReferences(content, {
+			'0001': '0001-foo',
+			'0002': '0002-bar',
+		})
+
+		expect(result).toContain(
+			'[ADR 0001](https://github.com/zeixcom/le-truc/blob/main/adr/0001-foo.md)',
+		)
+		expect(result).toContain(
+			'[ADR 0002](https://github.com/zeixcom/le-truc/blob/main/adr/0002-bar.md)',
+		)
+	})
+
+	test('leaves content without ADR references untouched', () => {
+		const content = 'No references here.'
+		expect(linkAdrReferences(content, {})).toBe(content)
+	})
+
+	test('links a lowercase "see" mention mid-sentence, inside parens', () => {
+		const content =
+			'activated yet — see ADR 0007). The request is therefore re-dispatched'
+		const result = linkAdrReferences(content, { '0007': '0007-foo' })
+
+		expect(result).toBe(
+			'activated yet — see [ADR 0007](https://github.com/zeixcom/le-truc/blob/main/adr/0007-foo.md)). The request is therefore re-dispatched',
+		)
+	})
+
+	test('links a reference with no trailing period, followed by more prose', () => {
+		const content = 'See ADR 0017 for full rationale (SSR adoption).'
+		const result = linkAdrReferences(content, { '0017': '0017-foo' })
+
+		expect(result).toBe(
+			'See [ADR 0017](https://github.com/zeixcom/le-truc/blob/main/adr/0017-foo.md) for full rationale (SSR adoption).',
+		)
+	})
+
+	test('links a reference followed by a closing paren and period, both left untouched', () => {
+		const content = 'see ADR 0003).'
+		const result = linkAdrReferences(content, { '0003': '0003-foo' })
+
+		expect(result).toBe(
+			'see [ADR 0003](https://github.com/zeixcom/le-truc/blob/main/adr/0003-foo.md)).',
+		)
+	})
+})
+
+/* === loadAdrSlugMap Tests === */
+
+describe('loadAdrSlugMap', () => {
+	test('maps known ADR numbers to their filename slug', async () => {
+		const map = await loadAdrSlugMap()
+
+		expect(map['0001']).toBe(
+			'0001-use-cause-effect-as-reactive-primitive-layer',
+		)
+		expect(Object.keys(map).length).toBeGreaterThan(0)
+	})
+
+	test('includes every numbered ADR file, including the template', () => {
+		return loadAdrSlugMap().then(map => {
+			expect(map['0000']).toBe('0000-template')
+			expect(map['0019']).toBe(
+				'0019-extension-based-dependency-injection-for-definecomponent',
+			)
+		})
 	})
 })
 

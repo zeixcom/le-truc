@@ -28,6 +28,8 @@ A roving-tabindex radio group that works both controlled and uncontrolled.
 - Value of the currently checked radio input; settable for controlled use
 {% /table %}
 
+{% partial file="form-associated.md" /%}
+
 #### Classes
 
 Use `class` attribute to get a different style for the radio group.

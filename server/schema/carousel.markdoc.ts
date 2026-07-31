@@ -78,7 +78,7 @@ const carousel: Schema = {
 		// Create slides container
 		const slidesContainer = new Tag(
 			'div',
-			{ class: 'slides' },
+			{ class: 'slides', tabindex: '0' },
 			slides.map(s => s.slide),
 		)
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.2
+
+### Fixed
+
+- **`each()` callback type omitted `void`**: `each()`'s contract expects callbacks to call `watch()`/`on()`/`pass()` directly without returning anything — the idiomatic void-returning form. This compiled under TypeScript 6.x by accident: a callback with no `return` statement implicitly returns `undefined`. It does not hold under TypeScript 7, which infer the no-return case as literal `void` — not assignable to `Falsy` even though `undefined` is. The callback type is now `FactoryResult | EffectDescriptor | Falsy | void`.
+
 ## 2.3.1
 
 ### Fixed
