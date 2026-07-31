@@ -3,12 +3,12 @@ module-splitview {
 	grid-template-columns: var(--module-splitview-ratio, 50%) var(--space-xs) 1fr;
 	overflow: hidden;
 
-	& .panel {
+	& module-scrollarea {
 		min-width: 0;
 		min-height: 0;
 	}
 
-	& .divider {
+	.divider {
 		display: flex;
 		align-items: center;
 		justify-content: center;
