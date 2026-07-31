@@ -76,7 +76,13 @@ export default defineComponent(
 
 		watch(hasOverflow, bindState(internals, 'overflow'))
 		watch(hasOverflow, overflow => {
-			host.tabIndex = overflow ? 0 : -1
+			// Only set tabindex="0" explicitly; never force -1. An explicit -1
+			// opts the element out of Chromium's native "sequentially focusable
+			// scrolling regions" heuristic, which — during the async gap before
+			// this effect first runs — can leave a containing modal <dialog>
+			// with a single tab stop, letting focus escape the modal.
+			if (overflow) host.setAttribute('tabindex', '0')
+			else host.removeAttribute('tabindex')
 		})
 		watch(overflowStart, bindState(internals, 'overflow-start'))
 		watch(overflowEnd, bindState(internals, 'overflow-end'))
