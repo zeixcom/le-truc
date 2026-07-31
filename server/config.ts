@@ -10,6 +10,7 @@ const ROOT = join(import.meta.dir, '..')
 
 // Path constants
 const SRC_DIR = join(ROOT, 'src')
+const ADR_DIR = join(ROOT, 'adr')
 
 const COMPONENTS_DIR = join(ROOT, 'examples')
 const CSS_FILE = join(ROOT, 'examples/main.css')
@@ -111,6 +112,7 @@ const COMPRESSIBLE_TYPES = [
 ] as const
 
 export {
+	ADR_DIR,
 	API_DIR,
 	ASSETS_DIR,
 	BASE_URL,
