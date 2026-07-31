@@ -45,7 +45,7 @@ form-textbox {
 		height: var(--input-height);
 	}
 
-	&[clearable] .input {
+	&:state(clearable) .input {
 		position: relative;
 
 		& input {
