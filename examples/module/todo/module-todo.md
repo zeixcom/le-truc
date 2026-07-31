@@ -1,6 +1,6 @@
 ### Module Todo
 
-A todo component that owns the data, manages the list DOM directly, and handles all interactions — adding, deleting, reordering (keyboard and drag), editing labels, and toggling completion.
+A todo component that owns the data, manages the list DOM directly, and handles all interactions — adding, deleting, reordering (keyboard and drag), editing labels, and toggling completion. Exposes the active filter as custom states (`:state(filter-active)`, `:state(filter-completed)`) for CSS-based item visibility.
 
 #### Preview
 
@@ -16,7 +16,7 @@ A todo component that owns the data, manages the list DOM directly, and handles 
 
 #### Reactive Properties
 
-None. This component orchestrates behavior by passing state and events between descendants.
+None. This component orchestrates behavior by passing state and events between descendants, and sets custom states (matched in CSS via `:state()`) based on the active filter.
 
 #### Descendant Elements
 

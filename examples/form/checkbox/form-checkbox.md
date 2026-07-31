@@ -1,6 +1,6 @@
 ### Form Checkbox
 
-A styledwrapper for a native checkbox with todo item and toggle switch variants.
+A styled wrapper for a native checkbox with todo item and toggle switch variants.
 
 #### Preview
 
@@ -32,6 +32,8 @@ A styledwrapper for a native checkbox with todo item and toggle switch variants.
 - Text content of `.label` or `label`
 - Label text shown next to the checkbox
 {% /table %}
+
+{% partial file="form-associated.md" /%}
 
 #### Classes
 
