@@ -35,12 +35,15 @@ declare global {
  * and validity are via ElementInternals (`formAssociated()`).
  * External consumers read `host.validationMessage` / `host.validity` like on a
  * native input; inline error display binds to component-internal state.
+ * Sets the `:state(clearable)` custom state when a `button.clear` descendant
+ * is present, so CSS can reserve space for it — derived from markup, not an
+ * author-set attribute, so it can't drift out of sync or be spoofed.
  *
  * @demo {https://zeixcom.github.io/le-truc/examples.html#form-textbox} Interactive preview and usage examples
  **/
 export default defineComponent<FormTextboxProps>(
 	'form-textbox',
-	({ expose, first, host, on, watch }) => {
+	({ expose, first, host, internals, on, watch }) => {
 		const textbox = first(
 			'input, textarea',
 			'Add a native input or textarea as descendant element.',
@@ -86,6 +89,7 @@ export default defineComponent<FormTextboxProps>(
 
 		const clearBtn = first('button.clear')
 		if (clearBtn) {
+			internals?.states.add('clearable')
 			on(clearBtn, 'click', () => {
 				host.clear()
 			})

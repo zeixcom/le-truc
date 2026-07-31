@@ -1,4 +1,5 @@
-import Markdoc from '@markdoc/markdoc'
+import { join } from 'node:path'
+import Markdoc, { type Node } from '@markdoc/markdoc'
 import { createEffect, match } from '@zeix/cause-effect'
 import { COMPONENTS_DIR, CONTENT_MARKER, EXAMPLES_DIR } from '../config'
 import {
@@ -18,6 +19,24 @@ const toPathMap = (files: FileInfo[]): Map<string, FileInfo> => {
 	return map
 }
 
+// Shared fragments referenced via Markdoc's built-in `{% partial file="..." /%}`
+// tag. Keyed by the exact `file` attribute value used in component docs.
+const PARTIALS: Record<string, string> = {
+	'form-associated.md': join(COMPONENTS_DIR, '_common', 'form-associated.md'),
+}
+
+// Not cached across calls: re-reading picks up edits to the fragment file
+// immediately under HMR/file-watch rebuilds, and the files are tiny.
+const loadPartials = async (): Promise<Record<string, Node>> => {
+	const entries = await Promise.all(
+		Object.entries(PARTIALS).map(async ([name, path]) => {
+			const content = await Bun.file(path).text()
+			return [name, Markdoc.parse(content)] as const
+		}),
+	)
+	return Object.fromEntries(entries)
+}
+
 const processExample = async (
 	componentName: string,
 	markdownContent: string,
@@ -32,14 +51,17 @@ const processExample = async (
 	// Parse with Markdoc
 	const ast = Markdoc.parse(processedContent)
 
+	const partials = await loadPartials()
+	const config = { ...markdocConfig, partials }
+
 	// Validate the document
-	const errors = Markdoc.validate(ast, markdocConfig)
+	const errors = Markdoc.validate(ast, config)
 	if (errors.length > 0) {
 		console.warn(`Markdoc validation errors for ${componentName}:`, errors)
 	}
 
 	// Transform the AST
-	const transformed = Markdoc.transform(ast, markdocConfig)
+	const transformed = Markdoc.transform(ast, config)
 
 	// Render to HTML
 	let htmlContent = Markdoc.renderers.html(transformed)

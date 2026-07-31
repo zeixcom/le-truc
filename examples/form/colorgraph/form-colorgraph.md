@@ -43,6 +43,8 @@ An interactive OKLCH color picker combining a 2D lightness/chroma graph, a hue s
 - Hue angle in degrees (0–360)
 {% /table %}
 
+{% partial file="form-associated.md" /%}
+
 #### Methods
 
 {% table %}

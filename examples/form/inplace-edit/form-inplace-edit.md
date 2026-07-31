@@ -33,6 +33,8 @@ A self-contained inline label editor. Wraps a `<span>` (label display) and an ed
 - Current label value; reactive — set via `pass()` to keep display in sync with external data
 {% /table %}
 
+{% partial file="form-associated.md" /%}
+
 #### Descendant Elements
 
 {% table %}

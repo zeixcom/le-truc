@@ -43,6 +43,8 @@ A full-featured listbox with client-side filtering and optional remote option lo
 - URL for loading options JSON (flat or grouped)
 {% /table %}
 
+{% partial file="form-associated.md" /%}
+
 #### Descendant Elements
 
 {% table %}

@@ -11,6 +11,18 @@ function isHostChecked(element: Locator): Promise<boolean> {
 }
 
 /**
+ * Check whether a custom state (ElementInternals `states`) is set on the
+ * element, via the `:state()` pseudo-class. Evaluated in the browser because
+ * Playwright's own selector engine does not parse `:state()`.
+ */
+function hasState(element: Locator, state: string): Promise<boolean> {
+	return element.evaluate(
+		(el: Element, s: string) => el.matches(`:state(${s})`),
+		state,
+	)
+}
+
+/**
  * Test Suite: module-todo Component
  *
  * Comprehensive tests for the Le Truc module-todo component, which provides
@@ -386,15 +398,18 @@ test.describe('module-todo component', () => {
 
 			// Switch to "Active" filter
 			await filter.locator('label').filter({ hasText: 'Active' }).click()
-			await expect(todo).toHaveAttribute('filter', 'active')
+			await expect.poll(() => hasState(todo, 'filter-active')).toBe(true)
+			await expect.poll(() => hasState(todo, 'filter-completed')).toBe(false)
 
 			// Switch to "Completed" filter
 			await filter.locator('label').filter({ hasText: 'Completed' }).click()
-			await expect(todo).toHaveAttribute('filter', 'completed')
+			await expect.poll(() => hasState(todo, 'filter-completed')).toBe(true)
+			await expect.poll(() => hasState(todo, 'filter-active')).toBe(false)
 
 			// Switch back to "All"
 			await filter.locator('label').filter({ hasText: 'All' }).click()
-			await expect(todo).toHaveAttribute('filter', 'all')
+			await expect.poll(() => hasState(todo, 'filter-active')).toBe(false)
+			await expect.poll(() => hasState(todo, 'filter-completed')).toBe(false)
 		})
 	})
 
