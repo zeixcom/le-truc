@@ -30,4 +30,17 @@ describe('processExample', () => {
 		expect(result).toContain('<div class="preview">')
 		expect(result).not.toContain('preview-html=')
 	})
+
+	test('resolves the shared form-associated.md partial into a details/summary block', async () => {
+		const markdown = `### Demo\n\n{{ content }}\n\n{% partial file="form-associated.md" /%}`
+		const componentHtml = `<form-textbox></form-textbox>`
+
+		const result = await processExample('form-textbox', markdown, componentHtml)
+
+		expect(result).toContain('<card-collapsible>')
+		expect(result).toContain('<details>')
+		expect(result).toContain('class="description">Participates in HTML forms')
+		expect(result).toContain('checkValidity')
+		expect(result).toContain('willValidate')
+	})
 })
