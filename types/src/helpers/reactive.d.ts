@@ -94,11 +94,11 @@ declare const activateResult: (result: FactoryResult) => void;
  * so it is still visited here — the only path that picks it up.
  *
  * @since 2.3
- * @param {FactoryResult | EffectDescriptor | Falsy} result - Flat or nested array, single descriptor, or falsy value to reconcile
+ * @param {FactoryResult | EffectDescriptor | Falsy | void} result - Flat or nested array, single descriptor, falsy value, or nothing to reconcile
  * @param {ReadonlySet<EffectDescriptor>} seen - Descriptors already accounted for (by reference) — skipped
  * @param {(descriptor: EffectDescriptor) => void} visit - Called once per not-yet-seen descriptor, in encounter order
  */
-declare const forEachUnseen: (result: FactoryResult | EffectDescriptor | Falsy, seen: ReadonlySet<EffectDescriptor>, visit: (descriptor: EffectDescriptor) => void) => void;
+declare const forEachUnseen: (result: FactoryResult | EffectDescriptor | Falsy | void, seen: ReadonlySet<EffectDescriptor>, visit: (descriptor: EffectDescriptor) => void) => void;
 /**
  * Drive per-element scopes from a `Memo<E[]>` with element-identity keying.
  *
@@ -170,7 +170,7 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => Pas
  *
  * @since 2.0
  */
-declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult | EffectDescriptor | Falsy): EffectDescriptor;
+declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult | EffectDescriptor | Falsy | void): EffectDescriptor;
 /**
  * Sync a keyed reactive data source to a container's children.
  *
