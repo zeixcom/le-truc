@@ -57,5 +57,5 @@ A two-panel resizable container with a drag handle between the panels, supportin
 - `.panel` (×2)
 - `HTMLElement`
 - **required**
-- The two resizable content areas; sized by the CSS grid via `--split`
+- The two resizable content areas; sized by the CSS grid via `--module-splitview-ratio`. Use a `module-scrollarea` for each panel so overflowing content stays keyboard-accessible.
 {% /table %}

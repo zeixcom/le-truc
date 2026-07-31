@@ -4,7 +4,6 @@ module-splitview {
 	overflow: hidden;
 
 	& .panel {
-		overflow: auto;
 		min-width: 0;
 		min-height: 0;
 	}

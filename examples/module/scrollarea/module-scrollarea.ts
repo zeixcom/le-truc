@@ -75,6 +75,9 @@ export default defineComponent(
 		})
 
 		watch(hasOverflow, bindState(internals, 'overflow'))
+		watch(hasOverflow, overflow => {
+			host.tabIndex = overflow ? 0 : -1
+		})
 		watch(overflowStart, bindState(internals, 'overflow-start'))
 		watch(overflowEnd, bindState(internals, 'overflow-end'))
 		watch(
