@@ -1,5 +1,3 @@
-import blogmeta from './schema/blogmeta.markdoc'
-import blogpost from './schema/blogpost.markdoc'
 import callout from './schema/callout.markdoc'
 import carousel from './schema/carousel.markdoc'
 import cemList from './schema/cem-list.markdoc'
@@ -35,8 +33,6 @@ export const markdocConfig = {
 		hero,
 		table,
 		tabgroup,
-		blogmeta,
-		blogpost,
 	},
 }
 

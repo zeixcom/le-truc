@@ -99,21 +99,16 @@ describe('stripMarkdocTags — callout', () => {
 })
 
 describe('stripMarkdocTags — container strip tags', () => {
-	test.each([
-		'hero',
-		'section',
-		'carousel',
-		'slide',
-		'demo',
-		'listnav',
-		'blogpost',
-	])('strips %s open/close tags, keeps content', tag => {
-		const input = `{%  ${tag} %}\nSome content\n{% /${tag} %}`
-		const result = stripMarkdocTags(input)
-		expect(result).toContain('Some content')
-		expect(result).not.toContain(`{% ${tag}`)
-		expect(result).not.toContain(`{% /${tag} %}`)
-	})
+	test.each(['hero', 'section', 'carousel', 'slide', 'demo', 'listnav'])(
+		'strips %s open/close tags, keeps content',
+		tag => {
+			const input = `{%  ${tag} %}\nSome content\n{% /${tag} %}`
+			const result = stripMarkdocTags(input)
+			expect(result).toContain('Some content')
+			expect(result).not.toContain(`{% ${tag}`)
+			expect(result).not.toContain(`{% /${tag} %}`)
+		},
+	)
 
 	test('strips section with class attribute', () => {
 		const input = `{% section .breakout %}\nContent here\n{% /section %}`
@@ -127,22 +122,6 @@ describe('stripMarkdocTags — container strip tags', () => {
 		const result = stripMarkdocTags(input)
 		expect(result).toContain('Slide content')
 		expect(result).not.toContain('{%')
-	})
-})
-
-describe('stripMarkdocTags — self-closing tags', () => {
-	test('strips blogmeta self-closing tag', () => {
-		const input = `Before\n{% blogmeta %}\nAfter`
-		const result = stripMarkdocTags(input)
-		expect(result).toContain('Before')
-		expect(result).toContain('After')
-		expect(result).not.toContain('{%')
-	})
-
-	test('strips blogmeta with explicit self-closing slash', () => {
-		const input = `{% blogmeta /%}`
-		const result = stripMarkdocTags(input)
-		expect(result).toBe('')
 	})
 })
 
