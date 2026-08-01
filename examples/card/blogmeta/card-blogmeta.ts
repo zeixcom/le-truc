@@ -10,6 +10,13 @@ declare global {
 const INVALID_DATE = 'invalid date'
 const UNKNOWN_DATE = 'unknown date'
 
+// Bootstrap Icons "person-circle" (MIT licensed) — stylized fallback avatar
+// shown when no <img> is provided inside .author.
+const AVATAR_FALLBACK_SVG = `<svg class="avatar" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+  <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+  <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/>
+</svg>`
+
 function formatLocalDate(
 	locale: string,
 	isoDate: string,
@@ -34,6 +41,7 @@ function formatLocalDate(
  * underlying `datetime` attributes change.
  * The `datetime` values must be valid date strings; missing attributes are skipped.
  * The host element should contain `<time class="published">` and `<time class="modified">` elements.
+ * If `.author` has no `<img>` child, a stylized placeholder avatar is inserted.
  *
  * @demo {https://zeixcom.github.io/le-truc/examples.html#card-blogmeta} Interactive preview and usage examples
  **/
@@ -57,4 +65,8 @@ export default defineComponent('card-blogmeta', ({ host, first }) => {
 		if (modifiedSpan && modifiedDate === INVALID_DATE) modifiedSpan.remove()
 		else modified.textContent = modifiedDate
 	}
+
+	const author = first('.author')
+	if (author && !author.querySelector('img'))
+		author.insertAdjacentHTML('afterbegin', AVATAR_FALLBACK_SVG)
 })

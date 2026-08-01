@@ -6,9 +6,9 @@ import { getStepColor } from '../../_common/getStepColor.ts'
 
 export type CardColorscaleProps = {
 	/** Display name of the color (e.g. "Blue"). */
-	name: string
-	/** Base color in Oklch format. Read from the `color` attribute at connect time. */
-	color: Oklch
+	label: string
+	/** Base color in Oklch format. Parsed from the `value` attribute at connect time. */
+	value: Oklch
 }
 
 declare global {
@@ -20,10 +20,11 @@ declare global {
 const CONTRAST_THRESHOLD = 0.71 // lightness
 
 /**
- * A color scale card that displays a named Oklch color with a full set of lightness steps.
+ * A color scale card that displays a named color with a full set of lightness steps.
  * Use it for previewing a color palette — provides lightness tints and shades
  * for when you need to evaluate contrast and accessibility of a base color.
- * The `color` attribute must be a valid Oklch color string.
+ * The `value` attribute accepts any valid CSS color string (hex, named, `rgb()`,
+ * `hsl()`, `oklch()`, etc.) and is parsed internally into Oklch via `asOklch`.
  *
  * @cssprop --card-colorscale-max-size - Maximum width/height of the card. Defaults to `18rem`.
  * @cssprop --card-colorscale-padding - Inner padding of the card. Defaults to `0.5em`.
@@ -38,17 +39,17 @@ export default defineComponent<CardColorscaleProps>(
 		)
 
 		expose({
-			name: labelStrong.textContent?.trim() ?? '',
-			color: asOklch(),
+			label: labelStrong.textContent?.trim() ?? '',
+			value: asOklch(),
 		})
 
-		watch('name', bindText(labelStrong))
+		watch('label', bindText(labelStrong))
 
 		const labelSmall = first(
 			'.label small',
 			'Add a <small> element inside .label.',
 		)
-		watch('color', color => {
+		watch('value', color => {
 			labelSmall.textContent = formatHex(color)
 			const props = new Map<string, string>()
 			const isLight = color.l > CONTRAST_THRESHOLD

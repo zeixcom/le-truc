@@ -22,49 +22,49 @@ An expandable color swatch with OKLCH, hex, RGB, and HSL details.
 - Default
 - Description
 ---
-- `name`
+- `label`
 - `string`
 - Text content of `.label strong`
 - Display name of the color
 ---
-- `color`
+- `value`
 - `Oklch`
-- `asOklch()` — parsed from `color` attribute
+- `asOklch()` — parsed from `value` attribute
 - The color to display
 ---
 - `css`
 - `string` (readonly)
-- Derived from `color`
+- Derived from `value`
 - CSS `oklch(…)` string
 ---
 - `hex`
 - `string` (readonly)
-- Derived from `color`
+- Derived from `value`
 - Hex color string (e.g. `#7a6ab2`)
 ---
 - `rgb`
 - `string` (readonly)
-- Derived from `color`
+- Derived from `value`
 - CSS `rgb(…)` string
 ---
 - `hsl`
 - `string` (readonly)
-- Derived from `color`
+- Derived from `value`
 - CSS `hsl(…)` string
 ---
 - `lightness`
 - `number` (readonly)
-- Derived from `color.l`
+- Derived from `value.l`
 - Lightness component (0–1)
 ---
 - `chroma`
 - `number` (readonly)
-- Derived from `color.c`
+- Derived from `value.c`
 - Chroma component
 ---
 - `hue`
 - `number` (readonly)
-- Derived from `color.h`
+- Derived from `value.h`
 - Hue angle in degrees
 {% /table %}
 
@@ -79,7 +79,7 @@ An expandable color swatch with OKLCH, hex, RGB, and HSL details.
 - `first('.label strong')`
 - `HTMLElement`
 - **required**
-- Displays the color name; bound to `name`
+- Displays the color name; bound to `label`
 ---
 - `first('.hex')`
 - `HTMLElement`

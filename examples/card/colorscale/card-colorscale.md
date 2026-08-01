@@ -1,6 +1,6 @@
 ### Card Colorscale
 
-A color scale card that displays a 9-step tonal palette derived from a single base OKLCH color.
+A color scale card that displays a 9-step tonal palette derived from a single base color, provided as any valid CSS color string.
 
 #### Preview
 
@@ -22,14 +22,14 @@ A color scale card that displays a 9-step tonal palette derived from a single ba
 - Default
 - Description
 ---
-- `name`
+- `label`
 - `string`
 - Text content of `.label strong`
 - Display name of the color
 ---
-- `color`
+- `value`
 - `Oklch`
-- `asOklch()` — parsed from `color` attribute
+- `asOklch()` — parsed from `value` attribute
 - Base color; drives all CSS custom properties and the hex label
 {% /table %}
 
@@ -63,12 +63,12 @@ A color scale card that displays a 9-step tonal palette derived from a single ba
 - `first('.label strong')`
 - `HTMLElement`
 - **required**
-- Displays the color name; bound to `name`
+- Displays the color name; bound to `label`
 ---
 - `first('.label small')`
 - `HTMLElement`
 - **required**
-- Displays the hex color value; updated on `color` change
+- Displays the hex color value; updated on `value` change
 ---
 - `li.lighten80` … `li.lighten20`
 - `HTMLLIElement`
