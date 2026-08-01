@@ -1,6 +1,6 @@
 ### Form Inplace Edit
 
-A self-contained inline label editor. Wraps a `<span>` (label display) and an edit button; on double-click or edit-button click it switches the span to a `<form-textbox>`, letting the user type a new value.
+A self-contained inline label editor — click to edit, and the label seamlessly becomes a text field. It shows how a component can swap its own internal presentation in response to user interaction.
 
 #### Preview
 

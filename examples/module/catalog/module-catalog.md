@@ -1,6 +1,6 @@
 ### Module Catalog
 
-A wrapper component that aggregates `value` properties of all descendant `form-spinbutton` elements passes the total to the badge of the shopping cart button.
+A coordinator component that aggregates the values of several `form-spinbutton` elements into a running total, shown on a shopping-cart badge. It shows how a component can orchestrate others' state without exposing any of its own.
 
 #### Preview
 

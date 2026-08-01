@@ -1,17 +1,25 @@
-<card-blogpost>
+<card-blogpost itemscope itemtype="https://schema.org/BlogPosting">
 	<h2>
-		<a href="./blog/2026-03-09-introducing-le-truc">🎉 Introducing Le Truc</a>
+		<a href="./blog/2026-03-09-introducing-le-truc" itemprop="url">🎉 <span itemprop="headline">Introducing Le Truc</span></a>
 	</h2>
 	<card-blogmeta>
-		<img
-			src="./assets/img/avatar/esther-brunner.jpg"
-			alt="Avatar of Esther Brunner"
+		<span
+			class="author"
+			itemprop="author"
+			itemscope
+			itemtype="https://schema.org/Person"
 		>
-		<span>Esther Brunner</span>
-		<time class="published" datetime="2026-03-09">2026-03-09</time>
-		<span>5 min read</span>
+			<img
+				class="avatar"
+				src="./assets/img/avatar/esther-brunner.jpg"
+				alt="Avatar of Esther Brunner"
+			>
+			<span itemprop="name">Esther Brunner</span>
+		</span>
+		<time class="published" itemprop="datePublished" datetime="2026-03-09">2026-03-09</time>
+		<span><meta itemprop="timeRequired" content="PT5M">5 min read</span>
 	</card-blogmeta>
-	<p>
+	<p itemprop="description">
 		A reactive custom elements library that brings fine-grained reactivity
 		directly to the web platform.
 	</p>

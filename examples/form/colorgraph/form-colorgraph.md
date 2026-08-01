@@ -1,6 +1,6 @@
 ### Form Colorgraph
 
-An interactive OKLCH color picker combining a 2D lightness/chroma graph, a hue slider, and numeric inputs.
+An interactive OKLCH color picker combining a 2D lightness/chroma graph, a hue slider, and numeric inputs. It demonstrates coordinating a multi-input, pointer-driven UI around a single reactive color value.
 
 #### Preview
 

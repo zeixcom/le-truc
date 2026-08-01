@@ -1,6 +1,6 @@
 ### Module Lazyload
 
-A component that loads and inserts a HTML fragment from a URL via an async fetch request.
+Fetches and injects a remote HTML fragment into the page on demand. It demonstrates async data loading with distinct loading, error, and content states.
 
 #### Preview
 

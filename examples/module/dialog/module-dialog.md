@@ -1,6 +1,6 @@
 ### Module Dialog
 
-A native `<dialog>` wrapper with scroll lock and focus restoration.
+A modal dialog wrapper around the native `<dialog>` element, with scroll locking and focus management. It shows how to layer accessible interaction behavior on top of native browser primitives.
 
 #### Preview
 

@@ -514,7 +514,6 @@ blockquote {
 	}
 }
 
-[aria-hidden="true"],
 [hidden] {
 	display: none !important;
 }

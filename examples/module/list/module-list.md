@@ -1,6 +1,6 @@
 ### Module List
 
-A dynamic list component that owns its data with a reactive `createList()` and keeps the DOM in sync by diffing the list's stable keys.
+A dynamic list component that owns its data and keeps the DOM in sync via keyed reconciliation. It's the reference example for adding, removing, and reordering items without losing element identity.
 
 #### Preview
 

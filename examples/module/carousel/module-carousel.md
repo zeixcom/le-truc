@@ -1,6 +1,6 @@
 ### Module Carousel
 
-A scroll-snap carousel with dot navigation and keyboard controls.
+A scroll-snap carousel with dot navigation and keyboard controls. It demonstrates wiring a native `IntersectionObserver` into Le Truc's reactive effect system.
 
 #### Preview
 

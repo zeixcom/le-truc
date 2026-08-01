@@ -1,6 +1,6 @@
 ### Form Radiogroup
 
-A roving-tabindex radio group that works both controlled and uncontrolled.
+A roving-tabindex radio group that works both controlled and uncontrolled. It demonstrates full keyboard navigation and native-like form participation without relying on native radio inputs.
 
 #### Preview
 

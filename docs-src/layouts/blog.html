@@ -41,30 +41,42 @@
 					<p class="error" role="alert" aria-live="assertive"></p>
 				</card-callout>
 			</header>
-			<main id="main" class="content-grid">
+			<main
+				id="main"
+				class="content-grid"
+				itemscope
+				itemtype="https://schema.org/BlogPosting"
+			>
 				<section-hero>
-					<h1>{{ emoji }} {{ title }}</h1>
+					<h1>{{ emoji }} <span itemprop="headline">{{ title }}</span></h1>
 					<div class="hero-layout">
 						<div class="lead">
 							<card-blogmeta>
-								<span>
-									<img src="{{ author-avatar }}" alt="Avatar of {{ author }}">
-									<span>{{ author }}</span>
+								<span
+									class="author"
+									itemprop="author"
+									itemscope
+									itemtype="https://schema.org/Person"
+								>
+									<img class="avatar" src="{{ author-avatar }}" alt="Avatar of {{ author }}">
+									<span itemprop="name">{{ author }}</span>
 								</span>
 								<span>
-									<time class="published" datetime="{{ published-date }}">
+									<time class="published" itemprop="datePublished" datetime="{{ published-date }}">
 										{{ published-date }}
 									</time>
 									<span class="modified">
 										· updated on
-										<time datetime="{{ modified-date }}">
+										<time itemprop="dateModified" datetime="{{ modified-date }}">
 											{{ modified-date }}
 										</time>
 									</span>
 								</span>
-								<span>{{ reading-time }} min read</span>
+								<span>
+									<meta itemprop="timeRequired" content="PT{{ reading-time }}M">{{ reading-time }} min read
+								</span>
 							</card-blogmeta>
-							<p>{{ description }}</p>
+							<p itemprop="description">{{ description }}</p>
 						</div>
 					</div>
 				</section-hero>

@@ -67,9 +67,6 @@ export const stripMarkdocTags = (content: string): string => {
 		(_, attrs: string, body: string) => transformCallout(attrs, body),
 	)
 
-	// Self-closing tags: strip entirely
-	result = result.replace(/\{%\s*blogmeta\s*\/?%\}/g, '')
-
 	// Container tags: strip open/close, keep content
 	for (const tag of [
 		'tabs',
@@ -80,7 +77,6 @@ export const stripMarkdocTags = (content: string): string => {
 		'slide',
 		'demo',
 		'listnav',
-		'blogpost',
 	]) {
 		result = result.replace(new RegExp(`\\{%\\s*${tag}[^%]*?%\\}`, 'g'), '')
 		result = result.replace(new RegExp(`\\{%\\s*\\/${tag}\\s*%\\}`, 'g'), '')

@@ -203,33 +203,42 @@ export const generateBlogExcerpts = (
 			const title = post.title
 			const description = post.metadata.description ?? ''
 
-			return html`<card-blogpost>
-				<h2><a href="${url}">${emoji} ${title}</a></h2>
+			return html`<card-blogpost itemscope itemtype="https://schema.org/BlogPosting">
+				<h2><a href="${url}" itemprop="url">${emoji} <span itemprop="headline">${title}</span></a></h2>
 				<card-blogmeta>
 					<span
+						class="author"
+						itemprop="author"
+						itemscope
+						itemtype="https://schema.org/Person"
 						>${
 							avatar
-								? raw(html`<img src="${avatar}" alt="Avatar of ${author}" />`)
+								? raw(
+										html`<img class="avatar" src="${avatar}" alt="Avatar of ${author}" />`,
+									)
 								: ''
-						} <span>${author}</span></span
+						} <span itemprop="name">${author}</span></span
 					>
 					<span
-						><time class="published" datetime="${publishedDate}"
+						><time class="published" itemprop="datePublished" datetime="${publishedDate}"
 							>${publishedDate}</time
 						>${
 							modifiedDate
 								? raw(
 										html`<span class="modified">
 										· updated on
-										<time datetime="${modifiedDate}">${modifiedDate}</time>
+										<time itemprop="dateModified" datetime="${modifiedDate}">${modifiedDate}</time>
 									</span>`,
 									)
 								: ''
 						}
 					</span>
-					<span>${readingTime} min read</span>
+					<span
+						><meta itemprop="timeRequired" content="PT${readingTime}M" />${readingTime}
+						min read</span
+					>
 				</card-blogmeta>
-				${description ? raw(html`<p>${description}</p>`) : ''}
+				${description ? raw(html`<p itemprop="description">${description}</p>`) : ''}
 			</card-blogpost>`
 		})
 		.join('\n')

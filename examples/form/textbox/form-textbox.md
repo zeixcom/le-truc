@@ -1,6 +1,6 @@
 ### Form Textbox
 
-A general-purpose text field wrapper for `input` or `textarea` elements. Sets the `:state(clearable)` custom state when a `button.clear` descendant is present, so CSS can reserve space for it.
+A general-purpose wrapper for `input` and `textarea` elements, with built-in validation display and an optional clear button. It demonstrates relaying native validity state through the component so it behaves like a native form control.
 
 #### Preview
 
