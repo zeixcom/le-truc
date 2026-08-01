@@ -1,6 +1,6 @@
 ### Basic Hello
 
-The Hello World example from the Quick Start guide.
+The Hello World example from the Quick Start guide — a greeting that updates live as the user types. It's the smallest possible Le Truc component, showing the minimal read-react-bind pattern.
 
 #### Preview
 

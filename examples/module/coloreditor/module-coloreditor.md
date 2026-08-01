@@ -1,6 +1,6 @@
 ### Module Coloreditor
 
-A full-featured color editor that composes `card-colorscale`, `form-textbox`, `form-colorgraph`, and nine `module-colorinfo` elements into a single reactive unit.
+A full-featured color editor composing a color scale, a text input, a color graph, and several color-info panels into one reactive unit. It's a showcase of composing multiple independent components around shared state.
 
 #### Preview
 

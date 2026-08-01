@@ -1,6 +1,6 @@
 ### Form Checkbox
 
-A styled wrapper for a native checkbox with todo item and toggle switch variants.
+A styled, form-associated wrapper around a native checkbox, with todo-item and toggle-switch variants. It shows how to layer custom styling and full form participation on top of native checkbox behavior.
 
 #### Preview
 

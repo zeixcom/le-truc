@@ -1,6 +1,6 @@
 ### Form Spinbutton
 
-A quantity spinbutton with increment/decrement buttons, clamped values, and keyboard support that works both controlled and uncontrolled.
+A quantity spinbutton with increment/decrement buttons, clamped values, and keyboard support. It works both controlled and uncontrolled, and participates in forms just like a native input.
 
 #### Preview
 

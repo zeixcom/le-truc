@@ -1,6 +1,6 @@
 ### Form Combobox
 
-An advanced form component that coordinates a text input with a popup `form-listbox`.
+An advanced form control that coordinates a text input with a popup `form-listbox` for filtering and selection. It's a reference example of composing several components into one form-associated whole.
 
 #### Preview
 

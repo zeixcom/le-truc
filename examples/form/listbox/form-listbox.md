@@ -1,6 +1,6 @@
 ### Form Listbox
 
-A full-featured listbox with client-side filtering and optional remote option loading.
+A full-featured listbox with client-side filtering, optional remote option loading, and keyboard navigation. It demonstrates form participation and per-option reactive state within a single component.
 
 #### Preview
 

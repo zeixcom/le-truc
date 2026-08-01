@@ -1,6 +1,6 @@
 ### Module Codeblock
 
-A progressively enhanced code block that can expand and copy its content.
+A progressively enhanced code block that can collapse, expand, and copy its content. It demonstrates layering interactive behavior onto server-rendered content, plus a reusable clipboard-copy effect.
 
 #### Preview
 

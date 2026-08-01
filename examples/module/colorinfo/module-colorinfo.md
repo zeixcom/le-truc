@@ -1,6 +1,6 @@
 ### Module Colorinfo
 
-An expandable color swatch with OKLCH, hex, RGB, and HSL details.
+An expandable color swatch showing the OKLCH, hex, RGB, and HSL representations of a color. It's designed to be driven by a parent component, such as `module-coloreditor`.
 
 #### Preview
 

@@ -1,6 +1,6 @@
 ### Card Colorscale
 
-A color scale card that displays a 9-step tonal palette derived from a single base color, provided as any valid CSS color string.
+Displays a 9-step tonal palette derived from a single base color, accepting any valid CSS color string. It's useful for previewing a palette and checking the contrast and accessibility of its lightness steps.
 
 #### Preview
 

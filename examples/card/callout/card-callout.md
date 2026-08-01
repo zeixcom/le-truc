@@ -1,6 +1,6 @@
 ### Card Callout
 
-A CSS-only component that displays a callout message.
+A callout box with a colored border and icon, for notes, tips, warnings, and similar asides. It's CSS-only — every variant is selected purely through the `class` attribute, with no JavaScript behavior involved.
 
 #### Preview
 
