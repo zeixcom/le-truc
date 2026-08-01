@@ -1,6 +1,6 @@
 ### Module Todo
 
-A todo component that owns the data, manages the list DOM directly, and handles all interactions — adding, deleting, reordering (keyboard and drag), editing labels, and toggling completion. Exposes the active filter as custom states (`:state(filter-active)`, `:state(filter-completed)`) for CSS-based item visibility.
+A complete todo list application — add, delete, reorder by keyboard or drag, inline-edit labels, and toggle completion. It's the most complete reference example of a real Le Truc application, combining most of the library's patterns in one component.
 
 #### Preview
 

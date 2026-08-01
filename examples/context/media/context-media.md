@@ -1,6 +1,6 @@
 ### Context Media
 
-A context provider that exposes live media query state to descendant components via the Web Components Context Protocol. On its own it produces no visible output — it must wrap one or more consumer components (such as `card-mediaqueries`) that call `requestContext()` to receive the provided values.
+A context provider that exposes live media query state — breakpoints, color scheme, and more — to any descendant component. On its own it renders nothing; it must wrap one or more consumers, such as `card-mediaqueries`, that request the values. It demonstrates Le Truc's context protocol for sharing reactive state across a component tree without prop drilling.
 
 #### Preview
 

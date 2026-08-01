@@ -1,6 +1,6 @@
 ### Basic Number
 
-A locale-aware number display component that uses `Intl.NumberFormat` for decimals, units, and currencies.
+A locale-aware number display that formats decimals, units, and currencies using `Intl.NumberFormat`. It shows how a reactive value can be rendered directly on the host element, without any descendant elements.
 
 #### Preview
 

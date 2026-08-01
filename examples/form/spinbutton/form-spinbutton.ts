@@ -38,8 +38,8 @@ export default defineComponent<FormSpinbuttonProps>(
 		)
 
 		expose({
-			value: Number.parseInt(input.value) || 0,
-			max: Number.parseInt(input.max) || 10,
+			value: Number.parseInt(input.value, 10) || 0,
+			max: Number.parseInt(input.max, 10) || 10,
 		})
 
 		const controls = all('button, input:not([disabled])')

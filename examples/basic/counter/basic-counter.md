@@ -1,6 +1,6 @@
 ### Basic Counter
 
-The canonical introductory counterexample for Le Truc.
+Le Truc's canonical introductory example: a button that increments a counter and a display that stays in sync. It demonstrates the core reactive loop — read the initial value from the DOM, update it on user interaction, and bind it back to the display.
 
 #### Preview
 

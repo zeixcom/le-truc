@@ -26,33 +26,51 @@ module-carousel {
 		flex: 0 0 100%;
 
 		&.blue {
-			background-color: var(--color-blue-20);
-			--color-text: var(--color-blue-90);
-			--color-text-soft: var(--color-blue-80);
+			background-color: light-dark(var(--color-blue-20), var(--color-blue-80));
+			--color-text: light-dark(var(--color-blue-90), var(--color-blue-10));
+			--color-text-soft: light-dark(var(--color-blue-80), var(--color-blue-20));
 		}
 
 		&.purple {
-			background-color: var(--color-purple-20);
-			--color-text: var(--color-purple-90);
-			--color-text-soft: var(--color-purple-80);
+			background-color: light-dark(
+				var(--color-purple-20),
+				var(--color-purple-80)
+			);
+			--color-text: light-dark(var(--color-purple-90), var(--color-purple-10));
+			--color-text-soft: light-dark(
+				var(--color-purple-80),
+				var(--color-purple-20)
+			);
 		}
 
 		&.pink {
-			background-color: var(--color-pink-20);
-			--color-text: var(--color-pink-90);
-			--color-text-soft: var(--color-pink-80);
+			background-color: light-dark(var(--color-pink-20), var(--color-pink-80));
+			--color-text: light-dark(var(--color-pink-90), var(--color-pink-10));
+			--color-text-soft: light-dark(var(--color-pink-80), var(--color-pink-20));
 		}
 
 		&.orange {
-			background-color: var(--color-orange-20);
-			--color-text: var(--color-orange-90);
-			--color-text-soft: var(--color-orange-80);
+			background-color: light-dark(
+				var(--color-orange-20),
+				var(--color-orange-80)
+			);
+			--color-text: light-dark(var(--color-orange-90), var(--color-orange-10));
+			--color-text-soft: light-dark(
+				var(--color-orange-80),
+				var(--color-orange-20)
+			);
 		}
 
 		&.green {
-			background-color: var(--color-green-20);
-			--color-text: var(--color-green-90);
-			--color-text-soft: var(--color-green-80);
+			background-color: light-dark(
+				var(--color-green-20),
+				var(--color-green-80)
+			);
+			--color-text: light-dark(var(--color-green-90), var(--color-green-10));
+			--color-text-soft: light-dark(
+				var(--color-green-80),
+				var(--color-green-20)
+			);
 		}
 
 		& h3 {
@@ -141,40 +159,6 @@ module-carousel {
 					opacity: var(--opacity-solid);
 				}
 			}
-		}
-	}
-}
-
-@media (prefers-color-scheme: dark) {
-	module-carousel [role="tabpanel"] {
-		&.blue {
-			background-color: var(--color-blue-80);
-			--color-text: var(--color-blue-10);
-			--color-text-soft: var(--color-blue-20);
-		}
-
-		&.purple {
-			background-color: var(--color-purple-80);
-			--color-text: var(--color-purple-10);
-			--color-text-soft: var(--color-purple-20);
-		}
-
-		&.pink {
-			background-color: var(--color-pink-80);
-			--color-text: var(--color-pink-10);
-			--color-text-soft: var(--color-pink-20);
-		}
-
-		&.orange {
-			background-color: var(--color-orange-80);
-			--color-text: var(--color-orange-10);
-			--color-text-soft: var(--color-orange-20);
-		}
-
-		&.green {
-			background-color: var(--color-green-80);
-			--color-text: var(--color-green-10);
-			--color-text-soft: var(--color-green-20);
 		}
 	}
 }

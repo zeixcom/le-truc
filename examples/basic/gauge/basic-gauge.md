@@ -1,6 +1,6 @@
 ### Basic Gauge
 
-A visual gauge meter that parses the `thresholds` attribute which configures the gauge's threshold ranges and colors.
+A visual gauge meter that renders a value against configurable, colored threshold ranges. It shows how a single attribute can drive both a displayed value and its derived visual styling.
 
 #### Preview
 

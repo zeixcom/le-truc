@@ -1,6 +1,6 @@
 ### Module Tabgroup
 
-A keyboard-accessible tab group.
+An accessible tab group with full keyboard navigation. It demonstrates managing selection state internally while keeping it read-only for outside consumers.
 
 #### Preview
 

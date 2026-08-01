@@ -1,6 +1,6 @@
 ### Module Calctable
 
-An editable calculation table — description, amount, and price/unit columns compute a per-row price, plus running totals in the footer.
+An editable calculation table whose description, amount, and price/unit columns compute a per-row price plus running totals. It shows several derived, reactive values feeding a summary footer.
 
 #### Preview
 

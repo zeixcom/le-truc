@@ -1,6 +1,6 @@
 ### Card Collapsible
 
-A content-agnostic collapsible card wrapping a native `<details>`/`<summary>` element.
+A content-agnostic collapsible card built on the native `<details>`/`<summary>` element. It's a reminder that some interactive patterns don't need custom JavaScript at all — the browser already provides them.
 
 #### Preview
 

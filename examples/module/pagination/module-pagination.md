@@ -1,6 +1,6 @@
 ### Module Pagination
 
-A keyboard-navigable page selector with clamped numeric input.
+A keyboard-navigable pagination control with previous/next buttons and a clamped numeric input. It hides itself automatically when there's nothing to paginate.
 
 #### Preview
 

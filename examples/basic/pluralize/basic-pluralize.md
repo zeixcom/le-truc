@@ -1,6 +1,6 @@
 ### Basic Pluralize
 
-A locale-aware pluralisation component driven by `Intl.PluralRules`.
+A locale-aware pluralization component built on `Intl.PluralRules`. It demonstrates wiring up only the plural-category elements a given locale actually needs, rather than all of them unconditionally.
 
 #### Preview
 

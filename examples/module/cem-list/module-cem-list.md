@@ -1,6 +1,6 @@
 ### Module Cem List
 
-A server-rendered catalog of custom-element declarations.
+A server-rendered catalog of custom-element declarations. It shows a component that simply displays pre-rendered, static data.
 
 #### Preview
 

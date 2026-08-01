@@ -48,8 +48,8 @@ const SECTION_SEPARATOR = '\n---\n\n'
 /**
  * Remove self-closing Markdoc tags (e.g. `{% sources src="..." /%}`).
  *
- * `stripMarkdocTags()` handles open/close pairs and `blogmeta`, but not
- * arbitrary self-closing tags. Self-closing tags like `{% sources %}` load
+ * `stripMarkdocTags()` handles open/close pairs, but not arbitrary
+ * self-closing tags. Self-closing tags like `{% sources %}` load
  * their content at runtime via `module-lazyload` and carry no inline text,
  * so dropping them entirely is correct for a concatenated text file.
  */

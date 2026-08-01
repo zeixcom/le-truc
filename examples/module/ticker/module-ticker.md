@@ -1,6 +1,6 @@
 ### Module Ticker
 
-A live market data table that updates at 10 ms intervals, demonstrating Le Truc's fine-grained reactivity at frame-rate scale and virtualized row blocks.
+A live market data table that updates every 10 milliseconds. It demonstrates Le Truc's fine-grained reactivity at frame-rate scale, using virtualized row blocks to stay fast.
 
 #### Preview
 

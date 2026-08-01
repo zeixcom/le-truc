@@ -1,6 +1,6 @@
 ### Module Listnav
 
-A navigation component that keeps the URL hash in sync with a `form-listbox` selection and loads content via `module-lazyload`.
+Keeps a `form-listbox` selection, the URL hash, and lazily loaded content all in sync with each other. It demonstrates coordinating multiple components together with browser navigation state.
 
 #### Preview
 

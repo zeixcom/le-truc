@@ -1,6 +1,6 @@
 ### Module Splitview
 
-A two-panel resizable container with a drag handle between the panels, supporting both horizontal and vertical orientations.
+A two-panel resizable container with a drag handle between the panels, supporting both horizontal and vertical orientations. It's a reference example of pointer-driven, continuously reactive layout.
 
 #### Preview
 

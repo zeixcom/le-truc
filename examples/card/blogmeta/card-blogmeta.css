@@ -13,12 +13,18 @@ card-blogmeta {
 		gap: var(--space-xs);
 	}
 
-	& img {
+	& img,
+	& svg.avatar {
 		width: var(--input-height);
 		height: var(--input-height);
 		border-radius: 50%;
 		object-fit: cover;
 		flex-shrink: 0;
+	}
+
+	& svg.avatar {
+		color: var(--color-border-soft);
+		background-color: var(--color-background-alt);
 	}
 
 	& time {

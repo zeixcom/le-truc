@@ -145,7 +145,7 @@ describe('generateBlogExcerpts', () => {
 			makePost({ slug: 'post-b', date: '2026-02-01' }),
 		]
 		const result = generateBlogExcerpts(posts)
-		const cardCount = (result.match(/<card-blogpost>/g) ?? []).length
+		const cardCount = (result.match(/<card-blogpost itemscope/g) ?? []).length
 		expect(cardCount).toBe(2)
 	})
 
@@ -157,7 +157,7 @@ describe('generateBlogExcerpts', () => {
 			makePost({ slug: 'p4', date: '2026-01-01' }),
 		]
 		const result = generateBlogExcerpts(posts)
-		const cardCount = (result.match(/<card-blogpost>/g) ?? []).length
+		const cardCount = (result.match(/<card-blogpost itemscope/g) ?? []).length
 		expect(cardCount).toBe(3)
 		// p4 should not appear (4th post in date-desc order)
 		expect(result).not.toContain('/blog/p4')
@@ -187,8 +187,10 @@ describe('generateBlogExcerpts', () => {
 			author: 'Alice',
 		})
 		const result = generateBlogExcerpts([post])
-		expect(result).toContain('class="published" datetime="2026-03-09"')
-		expect(result).toContain('<span>Alice</span>')
+		expect(result).toContain(
+			'class="published" itemprop="datePublished" datetime="2026-03-09"',
+		)
+		expect(result).toContain('<span itemprop="name">Alice</span>')
 	})
 
 	test('includes avatar img with derived path when author-avatar not set', () => {
@@ -229,7 +231,7 @@ describe('generateBlogExcerpts', () => {
 			description: 'A short summary.',
 		})
 		const result = generateBlogExcerpts([post])
-		expect(result).toContain('<p>A short summary.</p>')
+		expect(result).toContain('<p itemprop="description">A short summary.</p>')
 	})
 
 	test('HTML-escapes title, description, and author', () => {
