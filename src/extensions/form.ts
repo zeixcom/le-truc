@@ -2,10 +2,13 @@ import {
 	createEffect,
 	createSlot,
 	createState,
+	DEEP_EQUALITY,
 	isFunction,
 	isSignal,
 	isSlot,
+	isState,
 	type MaybeCleanup,
+	type State,
 } from '@zeix/cause-effect'
 import type { ComponentExtension } from '../extension'
 import { getSignals, internalsMap, retainedInitializers } from '../internal'
@@ -40,6 +43,22 @@ const EMPTY_VALIDITY_STATE: ValidityState = {
 	customError: false,
 	valid: true,
 } as ValidityState
+
+/**
+ * Snapshot a native `ValidityState` into a plain object. `ValidityState`'s
+ * fields (`valid`, `valueMissing`, `typeMismatch`, …) are accessor properties
+ * on the prototype, not own enumerable properties — `{ ...validity }` silently
+ * copies nothing and yields `{}`. Reads the field list off
+ * {@link EMPTY_VALIDITY_STATE} so the two stay in sync by construction.
+ */
+const snapshotValidity = (validity: ValidityState): ValidityState => {
+	const snapshot = {} as Record<keyof ValidityState, boolean>
+	for (const key of Object.keys(
+		EMPTY_VALIDITY_STATE,
+	) as (keyof ValidityState)[])
+		snapshot[key] = validity[key]
+	return snapshot as ValidityState
+}
 
 /**
  * Member-spec table: the single source of truth for the native-parity host
@@ -80,14 +99,20 @@ const HOST_CONTRACT_DESCRIPTORS = {
 	},
 	validity: {
 		get(this: HTMLElement) {
-			return internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE
+			const signal = getSignals(this)['validity']
+			return isState(signal)
+				? (signal.get() as ValidityState)
+				: (internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE)
 		},
 		enumerable: true,
 		configurable: true,
 	},
 	validationMessage: {
 		get(this: HTMLElement) {
-			return internalsMap.get(this)?.validationMessage ?? ''
+			const signal = getSignals(this)['validationMessage']
+			return isState(signal)
+				? (signal.get() as string)
+				: (internalsMap.get(this)?.validationMessage ?? '')
 		},
 		enumerable: true,
 		configurable: true,
@@ -167,6 +192,15 @@ const resolveAnchor = (host: HTMLElement): HTMLElement =>
  * `internals.setValidity`, setting `{ customError: true }` (or clearing it)
  * and the message. The anchor is resolved via the managed heuristic so the
  * browser can focus the control on blocked submission.
+ *
+ * `internals.setValidity` is itself wrapped by
+ * {@link createManagedValidityProperties} to keep the
+ * `validationMessage` signal in sync, so this call is what makes
+ * `setCustomValidity` reactive: called from outside the component (e.g. an
+ * app reacting to a server-side validation error), a
+ * `watch('validationMessage', …)` in the component's own factory now reruns,
+ * where previously only `ElementInternals` (and thus native validity UI) saw
+ * the change.
  *
  * @since 2.3
  * @internal
@@ -408,6 +442,66 @@ const createManagedDisabledProperty = (instance: HTMLElement): void => {
 	})
 }
 
+/**
+ * Register the managed `validationMessage` and `validity` reactive signals on
+ * a form-associated host, so `watch('validationMessage', …)` / `watch('validity',
+ * …)` resolve to real signals instead of `toSignal()`'s non-reactive one-shot
+ * `createMemo` fallback (the root cause of the reported one-way propagation:
+ * `setCustomValidity()` called from outside the component updated
+ * `ElementInternals` but had no reactive counterpart for the component's own
+ * setup code to observe — `validity` has the identical gap, driven by the
+ * same underlying call).
+ *
+ * Wraps `internals.setValidity` itself — not just `managedSetCustomValidity`
+ * — so both signals stay in sync regardless of *how* validity changes:
+ * `host.setCustomValidity()` from outside the component, or a component's own
+ * `watch('value', v => internals?.setValidity({ rangeOverflow: … }, msg))`
+ * for typed native constraints (a documented, supported pattern — see
+ * `FactoryContext.internals` in `component.ts`). Both call the same
+ * `internals.setValidity`, so wrapping it once here is the single place that
+ * covers every path, instead of re-deriving "was this called through our
+ * wrapper" per call site.
+ *
+ * `validity` uses `DEEP_EQUALITY` — `internals.validity` snapshots are always
+ * a new object reference, so without it every `setValidity` call would
+ * propagate even when clearing-and-reasserting the same flags produces a
+ * structurally identical `ValidityState`.
+ *
+ * Neither signal is Slot-backed like `disabled` — both are read-only to
+ * consumers (native parity: there is no `host.validationMessage = …` or
+ * `host.validity = …`), so a plain `State` is enough. The prototype getters
+ * in {@link HOST_CONTRACT_DESCRIPTORS} read these signals directly.
+ *
+ * `onConnect` only runs once per instance lifetime (guarded by `#initialized`
+ * in `component.ts`), so this wraps `setValidity` exactly once — no risk of
+ * stacking wrappers across reconnects.
+ *
+ * @since 2.3.3
+ */
+const createManagedValidityProperties = (
+	instance: HTMLElement,
+	internals: ElementInternals,
+): State<string> => {
+	const messageState = createState(internals.validationMessage)
+	const validityState = createState(snapshotValidity(internals.validity), {
+		equals: DEEP_EQUALITY,
+	})
+	const signals = getSignals(instance)
+	signals['validationMessage'] = messageState
+	signals['validity'] = validityState
+	const setValidity = internals.setValidity.bind(internals)
+	internals.setValidity = ((
+		flags?: ValidityStateFlags,
+		message?: string,
+		anchor?: HTMLElement,
+	) => {
+		setValidity(flags, message, anchor)
+		messageState.set(internals.validationMessage)
+		validityState.set(snapshotValidity(internals.validity))
+	}) as ElementInternals['setValidity']
+	return messageState
+}
+
 /** Brand distinguishing the form-associated extension at the type level. */
 type FormAssociatedTag = { readonly __kind: 'form-associated' }
 
@@ -441,6 +535,7 @@ const formAssociated = (): FormAssociatedExtension => ({
 				`form-associated component ${elementName(instance)} did not expose a reactive 'value' property. The managed form-control convention requires a reactive 'value' for form value sync, reset, and state restore.`,
 			)
 		createManagedDisabledProperty(instance)
+		createManagedValidityProperties(instance, internals)
 		return [managedValueSyncDescriptor(instance, internals)]
 	},
 })
@@ -497,6 +592,7 @@ const formAssociatedCheckbox = (): FormAssociatedCheckboxExtension => ({
 			)
 		const submitValue = instance.getAttribute('value') ?? 'on'
 		createManagedDisabledProperty(instance)
+		createManagedValidityProperties(instance, internals)
 		return [checkedValueSyncDescriptor(instance, internals, submitValue)]
 	},
 })
