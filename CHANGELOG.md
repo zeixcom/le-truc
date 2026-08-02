@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.3.3
+
+### Fixed
+
+- **`validationMessage` is now reactive on `formAssociated()`/`formAssociatedCheckbox()` hosts**: previously, `host.validationMessage` read straight off `ElementInternals` with no backing signal, so `watch('validationMessage', …)` fell back to `toSignal()`'s non-reactive one-shot `createMemo`. Calling `host.setCustomValidity(msg)` from outside the component (e.g. an app reacting to a server-side validation error) updated `ElementInternals` — and thus native validity UI — but a component's own `watch('validationMessage', …)` never saw the change. Now `internals.setValidity` itself is wrapped once per instance, keeping a `State<string>` in sync regardless of call path: external `host.setCustomValidity()` or a component's own documented `internals?.setValidity(…)` escape hatch for typed native constraints.
+- **`validity` is now reactive**, backed by a `State<ValidityState>` updated by the same `setValidity` wrapper as `validationMessage` (`DEEP_EQUALITY`-compared, since `internals.validity` reads are always a fresh object reference — without it, reasserting unchanged flags would still re-propagate to watchers).
+
 ## 2.3.2
 
 ### Fixed

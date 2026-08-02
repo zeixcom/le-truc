@@ -9,7 +9,6 @@ import {
 	type FormAssociatedElement,
 	formAssociated,
 } from '../../..'
-import { relayValidity } from '../../_common/relayValidity'
 import type { FormListboxProps } from '../listbox/form-listbox'
 
 export type FormComboboxProps = {
@@ -56,9 +55,6 @@ export default defineComponent<FormComboboxProps>(
 			() => showPopup.get() && listbox.options.length > 0,
 		)
 		const length = createState(textbox.value.length)
-		// Internal error state — not a public prop. External consumers read
-		// host.validationMessage / host.validity (native parity).
-		const error = createState('')
 
 		expose({
 			value: textbox.value,
@@ -88,7 +84,8 @@ export default defineComponent<FormComboboxProps>(
 			length.set(textbox.value.length)
 			batch(() => {
 				host.value = textbox.value
-				relayValidity(textbox, host, error)
+				textbox.checkValidity()
+				host.setCustomValidity(textbox.validationMessage ?? '')
 				showPopup.set(true)
 			})
 		})
@@ -106,7 +103,8 @@ export default defineComponent<FormComboboxProps>(
 			textbox.value = optionValue
 			batch(() => {
 				host.value = optionValue
-				relayValidity(textbox, host, error)
+				textbox.checkValidity()
+				host.setCustomValidity(textbox.validationMessage ?? '')
 				showPopup.set(false)
 				textbox.focus()
 			})
@@ -122,7 +120,7 @@ export default defineComponent<FormComboboxProps>(
 		// Validity: host.setCustomValidity() drives native :invalid /
 		// :user-invalid + host.validationMessage for external consumers.
 		const errorEl = first('form-combobox > .error')
-		if (errorEl) watch(error, bindText(errorEl))
+		if (errorEl) watch('validationMessage', bindText(errorEl))
 		if (descriptionEl) watch('description', bindText(descriptionEl))
 
 		watch(isExpanded, expanded => {
