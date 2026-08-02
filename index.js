@@ -2901,6 +2901,12 @@ var EMPTY_VALIDITY_STATE = {
   customError: false,
   valid: true
 };
+var snapshotValidity = (validity) => {
+  const snapshot = {};
+  for (const key of Object.keys(EMPTY_VALIDITY_STATE))
+    snapshot[key] = validity[key];
+  return snapshot;
+};
 var HOST_CONTRACT_DESCRIPTORS = {
   form: {
     get() {
@@ -2931,14 +2937,16 @@ var HOST_CONTRACT_DESCRIPTORS = {
   },
   validity: {
     get() {
-      return internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE;
+      const signal = getSignals(this)["validity"];
+      return isState(signal) ? signal.get() : internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE;
     },
     enumerable: true,
     configurable: true
   },
   validationMessage: {
     get() {
-      return internalsMap.get(this)?.validationMessage ?? "";
+      const signal = getSignals(this)["validationMessage"];
+      return isState(signal) ? signal.get() : internalsMap.get(this)?.validationMessage ?? "";
     },
     enumerable: true,
     configurable: true
@@ -3095,6 +3103,22 @@ var createManagedDisabledProperty = (instance) => {
     configurable: true
   });
 };
+var createManagedValidityProperties = (instance, internals) => {
+  const messageState = createState(internals.validationMessage);
+  const validityState = createState(snapshotValidity(internals.validity), {
+    equals: DEEP_EQUALITY
+  });
+  const signals = getSignals(instance);
+  signals["validationMessage"] = messageState;
+  signals["validity"] = validityState;
+  const setValidity = internals.setValidity.bind(internals);
+  internals.setValidity = (flags, message, anchor) => {
+    setValidity(flags, message, anchor);
+    messageState.set(internals.validationMessage);
+    validityState.set(snapshotValidity(internals.validity));
+  };
+  return messageState;
+};
 var formAssociated = () => ({
   name: "formAssociated",
   __kind: "form-associated",
@@ -3108,6 +3132,7 @@ var formAssociated = () => ({
     if (false)
       ;
     createManagedDisabledProperty(instance);
+    createManagedValidityProperties(instance, internals);
     return [managedValueSyncDescriptor(instance, internals)];
   }
 });
@@ -3125,6 +3150,7 @@ var formAssociatedCheckbox = () => ({
       ;
     const submitValue = instance.getAttribute("value") ?? "on";
     createManagedDisabledProperty(instance);
+    createManagedValidityProperties(instance, internals);
     return [checkedValueSyncDescriptor(instance, internals, submitValue)];
   }
 });

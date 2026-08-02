@@ -56,9 +56,56 @@ type MutableValidityState = {
 	-readonly [K in keyof ValidityState]: boolean
 }
 
+/**
+ * Mirrors the real DOM `ValidityState`: fields are accessor properties on the
+ * prototype, not own enumerable properties, so `{ ...validity }` yields `{}`
+ * — exactly the failure mode LT-005 fixed. Reads live off `#flags` so
+ * `internals.setValidity()` mutations are reflected without recreating the
+ * instance.
+ */
+class FakeValidityState {
+	#flags: MutableValidityState
+	constructor(flags: MutableValidityState) {
+		this.#flags = flags
+	}
+	get valueMissing() {
+		return this.#flags.valueMissing
+	}
+	get typeMismatch() {
+		return this.#flags.typeMismatch
+	}
+	get patternMismatch() {
+		return this.#flags.patternMismatch
+	}
+	get tooLong() {
+		return this.#flags.tooLong
+	}
+	get tooShort() {
+		return this.#flags.tooShort
+	}
+	get rangeUnderflow() {
+		return this.#flags.rangeUnderflow
+	}
+	get rangeOverflow() {
+		return this.#flags.rangeOverflow
+	}
+	get stepMismatch() {
+		return this.#flags.stepMismatch
+	}
+	get badInput() {
+		return this.#flags.badInput
+	}
+	get customError() {
+		return this.#flags.customError
+	}
+	get valid() {
+		return this.#flags.valid
+	}
+}
+
 class FakeElementInternals {
 	formValue: string | File | FormData | null = null
-	validity: MutableValidityState = {
+	#flags: MutableValidityState = {
 		valueMissing: false,
 		typeMismatch: false,
 		patternMismatch: false,
@@ -71,6 +118,7 @@ class FakeElementInternals {
 		customError: false,
 		valid: true,
 	}
+	validity: ValidityState = new FakeValidityState(this.#flags)
 	validationMessage = ''
 	states = new Set<string>()
 	willValidate = true
@@ -85,25 +133,25 @@ class FakeElementInternals {
 		message?: string,
 		anchor?: HTMLElement,
 	) {
-		Object.assign(this.validity, flags)
-		this.validity.valid =
-			!this.validity.valueMissing &&
-			!this.validity.typeMismatch &&
-			!this.validity.patternMismatch &&
-			!this.validity.tooLong &&
-			!this.validity.tooShort &&
-			!this.validity.rangeUnderflow &&
-			!this.validity.rangeOverflow &&
-			!this.validity.stepMismatch &&
-			!this.validity.badInput &&
-			!this.validity.customError
+		Object.assign(this.#flags, flags)
+		this.#flags.valid =
+			!this.#flags.valueMissing &&
+			!this.#flags.typeMismatch &&
+			!this.#flags.patternMismatch &&
+			!this.#flags.tooLong &&
+			!this.#flags.tooShort &&
+			!this.#flags.rangeUnderflow &&
+			!this.#flags.rangeOverflow &&
+			!this.#flags.stepMismatch &&
+			!this.#flags.badInput &&
+			!this.#flags.customError
 		this.validationMessage = message ?? ''
 	}
 	checkValidity() {
-		return this.validity.valid
+		return this.#flags.valid
 	}
 	reportValidity() {
-		return this.validity.valid
+		return this.#flags.valid
 	}
 }
 
@@ -475,6 +523,150 @@ describe('native-parity host contract', () => {
 		instance.setCustomValidity('')
 		expect(internals.validity.customError).toBe(false)
 		expect(internals.validationMessage).toBe('')
+	})
+
+	test('validationMessage can be watched by authors — reacts to external setCustomValidity()', () => {
+		// Regression: setCustomValidity() called from outside the component
+		// (e.g. an app reacting to a server-side validation error) used to be
+		// silently dropped from watch('validationMessage', …) — the getter read
+		// straight off ElementInternals with no backing signal, so watch()'s
+		// toSignal() fallback produced a one-shot, non-reactive createMemo.
+		let lastMessage: string | undefined
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose, watch }) => {
+				expose({ value: '' })
+				return [
+					watch('validationMessage', msg => {
+						lastMessage = msg
+					}),
+				]
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+
+		expect(lastMessage).toBe('')
+		instance.setCustomValidity('Email already registered')
+		expect(lastMessage).toBe('Email already registered')
+		expect(instance.validationMessage).toBe('Email already registered')
+
+		instance.setCustomValidity('')
+		expect(lastMessage).toBe('')
+	})
+
+	test('validationMessage stays in sync when internals.setValidity() is called directly (typed native constraints)', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		internals.setValidity({ valueMissing: true }, 'Required')
+		expect(instance.validationMessage).toBe('Required')
+
+		internals.setValidity({ valueMissing: false })
+		expect(instance.validationMessage).toBe('')
+	})
+
+	test('validity can be watched by authors — reacts to external setCustomValidity()', () => {
+		// Regression (LT-002): validity has the same root cause as
+		// validationMessage (LT-001) — both are driven by the same
+		// internals.setValidity() call, so watch('validity', …) had the
+		// identical non-reactive createMemo-fallback problem.
+		let lastValid: boolean | undefined
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose, watch }) => {
+				expose({ value: '' })
+				return [
+					watch('validity', v => {
+						lastValid = v.valid
+					}),
+				]
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+
+		expect(lastValid).toBe(true)
+		instance.setCustomValidity('Email already registered')
+		expect(lastValid).toBe(false)
+		expect(instance.validity.customError).toBe(true)
+
+		instance.setCustomValidity('')
+		expect(lastValid).toBe(true)
+	})
+
+	test('validity stays in sync when internals.setValidity() is called directly (typed native constraints)', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		internals.setValidity({ valueMissing: true }, 'Required')
+		expect(instance.validity.valueMissing).toBe(true)
+		expect(instance.validity.valid).toBe(false)
+
+		internals.setValidity({ valueMissing: false })
+		expect(instance.validity.valueMissing).toBe(false)
+		expect(instance.validity.valid).toBe(true)
+	})
+
+	test('validity snapshot is not an empty object (regression: ValidityState fields are prototype accessors, not own properties)', () => {
+		// LT-005: `{ ...internals.validity }` silently copies nothing because
+		// ValidityState's fields are getters on the prototype — FakeValidityState
+		// mirrors that shape so this test fails the same way a real browser would.
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		internals.setValidity({ valueMissing: true }, 'Required')
+		expect(Object.keys(instance.validity).length).toBeGreaterThan(0)
+		expect(instance.validity.valid).toBe(false)
+	})
+
+	test('validity signal does not propagate when setValidity reasserts the same flags (DEEP_EQUALITY)', () => {
+		let runCount = 0
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose, watch }) => {
+				expose({ value: '' })
+				return [
+					watch('validity', () => {
+						runCount++
+					}),
+				]
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		const initialRunCount = runCount
+		internals.setValidity({})
+		expect(runCount).toBe(initialRunCount)
 	})
 
 	test('validity, willValidate, form, labels delegate to internals', () => {

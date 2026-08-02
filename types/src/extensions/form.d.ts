@@ -101,6 +101,15 @@ declare const resolveAnchor: (host: HTMLElement) => HTMLElement;
  * and the message. The anchor is resolved via the managed heuristic so the
  * browser can focus the control on blocked submission.
  *
+ * `internals.setValidity` is itself wrapped by
+ * {@link createManagedValidityProperties} to keep the
+ * `validationMessage` signal in sync, so this call is what makes
+ * `setCustomValidity` reactive: called from outside the component (e.g. an
+ * app reacting to a server-side validation error), a
+ * `watch('validationMessage', …)` in the component's own factory now reruns,
+ * where previously only `ElementInternals` (and thus native validity UI) saw
+ * the change.
+ *
  * @since 2.3
  * @internal
  */

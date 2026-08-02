@@ -9,7 +9,6 @@ import {
 	type FormAssociatedElement,
 	formAssociated,
 } from '../../..'
-import { relayValidity } from '../../_common/relayValidity'
 
 export type FormTextboxProps = {
 	/** Current text value. Synced with the native input or textarea. */
@@ -34,7 +33,7 @@ declare global {
  * keyboard accessibility and standard ARIA textbox semantics. Form participation
  * and validity are via ElementInternals (`formAssociated()`).
  * External consumers read `host.validationMessage` / `host.validity` like on a
- * native input; inline error display binds to component-internal state.
+ * native input; inline error display binds directly to `host.validationMessage`.
  * Sets the `:state(clearable)` custom state when a `button.clear` descendant
  * is present, so CSS can reserve space for it — derived from markup, not an
  * author-set attribute, so it can't drift out of sync or be spoofed.
@@ -77,9 +76,9 @@ export default defineComponent<FormTextboxProps>(
 			}),
 		})
 
-		const error = createState('')
 		on(textbox, 'change', () => {
-			relayValidity(textbox, host, error)
+			textbox.checkValidity()
+			host.setCustomValidity(textbox.validationMessage ?? '')
 			return { value: textbox.value }
 		})
 		on(textbox, 'input', () => {
@@ -103,7 +102,7 @@ export default defineComponent<FormTextboxProps>(
 		}
 
 		const errorEl = first('.error')
-		if (errorEl) watch(error, bindText(errorEl))
+		if (errorEl) watch('validationMessage', bindText(errorEl))
 	},
 	[formAssociated()],
 )

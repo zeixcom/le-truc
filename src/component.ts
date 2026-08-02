@@ -134,15 +134,23 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 /**
  * The factory context for form-associated components. Extends `FactoryContext`
  * with `host` typed as `FormAssociatedElement & P` and `watch`/`on`/`pass`
- * accepting the managed `disabled` reactive prop in addition to `P`.
+ * accepting the managed `disabled`, `validationMessage`, and `validity`
+ * reactive props in addition to `P`.
  *
  * `expose` stays typed over `Initializers<P>`, not the widened
- * `P & { disabled: boolean }`, so `expose({ disabled: … })` is a type error.
- * `disabled` is managed by the library; `expose()` throws
- * `InvalidPropertyNameError` for it at runtime.
+ * `P & { disabled: boolean; validationMessage: string; validity: ValidityState }`,
+ * so `expose({ disabled: … })` / `expose({ validationMessage: … })` /
+ * `expose({ validity: … })` are type errors. All three are managed by the
+ * library; `expose()` throws `InvalidPropertyNameError` for them at runtime.
  */
 type FormFactoryContext<P extends ComponentProps> = Omit<
-	FactoryContext<P & { disabled: boolean }>,
+	FactoryContext<
+		P & {
+			disabled: boolean
+			validationMessage: string
+			validity: ValidityState
+		}
+	>,
 	'host' | 'expose'
 > & {
 	host: FormAssociatedElement & P
