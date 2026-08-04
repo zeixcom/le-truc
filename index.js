@@ -2907,6 +2907,8 @@ var snapshotValidity = (validity) => {
     snapshot[key] = validity[key];
   return snapshot;
 };
+var VALIDITY_FLAG_KEYS = Object.keys(EMPTY_VALIDITY_STATE).filter((key) => key !== "valid");
+var NATIVE_VALIDITY_FLAG_KEYS = VALIDITY_FLAG_KEYS.filter((key) => key !== "customError");
 var HOST_CONTRACT_DESCRIPTORS = {
   form: {
     get() {
@@ -2991,8 +2993,25 @@ var MANAGED_FORM_MEMBERS = new Set([
 ]);
 var FOCUSABLE_FORM_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
 var resolveAnchor = (host) => host.querySelector(FOCUSABLE_FORM_CONTROL_SELECTOR) ?? host;
+var FALLBACK_VALIDITY_MESSAGE = "Invalid value";
+var mergeValidity = (internals, flags, ownMessage, anchor) => {
+  const current = snapshotValidity(internals.validity);
+  const merged = {};
+  for (const key of VALIDITY_FLAG_KEYS)
+    merged[key] = flags[key] ?? current[key];
+  const anyTrue = VALIDITY_FLAG_KEYS.some((key) => merged[key]);
+  const message = ownMessage || (anyTrue ? internals.validationMessage || FALLBACK_VALIDITY_MESSAGE : undefined);
+  internals.setValidity(merged, message || undefined, anchor);
+};
 var managedSetCustomValidity = (internals, host, message) => {
-  internals.setValidity({ customError: !!message }, message || undefined, resolveAnchor(host));
+  mergeValidity(internals, { customError: !!message }, message, resolveAnchor(host));
+};
+var delegateValidity = (internals, control, anchor = control) => {
+  control.checkValidity();
+  const flags = {};
+  for (const key of NATIVE_VALIDITY_FLAG_KEYS)
+    flags[key] = control.validity[key];
+  mergeValidity(internals, flags, control.validationMessage, anchor);
 };
 var makeResetCallback = (prop) => function() {
   const initializer = retainedInitializers.get(this)?.[prop];
@@ -3239,6 +3258,7 @@ export {
   formAssociated,
   escapeHTML,
   each,
+  delegateValidity,
   defineMethod,
   defineComponent,
   dangerouslyBindInnerHTML,

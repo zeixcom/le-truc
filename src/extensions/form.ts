@@ -218,6 +218,18 @@ const resolveAnchor = (host: HTMLElement): HTMLElement =>
 	host.querySelector<HTMLElement>(FOCUSABLE_FORM_CONTROL_SELECTOR) ?? host
 
 /**
+ * Fallback message when a flag is `true` but no real message is available
+ * from either the caller or the host's own prior state (see
+ * {@link mergeValidity}'s third fallback tier). Native controls barred from
+ * constraint validation (`disabled`, or `readonly` on `type="number"`/`text`/
+ * etc.) always report an empty `validationMessage` even though their
+ * `.validity` flags stay live — {@link delegateValidity} relaying such a
+ * control hits this on the *first* flag transition, before any prior
+ * message exists to fall back to.
+ */
+const FALLBACK_VALIDITY_MESSAGE = 'Invalid value'
+
+/**
  * Merge a partial set of `ValidityStateFlags` onto the flags already present
  * on `internals.validity`, instead of replacing them outright.
  *
@@ -234,9 +246,14 @@ const resolveAnchor = (host: HTMLElement): HTMLElement =>
  * `internals.setValidity()` throws if any flag is `true` and no message is
  * supplied. Since `ElementInternals` stores exactly one message per call —
  * not one per flag, unlike a native control's own UA-computed
- * `validationMessage` — an empty `ownMessage` falls back to whatever message
- * is already current, so a merge that leaves a flag `true` never trips that
- * throw and never silently drops the message describing it.
+ * `validationMessage` — the message resolves through three fallback tiers so
+ * a merge that leaves a flag `true` never trips that throw: `ownMessage` (the
+ * caller's own message for *this* call) → `internals.validationMessage` (the
+ * message already current, e.g. from a previous flag this call didn't touch)
+ * → {@link FALLBACK_VALIDITY_MESSAGE} (neither of the above was available —
+ * notably, a `disabled`/`readonly` control relayed via
+ * {@link delegateValidity} always reports `''` for its own
+ * `validationMessage`, even while its `.validity` flags are genuinely `true`).
  *
  * @since 2.3.4
  * @internal
@@ -252,7 +269,10 @@ const mergeValidity = (
 	for (const key of VALIDITY_FLAG_KEYS) merged[key] = flags[key] ?? current[key]
 	const anyTrue = VALIDITY_FLAG_KEYS.some(key => merged[key])
 	const message =
-		ownMessage || (anyTrue ? internals.validationMessage : undefined)
+		ownMessage ||
+		(anyTrue
+			? internals.validationMessage || FALLBACK_VALIDITY_MESSAGE
+			: undefined)
 	internals.setValidity(merged, message || undefined, anchor)
 }
 
@@ -724,6 +744,7 @@ export {
 	delegateValidity,
 	EMPTY_NODELIST,
 	EMPTY_VALIDITY_STATE,
+	FALLBACK_VALIDITY_MESSAGE,
 	FOCUSABLE_FORM_CONTROL_SELECTOR,
 	type FormAssociatedCheckboxExtension,
 	type FormAssociatedCheckboxTag,

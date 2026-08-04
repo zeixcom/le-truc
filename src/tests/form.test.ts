@@ -16,6 +16,7 @@ import { defineComponent } from '../component'
 import { InvalidPropertyNameError } from '../errors'
 import {
 	delegateValidity,
+	FALLBACK_VALIDITY_MESSAGE,
 	formAssociated,
 	formAssociatedCheckbox,
 } from '../extensions/form'
@@ -144,23 +145,43 @@ class FakeElementInternals {
 		// exactly the stomping bug `mergeValidity` (src/extensions/form.ts)
 		// fixes: tests could pass against a fake that "remembers" flags the
 		// real browser would have dropped.
+		//
+		// Computed into a fresh `next` object first (not mutating `#flags`
+		// directly) so a rejected call — see the throw below — leaves the
+		// existing state untouched, matching the real platform's atomic
+		// behavior. Applied via `Object.assign(this.#flags, next)`, not
+		// `this.#flags = next`, since `validity` (FakeValidityState) captured
+		// a reference to the original `#flags` object at construction —
+		// reassigning the field would silently detach `validity` from further
+		// updates.
+		const next = {} as MutableValidityState
 		for (const key of Object.keys(
 			this.#flags,
 		) as (keyof MutableValidityState)[]) {
 			if (key === 'valid') continue
-			this.#flags[key] = flags[key as keyof ValidityStateFlags] ?? false
+			next[key] = flags[key as keyof ValidityStateFlags] ?? false
 		}
-		this.#flags.valid =
-			!this.#flags.valueMissing &&
-			!this.#flags.typeMismatch &&
-			!this.#flags.patternMismatch &&
-			!this.#flags.tooLong &&
-			!this.#flags.tooShort &&
-			!this.#flags.rangeUnderflow &&
-			!this.#flags.rangeOverflow &&
-			!this.#flags.stepMismatch &&
-			!this.#flags.badInput &&
-			!this.#flags.customError
+		next.valid =
+			!next.valueMissing &&
+			!next.typeMismatch &&
+			!next.patternMismatch &&
+			!next.tooLong &&
+			!next.tooShort &&
+			!next.rangeUnderflow &&
+			!next.rangeOverflow &&
+			!next.stepMismatch &&
+			!next.badInput &&
+			!next.customError
+		// Mirrors the real platform throw: a flag can't be left true with no
+		// message to describe it. This is what would have caught the LT-001
+		// follow-up bug (delegateValidity() on a barred-from-validation
+		// control) — this fake didn't enforce the constraint the real browser
+		// does, so no test noticed.
+		if (!next.valid && !message)
+			throw new TypeError(
+				"Failed to execute 'setValidity' on 'ElementInternals': The second argument should not be empty if one or more flags in the first argument are true.",
+			)
+		Object.assign(this.#flags, next)
 		this.validationMessage = message ?? ''
 	}
 	checkValidity() {
@@ -987,6 +1008,36 @@ describe('delegateValidity()', () => {
 		expect(internals.validity.rangeOverflow).toBe(true)
 		expect(internals.validationMessage).toBe('Too high')
 		expect((control as unknown as FakeControl).checkValidityCalls).toBe(1)
+	})
+
+	test('does not throw when the control is barred from constraint validation (disabled/readonly): falls back to a placeholder message', () => {
+		// A real disabled or readonly `<input>` reports an empty
+		// `validationMessage` even while its `.validity` flags stay live and
+		// true — this is exactly the shape that made delegateValidity() throw
+		// in a real browser (the LT-001 follow-up bug): the *first* time a
+		// flag transitions true on a fresh `internals`, there's no ownMessage
+		// and no prior `internals.validationMessage` to fall back to either.
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+		const barredControl = new FakeControl(
+			{ rangeOverflow: true, valid: false },
+			'', // barred controls always report '' here, regardless of the flag
+		) as unknown as HTMLInputElement
+
+		expect(() =>
+			delegateValidity(internals as unknown as ElementInternals, barredControl),
+		).not.toThrow()
+
+		expect(internals.validity.rangeOverflow).toBe(true)
+		expect(internals.validationMessage).toBe(FALLBACK_VALIDITY_MESSAGE)
 	})
 
 	test('merges with a pre-existing customError instead of clobbering it', () => {

@@ -4,7 +4,7 @@ export { defineComponent, type FactoryContext, type FormAssociatedElement, type 
 export { DependencyTimeoutError, ExtensionCollisionError, InvalidComponentNameError, InvalidCustomElementError, InvalidPassPropertyError, InvalidPropertyNameError, InvalidReactivesError, InvalidSelectorError, InvalidTemplateError, MissingElementError, NoActiveCollectorError, } from './src/errors';
 export { type ComponentExtension } from './src/extension';
 export { observedAttributes } from './src/extensions/attributes';
-export { FOCUSABLE_FORM_CONTROL_SELECTOR, type FormAssociatedCheckboxExtension, type FormAssociatedExtension, formAssociated, formAssociatedCheckbox, } from './src/extensions/form';
+export { delegateValidity, FOCUSABLE_FORM_CONTROL_SELECTOR, type FormAssociatedCheckboxExtension, type FormAssociatedExtension, formAssociated, formAssociatedCheckbox, type ValidatableControl, } from './src/extensions/form';
 export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, createContext, type ProvideContextsHelper, type RequestContextHelper, type UnknownContext, } from './src/helpers/context';
 export { type AllElements, createElementsMemo, type ElementFromSelector, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, type FirstElement, type KnownTag, type SplitByComma, type TrimWhitespace, } from './src/helpers/dom';
 export type { EventType, OnEventHandler, OnHelper } from './src/helpers/events';

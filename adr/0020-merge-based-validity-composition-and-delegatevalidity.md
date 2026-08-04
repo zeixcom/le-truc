@@ -21,6 +21,8 @@ Two changes to `src/extensions/form.ts`, both additive to ADR 0016's managed for
 ### 1. `mergeValidity()` — internal primitive, merge instead of replace
 
 ```ts
+const FALLBACK_VALIDITY_MESSAGE = 'Invalid value'
+
 const mergeValidity = (
   internals: ElementInternals,
   flags: Partial<ValidityStateFlags>,
@@ -30,9 +32,17 @@ const mergeValidity = (
   const merged = { ...snapshotFlags(internals.validity), ...flags }
   const anyTrue = Object.values(merged).some(Boolean)
   // setValidity throws if any flag is true and message is omitted, and
-  // ElementInternals has no per-flag message storage — fall back to
-  // whatever message is already current when this call doesn't supply one.
-  const message = ownMessage || (anyTrue ? internals.validationMessage : undefined)
+  // ElementInternals has no per-flag message storage. Three fallback tiers:
+  // this call's own message → whatever message is already current (a
+  // previous flag this call didn't touch) → a generic placeholder, for the
+  // case neither exists — notably a disabled/readonly control relayed via
+  // delegateValidity() on the *first* flag transition on a fresh internals,
+  // where a native control's validationMessage is always '' regardless of
+  // its live .validity flags (found during implementation — see Disclosed
+  // limitation below).
+  const message =
+    ownMessage ||
+    (anyTrue ? internals.validationMessage || FALLBACK_VALIDITY_MESSAGE : undefined)
   internals.setValidity(merged, message || undefined, anchor)
 }
 ```
@@ -56,6 +66,8 @@ Relays a wrapped native control's `ValidityState` — the nine UA-computed `Vali
 
 `ElementInternals` stores exactly one `validationMessage` per component per `setValidity()` call — unlike a native control, where the browser recomputes `validationMessage` from a fixed priority order across all currently-true flags on every read. When flags from different sources are simultaneously true on the same `internals` (e.g. a delegated native flag and a separately-set `customError`), the displayed message is whichever call supplied a non-empty one most recently — not always the "highest priority" one by native semantics. A per-flag message registry that would reproduce exact native prioritization was considered and rejected as materially larger than what issue #98 asked for; `mergeValidity`'s fallback (reuse the current message when the incoming call doesn't supply one) avoids losing the message entirely, which is the failure mode that actually surfaced, without solving message prioritization in general.
 
+**Found during implementation:** the two-tier fallback above (`ownMessage` → current `internals.validationMessage`) is not sufficient on its own. A native control barred from constraint validation — `disabled`, or `readonly` on `type="number"`/`text`/etc. — always reports `''` for its own `validationMessage`, even though its `.validity` flags are still computed live and can genuinely be `true`. `delegateValidity()` relaying such a control hits this on the *first* flag transition on a fresh `internals`: `ownMessage` is `''` (the control's own message) and `internals.validationMessage` is also `''` (nothing set yet), so the two-tier fallback resolved to `undefined` — tripping the exact throw this function exists to avoid. This is a real, not hypothetical, shape: "display value, buttons drive it" input components (`form-spinbutton` itself, before its own fix) commonly keep the wrapped native input `disabled`/`readonly`. `mergeValidity` now has a third tier, {@link FALLBACK_VALIDITY_MESSAGE} (`'Invalid value'`), for exactly this case — a generic, hardcoded string, deliberately not per-flag (that would be the same per-flag message registry rejected two paragraphs up, applied to a narrower trigger).
+
 ## Alternatives Considered
 
 - **Leave `managedSetCustomValidity` replacing, document the gap as a known limitation.** Rejected. The interaction is exactly the shape `delegateValidity()` invites (relay native flags on one call path, set `customError` from another) — shipping the new helper without fixing the composition bug it immediately runs into would hand every adopter a foot-gun.
@@ -75,6 +87,7 @@ Relays a wrapped native control's `ValidityState` — the nine UA-computed `Vali
 
 - Message display across simultaneously-true flags from different sources is not perfectly native — see "Disclosed limitation" above. Accepted as a smaller, real gap rather than building the general solution speculatively.
 - `mergeValidity`'s "reuse current message when this call has none" fallback means a caller cannot cleanly clear the *message* while leaving flags from another source true — but this matches the pre-existing constraint that any true flag requires a message at all (native `ElementInternals.setValidity()` throws otherwise), not a new one introduced here.
+- The third fallback tier (`FALLBACK_VALIDITY_MESSAGE`) can surface a generic `'Invalid value'` to end users instead of a real description, specifically when relaying a `disabled`/`readonly` control's first true flag on a fresh `internals`. Accepted: the alternative is throwing, and the common case (a live, non-barred control, or a second-and-later flag transition) still gets a real message through tiers one or two.
 
 **Compatibility:**
 
