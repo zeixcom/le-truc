@@ -61,6 +61,24 @@ const snapshotValidity = (validity: ValidityState): ValidityState => {
 }
 
 /**
+ * The settable `ValidityStateFlags` keys — every {@link EMPTY_VALIDITY_STATE}
+ * key except `valid`, which is computed by the platform, not a flag a caller
+ * can set via `internals.setValidity()`.
+ */
+const VALIDITY_FLAG_KEYS = (
+	Object.keys(EMPTY_VALIDITY_STATE) as (keyof ValidityState)[]
+).filter(key => key !== 'valid') as (keyof ValidityStateFlags)[]
+
+/**
+ * The UA-computed subset of {@link VALIDITY_FLAG_KEYS}, excluding
+ * `customError` — the one flag that is exogenous rather than derived from a
+ * control's own constraint checking (see {@link delegateValidity}).
+ */
+const NATIVE_VALIDITY_FLAG_KEYS = VALIDITY_FLAG_KEYS.filter(
+	key => key !== 'customError',
+)
+
+/**
  * Member-spec table: the single source of truth for the native-parity host
  * contract installed on form-associated components. Each entry maps a member
  * name to its property descriptor. Driving both the reserved set and the
@@ -171,6 +189,18 @@ const MANAGED_FORM_MEMBERS: ReadonlySet<string> = new Set([
 const FOCUSABLE_FORM_CONTROL_SELECTOR =
 	'input, select, textarea, button, [tabindex]'
 
+/**
+ * Structural shape required by {@link delegateValidity}: any element exposing
+ * the native Constraint Validation trio. `HTMLInputElement`,
+ * `HTMLSelectElement`, `HTMLTextAreaElement`, `HTMLButtonElement`, and others
+ * all satisfy this without a cast.
+ */
+type ValidatableControl = HTMLElement & {
+	readonly validity: ValidityState
+	readonly validationMessage: string
+	checkValidity(): boolean
+}
+
 /* === Internal Helpers === */
 
 /**
@@ -188,10 +218,52 @@ const resolveAnchor = (host: HTMLElement): HTMLElement =>
 	host.querySelector<HTMLElement>(FOCUSABLE_FORM_CONTROL_SELECTOR) ?? host
 
 /**
+ * Merge a partial set of `ValidityStateFlags` onto the flags already present
+ * on `internals.validity`, instead of replacing them outright.
+ *
+ * `internals.setValidity()` — like the underlying platform API — treats any
+ * flag key absent from the call as `false`: it fully replaces the flags
+ * object on every call, it does not merge. That is a correctness trap for
+ * any component with more than one source of validity flags on the same
+ * `internals` (e.g. `host.setCustomValidity()` from outside code, alongside
+ * a typed-flags `watch()` like `form-spinbutton`'s `rangeOverflow` — see ADR
+ * 0020): whichever call happens last silently wipes out the other's flags.
+ * `mergeValidity` reads the current snapshot first and only overrides the
+ * keys the caller actually supplies.
+ *
+ * `internals.setValidity()` throws if any flag is `true` and no message is
+ * supplied. Since `ElementInternals` stores exactly one message per call —
+ * not one per flag, unlike a native control's own UA-computed
+ * `validationMessage` — an empty `ownMessage` falls back to whatever message
+ * is already current, so a merge that leaves a flag `true` never trips that
+ * throw and never silently drops the message describing it.
+ *
+ * @since 2.3.4
+ * @internal
+ */
+const mergeValidity = (
+	internals: ElementInternals,
+	flags: Partial<ValidityStateFlags>,
+	ownMessage: string | undefined,
+	anchor: HTMLElement,
+): void => {
+	const current = snapshotValidity(internals.validity)
+	const merged = {} as ValidityStateFlags
+	for (const key of VALIDITY_FLAG_KEYS) merged[key] = flags[key] ?? current[key]
+	const anyTrue = VALIDITY_FLAG_KEYS.some(key => merged[key])
+	const message =
+		ownMessage || (anyTrue ? internals.validationMessage : undefined)
+	internals.setValidity(merged, message || undefined, anchor)
+}
+
+/**
  * Managed `setCustomValidity` implementation. Delegates to
- * `internals.setValidity`, setting `{ customError: true }` (or clearing it)
- * and the message. The anchor is resolved via the managed heuristic so the
- * browser can focus the control on blocked submission.
+ * `internals.setValidity` (via {@link mergeValidity}), setting
+ * `{ customError: true }` (or clearing it) and the message, while preserving
+ * any other validity flags already set on the same `internals` — e.g. typed
+ * native constraints set directly via `internals.setValidity(flags, …)`
+ * elsewhere in the component. The anchor is resolved via the managed
+ * heuristic so the browser can focus the control on blocked submission.
  *
  * `internals.setValidity` is itself wrapped by
  * {@link createManagedValidityProperties} to keep the
@@ -210,11 +282,62 @@ const managedSetCustomValidity = (
 	host: HTMLElement,
 	message: string,
 ): void => {
-	internals.setValidity(
+	mergeValidity(
+		internals,
 		{ customError: !!message },
-		message || undefined,
+		message,
 		resolveAnchor(host),
 	)
+}
+
+/**
+ * Relay a wrapped native control's full `ValidityState` onto a
+ * form-associated host's `internals` — every UA-computed
+ * `ValidityStateFlags` key (`valueMissing`, `rangeOverflow`, `stepMismatch`,
+ * `badInput`, …), not just a boolean collapsed into `customError`. For
+ * "enhanced native input" components — a spinbutton wrapping
+ * `<input type="number">`, a masked field wrapping `<input type="text">` —
+ * that need each of the control's own constraint violations individually
+ * visible on `host.validity`, instead of `setCustomValidity`'s single
+ * `customError` boolean.
+ *
+ * Deliberately does **not** copy the control's own `customError` flag: it
+ * merges via {@link mergeValidity}, which preserves any `customError`
+ * already set on `internals` through other means (typically
+ * `host.setCustomValidity()`, called from outside this component, or a
+ * parent layering its own cross-field constraint). `customError` is the one
+ * flag that is exogenous rather than derived from this control's own
+ * constraint checking (see ADR 0020) — relaying it here would let an
+ * unrelated call silently clear a `customError` set through the managed
+ * `setCustomValidity()` path.
+ *
+ * Calls `control.checkValidity()` first so the relayed snapshot reflects the
+ * control's current state. Anchors to `control` itself by default — unlike
+ * {@link resolveAnchor}'s descendant-search heuristic, the caller already
+ * holds the exact control to focus.
+ *
+ * Not reactive: the control's `validationMessage` has no signal
+ * counterpart, so re-run this from `on(control, 'input'/'change', …)` for
+ * every relevant native event, the same way a typed-flags `watch()` reruns
+ * on its own reactive source. Not gated behind `formAssociated()` — a plain
+ * function taking `internals` directly, usable by any component with
+ * `internals` from `FactoryContext`.
+ *
+ * @since 2.3.4
+ * @param internals - The host's `ElementInternals`
+ * @param control - The native control whose `ValidityState` to relay
+ * @param anchor - Focus target on blocked submission or `reportValidity()`; defaults to `control`
+ */
+const delegateValidity = (
+	internals: ElementInternals,
+	control: ValidatableControl,
+	anchor: HTMLElement = control,
+): void => {
+	control.checkValidity()
+	const flags = {} as Partial<ValidityStateFlags>
+	for (const key of NATIVE_VALIDITY_FLAG_KEYS)
+		flags[key] = control.validity[key]
+	mergeValidity(internals, flags, control.validationMessage, anchor)
 }
 
 /* === Form Lifecycle Callbacks === */
@@ -598,6 +721,7 @@ const formAssociatedCheckbox = (): FormAssociatedCheckboxExtension => ({
 })
 
 export {
+	delegateValidity,
 	EMPTY_NODELIST,
 	EMPTY_VALIDITY_STATE,
 	FOCUSABLE_FORM_CONTROL_SELECTOR,
@@ -613,4 +737,5 @@ export {
 	MANAGED_FORM_MEMBERS,
 	managedSetCustomValidity,
 	resolveAnchor,
+	type ValidatableControl,
 }
