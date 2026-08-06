@@ -399,10 +399,18 @@ test.describe('form-spinbutton component', () => {
 	test('handles component without zero element', async ({ page }) => {
 		const noZeroSpinbutton = page.locator('#no-zero-test')
 		const incrementButton = noZeroSpinbutton.locator('button.increment')
+		const decrementButton = noZeroSpinbutton.locator('button.decrement')
+		const input = noZeroSpinbutton.locator('input.value')
 		const zeroElement = noZeroSpinbutton.locator('.zero')
 
 		// Should not have zero element
 		await expect(zeroElement).toHaveCount(0)
+
+		// Without `.zero`, input and decrement stay visible at value 0 —
+		// no zero-state UI is wired up. Decrement is disabled at min instead.
+		await expect(input).toBeVisible()
+		await expect(decrementButton).toBeVisible()
+		await expect(decrementButton).toHaveAttribute('disabled')
 
 		// Aria-label should fallback to original when no zero element exists
 		let ariaLabel = await incrementButton.getAttribute('aria-label')
@@ -412,6 +420,48 @@ test.describe('form-spinbutton component', () => {
 		await incrementButton.click()
 		ariaLabel = await incrementButton.getAttribute('aria-label')
 		expect(ariaLabel).toBe('Increment')
+		await expect(decrementButton).not.toHaveAttribute('disabled')
+
+		// Decrementing back to min re-disables the decrement button, input
+		// and decrement stay visible throughout (no hiding without `.zero`)
+		await decrementButton.click()
+		await expect(input).toHaveValue('0')
+		await expect(input).toBeVisible()
+		await expect(decrementButton).toBeVisible()
+		await expect(decrementButton).toHaveAttribute('disabled')
+	})
+
+	test('exposes min, stepDown() and stepUp() for generic reuse', async ({
+		page,
+	}) => {
+		const minProperty = await page.evaluate(() => {
+			const element = document.querySelector('form-spinbutton') as any
+			return element.min
+		})
+		expect(minProperty).toBe(0)
+
+		const valueAfterStepUp = await page.evaluate(() => {
+			const element = document.querySelector('#no-zero-test') as any
+			element.stepUp()
+			element.stepUp(2)
+			return element.value
+		})
+		expect(valueAfterStepUp).toBe(3)
+
+		const valueAfterStepDown = await page.evaluate(() => {
+			const element = document.querySelector('#no-zero-test') as any
+			element.stepDown(2)
+			return element.value
+		})
+		expect(valueAfterStepDown).toBe(1)
+
+		// stepDown/stepUp clamp to min/max just like the buttons
+		const clampedDown = await page.evaluate(() => {
+			const element = document.querySelector('#no-zero-test') as any
+			element.stepDown(10)
+			return element.value
+		})
+		expect(clampedDown).toBe(0)
 	})
 
 	test('handles multiple instances independently', async ({ page }) => {

@@ -1,84 +1,99 @@
 <form-spinbutton name="amount">
-	<button type="button" class="decrement" aria-label="Decrement" hidden>
-		−
-	</button>
-	<input
-		type="number"
-		class="value"
-		value="0"
-		min="0"
-		max="10"
-		aria-label="Quantity"
-		readonly
-		disabled
-		hidden
-	>
-	<button type="button" class="increment" aria-label="Increment">
-		<span class="zero">Add to Cart</span>
-		<span class="other" hidden>+</span>
-	</button>
+	<fieldset>
+		<button type="button" class="decrement" aria-label="Decrement" hidden>
+			−
+		</button>
+		<input
+			id="amount-input"
+			type="number"
+			class="value"
+			value="0"
+			min="0"
+			max="10"
+			aria-label="Amount"
+			hidden
+		>
+		<button type="button" class="increment" aria-label="Increment">
+			<span class="zero">Add to Cart</span>
+			<span class="other" hidden>+</span>
+		</button>
+	</fieldset>
+	<p class="error" role="alert" aria-live="assertive"></p>
 </form-spinbutton>
 
 <hr>
 
 <!-- Test with different max value -->
 <form-spinbutton id="max-5-test" name="count">
-	<button type="button" class="decrement" aria-label="Decrement" hidden>
-		−
-	</button>
-	<input
-		type="number"
-		class="value"
-		value="0"
-		min="0"
-		max="5"
-		aria-label="Quantity"
-		hidden
-	>
-	<button type="button" class="increment" aria-label="Increment">
-		<span class="zero">Start</span>
-		<span class="other" hidden>+</span>
-	</button>
+	<fieldset>
+		<button type="button" class="decrement" aria-label="Decrement" hidden>
+			−
+		</button>
+		<input
+			id="max-5-test-input"
+			type="number"
+			class="value"
+			value="0"
+			min="0"
+			max="5"
+			aria-label="Quantity"
+			hidden
+		>
+		<button type="button" class="increment" aria-label="Increment">
+			<span class="zero">Start</span>
+			<span class="other" hidden>+</span>
+		</button>
+	</fieldset>
+	<p class="error" role="alert" aria-live="assertive"></p>
 </form-spinbutton>
 
 <hr>
 
 <!-- Test with initial value from DOM -->
 <form-spinbutton id="initial-value-test" name="number">
-	<button type="button" class="decrement" aria-label="Decrement">−</button>
-	<input
-		type="number"
-		class="value"
-		value="3"
-		min="0"
-		max="15"
-		aria-label="Quantity"
-		readonly
-		disabled
-	>
-	<button type="button" class="increment" aria-label="Increment">
-		<span class="zero" hidden>Begin</span>
-		<span class="other">+</span>
-	</button>
+	<fieldset>
+		<button type="button" class="decrement" aria-label="Decrement">−</button>
+		<input
+			id="initial-value-test-input"
+			type="number"
+			class="value"
+			value="3"
+			min="0"
+			max="15"
+			aria-label="Quantity"
+		>
+		<button type="button" class="increment" aria-label="Increment">
+			<span class="zero" hidden>Begin</span>
+			<span class="other">+</span>
+		</button>
+	</fieldset>
+	<p class="error" role="alert" aria-live="assertive"></p>
 </form-spinbutton>
 
 <hr>
 
-<!-- Test with no zero element (fallback behavior) -->
+<!-- Test with no zero element (plain generic spinbutton, no zero-state UI) -->
 <form-spinbutton id="no-zero-test" name="counter">
-	<input
-		type="number"
-		class="value"
-		value="0"
-		min="0"
-		max="8"
-		aria-label="Quantity"
-		hidden
-	>
-	<button type="button" class="decrement" aria-label="Decrement" hidden>
-		−
-	</button>
-	<button type="button" class="increment" aria-label="Increment">+</button>
+	<label for="no-zero-test-input">Quantity</label>
+	<fieldset>
+		<div class="input">
+			<input
+				id="no-zero-test-input"
+				type="number"
+				class="value"
+				value="0"
+				min="0"
+				max="999"
+			>
+		</div>
+		<div class="buttons">
+			<button type="button" class="decrement" aria-label="Decrement">
+				−
+			</button>
+			<button type="button" class="increment" aria-label="Increment">+</button>
+		</div>
+	</fieldset>
+	<p class="error" role="alert" aria-live="assertive"></p>
 </form-spinbutton>
 
 <hr>
@@ -86,21 +101,25 @@
 <!-- Test with interactive input field -->
 <form id="test-form">
 	<form-spinbutton id="interactive-input-test" name="interactive">
-		<button type="button" class="decrement" aria-label="Decrement" hidden>
-			−
-		</button>
-		<input
-			type="number"
-			class="value"
-			value="0"
-			min="0"
-			max="12"
-			aria-label="Quantity"
-			hidden
-		>
-		<button type="button" class="increment" aria-label="Increment">
-			<span class="zero">Begin</span>
-			<span class="other" hidden>+</span>
-		</button>
+		<fieldset>
+			<button type="button" class="decrement" aria-label="Decrement" hidden>
+				−
+			</button>
+			<input
+				id="interactive-input-test-input"
+				type="number"
+				class="value"
+				value="0"
+				min="0"
+				max="12"
+				aria-label="Quantity"
+				hidden
+			>
+			<button type="button" class="increment" aria-label="Increment">
+				<span class="zero">Begin</span>
+				<span class="other" hidden>+</span>
+			</button>
+		</fieldset>
+		<p class="error" role="alert" aria-live="assertive"></p>
 	</form-spinbutton>
 </form>

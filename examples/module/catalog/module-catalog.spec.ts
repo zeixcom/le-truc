@@ -255,4 +255,134 @@ test.describe('module-catalog component', () => {
 		await expect(badge).toHaveText('')
 		await expect(button).toBeDisabled()
 	})
+
+	test('composes rangeOverflow and customError on cart click (ADR 0020)', async ({
+		page,
+	}) => {
+		const catalog = page.locator('#default-test')
+		const button = catalog.locator('basic-button button')
+		const spinbuttons = catalog.locator('form-spinbutton')
+
+		// Product 1: stays fully available — no customError expected.
+		await spinbuttons.nth(0).locator('button.increment').click()
+
+		// Product 2: max 5 on load, mocked backend reduces it to 2.
+		const product2Increment = spinbuttons.nth(1).locator('button.increment')
+		await product2Increment.click()
+		await product2Increment.click()
+		await product2Increment.click() // value: 3, above the post-check max of 2
+
+		// Product 3: mocked backend reports it sold out (max: 0).
+		await spinbuttons.nth(2).locator('button.increment').click() // value: 1
+
+		await button.click()
+
+		// Wait for the mocked round trip (300ms) to resolve for all three.
+		await expect(spinbuttons.nth(2).locator('.error')).toHaveText(
+			'No longer available',
+		)
+
+		const states = await page.evaluate(() => {
+			const els = document.querySelectorAll(
+				'#default-test form-spinbutton',
+			) as NodeListOf<any>
+			return Array.from(els).map(el => ({
+				max: el.max,
+				rangeOverflow: el.validity.rangeOverflow,
+				customError: el.validity.customError,
+				message: el.validationMessage,
+			}))
+		})
+		const state1 = states[0]!
+		const state2 = states[1]!
+		const state3 = states[2]!
+
+		// Product 1: unaffected — no overflow, no custom error.
+		expect(state1).toEqual({
+			max: 10,
+			rangeOverflow: false,
+			customError: false,
+			message: '',
+		})
+
+		// Product 2: value (3) now exceeds the reduced max (2) — both the
+		// internally-derived rangeOverflow and the externally-set customError
+		// are true at once, on the same `internals`, neither clobbering the
+		// other.
+		expect(state2.max).toBe(2)
+		expect(state2.rangeOverflow).toBe(true)
+		expect(state2.customError).toBe(true)
+		expect(state2.message).toBe('Only 2 left in stock')
+
+		// Product 3: sold out — max 0, value (1) overflows, customError set.
+		expect(state3.max).toBe(0)
+		expect(state3.rangeOverflow).toBe(true)
+		expect(state3.customError).toBe(true)
+		expect(state3.message).toBe('No longer available')
+
+		await expect(spinbuttons.nth(1).locator('.error')).toHaveText(
+			'Only 2 left in stock',
+		)
+	})
+
+	test('a sold-out item (max: 0) becomes disabled — fieldset cascades to its controls', async ({
+		page,
+	}) => {
+		const catalog = page.locator('#default-test')
+		const button = catalog.locator('basic-button button')
+		const spinbuttons = catalog.locator('form-spinbutton')
+		const product3 = spinbuttons.nth(2)
+
+		await product3.locator('button.increment').click() // value: 1
+		await button.click()
+		await expect(product3.locator('.error')).toHaveText('No longer available')
+
+		// `<fieldset disabled>` itself doesn't match Playwright's toBeDisabled()
+		// (nor CSS :disabled) — only its descendants do, which is what actually
+		// matters for interactivity.
+		await expect(product3.locator('fieldset')).toHaveAttribute('disabled', '')
+		await expect(product3.locator('button.increment')).toBeDisabled()
+		await expect(product3.locator('button.decrement')).toBeDisabled()
+
+		// Native fieldset-disabled cascade blocks the click from having any
+		// effect — the button never even dispatches a click event.
+		await product3.locator('button.increment').click({ force: true })
+		const value = await product3.evaluate((el: any) => el.value)
+		expect(value).toBe(1)
+	})
+
+	test('a later value change wipes the previously server-set customError', async ({
+		page,
+	}) => {
+		const catalog = page.locator('#default-test')
+		const button = catalog.locator('basic-button button')
+		const spinbuttons = catalog.locator('form-spinbutton')
+		// Product 2 (reduced to max: 2, not sold out) stays interactive after
+		// the check — unlike Product 3 (max: 0), whose fieldset is now
+		// genuinely disabled and can't be interacted with at all.
+		const product2 = spinbuttons.nth(1)
+		const product2Increment = product2.locator('button.increment')
+
+		await product2Increment.click()
+		await product2Increment.click()
+		await product2Increment.click() // value: 3
+		await button.click()
+		await expect(product2.locator('.error')).toHaveText('Only 2 left in stock')
+
+		// User interacts with the control again — the spinbutton's own
+		// rangeOverflow/rangeUnderflow watch reruns and, by design, replaces
+		// (does not merge with) the stale server-reported customError.
+		await product2.locator('button.decrement').click() // value: 2
+
+		const state = await product2.evaluate((el: any) => ({
+			rangeOverflow: el.validity.rangeOverflow,
+			customError: el.validity.customError,
+			message: el.validationMessage,
+		}))
+		expect(state).toEqual({
+			rangeOverflow: false,
+			customError: false,
+			message: '',
+		})
+	})
 })

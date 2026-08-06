@@ -1,80 +1,87 @@
 <form>
-<form-colorgraph name="color" value="oklch(.48 .23 263)">
-	<div class="graph">
-		<canvas width="400" height="400"></canvas>
-		<button type="button" class="knob">
-			<span class="visually-hidden">Drag</span>
-		</button>
-		<ol role="presentation">
-			<li class="lighten80"></li>
-			<li class="lighten60"></li>
-			<li class="lighten40"></li>
-			<li class="lighten20"></li>
-			<li class="darken20"></li>
-			<li class="darken40"></li>
-			<li class="darken60"></li>
-			<li class="darken80"></li>
-		</ol>
-	</div>
-	<div
-		class="slider"
-		role="slider"
-		tabindex="0"
-		aria-valuenow="0"
-		aria-valuemin="0"
-		aria-valuemax="360"
-		aria-controls="hue"
-		aria-labelledby="hue-label"
-	>
-		<canvas width="360" height="1"></canvas>
-		<span class="thumb"></span>
-	</div>
-	<div class="lightness">
-		<label for="lightness">Lightness</label>
-		<div class="input">
-			<input id="lightness" type="number">
-			<span class="unit">%</span>
-		</div>
-		<div class="buttons">
-			<button type="button" class="decrement" aria-label="Decrement lightness">
-				−
+	<form-colorgraph name="color" value="oklch(.48 .23 263)">
+		<div class="graph">
+			<canvas width="400" height="400"></canvas>
+			<button type="button" class="knob">
+				<span class="visually-hidden">Drag</span>
 			</button>
-			<button type="button" class="increment" aria-label="Increment lightness">
-				+
-			</button>
+			<ol role="presentation">
+				<li class="lighten80"></li>
+				<li class="lighten60"></li>
+				<li class="lighten40"></li>
+				<li class="lighten20"></li>
+				<li class="darken20"></li>
+				<li class="darken40"></li>
+				<li class="darken60"></li>
+				<li class="darken80"></li>
+			</ol>
 		</div>
-		<p class="error" aria-live="assertive" id="lightness-error"></p>
-	</div>
-	<div class="chroma">
-		<label for="chroma">Chroma</label>
-		<div class="input">
-			<input id="chroma" type="number">
+		<div
+			class="slider"
+			role="slider"
+			tabindex="0"
+			aria-valuenow="0"
+			aria-valuemin="0"
+			aria-valuemax="360"
+			aria-controls="hue"
+			aria-labelledby="hue-label"
+		>
+			<canvas width="360" height="1"></canvas>
+			<span class="thumb"></span>
 		</div>
-		<div class="buttons">
-			<button type="button" class="decrement" aria-label="Decrement chroma">
-				−
-			</button>
-			<button type="button" class="increment" aria-label="Increment chroma">
-				+
-			</button>
-		</div>
-		<p class="error" aria-live="assertive" id="chroma-error"></p>
-	</div>
-	<div class="hue">
-		<label id="hue-label" for="hue">Hue</label>
-		<div class="input">
-			<input id="hue" type="number">
-			<span class="unit">°</span>
-		</div>
-		<div class="buttons">
-			<button type="button" class="decrement" aria-label="Decrement hue">
-				−
-			</button>
-			<button type="button" class="increment" aria-label="Increment hue">
-				+
-			</button>
-		</div>
-		<p class="error" aria-live="assertive" id="hue-error"></p>
-	</div>
+		<p class="error" aria-live="assertive" id="color-error"></p>
+		<form-spinbutton class="lightness" min="0" max="100" step="0.25" big-step="5">
+			<label for="lightness">Lightness</label>
+			<fieldset>
+				<div class="input">
+					<input id="lightness" type="number" step="any">
+					<span class="unit">%</span>
+				</div>
+				<div class="buttons">
+					<button type="button" class="decrement" aria-label="Decrement lightness">
+						−
+					</button>
+					<button type="button" class="increment" aria-label="Increment lightness">
+						+
+					</button>
+				</div>
+			</fieldset>
+			<p class="error" aria-live="assertive" id="lightness-error"></p>
+		</form-spinbutton>
+		<form-spinbutton class="chroma" min="0" max="0.4" step="0.001" big-step="0.02">
+			<label for="chroma">Chroma</label>
+			<fieldset>
+				<div class="input">
+					<input id="chroma" type="number" step="any">
+				</div>
+				<div class="buttons">
+					<button type="button" class="decrement" aria-label="Decrement chroma">
+						−
+					</button>
+					<button type="button" class="increment" aria-label="Increment chroma">
+						+
+					</button>
+				</div>
+			</fieldset>
+			<p class="error" aria-live="assertive" id="chroma-error"></p>
+		</form-spinbutton>
+		<form-spinbutton class="hue" min="0" max="360" step="0.01" big-step="15">
+			<label id="hue-label" for="hue">Hue</label>
+			<fieldset>
+				<div class="input">
+					<input id="hue" type="number" step="any">
+					<span class="unit">°</span>
+				</div>
+				<div class="buttons">
+					<button type="button" class="decrement" aria-label="Decrement hue">
+						−
+					</button>
+					<button type="button" class="increment" aria-label="Increment hue">
+						+
+					</button>
+				</div>
+			</fieldset>
+			<p class="error" aria-live="assertive" id="hue-error"></p>
+		</form-spinbutton>
 	</form-colorgraph>
 </form>
