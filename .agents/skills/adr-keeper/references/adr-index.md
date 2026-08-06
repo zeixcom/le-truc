@@ -24,7 +24,7 @@ This file is auto-generated. Do not edit manually.
 | [0017](0017-keyed-template-clone-reconciliation-for-lists.md) | Keyed Template-Clone Reconciliation for Lists | ✅ Accepted | M5, M6, §1, §4, §6 |
 | [0018](0018-implicit-effect-collection-via-ambient-context.md) | Implicit Effect Collection via Ambient Context | ✅ Accepted | M8, M5, M6 |
 | [0019](0019-extension-based-dependency-injection-for-definecomponent.md) | Extension-Based Dependency Injection for `defineComponent()` | ✅ Accepted | M1, X1, N1, §4 |
-| [0020](0020-merge-based-validity-composition-and-delegatevalidity.md) | Merge-Based Validity Composition and `delegateValidity()` | ✅ Accepted | M1, §4 |
+| [0020](0020-merge-based-validity-composition-and-relayvalidity.md) | Merge-Based Validity Composition and `relayValidity()` | ✅ Accepted | M1, §4 |
 
 ---
 

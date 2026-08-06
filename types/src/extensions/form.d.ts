@@ -84,7 +84,7 @@ declare const MANAGED_FORM_MEMBERS: ReadonlySet<string>;
 /** Selector for the managed validation-anchor heuristic. */
 declare const FOCUSABLE_FORM_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
 /**
- * Structural shape required by {@link delegateValidity}: any element exposing
+ * Structural shape required by {@link relayValidity}: any element exposing
  * the native Constraint Validation trio. `HTMLInputElement`,
  * `HTMLSelectElement`, `HTMLTextAreaElement`, `HTMLButtonElement`, and others
  * all satisfy this without a cast.
@@ -112,7 +112,7 @@ declare const resolveAnchor: (host: HTMLElement) => HTMLElement;
  * {@link mergeValidity}'s third fallback tier). Native controls barred from
  * constraint validation (`disabled`, or `readonly` on `type="number"`/`text`/
  * etc.) always report an empty `validationMessage` even though their
- * `.validity` flags stay live — {@link delegateValidity} relaying such a
+ * `.validity` flags stay live — {@link relayValidity} relaying such a
  * control hits this on the *first* flag transition, before any prior
  * message exists to fall back to.
  */
@@ -177,7 +177,7 @@ declare const managedSetCustomValidity: (internals: ElementInternals, host: HTML
  * @param control - The native control whose `ValidityState` to relay
  * @param anchor - Focus target on blocked submission or `reportValidity()`; defaults to `control`
  */
-declare const delegateValidity: (internals: ElementInternals, control: ValidatableControl, anchor?: HTMLElement) => void;
+declare const relayValidity: (internals: ElementInternals, control: ValidatableControl, anchor?: HTMLElement) => void;
 /**
  * Install the native-parity host contract and managed form lifecycle callbacks
  * on a prototype. Called only for form-associated components.
@@ -260,4 +260,4 @@ type FormAssociatedCheckboxExtension = ComponentExtension & FormAssociatedCheckb
  * @since 2.3
  */
 declare const formAssociatedCheckbox: () => FormAssociatedCheckboxExtension;
-export { delegateValidity, EMPTY_NODELIST, EMPTY_VALIDITY_STATE, FALLBACK_VALIDITY_MESSAGE, FOCUSABLE_FORM_CONTROL_SELECTOR, type FormAssociatedCheckboxExtension, type FormAssociatedCheckboxTag, type FormAssociatedExtension, type FormAssociatedTag, formAssociated, formAssociatedCheckbox, HOST_CONTRACT_DESCRIPTORS, installFormAssociatedCheckboxMembers, installFormAssociatedMembers, MANAGED_FORM_MEMBERS, managedSetCustomValidity, resolveAnchor, type ValidatableControl, };
+export { EMPTY_NODELIST, EMPTY_VALIDITY_STATE, FALLBACK_VALIDITY_MESSAGE, FOCUSABLE_FORM_CONTROL_SELECTOR, type FormAssociatedCheckboxExtension, type FormAssociatedCheckboxTag, type FormAssociatedExtension, type FormAssociatedTag, formAssociated, formAssociatedCheckbox, HOST_CONTRACT_DESCRIPTORS, installFormAssociatedCheckboxMembers, installFormAssociatedMembers, MANAGED_FORM_MEMBERS, managedSetCustomValidity, relayValidity, resolveAnchor, type ValidatableControl, };

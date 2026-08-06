@@ -6,9 +6,9 @@ import {
 	createMemo,
 	defineComponent,
 	defineMethod,
-	delegateValidity,
 	type FormAssociatedElement,
 	formAssociated,
+	relayValidity,
 } from '../../..'
 
 export type FormSpinbuttonProps = {
@@ -44,7 +44,7 @@ declare global {
  * into a focused input is left to the browser rather than intercepted as a
  * step shortcut (only Arrow keys and clicks on the buttons step by `±1`
  * character). Form participation and range validation are via ElementInternals
- * (`formAssociated()`, `setFormValue`, `delegateValidity`). Exposes
+ * (`formAssociated()`, `setFormValue`, `relayValidity`). Exposes
  * `stepDown`/`stepUp` methods (clamped to `min`/`max`) so other components can
  * drive the value without duplicating the clamp logic. An optional `.error`
  * descendant, if present, shows `host.validationMessage` — whichever of the
@@ -105,10 +105,12 @@ export default defineComponent<FormSpinbuttonProps>(
 			stepUp: defineMethod((big = false) => stepBy(1, big)),
 		})
 
+		// host.value's watch (below) already relays validity synchronously as
+		// part of this assignment — effects run synchronously on write in this
+		// library, so checkValidity() here already sees the up-to-date state.
 		const commit = (value: number) => {
 			const prev = host.value
 			host.value = value
-			if (internals) delegateValidity(internals, input)
 			if (host.checkValidity())
 				host.dispatchEvent(new Event('change', { bubbles: true }))
 			else host.value = prev
@@ -151,7 +153,7 @@ export default defineComponent<FormSpinbuttonProps>(
 				input.min = String(min)
 				input.max = String(max)
 				if (internals) {
-					delegateValidity(internals, input)
+					relayValidity(internals, input)
 					host.setCustomValidity('')
 				}
 			},

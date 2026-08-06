@@ -72,7 +72,7 @@ const VALIDITY_FLAG_KEYS = (
 /**
  * The UA-computed subset of {@link VALIDITY_FLAG_KEYS}, excluding
  * `customError` — the one flag that is exogenous rather than derived from a
- * control's own constraint checking (see {@link delegateValidity}).
+ * control's own constraint checking (see {@link relayValidity}).
  */
 const NATIVE_VALIDITY_FLAG_KEYS = VALIDITY_FLAG_KEYS.filter(
 	key => key !== 'customError',
@@ -190,7 +190,7 @@ const FOCUSABLE_FORM_CONTROL_SELECTOR =
 	'input, select, textarea, button, [tabindex]'
 
 /**
- * Structural shape required by {@link delegateValidity}: any element exposing
+ * Structural shape required by {@link relayValidity}: any element exposing
  * the native Constraint Validation trio. `HTMLInputElement`,
  * `HTMLSelectElement`, `HTMLTextAreaElement`, `HTMLButtonElement`, and others
  * all satisfy this without a cast.
@@ -223,7 +223,7 @@ const resolveAnchor = (host: HTMLElement): HTMLElement =>
  * {@link mergeValidity}'s third fallback tier). Native controls barred from
  * constraint validation (`disabled`, or `readonly` on `type="number"`/`text`/
  * etc.) always report an empty `validationMessage` even though their
- * `.validity` flags stay live — {@link delegateValidity} relaying such a
+ * `.validity` flags stay live — {@link relayValidity} relaying such a
  * control hits this on the *first* flag transition, before any prior
  * message exists to fall back to.
  */
@@ -252,7 +252,7 @@ const FALLBACK_VALIDITY_MESSAGE = 'Invalid value'
  * message already current, e.g. from a previous flag this call didn't touch)
  * → {@link FALLBACK_VALIDITY_MESSAGE} (neither of the above was available —
  * notably, a `disabled`/`readonly` control relayed via
- * {@link delegateValidity} always reports `''` for its own
+ * {@link relayValidity} always reports `''` for its own
  * `validationMessage`, even while its `.validity` flags are genuinely `true`).
  *
  * @since 2.3.4
@@ -348,7 +348,7 @@ const managedSetCustomValidity = (
  * @param control - The native control whose `ValidityState` to relay
  * @param anchor - Focus target on blocked submission or `reportValidity()`; defaults to `control`
  */
-const delegateValidity = (
+const relayValidity = (
 	internals: ElementInternals,
 	control: ValidatableControl,
 	anchor: HTMLElement = control,
@@ -741,7 +741,6 @@ const formAssociatedCheckbox = (): FormAssociatedCheckboxExtension => ({
 })
 
 export {
-	delegateValidity,
 	EMPTY_NODELIST,
 	EMPTY_VALIDITY_STATE,
 	FALLBACK_VALIDITY_MESSAGE,
@@ -757,6 +756,7 @@ export {
 	installFormAssociatedMembers,
 	MANAGED_FORM_MEMBERS,
 	managedSetCustomValidity,
+	relayValidity,
 	resolveAnchor,
 	type ValidatableControl,
 }

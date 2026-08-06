@@ -3006,7 +3006,7 @@ var mergeValidity = (internals, flags, ownMessage, anchor) => {
 var managedSetCustomValidity = (internals, host, message) => {
   mergeValidity(internals, { customError: !!message }, message, resolveAnchor(host));
 };
-var delegateValidity = (internals, control, anchor = control) => {
+var relayValidity = (internals, control, anchor = control) => {
   control.checkValidity();
   const flags = {};
   for (const key of NATIVE_VALIDITY_FLAG_KEYS)
@@ -3234,6 +3234,7 @@ export {
   setTextPreservingComments,
   schedule,
   safeSetAttribute,
+  relayValidity,
   reconcile,
   observedAttributes,
   match,
@@ -3258,7 +3259,6 @@ export {
   formAssociated,
   escapeHTML,
   each,
-  delegateValidity,
   defineMethod,
   defineComponent,
   dangerouslyBindInnerHTML,

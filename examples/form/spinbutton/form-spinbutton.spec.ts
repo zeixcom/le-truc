@@ -589,7 +589,7 @@ test.describe('form-spinbutton component', () => {
 		await expect(input).toHaveValue('2.5')
 
 		// A value off the step grid trips the native input's own
-		// stepMismatch constraint — delegateValidity picks that up, so it's
+		// stepMismatch constraint — relayValidity picks that up, so it's
 		// rejected and reverts rather than committing unaligned
 		await input.fill('2.3')
 		await input.blur()

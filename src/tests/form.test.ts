@@ -15,10 +15,10 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { defineComponent } from '../component'
 import { InvalidPropertyNameError } from '../errors'
 import {
-	delegateValidity,
 	FALLBACK_VALIDITY_MESSAGE,
 	formAssociated,
 	formAssociatedCheckbox,
+	relayValidity,
 } from '../extensions/form'
 import { asParser } from '../types'
 
@@ -174,7 +174,7 @@ class FakeElementInternals {
 			!next.customError
 		// Mirrors the real platform throw: a flag can't be left true with no
 		// message to describe it. This is what would have caught the LT-001
-		// follow-up bug (delegateValidity() on a barred-from-validation
+		// follow-up bug (relayValidity() on a barred-from-validation
 		// control) — this fake didn't enforce the constraint the real browser
 		// does, so no test noticed.
 		if (!next.valid && !message)
@@ -950,9 +950,9 @@ describe('internals on FactoryContext', () => {
 	})
 })
 
-/* === delegateValidity() === */
+/* === relayValidity() === */
 
-describe('delegateValidity()', () => {
+describe('relayValidity()', () => {
 	/** Minimal native-control double satisfying `ValidatableControl`. */
 	class FakeControl {
 		#flags: MutableValidityState
@@ -1003,7 +1003,7 @@ describe('delegateValidity()', () => {
 			'Too high',
 		) as unknown as HTMLInputElement
 
-		delegateValidity(internals as unknown as ElementInternals, control)
+		relayValidity(internals as unknown as ElementInternals, control)
 
 		expect(internals.validity.rangeOverflow).toBe(true)
 		expect(internals.validationMessage).toBe('Too high')
@@ -1013,7 +1013,7 @@ describe('delegateValidity()', () => {
 	test('does not throw when the control is barred from constraint validation (disabled/readonly): falls back to a placeholder message', () => {
 		// A real disabled or readonly `<input>` reports an empty
 		// `validationMessage` even while its `.validity` flags stay live and
-		// true — this is exactly the shape that made delegateValidity() throw
+		// true — this is exactly the shape that made relayValidity() throw
 		// in a real browser (the LT-001 follow-up bug): the *first* time a
 		// flag transitions true on a fresh `internals`, there's no ownMessage
 		// and no prior `internals.validationMessage` to fall back to either.
@@ -1033,7 +1033,7 @@ describe('delegateValidity()', () => {
 		) as unknown as HTMLInputElement
 
 		expect(() =>
-			delegateValidity(internals as unknown as ElementInternals, barredControl),
+			relayValidity(internals as unknown as ElementInternals, barredControl),
 		).not.toThrow()
 
 		expect(internals.validity.rangeOverflow).toBe(true)
@@ -1055,7 +1055,7 @@ describe('delegateValidity()', () => {
 		instance.setCustomValidity('Cross-field error')
 		const control = new FakeControl({}, '') as unknown as HTMLInputElement // control itself is fully valid
 
-		delegateValidity(internals as unknown as ElementInternals, control)
+		relayValidity(internals as unknown as ElementInternals, control)
 
 		expect(internals.validity.customError).toBe(true)
 		expect(internals.validationMessage).toBe('Cross-field error')
@@ -1076,11 +1076,11 @@ describe('delegateValidity()', () => {
 			{ rangeOverflow: true, valid: false },
 			'Too high',
 		) as unknown as HTMLInputElement
-		delegateValidity(internals as unknown as ElementInternals, invalidControl)
+		relayValidity(internals as unknown as ElementInternals, invalidControl)
 		expect(internals.validity.rangeOverflow).toBe(true)
 
 		const validControl = new FakeControl({}, '') as unknown as HTMLInputElement
-		delegateValidity(internals as unknown as ElementInternals, validControl)
+		relayValidity(internals as unknown as ElementInternals, validControl)
 
 		expect(internals.validity.rangeOverflow).toBe(false)
 	})
@@ -1105,7 +1105,7 @@ describe('delegateValidity()', () => {
 			return originalSetValidity(flags, message, a)
 		}
 
-		delegateValidity(internals as unknown as ElementInternals, control, anchor)
+		relayValidity(internals as unknown as ElementInternals, control, anchor)
 
 		expect(receivedAnchor).toBe(anchor)
 	})

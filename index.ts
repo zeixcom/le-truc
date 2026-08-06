@@ -114,12 +114,12 @@ export {
 export { type ComponentExtension } from './src/extension'
 export { observedAttributes } from './src/extensions/attributes'
 export {
-	delegateValidity,
 	FOCUSABLE_FORM_CONTROL_SELECTOR,
 	type FormAssociatedCheckboxExtension,
 	type FormAssociatedExtension,
 	formAssociated,
 	formAssociatedCheckbox,
+	relayValidity,
 	type ValidatableControl,
 } from './src/extensions/form'
 export {

@@ -1,4 +1,4 @@
-# ADR 0020: Merge-Based Validity Composition and `delegateValidity()`
+# ADR 0020: Merge-Based Validity Composition and `relayValidity()`
 
 ## Status
 
@@ -36,7 +36,7 @@ const mergeValidity = (
   // this call's own message → whatever message is already current (a
   // previous flag this call didn't touch) → a generic placeholder, for the
   // case neither exists — notably a disabled/readonly control relayed via
-  // delegateValidity() on the *first* flag transition on a fresh internals,
+  // relayValidity() on the *first* flag transition on a fresh internals,
   // where a native control's validationMessage is always '' regardless of
   // its live .validity flags (found during implementation — see Disclosed
   // limitation below).
@@ -49,39 +49,39 @@ const mergeValidity = (
 
 `managedSetCustomValidity` (ADR 0016 §5) is rewritten to call `mergeValidity(internals, { customError: !!message }, message, resolveAnchor(host))` instead of a raw, replacing `internals.setValidity(...)` call. `host.setCustomValidity()` now preserves any native/typed flags already set elsewhere on the same `internals` — matching native `<input>.setCustomValidity()` semantics instead of silently clearing unrelated constraint state.
 
-### 2. `delegateValidity()` — new exported helper
+### 2. `relayValidity()` — new exported helper
 
 ```ts
-delegateValidity(internals: ElementInternals, control: ValidatableControl, anchor: HTMLElement = control): void
+relayValidity(internals: ElementInternals, control: ValidatableControl, anchor: HTMLElement = control): void
 ```
 
 Relays a wrapped native control's `ValidityState` — the nine UA-computed `ValidityStateFlags` keys (`valueMissing`, `typeMismatch`, `patternMismatch`, `tooLong`, `tooShort`, `rangeUnderflow`, `rangeOverflow`, `stepMismatch`, `badInput`) — plus its `validationMessage`, through `mergeValidity()`. Anchored to `control` itself by default (overridable), unlike `resolveAnchor()`'s descendant-search heuristic — the caller already holds the exact control.
 
-**Deliberately excludes `control`'s own `customError` flag from the copied set** — a correction made during implementation to an earlier draft of this decision, which specified copying "every `ValidityStateFlags` key, including `customError`." That version does not compose: a wrapped native control's own `customError` is almost always `false`, and `mergeValidity()` only *preserves* a flag already set on `internals` when the incoming call omits the key entirely — an explicit `false` is a real override, not a gap to fall through. Copying `customError` verbatim would therefore silently clear any `customError` set on the same `internals` through `host.setCustomValidity()` (e.g. a parent layering its own cross-field constraint, or server-validation code reacting to `host.setCustomValidity()` from outside the component) on the very next `delegateValidity()` call — precisely the composition this ADR exists to fix, and precisely issue #98's own axis-spinbutton/gamut-picker scenario, where the wrapping component's own constraint state and a parent's separate `customError` must coexist. `customError` remains exclusively owned by the `setCustomValidity()` → `mergeValidity()` path; `delegateValidity()` only ever relays flags the control itself computes.
+**Deliberately excludes `control`'s own `customError` flag from the copied set** — a correction made during implementation to an earlier draft of this decision, which specified copying "every `ValidityStateFlags` key, including `customError`." That version does not compose: a wrapped native control's own `customError` is almost always `false`, and `mergeValidity()` only *preserves* a flag already set on `internals` when the incoming call omits the key entirely — an explicit `false` is a real override, not a gap to fall through. Copying `customError` verbatim would therefore silently clear any `customError` set on the same `internals` through `host.setCustomValidity()` (e.g. a parent layering its own cross-field constraint, or server-validation code reacting to `host.setCustomValidity()` from outside the component) on the very next `relayValidity()` call — precisely the composition this ADR exists to fix, and precisely issue #98's own axis-spinbutton/gamut-picker scenario, where the wrapping component's own constraint state and a parent's separate `customError` must coexist. `customError` remains exclusively owned by the `setCustomValidity()` → `mergeValidity()` path; `relayValidity()` only ever relays flags the control itself computes.
 
 - A plain function taking `internals` directly, mirroring `managedSetCustomValidity`'s shape: not gated behind `formAssociated()`, usable by any component with `internals` from `FactoryContext`. Tree-shakes away for consumers who don't import it.
-- Not reactive. Callers re-invoke it from `on(control, 'input'/'change', …)`, the same way `form-spinbutton` re-runs its own typed-flags `watch(...)`. This is consistent with ADR 0016's "no reactive abstraction layer" stance — `delegateValidity()` is a helper for the escape hatch, not a new lifecycle mechanism.
+- Not reactive. Callers re-invoke it from `on(control, 'input'/'change', …)`, the same way `form-spinbutton` re-runs its own typed-flags `watch(...)`. This is consistent with ADR 0016's "no reactive abstraction layer" stance — `relayValidity()` is a helper for the escape hatch, not a new lifecycle mechanism.
 
 ### Disclosed limitation: one message, not per-flag
 
 `ElementInternals` stores exactly one `validationMessage` per component per `setValidity()` call — unlike a native control, where the browser recomputes `validationMessage` from a fixed priority order across all currently-true flags on every read. When flags from different sources are simultaneously true on the same `internals` (e.g. a delegated native flag and a separately-set `customError`), the displayed message is whichever call supplied a non-empty one most recently — not always the "highest priority" one by native semantics. A per-flag message registry that would reproduce exact native prioritization was considered and rejected as materially larger than what issue #98 asked for; `mergeValidity`'s fallback (reuse the current message when the incoming call doesn't supply one) avoids losing the message entirely, which is the failure mode that actually surfaced, without solving message prioritization in general.
 
-**Found during implementation:** the two-tier fallback above (`ownMessage` → current `internals.validationMessage`) is not sufficient on its own. A native control barred from constraint validation — `disabled`, or `readonly` on `type="number"`/`text`/etc. — always reports `''` for its own `validationMessage`, even though its `.validity` flags are still computed live and can genuinely be `true`. `delegateValidity()` relaying such a control hits this on the *first* flag transition on a fresh `internals`: `ownMessage` is `''` (the control's own message) and `internals.validationMessage` is also `''` (nothing set yet), so the two-tier fallback resolved to `undefined` — tripping the exact throw this function exists to avoid. This is a real, not hypothetical, shape: "display value, buttons drive it" input components (`form-spinbutton` itself, before its own fix) commonly keep the wrapped native input `disabled`/`readonly`. `mergeValidity` now has a third tier, {@link FALLBACK_VALIDITY_MESSAGE} (`'Invalid value'`), for exactly this case — a generic, hardcoded string, deliberately not per-flag (that would be the same per-flag message registry rejected two paragraphs up, applied to a narrower trigger).
+**Found during implementation:** the two-tier fallback above (`ownMessage` → current `internals.validationMessage`) is not sufficient on its own. A native control barred from constraint validation — `disabled`, or `readonly` on `type="number"`/`text`/etc. — always reports `''` for its own `validationMessage`, even though its `.validity` flags are still computed live and can genuinely be `true`. `relayValidity()` relaying such a control hits this on the *first* flag transition on a fresh `internals`: `ownMessage` is `''` (the control's own message) and `internals.validationMessage` is also `''` (nothing set yet), so the two-tier fallback resolved to `undefined` — tripping the exact throw this function exists to avoid. This is a real, not hypothetical, shape: "display value, buttons drive it" input components (`form-spinbutton` itself, before its own fix) commonly keep the wrapped native input `disabled`/`readonly`. `mergeValidity` now has a third tier, {@link FALLBACK_VALIDITY_MESSAGE} (`'Invalid value'`), for exactly this case — a generic, hardcoded string, deliberately not per-flag (that would be the same per-flag message registry rejected two paragraphs up, applied to a narrower trigger).
 
 ## Alternatives Considered
 
-- **Leave `managedSetCustomValidity` replacing, document the gap as a known limitation.** Rejected. The interaction is exactly the shape `delegateValidity()` invites (relay native flags on one call path, set `customError` from another) — shipping the new helper without fixing the composition bug it immediately runs into would hand every adopter a foot-gun.
+- **Leave `managedSetCustomValidity` replacing, document the gap as a known limitation.** Rejected. The interaction is exactly the shape `relayValidity()` invites (relay native flags on one call path, set `customError` from another) — shipping the new helper without fixing the composition bug it immediately runs into would hand every adopter a foot-gun.
 - **Per-flag message registry (store a message per `ValidityStateFlags` key, recompute `validationMessage` by native priority order on every `setValidity` call).** Rejected as out of scope. It would fully solve the message-prioritization gap but requires tracking state ADR 0016 never introduced, adds real complexity to a helper meant to remove boilerplate, and no concrete use case in the current examples or issue #98 needs it — the single-message fallback avoids the actual reported failure (a message silently dropping to empty).
-- **Gate `delegateValidity()` behind `formAssociated()`/`formAssociatedCheckbox()` (e.g. as an extension method or a `FactoryContext` helper).** Rejected for the same reason ADR 0016 rejected `bindFormValue`/`bindValidity`-style wrappers (§ Alternatives Considered there): it would rename a low-level pattern instead of just removing its boilerplate, and would force every `formAssociated()` consumer to bundle it whether or not their component wraps a native control. A plain function taking `internals` directly keeps it tree-shakeable and usable outside the managed convention.
+- **Gate `relayValidity()` behind `formAssociated()`/`formAssociatedCheckbox()` (e.g. as an extension method or a `FactoryContext` helper).** Rejected for the same reason ADR 0016 rejected `bindFormValue`/`bindValidity`-style wrappers (§ Alternatives Considered there): it would rename a low-level pattern instead of just removing its boilerplate, and would force every `formAssociated()` consumer to bundle it whether or not their component wraps a native control. A plain function taking `internals` directly keeps it tree-shakeable and usable outside the managed convention.
 
 ## Consequences
 
 **Good:**
 
 - Fixes a real, previously-undiscovered bug: `host.setCustomValidity()` no longer clobbers typed native flags set elsewhere on the same `internals` (or vice versa).
-- `delegateValidity()` removes the repeated `VALIDITY_KEYS` copy-loop every "enhanced native input" component would otherwise hand-roll (per issue #98's own example).
-- `delegateValidity()`'s `customError` exclusion means it composes cleanly with `setCustomValidity()` on the same `internals` — relaying a wrapped control's native flags never clobbers a `customError` set by other means, and vice versa.
-- No change to the public host contract, the `formAssociated()`/`formAssociatedCheckbox()` extension surface, or bundle cost for consumers who don't import `delegateValidity`.
+- `relayValidity()` removes the repeated `VALIDITY_KEYS` copy-loop every "enhanced native input" component would otherwise hand-roll (per issue #98's own example).
+- `relayValidity()`'s `customError` exclusion means it composes cleanly with `setCustomValidity()` on the same `internals` — relaying a wrapped control's native flags never clobbers a `customError` set by other means, and vice versa.
+- No change to the public host contract, the `formAssociated()`/`formAssociatedCheckbox()` extension surface, or bundle cost for consumers who don't import `relayValidity`.
 
 **Bad / trade-offs:**
 
@@ -91,11 +91,11 @@ Relays a wrapped native control's `ValidityState` — the nine UA-computed `Vali
 
 **Compatibility:**
 
-- Non-breaking. `managedSetCustomValidity`'s merge fix changes only previously-undefined/broken composition behavior — no test or documented contract relied on the replacing behavior. `delegateValidity()` is a new, optional export. Targets the next minor release.
+- Non-breaking. `managedSetCustomValidity`'s merge fix changes only previously-undefined/broken composition behavior — no test or documented contract relied on the replacing behavior. `relayValidity()` is a new, optional export. Targets the next minor release.
 
 ## Related
 
 - Requirements: [M1](../REQUIREMENTS.md#m1-component-definition-via-a-single-function), §4 (Accessibility)
 - Amends: [ADR 0016](0016-element-internals-for-form-association-and-states.md) §5 (`setCustomValidity` implementation) and §7 (escape hatch); §1–4, §6, §8 unchanged
-- Related: [ADR-0019](0019-extension-based-dependency-injection-for-definecomponent.md) — `formAssociated()`/`formAssociatedCheckbox()` extension mechanism `delegateValidity()` deliberately sits outside of
+- Related: [ADR-0019](0019-extension-based-dependency-injection-for-definecomponent.md) — `formAssociated()`/`formAssociatedCheckbox()` extension mechanism `relayValidity()` deliberately sits outside of
 - Supersedes: None
