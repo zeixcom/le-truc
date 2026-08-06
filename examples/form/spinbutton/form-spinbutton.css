@@ -139,7 +139,7 @@ form-spinbutton {
 		& input {
 			border-block-end-width: 1px;
 			text-align: end;
-			margin-inline-end: 0;
+			margin-inline-end: var(--space-xxs);
 			font-size: var(--font-size-m);
 			line-height: var(--line-height-s);
 		}

@@ -59,8 +59,13 @@ export default defineComponent('module-catalog', ({ all, first, on, pass }) => {
 		'form-spinbutton',
 		'Add spinbutton components to calculate sum from.',
 	)
+	// Disabled spinbuttons (e.g. sold out after the availability check below)
+	// don't submit a value in a native form, so they shouldn't count here either.
 	const total = createMemo(() =>
-		spinbuttons.get().reduce((sum, item) => sum + item.value, 0),
+		spinbuttons
+			.get()
+			.filter(item => !item.disabled)
+			.reduce((sum, item) => sum + item.value, 0),
 	)
 
 	const button = first(

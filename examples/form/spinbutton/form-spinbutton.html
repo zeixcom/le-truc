@@ -98,6 +98,90 @@
 
 <hr>
 
+<!-- Test with fractional step (float mode): step="0.5" on the host switches
+     value/min/max parsing from integer to decimal -->
+<form-spinbutton id="decimal-test" step="0.5" name="weight">
+	<label for="decimal-test-input">Weight</label>
+	<fieldset>
+		<div class="input">
+			<input
+				id="decimal-test-input"
+				type="number"
+				class="value"
+				value="0"
+				min="0"
+				max="5"
+				step="0.5"
+			>
+			kg
+		</div>
+		<div class="buttons">
+			<button type="button" class="decrement" aria-label="Decrement">
+				−
+			</button>
+			<button type="button" class="increment" aria-label="Increment">+</button>
+		</div>
+	</fieldset>
+	<p class="error" role="alert" aria-live="assertive"></p>
+</form-spinbutton>
+
+<hr>
+
+<!-- Test with custom big-step: shift+Arrow or stepUp(true)/stepDown(true)
+     moves by 5 instead of the default step*10 (10) -->
+<form-spinbutton id="big-step-test" big-step="5" name="points">
+	<label for="big-step-test-input">Points</label>
+	<fieldset>
+		<div class="input">
+			<input
+				id="big-step-test-input"
+				type="number"
+				class="value"
+				value="0"
+				min="0"
+				max="100"
+			>
+		</div>
+		<div class="buttons">
+			<button type="button" class="decrement" aria-label="Decrement">
+				−
+			</button>
+			<button type="button" class="increment" aria-label="Increment">+</button>
+		</div>
+	</fieldset>
+	<p class="error" role="alert" aria-live="assertive"></p>
+</form-spinbutton>
+
+<hr>
+
+<!-- Test with negative min: value can go below 0, and typing "-" directly
+     into the focused input must not be intercepted as a decrement shortcut -->
+<form-spinbutton id="negative-min-test" name="temperature">
+	<label for="negative-min-test-input">Temperature</label>
+	<fieldset>
+		<div class="input">
+			<input
+				id="negative-min-test-input"
+				type="number"
+				class="value"
+				value="0"
+				min="-10"
+				max="10"
+			>
+			°C
+		</div>
+		<div class="buttons">
+			<button type="button" class="decrement" aria-label="Decrement">
+				−
+			</button>
+			<button type="button" class="increment" aria-label="Increment">+</button>
+		</div>
+	</fieldset>
+	<p class="error" role="alert" aria-live="assertive"></p>
+</form-spinbutton>
+
+<hr>
+
 <!-- Test with interactive input field -->
 <form id="test-form">
 	<form-spinbutton id="interactive-input-test" name="interactive">

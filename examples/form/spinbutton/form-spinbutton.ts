@@ -1,6 +1,4 @@
 import {
-	asClampedInteger,
-	asInteger,
 	asNumber,
 	bindProperty,
 	bindText,
@@ -16,14 +14,14 @@ import {
 export type FormSpinbuttonProps = {
 	/** Current numeric value. Clamped to [min, max]. */
 	value: number
-	/** Lower bound for the value. */
+	/** Lower bound for the value. Read from `input.min`, may be negative. */
 	min: number
-	/** Upper bound for the value. */
+	/** Upper bound for the value. Read from `input.max`. */
 	max: number
-	/** Decrements value by `step` (default 1), clamped to `min`. */
-	stepDown: (step?: number) => void
-	/** Increments value by `step` (default 1), clamped to `max`. */
-	stepUp: (step?: number) => void
+	/** Decrements value by a step, clamped to `min`. `big` uses the big-step instead of step. */
+	stepDown: (big?: boolean) => void
+	/** Increments value by a step, clamped to `max`. `big` uses the big-step instead of step. */
+	stepUp: (big?: boolean) => void
 }
 
 declare global {
@@ -36,7 +34,16 @@ declare global {
  * A numeric spinbutton with increment/decrement buttons and keyboard support.
  * Use it for numeric input within a bounded range — provides ARIA spinbutton
  * semantics and Arrow key support for incrementing and decrementing the value.
- * Form participation and range validation are via ElementInternals
+ * Step size is read from the host's `step` attribute (falling back to the
+ * nested `input.step`, default `1`); a fractional step (e.g. `step="0.1"`)
+ * switches the whole component to floating-point mode, so `value`/`min`/`max`
+ * are parsed and rounded as decimals instead of integers. An optional
+ * `big-step` attribute (default `step * 10`) sets the increment used when
+ * Shift is held or `stepDown(true)`/`stepUp(true)` is called. `min` is no
+ * longer fixed at `0` — negative ranges work, and typing `-`/`+` directly
+ * into a focused input is left to the browser rather than intercepted as a
+ * step shortcut (only Arrow keys and clicks on the buttons step by `±1`
+ * character). Form participation and range validation are via ElementInternals
  * (`formAssociated()`, `setFormValue`, `delegateValidity`). Exposes
  * `stepDown`/`stepUp` methods (clamped to `min`/`max`) so other components can
  * drive the value without duplicating the clamp logic. An optional `.error`
@@ -57,24 +64,43 @@ export default defineComponent<FormSpinbuttonProps>(
 	({ expose, first, host, internals, on, watch }) => {
 		const input = first('input', 'Add a native input to display the value')
 
-		const step = asNumber(1)(host.getAttribute('step') ?? input.step)
+		const rawStep = asNumber(1)(host.getAttribute('step') ?? input.step)
+		// Zero/negative steps would divide-by-zero or reverse +/- direction in stepBy
+		const step = rawStep > 0 ? rawStep : 1
 		const isInteger = Number.isInteger(step)
-		const bigStep = asNumber(step * 10)(host.getAttribute('big-step'))
-		const fromInput = (attr: 'value' | 'min' | 'max') => {
-			const parsed = isInteger ? Number.parseInt(input[attr]) : Number.parseFloat(input[attr])
+		const rawBigStep = asNumber(step * 10)(host.getAttribute('big-step'))
+		const bigStep = rawBigStep > 0 ? rawBigStep : step * 10
+		const decimals = isInteger ? 0 : (String(step).split('.')[1] ?? '').length
+		const roundToStep = (value: number) =>
+			isInteger ? value : Number(value.toFixed(decimals))
+
+		const parseValue = (raw: string | null) => {
+			if (raw == null) return undefined
+			const parsed = isInteger ? Number.parseInt(raw) : Number.parseFloat(raw)
 			return Number.isFinite(parsed) ? parsed : undefined
 		}
+		// Host attribute wins over the nested input's own attribute (e.g.
+		// form-colorgraph sets min/max/step on the host per axis, leaving its
+		// input bare); falls back further to an unbounded default.
+		// Bounds are resolved once, up front, so `value`'s fallback/clamp can
+		// use them directly — reading host.min/host.max here instead would see
+		// undefined, since those accessors aren't installed until the expose()
+		// call below processes them.
+		const fromHostOrInput = (attr: 'value' | 'min' | 'max') =>
+			parseValue(host.getAttribute(attr)) ?? parseValue(input[attr])
+		const minValue =
+			fromHostOrInput('min') ??
+			(isInteger ? Number.MIN_SAFE_INTEGER : Number.MIN_VALUE)
+		const maxValue =
+			fromHostOrInput('max') ??
+			(isInteger ? Number.MAX_SAFE_INTEGER : Number.MAX_VALUE)
+		const clamp = (value: number) =>
+			Math.min(maxValue, Math.max(minValue, value))
 
 		expose({
-			value: isInteger
-				? asClampedInteger(fromInput('value') ?? host.min, host.max)
-				: asNumber(fromInput('value') ?? host.min),
-			max: isInteger
-				? asInteger(fromInput('max') ?? Number.MAX_SAFE_INTEGER)
-				: asNumber(fromInput('max') ?? Number.MAX_VALUE),
-			min: isInteger
-				? asInteger(fromInput('min') ?? Number.MIN_SAFE_INTEGER)
-				: asNumber(fromInput('min') ?? Number.MIN_VALUE),
+			value: clamp(fromHostOrInput('value') ?? minValue),
+			max: maxValue,
+			min: minValue,
 			stepDown: defineMethod((big = false) => stepBy(-1, big)),
 			stepUp: defineMethod((big = false) => stepBy(1, big)),
 		})
@@ -83,28 +109,37 @@ export default defineComponent<FormSpinbuttonProps>(
 			const prev = host.value
 			host.value = value
 			if (internals) delegateValidity(internals, input)
-			if (host.checkValidity()) host.dispatchEvent(new Event('change', { bubbles: true }))
+			if (host.checkValidity())
+				host.dispatchEvent(new Event('change', { bubbles: true }))
 			else host.value = prev
 		}
 
 		const stepBy = (direction: 1 | -1, big = false) => {
 			const delta = (big ? bigStep : step) * direction
 			const current = input.valueAsNumber || 0
-			const nearest = Math.round((current + delta) / step) * step
+			const nearest = roundToStep(Math.round((current + delta) / step) * step)
 			const clamped = Math.min(host.max, Math.max(host.min, nearest))
 			input.value = String(clamped)
 			commit(clamped)
 		}
 
 		on(input, 'change', () => {
-			let next = input.valueAsNumber
-			// Ignore invalid values or out-of-range integers
-			if (
-				!Number.isFinite(next)
-				|| (isInteger && Math.abs(next) > Number.MAX_SAFE_INTEGER)
-			)
-				next = host.value
-			commit(next)
+			const next = input.valueAsNumber
+			// Reject invalid, non-integer (in integer mode), or unsafely large
+			// values outright — revert to the last committed value instead of
+			// guessing at a correction.
+			const rejected =
+				!Number.isFinite(next) ||
+				(isInteger &&
+					(!Number.isInteger(next) || Math.abs(next) > Number.MAX_SAFE_INTEGER))
+			// Clamp rather than reject out-of-range values: typing past a
+			// bound snaps to that bound, matching stepBy's clamping instead
+			// of leaving the field invalid.
+			const value = rejected
+				? host.value
+				: Math.min(host.max, Math.max(host.min, next))
+			input.value = String(value)
+			commit(value)
 		})
 
 		// Form value sync: managed (value → setFormValue via ElementInternals)
@@ -133,8 +168,9 @@ export default defineComponent<FormSpinbuttonProps>(
 		on(decrement, 'click', () => stepBy(-1, false))
 		on(increment, 'click', () => stepBy(1, false))
 		on(host, 'keydown', event => {
-			const { key, shiftKey } = event
+			const { key, shiftKey, target } = event
 			if (!['ArrowUp', 'ArrowDown', '+', '-'].includes(key)) return
+			if ((key === '+' || key === '-') && target === input) return
 			event.preventDefault()
 			event.stopPropagation()
 			stepBy(key === 'ArrowDown' || key === '-' ? -1 : 1, shiftKey)
@@ -151,9 +187,7 @@ export default defineComponent<FormSpinbuttonProps>(
 		const errorEl = first('.error')
 		if (errorEl) watch('validationMessage', bindText(errorEl))
 
-		// Zero-state visual treatment is opt-in via `.zero` — a plain reusable
-		// spinbutton (e.g. driven purely through stepDown()/stepUp() by a host
-		// component) has no reason to special-case value === 0.
+		// Zero-state visual treatment is opt-in via `.zero`
 		const zero = first('.zero')
 		if (zero) {
 			const nonZero = createMemo(() => host.value !== 0)

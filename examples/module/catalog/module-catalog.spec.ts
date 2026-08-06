@@ -330,10 +330,16 @@ test.describe('module-catalog component', () => {
 	}) => {
 		const catalog = page.locator('#default-test')
 		const button = catalog.locator('basic-button button')
+		const badge = catalog.locator('basic-button .badge')
 		const spinbuttons = catalog.locator('form-spinbutton')
+		const product1 = spinbuttons.nth(0)
 		const product3 = spinbuttons.nth(2)
 
+		await product1.locator('button.increment').click()
+		await product1.locator('button.increment').click() // value: 2
 		await product3.locator('button.increment').click() // value: 1
+		await expect(badge).toHaveText('3')
+
 		await button.click()
 		await expect(product3.locator('.error')).toHaveText('No longer available')
 
@@ -349,6 +355,10 @@ test.describe('module-catalog component', () => {
 		await product3.locator('button.increment').click({ force: true })
 		const value = await product3.evaluate((el: any) => el.value)
 		expect(value).toBe(1)
+
+		// A disabled item doesn't submit a value in a native form, so its
+		// (still-nonzero) quantity must drop out of the total/badge too
+		await expect(badge).toHaveText('2')
 	})
 
 	test('a later value change wipes the previously server-set customError', async ({

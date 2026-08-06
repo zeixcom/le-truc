@@ -39,16 +39,13 @@ const inP3Gamut = inGamut('p3')
 const inRGBGamut = inGamut('rgb')
 const fn2Digits = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
 	.format
-const AXIS_STEP = { l: 0.0025, c: 0.001, h: 1 }
-const AXIS_BIGSTEP = { l: 0.05, c: 0.02, h: 15 }
-const getStep = (axis: FormColorgraphAxis, shiftKey: boolean) =>
-	shiftKey ? AXIS_BIGSTEP[axis] : AXIS_STEP[axis]
 const TRACK_OFFSET = 20 // pixels
 const CONTRAST_THRESHOLD = 0.71 // lightness
 const AXIS_MAX = { l: 1, c: 0.4, h: 360 }
 // Raw-value → axis-spinbutton-display-unit conversion. Only lightness has a
-// non-1 scale (displayed as a percentage); min/max/step for each axis are set
-// on the corresponding form-spinbutton from AXIS_MAX/AXIS_STEP below.
+// non-1 scale (displayed as a percentage); min/max/step/big-step for each
+// axis live solely on the corresponding form-spinbutton's attributes in the
+// HTML — bounds validation and step rounding aren't duplicated here.
 const AXIS_SCALE = { l: 100, c: 1, h: 1 }
 const AXIS_DECIMALS = { l: 2, c: 4, h: 2 }
 const toDisplay = (axis: FormColorgraphAxis, raw: number) => {
@@ -83,35 +80,12 @@ export default defineComponent<FormColorgraphProps>(
 				host.setCustomValidity('')
 			})
 		}
-		const getValue = (axis: FormColorgraphAxis) => {
-			const c = color.get()
-			return axis === 'l' ? c.l : axis === 'c' ? c.c : (c.h ?? 0)
-		}
-		const setToNearestStep = (axis: FormColorgraphAxis, value: number) => {
-			const nearest = Math.round(value / AXIS_STEP[axis]) * AXIS_STEP[axis]
-			if (nearest < 0 || nearest > AXIS_MAX[axis]) return
-			const c = { ...color.get(), [axis]: nearest }
-			if (inP3Gamut(c)) commit(c)
-			else host.setCustomValidity(`Color out of gamut`)
-		}
-
-		expose({
-			value: asString('oklch(0.48 0.23 263)'),
-			lightness: () => color.get().l,
-			chroma: () => color.get().c,
-			hue: () => color.get().h ?? 0,
-			stepDown: defineMethod((axis: FormColorgraphAxis, bigStep = false) => {
-				setToNearestStep(axis, getValue(axis) - getStep(axis, bigStep))
-			}),
-			stepUp: defineMethod((axis: FormColorgraphAxis, bigStep = false) => {
-				setToNearestStep(axis, getValue(axis) + getStep(axis, bigStep))
-			}),
-		})
-
-		// Host CSS variable
-		watch(() => formatCss(color.get()), bindStyle(host, '--color-base'))
-
-		// Synchronize axis spinbuttons with color memo
+		// Each axis's own <form-spinbutton> already owns bounds validation and
+		// step rounding for its (display-scaled) value via its `min`/`max`/
+		// `step`/`big-step` attributes (set in the HTML per axis) — stepping
+		// an axis just delegates to it and lets the shared 'change' listener
+		// below (gamut check + commit) react, instead of reimplementing
+		// clamp-and-round here against a second, hand-kept copy of the bounds.
 		const axisSpinbuttons = {
 			l: first(
 				'form-spinbutton.lightness',
@@ -126,6 +100,24 @@ export default defineComponent<FormColorgraphProps>(
 				'Add an <form-spinbutton class="hue"> element to control the hue of the color.',
 			),
 		}
+
+		expose({
+			value: asString('oklch(0.48 0.23 263)'),
+			lightness: () => color.get().l,
+			chroma: () => color.get().c,
+			hue: () => color.get().h ?? 0,
+			stepDown: defineMethod((axis: FormColorgraphAxis, bigStep = false) => {
+				axisSpinbuttons[axis].stepDown(bigStep)
+			}),
+			stepUp: defineMethod((axis: FormColorgraphAxis, bigStep = false) => {
+				axisSpinbuttons[axis].stepUp(bigStep)
+			}),
+		})
+
+		// Host CSS variable
+		watch(() => formatCss(color.get()), bindStyle(host, '--color-base'))
+
+		// Synchronize axis spinbuttons with color memo
 		for (const axis of ['l', 'c', 'h'] as const) {
 			const el = axisSpinbuttons[axis]
 			watch(color, c => {
