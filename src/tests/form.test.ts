@@ -1040,7 +1040,11 @@ describe('relayValidity()', () => {
 		expect(internals.validationMessage).toBe(FALLBACK_VALIDITY_MESSAGE)
 	})
 
-	test('merges with a pre-existing customError instead of clobbering it', () => {
+	test('replaces a pre-existing customError instead of preserving it', () => {
+		// relayValidity relays the control's full, authoritative ValidityState —
+		// a parent's cross-field customError, set via host.setCustomValidity(),
+		// is not the control's own concern and does not survive a relay. The
+		// parent re-asserts it on its own next check (see ADR-0020).
 		const Ctor = defineComponent<{ value: string }>(
 			uniqueName(),
 			({ expose }) => {
@@ -1057,8 +1061,7 @@ describe('relayValidity()', () => {
 
 		relayValidity(internals as unknown as ElementInternals, control)
 
-		expect(internals.validity.customError).toBe(true)
-		expect(internals.validationMessage).toBe('Cross-field error')
+		expect(internals.validity.customError).toBe(false)
 	})
 
 	test('clears a previously-relayed native flag once the control becomes valid', () => {

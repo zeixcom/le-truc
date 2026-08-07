@@ -71,8 +71,12 @@ export default defineComponent<FormSpinbuttonProps>(
 		const rawBigStep = asNumber(step * 10)(host.getAttribute('big-step'))
 		const bigStep = rawBigStep > 0 ? rawBigStep : step * 10
 		const decimals = isInteger ? 0 : (String(step).split('.')[1] ?? '').length
-		const roundToStep = (value: number) =>
-			isInteger ? value : Number(value.toFixed(decimals))
+		const clamp = (value: number) =>
+			Math.min(maxValue, Math.max(minValue, value))
+		const roundToStep = (value: number) => {
+			const clamped = clamp(Math.round(value / step) * step)
+			return isInteger ? clamped : Number(clamped.toFixed(decimals))
+		}
 
 		const parseValue = (raw: string | null) => {
 			if (raw == null) return undefined
@@ -94,8 +98,6 @@ export default defineComponent<FormSpinbuttonProps>(
 		const maxValue =
 			fromHostOrInput('max') ??
 			(isInteger ? Number.MAX_SAFE_INTEGER : Number.MAX_VALUE)
-		const clamp = (value: number) =>
-			Math.min(maxValue, Math.max(minValue, value))
 
 		expose({
 			value: clamp(fromHostOrInput('value') ?? minValue),
@@ -118,9 +120,7 @@ export default defineComponent<FormSpinbuttonProps>(
 
 		const stepBy = (direction: 1 | -1, big = false) => {
 			const delta = (big ? bigStep : step) * direction
-			const current = input.valueAsNumber || 0
-			const nearest = roundToStep(Math.round((current + delta) / step) * step)
-			const clamped = Math.min(host.max, Math.max(host.min, nearest))
+			const clamped = roundToStep((input.valueAsNumber || 0) + delta)
 			input.value = String(clamped)
 			commit(clamped)
 		}
@@ -128,15 +128,12 @@ export default defineComponent<FormSpinbuttonProps>(
 		on(input, 'change', () => {
 			const next = input.valueAsNumber
 			// Reject invalid, non-integer (in integer mode), or unsafely large
-			// values outright — revert to the last committed value instead of
-			// guessing at a correction.
+			// values outright — revert to the last committed value.
 			const rejected =
 				!Number.isFinite(next) ||
 				(isInteger &&
 					(!Number.isInteger(next) || Math.abs(next) > Number.MAX_SAFE_INTEGER))
-			// Clamp rather than reject out-of-range values: typing past a
-			// bound snaps to that bound, matching stepBy's clamping instead
-			// of leaving the field invalid.
+			// Clamp rather than reject out-of-range values
 			const value = rejected
 				? host.value
 				: Math.min(host.max, Math.max(host.min, next))
@@ -152,10 +149,7 @@ export default defineComponent<FormSpinbuttonProps>(
 				input.value = String(value)
 				input.min = String(min)
 				input.max = String(max)
-				if (internals) {
-					relayValidity(internals, input)
-					host.setCustomValidity('')
-				}
+				relayValidity(internals, input)
 			},
 		)
 

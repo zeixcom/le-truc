@@ -2908,7 +2908,6 @@ var snapshotValidity = (validity) => {
   return snapshot;
 };
 var VALIDITY_FLAG_KEYS = Object.keys(EMPTY_VALIDITY_STATE).filter((key) => key !== "valid");
-var NATIVE_VALIDITY_FLAG_KEYS = VALIDITY_FLAG_KEYS.filter((key) => key !== "customError");
 var HOST_CONTRACT_DESCRIPTORS = {
   form: {
     get() {
@@ -2977,10 +2976,20 @@ var HOST_CONTRACT_DESCRIPTORS = {
     writable: true
   },
   setCustomValidity: {
-    value(message) {
+    value(ownMessage) {
       const internals = internalsMap.get(this);
-      if (internals)
-        managedSetCustomValidity(internals, this, message);
+      if (internals) {
+        const current = snapshotValidity(internals.validity);
+        const flags = {
+          customError: !!ownMessage
+        };
+        const merged = {};
+        for (const key of VALIDITY_FLAG_KEYS)
+          merged[key] = flags[key] ?? current[key];
+        const anyTrue = VALIDITY_FLAG_KEYS.some((key) => merged[key]);
+        const message = ownMessage || (anyTrue ? internals.validationMessage || FALLBACK_VALIDITY_MESSAGE : undefined);
+        internals.setValidity(merged, message || undefined, this.querySelector(FOCUSABLE_FORM_CONTROL_SELECTOR) ?? this);
+      }
     },
     enumerable: true,
     configurable: true,
@@ -2992,80 +3001,17 @@ var MANAGED_FORM_MEMBERS = new Set([
   "disabled"
 ]);
 var FOCUSABLE_FORM_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
-var resolveAnchor = (host) => host.querySelector(FOCUSABLE_FORM_CONTROL_SELECTOR) ?? host;
 var FALLBACK_VALIDITY_MESSAGE = "Invalid value";
-var mergeValidity = (internals, flags, ownMessage, anchor) => {
-  const current = snapshotValidity(internals.validity);
-  const merged = {};
-  for (const key of VALIDITY_FLAG_KEYS)
-    merged[key] = flags[key] ?? current[key];
-  const anyTrue = VALIDITY_FLAG_KEYS.some((key) => merged[key]);
-  const message = ownMessage || (anyTrue ? internals.validationMessage || FALLBACK_VALIDITY_MESSAGE : undefined);
-  internals.setValidity(merged, message || undefined, anchor);
-};
-var managedSetCustomValidity = (internals, host, message) => {
-  mergeValidity(internals, { customError: !!message }, message, resolveAnchor(host));
-};
-var relayValidity = (internals, control, anchor = control) => {
-  control.checkValidity();
-  const flags = {};
-  for (const key of NATIVE_VALIDITY_FLAG_KEYS)
-    flags[key] = control.validity[key];
-  mergeValidity(internals, flags, control.validationMessage, anchor);
-};
-var makeResetCallback = (prop) => function() {
-  const initializer = retainedInitializers.get(this)?.[prop];
-  if (initializer === undefined)
-    return;
-  if (isParser(initializer)) {
-    const parse = initializer;
-    const result = parse(this.getAttribute(prop));
-    if (result != null)
-      this[prop] = result;
-  } else if (!isSignal(initializer) && !isFunction(initializer)) {
-    this[prop] = initializer;
-  }
-};
-var formResetCallback = makeResetCallback("value");
-var checkboxResetCallback = makeResetCallback("checked");
-var formStateRestoreCallback = function(state, _mode) {
-  if (typeof state !== "string")
-    return;
-  const initializer = retainedInitializers.get(this)?.["value"];
-  if (isParser(initializer)) {
-    const parse = initializer;
-    const result = parse(state);
-    if (result != null)
-      this.value = result;
-  } else if (typeof this.value === "number") {
-    const n = Number(state);
-    if (!Number.isNaN(n))
-      this.value = n;
-  } else {
-    this.value = state;
-  }
-};
-var checkboxFormStateRestoreCallback = function(state, _mode) {
-  this.checked = typeof state === "string";
-};
-var formDisabledCallback = function(disabled) {
-  const signals = getSignals(this);
-  const slot = signals["disabled"];
-  if (isSlot(slot))
-    slot.set(disabled);
-  else
-    this.disabled = disabled;
-};
-var installFormAssociatedMembers = (proto) => {
-  Object.defineProperties(proto, HOST_CONTRACT_DESCRIPTORS);
+var installManagedFormMembers = (proto, resetCallback, stateRestoreCallback) => {
   Object.defineProperties(proto, {
+    ...HOST_CONTRACT_DESCRIPTORS,
     formResetCallback: {
-      value: formResetCallback,
+      value: resetCallback,
       writable: true,
       configurable: true
     },
     formStateRestoreCallback: {
-      value: formStateRestoreCallback,
+      value: stateRestoreCallback,
       writable: true,
       configurable: true
     },
@@ -3076,43 +3022,18 @@ var installFormAssociatedMembers = (proto) => {
     }
   });
 };
-var installFormAssociatedCheckboxMembers = (proto) => {
-  Object.defineProperties(proto, HOST_CONTRACT_DESCRIPTORS);
-  Object.defineProperties(proto, {
-    formResetCallback: {
-      value: checkboxResetCallback,
-      writable: true,
-      configurable: true
-    },
-    formStateRestoreCallback: {
-      value: checkboxFormStateRestoreCallback,
-      writable: true,
-      configurable: true
-    },
-    formDisabledCallback: {
-      value: formDisabledCallback,
-      writable: true,
-      configurable: true
-    }
+var createManagedProperties = (instance, internals) => {
+  const disabledSlot = createSlot(createState(instance.hasAttribute("disabled")));
+  const messageState = createState(internals.validationMessage);
+  const validityState = createState(snapshotValidity(internals.validity), {
+    equals: DEEP_EQUALITY
   });
-};
-var managedValueSyncDescriptor = (instance, internals) => () => createEffect(() => {
-  const v = instance.value;
-  internals.setFormValue(typeof v === "string" ? v : String(v ?? ""));
-});
-var checkedValueSyncDescriptor = (instance, internals, submitValue) => () => createEffect(() => {
-  const checked = instance.checked;
-  internals.setFormValue(checked ? submitValue : null);
-});
-var createManagedDisabledProperty = (instance) => {
-  const initial = instance.hasAttribute("disabled");
-  const slot = createSlot(createState(initial));
   const signals = getSignals(instance);
-  signals["disabled"] = slot;
+  signals["disabled"] = disabledSlot;
   Object.defineProperty(instance, "disabled", {
-    get: () => slot.get(),
+    get: () => disabledSlot.get(),
     set: (v) => {
-      slot.set(v);
+      disabledSlot.set(v);
       if (v)
         instance.setAttribute("disabled", "");
       else
@@ -3121,13 +3042,6 @@ var createManagedDisabledProperty = (instance) => {
     enumerable: true,
     configurable: true
   });
-};
-var createManagedValidityProperties = (instance, internals) => {
-  const messageState = createState(internals.validationMessage);
-  const validityState = createState(snapshotValidity(internals.validity), {
-    equals: DEEP_EQUALITY
-  });
-  const signals = getSignals(instance);
   signals["validationMessage"] = messageState;
   signals["validity"] = validityState;
   const setValidity = internals.setValidity.bind(internals);
@@ -3138,41 +3052,92 @@ var createManagedValidityProperties = (instance, internals) => {
   };
   return messageState;
 };
-var formAssociated = () => ({
-  name: "formAssociated",
+var makeFormAssociatedExtension = (config) => ({
+  name: config.name,
+  __kind: config.__kind,
+  staticProps: { formAssociated: true },
+  reservedMembers: MANAGED_FORM_MEMBERS,
+  installOnPrototype: config.installOnPrototype,
+  onConnect: (instance, internals) => {
+    if (!internals)
+      return;
+    const { propName } = config;
+    const hasSignal = propName in instance && getSignals(instance)[propName];
+    if (false)
+      ;
+    createManagedProperties(instance, internals);
+    return [config.makeSyncDescriptor(instance, internals)];
+  }
+});
+var makeResetCallback = (prop) => function() {
+  const initializer = retainedInitializers.get(this)?.[prop];
+  if (initializer === undefined)
+    return;
+  if (isParser(initializer)) {
+    const result = initializer(this.getAttribute(prop));
+    if (result != null)
+      this[prop] = result;
+  } else if (!isSignal(initializer) && !isFunction(initializer)) {
+    this[prop] = initializer;
+  }
+};
+var formStateRestoreCallback = function(state) {
+  if (typeof state !== "string")
+    return;
+  const initializer = retainedInitializers.get(this)?.["value"];
+  if (isParser(initializer)) {
+    const result = initializer(state);
+    if (result != null)
+      this.value = result;
+  } else if (typeof this.value === "number") {
+    const n = Number(state);
+    if (!Number.isNaN(n))
+      this.value = n;
+  } else {
+    this.value = state;
+  }
+};
+var checkboxFormStateRestoreCallback = function(state) {
+  this.checked = typeof state === "string";
+};
+var formDisabledCallback = function(disabled) {
+  const signals = getSignals(this);
+  const slot = signals["disabled"];
+  if (isSlot(slot))
+    slot.set(disabled);
+  else
+    this.disabled = disabled;
+};
+var formAssociated = () => makeFormAssociatedExtension({
   __kind: "form-associated",
-  staticProps: { formAssociated: true },
-  reservedMembers: MANAGED_FORM_MEMBERS,
-  installOnPrototype: installFormAssociatedMembers,
-  onConnect: (instance, internals) => {
-    if (!internals)
-      return;
-    const hasValueSignal = "value" in instance && getSignals(instance).value;
-    if (false)
-      ;
-    createManagedDisabledProperty(instance);
-    createManagedValidityProperties(instance, internals);
-    return [managedValueSyncDescriptor(instance, internals)];
-  }
+  name: "formAssociated",
+  propName: "value",
+  installOnPrototype: (proto) => installManagedFormMembers(proto, makeResetCallback("value"), formStateRestoreCallback),
+  makeSyncDescriptor: (instance, internals) => () => createEffect(() => {
+    const v = instance.value;
+    internals.setFormValue(typeof v === "string" ? v : String(v ?? ""));
+  })
 });
-var formAssociatedCheckbox = () => ({
-  name: "formAssociatedCheckbox",
+var formAssociatedCheckbox = () => makeFormAssociatedExtension({
   __kind: "form-associated-checkbox",
-  staticProps: { formAssociated: true },
-  reservedMembers: MANAGED_FORM_MEMBERS,
-  installOnPrototype: installFormAssociatedCheckboxMembers,
-  onConnect: (instance, internals) => {
-    if (!internals)
-      return;
-    const hasCheckedSignal = "checked" in instance && getSignals(instance).checked;
-    if (false)
-      ;
-    const submitValue = instance.getAttribute("value") ?? "on";
-    createManagedDisabledProperty(instance);
-    createManagedValidityProperties(instance, internals);
-    return [checkedValueSyncDescriptor(instance, internals, submitValue)];
-  }
+  name: "formAssociatedCheckbox",
+  propName: "checked",
+  installOnPrototype: (proto) => installManagedFormMembers(proto, makeResetCallback("checked"), checkboxFormStateRestoreCallback),
+  makeSyncDescriptor: (instance, internals) => () => createEffect(() => {
+    const checked = instance.checked;
+    internals.setFormValue(checked ? instance.getAttribute("value") ?? "on" : null);
+  })
 });
+var relayValidity = (internals, control, anchor = control) => {
+  if (!internals)
+    return;
+  control.checkValidity();
+  const flags = {};
+  for (const key of VALIDITY_FLAG_KEYS)
+    flags[key] = control.validity[key];
+  const anyTrue = VALIDITY_FLAG_KEYS.some((key) => flags[key]);
+  internals.setValidity(flags, control.validationMessage || (anyTrue ? FALLBACK_VALIDITY_MESSAGE : undefined), anchor);
+};
 // src/parsers/boolean.ts
 var asBoolean = (fallback = false) => asParser((value) => value != null ? value.toLowerCase() !== "false" : fallback);
 // src/parsers/json.ts
@@ -3311,7 +3276,6 @@ export {
   InvalidCustomElementError,
   InvalidComponentNameError,
   InvalidCallbackError,
-  FOCUSABLE_FORM_CONTROL_SELECTOR,
   ExtensionCollisionError,
   EffectConvergenceError,
   DuplicateKeyError,
