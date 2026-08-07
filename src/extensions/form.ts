@@ -65,11 +65,17 @@ type ValidatableControl = HTMLElement & {
  * `new NodeList()` throws `TypeError: Illegal constructor` — NodeList has no
  * public constructor. A DocumentFragment's `childNodes` is a live, permanently
  * empty NodeList, the idiomatic browser-side way to obtain an empty one.
+ * Computed lazily and cached on first access rather than at module-evaluation
+ * time: some non-browser module loaders (e.g. static-analysis tooling) expose
+ * a partial `document` global without `createDocumentFragment`, which would
+ * throw on import if this ran eagerly.
  */
-const EMPTY_NODELIST: NodeList =
-	typeof document !== 'undefined'
-		? document.createDocumentFragment().childNodes
-		: ([] as unknown as NodeList)
+let emptyNodeList: NodeList | undefined
+const getEmptyNodeList = (): NodeList =>
+	(emptyNodeList ??=
+		typeof document !== 'undefined'
+			? document.createDocumentFragment().childNodes
+			: ([] as unknown as NodeList))
 
 /** Fallback ValidityState for when internals is null (attachInternals failed). */
 const EMPTY_VALIDITY_STATE: ValidityState = {
@@ -143,7 +149,7 @@ const HOST_CONTRACT_DESCRIPTORS = {
 	},
 	labels: {
 		get(this: HTMLElement) {
-			return internalsMap.get(this)?.labels ?? EMPTY_NODELIST
+			return internalsMap.get(this)?.labels ?? getEmptyNodeList()
 		},
 		enumerable: true,
 		configurable: true,
