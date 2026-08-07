@@ -66,14 +66,15 @@ type ValidatableControl = HTMLElement & {
  * public constructor. A DocumentFragment's `childNodes` is a live, permanently
  * empty NodeList, the idiomatic browser-side way to obtain an empty one.
  * Computed lazily and cached on first access rather than at module-evaluation
- * time: some non-browser module loaders (e.g. static-analysis tooling) expose
- * a partial `document` global without `createDocumentFragment`, which would
- * throw on import if this ran eagerly.
+ * time, and guards the method itself, not just `document`'s existence: some
+ * non-browser or test-stub `document` globals are partial and don't implement
+ * `createDocumentFragment`.
  */
 let emptyNodeList: NodeList | undefined
 const getEmptyNodeList = (): NodeList =>
 	(emptyNodeList ??=
-		typeof document !== 'undefined'
+		typeof document !== 'undefined' &&
+		typeof document.createDocumentFragment === 'function'
 			? document.createDocumentFragment().childNodes
 			: ([] as unknown as NodeList))
 
