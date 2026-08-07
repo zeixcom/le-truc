@@ -8,10 +8,8 @@ import {
 	createState,
 	defineComponent,
 	defineMethod,
-	each,
 	type FormAssociatedElement,
 	formAssociated,
-	type State,
 	throttle,
 } from '../../..'
 import { asOklch } from '../../_common/asOklch'
@@ -25,8 +23,8 @@ export type FormColorgraphProps = {
 	readonly lightness: number
 	readonly chroma: number
 	readonly hue: number
-	stepDown: (axis: FormColorgraphAxis, bigStep?: boolean) => void
-	stepUp: (axis: FormColorgraphAxis, bigStep?: boolean) => void
+	stepDown: (axis: FormColorgraphAxis, big?: boolean) => void
+	stepUp: (axis: FormColorgraphAxis, big?: boolean) => void
 }
 
 declare global {
@@ -41,15 +39,21 @@ const inP3Gamut = inGamut('p3')
 const inRGBGamut = inGamut('rgb')
 const fn2Digits = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
 	.format
-const fn4Digits = new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 })
-	.format
 const TRACK_OFFSET = 20 // pixels
 const CONTRAST_THRESHOLD = 0.71 // lightness
 const AXIS_MAX = { l: 1, c: 0.4, h: 360 }
-const AXIS_STEP = { l: 0.0025, c: 0.001, h: 1 }
-const AXIS_BIGSTEP = { l: 0.05, c: 0.02, h: 15 }
-const getStep = (axis: FormColorgraphAxis, shiftKey: boolean) =>
-	shiftKey ? AXIS_BIGSTEP[axis] : AXIS_STEP[axis]
+// Raw-value → axis-spinbutton-display-unit conversion. Only lightness has a
+// non-1 scale (displayed as a percentage); min/max/step/big-step for each
+// axis live solely on the corresponding form-spinbutton's attributes in the
+// HTML — bounds validation and step rounding aren't duplicated here.
+const AXIS_SCALE = { l: 100, c: 1, h: 1 }
+const AXIS_DECIMALS = { l: 2, c: 4, h: 2 }
+const toDisplay = (axis: FormColorgraphAxis, raw: number) => {
+	const factor = 10 ** AXIS_DECIMALS[axis]
+	return Math.round(raw * AXIS_SCALE[axis] * factor) / factor
+}
+const fromDisplay = (axis: FormColorgraphAxis, display: number) =>
+	display / AXIS_SCALE[axis]
 
 /**
  * An interactive Oklch color editor with sliders for lightness, chroma, and hue.
@@ -63,166 +67,39 @@ const getStep = (axis: FormColorgraphAxis, shiftKey: boolean) =>
  **/
 export default defineComponent<FormColorgraphProps>(
 	'form-colorgraph',
-	({ all, expose, first, host, on, watch }) => {
-		// Required elements
-		const inputs = {
-			l: first(
-				'input#lightness',
-				'Add an <input id="lightness"> element to control the lightness of the color.',
-			),
-			c: first(
-				'input#chroma',
-				'Add an <input id="chroma"> element to control the chroma of the color.',
-			),
-			h: first(
-				'input#hue',
-				'Add an <input id="hue"> element to control the hue of the color.',
-			),
-		}
-		const graphEl = first(
-			'.graph',
-			'Add a <.graph> element as a container for the color graph.',
-		)
-		const canvas = first(
-			'.graph canvas',
-			'Add a <canvas> element inside the graph to display the lightness/chroma graph.',
-		)
-		const sliderEl = first(
-			'.slider',
-			'Add a <.slider> element as a container for track and thumb.',
-		)
-		const track = first(
-			'.slider canvas',
-			'Add a <canvas> element inside the slider to display the hue slider track.',
-		) as HTMLCanvasElement
-		const knob = first(
-			'.knob',
-			'Add a <.knob> element as a drag knob to control lightness and chroma.',
-		)
-		const thumb = first(
-			'.thumb',
-			'Add a <.thumb> element as a drag knob to control the hue.',
-		)
-
-		// Initialize
-		for (const [key, input] of Object.entries(inputs)) {
-			input.min = '0'
-			input.max = key === 'l' ? '100' : key === 'c' ? '0.4' : '360'
-			input.step = 'any'
-		}
-		sliderEl.setAttribute('aria-valuemin', '0')
-		sliderEl.setAttribute('aria-valuemax', '360')
-
-		// Internal states
-		const canvasSize = createState(graphEl.getBoundingClientRect().width)
-		const trackWidth = createMemo(() => canvasSize.get() - 2 * TRACK_OFFSET)
-		// Per-axis error states — a gamut error on one axis must only display
-		// under that axis, not under all three. Each `.error` element binds to
-		// its own axis's state.
-		const errors: Record<FormColorgraphAxis, State<string>> = {
-			l: createState(''),
-			c: createState(''),
-			h: createState(''),
-		}
-		const clearErrors = () => {
-			batch(() => {
-				errors.l.set('')
-				errors.c.set('')
-				errors.h.set('')
-			})
-		}
-		const setError = (axis: FormColorgraphAxis, msg: string) => {
-			batch(() => {
-				errors.l.set('')
-				errors.c.set('')
-				errors.h.set('')
-				errors[axis].set(msg)
-			})
-		}
-
+	({ expose, first, host, on, watch }) => {
 		// Internal Oklch memo derived from the string value (the form value).
 		// `value` is the source of truth; `color` is the parsed representation
 		// the UI derives from. Interactions write serialized strings back to value.
 		const color = createMemo<Oklch>(() => parseOklch(host.value))
 
-		// Helper functions
-		const formatNumber = (axis: FormColorgraphAxis, value: number) => {
-			const v = axis === 'l' ? value * 100 : value
-			return axis === 'c' ? fn4Digits(v) : fn2Digits(v)
-		}
-		const getAxis = (target: HTMLElement): FormColorgraphAxis | null => {
-			if (target.closest('.lightness')) return 'l'
-			if (target.closest('.chroma')) return 'c'
-			if (target.closest('.hue')) return 'h'
-			return null
-		}
-		const getColorFromPosition = (
-			x: number,
-			y: number,
-			h: number,
-			alpha: number = 1,
-		): string =>
-			formatCss({
-				mode: 'oklch',
-				l: 1 - y,
-				c: x * AXIS_MAX.c,
-				h,
-				alpha,
-			})
-		const setStepPosition = (target: HTMLLIElement, color: Oklch): void => {
-			const size = canvasSize.get()
-			const x = Math.round((color.c * size) / AXIS_MAX.c)
-			const y = Math.round((1 - color.l) * size)
-			target.style.setProperty('background-color', formatCss(color))
-			target.style.setProperty(
-				'border-color',
-				color.l > CONTRAST_THRESHOLD ? 'black' : 'white',
-			)
-			target.style.setProperty('left', `${x}px`)
-			target.style.setProperty('top', `${y}px`)
-		}
-		const getHueFromPosition = (x: number): Oklch => {
-			const newColor = { ...color.get(), h: x * AXIS_MAX.h }
-			if (inRGBGamut(newColor)) return newColor
-			if (inP3Gamut(newColor)) newColor.alpha = 0.5
-			else newColor.alpha = 0
-			return newColor
-		}
 		// Commit writes a serialized CSS color string to host.value (the form value).
 		const commit = (c: Oklch) => {
 			batch(() => {
 				host.value = formatCss(c)
-				clearErrors()
+				host.setCustomValidity('')
 			})
 		}
-		const getValue = (axis: FormColorgraphAxis) => {
-			const c = color.get()
-			return axis === 'l' ? c.l : axis === 'c' ? c.c : (c.h ?? 0)
+		// Each axis's own <form-spinbutton> already owns bounds validation and
+		// step rounding for its (display-scaled) value via its `min`/`max`/
+		// `step`/`big-step` attributes (set in the HTML per axis) — stepping
+		// an axis just delegates to it and lets the shared 'change' listener
+		// below (gamut check + commit) react, instead of reimplementing
+		// clamp-and-round here against a second, hand-kept copy of the bounds.
+		const axisSpinbuttons = {
+			l: first(
+				'form-spinbutton.lightness',
+				'Add an <form-spinbutton class="lightness"> element to control the lightness of the color.',
+			),
+			c: first(
+				'form-spinbutton.chroma',
+				'Add an <form-spinbutton class="chroma"> element to control the chroma of the color.',
+			),
+			h: first(
+				'form-spinbutton.hue',
+				'Add an <form-spinbutton class="hue"> element to control the hue of the color.',
+			),
 		}
-		const setToNearestStep = (axis: FormColorgraphAxis, value: number) => {
-			const nearest = Math.round(value / AXIS_STEP[axis]) * AXIS_STEP[axis]
-			if (nearest < 0 || nearest > AXIS_MAX[axis]) return
-			const c = { ...color.get(), [axis]: nearest }
-			if (inP3Gamut(c)) commit(c)
-			else setError(axis, 'Color out of gamut')
-		}
-		const moveKnob = throttle(
-			(x: number, y: number, top: number, left: number, size: number) => {
-				const c = {
-					...color.get(),
-					c: Math.min(Math.max((x - left) / size, 0), 1) * AXIS_MAX.c,
-					l: 1 - Math.min(Math.max((y - top) / size, 0), 1),
-				}
-				if (inP3Gamut(c)) commit(c)
-			},
-		)
-		const moveThumb = throttle((x: number, left: number, width: number) => {
-			const c = {
-				...color.get(),
-				h: Math.min(Math.max((x - left) / width, 0), 1) * AXIS_MAX.h,
-			}
-			if (inP3Gamut(c)) commit(c)
-		})
 
 		expose({
 			value: asString('oklch(0.48 0.23 263)'),
@@ -230,14 +107,37 @@ export default defineComponent<FormColorgraphProps>(
 			chroma: () => color.get().c,
 			hue: () => color.get().h ?? 0,
 			stepDown: defineMethod((axis: FormColorgraphAxis, bigStep = false) => {
-				setToNearestStep(axis, getValue(axis) - getStep(axis, bigStep))
+				axisSpinbuttons[axis].stepDown(bigStep)
 			}),
 			stepUp: defineMethod((axis: FormColorgraphAxis, bigStep = false) => {
-				setToNearestStep(axis, getValue(axis) + getStep(axis, bigStep))
+				axisSpinbuttons[axis].stepUp(bigStep)
 			}),
 		})
 
+		// Host CSS variable
+		watch(() => formatCss(color.get()), bindStyle(host, '--color-base'))
+
+		// Synchronize axis spinbuttons with color memo
+		for (const axis of ['l', 'c', 'h'] as const) {
+			const el = axisSpinbuttons[axis]
+			watch(color, c => {
+				el.value = toDisplay(axis, c[axis] ?? 0)
+			})
+			on(el, 'change', () => {
+				if (!el.validity.valid) return
+				const c = { ...color.get(), [axis]: fromDisplay(axis, el.value) }
+				if (inP3Gamut(c)) commit(c)
+				else host.setCustomValidity('Color out of gamut')
+			})
+		}
+
 		// ResizeObserver — runs once at connect, cleanup at disconnect
+		const graphEl = first(
+			'.graph',
+			'Add a <.graph> element as a container for the color graph.',
+		)
+		const canvasSize = createState(graphEl.getBoundingClientRect().width)
+
 		watch(
 			() => graphEl,
 			() => {
@@ -255,37 +155,40 @@ export default defineComponent<FormColorgraphProps>(
 			},
 		)
 
-		// Host CSS variable
-		watch(() => formatCss(color.get()), bindStyle(host, '--color-base'))
+		// Graph pointer interaction + canvas size CSS variable
+		const canvas = first(
+			'.graph canvas',
+			'Add a <canvas> element inside the graph to display the lightness/chroma graph.',
+		)
+		const knob = first(
+			'.knob',
+			'Add a <.knob> element as a drag knob to control lightness and chroma.',
+		)
 
-		// Input per-element effects
-		const allInputs = all('input')
-		each(allInputs, input => {
-			const axis = getAxis(input)
-			watch(color, c => {
-				if (axis) input.value = formatNumber(axis, c[axis] ?? 0)
-			})
-			on(input, 'change', () => {
-				if (!axis) return
-				const value = input.valueAsNumber
+		const moveKnob = throttle(
+			(x: number, y: number, top: number, left: number, size: number) => {
 				const c = {
 					...color.get(),
-					[axis]: axis === 'l' ? value / 100 : value,
+					c: Math.min(Math.max((x - left) / size, 0), 1) * AXIS_MAX.c,
+					l: 1 - Math.min(Math.max((y - top) / size, 0), 1),
 				}
 				if (inP3Gamut(c)) commit(c)
-				else setError(axis, 'Color out of gamut')
+			},
+		)
+		const getColorFromPosition = (
+			x: number,
+			y: number,
+			h: number,
+			alpha: number = 1,
+		): string =>
+			formatCss({
+				mode: 'oklch',
+				l: 1 - y,
+				c: x * AXIS_MAX.c,
+				h,
+				alpha,
 			})
-		})
 
-		// Error text — per-axis: each .error element binds to its own axis
-		const allErrors = all('.error')
-		each(allErrors, errorEl => {
-			const axis = getAxis(errorEl)
-			if (!axis) return
-			watch(errors[axis], bindText(errorEl))
-		})
-
-		// Graph pointer interaction + canvas size CSS variable
 		on(graphEl, 'pointerdown', event => {
 			const { top, left } = canvas.getBoundingClientRect()
 			const size = canvasSize.get()
@@ -376,7 +279,44 @@ export default defineComponent<FormColorgraphProps>(
 			},
 		)
 
-		// Slider pointer interaction + ARIA + CSS variable
+		// Hue slider pointer interaction + ARIA + CSS variable
+		const trackWidth = createMemo(() => canvasSize.get() - 2 * TRACK_OFFSET)
+		const sliderEl = first(
+			'.slider',
+			'Add a <.slider> element as a container for track and thumb.',
+		)
+		const track = first(
+			'.slider canvas',
+			'Add a <canvas> element inside the slider to display the hue slider track.',
+		)
+		const thumb = first(
+			'.thumb',
+			'Add a <.thumb> element as a drag knob to control the hue.',
+		)
+		sliderEl.setAttribute('aria-valuemin', '0')
+		sliderEl.setAttribute('aria-valuemax', '360')
+
+		const moveThumb = throttle((x: number, left: number, width: number) => {
+			const c = {
+				...color.get(),
+				h: Math.min(Math.max((x - left) / width, 0), 1) * AXIS_MAX.h,
+			}
+			if (inP3Gamut(c)) commit(c)
+		})
+		const getHueFromPosition = (x: number): Oklch => {
+			const newColor = { ...color.get(), h: x * AXIS_MAX.h }
+			if (inRGBGamut(newColor)) return newColor
+			if (inP3Gamut(newColor)) newColor.alpha = 0.5
+			else newColor.alpha = 0
+			return newColor
+		}
+		const getAxis = (target: HTMLElement): FormColorgraphAxis | null => {
+			if (target.closest('.lightness')) return 'l'
+			if (target.closest('.chroma')) return 'c'
+			if (target.closest('.hue')) return 'h'
+			return null
+		}
+
 		on(sliderEl, 'pointerdown', event => {
 			const left = track.getBoundingClientRect().left
 			const width = trackWidth.get()
@@ -399,7 +339,7 @@ export default defineComponent<FormColorgraphProps>(
 		watch(color, c => {
 			const hue = c.h ?? 0
 			sliderEl.setAttribute('aria-valuenow', String(hue))
-			sliderEl.setAttribute('aria-valuetext', `${formatNumber('h', hue)}°`)
+			sliderEl.setAttribute('aria-valuetext', `${fn2Digits(hue)}°`)
 		})
 
 		// Track canvas: redraw on color or track width change
@@ -435,38 +375,6 @@ export default defineComponent<FormColorgraphProps>(
 				)
 			},
 		)
-
-		// Decrement buttons
-		const decrementBtns = all('button.decrement')
-		each(decrementBtns, btn => {
-			const axis = getAxis(btn)
-			on(btn, 'click', event => {
-				if (axis) host.stepDown(axis, (event as MouseEvent).shiftKey)
-			})
-			watch(color, c => {
-				if (!axis) {
-					btn.disabled = true
-					return
-				}
-				btn.disabled = (c[axis] ?? 0) <= 0
-			})
-		})
-
-		// Increment buttons
-		const incrementBtns = all('button.increment')
-		each(incrementBtns, btn => {
-			const axis = getAxis(btn)
-			on(btn, 'click', event => {
-				if (axis) host.stepUp(axis, (event as MouseEvent).shiftKey)
-			})
-			watch(color, c => {
-				if (!axis) {
-					btn.disabled = true
-					return
-				}
-				btn.disabled = (c[axis] ?? 0) >= AXIS_MAX[axis]
-			})
-		})
 
 		// Keyboard navigation
 		on(host, 'keydown', event => {
@@ -517,6 +425,19 @@ export default defineComponent<FormColorgraphProps>(
 			}
 		})
 
+		const setStepPosition = (target: HTMLLIElement, color: Oklch): void => {
+			const size = canvasSize.get()
+			const x = Math.round((color.c * size) / AXIS_MAX.c)
+			const y = Math.round((1 - color.l) * size)
+			target.style.setProperty('background-color', formatCss(color))
+			target.style.setProperty(
+				'border-color',
+				color.l > CONTRAST_THRESHOLD ? 'black' : 'white',
+			)
+			target.style.setProperty('left', `${x}px`)
+			target.style.setProperty('top', `${y}px`)
+		}
+
 		for (let i = 1; i < 5; i++) {
 			const li = first(`li.lighten${(5 - i) * 20}`)
 			if (li)
@@ -538,20 +459,10 @@ export default defineComponent<FormColorgraphProps>(
 				)
 		}
 
-		// Host-level validity from any axis error. Goes through the managed
-		// host.setCustomValidity() so the validation anchor (first focusable
-		// descendant) is resolved for focus-on-blocked-submission — consistent
-		// with the other form examples.
-		watch(
-			() => errors.l.get() || errors.c.get() || errors.h.get(),
-			err => {
-				host.setCustomValidity(err)
-			},
-		)
-		// Form value sync: managed (value → setFormValue via ElementInternals)
-		// Form reset: managed (value attribute is the default — restores
-		// the initial CSS color string, replacing the hand-rolled
-		// initialColor capture from the previous design).
+		// Error text — one shared .error element watches the reactive
+		// validationMessage prop directly for the joint gamut constraint.
+		const errorEl = first('.error')
+		if (errorEl) watch('validationMessage', bindText(errorEl))
 	},
 	[formAssociated()],
 )

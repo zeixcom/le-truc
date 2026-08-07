@@ -161,13 +161,15 @@ test.describe('form-spinbutton component', () => {
 		await page.keyboard.press('ArrowDown')
 		await expect(input).toHaveValue('1')
 
-		// Test + key
+		// +/- are left to native text entry when the input has focus — unlike
+		// on a button (see 'handles keyboard interactions on buttons'), they
+		// must not be intercepted as step shortcuts, so `value` is untouched
 		await page.keyboard.press('+')
-		await expect(input).toHaveValue('2')
-
-		// Test - key
 		await page.keyboard.press('-')
-		await expect(input).toHaveValue('1')
+		const valueProperty = await page.evaluate(
+			() => (document.querySelector('#interactive-input-test') as any).value,
+		)
+		expect(valueProperty).toBe(1)
 	})
 
 	test('handles direct input value changes with validation', async ({
@@ -399,10 +401,18 @@ test.describe('form-spinbutton component', () => {
 	test('handles component without zero element', async ({ page }) => {
 		const noZeroSpinbutton = page.locator('#no-zero-test')
 		const incrementButton = noZeroSpinbutton.locator('button.increment')
+		const decrementButton = noZeroSpinbutton.locator('button.decrement')
+		const input = noZeroSpinbutton.locator('input.value')
 		const zeroElement = noZeroSpinbutton.locator('.zero')
 
 		// Should not have zero element
 		await expect(zeroElement).toHaveCount(0)
+
+		// Without `.zero`, input and decrement stay visible at value 0 —
+		// no zero-state UI is wired up. Decrement is disabled at min instead.
+		await expect(input).toBeVisible()
+		await expect(decrementButton).toBeVisible()
+		await expect(decrementButton).toHaveAttribute('disabled')
 
 		// Aria-label should fallback to original when no zero element exists
 		let ariaLabel = await incrementButton.getAttribute('aria-label')
@@ -412,6 +422,50 @@ test.describe('form-spinbutton component', () => {
 		await incrementButton.click()
 		ariaLabel = await incrementButton.getAttribute('aria-label')
 		expect(ariaLabel).toBe('Increment')
+		await expect(decrementButton).not.toHaveAttribute('disabled')
+
+		// Decrementing back to min re-disables the decrement button, input
+		// and decrement stay visible throughout (no hiding without `.zero`)
+		await decrementButton.click()
+		await expect(input).toHaveValue('0')
+		await expect(input).toBeVisible()
+		await expect(decrementButton).toBeVisible()
+		await expect(decrementButton).toHaveAttribute('disabled')
+	})
+
+	test('exposes min, stepDown() and stepUp() for generic reuse', async ({
+		page,
+	}) => {
+		const minProperty = await page.evaluate(() => {
+			const element = document.querySelector('form-spinbutton') as any
+			return element.min
+		})
+		expect(minProperty).toBe(0)
+
+		// stepUp()/stepDown() take a boolean: `true` steps by big-step
+		// (default step*10) instead of step
+		const valueAfterStepUp = await page.evaluate(() => {
+			const element = document.querySelector('#no-zero-test') as any
+			element.stepUp()
+			element.stepUp(true)
+			return element.value
+		})
+		expect(valueAfterStepUp).toBe(11)
+
+		const valueAfterStepDown = await page.evaluate(() => {
+			const element = document.querySelector('#no-zero-test') as any
+			element.stepDown(true)
+			return element.value
+		})
+		expect(valueAfterStepDown).toBe(1)
+
+		// stepDown/stepUp clamp to min/max just like the buttons
+		const clampedDown = await page.evaluate(() => {
+			const element = document.querySelector('#no-zero-test') as any
+			element.stepDown(true)
+			return element.value
+		})
+		expect(clampedDown).toBe(0)
 	})
 
 	test('handles multiple instances independently', async ({ page }) => {
@@ -510,5 +564,106 @@ test.describe('form-spinbutton component', () => {
 			return (document.querySelector('#interactive-input-test') as any).value
 		})
 		expect(valueAfter).toBe(0)
+	})
+
+	test('supports fractional step (float mode)', async ({ page }) => {
+		const spinbutton = page.locator('#decimal-test')
+		const incrementButton = spinbutton.locator('button.increment')
+		const decrementButton = spinbutton.locator('button.decrement')
+		const input = spinbutton.locator('input.value')
+
+		// step="0.5" switches value/min/max parsing to floats
+		await incrementButton.click()
+		await expect(input).toHaveValue('0.5')
+
+		await incrementButton.click()
+		await expect(input).toHaveValue('1')
+
+		await decrementButton.click()
+		await decrementButton.click()
+		await expect(input).toHaveValue('0')
+
+		// Typing a value aligned to the step grid commits as typed
+		await input.fill('2.5')
+		await input.blur()
+		await expect(input).toHaveValue('2.5')
+
+		// A value off the step grid trips the native input's own
+		// stepMismatch constraint — relayValidity picks that up, so it's
+		// rejected and reverts rather than committing unaligned
+		await input.fill('2.3')
+		await input.blur()
+		await expect(input).toHaveValue('2.5')
+
+		// Clamped to max (5) when exceeding the bound
+		await input.fill('9.9')
+		await input.blur()
+		await expect(input).toHaveValue('5')
+
+		const valueProperty = await page.evaluate(
+			() => (document.querySelector('#decimal-test') as any).value,
+		)
+		expect(valueProperty).toBe(5)
+	})
+
+	test('supports custom big-step for shift+Arrow', async ({ page }) => {
+		const spinbutton = page.locator('#big-step-test')
+		const incrementButton = spinbutton.locator('button.increment')
+		const input = spinbutton.locator('input.value')
+
+		await incrementButton.focus()
+		await page.keyboard.press('ArrowUp')
+		await expect(input).toHaveValue('1')
+
+		// Shift+ArrowUp steps by the custom big-step (5) instead of the
+		// default step*10 (10)
+		await page.keyboard.press('Shift+ArrowUp')
+		await expect(input).toHaveValue('6')
+
+		await page.keyboard.press('Shift+ArrowDown')
+		await expect(input).toHaveValue('1')
+
+		// stepUp(true)/stepDown(true) drive the same big-step programmatically
+		const valueAfterBigStepUp = await page.evaluate(() => {
+			const element = document.querySelector('#big-step-test') as any
+			element.stepUp(true)
+			return element.value
+		})
+		expect(valueAfterBigStepUp).toBe(6)
+	})
+
+	test('supports negative min and typing a negative value directly', async ({
+		page,
+	}) => {
+		const spinbutton = page.locator('#negative-min-test')
+		const decrementButton = spinbutton.locator('button.decrement')
+		const input = spinbutton.locator('input.value')
+
+		// min is below 0 — decrement can go negative
+		for (let i = 0; i < 3; i++) {
+			await decrementButton.click()
+		}
+		await expect(input).toHaveValue('-3')
+
+		// Typing "-" into the focused input must not be intercepted as a
+		// decrement shortcut, so a negative value can be entered directly
+		await input.fill('')
+		await input.focus()
+		await page.keyboard.type('-7')
+		await input.blur()
+		await expect(input).toHaveValue('-7')
+
+		// Clamped to min (-10) when going below the bound
+		await input.fill('-99')
+		await input.blur()
+		await expect(input).toHaveValue('-10')
+
+		// +/- on a focused button still steps by 1 (unambiguous, no text cursor)
+		const incrementButton = spinbutton.locator('button.increment')
+		await incrementButton.focus()
+		await page.keyboard.press('+')
+		await expect(input).toHaveValue('-9')
+		await page.keyboard.press('-')
+		await expect(input).toHaveValue('-10')
 	})
 })

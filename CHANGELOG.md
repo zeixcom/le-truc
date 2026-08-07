@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.3.4
+
+### Added
+
+- **`relayValidity(internals, control, anchor?)`**: relays a wrapped native control's (`<input>`, `<select>`, `<textarea>`) full `ValidityState` onto a form-associated host's `internals`, so individual UA-computed flags (`rangeOverflow`, `stepMismatch`, `badInput`, `valueMissing`, …) are visible on `host.validity` instead of collapsing into a single `customError`. For "enhanced native input" components (e.g. a spinbutton wrapping `<input type="number">`). Ships from `src/extensions/form.ts` — not gated behind `formAssociated()`, usable by any component with `internals` on its factory context. Not reactive; call it from an event handler on the wrapped control (`on(control, 'input', () => relayValidity(internals, control))`). See [ADR 0020](adr/0020-merge-based-validity-composition-and-relayvalidity.md).
+
+### Fixed
+
+- **`host.setCustomValidity()` no longer clobbers other validity flags on the same `internals`**: it used to call `internals.setValidity()` with only `customError` in the flags object. Per `ElementInternals.setValidity()`'s own semantics, any flag key omitted from a call is treated as `false` — the call fully replaces the flags object, it does not merge. A component that also sets typed flags elsewhere on the same `internals` (via `relayValidity()` or its own `internals?.setValidity({ rangeOverflow, … })` escape-hatch calls) would have those flags silently wiped by any subsequent `host.setCustomValidity()` call, and vice versa. `setCustomValidity()` now merges: it reads the current flags first and only overrides `customError`, preserving whatever else is already set — matching native `<input>.setCustomValidity()`, which only ever touches `customError` while the browser keeps computing the rest from the control's own state underneath.
+
 ## 2.3.3
 
 ### Fixed

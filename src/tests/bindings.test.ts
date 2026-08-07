@@ -202,6 +202,9 @@ beforeEach(() => {
 
 afterEach(() => {
 	flushRAF()
+	delete (globalThis as any).document
+	delete (globalThis as any).Node
+	delete (globalThis as any).requestAnimationFrame
 })
 
 describe('safeSetAttribute', () => {

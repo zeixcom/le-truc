@@ -496,7 +496,7 @@ The host gains a native-parity contract delegating to `internals`: `form`, `name
 
 The `internals` object on the context (`null` only if `attachInternals()` failed) is the escape hatch for typed validity flags and custom `:state()` pseudo-classes. Follow this rule: use `internals?.setFormValue()` indirectly through the managed convention. Set `value`, and it syncs automatically. Call `internals?.setValidity()` directly when you need flags beyond a simple custom-error message.
 
-### Checkbox-Shaped Controls
+#### Checkbox-Shaped Controls
 
 A checkbox's primary state is `checked: boolean`. It submits nothing when unchecked, unlike `formAssociated()`'s always-on string `value`. The `formAssociatedCheckbox()` extension handles this shape. It shares the same host contract and `disabled` management as `formAssociated()`. Its value-sync, reset, and state-restore mechanics target a `checked` prop instead of `value`:
 
@@ -520,6 +520,25 @@ defineComponent<FormCheckboxProps>(
 {% callout .caution title="Do not combine the two form extensions" %}
 Both `formAssociated()` and `formAssociatedCheckbox()` declare the same `staticProps.formAssociated` key. Combining them on one component throws `ExtensionCollisionError` in dev mode. Radio groups and listboxes do not need `formAssociatedCheckbox()`. Their selection aggregates into one string `value` on the container, which fits `formAssociated()`.
 {% /callout %}
+
+#### Relaying Native Control Validity
+
+A component that wraps a native control (`<input>`, `<select>`, `<textarea>`) — a spinbutton around `<input type="number">`, a masked field around `<input type="text">` — can relay the control's own `ValidityState` onto `host.validity` with `relayValidity(internals, control, anchor?)`, surfacing every constraint the browser already checks (`rangeOverflow`, `stepMismatch`, `badInput`, `valueMissing`, …) instead of collapsing them into a single `customError`. It fully replaces `host.validity`, including the control's own `customError` — the control's live state is the whole truth about itself. Not reactive — call it from an event handler on the wrapped control:
+
+```js#form-enhanced-input.js
+import { defineComponent, formAssociated, relayValidity } from '@zeix/le-truc'
+
+export default defineComponent(
+	'form-enhanced-input',
+	({ first, internals, on }) => {
+		const input = first('input', 'Add a native input')
+		on(input, 'input', () => relayValidity(internals, input))
+	},
+	[formAssociated()],
+)
+```
+
+`relayValidity()` isn't gated behind `formAssociated()` — it works with any component that has `internals` on its factory context. See `form-spinbutton.ts` for a complete example.
 
 ### Attribute-Driven Reactivity
 

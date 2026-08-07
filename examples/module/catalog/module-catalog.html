@@ -11,71 +11,77 @@
 	<ul>
 		<li>
 			<p>Product 1</p>
-			<form-spinbutton>
-				<button type="button" class="decrement" aria-label="Decrement" hidden>
-					−
-				</button>
-				<input
-					type="number"
-					class="value"
-					name="amount-product1"
-					value="0"
-					min="0"
-					max="10"
-					readonly
-					disabled
-					hidden
-				>
-				<button type="button" class="increment" aria-label="Increment">
-					<span class="zero">Add to Cart</span>
-					<span class="other" hidden>+</span>
-				</button>
+			<form-spinbutton data-product="product-1">
+				<fieldset>
+					<button type="button" class="decrement" aria-label="Decrement" hidden>
+						−
+					</button>
+					<input
+						id="product-1-quantity-input"
+						type="number"
+						class="value"
+						value="0"
+						min="0"
+						max="10"
+						aria-label="Quantity"
+						hidden
+					>
+					<button type="button" class="increment" aria-label="Increment">
+						<span class="zero">Add to Cart</span>
+						<span class="other" hidden>+</span>
+					</button>
+				</fieldset>
+				<p class="error" role="alert" aria-live="assertive"></p>
 			</form-spinbutton>
 		</li>
 		<li>
-			<p>Product 2</p>
-			<form-spinbutton>
-				<button type="button" class="decrement" aria-label="Decrement" hidden>
-					−
-				</button>
-				<input
-					type="number"
-					class="value"
-					name="amount-product2"
-					value="0"
-					min="0"
-					max="5"
-					readonly
-					disabled
-					hidden
-				>
-				<button type="button" class="increment" aria-label="Increment">
-					<span class="zero">Add to Cart</span>
-					<span class="other" hidden>+</span>
-				</button>
+			<p>Product 2 <small>(reduced stock on checkout)</small></p>
+			<form-spinbutton data-product="product-2">
+				<fieldset>
+					<button type="button" class="decrement" aria-label="Decrement" hidden>
+						−
+					</button>
+					<input
+						id="product-2-quantity-input"
+						type="number"
+						class="value"
+						value="0"
+						min="0"
+						max="5"
+						aria-label="Quantity"
+						hidden
+					>
+					<button type="button" class="increment" aria-label="Increment">
+						<span class="zero">Add to Cart</span>
+						<span class="other" hidden>+</span>
+					</button>
+				</fieldset>
+				<p class="error" role="alert" aria-live="assertive"></p>
 			</form-spinbutton>
 		</li>
 		<li>
-			<p>Product 3</p>
-			<form-spinbutton>
-				<button type="button" class="decrement" aria-label="Decrement" hidden>
-					−
-				</button>
-				<input
-					type="number"
-					class="value"
-					name="amount-product3"
-					value="0"
-					min="0"
-					max="20"
-					readonly
-					disabled
-					hidden
-				>
-				<button type="button" class="increment" aria-label="Increment">
-					<span class="zero">Add to Cart</span>
-					<span class="other" hidden>+</span>
-				</button>
+			<p>Product 3 <small>(sold out on checkout)</small></p>
+			<form-spinbutton data-product="product-3">
+				<fieldset>
+					<button type="button" class="decrement" aria-label="Decrement" hidden>
+						−
+					</button>
+					<input
+						id="product-3-quantity-input"
+						type="number"
+						class="value"
+						value="0"
+						min="0"
+						max="20"
+						aria-label="Quantity"
+						hidden
+					>
+					<button type="button" class="increment" aria-label="Increment">
+						<span class="zero">Add to Cart</span>
+						<span class="other" hidden>+</span>
+					</button>
+				</fieldset>
+				<p class="error" role="alert" aria-live="assertive"></p>
 			</form-spinbutton>
 		</li>
 	</ul>

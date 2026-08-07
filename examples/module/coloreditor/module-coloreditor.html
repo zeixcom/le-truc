@@ -62,61 +62,60 @@
 			<canvas width="360" height="1"></canvas>
 			<span class="thumb"></span>
 		</div>
-		<div class="lightness">
+		<p class="error" aria-live="assertive" id="color-error"></p>
+		<form-spinbutton class="lightness" min="0" max="100" step="0.25" big-step="5">
 			<label for="lightness">Lightness</label>
-			<div class="input">
-				<input id="lightness" name="lightness" type="number">
-				<span class="unit">%</span>
-			</div>
-			<div class="buttons">
-				<button
-					type="button"
-					class="decrement"
-					aria-label="Decrement lightness"
-				>
-					−
-				</button>
-				<button
-					type="button"
-					class="increment"
-					aria-label="Increment lightness"
-				>
-					+
-				</button>
-			</div>
+			<fieldset>
+				<div class="input">
+					<input id="lightness" type="number" step="any">
+					<span class="unit">%</span>
+				</div>
+				<div class="buttons">
+					<button type="button" class="decrement" aria-label="Decrement lightness">
+						−
+					</button>
+					<button type="button" class="increment" aria-label="Increment lightness">
+						+
+					</button>
+				</div>
+			</fieldset>
 			<p class="error" aria-live="assertive" id="lightness-error"></p>
-		</div>
-		<div class="chroma">
+		</form-spinbutton>
+		<form-spinbutton class="chroma" min="0" max="0.4" step="0.001" big-step="0.02">
 			<label for="chroma">Chroma</label>
-			<div class="input">
-				<input id="chroma" name="chroma" type="number">
-			</div>
-			<div class="buttons">
-				<button type="button" class="decrement" aria-label="Decrement chroma">
-					−
-				</button>
-				<button type="button" class="increment" aria-label="Increment chroma">
-					+
-				</button>
-			</div>
+			<fieldset>
+				<div class="input">
+					<input id="chroma" type="number" step="any">
+				</div>
+				<div class="buttons">
+					<button type="button" class="decrement" aria-label="Decrement chroma">
+						−
+					</button>
+					<button type="button" class="increment" aria-label="Increment chroma">
+						+
+					</button>
+				</div>
+			</fieldset>
 			<p class="error" aria-live="assertive" id="chroma-error"></p>
-		</div>
-		<div class="hue">
+		</form-spinbutton>
+		<form-spinbutton class="hue" min="0" max="360" step="0.01" big-step="15">
 			<label id="hue-label" for="hue">Hue</label>
-			<div class="input">
-				<input id="hue" name="hue" type="number">
-				<span class="unit">°</span>
-			</div>
-			<div class="buttons">
-				<button type="button" class="decrement" aria-label="Decrement hue">
-					−
-				</button>
-				<button type="button" class="increment" aria-label="Increment hue">
-					+
-				</button>
-			</div>
+			<fieldset>
+				<div class="input">
+					<input id="hue" type="number" step="any">
+					<span class="unit">°</span>
+				</div>
+				<div class="buttons">
+					<button type="button" class="decrement" aria-label="Decrement hue">
+						−
+					</button>
+					<button type="button" class="increment" aria-label="Increment hue">
+						+
+					</button>
+				</div>
+			</fieldset>
 			<p class="error" aria-live="assertive" id="hue-error"></p>
-		</div>
+		</form-spinbutton>
 	</form-colorgraph>
 	<div class="info">
 		<module-colorinfo class="lighten80">

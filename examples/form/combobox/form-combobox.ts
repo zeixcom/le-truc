@@ -9,7 +9,6 @@ import {
 	type FormAssociatedElement,
 	formAssociated,
 } from '../../..'
-import type { FormListboxProps } from '../listbox/form-listbox'
 
 export type FormComboboxProps = {
 	/** Current text input value. Updated on each `input` event. */
@@ -41,10 +40,7 @@ export default defineComponent<FormComboboxProps>(
 	'form-combobox',
 	({ expose, first, host, on, pass, watch }) => {
 		const textbox = first('input', 'Needed to enter value.')
-		const listbox = first<HTMLElement & FormListboxProps>(
-			'form-listbox',
-			'Needed to display options.',
-		)
+		const listbox = first('form-listbox', 'Needed to display options.')
 		const descriptionEl = first('.description')
 
 		const descriptionId = descriptionEl?.id
@@ -73,7 +69,7 @@ export default defineComponent<FormComboboxProps>(
 
 		pass(listbox, { filter: () => host.value })
 
-		on(host, 'keyup', ({ key }: KeyboardEvent) => {
+		on(host, 'keyup', ({ key }) => {
 			if (key === 'Escape') {
 				showPopup.set(false)
 				textbox.focus()

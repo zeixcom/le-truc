@@ -97,71 +97,7 @@ form-colorgraph {
 		}
 	}
 
-	> .lightness,
-	> .chroma,
-	> .hue {
-		display: grid;
-		align-items: center;
-		column-gap: var(--space-xs);
-		grid-template-areas: "label label" "input buttons" "error error";
-		grid-template-columns: 1fr auto;
-		max-width: 12rem;
-	}
-
-	& label,
-	& button {
-		opacity: var(--opacity-dimmed);
-		transition: opacity var(--transition-short) var(--easing-inout);
-	}
-
-	& label {
-		grid-area: label;
-		display: block;
-		font-size: var(--font-size-s);
-		color: var(--color-text);
-		margin-bottom: var(--space-xxs);
-	}
-
-	& input {
-		display: inline-block;
-		box-sizing: border-box;
-		background: var(--color-input);
-		color: var(--color-text);
-		border: none;
-		border-bottom: 1px solid var(--color-border);
-		padding: var(--space-xs) var(--space-xxs);
-		font-size: var(--font-size-m);
-		text-align: right;
-		height: var(--input-height);
-		width: 100%;
-		transition: color var(--transition-short) var(--easing-inout);
-		appearance: textfield;
-		-moz-appearance: textfield;
-
-		&::-webkit-outer-spin-button,
-		&::-webkit-inner-spin-button {
-			-webkit-appearance: none;
-			margin: 0;
-		}
-
-		&::placeholder {
-			color: var(--color-text);
-			opacity: var(--opacity-translucent);
-		}
-	}
-
-	/* Native validity styling — replaces the old aria-invalid attribute hook. */
-	&:user-invalid input {
-		box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
-	}
-
-	.input {
-		grid-area: input;
-		display: inline-flex;
-		align-items: center;
-	}
-
-	.error {
+	> .error {
 		grid-area: error;
 		margin: var(--space-xs) 0 0;
 		font-size: var(--font-size-xs);
@@ -215,60 +151,15 @@ form-colorgraph {
 			calc(var(--input-height) / -2)
 		);
 	}
-
-	.buttons {
-		grid-area: buttons;
-		display: flex;
-		align-items: center;
-
-		& button {
-			flex-grow: 0;
-			box-sizing: border-box;
-			height: var(--input-height);
-			min-width: var(--input-height);
-			border: 1px solid var(--color-border);
-			background-color: var(--color-secondary);
-			color: var(--color-text);
-			padding: 0 var(--space-s);
-			font-size: var(--font-size-s);
-			line-height: var(--line-height-s);
-			white-space: nowrap;
-			cursor: pointer;
-			transition: all var(--transition-shorter) var(--easing-inout);
-
-			&:disabled {
-				opacity: var(--opacity-translucent);
-			}
-
-			&:not(:disabled) {
-				cursor: pointer;
-				opacity: var(--opacity-solid);
-
-				&:hover {
-					background-color: var(--color-secondary-hover);
-				}
-
-				&:active {
-					background-color: var(--color-secondary-active);
-				}
-			}
-
-			&:first-of-type {
-				border-radius: var(--space-xs) 0 0 var(--space-xs);
-				border-right-width: 0;
-			}
-
-			&:last-of-type {
-				border-radius: 0 var(--space-xs) var(--space-xs) 0;
-			}
-		}
-	}
 }
 
 @container (width > 27rem) {
 	form-colorgraph {
 		display: grid;
-		grid-template-areas: "graph graph graph" "slider slider slider" "lightness chroma hue";
+		grid-template-areas:
+			"graph graph graph"
+			"slider slider slider"
+			"lightness chroma hue";
 		grid-template-columns: 1fr 1fr 1fr;
 		gap: var(--space-s) var(--space-m);
 		align-items: start;

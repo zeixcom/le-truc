@@ -93,6 +93,42 @@ test.describe('form-colorgraph component', () => {
 		expect(steppedValue).toMatch(/oklch/)
 	})
 
+	test('each axis form-spinbutton is bounded by its own min/max attributes', async ({
+		page,
+	}) => {
+		// min/max/step/big-step (e.g. min="0" max="360" big-step="15" on the
+		// hue spinbutton, per form-colorgraph.html) live only on each
+		// <form-spinbutton>, not duplicated in form-colorgraph.ts. Exercise
+		// the spinbuttons directly (not via form-colorgraph's stepUp/stepDown,
+		// which additionally gates commits on gamut) to isolate that bounds
+		// resolution specifically.
+		const hue = await page.evaluate(() => {
+			const el = document.querySelector(
+				'form-spinbutton.hue',
+			) as HTMLElement & {
+				stepUp: (big?: boolean) => void
+				value: number
+				max: number
+			}
+			for (let i = 0; i < 30; i++) el.stepUp(true)
+			return { value: el.value, max: el.max }
+		})
+		expect(hue).toEqual({ value: 360, max: 360 })
+
+		const lightness = await page.evaluate(() => {
+			const el = document.querySelector(
+				'form-spinbutton.lightness',
+			) as HTMLElement & {
+				stepDown: (big?: boolean) => void
+				value: number
+				min: number
+			}
+			for (let i = 0; i < 30; i++) el.stepDown(true)
+			return { value: el.value, min: el.min }
+		})
+		expect(lightness).toEqual({ value: 0, min: 0 })
+	})
+
 	test('form reset restores the initial color', async ({ page }) => {
 		// Get initial value (the form value is a CSS color string) and hue
 		const initial = await page.evaluate(() => {
