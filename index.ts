@@ -1,4 +1,4 @@
-// Le Truc 2.3.3
+// Le Truc 2.3.4
 
 // From Cause & Effect
 export {
@@ -114,11 +114,12 @@ export {
 export { type ComponentExtension } from './src/extension'
 export { observedAttributes } from './src/extensions/attributes'
 export {
-	FOCUSABLE_FORM_CONTROL_SELECTOR,
 	type FormAssociatedCheckboxExtension,
 	type FormAssociatedExtension,
 	formAssociated,
 	formAssociatedCheckbox,
+	relayValidity,
+	type ValidatableControl,
 } from './src/extensions/form'
 export {
 	CONTEXT_REQUEST,

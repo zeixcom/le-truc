@@ -14,7 +14,12 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { defineComponent } from '../component'
 import { InvalidPropertyNameError } from '../errors'
-import { formAssociated, formAssociatedCheckbox } from '../extensions/form'
+import {
+	FALLBACK_VALIDITY_MESSAGE,
+	formAssociated,
+	formAssociatedCheckbox,
+	relayValidity,
+} from '../extensions/form'
 import { asParser } from '../types'
 
 /* === Fake customElements registry + HTMLElement base === */
@@ -133,18 +138,50 @@ class FakeElementInternals {
 		message?: string,
 		anchor?: HTMLElement,
 	) {
-		Object.assign(this.#flags, flags)
-		this.#flags.valid =
-			!this.#flags.valueMissing &&
-			!this.#flags.typeMismatch &&
-			!this.#flags.patternMismatch &&
-			!this.#flags.tooLong &&
-			!this.#flags.tooShort &&
-			!this.#flags.rangeUnderflow &&
-			!this.#flags.rangeOverflow &&
-			!this.#flags.stepMismatch &&
-			!this.#flags.badInput &&
-			!this.#flags.customError
+		// Mirrors the real ElementInternals.setValidity() contract: this call
+		// *replaces* the flags object outright — any flag key absent from
+		// `flags` is reset to `false`, not left as-is. A fake that merged
+		// instead (e.g. via `Object.assign(this.#flags, flags)`) would mask
+		// exactly the stomping bug `mergeValidity` (src/extensions/form.ts)
+		// fixes: tests could pass against a fake that "remembers" flags the
+		// real browser would have dropped.
+		//
+		// Computed into a fresh `next` object first (not mutating `#flags`
+		// directly) so a rejected call — see the throw below — leaves the
+		// existing state untouched, matching the real platform's atomic
+		// behavior. Applied via `Object.assign(this.#flags, next)`, not
+		// `this.#flags = next`, since `validity` (FakeValidityState) captured
+		// a reference to the original `#flags` object at construction —
+		// reassigning the field would silently detach `validity` from further
+		// updates.
+		const next = {} as MutableValidityState
+		for (const key of Object.keys(
+			this.#flags,
+		) as (keyof MutableValidityState)[]) {
+			if (key === 'valid') continue
+			next[key] = flags[key as keyof ValidityStateFlags] ?? false
+		}
+		next.valid =
+			!next.valueMissing &&
+			!next.typeMismatch &&
+			!next.patternMismatch &&
+			!next.tooLong &&
+			!next.tooShort &&
+			!next.rangeUnderflow &&
+			!next.rangeOverflow &&
+			!next.stepMismatch &&
+			!next.badInput &&
+			!next.customError
+		// Mirrors the real platform throw: a flag can't be left true with no
+		// message to describe it. This is what would have caught the LT-001
+		// follow-up bug (relayValidity() on a barred-from-validation
+		// control) — this fake didn't enforce the constraint the real browser
+		// does, so no test noticed.
+		if (!next.valid && !message)
+			throw new TypeError(
+				"Failed to execute 'setValidity' on 'ElementInternals': The second argument should not be empty if one or more flags in the first argument are true.",
+			)
+		Object.assign(this.#flags, next)
 		this.validationMessage = message ?? ''
 	}
 	checkValidity() {
@@ -525,6 +562,53 @@ describe('native-parity host contract', () => {
 		expect(internals.validationMessage).toBe('')
 	})
 
+	test('setCustomValidity merges with, rather than replaces, other validity flags (ADR 0020)', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		internals.setValidity({ rangeOverflow: true }, 'Too high')
+		instance.setCustomValidity('Also bad')
+
+		expect(internals.validity.rangeOverflow).toBe(true)
+		expect(internals.validity.customError).toBe(true)
+	})
+
+	test('clearing setCustomValidity preserves other still-true flags and their message', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		internals.setValidity({ rangeOverflow: true }, 'Too high')
+		instance.setCustomValidity('Also bad')
+		instance.setCustomValidity('')
+
+		expect(internals.validity.customError).toBe(false)
+		expect(internals.validity.rangeOverflow).toBe(true)
+		// Only one message slot exists on ElementInternals, not one per flag —
+		// falls back to whatever message was already current ('Also bad', the
+		// customError message) rather than clearing to '' while rangeOverflow is
+		// still true, which would violate setValidity's "message required if any
+		// flag is true" contract. This is the disclosed message-priority
+		// limitation in ADR 0020: not always the "highest priority" flag's own
+		// message, but never silently empty either.
+		expect(internals.validationMessage).toBe('Also bad')
+	})
+
 	test('validationMessage can be watched by authors — reacts to external setCustomValidity()', () => {
 		// Regression: setCustomValidity() called from outside the component
 		// (e.g. an app reacting to a server-side validation error) used to be
@@ -863,6 +947,170 @@ describe('internals on FactoryContext', () => {
 		instance.value = 15
 		expect(internals.validity.rangeOverflow).toBe(true)
 		expect(internals.validationMessage).toBe('Too high')
+	})
+})
+
+/* === relayValidity() === */
+
+describe('relayValidity()', () => {
+	/** Minimal native-control double satisfying `ValidatableControl`. */
+	class FakeControl {
+		#flags: MutableValidityState
+		validationMessage: string
+		#checkValidityCalls = 0
+		constructor(flags: Partial<MutableValidityState>, message = '') {
+			this.#flags = {
+				valueMissing: false,
+				typeMismatch: false,
+				patternMismatch: false,
+				tooLong: false,
+				tooShort: false,
+				rangeUnderflow: false,
+				rangeOverflow: false,
+				stepMismatch: false,
+				badInput: false,
+				customError: false,
+				valid: true,
+				...flags,
+			}
+			this.validationMessage = message
+		}
+		get validity(): ValidityState {
+			return new FakeValidityState(this.#flags)
+		}
+		checkValidity() {
+			this.#checkValidityCalls++
+			return this.#flags.valid
+		}
+		get checkValidityCalls() {
+			return this.#checkValidityCalls
+		}
+	}
+
+	test('copies the control full ValidityState and message onto internals, anchored to the control by default', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+		const control = new FakeControl(
+			{ rangeOverflow: true, valid: false },
+			'Too high',
+		) as unknown as HTMLInputElement
+
+		relayValidity(internals as unknown as ElementInternals, control)
+
+		expect(internals.validity.rangeOverflow).toBe(true)
+		expect(internals.validationMessage).toBe('Too high')
+		expect((control as unknown as FakeControl).checkValidityCalls).toBe(1)
+	})
+
+	test('does not throw when the control is barred from constraint validation (disabled/readonly): falls back to a placeholder message', () => {
+		// A real disabled or readonly `<input>` reports an empty
+		// `validationMessage` even while its `.validity` flags stay live and
+		// true — this is exactly the shape that made relayValidity() throw
+		// in a real browser (the LT-001 follow-up bug): the *first* time a
+		// flag transitions true on a fresh `internals`, there's no ownMessage
+		// and no prior `internals.validationMessage` to fall back to either.
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+		const barredControl = new FakeControl(
+			{ rangeOverflow: true, valid: false },
+			'', // barred controls always report '' here, regardless of the flag
+		) as unknown as HTMLInputElement
+
+		expect(() =>
+			relayValidity(internals as unknown as ElementInternals, barredControl),
+		).not.toThrow()
+
+		expect(internals.validity.rangeOverflow).toBe(true)
+		expect(internals.validationMessage).toBe(FALLBACK_VALIDITY_MESSAGE)
+	})
+
+	test('replaces a pre-existing customError instead of preserving it', () => {
+		// relayValidity relays the control's full, authoritative ValidityState —
+		// a parent's cross-field customError, set via host.setCustomValidity(),
+		// is not the control's own concern and does not survive a relay. The
+		// parent re-asserts it on its own next check (see ADR-0020).
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+
+		instance.setCustomValidity('Cross-field error')
+		const control = new FakeControl({}, '') as unknown as HTMLInputElement // control itself is fully valid
+
+		relayValidity(internals as unknown as ElementInternals, control)
+
+		expect(internals.validity.customError).toBe(false)
+	})
+
+	test('clears a previously-relayed native flag once the control becomes valid', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+		const invalidControl = new FakeControl(
+			{ rangeOverflow: true, valid: false },
+			'Too high',
+		) as unknown as HTMLInputElement
+		relayValidity(internals as unknown as ElementInternals, invalidControl)
+		expect(internals.validity.rangeOverflow).toBe(true)
+
+		const validControl = new FakeControl({}, '') as unknown as HTMLInputElement
+		relayValidity(internals as unknown as ElementInternals, validControl)
+
+		expect(internals.validity.rangeOverflow).toBe(false)
+	})
+
+	test('anchors to a custom anchor when provided', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: '' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+		const control = new FakeControl({}, '') as unknown as HTMLInputElement
+		const anchor = new FakeHTMLElement() as unknown as HTMLElement
+		let receivedAnchor: HTMLElement | undefined
+		const originalSetValidity = internals.setValidity.bind(internals)
+		internals.setValidity = (flags, message, a) => {
+			receivedAnchor = a
+			return originalSetValidity(flags, message, a)
+		}
+
+		relayValidity(internals as unknown as ElementInternals, control, anchor)
+
+		expect(receivedAnchor).toBe(anchor)
 	})
 })
 
