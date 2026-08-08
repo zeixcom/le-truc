@@ -52,6 +52,7 @@ The observer watches only mutations implied by the CSS selector (class, ID, `[at
 - Internal element→key bookkeeping is a `WeakMap`; `data-key` on the DOM exists for SSR adoption and event delegation — complementary, not either/or.
 - The driving effect reads `source.keys()` only; everything after is wrapped in `untrack()`, so signal reads inside `bindItem` do not become structural dependencies.
 - Ownership follows `keyedScopes`: per-item scopes are `{ root: true }`, an outer `createScope` registers teardown-all on the component scope, and leavers are disposed before their elements are removed and before enterers mount.
+- `bindItem`'s 4th parameter (and `each()`'s callback's 2nd) is `first`, from `bindFirst()` in `src/helpers/dom.ts` — `query()` pre-bound to `element`, allocated once per mount, not per structural re-run (see ADR 0021). It never participates in M8 dependency resolution: items added later can never block the host's own effects, since the host's one-time dependency wait happens once at connect, before `reconcile()`'s effect ever runs.
 
 ## `pass()` Scope is Le Truc Components Only
 
@@ -80,6 +81,8 @@ When a reactive resolves to `undefined`, the component degrades gracefully to th
 ## Dependency Resolution Has a 200ms Timeout
 
 If a child custom element queried by `first()` or `all()` in `src/helpers/dom.ts` is not defined within 200ms, a `DependencyTimeoutError` is logged and effects proceed anyway. Effects run even if dependencies are missing — they do not block indefinitely.
+
+`query()`/`queryAll()` and the scoped `first` passed to `each()`/`bindItem` never participate in this — only host-level `first()`/`all()` collect dependencies (ADR 0021).
 
 ## `on()` Handler Return Value Updates Host
 

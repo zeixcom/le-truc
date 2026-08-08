@@ -150,7 +150,111 @@ const extractAttributes = (selector: string): string[] => {
 	return [...attributes]
 }
 
+// Shared lookup behind `query()`, `makeElementQueries`'s `first`, and
+// `bindFirst`'s item-scoped `first` — only `contextLabel` varies between them.
+function queryOne<S extends string>(
+	root: ParentNode,
+	selector: S,
+	required: string | undefined,
+	contextLabel: string,
+): ElementFromSelector<S> | undefined {
+	const target = root.querySelector<ElementFromSelector<S>>(selector)
+	if (required != null && !target)
+		throw new MissingElementError(root, selector, required, contextLabel)
+	return target ?? undefined
+}
+
+/**
+ * Bind `query()` to `root`, throwing with contextLabel `'item'` instead of the
+ * default `'component'`. Internal — backs `reconcile()`'s `bindItem` and
+ * `each()`'s scoped `first` parameter, not exported from the package. See
+ * ADR 0021.
+ */
+const bindFirst = (root: Element): FirstElement =>
+	((selector: string, required?: string) =>
+		queryOne(root, selector, required, 'item')) as FirstElement
+
 /* === Exported Functions === */
+
+/**
+ * Return the first descendant of `root` matching a CSS selector.
+ *
+ * One-shot: no dependency tracking for undefined custom elements, no `Memo`.
+ * `first()`/`all()` (see `makeElementQueries`) add that on top of this for a
+ * component host. Use `query()` directly for lookups relative to any other
+ * already-obtained element — inside `reconcile()`/`each()` callbacks, or from
+ * free-standing helper functions that only receive an element, not the
+ * factory context. See ADR 0021.
+ *
+ * @since 2.4.0
+ * @param {ParentNode} root - Node to search within
+ * @param {S} selector - CSS selector
+ * @param {string} [required] - If provided and no element is found, throws with this message as context
+ * @returns {ElementFromSelector<S> | undefined} The first matching element, or `undefined` if not found and not required
+ * @throws {MissingElementError} If `required` is set and no matching element exists
+ */
+function query<S extends string>(
+	root: ParentNode,
+	selector: S,
+	required: string,
+): ElementFromSelector<S>
+function query<S extends string>(
+	root: ParentNode,
+	selector: S,
+): ElementFromSelector<S> | undefined
+function query<E extends Element>(
+	root: ParentNode,
+	selector: string,
+	required: string,
+): E
+function query<E extends Element>(
+	root: ParentNode,
+	selector: string,
+): E | undefined
+function query<S extends string>(
+	root: ParentNode,
+	selector: S,
+	required?: string,
+): ElementFromSelector<S> | undefined {
+	return queryOne(root, selector, required, 'component')
+}
+
+/**
+ * Return a plain array of all descendants of `root` matching a CSS selector.
+ *
+ * One-shot: queried once, not backed by a `Memo`/`MutationObserver`. Use this
+ * for a roving-tabindex-style snapshot, or any other case where a live
+ * collection isn't needed. See `query()` and ADR 0021.
+ *
+ * @since 2.4.0
+ * @param {ParentNode} root - Node to search within
+ * @param {S} selector - CSS selector
+ * @param {string} [required] - If provided and no elements are found, throws with this message as context
+ * @returns {ElementFromSelector<S>[]} Array of matching elements
+ * @throws {MissingElementError} If `required` is set and no matching elements exist
+ */
+function queryAll<S extends string>(
+	root: ParentNode,
+	selector: S,
+	required?: string,
+): ElementFromSelector<S>[]
+function queryAll<E extends Element>(
+	root: ParentNode,
+	selector: string,
+	required?: string,
+): E[]
+function queryAll<S extends string>(
+	root: ParentNode,
+	selector: S,
+	required?: string,
+): ElementFromSelector<S>[] {
+	const targets = Array.from(
+		root.querySelectorAll<ElementFromSelector<S>>(selector),
+	)
+	if (required != null && !targets.length)
+		throw new MissingElementError(root, selector, required)
+	return targets
+}
 
 /**
  * Create a memo of elements matching a CSS selector.
@@ -279,9 +383,7 @@ const makeElementQueries = (
 		selector: S,
 		required?: string,
 	): ElementFromSelector<S> | undefined {
-		const target = root.querySelector<ElementFromSelector<S>>(selector)
-		if (required != null && !target)
-			throw new MissingElementError(host, selector, required)
+		const target = queryOne(root, selector, required, 'component')
 
 		// Only add to dependencies if element is a custom element that's not yet defined
 		if (target && isNotYetDefinedComponent(target))
@@ -391,6 +493,7 @@ const makeElementQueries = (
 
 export {
 	type AllElements,
+	bindFirst,
 	createElementsMemo,
 	type ElementFromSelector,
 	type ElementFromSingleSelector,
@@ -403,6 +506,8 @@ export {
 	type FirstElement,
 	type KnownTag,
 	makeElementQueries,
+	query,
+	queryAll,
 	type SplitByComma,
 	type TrimWhitespace,
 }

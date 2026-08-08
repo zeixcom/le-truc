@@ -8,6 +8,7 @@ import {
 	createStore,
 	defineComponent,
 	each,
+	query,
 	reconcile,
 	type Store,
 } from '../../..'
@@ -73,9 +74,7 @@ export default defineComponent(
 		let suppressNextClick = false
 
 		function getItemText(item: HTMLElement): string {
-			return (
-				item.querySelector('label.text, span')?.textContent?.trim() ?? 'item'
-			)
+			return query(item, 'label.text, span')?.textContent?.trim() ?? 'item'
 		}
 
 		function selectItem(item: HTMLElement | null) {
@@ -106,7 +105,7 @@ export default defineComponent(
 			status.set(
 				`${getItemText(item)} moved to position ${newIdx + 1} of ${list.length}.`,
 			)
-			item.querySelector<HTMLElement>(REORDER_SELECTOR)?.focus()
+			query(item, REORDER_SELECTOR)?.focus()
 		}
 
 		function updateMarkerPosition(clientY: number) {
@@ -197,20 +196,18 @@ export default defineComponent(
 		// content — server-adopted items already carry ids and text, so the
 		// fill is naturally idempotent (no <slot> left to replace).
 		const template = first('template', 'Add a template element for items.')
-		reconcile(container, template, list, (element, item, key) => {
+		reconcile(container, template, list, (_element, item, key, first) => {
 			const id = `${key}-checkbox`
-			const checkbox = element.querySelector('input')
+			const checkbox = first('input')
 			if (checkbox) checkbox.id = id
-			const label = element.querySelector('label')
+			const label = first('label')
 			if (label) label.htmlFor = id
-			element
-				.querySelector('slot')
-				?.replaceWith(document.createTextNode(item.label.get()))
+			first('slot')?.replaceWith(document.createTextNode(item.label.get()))
 		})
 
 		const form = first('form', 'Add a form element to enter a new todo item.')
-		on(form, 'submit', e => {
-			e.preventDefault()
+		on(form, 'submit', event => {
+			event.preventDefault()
 			const label = textbox.value.trim()
 			if (!label) return
 			list.add({
@@ -222,17 +219,17 @@ export default defineComponent(
 			textbox.clear()
 		})
 
-		on(host, 'click', e => {
+		on(host, 'click', event => {
 			if (suppressNextClick) {
 				suppressNextClick = false
 				return
 			}
-			const target = e.target as HTMLElement
+			const target = event.target as HTMLElement
 			const item = target.closest('[data-key]')
 			if (!(item instanceof HTMLElement)) return
 
 			if (target.closest('basic-button.remove')) {
-				e.stopPropagation()
+				event.stopPropagation()
 				if (item === selectedItem) selectItem(null)
 				const key = item.dataset.key
 				if (key) list.remove(key)
@@ -241,38 +238,38 @@ export default defineComponent(
 			}
 		})
 
-		on(host, 'keydown', e => {
+		on(host, 'keydown', event => {
 			if (!selectedItem) return
-			const target = e.target as HTMLElement
+			const target = event.target as HTMLElement
 			if (!target.classList.contains(REORDER_CLASS)) return
-			if (e.key === 'Escape') {
+			if (event.key === 'Escape') {
 				selectItem(null)
 				return
 			}
-			if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
-			e.preventDefault()
-			if (e.key === 'ArrowUp') moveItem(selectedItem, -1)
+			if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+			event.preventDefault()
+			if (event.key === 'ArrowUp') moveItem(selectedItem, -1)
 			else moveItem(selectedItem, 1)
 		})
 
-		on(host, 'pointerdown', e => {
-			const handle = (e.target as HTMLElement).closest(REORDER_SELECTOR)
+		on(host, 'pointerdown', event => {
+			const handle = (event.target as HTMLElement).closest(REORDER_SELECTOR)
 			if (!(handle instanceof HTMLElement)) return
 			const item = handle.closest('[data-key]')
 			if (!(item instanceof HTMLElement)) return
-			e.preventDefault()
+			event.preventDefault()
 			pendingDragHandle = handle
-			pointerStartY = e.clientY
-			pointerStartX = e.clientX
+			pointerStartY = event.clientY
+			pointerStartX = event.clientX
 			suppressNextClick = false
-			handle.setPointerCapture(e.pointerId)
+			handle.setPointerCapture(event.pointerId)
 			handle.focus()
 		})
 
-		on(host, 'pointermove', e => {
+		on(host, 'pointermove', event => {
 			if (!pendingDragHandle) return
-			const dy = Math.abs(e.clientY - pointerStartY)
-			const dx = Math.abs(e.clientX - pointerStartX)
+			const dy = Math.abs(event.clientY - pointerStartY)
+			const dx = Math.abs(event.clientX - pointerStartX)
 
 			if (!dragItem && (dy > DRAG_THRESHOLD || dx > DRAG_THRESHOLD)) {
 				const item = pendingDragHandle.closest('[data-key]')
@@ -299,8 +296,8 @@ export default defineComponent(
 			}
 
 			if (dragItem) {
-				dragItem.style.top = `${e.clientY - dragOffsetY}px`
-				updateMarkerPosition(e.clientY)
+				dragItem.style.top = `${event.clientY - dragOffsetY}px`
+				updateMarkerPosition(event.clientY)
 			}
 		})
 

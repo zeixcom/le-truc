@@ -20,4 +20,13 @@ declare const isNotYetDefinedComponent: (element: Element) => boolean;
  * @returns {string}
  */
 declare const elementName: (el: Element | undefined | null) => string;
-export { elementName, isCustomElement, isNotYetDefinedComponent };
+/**
+ * Describe a `ParentNode` for use in error messages: an element's `elementName()`,
+ * a shadow root's host plus "shadow root", or "document" for anything else.
+ *
+ * @since 2.4.0
+ * @param {ParentNode} parent - Node to describe
+ * @returns {string}
+ */
+declare const describeRoot: (parent: ParentNode) => string;
+export { describeRoot, elementName, isCustomElement, isNotYetDefinedComponent };

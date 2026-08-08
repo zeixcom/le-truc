@@ -1,4 +1,4 @@
-import { batch, createEffect, defineComponent } from '../../..'
+import { batch, createEffect, defineComponent, query } from '../../..'
 
 /**
  * Extract the base path (first path segment) from an option value.
@@ -8,9 +8,7 @@ import { batch, createEffect, defineComponent } from '../../..'
 const getBasePath = (
 	listbox: HTMLElement,
 ): { base: string; ext: string } | null => {
-	const firstOption = listbox.querySelector<HTMLButtonElement>(
-		'button[role="option"]',
-	)
+	const firstOption = query(listbox, 'button[role="option"]')
 	if (!firstOption?.value) return null
 
 	const value = firstOption.value
@@ -75,9 +73,7 @@ export default defineComponent('module-listnav', ({ first, pass, watch }) => {
 	const lazyload = first('module-lazyload', 'Required to load a partial into')
 
 	const hasOption = (value: string): boolean =>
-		!!listbox.querySelector(
-			`button[role="option"][value="${CSS.escape(value)}"]`,
-		)
+		!!query(listbox, `button[role="option"][value="${CSS.escape(value)}"]`)
 
 	// Set initial selection from hash
 	if (location.hash) {

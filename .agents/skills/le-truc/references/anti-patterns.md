@@ -217,6 +217,8 @@ if (badge) watch('count', () => {
 
 `on()` and `pass()` skip gracefully when the target is falsy. Inlining a query as a call argument (`on(first('button'), 'click', …)`) works, but it hides the timing from readers and mixes two intents in one expression. Declare the query on its own line, directly above the effect it feeds — see "Statement Layout: Group by Concern" in `effects.md`.
 
+This rule is specific to host-level `first()`/`all()` — they lose real guarantees (connect-time dependency registration, Memo liveness) when repeated inside a callback. `query()`/`queryAll()` never had those guarantees to begin with: they are one-shot, root-parameterized lookups meant to be called from inside `bindItem`/`each` callbacks, or from free-standing helper functions invoked from event handlers. Calling `query()` inside an `on()` handler is not this anti-pattern.
+
 ---
 
 ## HTML Anti-Patterns

@@ -37,7 +37,7 @@ export default defineComponent<ModuleSplitviewProps>(
 
 		on(divider, 'pointerdown', event => {
 			dragging = true
-			;(event.target as Element).setPointerCapture(event.pointerId)
+			divider.setPointerCapture(event.pointerId)
 		})
 		on(divider, 'pointermove', event => {
 			if (!dragging) return

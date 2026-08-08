@@ -6,7 +6,7 @@ export { type ComponentExtension } from './src/extension';
 export { observedAttributes } from './src/extensions/attributes';
 export { type FormAssociatedCheckboxExtension, type FormAssociatedExtension, formAssociated, formAssociatedCheckbox, relayValidity, type ValidatableControl, } from './src/extensions/form';
 export { CONTEXT_REQUEST, type Context, type ContextCallback, ContextRequestEvent, type ContextType, createContext, type ProvideContextsHelper, type RequestContextHelper, type UnknownContext, } from './src/helpers/context';
-export { type AllElements, createElementsMemo, type ElementFromSelector, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, type FirstElement, type KnownTag, type SplitByComma, type TrimWhitespace, } from './src/helpers/dom';
+export { type AllElements, createElementsMemo, type ElementFromSelector, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, type FirstElement, type KnownTag, query, queryAll, type SplitByComma, type TrimWhitespace, } from './src/helpers/dom';
 export type { EventType, OnEventHandler, OnHelper } from './src/helpers/events';
 export { each, type PassedProps, type PassHelper, type Reactive, reconcile, type WatchHelper, } from './src/helpers/reactive';
 export { asBoolean } from './src/parsers/boolean';

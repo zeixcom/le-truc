@@ -1998,6 +1998,7 @@ var elementName = (el) => {
   const classes = el.classList?.length ? `.${Array.from(el.classList).join(".")}` : "";
   return `<${el.localName}${id}${classes}>`;
 };
+var describeRoot = (parent) => typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
 
 // src/errors.ts
 class InvalidComponentNameError extends TypeError {
@@ -2015,8 +2016,8 @@ class InvalidPropertyNameError extends TypeError {
 }
 
 class MissingElementError extends Error {
-  constructor(host, selector, required) {
-    super(`Missing required element <${selector}> in component ${elementName(host)}. ${required}`);
+  constructor(root, selector, required, contextLabel = "component") {
+    super(`Missing required element <${selector}> in ${contextLabel} ${describeRoot(root)}. ${required}`);
     this.name = "MissingElementError";
   }
 }
@@ -2074,8 +2075,7 @@ class ExtensionCollisionError extends Error {
 
 class InvalidSelectorError extends TypeError {
   constructor(parent, selector, cause) {
-    const where = typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
-    super(`Invalid selector "${selector}" passed to all() in ${where}. ${cause instanceof Error ? cause.message : String(cause)}`);
+    super(`Invalid selector "${selector}" passed to all() in ${describeRoot(parent)}. ${cause instanceof Error ? cause.message : String(cause)}`);
     this.name = "InvalidSelectorError";
   }
 }
@@ -2242,6 +2242,22 @@ var extractAttributes = (selector) => {
   }
   return [...attributes];
 };
+function queryOne(root, selector, required, contextLabel) {
+  const target = root.querySelector(selector);
+  if (required != null && !target)
+    throw new MissingElementError(root, selector, required, contextLabel);
+  return target ?? undefined;
+}
+var bindFirst = (root) => (selector, required) => queryOne(root, selector, required, "item");
+function query(root, selector, required) {
+  return queryOne(root, selector, required, "component");
+}
+function queryAll(root, selector, required) {
+  const targets = Array.from(root.querySelectorAll(selector));
+  if (required != null && !targets.length)
+    throw new MissingElementError(root, selector, required);
+  return targets;
+}
 function createElementsMemo(parent, selector) {
   try {
     parent.querySelector(selector);
@@ -2287,9 +2303,7 @@ var makeElementQueries = (host) => {
   const dependencies = new Set;
   let queriedDefinedCustomChild = false;
   function first(selector, required) {
-    const target = root.querySelector(selector);
-    if (required != null && !target)
-      throw new MissingElementError(host, selector, required);
+    const target = queryOne(root, selector, required, "component");
     if (target && isNotYetDefinedComponent(target))
       dependencies.add(target.localName);
     else if (target && isCustomElement(target))
@@ -2478,7 +2492,7 @@ function each(memo, callback) {
   const descriptor = () => {
     keyedScopes(memo, (element) => {
       const collected = [];
-      const result = withCollector(collected, () => callback(element));
+      const result = withCollector(collected, () => callback(element, bindFirst(element)));
       activateResult(collected);
       forEachUnseen(result, new Set(collected), (d) => d());
     });
@@ -2562,7 +2576,7 @@ function reconcile(container, template, source, bindItem) {
             const element = el;
             disposers.set(key, createScope(() => {
               const collected = [];
-              const cleanup = withCollector(collected, () => bindItem(element, item, key));
+              const cleanup = withCollector(collected, () => bindItem(element, item, key, bindFirst(element)));
               activateResult(collected);
               return cleanup;
             }, {
@@ -3202,6 +3216,8 @@ export {
   safeSetAttribute,
   relayValidity,
   reconcile,
+  queryAll,
+  query,
   observedAttributes,
   match,
   isTask,
