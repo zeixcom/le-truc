@@ -27,6 +27,7 @@ layout: 'page'
   - [Callout](./examples/card-callout.html)
   - [Collapsible](./examples/card-collapsible.html)
   - [Colorscale](./examples/card-colorscale.html)
+  - [Mediaqueries](./examples/card-mediaqueries.html)
 - Context
   - [Media](./examples/context-media.html)
 - Form

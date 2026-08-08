@@ -398,15 +398,11 @@ Context allows **parent components to share state** with any descendant componen
 First, define typed context keys for the values you want to share:
 
 ```ts#context-media.ts
-// Define context keys with types
-export const MEDIA_MOTION = 'media-motion' as Context<
-  'media-motion',
-  () => 'no-preference' | 'reduce'
->
-export const MEDIA_THEME = 'media-theme' as Context<
-  'media-theme',
-  () => 'light' | 'dark'
->
+// Define context keys with types, via createContext()
+export const MEDIA_MOTION = createContext<() => 'no-preference' | 'reduce'>(
+  'motion',
+)
+export const MEDIA_THEME = createContext<() => 'light' | 'dark'>('theme')
 ```
 
 ### Provider Component
