@@ -39,7 +39,8 @@ declare global {
  * switches the whole component to floating-point mode, so `value`/`min`/`max`
  * are parsed and rounded as decimals instead of integers. An optional
  * `big-step` attribute (default `step * 10`) sets the increment used when
- * Shift is held or `stepDown(true)`/`stepUp(true)` is called. `min` is no
+ * Shift is held (on Arrow keys or button clicks) or `stepDown(true)`/
+ * `stepUp(true)` is called. `min` is no
  * longer fixed at `0` — negative ranges work, and typing `-`/`+` directly
  * into a focused input is left to the browser rather than intercepted as a
  * step shortcut (only Arrow keys and clicks on the buttons step by `±1`
@@ -161,8 +162,8 @@ export default defineComponent<FormSpinbuttonProps>(
 			'button.increment',
 			'Add a native button to increment the value',
 		)
-		on(decrement, 'click', () => stepBy(-1, false))
-		on(increment, 'click', () => stepBy(1, false))
+		on(decrement, 'click', event => stepBy(-1, event.shiftKey))
+		on(increment, 'click', event => stepBy(1, event.shiftKey))
 		on(host, 'keydown', event => {
 			const { key, shiftKey, target } = event
 			if (!['ArrowUp', 'ArrowDown', '+', '-'].includes(key)) return

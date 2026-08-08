@@ -277,6 +277,8 @@ defineComponent('form-textbox', ({ expose, first, host, on, watch }) => {
       textbox.value = ''
       textbox.setCustomValidity('')
       textbox.checkValidity()
+      textbox.dispatchEvent(new Event('input', { bubbles: true }))
+      textbox.dispatchEvent(new Event('change', { bubbles: true }))
       textbox.focus()
     }),
   })
