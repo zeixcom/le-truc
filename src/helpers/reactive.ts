@@ -38,6 +38,25 @@ import type {
 } from '../types'
 import { elementName, isCustomElement } from '../util'
 
+/**
+ * Reactive-effect helpers exposed through `FactoryContext`: `watch`, `pass`,
+ * `each`, and `reconcile`.
+ *
+ * A `Reactive<T, P>` source is one of three forms: a property name (reads
+ * `host[name]` and tracks it as a signal dependency), a `Signal`, or a thunk
+ * wrapped in `createComputed()`. `watch()` and `pass()` both resolve sources
+ * through `toSignal()`.
+ *
+ * `pass()` accepts a read-only thunk, a mediated `{ get, set }` descriptor, a
+ * bare property name, or a bare writable `Signal`. The last two forms hand
+ * the child component unrestricted `.set()` on the parent's signal
+ * (ADR-0012) and warn in DEV_MODE; prefer the thunk or the descriptor form.
+ *
+ * `watch()`, `pass()`, `each()`, and `reconcile()` push an `EffectDescriptor`
+ * into the active ambient collector when called and do not require an
+ * explicit `return` (ADR 0018). Explicit `return` is still supported.
+ */
+
 /* === Types === */
 
 /**
@@ -57,17 +76,12 @@ type Reactive<T, P extends ComponentProps> =
 	| (() => T | Promise<T> | null | undefined)
 
 /**
- * A map of child component property names to the reactive values to inject into them.
- * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
+ * Map of child component property names to the reactive values `pass()` injects into them.
  *
  * `Q` is bound to `HTMLElement`, not `ComponentProps`, because native members
  * mixed into a target's element type (e.g. `form: HTMLFormElement | null`)
- * can fail a `Record<string, {}>`-style constraint. `keyof Q & ComponentProp`
+ * fail a `Record<string, {}>`-style constraint. `keyof Q & ComponentProp`
  * filters to the author-exposed reactive props instead.
- *
- * Prefer the read-only thunk (`() => host.prop`) and the mediated
- * `{ get, set }` descriptor forms. The property-key and bare-writable-signal
- * forms are deprecated and warn in DEV_MODE.
  */
 type PassedProps<P extends ComponentProps, Q extends HTMLElement> = {
 	[K in keyof Q & ComponentProp]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>
@@ -76,13 +90,9 @@ type PassedProps<P extends ComponentProps, Q extends HTMLElement> = {
 /**
  * The `watch` helper type in `FactoryContext`.
  *
- * Drives a reactive effect from a signal source (property name, Signal, thunk,
- * or array). Only the declared sources trigger re-runs — incidental reads inside
- * the handler are not tracked. Returns an `EffectDescriptor`.
- *
- * Thunk form `() => T` is wrapped in `createComputed`, so all signals read inside
- * it are tracked in the pure phase — useful for deriving or transforming values
- * before the side-effectful handler runs.
+ * Drives a reactive effect from one or more `Reactive` sources. Only the
+ * declared sources trigger re-runs; other reads inside the handler are not
+ * tracked. Returns an `EffectDescriptor`.
  */
 type WatchHelper<P extends ComponentProps> = {
 	<K extends keyof P & string>(
@@ -118,21 +128,9 @@ type WatchHelper<P extends ComponentProps> = {
 /**
  * The `pass` helper type in `FactoryContext`.
  *
- * Passes reactive values to a descendant Le Truc component's Slot-backed signals.
- * Supports single-element and Memo targets (per-element lifecycle for Memo).
- *
- * The property-key (`'value'`) and bare-writable-signal (`someState`) forms are
- * deprecated — they hand the child unrestricted `.set()` on the parent's signal
- * (ADR-0012) and warn in DEV_MODE. Migrate to the behavior-preserving descriptor:
- *
- * ```ts
- * // before (deprecated) — child can write freely
- * pass(child, { value: parentSignal })
- * // after — child writes are mediated by the parent
- * pass(child, { value: { get: parentSignal.get, set: parentSignal.set } })
- * ```
- *
- * For read-only access use the thunk: `pass(child, { value: () => host.value })`.
+ * Passes reactive values to a descendant Le Truc component's Slot-backed
+ * signals. Supports a single element or a `Memo<Element[]>` target, with
+ * per-element lifecycle for the latter.
  */
 type PassHelper<P extends ComponentProps> = {
 	<Q extends HTMLElement>(
@@ -356,22 +354,16 @@ const makeWatch = <P extends ComponentProps>(
 /**
  * Create a `pass` helper bound to a specific component host.
  *
- * `pass` passes reactive values to a descendant Le Truc component by swapping
- * its Slot-backed signals. The original signals are restored when the component
- * disconnects. Supports both single-element and `Memo<Element[]>` targets.
+ * Swaps the target's Slot-backed signals for the given values and restores
+ * the originals on disconnect. A `Memo<Element[]>` target swaps and restores
+ * signals per element as it enters and leaves the collection.
  *
- * For Memo targets, uses per-element lifecycle: signals are swapped when elements
- * enter the collection and restored when they leave.
- *
- * The property-key and bare-writable-signal short forms are deprecated —
- * they grant the child unrestricted `.set()` on the parent's signal. In
- * DEV_MODE `pass()` warns for each writable binding:
- *
- * > `pass() received a writable signal for '<prop>'. Use () => host.<prop> for read-only access, or { get, set } to mediate writes.`
- *
- * Migrate with `pass(child, { value: sig })` →
- * `pass(child, { value: { get: sig.get, set: sig.set } })`, or for
- * read-only access `pass(child, { value: () => host.value })`.
+ * ```ts
+ * // deprecated — child can write freely
+ * pass(child, { value: parentSignal })
+ * // preferred — child writes are mediated by the parent
+ * pass(child, { value: { get: parentSignal.get, set: parentSignal.set } })
+ * ```
  *
  * @since 2.0
  * @param {HTMLElement & P} host - The component host element
