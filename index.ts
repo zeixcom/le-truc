@@ -1,4 +1,4 @@
-// Le Truc 2.4-alpha
+// Le Truc 2.4.0
 
 // From Cause & Effect
 export {
