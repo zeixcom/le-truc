@@ -70,7 +70,7 @@ defineComponent(
 - 🛡️ **Type-safe** — TypeScript infers types from selector strings through to property types and finds integration errors when you compile the code
 - 🧩 **Composable** — build component behavior from small, reusable parser and effect functions
 - 🌐 **Context support** — components share state without you passing props through each level
-- 🪶 **Small size** — 10 kB or less when compressed with gzip; tree-shakeable
+- 🪶 **Small size** — core under 9 kB gzipped, tree-shakeable extensions
 
 Le Truc uses [Cause & Effect](https://github.com/zeixcom/cause-effect) for its reactive primitives.
 

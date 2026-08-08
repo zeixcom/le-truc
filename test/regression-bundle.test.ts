@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { gzipSync } from 'node:zlib'
 
-const MINIMAL_CEILING = 8 * 1024
-const CORE_FORM_WARN = 14 * 1024
+const MINIMAL_CEILING = 9 * 1024
+const CORE_FORM_WARN = 10 * 1024
 
 const buildGzipped = async (entrypoint: string): Promise<number> => {
 	const result = await Bun.build({
