@@ -1,5 +1,19 @@
 import type { SingleMatchHandlers } from '@zeix/cause-effect';
 /**
+ * Low-level DOM-mutation primitives behind `bindText`, `bindAttribute`,
+ * `bindClass`, `bindState`, `bindStyle`, `bindVisible`, and
+ * `dangerouslyBindInnerHTML`. Each `bind*` function returns a setter (or
+ * `SingleMatchHandlers`) that a caller wires to a signal via `watch()` or
+ * `match()`.
+ *
+ * `safeSetAttribute()` blocks `on*` attribute names and validates URL-like
+ * values against an allowlist (`http:`, `https:`, `ftp:`, `mailto:`,
+ * `tel:`); see `isSafeURL()` for the exact rules. `dangerouslyBindInnerHTML()`
+ * is an XSS sink — pass a `sanitize` option (e.g. DOMPurify) for untrusted
+ * input, and return `TrustedHTML` from it on pages that enforce
+ * `require-trusted-types-for 'script'`. Le Truc ships no sanitizer.
+ */
+/**
  * Placeholder for the DOM's `TrustedHTML` type (Trusted Types API). Declared
  * locally because `lib.dom.d.ts` does not yet ship this type. Deliberately
  * just `object`, not a structural mirror: the real type is a nominal class
@@ -12,27 +26,18 @@ type DangerouslyBindInnerHTMLOptions = {
     shadowRootMode?: ShadowRootMode;
     allowScripts?: boolean;
     /**
-     * Optional sanitizer applied to the HTML string before it is assigned to
-     * `innerHTML`. Plug in an external sanitizer (e.g. DOMPurify) when the
-     * content is not fully trusted. Le Truc ships no built-in sanitizer.
-     *
-     * May return a plain `string` or a `TrustedHTML` instance. On a page
-     * that enforces `Content-Security-Policy: require-trusted-types-for
-     * 'script'`, the DOM rejects a plain string, so return `TrustedHTML`
-     * there (DOMPurify with `RETURN_TRUSTED_TYPE: true` is the canonical way).
-     *
-     * Sanitizing is the only reliable defense against XSS here: `innerHTML`
-     * fires event-handler attributes on non-`<script>` elements (e.g.
-     * `<img onerror>`, `<svg onload>`) even when `allowScripts` is false.
+     * Sanitizer applied to the HTML string before assignment to `innerHTML`.
+     * Return a sanitized `string`, or a `TrustedHTML` instance on pages that
+     * enforce Trusted Types (see the Security note on
+     * `dangerouslyBindInnerHTML` below).
      */
     sanitize?: (html: string) => string | TrustedHTML;
 };
 /**
  * Set an attribute on an element with security validation.
  *
- * Blocks `on*` event handler attributes and validates URL-like values against
- * a safe-protocol allowlist (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`).
- * Violations throw a descriptive error — they are never silent.
+ * Blocks `on*` event handler attribute names and rejects unsafe URL values
+ * (see `isSafeURL()`). Violations throw; they never fail silently.
  *
  * @since 2.0
  * @param {Element} element - Target element
@@ -169,20 +174,16 @@ declare const bindStyle: (element: HTMLElement | SVGElement | MathMLElement, pro
  *   entirely — under a Trusted-Types-enforcing CSP, any string assignment
  *   throws, even `''`.
  *
- * **Security — read carefully.** Assigning `innerHTML` is an XSS sink. It does
- * NOT execute inline `<script>`, but it DOES fire event-handler attributes on
- * other elements (e.g. `<img src=x onerror=…>`, `<svg onload=…>`, `<iframe srcdoc>`).
- * `allowScripts: false` (the default) does not make untrusted HTML safe — it
- * only suppresses the explicit `<script>` re-execution step. All content
- * passed here must be fully trusted or sanitized upstream; pass a `sanitize`
- * function (e.g. DOMPurify's `sanitize`) to sanitize at the sink. Le Truc
- * ships no built-in sanitizer.
+ * **Security.** `allowScripts: false` (the default) does not make untrusted
+ * HTML safe: `innerHTML` still fires event-handler attributes on other
+ * elements (e.g. `<img src=x onerror=…>`, `<svg onload=…>`, `<iframe srcdoc>`)
+ * even though it does not execute inline `<script>`. Pass a `sanitize`
+ * function for any content that is not fully trusted.
  *
- * **Trusted Types.** On a page that enforces
- * `Content-Security-Policy: require-trusted-types-for 'script'`, the
- * `innerHTML` assignment throws unless `html` is a `TrustedHTML` instance.
- * Return `TrustedHTML` from `sanitize` (e.g. DOMPurify with
- * `RETURN_TRUSTED_TYPE: true`) to support such pages.
+ * **Trusted Types.** Under `Content-Security-Policy:
+ * require-trusted-types-for 'script'`, the `innerHTML` assignment throws
+ * unless `html` is a `TrustedHTML` instance — return one from `sanitize`
+ * (e.g. DOMPurify with `RETURN_TRUSTED_TYPE: true`).
  *
  * @since 2.0
  * @param element - Target element

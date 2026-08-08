@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.0
+
+### Added
+
+- **`query(root, selector, required?)` / `queryAll(root, selector, required?)`**: new standalone, root-parameterized siblings of `first()`/`all()` — same selector-to-type inference and `MissingElementError` throw-on-`required` behavior, but explicit `root` instead of the component host, and always one-shot (`queryAll()` returns a plain array, never a `Memo`). Neither participates in dependency resolution for undefined custom elements — that guarantee stays host-level `first()`/`all()` only. Use them for a lookup relative to an element you already have: inside `reconcile()`/`each()` callbacks beyond what the new scoped `first` parameter covers, or in a free-standing helper function called from an event handler, outside the factory body entirely. `first()`/`all()` are now implemented as `query()`/`queryAll()` bound to the host plus dependency-tracking, with unchanged behavior and error wording. See [ADR 0021](adr/0021-root-parameterized-query-and-queryall.md).
+- **Scoped `first` parameter on `each()`'s callback and `reconcile()`'s `bindItem`**: `each(memo, (element, first) => …)` and `reconcile(container, template, source, (element, item, key, first) => …)` now receive a trailing `first`, the same type-safe throwing lookup as the factory's own `first()` but bound to `element` instead of the host — use it in place of `element.querySelector()`. Allocated once per mount (`bindFirst()` in `src/helpers/dom.ts`), not per structural re-run, and — like `query()`/`queryAll()` — does not participate in dependency resolution for undefined custom elements: items added later can never block the host's own effects, since the host's one-time dependency wait happens once at connect, before `reconcile()`'s effect ever runs. Purely additive — existing 1-arg `each()` callbacks and 3-arg `bindItem` callbacks are unaffected. See [ADR 0021](adr/0021-root-parameterized-query-and-queryall.md).
+- **`MissingElementError` `contextLabel` parameter**: the constructor's 4th parameter (default `'component'`) controls the noun in the thrown message — `query()`/`first()`-derived errors read "Missing required element ... in component ...", while the scoped `first` passed to `each()`/`bindItem` passes `'item'`, reading "... in item ...". The 1st parameter also widened from `HTMLElement` to `ParentNode` to accept any root `query()`/`queryAll()` can be called against, not just a component host. Both changes are additive — existing 3-arg call sites are source-compatible.
+
 ## 2.3.4
 
 ### Added

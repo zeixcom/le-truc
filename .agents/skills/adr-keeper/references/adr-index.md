@@ -25,8 +25,9 @@ This file is auto-generated. Do not edit manually.
 | [0018](0018-implicit-effect-collection-via-ambient-context.md) | Implicit Effect Collection via Ambient Context | ✅ Accepted | M8, M5, M6 |
 | [0019](0019-extension-based-dependency-injection-for-definecomponent.md) | Extension-Based Dependency Injection for `defineComponent()` | ✅ Accepted | M1, X1, N1, §4 |
 | [0020](0020-merge-based-validity-composition-and-relayvalidity.md) | Merge-Based Validity Composition and `relayValidity()` | ✅ Accepted | M1, §4 |
+| [0021](0021-root-parameterized-query-and-queryall.md) | `query`/`queryAll` — Root-Parameterized Siblings of `first`/`all` | ✅ Accepted | S6, M4, M8, M14 |
 
 ---
 
-**Last updated:** 2026-08-04
-**Total ADRs:** 20 (excluding template)
+**Last updated:** 2026-08-08
+**Total ADRs:** 21 (excluding template)

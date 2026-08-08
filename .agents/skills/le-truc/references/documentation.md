@@ -10,7 +10,7 @@ Include a section only when it applies to the component.
 
 ### Required Sections (Always Include)
 
-**Description** — single paragraph explaining what component does and which Le Truc patterns it demonstrates.
+**Description** — single paragraph explaining what component does and why it exists.
 
 **Tag name** — custom element tag name, formatted as inline code block.
 
@@ -61,7 +61,7 @@ One paragraph. State what it does, then name the key patterns it demonstrates
 | `label` | `string` | `''` | Label text |
 ```
 
-For readonly properties (sensor-driven):
+For readonly properties:
 
 ```markdown
 | `checked` | `boolean` (readonly) | `false` | Reflects checked state of native input |

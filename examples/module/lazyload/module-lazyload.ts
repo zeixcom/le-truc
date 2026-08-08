@@ -3,6 +3,7 @@ import {
 	createTask,
 	dangerouslyBindInnerHTML,
 	defineComponent,
+	query,
 	schedule,
 } from '../../..'
 import {
@@ -76,9 +77,10 @@ export default defineComponent<ModuleLazyloadProps>(
 
 				if (hasLoaded) {
 					schedule(scrollTask, () => {
-						contentEl
-							.querySelector('h1, h2, h3, h4, h5, h6')
-							?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+						query(contentEl, 'h1, h2, h3, h4, h5, h6')?.scrollIntoView({
+							behavior: 'smooth',
+							block: 'start',
+						})
 					})
 				}
 				hasLoaded = true

@@ -317,11 +317,11 @@ export default defineComponent<FormColorgraphProps>(
 			return null
 		}
 
-		on(sliderEl, 'pointerdown', event => {
+		on(sliderEl, 'pointerdown', ({ pointerId }) => {
 			const left = track.getBoundingClientRect().left
 			const width = trackWidth.get()
 			thumb.ariaPressed = 'true'
-			sliderEl.setPointerCapture(event.pointerId)
+			sliderEl.setPointerCapture(pointerId)
 			const handleMove = (e: PointerEvent) => {
 				const last = (e.getCoalescedEvents?.() || []).pop() || e
 				moveThumb(last.clientX, left, width)
@@ -378,10 +378,9 @@ export default defineComponent<FormColorgraphProps>(
 
 		// Keyboard navigation
 		on(host, 'keydown', event => {
-			const { key, shiftKey } = event as KeyboardEvent
-			const target = (event as KeyboardEvent).target as HTMLElement | null
+			const { key, shiftKey, target } = event
 			if (
-				!target ||
+				!(target instanceof HTMLElement) ||
 				(target.localName === 'input' &&
 					(key === 'ArrowLeft' || key === 'ArrowRight'))
 			)

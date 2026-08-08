@@ -1,10 +1,10 @@
 # Component Model
 
-**Overview:** The Le Truc component model — factory form of `defineComponent`, reactivity flow, and signal types re-exported from `@zeix/cause-effect`.
+**Overview:** The Le Truc component model, `defineComponent`, reactivity flow, and signal types re-exported from `@zeix/cause-effect`.
 
 ---
 
-## `defineComponent` — Factory Form (v2.0)
+## `defineComponent` Factory
 
 ```typescript
 defineComponent<P extends ComponentProps>(name, factory)
@@ -48,20 +48,20 @@ defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) =>
   // 3. Call effect helpers — each registers itself, no return needed
   on(button, 'click', () => { /* ... */ })
   watch('disabled', bindProperty(button, 'disabled'))
-  if (label) watch('label', bindText(label))  // guard for optional element
+  if (label) watch('label', bindText(label)) // guard for optional element
 })
 ```
 
-`watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` register their descriptor in an ambient collector the moment they're called — the factory doesn't collect or return anything. Calling one of these helpers outside synchronous factory (or `each()` callback) execution — after an `await`, in a detached `setTimeout` — throws `NoActiveCollectorError` immediately, rather than silently doing nothing.
+`watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` register their descriptor in an ambient collector the moment they're called. Calling one of these helpers outside synchronous factory (or `each()` callback) execution — after an `await`, in a detached `setTimeout` — throws `NoActiveCollectorError` immediately, rather than silently doing nothing.
 
-Explicit `return [...]` of the same descriptors still works (dual support in v2.3, deprecated as of v3.0) — see ADR 0018.
+Explicit `return [...]` of the same descriptors still works (dual support in v2.3, deprecated as of v3.0).
 
 ---
 
 ## Key Constraints
 
 - `expose()` **must** be called before any signal access that reads `host.propName`
-- `defineComponent` never registers `observedAttributes` — `attributeChangedCallback` support was dropped entirely in v2.0
+- `defineComponent` doesn't register `observedAttributes` unless explicitly requested via `observedAttributes` extension
 - Parsers in `expose()` called **once at connect time** — HTML authors configure via attributes in server-rendered markup
 - Attribute changes after connect **are not re-parsed** — reactive state flows through property interface only
 - Effect helpers register themselves when called — no `return` needed. Explicit `return [...]` of a `FactoryResult` (`Array<EffectDescriptor | FactoryResult | Falsy>`) still works but is deprecated; nested arrays are flattened and falsy values filtered, so the legacy `element && watch(...)` pattern still works too, but prefer `if (element) watch(...)` in new code
@@ -77,16 +77,6 @@ Explicit `return [...]` of the same descriptors still works (dual support in v2.
 | `Signal` | Any `Signal<T>` | Used directly as backing signal |
 | Static value | Anything else (`string`, `number`, `boolean`, `[]`, ...) | Wrapped in `createState()` |
 | `MemoCallback<T>` | `() => T` (unbranded thunk) | Wrapped in `createComputed()` — reactive derived value |
-
-**Note:** No `Reader` type in v2.0. Read initial DOM values directly before `expose()`:
-
-```typescript
-expose({
-  count: asInteger(parseInt(countEl.textContent || '0') || 0),
-  value: textbox.value,
-  label: asString(labelEl?.textContent ?? ''),
-})
-```
 
 ---
 

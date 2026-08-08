@@ -1,6 +1,6 @@
 # Effects
 
-**Overview:** How to drive DOM updates in Le Truc v2.3. All helpers imported from `@zeix/le-truc`. Effects driven by `watch()`, called directly in the factory — it registers itself, no `return` needed.
+**Overview:** How to drive DOM updates in Le Truc. All helpers imported from `@zeix/le-truc`. Effects driven by `watch()`, called directly in the factory.
 
 ---
 
@@ -194,23 +194,39 @@ each(items, item => {
 })
 ```
 
+The callback's 2nd parameter is `first`, a type-safe, throwing lookup scoped to `item` instead of the host — same shape as the factory's own `first()`, minus dependency resolution for undefined custom elements. Use it instead of `item.querySelector()`.
+
 The callback can call `watch()`, `on()`, `each()` (nested, to any depth), `pass()`, and `provideContexts()` directly — same as the factory itself — or return a single `EffectDescriptor` / `FactoryResult` array (legacy form, still supported).
 
 ### `reconcile(container, template, source, bindItem)`
 
-Data-driven complement of `each()`: syncs a keyed `List<T>` or `Collection<T>` (from cause-effect) to a container's children. The component owns the container; entering keys clone the `<template>`'s single root element (stamped with `data-key`), leaving keys dispose their scope and are removed, survivors are moved — always reused. `bindItem(element, item, key)` is mounted once per entering element in its own scope (a returned cleanup runs on leave/disconnect) and does all content work; it also runs for server-rendered children adopted by `data-key` on first run, so keep it idempotent. Unkeyed and unmatched children are removed (self-cleaning); children with `data-unreconciled` are exempt entirely.
+Data-driven complement of `each()`: syncs a keyed `List<T>` or `Collection<T>` (from cause-effect) to a container's children. The component owns the container; entering keys clone the `<template>`'s single root element (stamped with `data-key`), leaving keys dispose their scope and are removed, survivors are moved — always reused. `bindItem(element, item, key, first)` is mounted once per entering element in its own scope (a returned cleanup runs on leave/disconnect) and does all content work; it also runs for server-rendered children adopted by `data-key` on first run, so keep it idempotent. Unkeyed and unmatched children are removed (self-cleaning); children with `data-unreconciled` are exempt entirely.
+
+`bindItem`'s 4th parameter, `first`, is the same scoped lookup `each()`'s callback receives — pre-bound to `element`, throws `MissingElementError` with "in item ..." wording when required and missing. Use it instead of `element.querySelector()`.
 
 ```typescript
 const container = first('[data-container]', 'Add a container element.')
 const template = first('template', 'Add a template element for items.')
 const list = createList<string>([], { keyConfig: 'item' })
-reconcile(container, template, list, (element, item) => {
-  element.querySelector('slot')?.replaceWith(document.createTextNode(item.get()))
+reconcile(container, template, list, (element, item, _key, first) => {
+  first('slot')?.replaceWith(document.createTextNode(item.get()))
 })
 on(form, 'submit', e => { e.preventDefault(); list.add(textbox.value.trim()) })
 ```
 
-One-way sync, data → DOM: mutate the list in event handlers, never the container's children directly. Throws `InvalidTemplateError` if the template content doesn't have exactly one root element. See ADR 0017.
+One-way sync, data → DOM: mutate the list in event handlers, never the container's children directly. Throws `InvalidTemplateError` if the template content doesn't have exactly one root element.
+
+### `query(root, selector, required?)` and `queryAll(root, selector, required?)`
+
+Standalone siblings of `first()`/`all()`, root-parameterized instead of host-bound. Use them for a lookup relative to an element you already have — inside `each()`/`bindItem` (when you need a second-level lookup beyond the scoped `first` parameter), or in a free-standing helper function called from an event handler, outside the factory body entirely:
+
+```typescript
+function getItemText(item: HTMLElement): string {
+  return query(item, 'label.text, span')?.textContent?.trim() ?? 'item'
+}
+```
+
+Same selector-to-type inference and `MissingElementError` behavior as `first()`/`all()`. `queryAll()` returns a plain array, queried once — never a `Memo`. Neither participates in dependency resolution for undefined custom elements; that guarantee is host-level `first()`/`all()` only.
 
 ### Hand-authored descriptors: `watch(() => true, descriptor)`
 
@@ -282,4 +298,4 @@ if (badge) watch('count', bindText(badge)) // skipped if badge is null
 
 `on()` and `pass()` also skip a falsy target on their own — an absent optional element makes the effect a no-op, with no throw and no stray listener.
 
-`first()` and `all()` must run in the factory body, never inside a callback. See "Querying Inside Effect or Event Callbacks" in `anti-patterns.md`.
+`first()` and `all()` must run in the factory body, never inside a callback — this does not apply to `query()`/`queryAll()` or the scoped `first` passed to `each()`/`bindItem`, which never had dependency-resolution or Memo-liveness to lose. See "Querying Inside Effect or Event Callbacks" in `anti-patterns.md`.

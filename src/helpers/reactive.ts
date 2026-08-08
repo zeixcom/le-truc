@@ -37,6 +37,7 @@ import type {
 	Falsy,
 } from '../types'
 import { elementName, isCustomElement } from '../util'
+import { bindFirst, type FirstElement } from './dom'
 
 /**
  * Reactive-effect helpers exposed through `FactoryContext`: `watch`, `pass`,
@@ -497,16 +498,25 @@ const makePass = <P extends ComponentProps>(
  * own nested scope. Returning descriptors still works and is not
  * double-activated if you also call them directly.
  *
+ * The callback's 2nd parameter is `first`, a type-safe, throwing lookup
+ * scoped to `element` instead of the host — the same shape as host-level
+ * `first()`, minus M8 dependency-resolution participation (see ADR 0021).
+ *
  * @since 2.0
  */
 function each<E extends Element>(
 	memo: Memo<E[]>,
-	callback: (element: E) => FactoryResult | EffectDescriptor | Falsy | void,
+	callback: (
+		element: E,
+		first: FirstElement,
+	) => FactoryResult | EffectDescriptor | Falsy | void,
 ): EffectDescriptor {
 	const descriptor: EffectDescriptor = () => {
 		keyedScopes(memo, element => {
 			const collected: EffectDescriptor[] = []
-			const result = withCollector(collected, () => callback(element))
+			const result = withCollector(collected, () =>
+				callback(element, bindFirst(element)),
+			)
 			activateResult(collected)
 			forEachUnseen(result, new Set(collected), d => d())
 		})
@@ -536,6 +546,10 @@ function each<E extends Element>(
  * A returned `MaybeCleanup` runs when the key leaves the source or the
  * component disconnects.
  *
+ * `bindItem`'s 4th parameter is `first`, a type-safe, throwing lookup scoped
+ * to `element` instead of the host — the same shape as host-level `first()`,
+ * minus M8 dependency-resolution participation (see ADR 0021).
+ *
  * See ADR 0017 for full rationale (SSR adoption, unreconciled pinning,
  * keyed-relative positioning).
  *
@@ -543,7 +557,7 @@ function each<E extends Element>(
  * @param {Element} container - Container element whose children are reconciled
  * @param {HTMLTemplateElement} template - Template whose single root element is cloned for entering keys
  * @param {List<T> | Collection<T>} source - Keyed reactive data source
- * @param {(element: HTMLElement, item: Signal<T>, key: string) => MaybeCleanup} bindItem - Mounted once per entering element inside an ambient collector; collected descriptors activate against the per-item scope, and any returned cleanup is that scope's teardown
+ * @param {(element: HTMLElement, item: Signal<T>, key: string, first: FirstElement) => MaybeCleanup} bindItem - Mounted once per entering element inside an ambient collector; collected descriptors activate against the per-item scope, and any returned cleanup is that scope's teardown
  * @returns {EffectDescriptor} Effect descriptor to include in the component's factory result
  * @throws {InvalidTemplateError} if the template content does not contain exactly one root element
  */
@@ -551,13 +565,23 @@ function reconcile<T extends {}, S extends MutableSignal<T>>(
 	container: Element,
 	template: HTMLTemplateElement,
 	source: List<T, S>,
-	bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup,
+	bindItem: (
+		element: HTMLElement,
+		item: S,
+		key: string,
+		first: FirstElement,
+	) => MaybeCleanup,
 ): EffectDescriptor
 function reconcile<T extends {}, S extends Signal<T>>(
 	container: Element,
 	template: HTMLTemplateElement,
 	source: Collection<T, S>,
-	bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup,
+	bindItem: (
+		element: HTMLElement,
+		item: S,
+		key: string,
+		first: FirstElement,
+	) => MaybeCleanup,
 ): EffectDescriptor
 function reconcile<T extends {}>(
 	container: Element,
@@ -567,6 +591,7 @@ function reconcile<T extends {}>(
 		element: HTMLElement,
 		item: Signal<T>,
 		key: string,
+		first: FirstElement,
 	) => MaybeCleanup,
 ): EffectDescriptor {
 	const descriptor: EffectDescriptor = () => {
@@ -680,7 +705,7 @@ function reconcile<T extends {}>(
 								() => {
 									const collected: EffectDescriptor[] = []
 									const cleanup = withCollector(collected, () =>
-										bindItem(element, item, key),
+										bindItem(element, item, key, bindFirst(element)),
 									)
 									activateResult(collected)
 									return cleanup

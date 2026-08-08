@@ -150,13 +150,13 @@ Le Truc provides several built-in parsers for common attribute types. See the [P
 {% /section %}
 
 {% section %}
-## Select Elements
+## Query Elements
 
 Use the provided selector utilities to find descendant elements within your component:
 
 ### first()
 
-`first()` selects the first matching element:
+`first()` queries the first matching element:
 
 ```js
 defineComponent('basic-counter', ({ expose, first, host, on, watch }) => {
@@ -171,7 +171,7 @@ defineComponent('basic-counter', ({ expose, first, host, on, watch }) => {
 
 ### all()
 
-`all()` selects all matching elements as a `Memo<E[]>`:
+`all()` queries all matching elements as a live `Memo<E[]>`:
 
 ```js
 defineComponent('module-tabgroup', ({ all, expose, on, watch }) => {
@@ -196,6 +196,19 @@ If a queried custom element is not yet defined, Le Truc waits up to 200 ms befor
 {% callout .tip %}
 `all()` observes structural changes and re-runs effects accordingly. Prefer `first()` when targeting a single element known to be present at connection time.
 {% /callout %}
+
+### query() and queryAll()
+
+`first()` and `all()` always search from the component host. To search from an element you already have — inside a `reconcile()` `bindItem` or `each()` callback, or in a free-standing helper function that only receives an element — use `query()` and `queryAll()` instead. They take an explicit root as their first argument:
+
+```js
+import { query, queryAll } from '@zeix/le-truc'
+
+const items = queryAll(container, 'li')
+const label = query(item, '.label', 'Add a label to each item.')
+```
+
+Both share `first()`/`all()`'s selector-to-type inference and `MissingElementError` behavior. Unlike `all()`, `queryAll()` returns a plain array, queried once — not a live `Memo`. Neither waits for an undefined custom element to be defined; that check only applies to `first()`/`all()` at the host level. See [Manage Dynamic Lists](data-flow.html#manage-dynamic-lists) for `reconcile()`'s and `each()`'s own scoped `first` parameter, a `query()` pre-bound to the current item.
 
 {% /section %}
 

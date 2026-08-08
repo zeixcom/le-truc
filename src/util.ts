@@ -35,4 +35,19 @@ const elementName = /*#__PURE__*/ (el: Element | undefined | null): string => {
 	return `<${el.localName}${id}${classes}>`
 }
 
-export { elementName, isCustomElement, isNotYetDefinedComponent }
+/**
+ * Describe a `ParentNode` for use in error messages: an element's `elementName()`,
+ * a shadow root's host plus "shadow root", or "document" for anything else.
+ *
+ * @since 2.4.0
+ * @param {ParentNode} parent - Node to describe
+ * @returns {string}
+ */
+const describeRoot = /*#__PURE__*/ (parent: ParentNode): string =>
+	typeof ShadowRoot !== 'undefined' && parent instanceof ShadowRoot
+		? `${elementName(parent.host)} shadow root`
+		: typeof Element !== 'undefined' && parent instanceof Element
+			? elementName(parent)
+			: 'document'
+
+export { describeRoot, elementName, isCustomElement, isNotYetDefinedComponent }

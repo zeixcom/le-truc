@@ -22,7 +22,7 @@ description: 'Overview and key benefits of Le Truc'
 - Use any server-side technology to render HTML
 - Type-safe reactive components
 - Fine-grained DOM updates — no VDOM, no diffing
-- Core under 8 kB gzipped, tree-shakeable extensions
+- Core under 9 kB gzipped, tree-shakeable extensions
 {% /slide %}
 
 {% slide title="HTML First." class="pink" %}
