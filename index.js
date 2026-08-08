@@ -2887,7 +2887,8 @@ var observedAttributes = (names) => ({
   }
 });
 // src/extensions/form.ts
-var EMPTY_NODELIST = typeof document !== "undefined" ? document.createDocumentFragment().childNodes : [];
+var emptyNodeList;
+var getEmptyNodeList = () => emptyNodeList ??= typeof document !== "undefined" && typeof document.createDocumentFragment === "function" ? document.createDocumentFragment().childNodes : [];
 var EMPTY_VALIDITY_STATE = {
   valueMissing: false,
   typeMismatch: false,
@@ -2931,7 +2932,7 @@ var HOST_CONTRACT_DESCRIPTORS = {
   },
   labels: {
     get() {
-      return internalsMap.get(this)?.labels ?? EMPTY_NODELIST;
+      return internalsMap.get(this)?.labels ?? getEmptyNodeList();
     },
     enumerable: true,
     configurable: true

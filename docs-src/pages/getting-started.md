@@ -148,14 +148,14 @@ Add the following inside a `<script type="module">` tag, or in an external modul
   } from 'https://cdn.jsdelivr.net/npm/@zeix/le-truc@latest/index.js'
 
   defineComponent('basic-hello', ({ expose, first, on, watch }) => {
-    const input = first('input', 'Needed to enter the name.')
-    const output = first('output', 'Needed to display the name.')
+    const output = first('output', 'Needed to display the subject.')
     const fallback = output.textContent || ''
 
-    expose({ name: output.textContent ?? '' })
+    expose({ subject: fallback })
 
-    on(input, 'input', () => ({ name: input.value || fallback }))
-    watch('name', bindText(output))
+    const input = first('input', 'Needed to enter the subject.')
+    on(input, 'input', () => ({ subject: input.value || fallback }))
+    watch('subject', bindText(output))
   })
 </script>
 ```
