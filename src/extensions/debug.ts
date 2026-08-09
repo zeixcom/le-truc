@@ -19,8 +19,10 @@ import { elementName, isCustomElement } from '../util'
 
 /* === Visual Marking === */
 
-const PULSE_CLASS = 'le-truc-debug-pulse'
+const HOST_DEBUG_ATTR = 'data-le-truc-debug'
 const PULSE_DURATION_MS = 200
+const PULSE_ON = 'on'
+const PULSE_OFF = 'off'
 
 let styleInjected = false
 
@@ -53,15 +55,15 @@ const injectDebugStyle = (): void => {
 *:state(debug) {
 	box-shadow: 0 0 0 1px oklch(0.51 0.21 353);
 }
-*:state(debug).${PULSE_CLASS} {
+*:state(debug)[${HOST_DEBUG_ATTR}="${PULSE_ON}"] {
 	animation: le-truc-debug-host-pulse ${PULSE_DURATION_MS}ms ease-out;
 }
 [data-le-truc-on] { --le-truc-debug-color: oklch(0.37 0.18 293); }
 [data-le-truc-pass] { --le-truc-debug-color: oklch(0.65 0.18 53); }
 [data-le-truc-watch] { --le-truc-debug-color: oklch(0.79 0.18 113); }
-[data-le-truc-on].${PULSE_CLASS},
-[data-le-truc-pass].${PULSE_CLASS},
-[data-le-truc-watch].${PULSE_CLASS} {
+[data-le-truc-on="${PULSE_ON}"],
+[data-le-truc-pass="${PULSE_ON}"],
+[data-le-truc-watch="${PULSE_ON}"] {
 	animation: le-truc-debug-element-pulse ${PULSE_DURATION_MS}ms ease-out;
 }
 `
@@ -69,8 +71,15 @@ const injectDebugStyle = (): void => {
 }
 
 /**
- * Per-element pulse bookkeeping: the `schedule()` dedup key and the pending
- * class-removal timer.
+ * Per-(element, attribute) pulse bookkeeping: the `schedule()` dedup key and
+ * the pending attribute-reset timer.
+ *
+ * Keyed per attribute, not just per element, because the event/effect target
+ * and the host can be the same element (see {@link log}) — that element then
+ * needs two independent pulse cycles running concurrently, one on
+ * `data-le-truc-<kind>` and one on `${HOST_DEBUG_ATTR}`, each with its own
+ * timer. A single shared timer would let one cycle's reset clobber the
+ * other's still-running animation.
  *
  * The key is deliberately *not* the element itself. `schedule()` is keyed by
  * object identity with last-write-wins (`src/scheduler.ts`), and
@@ -79,9 +88,9 @@ const injectDebugStyle = (): void => {
  * in a frame silently discards the other. Since `makeWatch()` registers the
  * debug companion effect *before* the author's effect, the pulse was always
  * the one dropped, on exactly the elements whose content was changing. An
- * opaque per-element token keeps the ADR 0022 "one pulse per element per
- * frame" dedup while making debug instrumentation unable to interact with
- * functional scheduling in either direction.
+ * opaque per-(element, attribute) token keeps the ADR 0022 "one pulse per
+ * element per frame" dedup while making debug instrumentation unable to
+ * interact with functional scheduling in either direction.
  */
 type PulseState = {
 	key: object
@@ -93,48 +102,57 @@ type PulseState = {
 // `new WeakMap()` is a side-effectful expression to the bundler, so it
 // survives into the production bundle and keeps a fragment of debug.ts alive
 // — caught by `test/regression-bundle.test.ts`.
-const pulseStates = /*#__PURE__*/ new WeakMap<Element, PulseState>()
+const pulseStates = /*#__PURE__*/ new WeakMap<
+	Element,
+	Map<string, PulseState>
+>()
 
-const pulseStateFor = (element: Element): PulseState => {
-	let state = pulseStates.get(element)
+const pulseStateFor = (element: Element, attr: string): PulseState => {
+	let byAttr = pulseStates.get(element)
+	if (!byAttr) {
+		byAttr = new Map()
+		pulseStates.set(element, byAttr)
+	}
+	let state = byAttr.get(attr)
 	if (!state) {
 		state = { key: {}, timer: undefined }
-		pulseStates.set(element, state)
+		byAttr.set(attr, state)
 	}
 	return state
 }
 
 /**
- * Trigger a pulse on `element` — host or per-element, the CSS selectors in
- * {@link injectDebugStyle} tell them apart. Scheduled and deduplicated per
- * element via the existing `schedule()`, so a burst of same-element activity
- * within one frame collapses into a single visible pulse. The stylesheet is
- * already in the document by this point: `onConnect` injects it before any
- * component can have `debug` set at all.
+ * Trigger a pulse of `attr` on `element` — host or per-element, the CSS
+ * selectors in {@link injectDebugStyle} tell them apart by attribute name.
+ * Scheduled and deduplicated per (element, attribute) via the existing
+ * `schedule()`, so a burst of same-element activity within one frame
+ * collapses into a single visible pulse. The stylesheet is already in the
+ * document by this point: `onConnect` injects it before any component can
+ * have `debug` set at all.
  */
-const pulse = (element: Element): void => {
-	const state = pulseStateFor(element)
+const pulse = (element: Element, attr: string): void => {
+	const state = pulseStateFor(element, attr)
 	schedule(state.key, () => {
-		// Cancel the previous pulse's pending removal — otherwise a pulse
+		// Cancel the previous pulse's pending reset — otherwise a pulse
 		// started less than PULSE_DURATION_MS after the last one gets its
-		// class stripped mid-animation by the older timer.
+		// attribute flipped off mid-animation by the older timer.
 		if (state.timer !== undefined) clearTimeout(state.timer)
-		element.classList.remove(PULSE_CLASS)
-		// Force reflow so re-adding the class restarts the animation even if
-		// the previous pulse hasn't finished.
+		element.setAttribute(attr, PULSE_OFF)
+		// Force reflow so flipping the attribute back to "on" restarts the
+		// animation even if the previous pulse hasn't finished.
 		void (element as HTMLElement).offsetWidth
-		element.classList.add(PULSE_CLASS)
+		element.setAttribute(attr, PULSE_ON)
 		state.timer = setTimeout(() => {
 			state.timer = undefined
-			element.classList.remove(PULSE_CLASS)
+			element.setAttribute(attr, PULSE_OFF)
 		}, PULSE_DURATION_MS)
 	})
 }
 
-/** Set the presence-only marking attribute for `kind` on `element`, once. */
+/** Ensure `element` carries its resting `kind` attribute, once. */
 const mark = (element: Element, kind: 'on' | 'pass' | 'watch'): void => {
 	const attr = `data-le-truc-${kind}`
-	if (!element.hasAttribute(attr)) element.setAttribute(attr, '')
+	if (!element.hasAttribute(attr)) element.setAttribute(attr, PULSE_OFF)
 }
 
 /**
@@ -143,7 +161,9 @@ const mark = (element: Element, kind: 'on' | 'pass' | 'watch'): void => {
  * target element entirely when there's none to attribute (`watch()` with a
  * handler that isn't `bind*`-produced) rather than printing an
  * "(unattributed)" placeholder — no element is not itself information worth
- * a word in the message.
+ * a word in the message. Also drops it when it's the same element as `host`
+ * (e.g. a component listening on itself) — naming the same component twice
+ * in one line is redundant, not additional information.
  */
 const log = (
 	host: HTMLElement,
@@ -151,22 +171,26 @@ const log = (
 	element: Element | undefined,
 	value: unknown,
 ): void => {
+	const sameAsHost = element === host
 	if (kind === 'on') {
 		// value is always the raw DOM Event for 'on' firings (see debugFire()
 		// call sites in helpers/events.ts) — element is always known too.
 		const type = value instanceof Event ? value.type : String(value)
+		const origin = sameAsHost ? '' : ` from ${elementName(element)}`
 		console.debug(
-			`[le-truc debug] on "${type}" in ${elementName(host)} from ${elementName(element)}`,
+			`[le-truc debug] on "${type}" in ${elementName(host)}${origin}`,
 			value,
 		)
 	} else if (kind === 'pass') {
 		// element (the pass() target) is always known.
+		const target = sameAsHost ? '' : ` to ${elementName(element)}`
 		console.debug(
-			`[le-truc debug] pass from ${elementName(host)} to ${elementName(element)}`,
+			`[le-truc debug] pass from ${elementName(host)}${target}`,
 			value,
 		)
 	} else {
-		const attribution = element ? ` → ${elementName(element)}` : ''
+		const attribution =
+			element && !sameAsHost ? ` → ${elementName(element)}` : ''
 		console.debug(
 			`[le-truc debug] watch in ${elementName(host)}${attribution}`,
 			value,
@@ -198,9 +222,9 @@ const debugFire = (
 	if (!isDebugging(host)) return
 	if (element) {
 		mark(element, kind)
-		pulse(element)
+		pulse(element, `data-le-truc-${kind}`)
 	}
-	pulse(host)
+	pulse(host, HOST_DEBUG_ATTR)
 	log(host, kind, element, value)
 }
 
