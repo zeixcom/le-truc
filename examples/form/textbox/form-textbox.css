@@ -1,4 +1,5 @@
 form-textbox {
+	display: block;
 	width: 100%;
 
 	& label,
