@@ -229,10 +229,19 @@ function defineComponent<P extends ComponentProps>(
 			try {
 				internalsMap.set(this, this.attachInternals())
 			} catch {
-				// attachInternals() throws NotSupportedError for pre-upgrade
-				// instances or parser-ordering edge cases. The component
-				// degrades gracefully: internals is null, and a DEV_MODE
-				// warning fires on first access.
+				// In practice this catches environments with no
+				// `ElementInternals` at all — a TypeError from
+				// `this.attachInternals` being undefined (Safari <16.4,
+				// Firefox <93, non-DOM test environments), not a lifecycle
+				// timing problem. The upgrade algorithm sets the custom
+				// element state to "precustomized" immediately before invoking
+				// this constructor precisely so the call here is legal, and
+				// the spec's three NotSupportedError conditions (non-null `is`
+				// value, `disabledFeatures = ['internals']`, a second call)
+				// are all unreachable for an autonomous element with a single
+				// constructor call site. Either way the component degrades
+				// gracefully: internals is null, and a DEV_MODE warning fires
+				// on first access.
 				internalsMap.set(this, null)
 			}
 		}

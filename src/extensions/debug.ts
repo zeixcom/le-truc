@@ -28,6 +28,13 @@ let styleInjected = false
  * Inject the debug stylesheet once (module-scope, not per-instance). Scoped
  * entirely under `:state(debug)`/`[data-le-truc-*]` selectors, so it has no
  * visible effect unless an element opts in via `debug=true`.
+ *
+ * Called from `onConnect`, not lazily from {@link pulse}. The stylesheet
+ * carries the *resting* `*:state(debug)` outline as well as the pulse
+ * keyframes, and `bindState()` adds `:state(debug)` the instant `debug` flips
+ * on — so deferring injection to the first firing left a component that
+ * simply isn't firing anything with no visible indicator at all, until some
+ * unrelated `on()`/`pass()`/`watch()` happened to inject the rules later.
  */
 const injectDebugStyle = (): void => {
 	if (styleInjected || typeof document === 'undefined') return
@@ -62,21 +69,65 @@ const injectDebugStyle = (): void => {
 }
 
 /**
+ * Per-element pulse bookkeeping: the `schedule()` dedup key and the pending
+ * class-removal timer.
+ *
+ * The key is deliberately *not* the element itself. `schedule()` is keyed by
+ * object identity with last-write-wins (`src/scheduler.ts`), and
+ * `dangerouslyBindInnerHTML` schedules its writes under the element —
+ * scheduling a pulse under the same key means whichever of the two runs last
+ * in a frame silently discards the other. Since `makeWatch()` registers the
+ * debug companion effect *before* the author's effect, the pulse was always
+ * the one dropped, on exactly the elements whose content was changing. An
+ * opaque per-element token keeps the ADR 0022 "one pulse per element per
+ * frame" dedup while making debug instrumentation unable to interact with
+ * functional scheduling in either direction.
+ */
+type PulseState = {
+	key: object
+	timer: ReturnType<typeof setTimeout> | undefined
+}
+// `/*#__PURE__*/` is load-bearing, not decoration: everything else in this
+// module is either a function declaration or a primitive `let`, all of which
+// DCE drops once the `DEV_MODE` guards fold. A bare module-scope
+// `new WeakMap()` is a side-effectful expression to the bundler, so it
+// survives into the production bundle and keeps a fragment of debug.ts alive
+// — caught by `test/regression-bundle.test.ts`.
+const pulseStates = /*#__PURE__*/ new WeakMap<Element, PulseState>()
+
+const pulseStateFor = (element: Element): PulseState => {
+	let state = pulseStates.get(element)
+	if (!state) {
+		state = { key: {}, timer: undefined }
+		pulseStates.set(element, state)
+	}
+	return state
+}
+
+/**
  * Trigger a pulse on `element` — host or per-element, the CSS selectors in
  * {@link injectDebugStyle} tell them apart. Scheduled and deduplicated per
- * element via the existing `schedule()` (the same mechanism
- * `dangerouslyBindInnerHTML` uses), so a burst of same-element activity
- * within one frame collapses into a single visible pulse.
+ * element via the existing `schedule()`, so a burst of same-element activity
+ * within one frame collapses into a single visible pulse. The stylesheet is
+ * already in the document by this point: `onConnect` injects it before any
+ * component can have `debug` set at all.
  */
 const pulse = (element: Element): void => {
-	injectDebugStyle()
-	schedule(element, () => {
+	const state = pulseStateFor(element)
+	schedule(state.key, () => {
+		// Cancel the previous pulse's pending removal — otherwise a pulse
+		// started less than PULSE_DURATION_MS after the last one gets its
+		// class stripped mid-animation by the older timer.
+		if (state.timer !== undefined) clearTimeout(state.timer)
 		element.classList.remove(PULSE_CLASS)
 		// Force reflow so re-adding the class restarts the animation even if
 		// the previous pulse hasn't finished.
 		void (element as HTMLElement).offsetWidth
 		element.classList.add(PULSE_CLASS)
-		setTimeout(() => element.classList.remove(PULSE_CLASS), PULSE_DURATION_MS)
+		state.timer = setTimeout(() => {
+			state.timer = undefined
+			element.classList.remove(PULSE_CLASS)
+		}, PULSE_DURATION_MS)
 	})
 }
 
@@ -178,8 +229,45 @@ const markIfDebugging = (
 let toggleInstalled = false
 
 /**
+ * Walk up from `start` to the nearest ancestor that actually has a `debug`
+ * accessor, crossing shadow boundaries on the way.
+ *
+ * Two reasons this can't just stop at the first element with a dash in its
+ * localName. Structural-only custom elements are common as layout wrappers
+ * (`examples/main.ts` alone defines six: `module-demo`, `card-callout`,
+ * `section-hero`, …) and they're plain `HTMLElement` subclasses with no
+ * `debug` property — stopping there assigned a meaningless expando and the
+ * gesture silently did nothing. And `parentElement` is `null` for a
+ * top-level child of a shadow root, so the walk could never climb back out
+ * to a host that used `dangerouslyBindInnerHTML({ shadowRootMode })`, even
+ * though `composedPath()` had already pierced the boundary on the way in.
+ *
+ * `'debug' in node` is the honest test: `onConnect` defines the accessor on
+ * the instance, so it's true for exactly the connected components that can
+ * respond to the toggle, and false for structural wrappers and
+ * not-yet-upgraded elements alike.
+ */
+const findDebuggableHost = (
+	start: Element | null,
+): (HTMLElement & { debug: boolean }) | null => {
+	let node: Element | null = start
+	while (node) {
+		if (isCustomElement(node) && 'debug' in node)
+			return node as HTMLElement & { debug: boolean }
+		const root = node.getRootNode()
+		node =
+			node.parentElement ??
+			(typeof ShadowRoot !== 'undefined' && root instanceof ShadowRoot
+				? root.host
+				: null)
+	}
+	return null
+}
+
+/**
  * Install a single document-level, capture-phase click listener that toggles
- * the nearest custom-element ancestor's `debug` property on `metaKey`+click.
+ * the `debug` property of the nearest ancestor that has one (see
+ * {@link findDebuggableHost}) on `metaKey`+click.
  * Installed once, lazily, on the first `DEV_MODE` component connect — not
  * per instance. Provisional: `metaKey` collides with native Cmd/Ctrl+click
  * link navigation, judged a small risk since custom element hosts are
@@ -192,10 +280,8 @@ const installDebugToggle = (): void => {
 		'click',
 		(e: MouseEvent) => {
 			if (!e.metaKey) return
-			let node = e.composedPath()[0] as Element | null
-			while (node && !isCustomElement(node)) node = node.parentElement
-			if (!node) return
-			const host = node as HTMLElement & { debug?: boolean }
+			const host = findDebuggableHost(e.composedPath()[0] as Element | null)
+			if (!host) return
 			host.debug = !host.debug
 		},
 		{ capture: true },
@@ -218,6 +304,7 @@ const debug = (): ComponentExtension => ({
 	name: 'debug',
 	reservedMembers: new Set(['debug']),
 	onConnect: (instance, internals): FactoryResult | void => {
+		injectDebugStyle()
 		installDebugToggle()
 		const state = createState(false)
 		const slot = createSlot(state)
@@ -229,6 +316,17 @@ const debug = (): ComponentExtension => ({
 			enumerable: true,
 			configurable: true,
 		})
+		// No `internals` means the `attachInternals()` call in the `Truc`
+		// constructor threw (`src/component.ts`) — in practice because the
+		// environment has no `ElementInternals` at all, not because of any
+		// lifecycle timing. So there are no custom states to write to.
+		// Everything else
+		// still works: the `debug` property, the metaKey toggle, per-element
+		// marks, pulses, and logging. Only the resting `*:state(debug)`
+		// outline is missing, since that selector has nothing to match. Left
+		// as a graceful degradation rather than given an attribute fallback —
+		// a second marking mechanism for a case that already warns on first
+		// `internals` access is more surface area than the gap is worth.
 		if (!internals) return
 		const setState = bindState(internals, 'debug')
 		return [() => createEffect(() => setState(slot.get()))]

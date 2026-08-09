@@ -24,8 +24,8 @@ test.describe('debug instrumentation (ADR 0022)', () => {
 
 		await page.locator('test-debug #btn').click()
 
-		const marked = await page.evaluate(
-			() => document.querySelector('#btn')?.hasAttribute('data-le-truc-on'),
+		const marked = await page.evaluate(() =>
+			document.querySelector('#btn')?.hasAttribute('data-le-truc-on'),
 		)
 		expect(marked).toBe(false)
 		expect(consoleDebugCalls).toHaveLength(0)
@@ -70,8 +70,8 @@ test.describe('debug instrumentation (ADR 0022)', () => {
 
 		// The debug companion must still have fired for this same click,
 		// despite the author's stopImmediatePropagation() call.
-		const marked = await page.evaluate(
-			() => document.querySelector('#btn')?.hasAttribute('data-le-truc-on'),
+		const marked = await page.evaluate(() =>
+			document.querySelector('#btn')?.hasAttribute('data-le-truc-on'),
 		)
 		expect(marked).toBe(true)
 		expect(
@@ -122,12 +122,14 @@ test.describe('debug instrumentation (ADR 0022)', () => {
 		// "(unattributed)" — that's noise, not signal).
 		expect(
 			consoleDebugCalls.some(
-				text => text.includes('[le-truc debug] watch in') && text.includes('test-debug'),
+				text =>
+					text.includes('[le-truc debug] watch in') &&
+					text.includes('test-debug'),
 			),
 		).toBe(true)
-		expect(consoleDebugCalls.some(text => text.includes('(unattributed)'))).toBe(
-			false,
-		)
+		expect(
+			consoleDebugCalls.some(text => text.includes('(unattributed)')),
+		).toBe(false)
 	})
 
 	test('pass(): marks the child target element', async ({ page }) => {
@@ -209,6 +211,50 @@ test.describe('debug instrumentation (ADR 0022)', () => {
 			() => (document.querySelector('test-debug') as any).debug,
 		)
 		expect(afterSecond).toBe(false)
+	})
+
+	test('metaKey+click climbs past structural-only custom elements to reach the real host', async ({
+		page,
+	}) => {
+		// #wrapped sits inside <card-callout>, a plain HTMLElement subclass
+		// with no `debug` property. Stopping the ancestor walk at the first
+		// dashed localName set a meaningless expando on it and the gesture
+		// silently did nothing — the common case in real pages, where
+		// components are wrapped in layout elements.
+		await page.locator('#wrapped').click({ modifiers: ['Meta'] })
+
+		expect(
+			await page.evaluate(
+				() => (document.querySelector('test-debug') as any).debug,
+			),
+		).toBe(true)
+		expect(
+			await page.evaluate(() =>
+				Object.hasOwn(document.querySelector('card-callout')!, 'debug'),
+			),
+		).toBe(false)
+	})
+
+	test('the resting :state(debug) outline is visible on toggle, with no firing to inject the stylesheet', async ({
+		page,
+	}) => {
+		// The stylesheet carries both the pulse keyframes and the resting
+		// `*:state(debug)` outline. It used to be injected lazily from
+		// pulse(), i.e. only on the first on()/pass()/watch() firing — so
+		// enabling debug on a component that wasn't currently firing showed
+		// nothing at all. No click here on purpose: pass()'s mark-only
+		// companion runs on toggle but never pulses, so nothing else can
+		// inject the rules.
+		await page.evaluate(() => {
+			;(document.querySelector('test-debug') as any).debug = true
+		})
+
+		const boxShadow = await page.evaluate(() => {
+			const host = document.querySelector('test-debug')!
+			return getComputedStyle(host).boxShadow
+		})
+		expect(boxShadow).not.toBe('none')
+		expect(boxShadow).not.toBe('')
 	})
 })
 
