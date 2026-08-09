@@ -1,4 +1,4 @@
-import { createState, defineComponent } from '../../..'
+import { createState, defineComponent } from '../../../index'
 
 export type TestWatchProps = {
 	count: number

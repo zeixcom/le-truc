@@ -1,4 +1,4 @@
-import { asNumber, defineComponent } from '../../..'
+import { asNumber, defineComponent } from '../../../index'
 
 export type ModuleSplitviewProps = {
 	/** Split ratio between 0.1 and 0.9 (e.g. 0.5 = 50/50). Read from the `split` attribute at connect time. */

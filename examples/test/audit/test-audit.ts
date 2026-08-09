@@ -22,7 +22,7 @@ import {
 	type ComponentProps,
 	dangerouslyBindInnerHTML,
 	defineComponent,
-} from '../../..'
+} from '../../../index'
 
 /* === Reserved-word runtime guard === */
 //

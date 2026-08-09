@@ -9,7 +9,7 @@ import {
 	type FormAssociatedElement,
 	formAssociated,
 	relayValidity,
-} from '../../..'
+} from '../../../index'
 
 export type FormSpinbuttonProps = {
 	/** Current numeric value. Clamped to [min, max]. */

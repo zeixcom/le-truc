@@ -11,7 +11,7 @@ import {
 	formAssociated,
 	queryAll,
 	schedule,
-} from '../../..'
+} from '../../../index'
 import {
 	fetchWithCache,
 	isRecursiveURL,

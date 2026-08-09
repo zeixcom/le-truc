@@ -5,7 +5,7 @@ import {
 	defineComponent,
 	type FormAssociatedElement,
 	formAssociated,
-} from '../../..'
+} from '../../../index'
 
 export type FormInplaceEditProps = {
 	/** Whether the component is currently in edit mode. Read from the `editing` attribute at connect time. */

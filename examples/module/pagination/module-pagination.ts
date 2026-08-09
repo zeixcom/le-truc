@@ -3,7 +3,7 @@ import {
 	bindProperty,
 	bindText,
 	defineComponent,
-} from '../../..'
+} from '../../../index'
 
 export type ModulePaginationProps = {
 	/** Total number of pages. Read from the `max` attribute at connect time. */

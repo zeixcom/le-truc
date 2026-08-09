@@ -155,7 +155,7 @@ The library must be consumable via a `<script type="module">` tag from a CDN wit
 
 #### S3. Development mode with enhanced diagnostics
 
-When `DEV_MODE` is enabled, the library should surface problems that are otherwise silent in production: dependency-resolution timeout warnings and extension/deprecation warnings are in place today. Actionable error messages (naming the component and selector) are not gated behind `DEV_MODE` — they're always on. Effect execution logging is not yet implemented; this is open work for v2.4.
+✅ _Resolved._ When `DEV_MODE` is enabled, the library surfaces problems that are otherwise silent in production: dependency-resolution timeout warnings and extension/deprecation warnings, plus effect execution logging and per-instance visual debugging via `debug()` (see [N1](#n1-debug-flag-per-component-instance)). Actionable error messages (naming the component and selector) are not gated behind `DEV_MODE` — they're always on. See [ADR 0022](adr/0022-debug-extension-for-visual-and-console-instrumentation.md).
 
 #### S4. Scheduler deduplication for innerHTML mutations
 
@@ -177,7 +177,7 @@ Do not use `observedAttributes` to drive reactive property updates by default. A
 
 #### N1. Debug flag per component instance
 
-Not yet implemented. A `host.debug = true` flag would enable verbose logging for a single component instance without enabling global `DEV_MODE`. Candidate for v2.4 alongside [S3](#s3-development-mode-with-enhanced-diagnostics).
+✅ _Resolved._ `host.debug = true` (auto-injected by `defineComponent()` in `DEV_MODE`, no source change required) scopes enhanced diagnostics — `on()`/`pass()`/`watch()` element highlighting via presence-only marking attributes, a pulsing `:state(debug)` host indicator, and `console.debug` logging — to a single component instance instead of every instance in the app. Not a substitute for `DEV_MODE` — like the rest of S3, it only does anything when `DEV_MODE` is also on, and neither ships in production. See [ADR 0022](adr/0022-debug-extension-for-visual-and-console-instrumentation.md).
 
 #### N2. Compile-time selector type inference for SVG and MathML
 

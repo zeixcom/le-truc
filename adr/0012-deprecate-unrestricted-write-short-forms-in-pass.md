@@ -14,7 +14,7 @@ The Slot machinery (ADR-0004) and eager validation (ADR-0011) make the short for
 
 This is grounded in four canonical design principles: the short form couples the child to the parent's current representation and removes the parent's ability to control its own transitions (Liskov, Parnas); it lets transitions originate from unbounded external `.set()` sites with no chokepoint (Dijkstra); and it makes the parent's invariants undefendable, since a bypass exists by construction (Hoare). The descriptor form is representation-independent, hides the parent's update policy, funnels all writes through one entry point, and makes invariants provable.
 
-Relevant requirements: [M11](../REQUIREMENTS.md#m11-signal-injection-between-components-via-pass) (signal injection via `pass()`), [S4](../REQUIREMENTS.md#s4-development-mode-with-enhanced-diagnostics) (DEV_MODE diagnostics), §4 (type safety).
+Relevant requirements: [M11](../REQUIREMENTS.md#m11-signal-injection-between-components-via-pass) (signal injection via `pass()`), [S3](../REQUIREMENTS.md#s3-development-mode-with-enhanced-diagnostics) (DEV_MODE diagnostics), §4 (type safety).
 
 ## Decision
 
@@ -43,7 +43,7 @@ Read-only signals (`Memo`/`Task`) passed directly do not warn. Document the depr
 
 ## Related
 
-- Requirements: [M11](../REQUIREMENTS.md#m11-signal-injection-between-components-via-pass), [S4](../REQUIREMENTS.md#s4-development-mode-with-enhanced-diagnostics), §4 (type safety)
+- Requirements: [M11](../REQUIREMENTS.md#m11-signal-injection-between-components-via-pass), [S3](../REQUIREMENTS.md#s3-development-mode-with-enhanced-diagnostics), §4 (type safety)
 - Architecture: [Inter-Component Signal Sharing (Pass)](../ARCHITECTURE.md#inter-component-signal-sharing-pass)
 - Refines: [ADR-0004](0004-slot-based-signal-swapping-for-inter-component-binding.md) — narrows the accepted input forms of `pass()`; the Slot-swap mechanism itself is unchanged
 - Related: [ADR-0011](0011-throw-on-pass-binding-failure.md) — same complete-or-fail discipline; this ADR narrows what is considered a *valid* binding

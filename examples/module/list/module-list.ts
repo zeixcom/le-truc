@@ -1,4 +1,4 @@
-import { createList, defineComponent, type List, reconcile } from '../../..'
+import { createList, defineComponent, type List, reconcile } from '../../../index'
 
 declare global {
 	interface HTMLElementTagNameMap {

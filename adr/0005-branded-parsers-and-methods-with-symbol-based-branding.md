@@ -36,6 +36,6 @@ Use symbol-based branding (`PARSER_BRAND`, `METHOD_BRAND`) to reliably identify 
 
 ## Related
 
-- Requirements: [M13](../REQUIREMENTS.md#m13-typescript-types-exported-and-accurate), [S1](../REQUIREMENTS.md#s1-parserreader-distinction-replaced-by-explicit-api), [S2](../REQUIREMENTS.md#s2-methodproducer-made-explicit-in-the-type-system)
+- Requirements: [M13](../REQUIREMENTS.md#m13-typescript-types-exported-and-accurate), [S1](../REQUIREMENTS.md#s1-parsermethod-distinction-via-explicit-api)
 - Architecture: [Parsers](../ARCHITECTURE.md#parsers)
 - Supersedes: None

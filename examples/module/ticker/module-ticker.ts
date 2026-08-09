@@ -9,7 +9,7 @@ import {
 	each,
 	query,
     queryAll,
-} from '../../..'
+} from '../../../index'
 
 /* === Fantasy symbol generator === */
 

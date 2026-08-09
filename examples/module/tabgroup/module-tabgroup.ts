@@ -1,4 +1,4 @@
-import { createState, defineComponent } from '../../..'
+import { createState, defineComponent } from '../../../index'
 
 export type ModuleTabgroupProps = {
 	/** The `aria-controls` value of the currently selected tab (read-only). */

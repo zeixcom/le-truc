@@ -34,6 +34,13 @@ type DangerouslyBindInnerHTMLOptions = {
     sanitize?: (html: string) => string | TrustedHTML;
 };
 /**
+ * Look up the element a `bind*`-produced closure was registered against, if
+ * any. Used by `watch()`'s `DEV_MODE` instrumentation (ADR 0022) — a handler
+ * not produced by a `bind*` helper resolves to `undefined`, which is the
+ * correct "don't guess" outcome, not a bug.
+ */
+declare const getDebugBindingTarget: (handler: object) => Element | undefined;
+/**
  * Set an attribute on an element with security validation.
  *
  * Blocks `on*` event handler attribute names and rejects unsafe URL values
@@ -114,6 +121,11 @@ declare const bindClass: <T = boolean>(element: Element, token: string) => ((val
  * is `null` when `attachInternals()` failed, in which case the returned
  * function is a no-op.
  *
+ * `ElementInternals` carries no reference back to its host element, so this
+ * setter is never registered in the debug attribution registry (ADR 0022) —
+ * a custom state is host-scoped anyway, and the debug host pulse already
+ * covers it.
+ *
  * @since 2.3
  * @param internals - The component's `ElementInternals` (or `null`)
  * @param token - Custom state token to toggle (matched via `:state(token)`)
@@ -191,4 +203,4 @@ declare const bindStyle: (element: HTMLElement | SVGElement | MathMLElement, pro
  * @returns Match handlers that schedule the innerHTML mutation
  */
 declare const dangerouslyBindInnerHTML: (element: Element, options?: DangerouslyBindInnerHTMLOptions) => SingleMatchHandlers<string>;
-export { bindAttribute, bindClass, bindProperty, bindState, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, safeSetAttribute, setTextPreservingComments, };
+export { bindAttribute, bindClass, bindProperty, bindState, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, getDebugBindingTarget, safeSetAttribute, setTextPreservingComments, };

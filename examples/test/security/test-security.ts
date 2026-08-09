@@ -9,7 +9,7 @@
  * - security-urlhref: tries to set `href` attribute (blocked if unsafe protocol)
  */
 
-import { asString, defineComponent, safeSetAttribute } from '../../..'
+import { asString, defineComponent, safeSetAttribute } from '../../../index'
 
 type EvilProps = { src: string }
 type HrefProps = { href: string }

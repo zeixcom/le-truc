@@ -22,12 +22,14 @@ import {
 	type SlotDescriptor,
 	untrack,
 } from '@zeix/cause-effect'
+import { getDebugBindingTarget } from '../bindings'
 import {
 	InvalidCustomElementError,
 	InvalidPassPropertyError,
 	InvalidReactivesError,
 	InvalidTemplateError,
 } from '../errors'
+import { debugFire, markIfDebugging } from '../extensions/debug'
 import { getSignals, pushDescriptor, withCollector } from '../internal'
 import type {
 	ComponentProp,
@@ -332,15 +334,49 @@ const makeWatch = <P extends ComponentProps>(
 				const handler = handlerOrHandlers as (
 					values: any[],
 				) => MaybePromise<MaybeCleanup>
+				if (process.env.DEV_MODE === 'true') {
+					// Additive companion effect (ADR 0022) — never wraps or
+					// replaces the author's own effect. `handler` isn't a
+					// bind*-produced closure for an array source, so it never
+					// resolves to an element — host-level pulse only.
+					createEffect(() =>
+						match(signals, {
+							ok: values =>
+								untrack(() => debugFire(host, 'watch', undefined, values)),
+						}),
+					)
+				}
 				return createEffect(() =>
 					match(signals, { ok: values => untrack(() => handler(values)) }),
 				)
 			}
 			const signal = toSignal(host, source)
 			if (typeof handlerOrHandlers === 'function') {
+				if (process.env.DEV_MODE === 'true') {
+					createEffect(() =>
+						match(signal, {
+							ok: value =>
+								untrack(() => {
+									const element = getDebugBindingTarget(handlerOrHandlers)
+									debugFire(host, 'watch', element, value)
+								}),
+						}),
+					)
+				}
 				return createEffect(() =>
 					match(signal, {
 						ok: value => untrack(() => handlerOrHandlers(value)),
+					}),
+				)
+			}
+			if (process.env.DEV_MODE === 'true') {
+				createEffect(() =>
+					match(signal, {
+						ok: value =>
+							untrack(() => {
+								const element = getDebugBindingTarget(handlerOrHandlers)
+								debugFire(host, 'watch', element, value)
+							}),
 					}),
 				)
 			}
@@ -458,6 +494,32 @@ const makePass = <P extends ComponentProps>(
 				}
 		})
 
+	/**
+	 * Resolve every entry in `props` to its current value for the debug
+	 * `console.debug` entry — the raw `PassedProps` map holds thunks/signals/
+	 * descriptors, not values, which isn't useful to log as-is (LT-011).
+	 * Best-effort: a prop that fails to resolve (the same failures
+	 * `swapSlots` already validates against) logs the raw reactive instead.
+	 */
+	const resolvePassedValues = <Q extends HTMLElement>(
+		props: PassedProps<P, Q>,
+	): Record<string, unknown> => {
+		const resolved: Record<string, unknown> = {}
+		for (const [prop, reactive] of Object.entries(props)) {
+			if (reactive == null) continue
+			try {
+				const signal = toSignal(host, reactive as Reactive<unknown, P>)
+				resolved[prop] =
+					signal && typeof signal === 'object' && 'get' in signal
+						? (signal as { get: () => unknown }).get()
+						: reactive
+			} catch {
+				resolved[prop] = reactive
+			}
+		}
+		return resolved
+	}
+
 	function pass<Q extends HTMLElement>(
 		target: Q | Falsy,
 		props: PassedProps<P, Q>,
@@ -474,10 +536,41 @@ const makePass = <P extends ComponentProps>(
 			if (!target) return
 			if (isMemo<Q[]>(target)) {
 				// Memo target: keyed per-element lifecycle
-				keyedScopes(target, el => swapSlots(el, props))
+				keyedScopes(target, el => {
+					const cleanup = swapSlots(el, props)
+					// swapSlots() links signals directly, bypassing this
+					// descriptor on subsequent value updates — pass() has no
+					// other reactive re-run point of its own (unlike watch(),
+					// which re-runs its whole handler per prop change). So two
+					// independent effects: (1) a tracked dependency on
+					// `host.debug` that marks the element once debug turns on,
+					// even with no further value change (LT-010); (2) the real
+					// firing, driven by the passed values (so it re-runs on
+					// every actual change), with `debug`/mark/pulse/log
+					// resolved `untrack()`-ed — matching watch()'s companion
+					// above — so toggling `debug` alone doesn't itself count as
+					// a firing and spam `console.debug` (LT-013).
+					if (process.env.DEV_MODE === 'true') {
+						createEffect(() => markIfDebugging(host, el, 'pass'))
+						createEffect(() => {
+							const value = resolvePassedValues(props)
+							untrack(() => debugFire(host, 'pass', el, value))
+						})
+					}
+					return cleanup
+				})
 			} else {
 				// Single element: swap slots directly in current scope
 				swapSlots(target, props)
+				// See the Memo-target branch above for why this needs two
+				// independent effects.
+				if (process.env.DEV_MODE === 'true') {
+					createEffect(() => markIfDebugging(host, target, 'pass'))
+					createEffect(() => {
+						const value = resolvePassedValues(props)
+						untrack(() => debugFire(host, 'pass', target, value))
+					})
+				}
 			}
 		}
 		pushDescriptor(host, 'pass', descriptor)

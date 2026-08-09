@@ -30,6 +30,30 @@ describe('Bundle size', () => {
 		expect(gzipped).toBeLessThanOrEqual(MINIMAL_CEILING)
 	})
 
+	test('minimal entry carries zero bytes of debug() instrumentation (ADR 0022)', async () => {
+		// component.ts statically imports debug() from src/extensions/debug.ts —
+		// a deliberate exception to ADR 0019's "core never imports a concrete
+		// feature module" invariant (see ADR 0022 Consequences). Production
+		// safety rests entirely on `process.env.DEV_MODE === 'true'` folding to
+		// `false` and the now-dead import being eliminated, rather than being
+		// structurally unreachable the way every opt-in extension is. This
+		// asserts that actually happens, empirically, the same standard
+		// ADR 0019's tiers were held to — not just "under the size ceiling"
+		// (the first test above), but that none of debug()'s string literals
+		// (which survive minification verbatim, unlike renamed identifiers)
+		// leak into the minimal-entry production bundle at all.
+		const result = await Bun.build({
+			entrypoints: ['./test/fixtures/minimal-entry.ts'],
+			minify: true,
+			define: { 'process.env.DEV_MODE': '"false"' },
+		})
+		const bytes = await result.outputs[0]!.arrayBuffer()
+		const code = new TextDecoder().decode(bytes)
+		expect(code).not.toContain('le-truc-debug')
+		expect(code).not.toContain('data-le-truc-')
+		expect(code).not.toContain('[le-truc debug]')
+	})
+
 	test('core + formAssociated() warns if it exceeds 14 kB gzipped', async () => {
 		const gzipped = await buildGzipped('./test/fixtures/core-form-entry.ts')
 		console.log(`  coreFormGzipped: ${gzipped}B (warn: ${CORE_FORM_WARN}B)`)
