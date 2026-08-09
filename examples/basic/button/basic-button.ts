@@ -1,4 +1,4 @@
-import { bindProperty, bindText, defineComponent } from '../../..'
+import { bindProperty, bindText, defineComponent } from '../../../index'
 
 export type BasicButtonProps = {
 	/** Whether the button is disabled. */

@@ -5,7 +5,7 @@
 // minimal-entry.ts) does not. Mirrors the `form-textbox` example from
 // docs-src/pages/components.md: a reactive `value` prop synced to the
 // underlying native control.
-import { bindProperty, defineComponent, formAssociated } from '../..'
+import { bindProperty, defineComponent, formAssociated } from '../../index'
 
 type CoreFormTextboxProps = { value: string }
 

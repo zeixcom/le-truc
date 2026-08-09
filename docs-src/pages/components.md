@@ -474,6 +474,8 @@ Le Truc ships three extensions, each imported separately:
 | [`formAssociatedCheckbox()`](#checkbox-shaped-controls) | Form participation keyed on a `checked: boolean` prop — submits nothing when unchecked |
 | [`observedAttributes()`](#attribute-driven-reactivity) | Re-parses Parser-backed props when their attribute mutates after connect |
 
+A fourth extension, [`debug()`](#debug-instrumentation), ships too — but it never appears in this table, because you never add it yourself.
+
 ### Form Association
 
 The `formAssociated()` extension adapts a component to the [form-associated custom element](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-face-example) convention. Pass it as the first element of the extensions array. The factory's context then widens to expose the `internals` object alongside the usual helpers:
@@ -572,5 +574,22 @@ defineComponent<BasicGaugeProps>(
 ```
 
 Le Truc adds named attributes to the class's `static observedAttributes`. On each mutation, the extension re-runs the same retained `Parser` against the attribute's new string value. It writes the result to the prop. Props whose initializer is not a branded `Parser` are left untouched. Use this sparingly. For most components, event handlers or direct property writes are the right way to update state after connect.
+
+### Debug Instrumentation
+
+`debug()` is not exported, and you never pass it to `defineComponent()`. Build your app with `DEV_MODE=true` (the default for local development), and every component gets a reactive `debug: boolean` property for free — including components you didn't write. This is the point: instrumenting one specific component instance shouldn't require editing its source.
+
+Toggle `debug` from the browser's properties panel, or hold `Cmd`/`Ctrl` and click the component. While `debug` is `true`:
+- The host carries a pulsing box-shadow indicator on every `on()`, `pass()`, or `watch()` firing
+- Target elements that `on()`, `pass()`, or a `bind*`-backed `watch()` handler act on get a presence-only marking attribute (`data-le-truc-on`, `-pass`, or `-watch`)
+- Each firing logs one `console.debug()` entry naming the component and, where known, the event or target
+
+A `watch()` handler not produced by a `bind*` helper (`bindText`, `bindProperty`, and so on) can't be traced back to an element — Le Truc shows the host-level pulse only, rather than guess.
+
+`debug` does nothing in production. The property doesn't exist without `DEV_MODE`: setting `debug = true` on a production build is a no-op, because the extension that provides it was never added to the component.
+
+{% callout .caution title="debug is a reserved property name in DEV_MODE" %}
+`expose({ debug: ... })` throws in a `DEV_MODE` build, on any component, whether or not it uses `debug()` itself — the name is reserved the moment `DEV_MODE` is on. The same component works fine in production, where the reservation doesn't exist. Avoid `debug` as a prop name.
+{% /callout %}
 
 {% /section %}

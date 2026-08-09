@@ -1855,6 +1855,11 @@ var throttle = (fn, signal) => {
 };
 
 // src/bindings.ts
+var debugBindingTargets = new WeakMap;
+var registerDebugBindingTarget = (target, element) => {
+  if (false)
+    ;
+};
 var SCRIPT_ATTRS = [
   "type",
   "src",
@@ -1900,14 +1905,27 @@ var setTextPreservingComments = (element, text) => {
   });
   element.append(document.createTextNode(text));
 };
-var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
-  element.textContent = String(value);
+var bindText = (element, preserveComments = false) => {
+  const setter = preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
+    element.textContent = String(value);
+  };
+  registerDebugBindingTarget(setter, element);
+  return setter;
 };
-var bindProperty = (object, key) => (value) => {
-  object[key] = value;
+var bindProperty = (object, key) => {
+  const setter = (value) => {
+    object[key] = value;
+  };
+  if (typeof Element !== "undefined" && object instanceof Element)
+    registerDebugBindingTarget(setter, object);
+  return setter;
 };
-var bindClass = (element, token) => (value) => {
-  element.classList.toggle(token, Boolean(value));
+var bindClass = (element, token) => {
+  const setter = (value) => {
+    element.classList.toggle(token, Boolean(value));
+  };
+  registerDebugBindingTarget(setter, element);
+  return setter;
 };
 var bindState = (internals, token) => (value) => {
   if (!internals)
@@ -1917,31 +1935,43 @@ var bindState = (internals, token) => (value) => {
   else
     internals.states.delete(token);
 };
-var bindVisible = (element) => (value) => {
-  element.hidden = !value;
+var bindVisible = (element) => {
+  const setter = (value) => {
+    element.hidden = !value;
+  };
+  registerDebugBindingTarget(setter, element);
+  return setter;
 };
-var bindAttribute = (element, name, allowUnsafe = false) => ({
-  ok: (value) => {
-    if (typeof value === "boolean") {
-      element.toggleAttribute(name, value);
-    } else if (allowUnsafe) {
-      element.setAttribute(name, value);
-    } else {
-      safeSetAttribute(element, name, value);
+var bindAttribute = (element, name, allowUnsafe = false) => {
+  const handlers = {
+    ok: (value) => {
+      if (typeof value === "boolean") {
+        element.toggleAttribute(name, value);
+      } else if (allowUnsafe) {
+        element.setAttribute(name, value);
+      } else {
+        safeSetAttribute(element, name, value);
+      }
+    },
+    nil: () => {
+      element.removeAttribute(name);
     }
-  },
-  nil: () => {
-    element.removeAttribute(name);
-  }
-});
-var bindStyle = (element, prop) => ({
-  ok: (value) => {
-    element.style.setProperty(prop, value);
-  },
-  nil: () => {
-    element.style.removeProperty(prop);
-  }
-});
+  };
+  registerDebugBindingTarget(handlers, element);
+  return handlers;
+};
+var bindStyle = (element, prop) => {
+  const handlers = {
+    ok: (value) => {
+      element.style.setProperty(prop, value);
+    },
+    nil: () => {
+      element.style.removeProperty(prop);
+    }
+  };
+  registerDebugBindingTarget(handlers, element);
+  return handlers;
+};
 var dangerouslyBindInnerHTML = (element, options = {}) => {
   const reset = () => {
     if (element.shadowRoot)
@@ -2415,14 +2445,17 @@ var makeWatch = (host) => {
       if (Array.isArray(source)) {
         const signals = source.map((s) => toSignal(host, s));
         const handler = handlerOrHandlers;
+        if (false) {}
         return createEffect(() => match(signals, { ok: (values) => untrack(() => handler(values)) }));
       }
       const signal = toSignal(host, source);
       if (typeof handlerOrHandlers === "function") {
+        if (false) {}
         return createEffect(() => match(signal, {
           ok: (value) => untrack(() => handlerOrHandlers(value))
         }));
       }
+      if (false) {}
       return createEffect(() => match(signal, handlerOrHandlers));
     };
     pushDescriptor(host, "watch", descriptor);
@@ -2473,14 +2506,33 @@ var makePass = (host) => {
           c();
       };
   });
+  const resolvePassedValues = (props) => {
+    const resolved = {};
+    for (const [prop, reactive] of Object.entries(props)) {
+      if (reactive == null)
+        continue;
+      try {
+        const signal = toSignal(host, reactive);
+        resolved[prop] = signal && typeof signal === "object" && "get" in signal ? signal.get() : reactive;
+      } catch {
+        resolved[prop] = reactive;
+      }
+    }
+    return resolved;
+  };
   function pass(target, props) {
     const descriptor = () => {
       if (!target)
         return;
       if (isMemo(target)) {
-        keyedScopes(target, (el) => swapSlots(el, props));
+        keyedScopes(target, (el) => {
+          const cleanup = swapSlots(el, props);
+          if (false) {}
+          return cleanup;
+        });
       } else {
         swapSlots(target, props);
+        if (false) {}
       }
     };
     pushDescriptor(host, "pass", descriptor);
@@ -2685,7 +2737,17 @@ var makeOn = (host) => {
       if (isMemo(target)) {
         if (NON_BUBBLING_EVENTS.has(type)) {
           if (false) {}
-          return keyedScopes(target, (el) => attachListener(host, el, type, handler, options));
+          return keyedScopes(target, (el) => {
+            let removeDebugListener;
+            if (false) {}
+            const cleanup = attachListener(host, el, type, handler, options);
+            if (!removeDebugListener)
+              return cleanup;
+            return () => {
+              cleanup();
+              removeDebugListener?.();
+            };
+          });
         }
         const root = host.shadowRoot ?? host;
         const rawListener = (e) => {
@@ -2706,15 +2768,28 @@ var makeOn = (host) => {
         };
         const listener = options.passive ? throttle(rawListener) : rawListener;
         createScope(() => {
+          let removeDebugListener;
+          if (false) {}
           root.addEventListener(type, listener, options);
           return () => {
             root.removeEventListener(type, listener);
             listener.cancel?.();
+            removeDebugListener?.();
           };
         });
         return;
       }
-      createScope(() => attachListener(host, target, type, handler, options));
+      createScope(() => {
+        let removeDebugListener;
+        if (false) {}
+        const cleanup = attachListener(host, target, type, handler, options);
+        if (!removeDebugListener)
+          return cleanup;
+        return () => {
+          cleanup();
+          removeDebugListener?.();
+        };
+      });
     };
     pushDescriptor(host, "on", descriptor);
     return descriptor;

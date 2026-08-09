@@ -1,4 +1,4 @@
-import { bindText, defineComponent } from '../../..'
+import { bindText, defineComponent } from '../../../index'
 import 'culori/css'
 import { formatCss, formatHex, type Oklch } from 'culori/fn'
 import { asOklch } from '../../_common/asOklch.ts'

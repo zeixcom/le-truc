@@ -1,4 +1,4 @@
-import { bindProperty, defineComponent } from '../../..'
+import { bindProperty, defineComponent } from '../../../index'
 
 export type CardCollapsibleProps = {
 	/** Whether the card is expanded. Reflects the descendant `<details>` element's `open` state. */

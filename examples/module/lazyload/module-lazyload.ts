@@ -5,7 +5,7 @@ import {
 	defineComponent,
 	query,
 	schedule,
-} from '../../..'
+} from '../../../index'
 import {
 	fetchWithCache,
 	isRecursiveURL,

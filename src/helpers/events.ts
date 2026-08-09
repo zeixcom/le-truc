@@ -5,6 +5,7 @@ import {
 	isRecord,
 	type Memo,
 } from '@zeix/cause-effect'
+import { debugFire } from '../extensions/debug'
 import { pushDescriptor } from '../internal'
 import { throttle } from '../scheduler'
 import type { ComponentProps, EffectDescriptor, Falsy } from '../types'
@@ -217,9 +218,27 @@ const makeOn = <P extends ComponentProps>(
 						)
 					}
 					// Fall back to per-element listeners with keyed per-element lifecycle
-					return keyedScopes(target, el =>
-						attachListener(host, el, type, handler, options),
-					)
+					return keyedScopes(target, el => {
+						// Additive debug companion listener (ADR 0022) — never wraps
+						// or replaces the author's own listener. Registered *before*
+						// the author's listener: same-target listeners fire in
+						// registration order, and the author may legitimately call
+						// `stopImmediatePropagation()`, which would otherwise
+						// silently suppress a later-registered companion (LT-011).
+						let removeDebugListener: (() => void) | undefined
+						if (process.env.DEV_MODE === 'true') {
+							const debugListener = (e: Event) => debugFire(host, 'on', el, e)
+							el.addEventListener(type, debugListener, options)
+							removeDebugListener = () =>
+								el.removeEventListener(type, debugListener)
+						}
+						const cleanup = attachListener(host, el, type, handler, options)
+						if (!removeDebugListener) return cleanup
+						return () => {
+							cleanup()
+							removeDebugListener?.()
+						}
+					})
 				}
 
 				// Event delegation: one listener on the query root
@@ -240,18 +259,57 @@ const makeOn = <P extends ComponentProps>(
 					}
 				}
 				const listener = options.passive ? throttle(rawListener) : rawListener
+				// The companion is registered *before* the author's listener:
+				// same-target listeners fire in registration order, and the author
+				// may legitimately call `stopImmediatePropagation()`, which would
+				// otherwise silently suppress a later-registered companion (LT-011).
 				createScope(() => {
+					let removeDebugListener: (() => void) | undefined
+					if (process.env.DEV_MODE === 'true') {
+						const debugListener = (e: Event) => {
+							const path = e.composedPath()
+							for (const el of target.get()) {
+								if (path.includes(el)) {
+									debugFire(host, 'on', el, e)
+									break
+								}
+							}
+						}
+						root.addEventListener(type, debugListener, options)
+						removeDebugListener = () =>
+							root.removeEventListener(type, debugListener)
+					}
 					root.addEventListener(type, listener, options)
 					return () => {
 						root.removeEventListener(type, listener)
 						;(listener as any).cancel?.()
+						removeDebugListener?.()
 					}
 				})
 				return
 			}
 
-			// Single Element target
-			createScope(() => attachListener(host, target, type, handler, options))
+			// Single Element target. Debug companion and author listener share
+			// one scope — same lifecycle, so a second Scope would buy nothing.
+			// The companion is still registered *before* the author's listener:
+			// same-target listeners fire in registration order, and the author
+			// may legitimately call `stopImmediatePropagation()`, which would
+			// otherwise silently suppress a later-registered companion (LT-011).
+			createScope(() => {
+				let removeDebugListener: (() => void) | undefined
+				if (process.env.DEV_MODE === 'true') {
+					const debugListener = (e: Event) => debugFire(host, 'on', target, e)
+					target.addEventListener(type, debugListener, options)
+					removeDebugListener = () =>
+						target.removeEventListener(type, debugListener)
+				}
+				const cleanup = attachListener(host, target, type, handler, options)
+				if (!removeDebugListener) return cleanup
+				return () => {
+					cleanup()
+					removeDebugListener?.()
+				}
+			})
 		}
 		pushDescriptor(host, 'on', descriptor)
 		return descriptor

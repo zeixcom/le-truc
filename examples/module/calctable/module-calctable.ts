@@ -8,7 +8,7 @@ import {
 	queryAll,
 	reconcile,
 	type Store,
-} from '../../..'
+} from '../../../index'
 import { getLocale } from '../../_common/getLocale'
 import { getNumberFormatter } from '../../_common/getNumberFormatter'
 

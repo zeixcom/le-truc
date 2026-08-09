@@ -11,7 +11,7 @@ import {
 	type FormAssociatedElement,
 	formAssociated,
 	throttle,
-} from '../../..'
+} from '../../../index'
 import { asOklch } from '../../_common/asOklch'
 import { getStepColor } from '../../_common/getStepColor.ts'
 

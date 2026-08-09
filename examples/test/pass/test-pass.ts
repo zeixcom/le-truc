@@ -1,4 +1,4 @@
-import { defineComponent } from '../../..'
+import { defineComponent } from '../../../index'
 
 export type TestPassProps = {
 	count: number

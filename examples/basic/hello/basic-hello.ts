@@ -1,4 +1,4 @@
-import { bindText, defineComponent } from '../../..'
+import { bindText, defineComponent } from '../../../index'
 
 export type BasicHelloProps = {
 	/** The subject to greet. Updated reactively as the user types in the input. */

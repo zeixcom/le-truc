@@ -1,4 +1,4 @@
-import { defineComponent, query } from '../../..'
+import { defineComponent, query } from '../../../index'
 import { getLocale } from '../../_common/getLocale'
 
 declare global {

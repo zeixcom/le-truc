@@ -7,13 +7,14 @@
 ## `defineComponent` Factory
 
 ```typescript
-defineComponent<P extends ComponentProps>(name, factory)
+defineComponent<P extends ComponentProps>(name, factory, extensions?)
 ```
 
 | Argument | Type | Purpose |
 |---|---|---|
 | `name` | `string` | Tag name — lowercase, must contain hyphen |
 | `factory` | `(context: FactoryContext<P>) => FactoryResult \| Falsy \| void` | Called at connect time; queries elements, calls `expose()`, calls effect helpers |
+| `extensions` | `ComponentExtension[]` (optional) | Opt-in capabilities — see [Extensions](#extensions) |
 
 ### Factory Context Helpers
 
@@ -55,6 +56,26 @@ defineComponent<MyProps>('my-component', ({ expose, first, host, on, watch }) =>
 `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` register their descriptor in an ambient collector the moment they're called. Calling one of these helpers outside synchronous factory (or `each()` callback) execution — after an `await`, in a detached `setTimeout` — throws `NoActiveCollectorError` immediately, rather than silently doing nothing.
 
 Explicit `return [...]` of the same descriptors still works (dual support in v2.3, deprecated as of v3.0).
+
+---
+
+## Extensions
+
+`defineComponent`'s optional third argument is a `ComponentExtension[]`. Three are exported and opt-in — import and pass explicitly:
+
+| Extension | Adds |
+|---|---|
+| `formAssociated()` | Form participation via `ElementInternals` — value sync, reset, state restore, `disabled`, native-parity host contract. Widens the factory context with `internals` |
+| `formAssociatedCheckbox()` | Same host contract, keyed on `checked: boolean` instead of `value` — submits nothing when unchecked. Do not combine with `formAssociated()`: both declare `staticProps.formAssociated`, which throws `ExtensionCollisionError` in `DEV_MODE` |
+| `observedAttributes(names)` | Re-runs the retained `Parser` for each named prop when its attribute mutates post-connect (still not the default — see Key Constraints below) |
+
+```typescript
+defineComponent('my-element', factory, [formAssociated()])
+```
+
+`ComponentExtension` contributes `staticProps`, `observedAttributes`, `reservedMembers`, and optional lifecycle hooks (`installOnPrototype`, `onConnect`, `onAttributeChanged`). `defineComponent()` folds every extension in the array once at class-definition time; `reservedMembers` and `observedAttributes` union across all extensions, so `expose()` throws `InvalidPropertyNameError` for a prop name any extension has reserved.
+
+A fourth extension, `debug()`, is **not exported and never appears in this array**. `defineComponent()` appends it to every component automatically whenever the app is built with `DEV_MODE=true` — no source change needed, including for components you didn't write. It adds a reactive `debug: boolean` property, toggled from the browser's properties panel or `metaKey`+click. While `true`, `on()`/`pass()`/`watch()` firings pulse the host and, where the target is knowable (`on()`, `pass()`, or a `bind*`-backed `watch()` handler), mark it with a `data-le-truc-on`/`-pass`/`-watch` attribute and log one `console.debug()` entry. `debug` does nothing in production builds — the extension providing the property was never merged in, so setting it is a no-op, not just hidden. `debug` is a reserved prop name on every component in a `DEV_MODE` build, even ones that never touch `debug()` — `expose({ debug: ... })` throws in dev, works in prod.
 
 ---
 

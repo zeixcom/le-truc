@@ -1,4 +1,4 @@
-import { batch, createEffect, defineComponent, query } from '../../..'
+import { batch, createEffect, defineComponent, query } from '../../../index'
 
 /**
  * Extract the base path (first path segment) from an option value.

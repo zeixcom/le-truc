@@ -8,7 +8,7 @@ import {
 	defineMethod,
 	type FormAssociatedElement,
 	formAssociated,
-} from '../../..'
+} from '../../../index'
 
 export type FormTextboxProps = {
 	/** Current text value. Synced with the native input or textarea. */

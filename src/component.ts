@@ -15,6 +15,7 @@ import {
 } from '@zeix/cause-effect'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
 import { type ComponentExtension, mergeExtensions } from './extension'
+import { debug } from './extensions/debug'
 import type {
 	FormAssociatedCheckboxExtension,
 	FormAssociatedExtension,
@@ -201,7 +202,15 @@ function defineComponent<P extends ComponentProps>(
 ): CustomElementConstructor | undefined {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
-	const exts: readonly ComponentExtension[] = extensions ?? []
+	// Deliberate, narrow exception to the "component.ts never imports a
+	// concrete feature module" invariant (ADR 0019): debug() is not
+	// opt-in — instrumenting a component must require no source change, so
+	// defineComponent() itself appends it whenever DEV_MODE is true,
+	// regardless of what the caller passed. See ADR 0022.
+	const exts: readonly ComponentExtension[] =
+		process.env.DEV_MODE === 'true'
+			? [...(extensions ?? []), debug()]
+			: (extensions ?? [])
 	const merged = mergeExtensions(name, exts)
 	class Truc extends HTMLElement {
 		// Concrete boolean default so `Truc.formAssociated` always reads as a

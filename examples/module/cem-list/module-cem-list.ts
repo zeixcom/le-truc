@@ -1,4 +1,4 @@
-import { createState, defineComponent, each } from '../../..'
+import { createState, defineComponent, each } from '../../../index'
 
 declare global {
 	interface HTMLElementTagNameMap {

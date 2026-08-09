@@ -106,7 +106,7 @@ Each effect factory calls `createEffect(() => match([...signals], { ok, err }))`
 | `apiEffect` | `libraryScripts.sources` | `docs-src/api/**/*.md`, `docs-src/pages/api.md` | TypeDoc + typedoc-plugin-markdown |
 | `apiPagesEffect` | `apiMarkdown.sources` | `docs/api/**/*.html` | Markdoc + Shiki (HTML fragments) |
 | `cssEffect` | `docsStyles`, `componentStyles` | `docs/assets/main.css` | LightningCSS (`bunx lightningcss`) |
-| `jsEffect` | `docsScripts`, `libraryScripts`, `componentScripts` | `docs/assets/main.js` + sourcemap | `bun build` |
+| `jsEffect` | `docsScripts`, `libraryScripts`, `componentScripts` | `docs/assets/main.js` + sourcemap | `bun build` (`DEV_MODE=true` unless `CI=true`, see [Environment Variables](#environment-variables)) |
 | `staticAssetsEffect` | — (one-shot copy, not watched) | `docs/**` (static assets from `docs-src/static/`) | File copy |
 | `serviceWorkerEffect` | All style + script sources | `docs/sw.js` | Template generation |
 | `examplesEffect` | `componentMarkdown`, `componentMarkup` | `docs/examples/<name>.html` | Markdoc + Shiki |
@@ -465,8 +465,12 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 |----------|--------|--------|
 | `NODE_ENV` | `development` | Enables HMR, file watching, debug features |
 | | `production` / unset | Disables HMR, production-like serving |
+| `CI` | `true` | `jsEffect` builds `docs/assets/main.js` with the library's `DEV_MODE=false` (published-site behavior) |
+| | unset | `jsEffect` builds with `DEV_MODE=true` (le-truc's own dev-only diagnostics, e.g. the `debug()` instrumentation extension — see [ADR 0022](../adr/0022-debug-extension-for-visual-and-console-instrumentation.md)) |
 | `PLAYWRIGHT` | `1` | Disables HMR even in development; prevents WebSocket connections and script injection |
 | `DEBUG` | `1` | Verbose logging for file watching and build events |
+
+`jsEffect` (used by `bun run dev`, `serve:docs`, and `build:docs` alike) keys `DEV_MODE` off `CI`, not `NODE_ENV`: GitHub Actions sets `CI=true` automatically, which is the one signal that reliably distinguishes a real CI run (the published site's `build:docs` in `ci-cd.yml`/`static.yml`) from *any* local invocation. Every local workflow — `bun run dev`, `serve:docs`, or running `build:docs` by hand — therefore defaults to `DEV_MODE=true`; only an actual CI run ships `DEV_MODE=false` (PROD) assets. The separate `serve:examples`/`build:examples:js` pipeline (package.json, used for the Playwright-safe pre-build) hardcodes `DEV_MODE=true` unconditionally, independent of `CI` — Playwright always wants DEV_MODE instrumentation live regardless of how it's invoked.
 
 ## Troubleshooting
 

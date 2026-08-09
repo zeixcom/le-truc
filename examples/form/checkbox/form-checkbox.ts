@@ -5,7 +5,7 @@ import {
 	defineComponent,
 	type FormAssociatedElement,
 	formAssociatedCheckbox,
-} from '../../..'
+} from '../../../index'
 
 export type FormCheckboxProps = {
 	/**

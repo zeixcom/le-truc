@@ -1,4 +1,4 @@
-import { bindStyle, bindText, defineComponent } from '../../..'
+import { bindStyle, bindText, defineComponent } from '../../../index'
 import 'culori/css'
 import {
 	formatCss,

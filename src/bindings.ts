@@ -40,6 +40,36 @@ type DangerouslyBindInnerHTMLOptions = {
 	sanitize?: (html: string) => string | TrustedHTML
 }
 
+/* === DEV_MODE Debug Attribution (ADR 0022) === */
+
+/**
+ * DEV_MODE-only registry mapping a `bind*` helper's returned setter (or
+ * `SingleMatchHandlers` object, for `bindAttribute`/`bindStyle`) back to the
+ * element it closes over. `watch()`'s debug instrumentation looks a handler
+ * up here to attribute an otherwise-opaque closure to a DOM element — exact
+ * tagging of a fact the helper already has, never a heuristic guess. Never
+ * populated outside `DEV_MODE`; empty in production.
+ */
+const debugBindingTargets = new WeakMap<object, Element>()
+
+/**
+ * Register a `bind*` helper's returned closure against the element it closes
+ * over, gated by `DEV_MODE` — a no-op call in production that constant-folds
+ * away along with the guard.
+ */
+const registerDebugBindingTarget = (target: object, element: Element): void => {
+	if (process.env.DEV_MODE === 'true') debugBindingTargets.set(target, element)
+}
+
+/**
+ * Look up the element a `bind*`-produced closure was registered against, if
+ * any. Used by `watch()`'s `DEV_MODE` instrumentation (ADR 0022) — a handler
+ * not produced by a `bind*` helper resolves to `undefined`, which is the
+ * correct "don't guess" outcome, not a bug.
+ */
+const getDebugBindingTarget = (handler: object): Element | undefined =>
+	debugBindingTargets.get(handler)
+
 /* === Constants === */
 
 const SCRIPT_ATTRS = [
@@ -175,13 +205,16 @@ const setTextPreservingComments = (element: Element, text: string): void => {
 const bindText = (
 	element: Element,
 	preserveComments: boolean = false,
-): ((value: string | number) => void) =>
-	preserveComments
+): ((value: string | number) => void) => {
+	const setter = preserveComments
 		? (value: string | number) =>
 				setTextPreservingComments(element, String(value))
 		: (value: string | number) => {
 				element.textContent = String(value)
 			}
+	registerDebugBindingTarget(setter, element)
+	return setter
+}
 
 /**
  * Returns a function that sets a DOM property directly on an element.
@@ -194,14 +227,17 @@ const bindText = (
  * @param key - Property key to set
  * @returns Function that sets a property
  */
-const bindProperty =
-	<O extends object, K extends keyof O & string>(
-		object: O,
-		key: K,
-	): ((value: O[K]) => void) =>
-	(value: O[K]) => {
+const bindProperty = <O extends object, K extends keyof O & string>(
+	object: O,
+	key: K,
+): ((value: O[K]) => void) => {
+	const setter = (value: O[K]) => {
 		object[key] = value
 	}
+	if (typeof Element !== 'undefined' && object instanceof Element)
+		registerDebugBindingTarget(setter, object)
+	return setter
+}
 
 /**
  * Returns a function that toggles a CSS class token on an element.
@@ -213,11 +249,16 @@ const bindProperty =
  * @param token - CSS class token to toggle
  * @returns Function that toggles the class token
  */
-const bindClass =
-	<T = boolean>(element: Element, token: string): ((value: T) => void) =>
-	(value: T) => {
+const bindClass = <T = boolean>(
+	element: Element,
+	token: string,
+): ((value: T) => void) => {
+	const setter = (value: T) => {
 		element.classList.toggle(token, Boolean(value))
 	}
+	registerDebugBindingTarget(setter, element)
+	return setter
+}
 
 /**
  * Returns a function that toggles a custom state on an element's `ElementInternals`.
@@ -230,6 +271,11 @@ const bindClass =
  * Accepts `null` for graceful degradation: the factory context's `internals`
  * is `null` when `attachInternals()` failed, in which case the returned
  * function is a no-op.
+ *
+ * `ElementInternals` carries no reference back to its host element, so this
+ * setter is never registered in the debug attribution registry (ADR 0022) —
+ * a custom state is host-scoped anyway, and the debug host pulse already
+ * covers it.
  *
  * @since 2.3
  * @param internals - The component's `ElementInternals` (or `null`)
@@ -256,11 +302,15 @@ const bindState =
  * @param element - Target element
  * @returns Function that schedules the visibility update
  */
-const bindVisible =
-	<T = boolean>(element: HTMLElement): ((value: T) => void) =>
-	(value: T) => {
+const bindVisible = <T = boolean>(
+	element: HTMLElement,
+): ((value: T) => void) => {
+	const setter = (value: T) => {
 		element.hidden = !value
 	}
+	registerDebugBindingTarget(setter, element)
+	return setter
+}
 
 /**
  * Returns `SingleMatchHandlers` that set or toggle an attribute with security validation.
@@ -281,20 +331,24 @@ const bindAttribute = (
 	element: Element,
 	name: string,
 	allowUnsafe: boolean = false,
-): SingleMatchHandlers<string | boolean> => ({
-	ok: (value: string | boolean) => {
-		if (typeof value === 'boolean') {
-			element.toggleAttribute(name, value)
-		} else if (allowUnsafe) {
-			element.setAttribute(name, value)
-		} else {
-			safeSetAttribute(element, name, value)
-		}
-	},
-	nil: () => {
-		element.removeAttribute(name)
-	},
-})
+): SingleMatchHandlers<string | boolean> => {
+	const handlers: SingleMatchHandlers<string | boolean> = {
+		ok: (value: string | boolean) => {
+			if (typeof value === 'boolean') {
+				element.toggleAttribute(name, value)
+			} else if (allowUnsafe) {
+				element.setAttribute(name, value)
+			} else {
+				safeSetAttribute(element, name, value)
+			}
+		},
+		nil: () => {
+			element.removeAttribute(name)
+		},
+	}
+	registerDebugBindingTarget(handlers, element)
+	return handlers
+}
 
 /**
  * Returns `SingleMatchHandlers<string>` that set or remove an inline style property.
@@ -310,14 +364,18 @@ const bindAttribute = (
 const bindStyle = (
 	element: HTMLElement | SVGElement | MathMLElement,
 	prop: string,
-): SingleMatchHandlers<string> => ({
-	ok: (value: string) => {
-		element.style.setProperty(prop, value)
-	},
-	nil: () => {
-		element.style.removeProperty(prop)
-	},
-})
+): SingleMatchHandlers<string> => {
+	const handlers: SingleMatchHandlers<string> = {
+		ok: (value: string) => {
+			element.style.setProperty(prop, value)
+		},
+		nil: () => {
+			element.style.removeProperty(prop)
+		},
+	}
+	registerDebugBindingTarget(handlers, element)
+	return handlers
+}
 
 /**
  * Returns `SingleMatchHandlers<string>` that sets the inner HTML of an element,
@@ -421,6 +479,7 @@ export {
 	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
 	escapeHTML,
+	getDebugBindingTarget,
 	safeSetAttribute,
 	setTextPreservingComments,
 }

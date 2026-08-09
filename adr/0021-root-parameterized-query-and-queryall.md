@@ -14,7 +14,7 @@ Confirmed against real usage across six components:
 - **Second-level, relative to an already-`first()`-obtained element, elsewhere in the factory or in free-standing helper functions:** `examples/card/blogmeta` (`author.querySelector('img')`), `examples/module/lazyload` (a lookup inside dynamically-injected `innerHTML`, relative to `contentEl = first('.content', ...)`), `examples/module/listnav` (`listbox.querySelector(...)` in helper functions that only receive the element, not the factory context), and `examples/module/todo`'s `getItemText`/`moveItem` — called from drag/keyboard handlers *after* `bindItem` has already returned, so a lookup bound only inside `bindItem`'s closure cannot reach them.
 - **One-shot multi-element snapshot:** `examples/form/listbox`'s roving-tabindex focus management wants `listbox.querySelectorAll(...)` as a plain array, hand-rolled today because `all()` is unavoidably live/`Memo`-backed.
 
-Gathered as [REQUIREMENTS.md §S6](../REQUIREMENTS.md#s6-typed-throwing-root-parameterized-element-lookup-queryqueryall).
+Gathered as [REQUIREMENTS.md §S5](../REQUIREMENTS.md#s5-typed-throwing-root-parameterized-element-lookup-queryqueryall).
 
 ## Decision
 
@@ -51,5 +51,5 @@ Gathered as [REQUIREMENTS.md §S6](../REQUIREMENTS.md#s6-typed-throwing-root-par
 
 ## Related
 
-- Requirements: [S6](../REQUIREMENTS.md#s6-typed-throwing-root-parameterized-element-lookup-queryqueryall), [M4](../REQUIREMENTS.md#m4-type-safe-dom-queries), [M8](../REQUIREMENTS.md#m8-dependency-resolution-for-nested-custom-elements), [M14](../REQUIREMENTS.md#m14-tree-shakeable-exports)
+- Requirements: [S5](../REQUIREMENTS.md#s5-typed-throwing-root-parameterized-element-lookup-queryqueryall), [M4](../REQUIREMENTS.md#m4-type-safe-dom-queries), [M8](../REQUIREMENTS.md#m8-dependency-resolution-for-nested-custom-elements), [M14](../REQUIREMENTS.md#m14-tree-shakeable-exports)
 - Architecture: [Query System](../ARCHITECTURE.md#query-system), [List Reconciliation](../ARCHITECTURE.md#list-reconciliation), [Naming Conventions](../ARCHITECTURE.md#naming-conventions)

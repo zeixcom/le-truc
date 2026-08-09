@@ -41,7 +41,7 @@ For `Memo<Element[]>` targets, the same per-target throw applies with no special
 
 ## Related
 
-- Requirements: [M11](../REQUIREMENTS.md#m11-signal-injection-between-components-via-pass), [S3](../REQUIREMENTS.md#s3-required-element-error-messages-are-actionable)
+- Requirements: [M11](../REQUIREMENTS.md#m11-signal-injection-between-components-via-pass), [S2](../REQUIREMENTS.md#s2-required-element-error-messages-are-actionable)
 - Architecture: [Inter-Component Signal Sharing (Pass)](../ARCHITECTURE.md#inter-component-signal-sharing-pass)
 - Related ADRs: [ADR 0004](0004-slot-based-signal-swapping-for-inter-component-binding.md) (Slot-based signal swapping), [ADR 0007](0007-effect-descriptors-with-deferred-activation.md) (deferred activation — explains why this can't be caught by the caller)
 - Supersedes: None

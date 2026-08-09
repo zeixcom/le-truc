@@ -1,4 +1,4 @@
-import { defineComponent } from '../../..'
+import { defineComponent } from '../../../index'
 
 export type ModuleDialogProps = {
 	/** Whether the dialog is currently open. */

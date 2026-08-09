@@ -11,7 +11,7 @@ import {
 	query,
 	reconcile,
 	type Store,
-} from '../../..'
+} from '../../../index'
 
 export type TodoItem = {
 	id: string
