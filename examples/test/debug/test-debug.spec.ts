@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test'
 
 /**
- * End-to-end coverage for the DEV_MODE debug instrumentation (ADR 0022,
- * LT-010) — real browser DOM/CSS and real addEventListener ordering
+ * End-to-end coverage for the DEV_MODE debug instrumentation (ADR 0022)
+ * — real browser DOM/CSS and real addEventListener ordering
  * semantics that `bun:test` fake-DOM stubs can't exercise. The examples
  * bundle is built with `DEV_MODE=true` (see `build:examples:js` in
  * package.json), so `debug()` is auto-injected into every component here.
@@ -48,7 +48,7 @@ test.describe('debug instrumentation (ADR 0022)', () => {
 		expect(after).toBe(true)
 	})
 
-	test('on(): marks the target, pulses the host, and logs — even though the handler calls stopImmediatePropagation() (LT-011)', async ({
+	test('on(): marks the target, pulses the host, and logs — even though the handler calls stopImmediatePropagation()', async ({
 		page,
 	}) => {
 		const consoleDebugCalls: string[] = []
@@ -69,8 +69,7 @@ test.describe('debug instrumentation (ADR 0022)', () => {
 		expect(count).toBe(1)
 
 		// The debug companion must still have fired for this same click,
-		// despite the author's stopImmediatePropagation() call — this is
-		// exactly the ordering bug LT-011 fixed.
+		// despite the author's stopImmediatePropagation() call.
 		const marked = await page.evaluate(
 			() => document.querySelector('#btn')?.hasAttribute('data-le-truc-on'),
 		)
@@ -117,15 +116,18 @@ test.describe('debug instrumentation (ADR 0022)', () => {
 				?.hasAttribute('data-le-truc-watch'),
 		)
 		expect(marked).toBe(false)
-		// The firing is still logged (host-level signal), just unattributed.
+		// The firing is still logged (host-level signal) — names the host,
+		// but names no target element since there's none to attribute (and
+		// the message must not claim otherwise with a placeholder like
+		// "(unattributed)" — that's noise, not signal).
 		expect(
 			consoleDebugCalls.some(
-				text =>
-					text.includes('[le-truc debug]') &&
-					text.includes('watch') &&
-					text.includes('(unattributed)'),
+				text => text.includes('[le-truc debug] watch in') && text.includes('test-debug'),
 			),
 		).toBe(true)
+		expect(consoleDebugCalls.some(text => text.includes('(unattributed)'))).toBe(
+			false,
+		)
 	})
 
 	test('pass(): marks the child target element', async ({ page }) => {
@@ -139,7 +141,7 @@ test.describe('debug instrumentation (ADR 0022)', () => {
 		expect(marked).toBe(true)
 	})
 
-	test('pass(): toggling debug on alone does not itself log a firing (LT-013)', async ({
+	test('pass(): toggling debug on alone does not itself log a firing', async ({
 		page,
 	}) => {
 		const consoleDebugCalls: string[] = []

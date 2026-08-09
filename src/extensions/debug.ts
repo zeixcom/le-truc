@@ -4,7 +4,7 @@ import type { ComponentExtension } from '../extension'
 import { getSignals } from '../internal'
 import { schedule } from '../scheduler'
 import type { FactoryResult } from '../types'
-import { isCustomElement } from '../util'
+import { elementName, isCustomElement } from '../util'
 
 /**
  * `DEV_MODE`-only visual and console instrumentation (ADR 0022). Not
@@ -86,13 +86,41 @@ const mark = (element: Element, kind: 'on' | 'pass' | 'watch'): void => {
 	if (!element.hasAttribute(attr)) element.setAttribute(attr, '')
 }
 
-/** One `console.debug` entry per firing that also drives a visual effect. */
+/**
+ * One `console.debug` entry per firing that also drives a visual effect.
+ * Always names the originating component via `elementName(host)`. Drops the
+ * target element entirely when there's none to attribute (`watch()` with a
+ * handler that isn't `bind*`-produced) rather than printing an
+ * "(unattributed)" placeholder — no element is not itself information worth
+ * a word in the message.
+ */
 const log = (
+	host: HTMLElement,
 	kind: 'on' | 'pass' | 'watch',
 	element: Element | undefined,
 	value: unknown,
 ): void => {
-	console.debug('[le-truc debug]', kind, element ?? '(unattributed)', value)
+	if (kind === 'on') {
+		// value is always the raw DOM Event for 'on' firings (see debugFire()
+		// call sites in helpers/events.ts) — element is always known too.
+		const type = value instanceof Event ? value.type : String(value)
+		console.debug(
+			`[le-truc debug] on "${type}" in ${elementName(host)} from ${elementName(element)}`,
+			value,
+		)
+	} else if (kind === 'pass') {
+		// element (the pass() target) is always known.
+		console.debug(
+			`[le-truc debug] pass from ${elementName(host)} to ${elementName(element)}`,
+			value,
+		)
+	} else {
+		const attribution = element ? ` → ${elementName(element)}` : ''
+		console.debug(
+			`[le-truc debug] watch in ${elementName(host)}${attribution}`,
+			value,
+		)
+	}
 }
 
 /**
@@ -122,7 +150,7 @@ const debugFire = (
 		pulse(element)
 	}
 	pulse(host)
-	log(kind, element, value)
+	log(host, kind, element, value)
 }
 
 /**
