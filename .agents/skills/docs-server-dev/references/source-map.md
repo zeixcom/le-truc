@@ -34,6 +34,7 @@ Where to find things in the server/ build system. Read this before locating any 
 
 | File | What it produces |
 |---|---|
+| `build-effect.ts` | Not an effect itself — `createBuildEffect()` + `runCommand()`, the shared wrapper every effect below uses for `ready`/first-run-fails-loudly bookkeeping |
 | `api.ts` | `docs-src/api/**/*.md` + `docs-src/pages/api.md` (runs TypeDoc) |
 | `api-pages.ts` | `docs/api/**/*.html` (HTML fragments from TypeDoc markdown) |
 | `css.ts` | `docs/assets/main.css` (LightningCSS) |

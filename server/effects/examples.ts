@@ -1,6 +1,5 @@
 import { join } from 'node:path'
 import Markdoc, { type Node } from '@markdoc/markdoc'
-import { createEffect, match } from '@zeix/cause-effect'
 import { COMPONENTS_DIR, CONTENT_MARKER, EXAMPLES_DIR } from '../config'
 import {
 	componentMarkdown,
@@ -10,6 +9,7 @@ import {
 import { highlightCodeBlocks, injectModuleDemoPreview } from '../html-shaping'
 import { getFilePath, writeFileSafe } from '../io'
 import markdocConfig from '../markdoc.config'
+import { createBuildEffect } from './build-effect'
 
 /* === Internal Functions === */
 
@@ -79,92 +79,64 @@ export { processExample }
 
 /* === Exported Effect === */
 
-export const examplesEffect = (onRebuild?: () => void) => {
-	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => {
-		resolve = res
-	})
-	const cleanup = createEffect(() => {
-		match([componentMarkdown.sources, componentMarkup.sources], {
-			ok: async ([mdFiles, htmlFiles]) => {
-				const firstRun = !!resolve
-				try {
-					console.log('🔄 Rebuilding example documentation...')
+export const examplesEffect = (onRebuild?: () => void) =>
+	createBuildEffect(
+		'Examples',
+		[componentMarkdown.sources, componentMarkup.sources],
+		async ([mdFiles, htmlFiles]) => {
+			console.log('🔄 Rebuilding example documentation...')
 
-					const htmlMap = toPathMap(htmlFiles)
+			const htmlMap = toPathMap(htmlFiles)
 
-					for (const md of mdFiles) {
-						const pathParts = md.path.split('/')
+			for (const md of mdFiles) {
+				const pathParts = md.path.split('/')
 
-						if (pathParts.length < 4) continue
+				if (pathParts.length < 4) continue
 
-						const typeName = pathParts[pathParts.length - 3]!
-						const dirName = pathParts[pathParts.length - 2]!
-						const fileName = pathParts[pathParts.length - 1]!.replace(
-							/\.md$/,
-							'',
-						)
+				const typeName = pathParts[pathParts.length - 3]!
+				const dirName = pathParts[pathParts.length - 2]!
+				const fileName = pathParts[pathParts.length - 1]!.replace(/\.md$/, '')
 
-						// Only process markdown files that match <type>-<name> pattern
-						if (fileName !== `${typeName}-${dirName}`) continue
+				// Only process markdown files that match <type>-<name> pattern
+				if (fileName !== `${typeName}-${dirName}`) continue
 
-						const componentName = fileName
+				const componentName = fileName
 
-						// Find corresponding HTML file
-						const htmlPath = getFilePath(
-							COMPONENTS_DIR,
-							typeName,
-							dirName,
-							`${componentName}.html`,
-						)
-						const htmlFile = htmlMap.get(htmlPath)
+				// Find corresponding HTML file
+				const htmlPath = getFilePath(
+					COMPONENTS_DIR,
+					typeName,
+					dirName,
+					`${componentName}.html`,
+				)
+				const htmlFile = htmlMap.get(htmlPath)
 
-						if (!htmlFile) {
-							console.warn(`No HTML file found for component: ${componentName}`)
-							continue
-						}
-
-						try {
-							const htmlContent = await processExample(
-								componentName,
-								md.content,
-								htmlFile.content,
-							)
-
-							const outputPath = getFilePath(
-								EXAMPLES_DIR,
-								`${componentName}.html`,
-							)
-							const success = await writeFileSafe(outputPath, htmlContent)
-
-							if (success) {
-								console.log(`✅ Generated examples/${componentName}.html`)
-							} else {
-								console.error(`❌ Failed to write ${outputPath}`)
-							}
-						} catch (error) {
-							console.error(
-								`Failed to process example ${componentName}:`,
-								error,
-							)
-						}
-					}
-
-					console.log('📝 Examples processing completed')
-					if (!firstRun) onRebuild?.()
-				} catch (error) {
-					console.error('Failed to process examples:', error)
-				} finally {
-					resolve?.()
-					resolve = undefined
+				if (!htmlFile) {
+					console.warn(`No HTML file found for component: ${componentName}`)
+					continue
 				}
-			},
-			err: errors => {
-				console.error('Error in examples effect:', errors[0]!.message)
-				resolve?.()
-				resolve = undefined
-			},
-		})
-	})
-	return { cleanup, ready }
-}
+
+				try {
+					const htmlContent = await processExample(
+						componentName,
+						md.content,
+						htmlFile.content,
+					)
+
+					const outputPath = getFilePath(EXAMPLES_DIR, `${componentName}.html`)
+					const success = await writeFileSafe(outputPath, htmlContent)
+
+					if (success) {
+						console.log(`✅ Generated examples/${componentName}.html`)
+					} else {
+						console.error(`❌ Failed to write ${outputPath}`)
+					}
+				} catch (error) {
+					console.error(`Failed to process example ${componentName}:`, error)
+				}
+			}
+
+			console.log('📝 Examples processing completed')
+		},
+		onRebuild,
+	)

@@ -1,7 +1,7 @@
-import { createEffect, match } from '@zeix/cause-effect'
 import { LLMS_FULL_TXT_FILE, ROOT } from '../config'
 import { docsMarkdown } from '../file-signals'
 import { writeFileSafe } from '../io'
+import { createBuildEffect } from './build-effect'
 import { stripMarkdocTags } from './md-mirror'
 
 /* === Types === */
@@ -149,59 +149,38 @@ export const generateLlmsFullTxt = (params: {
 
 /* === Effect === */
 
-export const llmsFullManifestEffect = (onRebuild?: () => void) => {
-	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => {
-		resolve = res
-	})
+export const llmsFullManifestEffect = (onRebuild?: () => void) =>
+	createBuildEffect(
+		'llms-full.txt',
+		[docsMarkdown.processed],
+		async ([processedFiles]) => {
+			// Collect curated page content
+			const pages: PageContent[] = []
+			for (const [, file] of processedFiles) {
+				const slug = file.filename.replace(/\.md$/, '').split('/')[0] ?? ''
+				if (!slug) continue
+				// Keep only top-level narrative pages; `processedFiles`
+				// only contains docs-src/pages/**, so section depth is
+				// derived from the path.
+				if (file.path.includes('/blog/')) continue
+				pages.push({ relativePath: file.filename, content: file.content })
+			}
 
-	const cleanup = createEffect(() => {
-		match([docsMarkdown.processed], {
-			ok: async ([processedFiles]): Promise<void> => {
-				const firstRun = !!resolve
-				try {
-					// Collect curated page content
-					const pages: PageContent[] = []
-					for (const [, file] of processedFiles) {
-						const slug = file.filename.replace(/\.md$/, '').split('/')[0] ?? ''
-						if (!slug) continue
-						// Keep only top-level narrative pages; `processedFiles`
-						// only contains docs-src/pages/**, so section depth is
-						// derived from the path.
-						if (file.path.includes('/blog/')) continue
-						pages.push({ relativePath: file.filename, content: file.content })
-					}
+			// Read standalone docs from the repo root. Promise.all() over an
+			// explicit tuple (rather than .map() over STANDALONE_DOCS, which
+			// degrades to string[]) keeps each element typed as `string`
+			// under noUncheckedIndexedAccess.
+			const [readme, architecture, agents] = await Promise.all([
+				Bun.file(`${ROOT}/${STANDALONE_DOCS[0].filename}`).text(),
+				Bun.file(`${ROOT}/${STANDALONE_DOCS[1].filename}`).text(),
+				Bun.file(`${ROOT}/${STANDALONE_DOCS[2].filename}`).text(),
+			])
 
-					// Read standalone docs from the repo root. Promise.all() over an
-					// explicit tuple (rather than .map() over STANDALONE_DOCS, which
-					// degrades to string[]) keeps each element typed as `string`
-					// under noUncheckedIndexedAccess.
-					const [readme, architecture, agents] = await Promise.all([
-						Bun.file(`${ROOT}/${STANDALONE_DOCS[0].filename}`).text(),
-						Bun.file(`${ROOT}/${STANDALONE_DOCS[1].filename}`).text(),
-						Bun.file(`${ROOT}/${STANDALONE_DOCS[2].filename}`).text(),
-					])
-
-					await writeFileSafe(
-						LLMS_FULL_TXT_FILE,
-						generateLlmsFullTxt({ pages, readme, architecture, agents }),
-					)
-					console.log('📚 Generated llms-full.txt')
-					if (!firstRun) onRebuild?.()
-				} catch (error) {
-					console.error('Failed to generate llms-full.txt:', error)
-				} finally {
-					resolve?.()
-					resolve = undefined
-				}
-			},
-			err: errors => {
-				console.error('Error in llmsFullManifestEffect:', errors[0]!.message)
-				resolve?.()
-				resolve = undefined
-			},
-		})
-	})
-
-	return { cleanup, ready }
-}
+			await writeFileSafe(
+				LLMS_FULL_TXT_FILE,
+				generateLlmsFullTxt({ pages, readme, architecture, agents }),
+			)
+			console.log('📚 Generated llms-full.txt')
+		},
+		onRebuild,
+	)
