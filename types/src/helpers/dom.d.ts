@@ -33,6 +33,50 @@ type ElementQueries = {
  */
 declare const extractAttributes: (selector: string) => string[];
 /**
+ * Bind `query()` to `root`, throwing with contextLabel `'item'` instead of the
+ * default `'component'`. Internal — backs `reconcile()`'s `bindItem` and
+ * `each()`'s scoped `first` parameter, not exported from the package. See
+ * ADR 0021.
+ */
+declare const bindFirst: (root: Element) => FirstElement;
+/**
+ * Return the first descendant of `root` matching a CSS selector.
+ *
+ * One-shot: no dependency tracking for undefined custom elements, no `Memo`.
+ * `first()`/`all()` (see `makeElementQueries`) add that on top of this for a
+ * component host. Use `query()` directly for lookups relative to any other
+ * already-obtained element — inside `reconcile()`/`each()` callbacks, or from
+ * free-standing helper functions that only receive an element, not the
+ * factory context. See ADR 0021.
+ *
+ * @since 2.4.0
+ * @param {ParentNode} root - Node to search within
+ * @param {S} selector - CSS selector
+ * @param {string} [required] - If provided and no element is found, throws with this message as context
+ * @returns {ElementFromSelector<S> | undefined} The first matching element, or `undefined` if not found and not required
+ * @throws {MissingElementError} If `required` is set and no matching element exists
+ */
+declare function query<S extends string>(root: ParentNode, selector: S, required: string): ElementFromSelector<S>;
+declare function query<S extends string>(root: ParentNode, selector: S): ElementFromSelector<S> | undefined;
+declare function query<E extends Element>(root: ParentNode, selector: string, required: string): E;
+declare function query<E extends Element>(root: ParentNode, selector: string): E | undefined;
+/**
+ * Return a plain array of all descendants of `root` matching a CSS selector.
+ *
+ * One-shot: queried once, not backed by a `Memo`/`MutationObserver`. Use this
+ * for a roving-tabindex-style snapshot, or any other case where a live
+ * collection isn't needed. See `query()` and ADR 0021.
+ *
+ * @since 2.4.0
+ * @param {ParentNode} root - Node to search within
+ * @param {S} selector - CSS selector
+ * @param {string} [required] - If provided and no elements are found, throws with this message as context
+ * @returns {ElementFromSelector<S>[]} Array of matching elements
+ * @throws {MissingElementError} If `required` is set and no matching elements exist
+ */
+declare function queryAll<S extends string>(root: ParentNode, selector: S, required?: string): ElementFromSelector<S>[];
+declare function queryAll<E extends Element>(root: ParentNode, selector: string, required?: string): E[];
+/**
  * Create a memo of elements matching a CSS selector.
  * The MutationObserver is lazily activated when an effect first reads
  * the memo, and disconnected when no effects are watching.
@@ -57,4 +101,4 @@ declare function createElementsMemo<E extends Element>(parent: ParentNode, selec
  * @returns {[ElementQueries, (callback: () => void) => void]} Query helpers and a dependency resolver
  */
 declare const makeElementQueries: (host: HTMLElement) => [ElementQueries, (run: () => void) => void];
-export { type AllElements, createElementsMemo, type ElementFromSelector, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, extractAttributes, type FirstElement, type KnownTag, makeElementQueries, type SplitByComma, type TrimWhitespace, };
+export { type AllElements, bindFirst, createElementsMemo, type ElementFromSelector, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, extractAttributes, type FirstElement, type KnownTag, makeElementQueries, query, queryAll, type SplitByComma, type TrimWhitespace, };

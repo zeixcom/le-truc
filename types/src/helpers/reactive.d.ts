@@ -1,5 +1,24 @@
 import { type Collection, type List, type MaybeCleanup, type MaybePromise, type Memo, type MutableSignal, type Signal, type SingleMatchHandlers, type SlotDescriptor } from '@zeix/cause-effect';
 import type { ComponentProp, ComponentProps, EffectDescriptor, FactoryResult, Falsy } from '../types';
+import { type FirstElement } from './dom';
+/**
+ * Reactive-effect helpers exposed through `FactoryContext`: `watch`, `pass`,
+ * `each`, and `reconcile`.
+ *
+ * A `Reactive<T, P>` source is one of three forms: a property name (reads
+ * `host[name]` and tracks it as a signal dependency), a `Signal`, or a thunk
+ * wrapped in `createComputed()`. `watch()` and `pass()` both resolve sources
+ * through `toSignal()`.
+ *
+ * `pass()` accepts a read-only thunk, a mediated `{ get, set }` descriptor, a
+ * bare property name, or a bare writable `Signal`. The last two forms hand
+ * the child component unrestricted `.set()` on the parent's signal
+ * (ADR-0012) and warn in DEV_MODE; prefer the thunk or the descriptor form.
+ *
+ * `watch()`, `pass()`, `each()`, and `reconcile()` push an `EffectDescriptor`
+ * into the active ambient collector when called and do not require an
+ * explicit `return` (ADR 0018). Explicit `return` is still supported.
+ */
 /**
  * A reactive value that drives a DOM update or a slot injection.
  *
@@ -13,17 +32,12 @@ import type { ComponentProp, ComponentProps, EffectDescriptor, FactoryResult, Fa
  */
 type Reactive<T, P extends ComponentProps> = keyof P | Signal<T & {}> | (() => T | Promise<T> | null | undefined);
 /**
- * A map of child component property names to the reactive values to inject into them.
- * Passed as the second argument to `pass()`. Keys must be property names of the target component `Q`.
+ * Map of child component property names to the reactive values `pass()` injects into them.
  *
  * `Q` is bound to `HTMLElement`, not `ComponentProps`, because native members
  * mixed into a target's element type (e.g. `form: HTMLFormElement | null`)
- * can fail a `Record<string, {}>`-style constraint. `keyof Q & ComponentProp`
+ * fail a `Record<string, {}>`-style constraint. `keyof Q & ComponentProp`
  * filters to the author-exposed reactive props instead.
- *
- * Prefer the read-only thunk (`() => host.prop`) and the mediated
- * `{ get, set }` descriptor forms. The property-key and bare-writable-signal
- * forms are deprecated and warn in DEV_MODE.
  */
 type PassedProps<P extends ComponentProps, Q extends HTMLElement> = {
     [K in keyof Q & ComponentProp]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>;
@@ -31,13 +45,9 @@ type PassedProps<P extends ComponentProps, Q extends HTMLElement> = {
 /**
  * The `watch` helper type in `FactoryContext`.
  *
- * Drives a reactive effect from a signal source (property name, Signal, thunk,
- * or array). Only the declared sources trigger re-runs — incidental reads inside
- * the handler are not tracked. Returns an `EffectDescriptor`.
- *
- * Thunk form `() => T` is wrapped in `createComputed`, so all signals read inside
- * it are tracked in the pure phase — useful for deriving or transforming values
- * before the side-effectful handler runs.
+ * Drives a reactive effect from one or more `Reactive` sources. Only the
+ * declared sources trigger re-runs; other reads inside the handler are not
+ * tracked. Returns an `EffectDescriptor`.
  */
 type WatchHelper<P extends ComponentProps> = {
     <K extends keyof P & string>(source: K, handler: (value: P[K]) => MaybePromise<MaybeCleanup>): EffectDescriptor;
@@ -51,21 +61,9 @@ type WatchHelper<P extends ComponentProps> = {
 /**
  * The `pass` helper type in `FactoryContext`.
  *
- * Passes reactive values to a descendant Le Truc component's Slot-backed signals.
- * Supports single-element and Memo targets (per-element lifecycle for Memo).
- *
- * The property-key (`'value'`) and bare-writable-signal (`someState`) forms are
- * deprecated — they hand the child unrestricted `.set()` on the parent's signal
- * (ADR-0012) and warn in DEV_MODE. Migrate to the behavior-preserving descriptor:
- *
- * ```ts
- * // before (deprecated) — child can write freely
- * pass(child, { value: parentSignal })
- * // after — child writes are mediated by the parent
- * pass(child, { value: { get: parentSignal.get, set: parentSignal.set } })
- * ```
- *
- * For read-only access use the thunk: `pass(child, { value: () => host.value })`.
+ * Passes reactive values to a descendant Le Truc component's Slot-backed
+ * signals. Supports a single element or a `Memo<Element[]>` target, with
+ * per-element lifecycle for the latter.
  */
 type PassHelper<P extends ComponentProps> = {
     <Q extends HTMLElement>(target: Q | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
@@ -134,22 +132,16 @@ declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => Wa
 /**
  * Create a `pass` helper bound to a specific component host.
  *
- * `pass` passes reactive values to a descendant Le Truc component by swapping
- * its Slot-backed signals. The original signals are restored when the component
- * disconnects. Supports both single-element and `Memo<Element[]>` targets.
+ * Swaps the target's Slot-backed signals for the given values and restores
+ * the originals on disconnect. A `Memo<Element[]>` target swaps and restores
+ * signals per element as it enters and leaves the collection.
  *
- * For Memo targets, uses per-element lifecycle: signals are swapped when elements
- * enter the collection and restored when they leave.
- *
- * The property-key and bare-writable-signal short forms are deprecated —
- * they grant the child unrestricted `.set()` on the parent's signal. In
- * DEV_MODE `pass()` warns for each writable binding:
- *
- * > `pass() received a writable signal for '<prop>'. Use () => host.<prop> for read-only access, or { get, set } to mediate writes.`
- *
- * Migrate with `pass(child, { value: sig })` →
- * `pass(child, { value: { get: sig.get, set: sig.set } })`, or for
- * read-only access `pass(child, { value: () => host.value })`.
+ * ```ts
+ * // deprecated — child can write freely
+ * pass(child, { value: parentSignal })
+ * // preferred — child writes are mediated by the parent
+ * pass(child, { value: { get: parentSignal.get, set: parentSignal.set } })
+ * ```
  *
  * @since 2.0
  * @param {HTMLElement & P} host - The component host element
@@ -168,9 +160,13 @@ declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => Pas
  * own nested scope. Returning descriptors still works and is not
  * double-activated if you also call them directly.
  *
+ * The callback's 2nd parameter is `first`, a type-safe, throwing lookup
+ * scoped to `element` instead of the host — the same shape as host-level
+ * `first()`, minus M8 dependency-resolution participation (see ADR 0021).
+ *
  * @since 2.0
  */
-declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E) => FactoryResult | EffectDescriptor | Falsy | void): EffectDescriptor;
+declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E, first: FirstElement) => FactoryResult | EffectDescriptor | Falsy | void): EffectDescriptor;
 /**
  * Sync a keyed reactive data source to a container's children.
  *
@@ -192,6 +188,10 @@ declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E)
  * A returned `MaybeCleanup` runs when the key leaves the source or the
  * component disconnects.
  *
+ * `bindItem`'s 4th parameter is `first`, a type-safe, throwing lookup scoped
+ * to `element` instead of the host — the same shape as host-level `first()`,
+ * minus M8 dependency-resolution participation (see ADR 0021).
+ *
  * See ADR 0017 for full rationale (SSR adoption, unreconciled pinning,
  * keyed-relative positioning).
  *
@@ -199,10 +199,10 @@ declare function each<E extends Element>(memo: Memo<E[]>, callback: (element: E)
  * @param {Element} container - Container element whose children are reconciled
  * @param {HTMLTemplateElement} template - Template whose single root element is cloned for entering keys
  * @param {List<T> | Collection<T>} source - Keyed reactive data source
- * @param {(element: HTMLElement, item: Signal<T>, key: string) => MaybeCleanup} bindItem - Mounted once per entering element inside an ambient collector; collected descriptors activate against the per-item scope, and any returned cleanup is that scope's teardown
+ * @param {(element: HTMLElement, item: Signal<T>, key: string, first: FirstElement) => MaybeCleanup} bindItem - Mounted once per entering element inside an ambient collector; collected descriptors activate against the per-item scope, and any returned cleanup is that scope's teardown
  * @returns {EffectDescriptor} Effect descriptor to include in the component's factory result
  * @throws {InvalidTemplateError} if the template content does not contain exactly one root element
  */
-declare function reconcile<T extends {}, S extends MutableSignal<T>>(container: Element, template: HTMLTemplateElement, source: List<T, S>, bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup): EffectDescriptor;
-declare function reconcile<T extends {}, S extends Signal<T>>(container: Element, template: HTMLTemplateElement, source: Collection<T, S>, bindItem: (element: HTMLElement, item: S, key: string) => MaybeCleanup): EffectDescriptor;
+declare function reconcile<T extends {}, S extends MutableSignal<T>>(container: Element, template: HTMLTemplateElement, source: List<T, S>, bindItem: (element: HTMLElement, item: S, key: string, first: FirstElement) => MaybeCleanup): EffectDescriptor;
+declare function reconcile<T extends {}, S extends Signal<T>>(container: Element, template: HTMLTemplateElement, source: Collection<T, S>, bindItem: (element: HTMLElement, item: S, key: string, first: FirstElement) => MaybeCleanup): EffectDescriptor;
 export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, forEachUnseen, keyedScopes, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, reconcile, type WatchHelper, };

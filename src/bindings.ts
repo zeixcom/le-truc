@@ -1,6 +1,21 @@
 import type { SingleMatchHandlers } from '@zeix/cause-effect'
 import { schedule } from './scheduler'
 
+/**
+ * Low-level DOM-mutation primitives behind `bindText`, `bindAttribute`,
+ * `bindClass`, `bindState`, `bindStyle`, `bindVisible`, and
+ * `dangerouslyBindInnerHTML`. Each `bind*` function returns a setter (or
+ * `SingleMatchHandlers`) that a caller wires to a signal via `watch()` or
+ * `match()`.
+ *
+ * `safeSetAttribute()` blocks `on*` attribute names and validates URL-like
+ * values against an allowlist (`http:`, `https:`, `ftp:`, `mailto:`,
+ * `tel:`); see `isSafeURL()` for the exact rules. `dangerouslyBindInnerHTML()`
+ * is an XSS sink — pass a `sanitize` option (e.g. DOMPurify) for untrusted
+ * input, and return `TrustedHTML` from it on pages that enforce
+ * `require-trusted-types-for 'script'`. Le Truc ships no sanitizer.
+ */
+
 /* === Types === */
 
 /**
@@ -17,21 +32,43 @@ type DangerouslyBindInnerHTMLOptions = {
 	shadowRootMode?: ShadowRootMode
 	allowScripts?: boolean
 	/**
-	 * Optional sanitizer applied to the HTML string before it is assigned to
-	 * `innerHTML`. Plug in an external sanitizer (e.g. DOMPurify) when the
-	 * content is not fully trusted. Le Truc ships no built-in sanitizer.
-	 *
-	 * May return a plain `string` or a `TrustedHTML` instance. On a page
-	 * that enforces `Content-Security-Policy: require-trusted-types-for
-	 * 'script'`, the DOM rejects a plain string, so return `TrustedHTML`
-	 * there (DOMPurify with `RETURN_TRUSTED_TYPE: true` is the canonical way).
-	 *
-	 * Sanitizing is the only reliable defense against XSS here: `innerHTML`
-	 * fires event-handler attributes on non-`<script>` elements (e.g.
-	 * `<img onerror>`, `<svg onload>`) even when `allowScripts` is false.
+	 * Sanitizer applied to the HTML string before assignment to `innerHTML`.
+	 * Return a sanitized `string`, or a `TrustedHTML` instance on pages that
+	 * enforce Trusted Types (see the Security note on
+	 * `dangerouslyBindInnerHTML` below).
 	 */
 	sanitize?: (html: string) => string | TrustedHTML
 }
+
+/* === DEV_MODE Debug Attribution (ADR 0022) === */
+
+/**
+ * DEV_MODE-only registry mapping a `bind*` helper's returned setter (or
+ * `SingleMatchHandlers` object, for `bindAttribute`/`bindStyle`) back to the
+ * element it closes over. `watch()`'s debug instrumentation looks a handler
+ * up here to attribute an otherwise-opaque closure to a DOM element — exact
+ * tagging of a fact the helper already has, never a heuristic guess. Never
+ * populated outside `DEV_MODE`; empty in production.
+ */
+const debugBindingTargets = new WeakMap<object, Element>()
+
+/**
+ * Register a `bind*` helper's returned closure against the element it closes
+ * over, gated by `DEV_MODE` — a no-op call in production that constant-folds
+ * away along with the guard.
+ */
+const registerDebugBindingTarget = (target: object, element: Element): void => {
+	if (process.env.DEV_MODE === 'true') debugBindingTargets.set(target, element)
+}
+
+/**
+ * Look up the element a `bind*`-produced closure was registered against, if
+ * any. Used by `watch()`'s `DEV_MODE` instrumentation (ADR 0022) — a handler
+ * not produced by a `bind*` helper resolves to `undefined`, which is the
+ * correct "don't guess" outcome, not a bug.
+ */
+const getDebugBindingTarget = (handler: object): Element | undefined =>
+	debugBindingTargets.get(handler)
 
 /* === Constants === */
 
@@ -92,9 +129,8 @@ const isSafeURL = (value: string): boolean => {
 /**
  * Set an attribute on an element with security validation.
  *
- * Blocks `on*` event handler attributes and validates URL-like values against
- * a safe-protocol allowlist (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`).
- * Violations throw a descriptive error — they are never silent.
+ * Blocks `on*` event handler attribute names and rejects unsafe URL values
+ * (see `isSafeURL()`). Violations throw; they never fail silently.
  *
  * @since 2.0
  * @param {Element} element - Target element
@@ -169,13 +205,16 @@ const setTextPreservingComments = (element: Element, text: string): void => {
 const bindText = (
 	element: Element,
 	preserveComments: boolean = false,
-): ((value: string | number) => void) =>
-	preserveComments
+): ((value: string | number) => void) => {
+	const setter = preserveComments
 		? (value: string | number) =>
 				setTextPreservingComments(element, String(value))
 		: (value: string | number) => {
 				element.textContent = String(value)
 			}
+	registerDebugBindingTarget(setter, element)
+	return setter
+}
 
 /**
  * Returns a function that sets a DOM property directly on an element.
@@ -188,14 +227,17 @@ const bindText = (
  * @param key - Property key to set
  * @returns Function that sets a property
  */
-const bindProperty =
-	<O extends object, K extends keyof O & string>(
-		object: O,
-		key: K,
-	): ((value: O[K]) => void) =>
-	(value: O[K]) => {
+const bindProperty = <O extends object, K extends keyof O & string>(
+	object: O,
+	key: K,
+): ((value: O[K]) => void) => {
+	const setter = (value: O[K]) => {
 		object[key] = value
 	}
+	if (typeof Element !== 'undefined' && object instanceof Element)
+		registerDebugBindingTarget(setter, object)
+	return setter
+}
 
 /**
  * Returns a function that toggles a CSS class token on an element.
@@ -207,11 +249,16 @@ const bindProperty =
  * @param token - CSS class token to toggle
  * @returns Function that toggles the class token
  */
-const bindClass =
-	<T = boolean>(element: Element, token: string): ((value: T) => void) =>
-	(value: T) => {
+const bindClass = <T = boolean>(
+	element: Element,
+	token: string,
+): ((value: T) => void) => {
+	const setter = (value: T) => {
 		element.classList.toggle(token, Boolean(value))
 	}
+	registerDebugBindingTarget(setter, element)
+	return setter
+}
 
 /**
  * Returns a function that toggles a custom state on an element's `ElementInternals`.
@@ -224,6 +271,11 @@ const bindClass =
  * Accepts `null` for graceful degradation: the factory context's `internals`
  * is `null` when `attachInternals()` failed, in which case the returned
  * function is a no-op.
+ *
+ * `ElementInternals` carries no reference back to its host element, so this
+ * setter is never registered in the debug attribution registry (ADR 0022) —
+ * a custom state is host-scoped anyway, and the debug host pulse already
+ * covers it.
  *
  * @since 2.3
  * @param internals - The component's `ElementInternals` (or `null`)
@@ -250,11 +302,15 @@ const bindState =
  * @param element - Target element
  * @returns Function that schedules the visibility update
  */
-const bindVisible =
-	<T = boolean>(element: HTMLElement): ((value: T) => void) =>
-	(value: T) => {
+const bindVisible = <T = boolean>(
+	element: HTMLElement,
+): ((value: T) => void) => {
+	const setter = (value: T) => {
 		element.hidden = !value
 	}
+	registerDebugBindingTarget(setter, element)
+	return setter
+}
 
 /**
  * Returns `SingleMatchHandlers` that set or toggle an attribute with security validation.
@@ -275,20 +331,24 @@ const bindAttribute = (
 	element: Element,
 	name: string,
 	allowUnsafe: boolean = false,
-): SingleMatchHandlers<string | boolean> => ({
-	ok: (value: string | boolean) => {
-		if (typeof value === 'boolean') {
-			element.toggleAttribute(name, value)
-		} else if (allowUnsafe) {
-			element.setAttribute(name, value)
-		} else {
-			safeSetAttribute(element, name, value)
-		}
-	},
-	nil: () => {
-		element.removeAttribute(name)
-	},
-})
+): SingleMatchHandlers<string | boolean> => {
+	const handlers: SingleMatchHandlers<string | boolean> = {
+		ok: (value: string | boolean) => {
+			if (typeof value === 'boolean') {
+				element.toggleAttribute(name, value)
+			} else if (allowUnsafe) {
+				element.setAttribute(name, value)
+			} else {
+				safeSetAttribute(element, name, value)
+			}
+		},
+		nil: () => {
+			element.removeAttribute(name)
+		},
+	}
+	registerDebugBindingTarget(handlers, element)
+	return handlers
+}
 
 /**
  * Returns `SingleMatchHandlers<string>` that set or remove an inline style property.
@@ -304,14 +364,18 @@ const bindAttribute = (
 const bindStyle = (
 	element: HTMLElement | SVGElement | MathMLElement,
 	prop: string,
-): SingleMatchHandlers<string> => ({
-	ok: (value: string) => {
-		element.style.setProperty(prop, value)
-	},
-	nil: () => {
-		element.style.removeProperty(prop)
-	},
-})
+): SingleMatchHandlers<string> => {
+	const handlers: SingleMatchHandlers<string> = {
+		ok: (value: string) => {
+			element.style.setProperty(prop, value)
+		},
+		nil: () => {
+			element.style.removeProperty(prop)
+		},
+	}
+	registerDebugBindingTarget(handlers, element)
+	return handlers
+}
 
 /**
  * Returns `SingleMatchHandlers<string>` that sets the inner HTML of an element,
@@ -329,20 +393,16 @@ const bindStyle = (
  *   entirely — under a Trusted-Types-enforcing CSP, any string assignment
  *   throws, even `''`.
  *
- * **Security — read carefully.** Assigning `innerHTML` is an XSS sink. It does
- * NOT execute inline `<script>`, but it DOES fire event-handler attributes on
- * other elements (e.g. `<img src=x onerror=…>`, `<svg onload=…>`, `<iframe srcdoc>`).
- * `allowScripts: false` (the default) does not make untrusted HTML safe — it
- * only suppresses the explicit `<script>` re-execution step. All content
- * passed here must be fully trusted or sanitized upstream; pass a `sanitize`
- * function (e.g. DOMPurify's `sanitize`) to sanitize at the sink. Le Truc
- * ships no built-in sanitizer.
+ * **Security.** `allowScripts: false` (the default) does not make untrusted
+ * HTML safe: `innerHTML` still fires event-handler attributes on other
+ * elements (e.g. `<img src=x onerror=…>`, `<svg onload=…>`, `<iframe srcdoc>`)
+ * even though it does not execute inline `<script>`. Pass a `sanitize`
+ * function for any content that is not fully trusted.
  *
- * **Trusted Types.** On a page that enforces
- * `Content-Security-Policy: require-trusted-types-for 'script'`, the
- * `innerHTML` assignment throws unless `html` is a `TrustedHTML` instance.
- * Return `TrustedHTML` from `sanitize` (e.g. DOMPurify with
- * `RETURN_TRUSTED_TYPE: true`) to support such pages.
+ * **Trusted Types.** Under `Content-Security-Policy:
+ * require-trusted-types-for 'script'`, the `innerHTML` assignment throws
+ * unless `html` is a `TrustedHTML` instance — return one from `sanitize`
+ * (e.g. DOMPurify with `RETURN_TRUSTED_TYPE: true`).
  *
  * @since 2.0
  * @param element - Target element
@@ -419,6 +479,7 @@ export {
 	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
 	escapeHTML,
+	getDebugBindingTarget,
 	safeSetAttribute,
 	setTextPreservingComments,
 }

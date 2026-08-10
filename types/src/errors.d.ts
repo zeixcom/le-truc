@@ -23,17 +23,18 @@ declare class InvalidPropertyNameError extends TypeError {
     constructor(component: string, prop: string, reason: string);
 }
 /**
- * Error thrown when a required descendant element does not exist in a component's DOM subtree
+ * Error thrown when a required descendant element does not exist in a queried root's DOM subtree
  *
  * @since 0.14.0
  */
 declare class MissingElementError extends Error {
     /**
-     * @param {HTMLElement} host - Host component
+     * @param {ParentNode} root - Node the selector was queried against
      * @param {string} selector - Selector used to find the elements
      * @param {string} required - Explanation why the element is required
+     * @param {string} [contextLabel] - Noun describing `root` in the message (default `'component'`); `query()`/`queryAll()`-derived helpers scoped to a narrower root, like `reconcile()`'s item-scoped `first`, pass `'item'`
      */
-    constructor(host: HTMLElement, selector: string, required: string);
+    constructor(root: ParentNode, selector: string, required: string, contextLabel?: string);
 }
 /**
  * Error when a component's dependencies are not met within a specified timeout

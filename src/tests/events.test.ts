@@ -313,3 +313,147 @@ describe('makeOn Memo target dispatch', () => {
 		expect(warnings[0]?.[0]).toContain("'focus' does not bubble")
 	})
 })
+
+/* === makeOn — DEV_MODE debug companion listener ordering (LT-011) === */
+
+describe('makeOn debug companion listener ordering', () => {
+	// A fake element whose addEventListener/removeEventListener track an
+	// ordered list per event type (unlike the Map-based stubs above, which
+	// only keep the last-registered listener) and whose dispatch() honors
+	// stopImmediatePropagation() — the real DOM behavior LT-011 depends on.
+	const makeOrderedFakeElement = () => {
+		const listeners = new Map<string, EventListener[]>()
+		const attrs = new Set<string>()
+		const classes = new Set<string>()
+		const el = {
+			shadowRoot: null,
+			addEventListener: (type: string, fn: EventListener) => {
+				const arr = listeners.get(type) ?? []
+				arr.push(fn)
+				listeners.set(type, arr)
+			},
+			removeEventListener: (type: string, fn: EventListener) => {
+				const arr = listeners.get(type)
+				if (!arr) return
+				const i = arr.indexOf(fn)
+				if (i >= 0) arr.splice(i, 1)
+			},
+			hasAttribute: (name: string) => attrs.has(name),
+			setAttribute: (name: string) => attrs.add(name),
+			removeAttribute: (name: string) => attrs.delete(name),
+			classList: {
+				add: (c: string) => classes.add(c),
+				remove: (c: string) => classes.delete(c),
+				toggle: (c: string, v?: boolean) =>
+					v ? classes.add(c) : classes.delete(c),
+				contains: (c: string) => classes.has(c),
+			},
+			offsetWidth: 0,
+		}
+		const dispatch = (type: string, composedPath: Element[] = [el as any]) => {
+			const arr = listeners.get(type) ?? []
+			let stopped = false
+			const event = {
+				type,
+				stopImmediatePropagation: () => {
+					stopped = true
+				},
+				composedPath: () => composedPath,
+			} as unknown as Event
+			for (const fn of [...arr]) {
+				if (stopped) break
+				fn(event)
+			}
+			return event
+		}
+		return Object.assign(el, { dispatch }) as unknown as Element & {
+			dispatch: (type: string, composedPath?: Element[]) => Event
+		}
+	}
+
+	const withDevModeDebugging = (fn: () => void) => {
+		const prevDevMode = process.env.DEV_MODE
+		const originalDebug = console.debug
+		const debugCalls: unknown[][] = []
+		console.debug = (...args: unknown[]) => debugCalls.push(args)
+		try {
+			process.env.DEV_MODE = 'true'
+			fn()
+		} finally {
+			if (prevDevMode === undefined) delete process.env.DEV_MODE
+			else process.env.DEV_MODE = prevDevMode
+			console.debug = originalDebug
+		}
+		return debugCalls
+	}
+
+	test('single-element target: debug companion fires even when the author handler calls stopImmediatePropagation()', () => {
+		const debugCalls = withDevModeDebugging(() => {
+			const target = makeOrderedFakeElement()
+			const host = Object.assign(makeOrderedFakeElement(), {
+				debug: true,
+			}) as unknown as HTMLElement & { debug: boolean }
+
+			const on = makeOn(host)
+			let authorCalled = false
+			const descriptor = on(target, 'click', (e: Event) => {
+				authorCalled = true
+				e.stopImmediatePropagation()
+			})
+			descriptor()
+
+			target.dispatch('click')
+			flushRAF()
+			expect(authorCalled).toBe(true)
+		})
+		expect(debugCalls.length).toBeGreaterThan(0)
+	})
+
+	test('Memo target (delegated, bubbling): debug companion fires even when the author handler calls stopImmediatePropagation()', () => {
+		const debugCalls = withDevModeDebugging(() => {
+			const el1 = makeOrderedFakeElement()
+			const hostRaw = makeOrderedFakeElement()
+			const host = Object.assign(hostRaw, {
+				debug: true,
+			}) as unknown as HTMLElement & { debug: boolean }
+			const memo = createMemo(() => [el1]) as unknown as Memo<Element[]>
+
+			const on = makeOn(host)
+			let authorCalled = false
+			const descriptor = on(memo, 'click', (e: Event) => {
+				authorCalled = true
+				e.stopImmediatePropagation()
+			})
+			descriptor()
+
+			// Delegated: dispatched on the host (root), path includes el1
+			hostRaw.dispatch('click', [el1 as any])
+			flushRAF()
+			expect(authorCalled).toBe(true)
+		})
+		expect(debugCalls.length).toBeGreaterThan(0)
+	})
+
+	test('Memo target (non-bubbling fallback): debug companion fires even when the author handler calls stopImmediatePropagation()', () => {
+		const debugCalls = withDevModeDebugging(() => {
+			const el1 = makeOrderedFakeElement()
+			const host = Object.assign(makeOrderedFakeElement(), {
+				debug: true,
+			}) as unknown as HTMLElement & { debug: boolean }
+			const memo = createMemo(() => [el1]) as unknown as Memo<Element[]>
+
+			const on = makeOn(host)
+			let authorCalled = false
+			const descriptor = on(memo, 'focus', (e: Event) => {
+				authorCalled = true
+				e.stopImmediatePropagation()
+			})
+			descriptor()
+
+			el1.dispatch('focus')
+			flushRAF()
+			expect(authorCalled).toBe(true)
+		})
+		expect(debugCalls.length).toBeGreaterThan(0)
+	})
+})

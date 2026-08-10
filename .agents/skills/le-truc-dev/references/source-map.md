@@ -31,6 +31,10 @@ Core files in `src/`:
 | `errors.ts` | `MissingElementError`, `DependencyTimeoutError`, `InvalidCustomElementError`, `InvalidPassPropertyError`, `InvalidPropertyNameError`, `InvalidReactivesError`, `InvalidSelectorError`, `InvalidTemplateError`, `InvalidComponentNameError`, `NoActiveCollectorError` |
 | `internal.ts` | `getSignals` — internal signal map shared by `component.ts` and `helpers/reactive.ts`; `withCollector`, `pushDescriptor`, `installActiveCollector`/`restoreActiveCollector` (ADR 0018 ambient effect-descriptor collector) |
 | `util.ts` | `elementName`, `isCustomElement`, `isNotYetDefinedComponent` — DEV diagnostics are gated per-site by `process.env.DEV_MODE === 'true'`, folded out by the build define |
+| `extension.ts` | `ComponentExtension` type, `mergeExtensions` — folds an extensions array into `staticProps`/`observedAttributes`/`reservedMembers` plus lifecycle hooks, called once by `component.ts` at class-definition time |
+| `extensions/form.ts` | `formAssociated`, `formAssociatedCheckbox`, `relayValidity` |
+| `extensions/attributes.ts` | `observedAttributes` |
+| `extensions/debug.ts` | `debug`, `debugFire`, `markIfDebugging` — `DEV_MODE`-only per-instance instrumentation (ADR 0022); not exported from `index.ts`, statically imported and auto-appended by `component.ts` itself (see `non-obvious.md`) |
 
 Parser files in `src/parsers/`:
 
@@ -54,4 +58,6 @@ Parser files in `src/parsers/`:
 - Changing error conditions → `src/errors.ts`
 - Changing security validation → `src/bindings.ts`
 - Changing scheduler → `src/scheduler.ts`
+- Adding or changing a `ComponentExtension` → `src/extension.ts` (merge mechanics) + `src/extensions/*.ts` (the extension itself) + `ARCHITECTURE.md`
+- Changing `debug()` instrumentation → `src/extensions/debug.ts`; see `non-obvious.md` before touching its static import in `component.ts`
 - Checking a non-obvious behavior → `ARCHITECTURE.md` first, then source

@@ -1855,6 +1855,11 @@ var throttle = (fn, signal) => {
 };
 
 // src/bindings.ts
+var debugBindingTargets = new WeakMap;
+var registerDebugBindingTarget = (target, element) => {
+  if (false)
+    ;
+};
 var SCRIPT_ATTRS = [
   "type",
   "src",
@@ -1900,14 +1905,27 @@ var setTextPreservingComments = (element, text) => {
   });
   element.append(document.createTextNode(text));
 };
-var bindText = (element, preserveComments = false) => preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
-  element.textContent = String(value);
+var bindText = (element, preserveComments = false) => {
+  const setter = preserveComments ? (value) => setTextPreservingComments(element, String(value)) : (value) => {
+    element.textContent = String(value);
+  };
+  registerDebugBindingTarget(setter, element);
+  return setter;
 };
-var bindProperty = (object, key) => (value) => {
-  object[key] = value;
+var bindProperty = (object, key) => {
+  const setter = (value) => {
+    object[key] = value;
+  };
+  if (typeof Element !== "undefined" && object instanceof Element)
+    registerDebugBindingTarget(setter, object);
+  return setter;
 };
-var bindClass = (element, token) => (value) => {
-  element.classList.toggle(token, Boolean(value));
+var bindClass = (element, token) => {
+  const setter = (value) => {
+    element.classList.toggle(token, Boolean(value));
+  };
+  registerDebugBindingTarget(setter, element);
+  return setter;
 };
 var bindState = (internals, token) => (value) => {
   if (!internals)
@@ -1917,31 +1935,43 @@ var bindState = (internals, token) => (value) => {
   else
     internals.states.delete(token);
 };
-var bindVisible = (element) => (value) => {
-  element.hidden = !value;
+var bindVisible = (element) => {
+  const setter = (value) => {
+    element.hidden = !value;
+  };
+  registerDebugBindingTarget(setter, element);
+  return setter;
 };
-var bindAttribute = (element, name, allowUnsafe = false) => ({
-  ok: (value) => {
-    if (typeof value === "boolean") {
-      element.toggleAttribute(name, value);
-    } else if (allowUnsafe) {
-      element.setAttribute(name, value);
-    } else {
-      safeSetAttribute(element, name, value);
+var bindAttribute = (element, name, allowUnsafe = false) => {
+  const handlers = {
+    ok: (value) => {
+      if (typeof value === "boolean") {
+        element.toggleAttribute(name, value);
+      } else if (allowUnsafe) {
+        element.setAttribute(name, value);
+      } else {
+        safeSetAttribute(element, name, value);
+      }
+    },
+    nil: () => {
+      element.removeAttribute(name);
     }
-  },
-  nil: () => {
-    element.removeAttribute(name);
-  }
-});
-var bindStyle = (element, prop) => ({
-  ok: (value) => {
-    element.style.setProperty(prop, value);
-  },
-  nil: () => {
-    element.style.removeProperty(prop);
-  }
-});
+  };
+  registerDebugBindingTarget(handlers, element);
+  return handlers;
+};
+var bindStyle = (element, prop) => {
+  const handlers = {
+    ok: (value) => {
+      element.style.setProperty(prop, value);
+    },
+    nil: () => {
+      element.style.removeProperty(prop);
+    }
+  };
+  registerDebugBindingTarget(handlers, element);
+  return handlers;
+};
 var dangerouslyBindInnerHTML = (element, options = {}) => {
   const reset = () => {
     if (element.shadowRoot)
@@ -1998,6 +2028,7 @@ var elementName = (el) => {
   const classes = el.classList?.length ? `.${Array.from(el.classList).join(".")}` : "";
   return `<${el.localName}${id}${classes}>`;
 };
+var describeRoot = (parent) => typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
 
 // src/errors.ts
 class InvalidComponentNameError extends TypeError {
@@ -2015,8 +2046,8 @@ class InvalidPropertyNameError extends TypeError {
 }
 
 class MissingElementError extends Error {
-  constructor(host, selector, required) {
-    super(`Missing required element <${selector}> in component ${elementName(host)}. ${required}`);
+  constructor(root, selector, required, contextLabel = "component") {
+    super(`Missing required element <${selector}> in ${contextLabel} ${describeRoot(root)}. ${required}`);
     this.name = "MissingElementError";
   }
 }
@@ -2074,8 +2105,7 @@ class ExtensionCollisionError extends Error {
 
 class InvalidSelectorError extends TypeError {
   constructor(parent, selector, cause) {
-    const where = typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
-    super(`Invalid selector "${selector}" passed to all() in ${where}. ${cause instanceof Error ? cause.message : String(cause)}`);
+    super(`Invalid selector "${selector}" passed to all() in ${describeRoot(parent)}. ${cause instanceof Error ? cause.message : String(cause)}`);
     this.name = "InvalidSelectorError";
   }
 }
@@ -2242,6 +2272,22 @@ var extractAttributes = (selector) => {
   }
   return [...attributes];
 };
+function queryOne(root, selector, required, contextLabel) {
+  const target = root.querySelector(selector);
+  if (required != null && !target)
+    throw new MissingElementError(root, selector, required, contextLabel);
+  return target ?? undefined;
+}
+var bindFirst = (root) => (selector, required) => queryOne(root, selector, required, "item");
+function query(root, selector, required) {
+  return queryOne(root, selector, required, "component");
+}
+function queryAll(root, selector, required) {
+  const targets = Array.from(root.querySelectorAll(selector));
+  if (required != null && !targets.length)
+    throw new MissingElementError(root, selector, required);
+  return targets;
+}
 function createElementsMemo(parent, selector) {
   try {
     parent.querySelector(selector);
@@ -2287,9 +2333,7 @@ var makeElementQueries = (host) => {
   const dependencies = new Set;
   let queriedDefinedCustomChild = false;
   function first(selector, required) {
-    const target = root.querySelector(selector);
-    if (required != null && !target)
-      throw new MissingElementError(host, selector, required);
+    const target = queryOne(root, selector, required, "component");
     if (target && isNotYetDefinedComponent(target))
       dependencies.add(target.localName);
     else if (target && isCustomElement(target))
@@ -2401,14 +2445,17 @@ var makeWatch = (host) => {
       if (Array.isArray(source)) {
         const signals = source.map((s) => toSignal(host, s));
         const handler = handlerOrHandlers;
+        if (false) {}
         return createEffect(() => match(signals, { ok: (values) => untrack(() => handler(values)) }));
       }
       const signal = toSignal(host, source);
       if (typeof handlerOrHandlers === "function") {
+        if (false) {}
         return createEffect(() => match(signal, {
           ok: (value) => untrack(() => handlerOrHandlers(value))
         }));
       }
+      if (false) {}
       return createEffect(() => match(signal, handlerOrHandlers));
     };
     pushDescriptor(host, "watch", descriptor);
@@ -2459,14 +2506,33 @@ var makePass = (host) => {
           c();
       };
   });
+  const resolvePassedValues = (props) => {
+    const resolved = {};
+    for (const [prop, reactive] of Object.entries(props)) {
+      if (reactive == null)
+        continue;
+      try {
+        const signal = toSignal(host, reactive);
+        resolved[prop] = signal && typeof signal === "object" && "get" in signal ? signal.get() : reactive;
+      } catch {
+        resolved[prop] = reactive;
+      }
+    }
+    return resolved;
+  };
   function pass(target, props) {
     const descriptor = () => {
       if (!target)
         return;
       if (isMemo(target)) {
-        keyedScopes(target, (el) => swapSlots(el, props));
+        keyedScopes(target, (el) => {
+          const cleanup = swapSlots(el, props);
+          if (false) {}
+          return cleanup;
+        });
       } else {
         swapSlots(target, props);
+        if (false) {}
       }
     };
     pushDescriptor(host, "pass", descriptor);
@@ -2478,7 +2544,7 @@ function each(memo, callback) {
   const descriptor = () => {
     keyedScopes(memo, (element) => {
       const collected = [];
-      const result = withCollector(collected, () => callback(element));
+      const result = withCollector(collected, () => callback(element, bindFirst(element)));
       activateResult(collected);
       forEachUnseen(result, new Set(collected), (d) => d());
     });
@@ -2562,7 +2628,7 @@ function reconcile(container, template, source, bindItem) {
             const element = el;
             disposers.set(key, createScope(() => {
               const collected = [];
-              const cleanup = withCollector(collected, () => bindItem(element, item, key));
+              const cleanup = withCollector(collected, () => bindItem(element, item, key, bindFirst(element)));
               activateResult(collected);
               return cleanup;
             }, {
@@ -2671,7 +2737,17 @@ var makeOn = (host) => {
       if (isMemo(target)) {
         if (NON_BUBBLING_EVENTS.has(type)) {
           if (false) {}
-          return keyedScopes(target, (el) => attachListener(host, el, type, handler, options));
+          return keyedScopes(target, (el) => {
+            let removeDebugListener;
+            if (false) {}
+            const cleanup = attachListener(host, el, type, handler, options);
+            if (!removeDebugListener)
+              return cleanup;
+            return () => {
+              cleanup();
+              removeDebugListener?.();
+            };
+          });
         }
         const root = host.shadowRoot ?? host;
         const rawListener = (e) => {
@@ -2692,15 +2768,28 @@ var makeOn = (host) => {
         };
         const listener = options.passive ? throttle(rawListener) : rawListener;
         createScope(() => {
+          let removeDebugListener;
+          if (false) {}
           root.addEventListener(type, listener, options);
           return () => {
             root.removeEventListener(type, listener);
             listener.cancel?.();
+            removeDebugListener?.();
           };
         });
         return;
       }
-      createScope(() => attachListener(host, target, type, handler, options));
+      createScope(() => {
+        let removeDebugListener;
+        if (false) {}
+        const cleanup = attachListener(host, target, type, handler, options);
+        if (!removeDebugListener)
+          return cleanup;
+        return () => {
+          cleanup();
+          removeDebugListener?.();
+        };
+      });
     };
     pushDescriptor(host, "on", descriptor);
     return descriptor;
@@ -3202,6 +3291,8 @@ export {
   safeSetAttribute,
   relayValidity,
   reconcile,
+  queryAll,
+  query,
   observedAttributes,
   match,
   isTask,

@@ -52,6 +52,7 @@ The observer watches only mutations implied by the CSS selector (class, ID, `[at
 - Internal element→key bookkeeping is a `WeakMap`; `data-key` on the DOM exists for SSR adoption and event delegation — complementary, not either/or.
 - The driving effect reads `source.keys()` only; everything after is wrapped in `untrack()`, so signal reads inside `bindItem` do not become structural dependencies.
 - Ownership follows `keyedScopes`: per-item scopes are `{ root: true }`, an outer `createScope` registers teardown-all on the component scope, and leavers are disposed before their elements are removed and before enterers mount.
+- `bindItem`'s 4th parameter (and `each()`'s callback's 2nd) is `first`, from `bindFirst()` in `src/helpers/dom.ts` — `query()` pre-bound to `element`, allocated once per mount, not per structural re-run (see ADR 0021). It never participates in M8 dependency resolution: items added later can never block the host's own effects, since the host's one-time dependency wait happens once at connect, before `reconcile()`'s effect ever runs.
 
 ## `pass()` Scope is Le Truc Components Only
 
@@ -81,6 +82,8 @@ When a reactive resolves to `undefined`, the component degrades gracefully to th
 
 If a child custom element queried by `first()` or `all()` in `src/helpers/dom.ts` is not defined within 200ms, a `DependencyTimeoutError` is logged and effects proceed anyway. Effects run even if dependencies are missing — they do not block indefinitely.
 
+`query()`/`queryAll()` and the scoped `first` passed to `each()`/`bindItem` never participate in this — only host-level `first()`/`all()` collect dependencies (ADR 0021).
+
 ## `on()` Handler Return Value Updates Host
 
 If an event handler in `src/helpers/events.ts` returns `{ prop: value }`, all returned entries are applied to `host` in a `batch()`. Returning `void` (or `undefined`) is a no-op — no host update occurs. The handler always receives `(event, element)` — second arg is the element, useful for Memo targets.
@@ -105,9 +108,11 @@ When the reactive value is boolean, `toggleAttribute` is called — the attribut
 
 When the reactive is nil, `el.style.removeProperty(prop)` is called, restoring whatever value the CSS cascade provides. Setting the reactive back to a string re-applies the inline style.
 
-## Debug Mode Guards Must Stay in Foldable Form
+## Debug Mode Guards and the `debug()` Extension
 
-Dev mode is the only debug mode — there is no per-instance debug flag. As of v2.3 there is **no `DEV_MODE` const** in `util.ts`: every DEV-gated diagnostic is guarded inline by `process.env.DEV_MODE === 'true'` at its use site. This exact form is load-bearing: Bun's minifier does no cross-reference constant propagation (an imported `const DEV_MODE = false` — and even `var o = !1; if (o) …` — survives minification), but it does fold a same-type literal comparison in an `if` condition. The build therefore defines the **string** `'"false"'` (prod) or `'"true"'` (dev) — a bare boolean define produces `false === 'true'`, which Bun does *not* fold, silently shipping all DEV code again (this was a real ~450B-gzipped regression). In `&&` chains, keep the env check in first position. `test/regression-bundle.test.ts` asserts known DEV-only strings are absent from the prod bundle.
+DEV-gated code is guarded inline by `process.env.DEV_MODE === 'true'` at each use site — there is no `DEV_MODE` const, because this exact literal-comparison form is what Bun's minifier folds for dead-code elimination in production builds. Keep the env check first in `&&` chains. `debug()` (`src/extensions/debug.ts`) narrows `DEV_MODE` rather than adding a second mode: its `debug` property only exists when `DEV_MODE` is on, and every effect it drives re-checks the same guard at fire time.
+
+`pulse()` schedules debug writes under a private per-element `WeakMap<Element, PulseState>` token (annotated `/*#__PURE__*/` so DCE doesn't strip it) instead of the element itself, to avoid colliding with `dangerouslyBindInnerHTML`'s `schedule()` key for the same element — any new per-element diagnostic scheduling needs its own key too. `onConnect` injects the debug stylesheet eagerly, not lazily from `pulse()`, and skips only the resting `*:state(debug)` outline if `attachInternals()` isn't available in the environment (older browsers, non-DOM test environments) — every other debug feature still works. `findDebuggableHost()`'s metaKey-toggle walk looks for a `debug` accessor (`'debug' in node`), not a dashed tag name, and crosses shadow boundaries via `parentElement ?? root.host`. `component.ts` statically imports `debug()` and injects it into every component's extensions when `DEV_MODE` is on — a deliberate exception (ADR 0022) to "never statically import a concrete extension module" (ADR 0019); don't make it opt-in or remove the static import.
 
 ## Event-Driven Read-Only Props
 

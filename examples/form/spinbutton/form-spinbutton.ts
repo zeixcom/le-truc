@@ -9,7 +9,7 @@ import {
 	type FormAssociatedElement,
 	formAssociated,
 	relayValidity,
-} from '../../..'
+} from '../../../index'
 
 export type FormSpinbuttonProps = {
 	/** Current numeric value. Clamped to [min, max]. */
@@ -162,8 +162,8 @@ export default defineComponent<FormSpinbuttonProps>(
 			'button.increment',
 			'Add a native button to increment the value',
 		)
-		on(decrement, 'click', event => stepBy(-1, event.shiftKey))
-		on(increment, 'click', event => stepBy(1, event.shiftKey))
+		on(decrement, 'click', ({ shiftKey }) => stepBy(-1, shiftKey))
+		on(increment, 'click', ({ shiftKey }) => stepBy(1, shiftKey))
 		on(host, 'keydown', event => {
 			const { key, shiftKey, target } = event
 			if (!['ArrowUp', 'ArrowDown', '+', '-'].includes(key)) return

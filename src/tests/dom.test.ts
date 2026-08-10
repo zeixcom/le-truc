@@ -8,11 +8,13 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { InvalidSelectorError } from '../errors'
+import { InvalidSelectorError, MissingElementError } from '../errors'
 import {
 	createElementsMemo,
 	extractAttributes,
 	makeElementQueries,
+	query,
+	queryAll,
 } from '../helpers/dom'
 
 const makeParent = (
@@ -90,6 +92,77 @@ describe('createElementsMemo', () => {
 	test('valid selectors are unaffected', () => {
 		const parent = makeParent(() => null)
 		expect(() => createElementsMemo(parent, 'div.foo')).not.toThrow()
+	})
+})
+
+describe('query', () => {
+	test('returns the first matching element', () => {
+		const el = { localName: 'span' } as unknown as HTMLSpanElement
+		const parent = makeParent(() => el)
+		expect(query(parent, 'span')).toBe(el)
+	})
+
+	test('returns undefined when optional and missing', () => {
+		const parent = makeParent(() => null)
+		expect(query(parent, '.missing')).toBeUndefined()
+	})
+
+	test('throws MissingElementError with default contextLabel when required and missing', () => {
+		const parent = makeParent(() => null)
+		expect(() => query(parent, '.missing', 'needed for X')).toThrow(
+			MissingElementError,
+		)
+		expect(() => query(parent, '.missing', 'needed for X')).toThrow(
+			/in component /,
+		)
+	})
+})
+
+describe('queryAll', () => {
+	test('returns a plain array of matches', () => {
+		const el = { localName: 'li' } as unknown as HTMLLIElement
+		const parent = {
+			querySelector: () => null,
+			querySelectorAll: () => [el] as unknown as NodeListOf<Element>,
+		} as unknown as ParentNode
+		const result = queryAll(parent, 'li')
+		expect(Array.isArray(result)).toBe(true)
+		expect(result).toEqual([el])
+	})
+
+	test('returns an empty array when optional and no matches', () => {
+		const parent = makeParent(() => null)
+		expect(queryAll(parent, '.missing')).toEqual([])
+	})
+
+	test('throws MissingElementError when required and no matches', () => {
+		const parent = makeParent(() => null)
+		expect(() => queryAll(parent, '.missing', 'needed for X')).toThrow(
+			MissingElementError,
+		)
+	})
+})
+
+describe('makeElementQueries first/all delegate to query/queryAll unchanged', () => {
+	test('first() still throws MissingElementError with "in component" wording', () => {
+		const host = {
+			localName: 'my-host',
+			shadowRoot: null,
+			querySelector: (_selector: string) => null,
+		} as unknown as HTMLElement
+		const [{ first }] = makeElementQueries(host)
+		expect(() => first('.missing', 'needed for X')).toThrow(MissingElementError)
+		expect(() => first('.missing', 'needed for X')).toThrow(/in component /)
+	})
+
+	test('first() still returns undefined when optional and missing', () => {
+		const host = {
+			localName: 'my-host',
+			shadowRoot: null,
+			querySelector: (_selector: string) => null,
+		} as unknown as HTMLElement
+		const [{ first }] = makeElementQueries(host)
+		expect(first('.missing')).toBeUndefined()
 	})
 })
 

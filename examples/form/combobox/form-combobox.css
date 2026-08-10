@@ -1,4 +1,5 @@
 form-combobox {
+	display: block;
 	width: 100%;
 
 	> label,

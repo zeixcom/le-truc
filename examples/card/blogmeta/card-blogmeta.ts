@@ -1,4 +1,4 @@
-import { defineComponent } from '../../..'
+import { defineComponent, query } from '../../../index'
 import { getLocale } from '../../_common/getLocale'
 
 declare global {
@@ -67,6 +67,6 @@ export default defineComponent('card-blogmeta', ({ host, first }) => {
 	}
 
 	const author = first('.author')
-	if (author && !author.querySelector('img'))
+	if (author && !query(author, 'img'))
 		author.insertAdjacentHTML('afterbegin', AVATAR_FALLBACK_SVG)
 })

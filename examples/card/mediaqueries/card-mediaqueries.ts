@@ -1,4 +1,4 @@
-import { bindText, defineComponent } from '../../..'
+import { bindText, defineComponent } from '../../../index'
 import {
 	MEDIA_MOTION,
 	MEDIA_ORIENTATION,

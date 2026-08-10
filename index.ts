@@ -1,4 +1,4 @@
-// Le Truc 2.3.4
+// Le Truc 2.4.0
 
 // From Cause & Effect
 export {
@@ -144,6 +144,8 @@ export {
 	type ExtractTagFromSimpleSelector,
 	type FirstElement,
 	type KnownTag,
+	query,
+	queryAll,
 	type SplitByComma,
 	type TrimWhitespace,
 } from './src/helpers/dom'

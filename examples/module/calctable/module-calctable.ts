@@ -4,9 +4,11 @@ import {
 	createMemo,
 	createStore,
 	defineComponent,
+	query,
+	queryAll,
 	reconcile,
 	type Store,
-} from '../../..'
+} from '../../../index'
 import { getLocale } from '../../_common/getLocale'
 import { getNumberFormatter } from '../../_common/getNumberFormatter'
 
@@ -48,16 +50,6 @@ const clamp = (value: number, min: number, max: number): number =>
 export default defineComponent(
 	'module-calctable',
 	({ first, host, on, watch }) => {
-		const container = first(
-			'tbody[data-container]',
-			'Add a <tbody data-container> element for item rows.',
-		)
-		const template = first('template', 'Add a template element for rows.')
-		const entryRow = first(
-			'tbody[data-container] > tr[data-unreconciled]',
-			'Add a trailing <tr data-unreconciled> row for entering new items.',
-		)
-
 		const formatter = getNumberFormatter(
 			getLocale(host),
 			host.getAttribute('options'),
@@ -65,16 +57,17 @@ export default defineComponent(
 
 		// Seed the list from server-rendered rows so reconcile() adopts them on
 		// first run instead of treating them as stray unkeyed children.
-		const initialItems: CalcItem[] = Array.from(
-			container.querySelectorAll<HTMLElement>(':scope > tr[data-key]'),
+		const container = first(
+			'tbody[data-container]',
+			'Add a <tbody data-container> element for item rows.',
+		)
+		const initialItems: CalcItem[] = queryAll(
+			container,
+			':scope > tr[data-key]',
 		).map(row => {
-			const description =
-				row.querySelector<HTMLInputElement>('input.description')?.value ?? ''
-			const amount =
-				row.querySelector<HTMLInputElement>('input.amount')?.valueAsNumber ?? 0
-			const pricePerUnit =
-				row.querySelector<HTMLInputElement>('input.price-per-unit')
-					?.valueAsNumber ?? 0
+			const description = query(row, 'input.description')?.value ?? ''
+			const amount = query(row, 'input.amount')?.valueAsNumber ?? 0
+			const pricePerUnit = query(row, 'input.price-per-unit')?.valueAsNumber ?? 0
 			return {
 				id: row.dataset.key ?? '',
 				description,
@@ -105,15 +98,12 @@ export default defineComponent(
 			rowPrices.get().reduce((sum, price) => sum + price, 0),
 		)
 
-		reconcile(container, template, list, (element, item, key) => {
-			const descriptionInput =
-				element.querySelector<HTMLInputElement>('input.description')
-			const amountInput =
-				element.querySelector<HTMLInputElement>('input.amount')
-			const priceInput = element.querySelector<HTMLInputElement>(
-				'input.price-per-unit',
-			)
-			const priceOutput = element.querySelector<HTMLElement>('.price')
+		const template = first('template', 'Add a template element for rows.')
+		reconcile(container, template, list, (_element, item, key, first) => {
+			const descriptionInput = first('input.description')
+			const amountInput = first('input.amount')
+			const priceInput = first('input.price-per-unit')
+			const priceOutput = first('.price')
 			if (descriptionInput) descriptionInput.value = item.description.get()
 			if (amountInput) amountInput.value = String(item.amount.get())
 			if (priceInput) priceInput.value = item.pricePerUnit.get().toFixed(2)
@@ -126,38 +116,28 @@ export default defineComponent(
 			// Live sync as the user types — per-row listeners live inside the
 			// row's own scope now, so no container-level delegation or key
 			// re-derivation from the DOM is needed.
-			on(descriptionInput, 'input', e =>
-				item.description.set((e.target as HTMLInputElement).value),
-			)
-			on(amountInput, 'input', e =>
+			on(descriptionInput, 'input', (_e, target) => {
+				item.description.set(target.value)
+			})
+			on(amountInput, 'input', (_e, target) => {
 				item.amount.set(
-					clamp(
-						(e.target as HTMLInputElement).valueAsNumber || 0,
-						MIN_AMOUNT,
-						MAX_AMOUNT,
-					),
-				),
-			)
-			on(priceInput, 'input', e =>
+					clamp(target.valueAsNumber || 0, MIN_AMOUNT, MAX_AMOUNT),
+				)
+			})
+			on(priceInput, 'input', (_e, target) => {
 				item.pricePerUnit.set(
-					clamp(
-						(e.target as HTMLInputElement).valueAsNumber || 0,
-						MIN_PRICE,
-						MAX_PRICE,
-					),
-				),
-			)
+					clamp(target.valueAsNumber || 0, MIN_PRICE, MAX_PRICE),
+				)
+			})
 
 			// Per-row commit: clamp/reformat, remove zero-amount rows.
-			on(amountInput, 'change', e => {
-				const target = e.target as HTMLInputElement
+			on(amountInput, 'change', (_e, target) => {
 				const amount = clamp(target.valueAsNumber || 0, MIN_AMOUNT, MAX_AMOUNT)
 				target.value = String(amount)
 				item.amount.set(amount)
 				if (amount === 0) list.remove(key)
 			})
-			on(priceInput, 'change', e => {
-				const target = e.target as HTMLInputElement
+			on(priceInput, 'change', (_e, target) => {
 				const price = clamp(target.valueAsNumber || 0, MIN_PRICE, MAX_PRICE)
 				target.value = price.toFixed(2)
 				item.pricePerUnit.set(price)
@@ -166,19 +146,18 @@ export default defineComponent(
 
 		// Entry-row commit (container-scoped): create a new row once the
 		// `data-unreconciled` entry row has description, amount, and price/unit.
-		on(container, 'change', e => {
-			const target = e.target
+		const entryRow = first(
+			'tbody[data-container] > tr[data-unreconciled]',
+			'Add a trailing <tr data-unreconciled> row for entering new items.',
+		)
+		on(container, 'change', ({ target }) => {
 			if (!(target instanceof HTMLInputElement)) return
-			const row = target.closest<HTMLElement>('tr')
+			const row = target.closest('tr')
 			if (row !== entryRow) return
 
-			const descriptionInput =
-				entryRow.querySelector<HTMLInputElement>('input.description')
-			const amountInput =
-				entryRow.querySelector<HTMLInputElement>('input.amount')
-			const priceInput = entryRow.querySelector<HTMLInputElement>(
-				'input.price-per-unit',
-			)
+			const descriptionInput = query(entryRow, 'input.description')
+			const amountInput = query(entryRow, 'input.amount')
+			const priceInput = query(entryRow, 'input.price-per-unit')
 			if (!descriptionInput || !amountInput || !priceInput) return
 
 			const description = descriptionInput.value.trim()

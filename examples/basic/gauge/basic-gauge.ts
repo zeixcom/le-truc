@@ -1,4 +1,4 @@
-import { asJSON, asNumber, defineComponent, observedAttributes } from '../../..'
+import { asJSON, asNumber, defineComponent, observedAttributes } from '../../../index'
 
 export type BasicGaugeProps = {
 	/**

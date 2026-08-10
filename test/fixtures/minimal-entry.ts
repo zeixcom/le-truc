@@ -5,8 +5,7 @@
 // never bundles its module, since `component.ts` only references the
 // generic `ComponentExtension` shape at the value level, never a concrete
 // feature module. See ADR on the `ComponentExtension` mechanism.
-import { bindText } from '../../src/bindings'
-import { defineComponent } from '../../src/component'
+import { bindText, defineComponent } from '../../index'
 
 type MinimalCounterProps = { count: number }
 

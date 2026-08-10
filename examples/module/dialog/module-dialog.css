@@ -5,6 +5,8 @@ body.scroll-lock {
 }
 
 module-dialog {
+	display: inline-block;
+
 	> button {
 		border: 0;
 		padding: 0;

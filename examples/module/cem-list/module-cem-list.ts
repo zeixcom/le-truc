@@ -1,4 +1,4 @@
-import { createState, defineComponent, each } from '../../..'
+import { createState, defineComponent, each } from '../../../index'
 
 declare global {
 	interface HTMLElementTagNameMap {
@@ -24,8 +24,8 @@ export default defineComponent(
 		if (!filterEl) return
 
 		const filterText = createState('')
-		on(filterEl, 'input', e => {
-			filterText.set((e.target as HTMLInputElement).value.trim().toLowerCase())
+		on(filterEl, 'input', () => {
+			filterText.set(filterEl.value.trim().toLowerCase())
 		})
 
 		const cards = all('card-collapsible')

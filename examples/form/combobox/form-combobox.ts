@@ -8,7 +8,7 @@ import {
 	defineMethod,
 	type FormAssociatedElement,
 	formAssociated,
-} from '../../..'
+} from '../../../index'
 
 export type FormComboboxProps = {
 	/** Current text input value. Updated on each `input` event. */

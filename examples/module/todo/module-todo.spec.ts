@@ -495,7 +495,7 @@ test.describe('module-todo component', () => {
 		// Each test targets one specific link in the reactivity chain so that
 		// failures point at the exact broken behaviour.
 
-		test('B1 baseline: checking the only item decreases active count', async ({
+		test('Checking the only item decreases active count', async ({
 			page,
 		}) => {
 			// Verifies the full chain for a single item:
@@ -518,7 +518,7 @@ test.describe('module-todo component', () => {
 			await expect(count.locator('.none')).toBeVisible()
 		})
 
-		test('B2: checking the SECOND item (after two are added) decreases count', async ({
+		test('Checking the SECOND item (after two are added) decreases count', async ({
 			page,
 		}) => {
 			// The second item is added after each() already ran once for the first.
@@ -541,7 +541,7 @@ test.describe('module-todo component', () => {
 			await expect(count.locator('.count')).toHaveText('1')
 		})
 
-		test('B3: checking the FIRST item still works after a second item is added', async ({
+		test('Checking the FIRST item still works after a second item is added', async ({
 			page,
 		}) => {
 			// When a second item is added, each() re-runs. If the re-run breaks
@@ -563,7 +563,7 @@ test.describe('module-todo component', () => {
 			await expect(count.locator('.count')).toHaveText('1')
 		})
 
-		test('B4: form-checkbox enters :has(input:checked) when item is marked complete', async ({
+		test('form-checkbox enters :has(input:checked) when item is marked complete', async ({
 			page,
 		}) => {
 			// Verifies the watch('checked', ...) effect inside form-checkbox runs
@@ -590,7 +590,7 @@ test.describe('module-todo component', () => {
 			)
 		})
 
-		test('B5: state is isolated — checking item 1 does not affect item 2', async ({
+		test('State is isolated — checking item 1 does not affect item 2', async ({
 			page,
 		}) => {
 			// Verifies that pass() wires DIFFERENT signals to DIFFERENT elements.
@@ -618,7 +618,7 @@ test.describe('module-todo component', () => {
 			)
 		})
 
-		test('B6: inplace-edit value is isolated per item', async ({ page }) => {
+		test('inplace-edit value is isolated per item', async ({ page }) => {
 			// Verifies that pass() for form-inplace-edit wires the correct label
 			// signal for each item. If signals are crossed, editing one item's label
 			// would change the other's display.
@@ -641,7 +641,7 @@ test.describe('module-todo component', () => {
 			)
 		})
 
-		test('B7: after reorder each() re-run fixes any broken wiring', async ({
+		test('After reorder each() re-run fixes any broken wiring', async ({
 			page,
 		}) => {
 			// Reproduces the partial-recovery symptom: if checkboxes don't work
@@ -677,7 +677,7 @@ test.describe('module-todo component', () => {
 			)
 		})
 
-		test('B9: inplace-edit opens after reorder', async ({ page }) => {
+		test('inplace-edit opens after reorder', async ({ page }) => {
 			// Reproduces: after moving an item via keyboard reorder, dblclick on its
 			// label should still open the inplace editor. Without the fix, the dblclick
 			// listener is lost on disconnect/reconnect, so only the two click events fire
@@ -717,7 +717,7 @@ test.describe('module-todo component', () => {
 			await expect(firstEdit).toHaveAttribute('editing')
 		})
 
-		test('B8: three items — all checkboxes wire up independently', async ({
+		test('Three items — all checkboxes wire up independently', async ({
 			page,
 		}) => {
 			// Stress-tests that each() correctly wires N items as the list grows.

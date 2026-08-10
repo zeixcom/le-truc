@@ -15,6 +15,7 @@ import {
 } from '@zeix/cause-effect'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
 import { type ComponentExtension, mergeExtensions } from './extension'
+import { debug } from './extensions/debug'
 import type {
 	FormAssociatedCheckboxExtension,
 	FormAssociatedExtension,
@@ -201,7 +202,15 @@ function defineComponent<P extends ComponentProps>(
 ): CustomElementConstructor | undefined {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
 		throw new InvalidComponentNameError(name)
-	const exts: readonly ComponentExtension[] = extensions ?? []
+	// Deliberate, narrow exception to the "component.ts never imports a
+	// concrete feature module" invariant (ADR 0019): debug() is not
+	// opt-in — instrumenting a component must require no source change, so
+	// defineComponent() itself appends it whenever DEV_MODE is true,
+	// regardless of what the caller passed. See ADR 0022.
+	const exts: readonly ComponentExtension[] =
+		process.env.DEV_MODE === 'true'
+			? [...(extensions ?? []), debug()]
+			: (extensions ?? [])
 	const merged = mergeExtensions(name, exts)
 	class Truc extends HTMLElement {
 		// Concrete boolean default so `Truc.formAssociated` always reads as a
@@ -220,10 +229,19 @@ function defineComponent<P extends ComponentProps>(
 			try {
 				internalsMap.set(this, this.attachInternals())
 			} catch {
-				// attachInternals() throws NotSupportedError for pre-upgrade
-				// instances or parser-ordering edge cases. The component
-				// degrades gracefully: internals is null, and a DEV_MODE
-				// warning fires on first access.
+				// In practice this catches environments with no
+				// `ElementInternals` at all — a TypeError from
+				// `this.attachInternals` being undefined (Safari <16.4,
+				// Firefox <93, non-DOM test environments), not a lifecycle
+				// timing problem. The upgrade algorithm sets the custom
+				// element state to "precustomized" immediately before invoking
+				// this constructor precisely so the call here is legal, and
+				// the spec's three NotSupportedError conditions (non-null `is`
+				// value, `disabledFeatures = ['internals']`, a second call)
+				// are all unreachable for an autonomous element with a single
+				// constructor call site. Either way the component degrades
+				// gracefully: internals is null, and a DEV_MODE warning fires
+				// on first access.
 				internalsMap.set(this, null)
 			}
 		}

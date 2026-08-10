@@ -1,5 +1,5 @@
 import { valueString } from '@zeix/cause-effect'
-import { elementName } from './util'
+import { describeRoot, elementName } from './util'
 
 /* === Error Classes === */
 
@@ -40,19 +40,25 @@ class InvalidPropertyNameError extends TypeError {
 }
 
 /**
- * Error thrown when a required descendant element does not exist in a component's DOM subtree
+ * Error thrown when a required descendant element does not exist in a queried root's DOM subtree
  *
  * @since 0.14.0
  */
 class MissingElementError extends Error {
 	/**
-	 * @param {HTMLElement} host - Host component
+	 * @param {ParentNode} root - Node the selector was queried against
 	 * @param {string} selector - Selector used to find the elements
 	 * @param {string} required - Explanation why the element is required
+	 * @param {string} [contextLabel] - Noun describing `root` in the message (default `'component'`); `query()`/`queryAll()`-derived helpers scoped to a narrower root, like `reconcile()`'s item-scoped `first`, pass `'item'`
 	 */
-	constructor(host: HTMLElement, selector: string, required: string) {
+	constructor(
+		root: ParentNode,
+		selector: string,
+		required: string,
+		contextLabel: string = 'component',
+	) {
 		super(
-			`Missing required element <${selector}> in component ${elementName(host)}. ${required}`,
+			`Missing required element <${selector}> in ${contextLabel} ${describeRoot(root)}. ${required}`,
 		)
 		this.name = 'MissingElementError'
 	}
@@ -218,14 +224,8 @@ class InvalidSelectorError extends TypeError {
 	 * @param {unknown} cause - The error thrown by the DOM selector engine
 	 */
 	constructor(parent: ParentNode, selector: string, cause: unknown) {
-		const where =
-			typeof ShadowRoot !== 'undefined' && parent instanceof ShadowRoot
-				? `${elementName(parent.host)} shadow root`
-				: typeof Element !== 'undefined' && parent instanceof Element
-					? elementName(parent)
-					: 'document'
 		super(
-			`Invalid selector "${selector}" passed to all() in ${where}. ${cause instanceof Error ? cause.message : String(cause)}`,
+			`Invalid selector "${selector}" passed to all() in ${describeRoot(parent)}. ${cause instanceof Error ? cause.message : String(cause)}`,
 		)
 		this.name = 'InvalidSelectorError'
 	}

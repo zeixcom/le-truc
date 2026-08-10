@@ -98,6 +98,12 @@ class FakeElement {
 				copy.appendChild(child.cloneNode(true))
 		return copy
 	}
+
+	// Minimal stand-in for querySelector: matches a direct child by tag name
+	// only — enough to exercise the scoped `first` parameter in tests below.
+	querySelector(selector: string): FakeElement | null {
+		return this.childElements.find(c => c.localName === selector) ?? null
+	}
 }
 
 const makeTemplate = (rootCount = 1): HTMLTemplateElement => {
@@ -664,4 +670,97 @@ describe('reconcile — collector parity with each() (ADR 0017)', () => {
 	// here: this file's beforeEach installs a file-level ambient collector so
 	// reconcile() can be called outside a factory, which would mask the throw.
 	// It's guarded at the component level in component.test.ts instead.
+})
+
+// bindItem's 4th parameter is a scoped `first`, pre-bound to the entering
+// element instead of the host — see ADR 0021.
+describe('reconcile — scoped first (ADR 0021)', () => {
+	test('scoped first resolves against the item root, not the host', () => {
+		const container = new FakeElement('ul')
+		const list = createList<string>(['a'], { keyConfig: 'item' })
+
+		const found: (FakeElement | undefined)[] = []
+		const dispose = createScope(() =>
+			reconcile(
+				container as unknown as Element,
+				makeTemplate(),
+				list,
+				(element, _item, _key, first) => {
+					;(element as unknown as FakeElement).appendChild(
+						new FakeElement('input'),
+					)
+					found.push(first('input') as unknown as FakeElement | undefined)
+				},
+			)(),
+		)
+
+		expect(found).toHaveLength(1)
+		expect(found[0]?.localName).toBe('input')
+		dispose()
+	})
+
+	test('scoped first returns undefined when optional and missing', () => {
+		const container = new FakeElement('ul')
+		const list = createList<string>(['a'], { keyConfig: 'item' })
+
+		const found: unknown[] = []
+		const dispose = createScope(() =>
+			reconcile(
+				container as unknown as Element,
+				makeTemplate(),
+				list,
+				(_element, _item, _key, first) => {
+					found.push(first('input'))
+				},
+			)(),
+		)
+
+		expect(found).toEqual([undefined])
+		dispose()
+	})
+
+	test('scoped first throws MissingElementError with "in item" wording when required and missing', () => {
+		const container = new FakeElement('ul')
+		const list = createList<string>(['a'], { keyConfig: 'item' })
+
+		expect(() =>
+			createScope(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					(_element, _item, _key, first) => {
+						first('input', 'needed for label association')
+					},
+				)(),
+			),
+		).toThrow(/in item /)
+	})
+
+	test('does not defer bindItem for an undefined custom element found via scoped first', () => {
+		// Item subtrees are static clones — unlike host-level first()/all(), the
+		// scoped first must never participate in M8 dependency resolution.
+		const container = new FakeElement('ul')
+		const list = createList<string>(['a'], { keyConfig: 'item' })
+		const calls: string[] = []
+
+		const dispose = createScope(() =>
+			reconcile(
+				container as unknown as Element,
+				makeTemplate(),
+				list,
+				(element, _item, _key, first) => {
+					;(element as unknown as FakeElement).appendChild(
+						new FakeElement('not-yet-defined-el'),
+					)
+					first('not-yet-defined-el')
+					calls.push('bound')
+				},
+			)(),
+		)
+
+		// bindItem's body ran synchronously to completion — no deferral occurred.
+		expect(calls).toEqual(['bound'])
+		dispose()
+	})
 })

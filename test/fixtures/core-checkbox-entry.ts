@@ -4,10 +4,12 @@
 // both live in src/extensions/form.ts and share the host-contract table.
 // Mirrors the `form-checkbox` example from docs-src/pages/components.md: a
 // reactive `checked` prop synced to the underlying native checkbox.
-import { bindProperty } from '../../src/bindings'
-import { defineComponent } from '../../src/component'
-import { formAssociatedCheckbox } from '../../src/extensions/form'
-import { asBoolean } from '../../src/parsers/boolean'
+import {
+	asBoolean,
+	bindProperty,
+	defineComponent,
+	formAssociatedCheckbox,
+} from '../../index'
 
 type CoreFormCheckboxProps = { checked: boolean }
 

@@ -1,4 +1,4 @@
-import { asInteger, bindText, defineComponent } from '../../..'
+import { asInteger, bindText, defineComponent } from '../../../index'
 
 export type BasicCounterProps = {
 	/** Current counter value. Increments on each button click. */

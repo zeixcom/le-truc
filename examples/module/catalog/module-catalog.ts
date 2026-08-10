@@ -1,4 +1,4 @@
-import { createMemo, defineComponent } from '../../..'
+import { createMemo, defineComponent } from '../../../index'
 
 declare global {
 	interface HTMLElementTagNameMap {

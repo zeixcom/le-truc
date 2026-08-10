@@ -91,6 +91,8 @@ Per-item bindings mount via `bindItem` in root-keyed scopes, reusing the `keyedS
 
 So `watch()`, `on()`, `pass()`, and `provideContexts()` are all usable inside `bindItem`, exactly as inside `each()`'s callback. Per-item reactivity does not require a raw `createEffect`, and per-item events do not require container-level delegation.
 
+`bindItem` and `each()`'s callback also receive a scoped `first` as their last parameter — `query()` (see "Query System" below) pre-bound to the item's root element instead of an explicit root argument (see [ADR 0021](adr/0021-root-parameterized-query-and-queryall.md)). It is named `first`, not `query`, matching host-level `first()`'s pre-bound, one-off shape; naming it `query` would shadow a same-scope standalone `query` import in components that need both. It does not return a `Memo` and does not defer for undefined custom elements: item subtrees are cloned once and static, and no dependency-resolution mechanism exists for a single item mid-reconciliation. An existing, not-yet-upgraded custom element inside an item still surfaces normally through the host-level `first`/`all` if the factory queries it there.
+
 Collected descriptors activate against the per-item `{ root: true }` scope, not the driving structural effect. Item-level `watch(item, …)` therefore does not make the structural effect depend on item signals.
 
 Unlike `each()`, `reconcile()` does not apply `forEachUnseen` to the return value: the return is a teardown, not a descriptor.
@@ -103,6 +105,12 @@ Unlike `each()`, `reconcile()` does not apply `forEachUnseen` to the return valu
 - `all()`: Returns `Memo<Element[]>` with lazy `MutationObserver` (see [ADR 0006](adr/0006-lazy-mutationobserver-for-all-collections.md)); a malformed selector throws `InvalidSelectorError` immediately instead of stalling the observer
 
 Both collect undefined custom element dependencies for `resolveDependencies()`.
+
+### `query(root, selector, required?)` / `queryAll(root, selector, required?)`
+
+Standalone, root-parameterized siblings of `first`/`all` (see [ADR 0021](adr/0021-root-parameterized-query-and-queryall.md)) — same selector-to-type inference and `MissingElementError`-throwing/optional behavior, applied to an explicit `root` instead of a closed-over host. `queryAll()` returns a plain array, not a `Memo` — no `MutationObserver`, one-shot only. Neither collects dependencies for `resolveDependencies()`.
+
+`first()`/`all()` are implemented as `query`/`queryAll` bound to `host.shadowRoot ?? host`, plus the dependency-collection step. `reconcile()`'s `bindItem` and `each()`'s callback receive `query` pre-bound to the item's root element as their scoped lookup, exposed under the name `first` (see "List Reconciliation" above) — there is no separate per-item implementation.
 
 ### Dependency Resolution
 
@@ -151,7 +159,7 @@ The property-key and bare-writable-signal short forms grant the child unrestrict
 | `as*` | Parsers | `asBoolean`, `asInteger`, `asString` |
 | `create*` | Signals | `createState`, `createEffect`, `createScope` |
 
-Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestContext`, `expose`, `first`, `all`) are plain verbs with no prefix.
+Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestContext`, `expose`, `first`, `all`) are plain verbs with no prefix. `query`/`queryAll` are also plain verbs, deliberately distinct from `first`/`all` — standalone exports usable with any root element, not FactoryContext members.
 
 ## Security
 
@@ -160,6 +168,10 @@ Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestConte
 ## Scheduler
 
 `schedule(element, task)` deduplicates high-frequency DOM updates using `requestAnimationFrame`, keyed per element. It is used by `dangerouslyBindInnerHTML`. The sibling `throttle(fn, signal?)` helper — which shares the same single RAF tick — limits passive event handlers in `on()` to one call per animation frame.
+
+## Debug Instrumentation
+
+In `DEV_MODE`, every component gets a reactive `debug: boolean` property (default `false`) for free — no source change, no explicit opt-in — via `debug()`, a `ComponentExtension` `defineComponent()` appends to every component's extensions array unconditionally when `process.env.DEV_MODE === 'true'`. While `debug` is on for an instance, `on()`/`pass()`/`watch()` push an additive companion effect through the same `collect()` chokepoint every effect helper already uses: a permanent `:state(debug)` host indicator that pulses on any firing, presence-only `data-le-truc-on`/`-pass`/`-watch` marking on the target element where attribution is possible (exact for `on()`/`pass()`, and for `watch()` handlers produced by a `bind*` helper; a host-level-only pulse otherwise), and one `console.debug` entry per firing. The author's own effect or listener is never wrapped or modified — instrumentation cannot change app behavior merely by being switched on. Toggling `debug` works via the browser's properties panel or, in `DEV_MODE`, `metaKey`+click on the nearest custom-element ancestor. See [ADR 0022](adr/0022-debug-extension-for-visual-and-console-instrumentation.md).
 
 ## Ecosystem Tooling
 

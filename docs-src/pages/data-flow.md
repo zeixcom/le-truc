@@ -297,14 +297,14 @@ The `keyConfig` option controls key generation. A string prefix produces auto-in
 `reconcile(container, template, source, bindItem)` syncs the source's keys to the container's children in one declarative call. It runs once at connect and again whenever keys are added, removed, or reordered:
 
 ```js
-reconcile(container, template, list, (element, item) => {
-  element
-    .querySelector('slot')
-    ?.replaceWith(document.createTextNode(item.get()))
+reconcile(container, template, list, (element, item, key, first) => {
+  first('slot')?.replaceWith(document.createTextNode(item.get()))
 }),
 ```
 
-For every key in source order, the container holds one element stamped with `data-key`. Entering keys clone the template's single root element and mount `bindItem(element, item, key)` in its own scope. Leaving keys dispose that scope and remove their element. Surviving elements move via `insertBefore()`, always reused, never recreated. Per-item value changes flow through the `item` signal and never trigger structural work.
+For every key in source order, the container holds one element stamped with `data-key`. Entering keys clone the template's single root element and mount `bindItem(element, item, key, first)` in its own scope. Leaving keys dispose that scope and remove their element. Surviving elements move via `insertBefore()`, always reused, never recreated. Per-item value changes flow through the `item` signal and never trigger structural work.
+
+`bindItem`'s 4th parameter, `first`, looks up a descendant of `element` the same way the factory's own `first()` does: type-safe, and it throws when you pass a `required` message and nothing matches. Use it instead of `element.querySelector()` for type inference and actionable errors. It has one difference from the factory's `first()`: it never waits for an undefined custom element inside the item to be defined. An item added later can never block the host component's own effects, so there is nothing to wait for.
 
 `bindItem` does all content work. There is no default fill convention. A returned cleanup runs when the key leaves the list or the component disconnects. It also runs for **adopted** elements: children already in the container at connect time (server-rendered). Le Truc matches them to source keys by their `data-key` attribute and keeps them. It removes keyed children not in the source and all unkeyed children. `bindItem` should be idempotent against server-rendered content. In the example above, an adopted item has no `<slot>` left to replace. The fill is naturally a no-op.
 

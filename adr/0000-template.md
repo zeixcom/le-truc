@@ -30,7 +30,7 @@
 
 ## Related
 
-- Requirements: [M1](../REQUIREMENTS.md#m1-component-definition-via-a-single-function), [S3](../REQUIREMENTS.md#s3-required-element-error-messages-are-actionable)
+- Requirements: [M1](../REQUIREMENTS.md#m1-component-definition-via-a-single-function), [S2](../REQUIREMENTS.md#s2-required-element-error-messages-are-actionable)
 - Architecture: [Section in ARCHITECTURE.md](../ARCHITECTURE.md#component-model)
 - Supersedes: [ADR-000Z](0001-use-cause-effect-as-reactive-primitive-layer.md) (if applicable)
 - Superseded by: [ADR-000Y](0002-factory-form-over-builder-pattern.md) (if applicable)

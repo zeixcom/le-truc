@@ -1,4 +1,4 @@
-import { createList, defineComponent, type List, reconcile } from '../../..'
+import { createList, defineComponent, type List, reconcile } from '../../../index'
 
 declare global {
 	interface HTMLElementTagNameMap {
@@ -20,29 +20,27 @@ export default defineComponent('module-list', ({ first, host, on, pass }) => {
 	// across reorders, which is what lets removal target the right item.
 	const list: List<string> = createList<string>([], { keyConfig: 'item' })
 
+	// Sync the container's children to the list: clones the template for
+	// entering keys, removes leavers, moves survivors. bindItem fills the
+	// cloned content — server-adopted items have no <slot> left, so the
+	// fill is naturally idempotent.
 	const container = first(
 		'[data-container]',
 		'Add a container element for items.',
 	)
 	const template = first('template', 'Add a template element for items.')
-	// Sync the container's children to the list: clones the template for
-	// entering keys, removes leavers, moves survivors. bindItem fills the
-	// cloned content — server-adopted items have no <slot> left, so the
-	// fill is naturally idempotent.
-	reconcile(container, template, list, (element, item) => {
-		element
-			.querySelector('slot')
-			?.replaceWith(document.createTextNode(item.get()))
+	reconcile(container, template, list, (_element, item, _key, first) => {
+		first('slot')?.replaceWith(document.createTextNode(item.get()))
 	})
 
+	// Add on submit, then clear the input by calling the child's method.
 	const form = first('form', 'Add a form element to enter a new list item.')
 	const textbox = first(
 		'form-textbox',
 		'Add <form-textbox> component to enter a new list item.',
 	)
-	// Add on submit, then clear the input by calling the child's method.
-	on(form, 'submit', e => {
-		e.preventDefault()
+	on(form, 'submit', event => {
+		event.preventDefault()
 		const value = textbox.value.trim()
 		if (!value) return
 		list.add(value)
@@ -51,20 +49,20 @@ export default defineComponent('module-list', ({ first, host, on, pass }) => {
 
 	// Event delegation: one handler removes any item whose Remove button
 	// was clicked, scaling to any number of items.
-	on(host, 'click', e => {
-		const target = e.target as HTMLElement
+	on(host, 'click', event => {
+		const target = event.target as HTMLElement
 		if (!target.closest('basic-button.remove')) return
 		const item = target.closest('[data-key]')
 		if (!(item instanceof HTMLElement)) return
-		e.stopPropagation()
+		event.stopPropagation()
 		const key = item.dataset.key
 		if (key) list.remove(key)
 	})
 
+	// Disable the submit button while the textbox is empty.
 	const submit = first(
 		'basic-button.submit',
 		'Add <basic-button.submit> component to submit the form.',
 	)
-	// Disable the submit button while the textbox is empty.
 	pass(submit, { disabled: () => !textbox.length })
 })

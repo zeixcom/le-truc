@@ -150,13 +150,13 @@ Le Truc provides several built-in parsers for common attribute types. See the [P
 {% /section %}
 
 {% section %}
-## Select Elements
+## Query Elements
 
 Use the provided selector utilities to find descendant elements within your component:
 
 ### first()
 
-`first()` selects the first matching element:
+`first()` queries the first matching element:
 
 ```js
 defineComponent('basic-counter', ({ expose, first, host, on, watch }) => {
@@ -171,7 +171,7 @@ defineComponent('basic-counter', ({ expose, first, host, on, watch }) => {
 
 ### all()
 
-`all()` selects all matching elements as a `Memo<E[]>`:
+`all()` queries all matching elements as a live `Memo<E[]>`:
 
 ```js
 defineComponent('module-tabgroup', ({ all, expose, on, watch }) => {
@@ -196,6 +196,19 @@ If a queried custom element is not yet defined, Le Truc waits up to 200 ms befor
 {% callout .tip %}
 `all()` observes structural changes and re-runs effects accordingly. Prefer `first()` when targeting a single element known to be present at connection time.
 {% /callout %}
+
+### query() and queryAll()
+
+`first()` and `all()` always search from the component host. To search from an element you already have — inside a `reconcile()` `bindItem` or `each()` callback, or in a free-standing helper function that only receives an element — use `query()` and `queryAll()` instead. They take an explicit root as their first argument:
+
+```js
+import { query, queryAll } from '@zeix/le-truc'
+
+const items = queryAll(container, 'li')
+const label = query(item, '.label', 'Add a label to each item.')
+```
+
+Both share `first()`/`all()`'s selector-to-type inference and `MissingElementError` behavior. Unlike `all()`, `queryAll()` returns a plain array, queried once — not a live `Memo`. Neither waits for an undefined custom element to be defined; that check only applies to `first()`/`all()` at the host level. See [Manage Dynamic Lists](data-flow.html#manage-dynamic-lists) for `reconcile()`'s and `each()`'s own scoped `first` parameter, a `query()` pre-bound to the current item.
 
 {% /section %}
 
@@ -461,6 +474,8 @@ Le Truc ships three extensions, each imported separately:
 | [`formAssociatedCheckbox()`](#checkbox-shaped-controls) | Form participation keyed on a `checked: boolean` prop — submits nothing when unchecked |
 | [`observedAttributes()`](#attribute-driven-reactivity) | Re-parses Parser-backed props when their attribute mutates after connect |
 
+A fourth extension, [`debug()`](#debug-instrumentation), ships too — but it never appears in this table, because you never add it yourself.
+
 ### Form Association
 
 The `formAssociated()` extension adapts a component to the [form-associated custom element](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-face-example) convention. Pass it as the first element of the extensions array. The factory's context then widens to expose the `internals` object alongside the usual helpers:
@@ -559,5 +574,22 @@ defineComponent<BasicGaugeProps>(
 ```
 
 Le Truc adds named attributes to the class's `static observedAttributes`. On each mutation, the extension re-runs the same retained `Parser` against the attribute's new string value. It writes the result to the prop. Props whose initializer is not a branded `Parser` are left untouched. Use this sparingly. For most components, event handlers or direct property writes are the right way to update state after connect.
+
+### Debug Instrumentation
+
+`debug()` is not exported, and you never pass it to `defineComponent()`. Build your app with `DEV_MODE=true` (the default for local development), and every component gets a reactive `debug: boolean` property for free — including components you didn't write. This is the point: instrumenting one specific component instance shouldn't require editing its source.
+
+Toggle `debug` from the browser's properties panel, or hold `Cmd`/`Ctrl` and click the component. While `debug` is `true`:
+- The host carries a pulsing box-shadow indicator on every `on()`, `pass()`, or `watch()` firing
+- Target elements that `on()`, `pass()`, or a `bind*`-backed `watch()` handler act on get a presence-only marking attribute (`data-le-truc-on`, `-pass`, or `-watch`)
+- Each firing logs one `console.debug()` entry naming the component and, where known, the event or target
+
+A `watch()` handler not produced by a `bind*` helper (`bindText`, `bindProperty`, and so on) can't be traced back to an element — Le Truc shows the host-level pulse only, rather than guess.
+
+`debug` does nothing in production. The property doesn't exist without `DEV_MODE`: setting `debug = true` on a production build is a no-op, because the extension that provides it was never added to the component.
+
+{% callout .caution title="debug is a reserved property name in DEV_MODE" %}
+`expose({ debug: ... })` throws in a `DEV_MODE` build, on any component, whether or not it uses `debug()` itself — the name is reserved the moment `DEV_MODE` is on. The same component works fine in production, where the reservation doesn't exist. Avoid `debug` as a prop name.
+{% /callout %}
 
 {% /section %}

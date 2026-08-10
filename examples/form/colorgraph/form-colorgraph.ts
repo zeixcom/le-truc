@@ -11,7 +11,7 @@ import {
 	type FormAssociatedElement,
 	formAssociated,
 	throttle,
-} from '../../..'
+} from '../../../index'
 import { asOklch } from '../../_common/asOklch'
 import { getStepColor } from '../../_common/getStepColor.ts'
 
@@ -201,11 +201,13 @@ export default defineComponent<FormColorgraphProps>(
 			const handleUp = () => {
 				graphEl.removeEventListener('pointermove', handleMove)
 				graphEl.removeEventListener('pointerup', handleUp)
+				graphEl.removeEventListener('pointercancel', handleUp)
 				moveKnob.cancel()
 				knob.ariaPressed = 'false'
 			}
 			graphEl.addEventListener('pointermove', handleMove, { passive: true })
 			graphEl.addEventListener('pointerup', handleUp)
+			graphEl.addEventListener('pointercancel', handleUp)
 		})
 		watch(() => `${canvasSize.get()}px`, bindStyle(graphEl, '--canvas-size'))
 
@@ -317,11 +319,11 @@ export default defineComponent<FormColorgraphProps>(
 			return null
 		}
 
-		on(sliderEl, 'pointerdown', event => {
+		on(sliderEl, 'pointerdown', ({ pointerId }) => {
 			const left = track.getBoundingClientRect().left
 			const width = trackWidth.get()
 			thumb.ariaPressed = 'true'
-			sliderEl.setPointerCapture(event.pointerId)
+			sliderEl.setPointerCapture(pointerId)
 			const handleMove = (e: PointerEvent) => {
 				const last = (e.getCoalescedEvents?.() || []).pop() || e
 				moveThumb(last.clientX, left, width)
@@ -329,11 +331,13 @@ export default defineComponent<FormColorgraphProps>(
 			const handleUp = () => {
 				sliderEl.removeEventListener('pointermove', handleMove)
 				sliderEl.removeEventListener('pointerup', handleUp)
+				sliderEl.removeEventListener('pointercancel', handleUp)
 				moveThumb.cancel()
 				thumb.ariaPressed = 'false'
 			}
 			sliderEl.addEventListener('pointermove', handleMove, { passive: true })
 			sliderEl.addEventListener('pointerup', handleUp)
+			sliderEl.addEventListener('pointercancel', handleUp)
 		})
 		watch(() => `${trackWidth.get()}px`, bindStyle(sliderEl, '--track-width'))
 		watch(color, c => {
@@ -378,10 +382,9 @@ export default defineComponent<FormColorgraphProps>(
 
 		// Keyboard navigation
 		on(host, 'keydown', event => {
-			const { key, shiftKey } = event as KeyboardEvent
-			const target = (event as KeyboardEvent).target as HTMLElement | null
+			const { key, shiftKey, target } = event
 			if (
-				!target ||
+				!(target instanceof HTMLElement) ||
 				(target.localName === 'input' &&
 					(key === 'ArrowLeft' || key === 'ArrowRight'))
 			)

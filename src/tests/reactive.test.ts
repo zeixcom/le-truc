@@ -297,6 +297,50 @@ describe('each', () => {
 	})
 })
 
+// each()'s 2nd callback parameter is a scoped `first`, pre-bound to the
+// current element instead of the host — see ADR 0021.
+describe('each — scoped first (ADR 0021)', () => {
+	test('scoped first resolves against the element, not the host', () => {
+		const child = { localName: 'span' } as unknown as Element
+		const el = {
+			querySelector: (selector: string) => (selector === 'span' ? child : null),
+		} as unknown as Element
+		const memo = createMemo(() => [el])
+
+		const found: unknown[] = []
+		const descriptor = each(memo, (_el, first) => {
+			found.push(first('span'))
+		})
+		createScope(() => descriptor())
+
+		expect(found).toEqual([child])
+	})
+
+	test('scoped first returns undefined when optional and missing', () => {
+		const el = { querySelector: () => null } as unknown as Element
+		const memo = createMemo(() => [el])
+
+		const found: unknown[] = []
+		const descriptor = each(memo, (_el, first) => {
+			found.push(first('.missing'))
+		})
+		createScope(() => descriptor())
+
+		expect(found).toEqual([undefined])
+	})
+
+	test('scoped first throws MissingElementError with "in item" wording when required and missing', () => {
+		const el = { querySelector: () => null } as unknown as Element
+		const memo = createMemo(() => [el])
+
+		const descriptor = each(memo, (_el, first) => {
+			first('.missing', 'needed for X')
+		})
+
+		expect(() => createScope(() => descriptor())).toThrow(/in item /)
+	})
+})
+
 describe('each — implicit collection (ADR 0018)', () => {
 	test('activates a bare (non-returned) watch() call made inside the callback', () => {
 		const el = {} as Element

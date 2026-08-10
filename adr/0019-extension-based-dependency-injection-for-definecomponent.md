@@ -77,14 +77,7 @@ A single generic function with a `const`-modified type parameter over the extens
 
 **Generalized retained initializers.** `internal.ts`'s `initialValueInitializers` (a `WeakMap<HTMLElement, unknown>` holding one retained initializer for `'value'` only, added by ADR 0016 for `formResetCallback`) becomes `retainedInitializers: WeakMap<HTMLElement, Record<string, unknown>>`, populated unconditionally in `#initSignals` for every exposed prop — not gated by which extension is active. This keeps `component.ts` generic: extensions read back only the keys they care about (`formAssociated()`'s `formResetCallback`/`formStateRestoreCallback` read `'value'`; `observedAttributes()` reads whichever prop name matches the mutated attribute).
 
-**Bundle-size verification.** `test/regression-bundle.test.ts` is restructured into tiers, reflecting that the full barrel is no longer a realistic consumer surface once extensions are opt-in:
-
-- `test/fixtures/minimal-entry.ts` (`defineComponent`, no extensions) — hard-asserted ≤8 kB gzipped. Measured: 7.3 kB.
-- `test/fixtures/core-form-entry.ts` (`defineComponent` + `formAssociated()`) — warns (not fails) above 14 kB. Measured: 8.1 kB.
-- `test/fixtures/core-checkbox-entry.ts` (`defineComponent` + `formAssociatedCheckbox()`) — same warn threshold, proving the checkbox variant tree-shakes independently of `formAssociated()`'s value-sync code despite sharing one file. Measured: 8.1 kB — comparable to `core-form-entry.ts`, not their sum, which would indicate the shared host-contract code duplicating rather than being reused.
-- The full `index.ts` barrel (every export, including every bundled extension) — reported only, not asserted. Measured: 14.8 kB.
-
-[REQUIREMENTS.md §4](../REQUIREMENTS.md#4-non-functional-requirements) and the library-itself success metric are updated to describe this three-tier contract in place of the single 10/14 kB ceiling.
+[REQUIREMENTS.md §4](../REQUIREMENTS.md#4-non-functional-requirements) and the library-itself success metric are updated to describe this three-tier contract in place of the single 9/10 kB ceiling.
 
 ## Alternatives Considered
 
