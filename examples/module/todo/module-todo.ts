@@ -252,6 +252,9 @@ export default defineComponent(
 			else moveItem(selectedItem, 1)
 		})
 
+		// pointermove/pointerup/pointercancel are only attached while a drag
+		// might be in progress, mirroring form-colorgraph.ts — keeps them off
+		// the debugger's always-on radar.
 		on(host, 'pointerdown', event => {
 			const handle = (event.target as HTMLElement).closest(REORDER_SELECTOR)
 			if (!(handle instanceof HTMLElement)) return
@@ -264,84 +267,96 @@ export default defineComponent(
 			suppressNextClick = false
 			handle.setPointerCapture(event.pointerId)
 			handle.focus()
-		})
 
-		on(host, 'pointermove', event => {
-			if (!pendingDragHandle) return
-			const dy = Math.abs(event.clientY - pointerStartY)
-			const dx = Math.abs(event.clientX - pointerStartX)
+			const handleMove = (e: PointerEvent) => {
+				if (!pendingDragHandle) return
+				const dy = Math.abs(e.clientY - pointerStartY)
+				const dx = Math.abs(e.clientX - pointerStartX)
 
-			if (!dragItem && (dy > DRAG_THRESHOLD || dx > DRAG_THRESHOLD)) {
-				const item = pendingDragHandle.closest('[data-key]')
-				if (!(item instanceof HTMLElement)) return
+				if (!dragItem && (dy > DRAG_THRESHOLD || dx > DRAG_THRESHOLD)) {
+					const dragged = pendingDragHandle.closest('[data-key]')
+					if (!(dragged instanceof HTMLElement)) return
 
-				dragItem = item
-				const rect = item.getBoundingClientRect()
-				dragOffsetY = pointerStartY - rect.top
+					dragItem = dragged
+					const rect = dragged.getBoundingClientRect()
+					dragOffsetY = pointerStartY - rect.top
 
-				// Transient drag state is owned by the event handlers:
-				// data-unreconciled protects the marker and the dragged item
-				// from a reconcile re-run mid-drag (e.g. a concurrent edit).
-				marker = document.createElement('li')
-				marker.className = 'drop-marker'
-				marker.setAttribute('data-unreconciled', '')
-				marker.style.height = `${rect.height - 4}px`
-				container.insertBefore(marker, item)
+					// Transient drag state is owned by the event handlers:
+					// data-unreconciled protects the marker and the dragged item
+					// from a reconcile re-run mid-drag (e.g. a concurrent edit).
+					marker = document.createElement('li')
+					marker.className = 'drop-marker'
+					marker.setAttribute('data-unreconciled', '')
+					marker.style.height = `${rect.height - 4}px`
+					container.insertBefore(marker, dragged)
 
-				item.setAttribute('data-unreconciled', '')
-				item.style.top = `${rect.top}px`
-				item.style.left = `${rect.left}px`
-				item.style.width = `${rect.width}px`
-				item.classList.add(DRAGGING_CLASS)
-			}
-
-			if (dragItem) {
-				dragItem.style.top = `${event.clientY - dragOffsetY}px`
-				updateMarkerPosition(event.clientY)
-			}
-		})
-
-		on(host, 'pointerup', () => {
-			if (dragItem && marker) {
-				// Committed order: keyed children in DOM order, with the dragged
-				// key at the marker's position. Read before cleaning up.
-				const keys: string[] = []
-				for (const child of container.children) {
-					if (child === marker) {
-						if (dragItem.dataset.key) keys.push(dragItem.dataset.key)
-					} else if (
-						child instanceof HTMLElement &&
-						child.dataset.key &&
-						child !== dragItem
-					) {
-						keys.push(child.dataset.key)
-					}
+					dragged.setAttribute('data-unreconciled', '')
+					dragged.style.top = `${rect.top}px`
+					dragged.style.left = `${rect.left}px`
+					dragged.style.width = `${rect.width}px`
+					dragged.classList.add(DRAGGING_CLASS)
 				}
-				// Clean up transient state and strip the pin before committing —
-				// reconcile() is the sole writer to structural children.
-				marker.remove()
-				dragItem.style.cssText = ''
-				dragItem.classList.remove(DRAGGING_CLASS)
-				dragItem.removeAttribute('data-unreconciled')
-				dragItem = null
-				marker = null
-				suppressNextClick = true
-				applyOrder(keys)
-			}
-			pendingDragHandle = null
-		})
 
-		on(host, 'pointercancel', () => {
-			if (dragItem && marker) {
-				marker.remove()
-				dragItem.style.cssText = ''
-				dragItem.classList.remove(DRAGGING_CLASS)
-				dragItem.removeAttribute('data-unreconciled')
-				dragItem = null
-				marker = null
+				if (dragItem) {
+					dragItem.style.top = `${e.clientY - dragOffsetY}px`
+					updateMarkerPosition(e.clientY)
+				}
 			}
-			pendingDragHandle = null
-			suppressNextClick = false
+
+			const handleUp = () => {
+				if (dragItem && marker) {
+					// Committed order: keyed children in DOM order, with the dragged
+					// key at the marker's position. Read before cleaning up.
+					const keys: string[] = []
+					for (const child of container.children) {
+						if (child === marker) {
+							if (dragItem.dataset.key) keys.push(dragItem.dataset.key)
+						} else if (
+							child instanceof HTMLElement &&
+							child.dataset.key &&
+							child !== dragItem
+						) {
+							keys.push(child.dataset.key)
+						}
+					}
+					// Clean up transient state and strip the pin before committing —
+					// reconcile() is the sole writer to structural children.
+					marker.remove()
+					dragItem.style.cssText = ''
+					dragItem.classList.remove(DRAGGING_CLASS)
+					dragItem.removeAttribute('data-unreconciled')
+					dragItem = null
+					marker = null
+					suppressNextClick = true
+					applyOrder(keys)
+				}
+				pendingDragHandle = null
+				cleanup()
+			}
+
+			const handleCancel = () => {
+				if (dragItem && marker) {
+					marker.remove()
+					dragItem.style.cssText = ''
+					dragItem.classList.remove(DRAGGING_CLASS)
+					dragItem.removeAttribute('data-unreconciled')
+					dragItem = null
+					marker = null
+				}
+				pendingDragHandle = null
+				suppressNextClick = false
+				cleanup()
+			}
+
+			function cleanup() {
+				host.removeEventListener('pointermove', handleMove)
+				host.removeEventListener('pointerup', handleUp)
+				host.removeEventListener('pointercancel', handleCancel)
+			}
+
+			host.addEventListener('pointermove', handleMove, { passive: true })
+			host.addEventListener('pointerup', handleUp)
+			host.addEventListener('pointercancel', handleCancel)
 		})
 
 		const filter = first(

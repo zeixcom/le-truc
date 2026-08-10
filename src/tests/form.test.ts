@@ -193,8 +193,13 @@ class FakeElementInternals {
 }
 
 /**
- * FakeHTMLElement that throws on attachInternals to simulate the
- * pre-upgrade / parser-ordering edge case.
+ * FakeHTMLElement that throws on attachInternals, simulating an environment
+ * with no `ElementInternals` support (Safari <16.4, Firefox <93, non-DOM test
+ * environments) — the case the constructor's bare `catch` in
+ * `src/component.ts` actually guards. A real such environment throws
+ * `TypeError` (`this.attachInternals` is undefined) rather than the
+ * `DOMException` thrown here; both hit the same `catch`, so the distinction
+ * doesn't affect what these tests cover.
  */
 class FakeHTMLElementNoInternals extends FakeHTMLElement {
 	attachInternals(): FakeElementInternals {

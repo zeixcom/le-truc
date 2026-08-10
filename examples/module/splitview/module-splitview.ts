@@ -33,25 +33,26 @@ export default defineComponent<ModuleSplitviewProps>(
 			'Add a button.divider resize handle.',
 		)
 		const isVertical = host.getAttribute('orientation') === 'vertical'
-		let dragging = false
 
+		// pointermove/pointerup are only attached while dragging, mirroring
+		// form-colorgraph.ts — keeps them off the debugger's always-on radar.
 		on(divider, 'pointerdown', event => {
-			dragging = true
 			divider.setPointerCapture(event.pointerId)
-		})
-		on(divider, 'pointermove', event => {
-			if (!dragging) return
-			const rect = host.getBoundingClientRect()
-			const ratio = isVertical
-				? (event.clientY - rect.top) / rect.height
-				: (event.clientX - rect.left) / rect.width
-			return { split: Math.max(MIN_SPLIT, Math.min(MAX_SPLIT, ratio)) }
-		})
-		on(divider, 'pointerup', () => {
-			dragging = false
-		})
-		on(divider, 'lostpointercapture', () => {
-			dragging = false
+			const handleMove = (e: PointerEvent) => {
+				const rect = host.getBoundingClientRect()
+				const ratio = isVertical
+					? (e.clientY - rect.top) / rect.height
+					: (e.clientX - rect.left) / rect.width
+				host.split = Math.max(MIN_SPLIT, Math.min(MAX_SPLIT, ratio))
+			}
+			const handleUp = () => {
+				divider.removeEventListener('pointermove', handleMove)
+				divider.removeEventListener('pointerup', handleUp)
+				divider.removeEventListener('lostpointercapture', handleUp)
+			}
+			divider.addEventListener('pointermove', handleMove, { passive: true })
+			divider.addEventListener('pointerup', handleUp)
+			divider.addEventListener('lostpointercapture', handleUp)
 		})
 		on(divider, 'keydown', event => {
 			const { key } = event
