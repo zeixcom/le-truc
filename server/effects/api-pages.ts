@@ -3,7 +3,6 @@ import Markdoc, {
 	type RenderableTreeNodes,
 	Tag,
 } from '@markdoc/markdoc'
-import { createEffect, match } from '@zeix/cause-effect'
 import { ADR_DIR, API_DIR, OUTPUT_DIR } from '../config'
 import { apiMarkdown, type FileInfo } from '../file-signals'
 import { highlightCodeBlocks } from '../html-shaping'
@@ -14,6 +13,7 @@ import {
 	writeFileSafe,
 } from '../io'
 import markdocConfig from '../markdoc.config'
+import { createBuildEffect } from './build-effect'
 
 /* === Internal Functions === */
 
@@ -871,45 +871,26 @@ export {
 	wrapDeprecatedCallout,
 }
 
-export const apiPagesEffect = (onRebuild?: () => void) => {
-	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => {
-		resolve = res
-	})
-	const cleanup = createEffect(() => {
-		match([apiMarkdown.sources], {
-			ok: async ([apiFiles]) => {
-				const firstRun = !!resolve
+export const apiPagesEffect = (onRebuild?: () => void) =>
+	createBuildEffect(
+		'API pages',
+		[apiMarkdown.sources],
+		async ([apiFiles]) => {
+			console.log('📖 Generating API page fragments...')
+
+			const adrSlugs = await loadAdrSlugMap()
+			let count = 0
+			const processPromises = apiFiles.map(async (file: FileInfo) => {
 				try {
-					console.log('📖 Generating API page fragments...')
-
-					const adrSlugs = await loadAdrSlugMap()
-					let count = 0
-					const processPromises = apiFiles.map(async (file: FileInfo) => {
-						try {
-							await processApiFile(file, adrSlugs)
-							count++
-						} catch (error) {
-							console.error(`Failed to process API file ${file.path}:`, error)
-						}
-					})
-
-					await Promise.all(processPromises)
-					console.log(`📖 Generated ${count} API page fragments`)
-					if (!firstRun) onRebuild?.()
+					await processApiFile(file, adrSlugs)
+					count++
 				} catch (error) {
-					console.error('Failed to generate API pages:', error)
-				} finally {
-					resolve?.()
-					resolve = undefined
+					console.error(`Failed to process API file ${file.path}:`, error)
 				}
-			},
-			err: errors => {
-				console.error('Error in API pages effect:', errors[0]!.message)
-				resolve?.()
-				resolve = undefined
-			},
-		})
-	})
-	return { cleanup, ready }
-}
+			})
+
+			await Promise.all(processPromises)
+			console.log(`📖 Generated ${count} API page fragments`)
+		},
+		onRebuild,
+	)

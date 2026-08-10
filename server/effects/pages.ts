@@ -1,4 +1,3 @@
-import { createEffect, match } from '@zeix/cause-effect'
 import pkg from '../../package.json'
 import { ASSETS_DIR, INCLUDES_DIR, LAYOUTS_DIR, OUTPUT_DIR } from '../config'
 import { docsMarkdown, type ProcessedMarkdownFile } from '../file-signals'
@@ -10,6 +9,7 @@ import {
 } from '../io'
 import { performanceHints } from '../templates/performance-hints'
 import { escapeHtml, generateSlug, html, raw } from '../templates/utils'
+import { createBuildEffect } from './build-effect'
 
 /* === Internal Functionals === */
 
@@ -306,121 +306,100 @@ const applyTemplate = async (
 	}
 }
 
-export const pagesEffect = (onRebuild?: () => void) => {
-	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => {
-		resolve = res
-	})
-	const cleanup = createEffect(() => {
-		match([docsMarkdown.fullyProcessed], {
-			ok: async ([processedFiles]) => {
-				const firstRun = !!resolve
-				try {
-					console.log('📚 Generating HTML pages from processed markdown...')
+export const pagesEffect = (onRebuild?: () => void) =>
+	createBuildEffect(
+		'Pages',
+		[docsMarkdown.fullyProcessed],
+		async ([processedFiles]) => {
+			console.log('📚 Generating HTML pages from processed markdown...')
 
-					const assetHashes = await getAssetHashes()
+			const assetHashes = await getAssetHashes()
 
-					// Pre-compute sorted blog posts and prev/next navigation
-					const sortedBlogPosts = Array.from(processedFiles.values())
-						.filter(f => f.section === 'blog' && !f.metadata.draft)
-						.sort((a, b) =>
-							(b.metadata.date ?? '').localeCompare(a.metadata.date ?? ''),
-						)
-					const prevNextMap = computeBlogPrevNext(sortedBlogPosts)
-					// blog.md is at depth 0, so basePath is always './'
-					const blogOverviewBasePath =
-						[...processedFiles.values()].find(f => f.relativePath === 'blog.md')
-							?.basePath ?? './'
-					const blogExcerpts = generateBlogExcerpts(
-						sortedBlogPosts,
-						blogOverviewBasePath,
-					)
+			// Pre-compute sorted blog posts and prev/next navigation
+			const sortedBlogPosts = Array.from(processedFiles.values())
+				.filter(f => f.section === 'blog' && !f.metadata.draft)
+				.sort((a, b) =>
+					(b.metadata.date ?? '').localeCompare(a.metadata.date ?? ''),
+				)
+			const prevNextMap = computeBlogPrevNext(sortedBlogPosts)
+			// blog.md is at depth 0, so basePath is always './'
+			const blogOverviewBasePath =
+				[...processedFiles.values()].find(f => f.relativePath === 'blog.md')
+					?.basePath ?? './'
+			const blogExcerpts = generateBlogExcerpts(
+				sortedBlogPosts,
+				blogOverviewBasePath,
+			)
 
-					// Process all markdown files
-					const processPromises = Array.from(processedFiles.values()).map(
-						async (processedFile: ProcessedMarkdownFile) => {
-							try {
-								let fileToRender = processedFile
-								let extra: Record<string, string> = {}
+			// Process all markdown files
+			const processPromises = Array.from(processedFiles.values()).map(
+				async (processedFile: ProcessedMarkdownFile) => {
+					try {
+						let fileToRender = processedFile
+						let extra: Record<string, string> = {}
 
-								if (processedFile.relativePath === 'blog.md') {
-									// Inject hero + excerpt cards into the blog overview
-									const { metadata } = processedFile
-									const heroHtml = html`<section-hero>
-										<h1>${metadata.emoji ?? ''} ${metadata.title ?? 'Blog'}</h1>
-										<div class="hero-layout">
-											<div class="lead">
-												${
-													metadata.description
-														? raw(html`<p>${metadata.description}</p>`)
-														: ''
-												}
-											</div>
-										</div>
-									</section-hero>`
-									fileToRender = {
-										...processedFile,
-										htmlContent: html`${raw(heroHtml)}
-											<section class="blog-posts">
-												${raw(blogExcerpts)}
-											</section>`,
-									}
-								} else if (processedFile.section === 'blog') {
-									// Add blog-specific template variables
-									extra = {
-										...getBlogVariables(processedFile),
-										...(prevNextMap.get(processedFile.path) ?? {}),
-									}
-								}
-
-								// Apply template
-								const finalHtml = await applyTemplate(
-									fileToRender,
-									assetHashes,
-									extra,
-								)
-
-								// Write output file
-								await writeFileSafe(
-									getFilePath(
-										OUTPUT_DIR,
-										processedFile.relativePath.replace('.md', '.html'),
-									),
-									finalHtml,
-								)
-
-								console.log(
-									`📄 Generated ${processedFile.relativePath.replace('.md', '.html')}`,
-								)
-							} catch (error) {
-								console.error(
-									`Failed to generate ${processedFile.relativePath}:`,
-									error,
-								)
+						if (processedFile.relativePath === 'blog.md') {
+							// Inject hero + excerpt cards into the blog overview
+							const { metadata } = processedFile
+							const heroHtml = html`<section-hero>
+								<h1>${metadata.emoji ?? ''} ${metadata.title ?? 'Blog'}</h1>
+								<div class="hero-layout">
+									<div class="lead">
+										${
+											metadata.description
+												? raw(html`<p>${metadata.description}</p>`)
+												: ''
+										}
+									</div>
+								</div>
+							</section-hero>`
+							fileToRender = {
+								...processedFile,
+								htmlContent: html`${raw(heroHtml)}
+									<section class="blog-posts">
+										${raw(blogExcerpts)}
+									</section>`,
 							}
-						},
-					)
+						} else if (processedFile.section === 'blog') {
+							// Add blog-specific template variables
+							extra = {
+								...getBlogVariables(processedFile),
+								...(prevNextMap.get(processedFile.path) ?? {}),
+							}
+						}
 
-					// Wait for all processing to complete
-					await Promise.all(processPromises)
+						// Apply template
+						const finalHtml = await applyTemplate(
+							fileToRender,
+							assetHashes,
+							extra,
+						)
 
-					console.log(
-						`📚 Successfully generated ${processedFiles.size} HTML pages`,
-					)
-					if (!firstRun) onRebuild?.()
-				} catch (error) {
-					console.error('Failed to generate HTML pages:', error)
-				} finally {
-					resolve?.()
-					resolve = undefined
-				}
-			},
-			err: errors => {
-				console.error('Error in pages effect:', errors[0]!.message)
-				resolve?.()
-				resolve = undefined
-			},
-		})
-	})
-	return { cleanup, ready }
-}
+						// Write output file
+						await writeFileSafe(
+							getFilePath(
+								OUTPUT_DIR,
+								processedFile.relativePath.replace('.md', '.html'),
+							),
+							finalHtml,
+						)
+
+						console.log(
+							`📄 Generated ${processedFile.relativePath.replace('.md', '.html')}`,
+						)
+					} catch (error) {
+						console.error(
+							`Failed to generate ${processedFile.relativePath}:`,
+							error,
+						)
+					}
+				},
+			)
+
+			// Wait for all processing to complete
+			await Promise.all(processPromises)
+
+			console.log(`📚 Successfully generated ${processedFiles.size} HTML pages`)
+		},
+		onRebuild,
+	)

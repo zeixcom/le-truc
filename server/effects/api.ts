@@ -1,4 +1,3 @@
-import { createEffect, match } from '@zeix/cause-effect'
 import { API_DIR, PAGES_DIR, ROOT } from '../config'
 import { apiMarkdown, docsMarkdown, libraryScripts } from '../file-signals'
 import {
@@ -8,6 +7,7 @@ import {
 	getFilePath,
 	writeFileSafe,
 } from '../io'
+import { createBuildEffect, runCommand } from './build-effect'
 
 /* === Types === */
 
@@ -163,85 +163,56 @@ export {
 	sortCategories,
 }
 
-export const apiEffect = (onRebuild?: () => void) => {
-	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => {
-		resolve = res
-	})
-	const cleanup = createEffect(() => {
-		match([libraryScripts.sources], {
-			ok: async ([sources]) => {
-				const firstRun = !!resolve
-				try {
-					// Skip TypeDoc run if library sources haven't changed
-					const currentHash = computeSourcesHash(sources)
-					if (currentHash === previousSourcesHash) {
-						console.log('📚 Library sources unchanged, skipping TypeDoc')
-						return
-					}
+export const apiEffect = (onRebuild?: () => void) =>
+	createBuildEffect(
+		'API documentation',
+		[libraryScripts.sources],
+		async ([sources]) => {
+			// Skip TypeDoc run if library sources haven't changed
+			const currentHash = computeSourcesHash(sources)
+			if (currentHash === previousSourcesHash) {
+				console.log('📚 Library sources unchanged, skipping TypeDoc')
+				return
+			}
 
-					console.log('📚 Rebuilding API documentation...')
+			console.log('📚 Rebuilding API documentation...')
 
-					// Generate API docs using TypeDoc (async)
-					// Configuration is in typedoc.json at project root
-					const proc = Bun.spawn(['typedoc'], {
-						stdout: 'inherit',
-						stderr: 'inherit',
-						cwd: ROOT,
-					})
-					const exitCode = await proc.exited
+			// Generate API docs using TypeDoc. Configuration is in
+			// typedoc.json at project root. A non-zero exit (e.g. a type
+			// error surfaced while type-checking the project) throws here.
+			await runCommand(['typedoc'], { cwd: ROOT })
 
-					if (exitCode !== 0) {
-						console.error(`TypeDoc exited with code ${exitCode}`)
-						return
-					}
+			previousSourcesHash = currentHash
+			console.log('📚 API documentation rebuilt successfully')
 
-					previousSourcesHash = currentHash
-					console.log('📚 API documentation rebuilt successfully')
+			// docs-src/api is generated (gitignored): on a fresh checkout the
+			// initial scan ran before TypeDoc wrote anything and no fs watcher
+			// was attached, so push the new files through the signal explicitly.
+			await apiMarkdown.sources.rescan()
 
-					// docs-src/api is generated (gitignored): on a fresh checkout the
-					// initial scan ran before TypeDoc wrote anything and no fs watcher
-					// was attached, so push the new files through the signal explicitly.
-					await apiMarkdown.sources.rescan()
+			// Generate listnav-compatible API index page
+			// TypeDoc 0.28+ uses README.md instead of globals.md
+			const readmePath = getFilePath(API_DIR, 'README.md')
+			if (fileExists(readmePath)) {
+				const readmeContent = await getFileContent(readmePath)
+				const categories = parseGlobals(readmeContent)
 
-					// Generate listnav-compatible API index page
-					// TypeDoc 0.28+ uses README.md instead of globals.md
-					const readmePath = getFilePath(API_DIR, 'README.md')
-					if (fileExists(readmePath)) {
-						const readmeContent = await getFileContent(readmePath)
-						const categories = parseGlobals(readmeContent)
-
-						if (categories.length > 0) {
-							const apiIndexMd = generateApiIndexMarkdown(categories)
-							await writeFileSafe(getFilePath(PAGES_DIR, 'api.md'), apiIndexMd)
-							// api.md is generated (gitignored) — same reasoning as the
-							// apiMarkdown rescan above, and the fs watcher's 50ms debounce
-							// would race buildOnce's cleanup on a one-shot build.
-							await docsMarkdown.sources.rescan()
-							console.log(
-								`📖 Generated API index with ${categories.length} categories`,
-							)
-						} else {
-							console.warn('⚠️ No API categories found in README.md')
-						}
-					} else {
-						console.warn('⚠️ README.md not found, skipping API index generation')
-					}
-
-					if (!firstRun) onRebuild?.()
-				} catch (error) {
-					console.error('Failed to rebuild API documentation:', error)
-				} finally {
-					resolve?.()
-					resolve = undefined
+				if (categories.length > 0) {
+					const apiIndexMd = generateApiIndexMarkdown(categories)
+					await writeFileSafe(getFilePath(PAGES_DIR, 'api.md'), apiIndexMd)
+					// api.md is generated (gitignored) — same reasoning as the
+					// apiMarkdown rescan above, and the fs watcher's 50ms debounce
+					// would race buildOnce's cleanup on a one-shot build.
+					await docsMarkdown.sources.rescan()
+					console.log(
+						`📖 Generated API index with ${categories.length} categories`,
+					)
+				} else {
+					console.warn('⚠️ No API categories found in README.md')
 				}
-			},
-			err: errors => {
-				console.error('API reference failed to rebuild', String(errors[0]))
-				resolve?.()
-				resolve = undefined
-			},
-		})
-	})
-	return { cleanup, ready }
-}
+			} else {
+				console.warn('⚠️ README.md not found, skipping API index generation')
+			}
+		},
+		onRebuild,
+	)
