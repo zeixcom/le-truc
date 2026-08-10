@@ -1,4 +1,3 @@
-import { createEffect, match } from '@zeix/cause-effect'
 import { SOURCES_DIR } from '../config'
 import {
 	componentMarkup,
@@ -9,6 +8,7 @@ import {
 import { highlightSnippet } from '../html-shaping'
 import { getFilePath, writeFileSafe } from '../io'
 import { type PanelType, tabGroup } from '../templates/fragments'
+import { createBuildEffect } from './build-effect'
 
 /* === Internal Functions === */
 
@@ -57,74 +57,46 @@ export { generatePanels }
 
 /* === Exported Effect === */
 
-export const sourcesEffect = (onRebuild?: () => void) => {
-	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => {
-		resolve = res
-	})
-	const cleanup = createEffect(() => {
-		match(
-			[
-				componentMarkup.sources,
-				componentStyles.sources,
-				componentScripts.sources,
-			],
-			{
-				ok: async ([htmlFiles, cssFiles, tsFiles]) => {
-					const firstRun = !!resolve
-					try {
-						console.log('🔄 Rebuilding source fragments...')
+export const sourcesEffect = (onRebuild?: () => void) =>
+	createBuildEffect(
+		'Source fragments',
+		[
+			componentMarkup.sources,
+			componentStyles.sources,
+			componentScripts.sources,
+		],
+		async ([htmlFiles, cssFiles, tsFiles]) => {
+			console.log('🔄 Rebuilding source fragments...')
 
-						const cssMap = toPathMap(cssFiles)
-						const tsMap = toPathMap(tsFiles)
+			const cssMap = toPathMap(cssFiles)
+			const tsMap = toPathMap(tsFiles)
 
-						for (const html of htmlFiles) {
-							// Only process main component HTML files (examples/<type>/<name>/<type>-<name>.html)
-							// Skip test files and other auxiliary HTML files
-							const pathParts = html.path.split('/')
+			for (const html of htmlFiles) {
+				// Only process main component HTML files (examples/<type>/<name>/<type>-<name>.html)
+				// Skip test files and other auxiliary HTML files
+				const pathParts = html.path.split('/')
 
-							if (pathParts.length < 4) continue
+				if (pathParts.length < 4) continue
 
-							const typeName = pathParts[pathParts.length - 3]!
-							const dirName = pathParts[pathParts.length - 2]!
-							const fileName = pathParts[pathParts.length - 1]!.replace(
-								/\.html$/,
-								'',
-							)
+				const typeName = pathParts[pathParts.length - 3]!
+				const dirName = pathParts[pathParts.length - 2]!
+				const fileName = pathParts[pathParts.length - 1]!.replace(/\.html$/, '')
 
-							// Skip if filename doesn't match <type>-<name> pattern
-							if (fileName !== `${typeName}-${dirName}`) continue
+				// Skip if filename doesn't match <type>-<name> pattern
+				if (fileName !== `${typeName}-${dirName}`) continue
 
-							const componentName = fileName
+				const componentName = fileName
 
-							const name = html.path.replace(/\.html$/, '')
-							const css = cssMap.get(name + '.css')
-							const ts = tsMap.get(name + '.ts')
+				const name = html.path.replace(/\.html$/, '')
+				const css = cssMap.get(name + '.css')
+				const ts = tsMap.get(name + '.ts')
 
-							const panels = await generatePanels(html, css, ts)
-							const outputPath = getFilePath(
-								SOURCES_DIR,
-								`${componentName}.html`,
-							)
-							await writeFileSafe(outputPath, tabGroup(componentName, panels))
-						}
+				const panels = await generatePanels(html, css, ts)
+				const outputPath = getFilePath(SOURCES_DIR, `${componentName}.html`)
+				await writeFileSafe(outputPath, tabGroup(componentName, panels))
+			}
 
-						console.log('Source fragments successfully rebuilt')
-						if (!firstRun) onRebuild?.()
-					} catch (error) {
-						console.error('Source fragments failed to rebuild:', String(error))
-					} finally {
-						resolve?.()
-						resolve = undefined
-					}
-				},
-				err: errors => {
-					console.error('Error in sources effect:', errors[0]!.message)
-					resolve?.()
-					resolve = undefined
-				},
-			},
-		)
-	})
-	return { cleanup, ready }
-}
+			console.log('Source fragments successfully rebuilt')
+		},
+		onRebuild,
+	)

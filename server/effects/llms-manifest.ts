@@ -1,7 +1,7 @@
-import { createEffect, match } from '@zeix/cause-effect'
 import { LLMS_TXT_FILE, PAGE_ORDER } from '../config'
 import { docsMarkdown, type PageInfo } from '../file-signals'
 import { writeFileSafe } from '../io'
+import { createBuildEffect } from './build-effect'
 
 /* === Generation Helpers === */
 
@@ -81,34 +81,13 @@ export const generateLlmsTxt = (pageInfos: PageInfo[]): string => {
 
 /* === Effect === */
 
-export const llmsManifestEffect = (onRebuild?: () => void) => {
-	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => {
-		resolve = res
-	})
-
-	const cleanup = createEffect(() => {
-		match([docsMarkdown.pageInfos], {
-			ok: async ([pageInfos]): Promise<void> => {
-				const firstRun = !!resolve
-				try {
-					await writeFileSafe(LLMS_TXT_FILE, generateLlmsTxt(pageInfos))
-					console.log('📋 Generated llms.txt')
-					if (!firstRun) onRebuild?.()
-				} catch (error) {
-					console.error('Failed to generate llms.txt:', error)
-				} finally {
-					resolve?.()
-					resolve = undefined
-				}
-			},
-			err: errors => {
-				console.error('Error in llmsManifestEffect:', errors[0]!.message)
-				resolve?.()
-				resolve = undefined
-			},
-		})
-	})
-
-	return { cleanup, ready }
-}
+export const llmsManifestEffect = (onRebuild?: () => void) =>
+	createBuildEffect(
+		'llms.txt',
+		[docsMarkdown.pageInfos],
+		async ([pageInfos]) => {
+			await writeFileSafe(LLMS_TXT_FILE, generateLlmsTxt(pageInfos))
+			console.log('📋 Generated llms.txt')
+		},
+		onRebuild,
+	)

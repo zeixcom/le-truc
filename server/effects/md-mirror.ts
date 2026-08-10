@@ -1,7 +1,7 @@
-import { createEffect, match } from '@zeix/cause-effect'
 import { OUTPUT_DIR, PAGES_DIR } from '../config'
 import { docsMarkdown, type PageMetadata } from '../file-signals'
 import { getFilePath, getRelativePath, writeFileSafe } from '../io'
+import { createBuildEffect } from './build-effect'
 
 /* === Transformation Helpers === */
 
@@ -105,51 +105,30 @@ export const serializeFrontmatter = (metadata: PageMetadata): string => {
 
 /* === Effect === */
 
-export const mdMirrorEffect = (onRebuild?: () => void) => {
-	let resolve: (() => void) | undefined
-	const ready = new Promise<void>(res => {
-		resolve = res
-	})
+export const mdMirrorEffect = (onRebuild?: () => void) =>
+	createBuildEffect(
+		'Markdown mirrors',
+		[docsMarkdown.processed],
+		async ([processedFiles]) => {
+			console.log('🪞 Generating Markdown mirrors...')
 
-	const cleanup = createEffect(() => {
-		match([docsMarkdown.processed], {
-			ok: async ([processedFiles]): Promise<void> => {
-				const firstRun = !!resolve
-				try {
-					console.log('🪞 Generating Markdown mirrors...')
+			const writePromises = Array.from(processedFiles.entries()).map(
+				async ([path, file]) => {
+					const relativePath = getRelativePath(PAGES_DIR, path)
+					if (!relativePath) return
 
-					const writePromises = Array.from(processedFiles.entries()).map(
-						async ([path, file]) => {
-							const relativePath = getRelativePath(PAGES_DIR, path)
-							if (!relativePath) return
+					const frontmatter = serializeFrontmatter(file.metadata)
+					const cleanContent = stripMarkdocTags(file.content)
+					const output = `${frontmatter}${cleanContent}\n`
 
-							const frontmatter = serializeFrontmatter(file.metadata)
-							const cleanContent = stripMarkdocTags(file.content)
-							const output = `${frontmatter}${cleanContent}\n`
+					await writeFileSafe(getFilePath(OUTPUT_DIR, relativePath), output)
+				},
+			)
 
-							await writeFileSafe(getFilePath(OUTPUT_DIR, relativePath), output)
-						},
-					)
-
-					await Promise.all(writePromises)
-					console.log(
-						`🪞 Generated ${processedFiles.size} Markdown mirror${processedFiles.size === 1 ? '' : 's'}`,
-					)
-					if (!firstRun) onRebuild?.()
-				} catch (error) {
-					console.error('Failed to generate Markdown mirrors:', error)
-				} finally {
-					resolve?.()
-					resolve = undefined
-				}
-			},
-			err: errors => {
-				console.error('Error in mdMirrorEffect:', errors[0]!.message)
-				resolve?.()
-				resolve = undefined
-			},
-		})
-	})
-
-	return { cleanup, ready }
-}
+			await Promise.all(writePromises)
+			console.log(
+				`🪞 Generated ${processedFiles.size} Markdown mirror${processedFiles.size === 1 ? '' : 's'}`,
+			)
+		},
+		onRebuild,
+	)

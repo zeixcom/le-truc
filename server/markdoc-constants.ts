@@ -6,7 +6,7 @@
  * markdoc-helpers.ts and schema files.
  */
 
-import type { ValidationError } from '@markdoc/markdoc'
+import type { NodeType, ValidationError } from '@markdoc/markdoc'
 
 /* === Attribute Classes === */
 
@@ -143,7 +143,7 @@ export const standardChildren = [
 	'callout',
 	'tag',
 	'inline',
-]
+] as NodeType[]
 
 export const richChildren = [
 	...standardChildren,
@@ -153,4 +153,4 @@ export const richChildren = [
 	'em',
 	'code',
 	'link',
-]
+] as NodeType[]
