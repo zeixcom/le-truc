@@ -106,12 +106,20 @@ Le Truc re-exports the reactive primitives from [`@zeix/cause-effect`](https://g
 | [`Sensor`](./api.html#functions/createSensor) | External input (lazy) | Values that arrive from outside the graph — `matchMedia`, `IntersectionObserver`, geolocation. Seeds an initial value via `{ value }` |
 | [`Memo`](./api.html#functions/createMemo) | Sync derivation | A value computed from other signals — e.g. the sum of a spinbutton collection. For cheap one-off derivations, a plain thunk passed to `watch()` is often enough |
 | [`Task`](./api.html#functions/createTask) | Async derivation | `fetch`, dynamic imports, or any async work. Auto-cancels in-flight work when its dependencies change and exposes pending / error / ok states via `match()` |
-| [`Store`](./api.html#functions/createStore) | Reactive object | An object whose individual properties are each reactive |
-| [`List`](./api.html#functions/createList) | Reactive array | A keyed collection with stable item identity across add, remove, sort, and reorder |
-| [`Collection`](./api.html#functions/createCollection) | Reactive collection | Externally-driven streams (WebSocket, SSE) or derived pipelines |
+| [`MutableStore`](./api.html#functions/createStore) | Reactive object | An object whose individual properties are each reactive |
+| [`MutableList`](./api.html#functions/createList) | Reactive array | A keyed list with stable item identity across add, remove, sort, and reorder |
+| [`DerivedList`](./api.html#functions/deriveList) | Derived keyed list | Derived sequences — map another list per item with `deriveList(list, fn)`, or feed one from a fetch or an external stream |
 | [`Effect`](./api.html#functions/createEffect) | Side-effect sink | Terminal consumer for work outside the graph. Inside a component, prefer the factory's `watch()` / `on()` over a bare `createEffect()` |
 
 `Slot` is an integration primitive used internally by `pass()` to swap a child's backing signal. You rarely create one directly.
+
+### Migrating Deprecated Signal Names
+
+Le Truc re-exports each Cause & Effect replacement name next to its deprecated counterpart, so you can migrate incrementally. See [Cause & Effect's MIGRATION-2.0.md](https://github.com/zeixcom/cause-effect/blob/main/MIGRATION-2.0.md) for the full rename list and a codemod: 
+
+```sh
+bun tools/codemod-v2.ts 'src/**/*.ts' --module @zeix/le-truc
+```
 
 ### Characteristics and Special Values
 
@@ -540,7 +548,7 @@ Both `formAssociated()` and `formAssociatedCheckbox()` declare the same `staticP
 
 #### Relaying Native Control Validity
 
-A component that wraps a native control (`<input>`, `<select>`, `<textarea>`) — a spinbutton around `<input type="number">`, a masked field around `<input type="text">` — can relay the control's own `ValidityState` onto `host.validity` with `relayValidity(internals, control, anchor?)`, surfacing every constraint the browser already checks (`rangeOverflow`, `stepMismatch`, `badInput`, `valueMissing`, …) instead of collapsing them into a single `customError`. It fully replaces `host.validity`, including the control's own `customError` — the control's live state is the whole truth about itself. Not reactive — call it from an event handler on the wrapped control:
+A component that wraps a native control (`<input>`, `<select>`, `<textarea>`) — a spinbutton around `<input type="number">`, a masked field around `<input type="text">` — can relay the control's own `ValidityState` onto `host.validity` with `relayValidity(internals, control, anchor?)`. This surfaces every constraint the browser already checks (`rangeOverflow`, `stepMismatch`, `badInput`, `valueMissing`, …), instead of collapsing them into a single `customError`. It fully replaces `host.validity`, including the control's own `customError` — the control's live state is the whole truth about itself. It is not reactive. Call it from an event handler on the wrapped control:
 
 ```js#form-enhanced-input.js
 import { defineComponent, formAssociated, relayValidity } from '@zeix/le-truc'

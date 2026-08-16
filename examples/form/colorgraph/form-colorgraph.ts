@@ -322,7 +322,6 @@ export default defineComponent<FormColorgraphProps>(
 		on(sliderEl, 'pointerdown', ({ pointerId }) => {
 			const left = track.getBoundingClientRect().left
 			const width = trackWidth.get()
-			thumb.ariaPressed = 'true'
 			sliderEl.setPointerCapture(pointerId)
 			const handleMove = (e: PointerEvent) => {
 				const last = (e.getCoalescedEvents?.() || []).pop() || e
@@ -333,7 +332,6 @@ export default defineComponent<FormColorgraphProps>(
 				sliderEl.removeEventListener('pointerup', handleUp)
 				sliderEl.removeEventListener('pointercancel', handleUp)
 				moveThumb.cancel()
-				thumb.ariaPressed = 'false'
 			}
 			sliderEl.addEventListener('pointermove', handleMove, { passive: true })
 			sliderEl.addEventListener('pointerup', handleUp)

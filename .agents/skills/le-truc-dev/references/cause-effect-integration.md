@@ -10,10 +10,10 @@ Le Truc re-exports the entire cause-effect public API from its own entry point. 
 // All of these come from @zeix/cause-effect, re-exported by @zeix/le-truc:
 import {
   createState, createMemo, createSensor, createTask,
-  createEffect, createScope, createSlot, createStore,
-  createList, createCollection, deriveCollection,
+  createEffect, createScope, createSlot, createStore, createList,
+  deriveSignal, deriveList, deriveStore, isPending, abort,
   batch, untrack, unown, match,
-  isState, isMemo, isSignal, isFunction, isRecord,
+  isSignal, isFunction, isRecord,
 } from '@zeix/le-truc'
 ```
 

@@ -89,7 +89,7 @@ GitHub Pages cannot set response headers dynamically, so `Accept: text/markdown`
 ### Build Orchestration
 
 `build()` in `build.ts` runs the 15 effects in **two phases** — each factory returns `{ cleanup, ready }`:
-1. Phase 1 — generators: `apiEffect`, `cssEffect`, `jsEffect`, `staticAssetsEffect`; their `ready` promises are awaited before phase 2 starts, because consumers must not take their first-run snapshot until the generated inputs (TypeDoc output, bundled assets) exist on disk (matters on a fresh checkout, where generated files are gitignored)
+1. Phase 1 — generators: `apiEffect`, `cssEffect`, `jsEffect`, `staticAssetsEffect`. Their `ready` promises are awaited before phase 2 starts. Consumers must not take their first-run snapshot until the generated inputs (TypeDoc output, bundled assets) exist on disk — this matters on a fresh checkout, where generated files are gitignored
 2. Phase 2 — consumers: the remaining 11 effects are instantiated, then all their `ready` promises awaited
 3. After all ready: broadcasts HMR `build-success` + `reload` (watch mode only)
 4. Returns a cleanup function that calls all `cleanup()` functions for graceful shutdown

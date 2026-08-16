@@ -105,7 +105,7 @@ watch('disabled', bindState(internals, 'disabled'))
 watch('overflowEnd', bindState(internals, 'overflow-end'))
 ```
 
-Prefer `bindState` over `bindClass(host, token)` for host-level state: a custom state can't be clobbered by consumer code rewriting the host's `class` attribute, and it's available on every component (`internals` is attached unconditionally), not only form-associated ones. `internals` comes from `FactoryContext` — destructure it alongside `watch`/`host`/etc.
+Prefer `bindState` over `bindClass(host, token)` for host-level state. Consumer code rewriting the host's `class` attribute cannot overwrite a custom state. It is also available on every component (`internals` is attached unconditionally), not only form-associated ones. `internals` comes from `FactoryContext` — destructure it alongside `watch`/`host`/etc.
 
 ### `bindAttribute(element, name, allowUnsafe?)`
 
@@ -242,7 +242,7 @@ watch(() => true, () => {
 })
 ```
 
-`() => true` has no signal dependency, so `createComputed` evaluates it once and never reruns — the descriptor's setup runs exactly once, on connect. `watch()` calls `createEffect()` internally, which self-registers the descriptor's returned cleanup on the active owner, so it runs on disconnect. Without this wrapping (or `return`), a bare descriptor's cleanup never registers anywhere — `disconnectedCallback()` has no way to find it, so it silently never runs.
+`() => true` has no signal dependency, so `deriveSignal` evaluates it once and never reruns — the descriptor's setup runs exactly once, on connect. `watch()` calls `createEffect()` internally, which self-registers the descriptor's returned cleanup on the active owner, so it runs on disconnect. Without this wrapping (or `return`), a bare descriptor's cleanup never registers anywhere — `disconnectedCallback()` has no way to find it, so it silently never runs.
 
 ---
 

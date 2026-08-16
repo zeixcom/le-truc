@@ -67,7 +67,10 @@ export default defineComponent<ModuleSplitviewProps>(
 			if (key === 'End') return { split: MAX_SPLIT }
 		})
 		watch('split', split => {
-			host.style.setProperty('--module-splitview-ratio', `${(split * 100).toFixed(2)}%`)
+			host.style.setProperty(
+				'--module-splitview-ratio',
+				`${(split * 100).toFixed(2)}%`,
+			)
 			divider.setAttribute('aria-valuenow', String(Math.round(split * 100)))
 		})
 	},

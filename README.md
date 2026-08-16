@@ -2,7 +2,7 @@
 
 **Type-safe reactive Web Components — HTML-first, backend-agnostic**
 
-Le Truc adds a thin reactive layer to HTML that your server renders. Your backend can be Java, PHP, Python, C#, a static site generator, or any tool that outputs HTML. Le Truc connects reactive component properties to specific DOM nodes in the browser and updates only these nodes. It does not re-render whole sections of the page. It does not need JavaScript on the server.
+Le Truc adds a thin reactive layer to HTML that your server renders. Your backend can be Java, PHP, Python, C#, a static site generator, or any tool that outputs HTML. Le Truc connects reactive component properties to specific DOM nodes in the browser. It updates only these nodes. It does not re-render whole sections of the page. It does not need JavaScript on the server.
 
 The result is reactivity in the style of SolidJS, packaged as standard Custom Elements: reusable across projects, type-safe, no framework lock-in.
 
@@ -13,7 +13,7 @@ You often face this choice:
 - Imperative JavaScript, which becomes hard to maintain as the code grows
 - An SPA framework, which takes control of rendering and needs a JavaScript backend for SSR
 
-Neither choice is good when the backend is a CMS and the initial HTML is already correct.
+Neither choice is good when the backend is a CMS. Neither choice is good when the initial HTML is already correct.
 
 Le Truc solves one problem: how to add stateful interactivity to a page that the server has already rendered. See [Key features](#key-features) below.
 
@@ -59,7 +59,7 @@ defineComponent(
 
 3. Import the module. The component now works.
 
-`defineComponent` registers the element with `customElements.define()`. `expose()` declares the reactive properties. `watch()` connects a DOM update to a signal; the update runs only when the signal changes. `on()` binds an event listener.
+`defineComponent` registers the element with `customElements.define()`. `expose()` declares the reactive properties. `watch()` connects a DOM update to a signal. The update runs only when the signal changes. `on()` binds an event listener.
 
 ## Key features
 
@@ -67,7 +67,7 @@ defineComponent(
 - 🔌 **Plain Custom Elements** — components work in any host environment
 - 🚦 **Reactive properties** — signals track their dependencies automatically
 - ⚡️ **Pinpoint effects** — changes only the exact DOM nodes that changed
-- 🛡️ **Type-safe** — TypeScript infers types from selector strings through to property types and finds integration errors when you compile the code
+- 🛡️ **Type-safe** — TypeScript infers types from selector strings through to property types; it finds integration errors when you compile the code
 - 🧩 **Composable** — build component behavior from small, reusable parser and effect functions
 - 🌐 **Context support** — components share state without you passing props through each level
 - 🪶 **Small size** — core under 9 kB gzipped, tree-shakeable extensions

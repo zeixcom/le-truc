@@ -28,7 +28,7 @@ Core files in `src/`:
 | `helpers/dom.ts` | `first`, `all`, `makeElementQueries`, `createElementsMemo`, selector type inference |
 | `helpers/context.ts` | `makeProvideContexts`, `makeRequestContext`, `ContextRequestEvent` |
 | `scheduler.ts` | `schedule`, `throttle` — rAF-based task deduplication |
-| `errors.ts` | `MissingElementError`, `DependencyTimeoutError`, `InvalidCustomElementError`, `InvalidPassPropertyError`, `InvalidPropertyNameError`, `InvalidReactivesError`, `InvalidSelectorError`, `InvalidTemplateError`, `InvalidComponentNameError`, `NoActiveCollectorError` |
+| `errors.ts` | `MissingElementError`, `DependencyTimeoutError`, `InvalidCustomElementError`, `InvalidPassPropertyError`, `InvalidPropertyNameError`, `InvalidReactivesError`, `InvalidSelectorError`, `InvalidTemplateError`, `InvalidComponentNameError`, `NoActiveCollectorError`, `ExtensionCollisionError` |
 | `internal.ts` | `getSignals` — internal signal map shared by `component.ts` and `helpers/reactive.ts`; `withCollector`, `pushDescriptor`, `installActiveCollector`/`restoreActiveCollector` (ADR 0018 ambient effect-descriptor collector) |
 | `util.ts` | `elementName`, `isCustomElement`, `isNotYetDefinedComponent` — DEV diagnostics are gated per-site by `process.env.DEV_MODE === 'true'`, folded out by the build define |
 | `extension.ts` | `ComponentExtension` type, `mergeExtensions` — folds an extensions array into `staticProps`/`observedAttributes`/`reservedMembers` plus lifecycle hooks, called once by `component.ts` at class-definition time |

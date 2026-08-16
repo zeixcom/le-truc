@@ -478,7 +478,9 @@ The provider component wraps your entire application or a section that needs sha
 
 ## Consume Context
 
-**Consumer components** use `requestContext()` to access shared state from ancestor providers. The returned `Signal<T>` is reactive. When the provider's signal updates, all consumers update automatically. It serves the `fallback` until a provider answers. Even a provider that connects late (bundle ordering, code-splitting) is picked up. The consumer switches from `fallback` to the provided value automatically, without any extra code.
+**Consumer components** use `requestContext()` to access shared state from ancestor providers. The returned `Signal<T>` is reactive. When the provider's signal updates, all consumers update automatically.
+
+It serves the `fallback` until a provider answers. Even a provider that connects late (bundle ordering, code-splitting) is picked up. The consumer switches from `fallback` to the provided value automatically, without any extra code.
 
 ### Consumer Component
 
@@ -604,6 +606,35 @@ The HTML provides all three regions up front. The `watch` handler toggles their 
 {% callout .caution title="The Task owns the async work" %}
 Do not `fetch` inside a plain `watch` callback. A `Task` receives an `AbortSignal`. It auto-cancels when its dependencies change, so switching `src` aborts the in-flight request. Its pending and error states become first-class reactive values that compose through `match()`.
 {% /callout %}
+
+### Fetch Data into a List
+
+A `Task` fetches one value. When the data is a keyed list, derive a `DerivedList` from the fetch and hand it to `reconcile()`. `deriveList` accepts the async function directly. It manages cancellation and refresh internally:
+
+```js#module-users.js
+defineComponent('module-users', ({ expose, first, host, watch }) => {
+  const container = first('[data-container]', 'Add a container element for users.')
+  const template = first('template', 'Add a template element for users.')
+
+  expose({ src: asString() })
+
+  const users = deriveList(
+    async (_prev, abort) => {
+      const response = await fetch(host.src, { signal: abort })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      return response.json()
+    },
+    { initial: [], keyConfig: user => user.id },
+  )
+
+  reconcile(container, template, users, (element, item) => { /* fill content */ })
+  watch(() => isPending(users), pending => { container.ariaBusy = String(pending) })
+})
+```
+
+`{ initial: [] }` seeds the list before the first response. `{ keyConfig }` gives each fetched item a stable key. When `src` changes, the in-flight request aborts and `reconcile()` re-syncs the container to the new keys. `isPending()` works on any signal with an async origin, the derived list included.
+
+To adapt a signal you already hold — a `Task` created elsewhere — pass a thunk that reads it: `deriveList(() => task.get(), { keyConfig: item => item.id })`.
 
 {% /section %}
 

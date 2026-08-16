@@ -42,7 +42,8 @@ module-colorinfo {
 			width: 0;
 			height: 0;
 			border-left: var(--module-colorinfo-swatch-size) solid transparent;
-			border-bottom: var(--module-colorinfo-swatch-size) solid var(--module-colorinfo-color-fallback);
+			border-bottom: var(--module-colorinfo-swatch-size) solid
+				var(--module-colorinfo-color-fallback);
 		}
 	}
 

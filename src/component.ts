@@ -1,16 +1,16 @@
 import {
-	createComputed,
 	createScope,
 	createSlot,
 	createState,
+	deriveSignal,
 	isFunction,
 	isMutableSignal,
 	isSignal,
 	isSlot,
 	type MaybeCleanup,
 	type MemoCallback,
+	type MutableSignal,
 	type Signal,
-	type State,
 	type TaskCallback,
 } from '@zeix/cause-effect'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
@@ -61,7 +61,7 @@ import { elementName } from './util'
  * Any value that `#setAccessor` can turn into a signal:
  * - `T` — wrapped in `createState()`
  * - `Signal<T>` — used directly
- * - `MemoCallback<T>` — wrapped in `createComputed()`
+ * - `MemoCallback<T>` — wrapped in `deriveSignal()`
  * - `TaskCallback<T>` — wrapped in `createTask()`
  */
 type MaybeSignal<T extends {}> =
@@ -436,8 +436,8 @@ function defineComponent<P extends ComponentProps>(
 			const signal = isSignal(value)
 				? value
 				: isFunction<P[K]>(value)
-					? createComputed(value)
-					: (createState(value) as State<P[K]>)
+					? deriveSignal(value)
+					: (createState(value) as MutableSignal<P[K]>)
 			const signals = getSignals(this)
 			const k = key as string
 			const prev = signals[k]

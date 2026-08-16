@@ -29,9 +29,10 @@ setTimeout(() => {
 	defineComponent<TestContextLateProviderProps>(
 		'test-context-late-provider',
 		({ expose, provideContexts }) => {
-		expose({ count: 42 })
-		provideContexts(['count'])
-	})
+			expose({ count: 42 })
+			provideContexts(['count'])
+		},
+	)
 }, 50)
 
 export { type Context, TEST_COUNT_CONTEXT }

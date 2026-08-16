@@ -1,6 +1,6 @@
 # Cause & Effect — Pitfalls & Sharp Edges
 
-Verified against `@zeix/cause-effect` 1.4.0 `src/`. Each entry: the trap, why it happens, and the one-line fix. When the README and `src/` disagree, `src/` wins (two entries below correct common misreadings).
+Verified against `@zeix/cause-effect` 1.5.0 `src/`. Each entry: the trap, why it happens, and the one-line fix. When the README and `src/` disagree, `src/` wins (two entries below correct common misreadings).
 
 ## 1. `T extends {}` — no `null` / `undefined` in signal values
 
@@ -48,13 +48,13 @@ createEffect(() => {
 
 ## 5. Synchronous Memo/Slot callbacks must not return a Promise (`PromiseValueError`)
 
-`createMemo` validates its callback is a sync function, and at recompute time the engine checks the return value: if it's a `Promise`, `recomputeMemo` throws `PromiseValueError` (it will not silently cache the Promise as the value). The same applies to `createComputed` when it commits to the sync path.
+`createMemo` validates its callback is a sync function, and at recompute time the engine checks the return value: if it's a `Promise`, `recomputeMemo` throws `PromiseValueError` (it will not silently cache the Promise as the value). The same applies to `deriveSignal` (deprecated alias `createComputed`) when it commits to the sync path.
 
 ```ts
 createMemo(() => fetch(url).then(r => r.json()))  // ✗ PromiseValueError on first read
 ```
 
-**Fix:** make the callback `async` and use `createTask` (or `createComputed`, which auto-detects `async`). The sync/async split is decided **statically** by inspecting the function prototype, before it ever runs — so forgetting `async` on a function that returns a Promise commits to the sync path and fails later, not upfront.
+**Fix:** make the callback `async` and use `createTask` (or `deriveSignal`, which auto-detects `async`). The sync/async split is decided **statically** by inspecting the function prototype, before it ever runs — so forgetting `async` on a function that returns a Promise commits to the sync path and fails later, not upfront.
 
 ## 6. Async effect handlers can't be cancelled — keep them free of state writes
 
@@ -64,7 +64,7 @@ An `ok`/`err` handler in `match()` may return a `Promise` (for fire-and-forget s
 
 ## 7. Unseeded Task first read throws → routes to `nil`, not `stale`
 
-`stale` in `match()` fires only when a signal has a **retained** value AND `isTask(signal) && signal.isPending()`. An unseeded Task has no retained value, so its first read throws `UnsetSignalValueError`, which routes to `nil`. Routing precedence is `nil` > `err` > `stale` > `ok`.
+`stale` in `match()` fires only when a signal has a **retained** value AND `isPending(signal)`. An unseeded Task has no retained value, so its first read throws `UnsetSignalValueError`, which routes to `nil`. Routing precedence is `nil` > `err` > `stale` > `ok`.
 
 ```ts
 const data = createTask(async (_, s) => fetch('/x', { signal: s }).then(r => r.json()))

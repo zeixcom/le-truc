@@ -1,4 +1,9 @@
-import { createList, defineComponent, type List, reconcile } from '../../../index'
+import {
+	createList,
+	defineComponent,
+	type MutableList,
+	reconcile,
+} from '../../../index'
 
 declare global {
 	interface HTMLElementTagNameMap {
@@ -18,7 +23,9 @@ export default defineComponent('module-list', ({ first, host, on, pass }) => {
 	// Keyed reactive list of plain string items. The 'item' prefix feeds the
 	// auto-incrementing key generator (item0, item1, ...); keys are stable
 	// across reorders, which is what lets removal target the right item.
-	const list: List<string> = createList<string>([], { keyConfig: 'item' })
+	const list: MutableList<string> = createList<string>([], {
+		keyConfig: 'item',
+	})
 
 	// Sync the container's children to the list: clones the template for
 	// entering keys, removes leavers, moves survivors. bindItem fills the
