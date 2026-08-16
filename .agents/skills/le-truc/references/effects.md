@@ -105,7 +105,7 @@ watch('disabled', bindState(internals, 'disabled'))
 watch('overflowEnd', bindState(internals, 'overflow-end'))
 ```
 
-Prefer `bindState` over `bindClass(host, token)` for host-level state: a custom state can't be clobbered by consumer code rewriting the host's `class` attribute, and it's available on every component (`internals` is attached unconditionally), not only form-associated ones. `internals` comes from `FactoryContext` — destructure it alongside `watch`/`host`/etc.
+Prefer `bindState` over `bindClass(host, token)` for host-level state. Consumer code rewriting the host's `class` attribute cannot overwrite a custom state. It is also available on every component (`internals` is attached unconditionally), not only form-associated ones. `internals` comes from `FactoryContext` — destructure it alongside `watch`/`host`/etc.
 
 ### `bindAttribute(element, name, allowUnsafe?)`
 

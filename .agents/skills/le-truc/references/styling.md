@@ -126,7 +126,7 @@ my-component {
 
 ## State Classes
 
-For state-driven styling, prefer custom `:state()` pseudo-classes via `bindState(internals, token)` over modifier classes — a custom state is component-owned and cannot be clobbered by consumer code rewriting the host's `class` attribute, and it works on any component (`internals` is attached unconditionally in the constructor), not only form-associated ones:
+For state-driven styling, prefer custom `:state()` pseudo-classes via `bindState(internals, token)` over modifier classes. A custom state is component-owned. Consumer code rewriting the host's `class` attribute cannot overwrite it. It works on any component (`internals` is attached unconditionally in the constructor), not only form-associated ones:
 
 ```css
 my-component {

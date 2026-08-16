@@ -30,7 +30,7 @@ defineComponent<P extends ComponentProps>(name, factory, extensions?)
 | `provideContexts(contexts)` | Create and register a context-provider descriptor |
 | `requestContext(context, fallback)` | Return `Signal<T>` (backed by a `Slot`) for use inside `expose()` |
 
-For a raw hand-authored `EffectDescriptor` not produced by any of the above (e.g. wrapping `IntersectionObserver`), register it via `watch(() => true, descriptor)` — `() => true` has no signal dependency, so the effect runs its setup once, on connect, and `watch()`'s internal `createEffect()` call registers the descriptor's returned cleanup for disconnect.
+For a raw hand-authored `EffectDescriptor` not produced by any of the above (e.g. wrapping `IntersectionObserver`), register it via `watch(() => true, descriptor)` — see effects.md § Hand-authored descriptors for why the wrapping is required.
 
 ### Example
 

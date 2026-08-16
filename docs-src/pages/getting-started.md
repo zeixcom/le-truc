@@ -35,7 +35,7 @@ Then include it like any other script:
 <script src="/path/to/your/hosted/le-truc.js"></script>
 ```
 
-Self-hosting gives you control over updates. It avoids CDN dependencies, which helps with strict Content Security Policies.
+Self-hosting gives you control over updates. It avoids CDN dependencies. This helps with strict Content Security Policies.
 
 ### Install via Package Managers
 

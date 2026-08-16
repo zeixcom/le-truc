@@ -68,10 +68,10 @@ Where to find things in the server/ build system. Read this before locating any 
 
 | File | Renders as |
 |---|---|
-| `blogmeta.markdoc.ts` | `card-blogmeta` |
-| `blogpost.markdoc.ts` | `card-blogpost` |
 | `callout.markdoc.ts` | `card-callout` |
 | `carousel.markdoc.ts` | `module-carousel` (with `slide`) |
+| `cem-list.markdoc.ts` | Custom Elements Manifest tables (`card-collapsible`, `card-callout`, data tables) |
+| `collapsible.markdoc.ts` | `card-collapsible` |
 | `demo.markdoc.ts` | `module-demo` |
 | `fence.markdoc.ts` | `module-codeblock` |
 | `heading.markdoc.ts` | Accessible `<h1>`-`<h6>` with anchor links |
@@ -81,6 +81,7 @@ Where to find things in the server/ build system. Read this before locating any 
 | `section.markdoc.ts` | `<section>` wrapper |
 | `sources.markdoc.ts` | Source code viewer |
 | `slide.markdoc.ts` | Carousel slide |
+| `tabgroup.markdoc.ts` | `module-tabgroup` |
 | `table.markdoc.ts` | `<table>` |
 | `tabgroup.markdoc.ts` | `module-tabgroup` |
 

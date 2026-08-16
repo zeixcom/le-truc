@@ -113,43 +113,13 @@ Le Truc re-exports the reactive primitives from [`@zeix/cause-effect`](https://g
 
 `Slot` is an integration primitive used internally by `pass()` to swap a child's backing signal. You rarely create one directly.
 
-### Prepare for Cause & Effect 2.0
+### Migrating Deprecated Signal Names
 
-Cause & Effect 1.5 deprecates a set of names ahead of its 2.0 release. Le Truc re-exports each replacement next to the deprecated name, so migration is incremental. The deprecated names keep working for all of 1.x.
-
-Renames to apply now — the new name is final v2 vocabulary:
-
-| Deprecated | Use instead |
-|---|---|
-| `List` | `MutableList` |
-| `isList` | `isMutableList` |
-| `Store` | `MutableStore` |
-| `isStore` | `isMutableStore` |
-| `createComputed` | `deriveSignal` |
-| `createMutableSignal` | `createSignal` |
-| `createCollection` | `deriveList(seed, { watched })` |
-| `list.deriveCollection(fn)` | `deriveList(list, fn)` |
-| `CollectionSource` | `ListSource` |
-| `CollectionCallback` | `ListCallback` |
-| `CollectionChanges` | `ListChanges` |
-| `DeriveCollectionCallback` | `PerItemCallback` |
-
-Two of today's names are interim bridges. They rename once more at 2.0, when the readonly base takes the short name:
-
-| Today | At 2.0 | Deprecated alias today |
-|---|---|---|
-| `DerivedList` | `List` | `Collection` |
-| `isDerivedList` | `isList` | `isCollection` |
-
-The origin type names `State`, `Memo`, `Task`, and `Sensor` and their guards (`isState`, `isMemo`, `isTask`, `isSensor`, `isComputed`) are removed at 2.0 with no alias. The factories (`createState`, `createMemo`, `createTask`, `createSensor`) stay. Use `isSignalOfType()` where an origin check is required.
-
-The full guide, including a codemod, lives in [Cause & Effect's `MIGRATION-2.0.md`](https://github.com/zeixcom/cause-effect/blob/main/MIGRATION-2.0.md):
+Le Truc re-exports each Cause & Effect replacement name next to its deprecated counterpart, so you can migrate incrementally. See [Cause & Effect's MIGRATION-2.0.md](https://github.com/zeixcom/cause-effect/blob/main/MIGRATION-2.0.md) for the full rename list and a codemod: 
 
 ```sh
 bun tools/codemod-v2.ts 'src/**/*.ts' --module @zeix/le-truc
 ```
-
-The `--module` flag scopes the codemod to imports from `@zeix/le-truc`, so it works without a direct `@zeix/cause-effect` dependency. The `createComputed` → `deriveSignal` rename has no codemod rule — apply it by hand and rename `options.value` to `options.initial`.
 
 ### Characteristics and Special Values
 
@@ -578,7 +548,7 @@ Both `formAssociated()` and `formAssociatedCheckbox()` declare the same `staticP
 
 #### Relaying Native Control Validity
 
-A component that wraps a native control (`<input>`, `<select>`, `<textarea>`) — a spinbutton around `<input type="number">`, a masked field around `<input type="text">` — can relay the control's own `ValidityState` onto `host.validity` with `relayValidity(internals, control, anchor?)`, surfacing every constraint the browser already checks (`rangeOverflow`, `stepMismatch`, `badInput`, `valueMissing`, …) instead of collapsing them into a single `customError`. It fully replaces `host.validity`, including the control's own `customError` — the control's live state is the whole truth about itself. Not reactive — call it from an event handler on the wrapped control:
+A component that wraps a native control (`<input>`, `<select>`, `<textarea>`) — a spinbutton around `<input type="number">`, a masked field around `<input type="text">` — can relay the control's own `ValidityState` onto `host.validity` with `relayValidity(internals, control, anchor?)`. This surfaces every constraint the browser already checks (`rangeOverflow`, `stepMismatch`, `badInput`, `valueMissing`, …), instead of collapsing them into a single `customError`. It fully replaces `host.validity`, including the control's own `customError` — the control's live state is the whole truth about itself. It is not reactive. Call it from an event handler on the wrapped control:
 
 ```js#form-enhanced-input.js
 import { defineComponent, formAssociated, relayValidity } from '@zeix/le-truc'
