@@ -8,7 +8,7 @@ import {
 	defineComponent,
 	each,
 	query,
-    queryAll,
+	queryAll,
 } from '../../../index'
 
 /* === Fantasy symbol generator === */

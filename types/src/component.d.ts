@@ -10,7 +10,7 @@ import { type ComponentProps, type MethodProducer, type Parser } from './types';
  * Any value that `#setAccessor` can turn into a signal:
  * - `T` — wrapped in `createState()`
  * - `Signal<T>` — used directly
- * - `MemoCallback<T>` — wrapped in `createComputed()`
+ * - `MemoCallback<T>` — wrapped in `deriveSignal()`
  * - `TaskCallback<T>` — wrapped in `createTask()`
  */
 type MaybeSignal<T extends {}> = T | Signal<T> | MemoCallback<T> | TaskCallback<T>;

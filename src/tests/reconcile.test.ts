@@ -12,11 +12,16 @@
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import {
+	type Collection,
 	createCollection,
 	createList,
 	createScope,
 	createState,
+	createStore,
+	deriveList,
+	type List,
 	type Signal,
+	type Store,
 } from '@zeix/cause-effect'
 import { InvalidTemplateError } from '../errors'
 import { makeWatch, reconcile } from '../helpers/reactive'
@@ -762,5 +767,88 @@ describe('reconcile — scoped first (ADR 0021)', () => {
 		// bindItem's body ran synchronously to completion — no deferral occurred.
 		expect(calls).toEqual(['bound'])
 		dispose()
+	})
+})
+
+describe('reconcile — bridge-name source types (CE 1.5)', () => {
+	// Type-level compatibility, compiled by tsc during `bun run build`
+	// (tsconfig.build.json includes src/**/*.ts): a regression in the public
+	// overloads (MutableList | DerivedList) fails the build here rather than
+	// in a consumer project. The runtime assertions keep the values alive.
+
+	type Row = { id: string; label: string }
+
+	test('accepts a MutableList with a custom per-item signal type', () => {
+		const rows = createList<Row, Store<Row>>([], {
+			keyConfig: row => row.id,
+			createItem: createStore,
+		})
+		const container = new FakeElement('ul')
+		const dispose = createScope(() =>
+			reconcile(
+				container as unknown as Element,
+				makeTemplate(),
+				rows,
+				(_element, item) => {
+					// item: Store<Row> — per-item granularity preserved
+					void item.label.get()
+				},
+			)(),
+		)
+		expect(childKeys(container)).toEqual([])
+		dispose()
+	})
+
+	test('accepts a DerivedList from deriveList()', () => {
+		const rows = createList<Row>([], { keyConfig: row => row.id })
+		const labels = deriveList(rows, row => row.label)
+		const container = new FakeElement('ul')
+		const dispose = createScope(() =>
+			reconcile(
+				container as unknown as Element,
+				makeTemplate(),
+				labels,
+				(_element, item) => {
+					void item.get()
+				},
+			)(),
+		)
+		expect(childKeys(container)).toEqual([])
+		dispose()
+	})
+
+	test('deprecated List and Collection annotations remain valid sources', () => {
+		const asList: List<string> = createList<string>([], { keyConfig: 'item' })
+		const asCollection: Collection<string> = createCollection<string>(
+			emit => {
+				emit({ add: [] })
+				return () => {}
+			},
+			{ value: [], keyConfig: 'item' },
+		)
+		// Each deprecated alias satisfies its own overload; a union of the two
+		// never matched a single overload, before or after the rename.
+		const listContainer = new FakeElement('ul')
+		const disposeList = createScope(() =>
+			reconcile(
+				listContainer as unknown as Element,
+				makeTemplate(),
+				asList,
+				() => {},
+			)(),
+		)
+		expect(childKeys(listContainer)).toEqual([])
+		disposeList()
+		const collectionContainer = new FakeElement('ul')
+		const disposeCollection = createScope(() =>
+			reconcile(
+				collectionContainer as unknown as Element,
+				makeTemplate(),
+				asCollection,
+				() => {},
+			)(),
+		)
+		expect(childKeys(collectionContainer)).toEqual([])
+		disposeCollection()
 	})
 })

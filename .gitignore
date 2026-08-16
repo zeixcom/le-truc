@@ -171,3 +171,4 @@ docs-src/pages/api.md
 # Local dev tooling
 .mcp.json
 dataset/
+.mimosa/

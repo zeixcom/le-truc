@@ -37,7 +37,7 @@ function hasState(element: Locator, state: string): Promise<boolean> {
  * - ✅ Initial state rendering
  * - ✅ Add functionality via form submission
  * - ✅ Checkbox state management and reactivity
- * - ✅ Collection updates when items are checked/unchecked
+ * - ✅ List updates when items are checked/unchecked
  * - ✅ Filter functionality (all, active, completed)
  * - ✅ Clear completed functionality
  * - ✅ Count updates based on active items
@@ -47,12 +47,12 @@ function hasState(element: Locator, state: string): Promise<boolean> {
  * - Manages its own list state and DOM reconciliation internally
  * - Integrates with form-textbox for input handling
  * - Uses form-checkbox components for item state
- * - Implements collections to track active/completed items
+ * - Implements a keyed list to track active/completed items
  * - Uses form-radiogroup for filtering
  * - Uses basic-pluralize for count display
  *
- * Collections Reactivity:
- * - Collections properly update when checkbox state changes
+ * List reactivity:
+ * - The list properly updates when checkbox state changes
  * - Count display and clear completed functionality work correctly
  */
 
@@ -192,7 +192,7 @@ test.describe('module-todo component', () => {
 		})
 	})
 
-	test.describe('Collections and Count Updates', () => {
+	test.describe('List and Count Updates', () => {
 		test('count updates when todos are added', async ({ page }) => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form-textbox input')
@@ -495,9 +495,7 @@ test.describe('module-todo component', () => {
 		// Each test targets one specific link in the reactivity chain so that
 		// failures point at the exact broken behaviour.
 
-		test('Checking the only item decreases active count', async ({
-			page,
-		}) => {
+		test('Checking the only item decreases active count', async ({ page }) => {
 			// Verifies the full chain for a single item:
 			// label click → checkbox.change → slot setter → list.completed.set
 			// → completedCount memo → activeCount → pass(count) → basic-pluralize

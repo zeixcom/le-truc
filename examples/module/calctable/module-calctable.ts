@@ -4,10 +4,11 @@ import {
 	createMemo,
 	createStore,
 	defineComponent,
+	deriveList,
+	type MutableStore,
 	query,
 	queryAll,
 	reconcile,
-	type Store,
 } from '../../../index'
 import { getLocale } from '../../_common/getLocale'
 import { getNumberFormatter } from '../../_common/getNumberFormatter'
@@ -67,7 +68,8 @@ export default defineComponent(
 		).map(row => {
 			const description = query(row, 'input.description')?.value ?? ''
 			const amount = query(row, 'input.amount')?.valueAsNumber ?? 0
-			const pricePerUnit = query(row, 'input.price-per-unit')?.valueAsNumber ?? 0
+			const pricePerUnit =
+				query(row, 'input.price-per-unit')?.valueAsNumber ?? 0
 			return {
 				id: row.dataset.key ?? '',
 				description,
@@ -84,13 +86,11 @@ export default defineComponent(
 			}
 		})
 
-		const list = createList<CalcItem, Store<CalcItem>>(initialItems, {
+		const list = createList<CalcItem, MutableStore<CalcItem>>(initialItems, {
 			keyConfig: item => item.id,
 			createItem: createStore,
 		})
-		const rowPrices = list.deriveCollection(
-			item => item.amount * item.pricePerUnit,
-		)
+		const rowPrices = deriveList(list, item => item.amount * item.pricePerUnit)
 		const amountTotal = createMemo(() =>
 			list.get().reduce((sum, item) => sum + item.amount, 0),
 		)
