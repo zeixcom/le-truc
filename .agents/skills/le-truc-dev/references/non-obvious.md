@@ -120,6 +120,16 @@ DEV-gated code is guarded inline by `process.env.DEV_MODE === 'true'` at each us
 
 Expose `state.get` (not the full `State`) to make a prop readable but not settable by consumers. Update the value in an `on()` handler. To watch the prop inside the factory, pass the signal directly: `watch(length, bindVisible(clearBtn))`.
 
+## `expose()` Accepts a `SlotDescriptor` (`{ get, set? }`) for a Mediated Read/Write Prop
+
+`#setAccessor` in `src/component.ts` recognizes a plain `{ get, set? }` object — detected by `isSlotDescriptor()` in `src/util.ts` (a `get` function, no `Signal` brand `Symbol.toStringTag`) — and installs it directly as the property's backing `Slot`, exactly as `createSlot()` (`@zeix/cause-effect`) already accepts a `SlotDescriptor` in place of a `Signal`. This is the same mediated shape `pass()` accepts (ADR 0012), now usable in `expose()` too.
+
+Use this instead of a pair of `watch()` calls syncing two signals by hand (one direction needs an equality guard to avoid re-triggering the other): `expose({ value: { get: () => tokens.get().join(', '), set: v => tokens.set(parse(v)) } })` replaces `watch(tokens, list => host.value = list.join(', '))` + `watch('value', v => { if (!same(parse(v), tokens.get())) tokens.set(parse(v)) })`. Omitting `set` produces a read-only prop; writing to it throws `ReadonlySignalError`, same as any read-only `Signal`.
+
+`isSignal({ get, set })` is `false` (no brand) — this is what lets `#setAccessor` distinguish a descriptor from a static value that happens to be an arbitrary object. `formResetCallback`/`formAssociatedCheckbox()`'s reset path (`src/extensions/form.ts`) also checks `isSlotDescriptor()` before treating an initializer as a literal default to reassign — a descriptor has no "default", so reset is a no-op for it, same as for a `Signal` or callback initializer.
+
+See `examples/form/tokenbox/form-tokenbox.ts` for a real usage.
+
 ## Testing a DEV-Gated Branch: Flip the Env Var, No Module Mocking
 
 Since v2.3, DEV guards read `process.env.DEV_MODE` at call time (no import-time const), so a test exercises a DEV branch by setting `process.env.DEV_MODE = 'true'` around the call and restoring the previous value in a `finally` (see `withDevMode` in `src/tests/context.test.ts`, and the inline pattern in `events.test.ts` / `reactive.test.ts`). The historical `mock.module('../util', …)` + namespace-snapshot dance is gone — do not reintroduce it. One residual caveat: the env var is process-global, so while an `await` is pending inside a DEV-enabled window, guards in interleaved tests from other files also see it. That only produces extra `console.warn` calls; keep warn-counting assertions inside the same file (bun runs a file's tests sequentially) and this stays benign.

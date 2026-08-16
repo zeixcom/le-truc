@@ -2153,6 +2153,7 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
   };
 };
 // src/util.ts
+var isSlotDescriptor = (value) => value !== null && typeof value === "object" && typeof value.get === "function" && !(Symbol.toStringTag in value);
 var isCustomElement = (element) => element.localName.includes("-");
 var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
 var elementName = (el) => {
@@ -2568,9 +2569,8 @@ var toSignal = (host, source) => {
       return sig;
     return createMemo(() => host[source]);
   }
-  if (source && typeof source === "object" && "get" in source && !(Symbol.toStringTag in source)) {
+  if (isSlotDescriptor(source))
     return source;
-  }
   return source;
 };
 var makeWatch = (host) => {
@@ -3071,13 +3071,13 @@ function defineComponent(name, factory, extensions) {
       }
     }
     #setAccessor(key, value) {
-      const signal = isSignal(value) ? value : isFunction(value) ? deriveSignal(value) : createState(value);
+      const signal = isSignal(value) ? value : isSlotDescriptor(value) ? value : isFunction(value) ? deriveSignal(value) : createState(value);
       const signals = getSignals(this);
       const k = key;
       const prev = signals[k];
       if (isSlot(prev)) {
         prev.replace(signal);
-      } else if (isMutableSignal(signal)) {
+      } else if (isMutableSignal(signal) || isSlotDescriptor(signal)) {
         const slot = createSlot(signal);
         signals[k] = slot;
         Object.defineProperty(this, key, slot);
@@ -3301,7 +3301,7 @@ var makeResetCallback = (prop) => function() {
     const result = initializer(this.getAttribute(prop));
     if (result != null)
       this[prop] = result;
-  } else if (!isSignal(initializer) && !isFunction(initializer)) {
+  } else if (!isSignal(initializer) && !isFunction(initializer) && !isSlotDescriptor(initializer)) {
     this[prop] = initializer;
   }
 };

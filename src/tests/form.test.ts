@@ -12,6 +12,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { createState } from '@zeix/cause-effect'
 import { defineComponent } from '../component'
 import { InvalidPropertyNameError } from '../errors'
 import {
@@ -346,6 +347,26 @@ describe('managed formResetCallback', () => {
 		instance.value = 'changed'
 		instance.formResetCallback()
 		expect(instance.value).toBe('from-attribute')
+	})
+
+	test('is a no-op for a SlotDescriptor ({ get, set }) initializer — no default to restore', () => {
+		const backing = createState('a,b')
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({
+					value: { get: () => backing.get(), set: v => backing.set(v) },
+				})
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		instance.value = 'c,d'
+		expect(instance.value).toBe('c,d')
+
+		expect(() => instance.formResetCallback()).not.toThrow()
+		expect(instance.value).toBe('c,d')
 	})
 
 	test('is a no-op when value was not exposed', () => {

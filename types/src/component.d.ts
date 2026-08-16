@@ -1,4 +1,4 @@
-import { type MemoCallback, type Signal, type TaskCallback } from '@zeix/cause-effect';
+import { type MemoCallback, type Signal, type SlotDescriptor, type TaskCallback } from '@zeix/cause-effect';
 import { type ComponentExtension } from './extension';
 import type { FormAssociatedCheckboxExtension, FormAssociatedExtension } from './extensions/form';
 import { type ProvideContextsHelper, type RequestContextHelper } from './helpers/context';
@@ -12,8 +12,15 @@ import { type ComponentProps, type MethodProducer, type Parser } from './types';
  * - `Signal<T>` — used directly
  * - `MemoCallback<T>` — wrapped in `deriveSignal()`
  * - `TaskCallback<T>` — wrapped in `createTask()`
+ * - `SlotDescriptor<T>` (`{ get, set? }`) — used directly as the Slot's backing
+ *   signal, mirroring the mediated form `pass()` accepts. Distinguished from `T`
+ *   by `isSlotDescriptor()`: a plain object with a `get` function and no `Signal`
+ *   brand (`Symbol.toStringTag`). Use this form when the property needs both a
+ *   computed read and a validated write — e.g.
+ *   `expose({ value: { get: () => tokens.get().join(', '), set: v => tokens.set(parse(v)) } })`
+ *   replaces a pair of `watch()` calls kept in sync by hand.
  */
-type MaybeSignal<T extends {}> = T | Signal<T> | MemoCallback<T> | TaskCallback<T>;
+type MaybeSignal<T extends {}> = T | Signal<T> | MemoCallback<T> | TaskCallback<T> | SlotDescriptor<T>;
 /**
  * The `props` argument of `defineComponent` — a map from property names to their initializers.
  *
@@ -23,9 +30,13 @@ type MaybeSignal<T extends {}> = T | Signal<T> | MemoCallback<T> | TaskCallback<
  *   at connect time.
  * - A **`MethodProducer`** (branded with `defineMethod()`) — assigned directly as the property
  *   value; the function IS the method. Per-instance state lives in factory scope.
+ * - A **`SlotDescriptor`** (`{ get, set? }`) — used directly as the property's backing
+ *   Slot, mirroring the mediated form `pass()` accepts. Listed explicitly (not left to
+ *   structurally match `Signal<P[K]>`) so an object literal with `set` type-checks without
+ *   excess-property errors.
  */
 type Initializers<P extends ComponentProps> = {
-    [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K]> | MethodProducer;
+    [K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K]> | MethodProducer | SlotDescriptor<P[K]>;
 };
 /**
  * The native form-control members the generated class defines on the host when

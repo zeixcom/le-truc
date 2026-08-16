@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **`expose()` accepts a `SlotDescriptor` (`{ get, set? }`) initializer**: `expose({ value: { get: () => …, set: v => … } })` installs the descriptor directly as the property's backing `Slot`, mirroring the mediated form `pass()` already accepts. Distinguished from a static value or bare `Signal` by `isSlotDescriptor()` (new in `src/util.ts`): a plain object with a `get` function and no `Signal` brand (`Symbol.toStringTag`). Lets a mutable, derived property (e.g. a joined-string view over an internal `MutableList`, with a setter that re-splits and writes back) be expressed as one property instead of a pair of `watch()` calls kept in sync by hand and guarded against re-entrant circularity — see the `form-tokenbox` example. Omitting `set` produces a read-only property; writing to it throws `ReadonlySignalError`, same as a read-only `Signal`. `formResetCallback`/`formAssociatedCheckbox()`'s reset (`src/extensions/form.ts`) now also recognizes a `SlotDescriptor` initializer as having no default to restore (a no-op on reset), matching how it already treats `Signal` and callback initializers — without this, reset would have reassigned the raw `{ get, set }` object as the literal property value.
+
 ## 2.5.0
 
 Bridge release ahead of Cause & Effect 2.0: adopt `@zeix/cause-effect` 1.5, re-export the v2 bridge names, and mirror CE's deprecations on the Le Truc re-export surface — all non-breaking. Deprecated re-exports keep working through Le Truc 2.x; Le Truc 3.0 will follow CE 2.0 and remove them.

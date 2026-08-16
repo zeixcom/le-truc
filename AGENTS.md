@@ -47,6 +47,8 @@ Explicit `return [...]` of a `FactoryResult` (nested arrays flattened, falsy val
 
 - **Event-driven read-only props use `createState` + `on`**: Expose `state.get` (not the full `State`) to make a prop readable but not settable by consumers. Update the value in an `on()` handler. To watch the prop inside the factory, pass the signal directly: `watch(length, bindVisible(clearBtn))`.
 
+- **`expose()` accepts a `{ get, set? }` descriptor for a mediated read/write prop**: `expose({ value: { get: () => …, set: v => … } })` installs the descriptor directly as the property's backing `Slot` — the same mediated form `pass()` accepts, now usable in `expose()` too. Prefer this over a pair of `watch(internalSignal, v => host.prop = …)` / `watch('prop', v => internalSignal.set(…))` calls kept in sync by hand: one drives the other's re-run, so the second needs an equality guard against re-entrant circularity. A descriptor sidesteps that — the getter derives live, the setter writes through, no second signal to keep in sync. Omit `set` for a read-only mediated prop (writes throw `ReadonlySignalError`). See `examples/form/tokenbox/form-tokenbox.ts`.
+
 - **Dev mode enables enhanced diagnostics**: Build with `--define process.env.DEV_MODE='"true"'` (the **string** `"true"` — guards check `process.env.DEV_MODE === 'true'` inline, so a bare boolean does not enable them) for detailed error messages, dependency-timeout warnings, and effect-execution logging. Production builds define the string `"false"`, which constant-folds every dev branch out of the bundle. No per-instance debug flag exists.
 
 - **`bindVisible` is the inverse of `el.hidden`**: `bindVisible(el)` sets `el.hidden = !value`. A value of `true` makes the element visible.

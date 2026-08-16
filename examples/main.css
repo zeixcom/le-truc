@@ -17,6 +17,7 @@
 @import "./form/radiogroup/form-radiogroup.css";
 @import "./form/spinbutton/form-spinbutton.css";
 @import "./form/textbox/form-textbox.css";
+@import "./form/tokenbox/form-tokenbox.css";
 @import "./module/calctable/module-calctable.css";
 @import "./module/carousel/module-carousel.css";
 @import "./module/catalog/module-catalog.css";
