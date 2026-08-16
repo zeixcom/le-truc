@@ -147,7 +147,7 @@ my-button {
 Styles become interactive when JavaScript toggles a styling hook in response to state. Which hook depends on who owns the state:
 
 - **Classes** are author-controlled. Use `watch()` + `bindClass()` when the toggled token belongs to the same vocabulary as the variant classes above. The consumer could also set or remove it by hand. The contract is simple: **the class name in CSS must exactly match the token passed to `bindClass()`**.
-- **Custom states** are component-owned. Use `watch()` + `bindState()` when the state is something only the component itself can know. It is exposed to CSS via the `:state()` pseudo-class (backed by ElementInternals). Consumer code or frameworks rewriting the `class` attribute cannot clobber it.
+- **Custom states** are component-owned. Use `watch()` + `bindState()` when the state is something only the component itself can know. It is exposed to CSS via the `:state()` pseudo-class (backed by ElementInternals). Consumer code or frameworks rewriting the `class` attribute cannot overwrite it.
 
 The `module-scrollarea` component demonstrates the custom-state case. Whether content overflows is runtime knowledge the component derives from scroll position. It is nothing an author would ever set. The CSS defines what the shadow looks like when overflow is present:
 

@@ -478,7 +478,9 @@ The provider component wraps your entire application or a section that needs sha
 
 ## Consume Context
 
-**Consumer components** use `requestContext()` to access shared state from ancestor providers. The returned `Signal<T>` is reactive. When the provider's signal updates, all consumers update automatically. It serves the `fallback` until a provider answers. Even a provider that connects late (bundle ordering, code-splitting) is picked up. The consumer switches from `fallback` to the provided value automatically, without any extra code.
+**Consumer components** use `requestContext()` to access shared state from ancestor providers. The returned `Signal<T>` is reactive. When the provider's signal updates, all consumers update automatically.
+
+It serves the `fallback` until a provider answers. Even a provider that connects late (bundle ordering, code-splitting) is picked up. The consumer switches from `fallback` to the provided value automatically, without any extra code.
 
 ### Consumer Component
 

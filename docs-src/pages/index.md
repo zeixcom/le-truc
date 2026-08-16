@@ -57,13 +57,13 @@ The component is a native Custom Element. Its `name` property is reactive. Readi
 {% /slide %}
 
 {% slide title="Faster. Because We Do Less." class="green" %}
-- SPA frameworks (React, Vue, Angular, Svelte, Lit, etc.) render on the client. Le Truc **never does**. The server renders HTML, and the browser shows it immediately. There is no hydration, no double templates, and no pipeline from database to JSON to JavaScript to HTML.
+- SPA frameworks (React, Vue, Angular, Svelte, Lit, etc.) render on the client. Le Truc **never does**. The server renders HTML. The browser shows it immediately. There is no hydration and no double templates. There is no pipeline from database to JSON to JavaScript to HTML.
 - Hypermedia frameworks (HTMX, Datastar) avoid client rendering. They fetch new HTML from the server on every state change. Le Truc updates state locally. It sends a network request only when the logic needs data from the server.
-- Le Truc sets up event listeners and a signal graph. It causes no layout shifts and uses no virtual DOM or diffing. When state changes, only the affected DOM nodes update.
+- Le Truc sets up event listeners and a signal graph. It causes no layout shifts.
 {% /slide %}
 
 {% slide title="Minimal Size." class="blue" %}
-Le Truc adds few abstractions, so the library stays small. The core is under 8 kB gzipped. Extensions are fully tree-shakeable.
+Le Truc adds few abstractions, so the library stays small. The core is under 9 kB gzipped. Extensions are fully tree-shakeable.
 
 HTML, CSS, and JavaScript already solve most of the problem. Le Truc adds what is missing: component boundaries, compile-time type safety, and predictable reactive updates without tight coupling.
 {% /slide %}

@@ -58,6 +58,7 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 | `bindClass` | Adds/removes CSS classes |
 | `bindText` | Sets text content |
 | `bindProperty` | Sets DOM properties |
+| `bindState` | Toggles `ElementInternals` custom states via `:state()` |
 | `bindStyle` | Sets/removes inline styles |
 | `bindVisible` | Controls `hidden` attribute |
 | `dangerouslyBindInnerHTML` | Sets innerHTML |
@@ -124,7 +125,7 @@ Selector strings infer correct `HTMLElement` subtypes at compile time (e.g., `fi
 
 ### Parsers
 
-Parsers transform HTML attribute strings to typed values (see [ADR 0005](adr/0005-branded-parsers-and-methods-with-symbol-based-branding.md)). They are called once at connect time with `getAttribute(key)`. `observedAttributes`/`attributeChangedCallback` support was dropped entirely — attributes don't drive reactive updates (see [ADR 0003](adr/0003-attributes-drive-state-at-connect-time-only.md)).
+Parsers transform HTML attribute strings to typed values (see [ADR 0005](adr/0005-branded-parsers-and-methods-with-symbol-based-branding.md)). By default, they are called once at connect time with `getAttribute(key)` (see [ADR 0003](adr/0003-attributes-drive-state-at-connect-time-only.md)). The `observedAttributes()` extension (`src/extensions/attributes.ts`) is an opt-in escape hatch: it registers `observedAttributes`/`attributeChangedCallback` and re-runs the retained `Parser` for named props on each attribute mutation after connect.
 
 ### Context Protocol
 

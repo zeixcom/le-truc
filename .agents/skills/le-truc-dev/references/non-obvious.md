@@ -2,14 +2,14 @@
 
 Non-obvious behaviors in the le-truc source. These are the things most likely to cause confusion or incorrect changes. Authoritative sources: ARCHITECTURE.md, CONTEXT.md, REQUIREMENTS.md, ADR files in `adr/`, and AGENTS.md.
 
-## Factory Form Opts Out of observedAttributes Entirely
+## Factory Form Opts Out of observedAttributes By Default
 
-`defineComponent` never registers `observedAttributes` — `attributeChangedCallback` support was dropped entirely in v2.0 (see ADR 0003).
+`defineComponent` never registers `observedAttributes`/`attributeChangedCallback` on its own — parsers in `expose()` run once at connect time (see ADR 0003). The `observedAttributes()` extension (`src/extensions/attributes.ts`, since v2.3) is the opt-in escape hatch: pass it in `defineComponent`'s third argument and it re-runs the retained `Parser` for named props on each attribute mutation after connect.
 
 Consequences:
-- Parsers in `expose()` are called **once at connect time** — HTML authors can configure the component via attributes in server-rendered markup, but `attributeChangedCallback` never fires afterward
+- Without the extension, HTML authors can configure the component via attributes in server-rendered markup, but `attributeChangedCallback` never fires afterward
 - The distinction is semantic: attributes are for server-side configuration; properties are for reactive client-side state
-- There is no mechanism to make attributes reactive after connect — reactive state flows through the property interface only
+- With the extension, only props whose initializer is a branded `Parser` are affected — other props stay connect-time-only
 
 ## Parser Branding is Required for Reliable Detection
 
@@ -33,7 +33,9 @@ In `DEV_MODE`, using an unbranded function that resembles a parser triggers `con
 
 ## A Hand-Authored `EffectDescriptor` Needs `watch(() => true, …)` (or an Internal `createEffect`/`createScope` Call) to Actually Clean Up
 
-`activateResult()` (`src/helpers/reactive.ts`) discards the return value of every descriptor it calls during activation. `watch()`/`on()`/`pass()` are unaffected because they call `createEffect()`/`createScope()` *inside* their own descriptor body, which self-registers cleanup onto the active owner regardless of what the outer caller does with the return value. A raw hand-authored descriptor — `() => { setup(); return cleanup }`, with no internal `createEffect`/`createScope` call — has **no such registration**: if it's called via `activateResult` directly (i.e. `return`ed from the factory with no wrapping), its cleanup is silently dropped and never runs on disconnect. This was a real, previously-shipping bug in several example components (found during LT-010; see NOTES.md history), fixed by wrapping the raw descriptor in `watch(() => true, descriptor)` — `() => true` has no signal dependency so it runs once, and `watch()`'s internal `createEffect()` call self-registers the descriptor's returned cleanup. Always register hand-authored descriptors this way, not bare `return`, in new code.
+`activateResult()` (`src/helpers/reactive.ts`) discards the return value of every descriptor it calls during activation. `watch()`/`on()`/`pass()` are unaffected because they call `createEffect()`/`createScope()` *inside* their own descriptor body. That self-registers cleanup onto the active owner, regardless of what the outer caller does with the return value.
+
+A raw hand-authored descriptor — `() => { setup(); return cleanup }`, with no internal `createEffect`/`createScope` call — has **no such registration**. If it's called via `activateResult` directly (i.e. `return`ed from the factory with no wrapping), its cleanup is silently dropped and never runs on disconnect. This was a real, previously-shipping bug in several example components (found during LT-010; see NOTES.md history). The fix wraps the raw descriptor in `watch(() => true, descriptor)`: `() => true` has no signal dependency so it runs once, and `watch()`'s internal `createEffect()` call self-registers the descriptor's returned cleanup. Always register hand-authored descriptors this way, not bare `return`, in new code.
 
 ## `all()` MutationObserver is Lazy
 
