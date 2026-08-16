@@ -8,18 +8,18 @@
         "@zeix/cause-effect": "^1.5.0",
       },
       "devDependencies": {
-        "@biomejs/biome": "^2.5.7",
+        "@biomejs/biome": "^2.5.8",
         "@custom-elements-manifest/analyzer": "^0.11.0",
         "@markdoc/markdoc": "^0.5.9",
         "@playwright/test": "^1.62.1",
         "@types/bun": "^1.3.14",
         "@types/culori": "^4.0.1",
         "@types/node": "^26.2.0",
-        "@zeix/cem-plugin-le-truc": "^0.3.2",
+        "@zeix/cem-plugin-le-truc": "^0.3.3",
         "culori": "^4.0.2",
         "dompurify": "^3.4.13",
         "lightningcss-cli": "^1.33.0",
-        "shiki": "^4.4.2",
+        "shiki": "^4.4.3",
         "typedoc": "^0.28.20",
         "typedoc-plugin-markdown": "^4.12.0",
         "typescript": "^6.0.3",
@@ -31,6 +31,9 @@
         "typescript",
       ],
     },
+  },
+  "overrides": {
+    "brace-expansion": "^5.0.9",
   },
   "packages": {
     "@biomejs/biome": ["@biomejs/biome@2.5.8", "", { "optionalDependencies": { "@biomejs/cli-darwin-arm64": "2.5.8", "@biomejs/cli-darwin-x64": "2.5.8", "@biomejs/cli-linux-arm64": "2.5.8", "@biomejs/cli-linux-arm64-musl": "2.5.8", "@biomejs/cli-linux-x64": "2.5.8", "@biomejs/cli-linux-x64-musl": "2.5.8", "@biomejs/cli-win32-arm64": "2.5.8", "@biomejs/cli-win32-x64": "2.5.8" }, "bin": { "biome": "bin/biome" } }, "sha512-aeAeeJB9fSDc7Gq+2GqpQxA0qBj6gj1k2R6L1cYqGePKP/baIq1WX8y6B+D+nRsO5ViQL22K/8IwbqERW0q1nw=="],
@@ -193,7 +196,7 @@
 
     "binary-extensions": ["binary-extensions@2.3.0", "", {}, "sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw=="],
 
-    "brace-expansion": ["brace-expansion@5.0.5", "", { "dependencies": { "balanced-match": "^4.0.2" } }, "sha512-VZznLgtwhn+Mact9tfiwx64fA9erHH/MCXEUfB/0bX/6Fz6ny5EGTXYltMocqg4xFAQZtnO3DHWWXi8RiuN7cQ=="],
+    "brace-expansion": ["brace-expansion@5.0.9", "", { "dependencies": { "balanced-match": "^4.0.2" } }, "sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg=="],
 
     "braces": ["braces@3.0.3", "", { "dependencies": { "fill-range": "^7.1.1" } }, "sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA=="],
 
