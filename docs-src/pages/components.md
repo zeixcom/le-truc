@@ -115,7 +115,11 @@ Le Truc re-exports the reactive primitives from [`@zeix/cause-effect`](https://g
 
 ### Migrating Deprecated Signal Names
 
-Le Truc re-exports each Cause & Effect replacement name next to its deprecated counterpart, so you can migrate incrementally. See [Cause & Effect's `MIGRATION-2.0.md`](https://github.com/zeixcom/cause-effect/blob/main/MIGRATION-2.0.md) for the full rename list and a codemod (`bun tools/codemod-v2.ts 'src/**/*.ts' --module @zeix/le-truc`).
+Le Truc re-exports each Cause & Effect replacement name next to its deprecated counterpart, so you can migrate incrementally. See [Cause & Effect's MIGRATION-2.0.md](https://github.com/zeixcom/cause-effect/blob/main/MIGRATION-2.0.md) for the full rename list and a codemod: 
+
+```sh
+bun tools/codemod-v2.ts 'src/**/*.ts' --module @zeix/le-truc
+```
 
 ### Characteristics and Special Values
 
