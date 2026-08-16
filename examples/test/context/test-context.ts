@@ -25,7 +25,8 @@ export const TestContextProvider = defineComponent<TestContextProviderProps>(
 	({ expose, provideContexts }) => {
 		expose({ count: 0 })
 		provideContexts(['count'])
-	})
+	},
+)
 
 /* === Consumer === */
 

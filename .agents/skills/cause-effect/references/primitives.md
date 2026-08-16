@@ -1,6 +1,6 @@
 # Cause & Effect — Primitive Reference
 
-Per-primitive signatures, laziness/`watched` activation, equality, and canonical examples. Sourced from `@zeix/cause-effect` 1.4.0 `src/` and README — when they disagree, `src/` wins. This file selects and warns; it does not mirror the README (read it directly in `node_modules/@zeix/cause-effect/README.md` for the full tour).
+Per-primitive signatures, laziness/`watched` activation, equality, and canonical examples. Sourced from `@zeix/cause-effect` 1.5.0 `src/` and README — when they disagree, `src/` wins. This file selects and warns; it does not mirror the README (read it directly in `node_modules/@zeix/cause-effect/README.md` for the full tour).
 
 All signals enforce `T extends {}` — `null` and `undefined` are rejected at the type level and throw `NullishSignalValueError` at runtime (see `pitfalls.md`).
 
@@ -99,55 +99,57 @@ const data = createTask(async (oldValue, abort) => {
 id.set(2) // cancels the previous fetch automatically
 ```
 
-## createComputed (sync-or-async auto-detect)
+## deriveSignal (sync-or-async auto-detect)
 
 ```ts
-createComputed<T extends {}>(
-  callback: TaskCallback<T>, options?: ComputedOptions<T>): Task<T>
-createComputed<T extends {}>(
-  callback: MemoCallback<T>, options?: ComputedOptions<T>): Memo<T>
+deriveSignal<T extends {}>(
+  callback: TaskCallback<T>, options?: DeriveSignalOptions<T>): Signal<T>
+deriveSignal<T extends {}>(
+  callback: MemoCallback<T>, options?: DeriveSignalOptions<T>): Signal<T>
 ```
 
 Returns a `Memo` or a `Task` depending on whether `callback` is `async`. The decision is made **statically, before the callback ever runs** (it inspects the function prototype, not the return value). This is why a non-`async` function returning a Promise becomes a `Memo` that later throws `PromiseValueError` — the library already committed to the sync path.
 
-`createMemo` and `createTask` are the explicit primitives; `createComputed` is the convenience dispatcher. Le Truc uses `createComputed` internally where the sync/async split is data-dependent.
+`createMemo` and `createTask` are the explicit primitives; `deriveSignal` is the convenience dispatcher. Le Truc uses `deriveSignal` internally where the sync/async split is data-dependent. Deprecated alias: `createComputed` (same dispatch; its `options.value` is `options.initial` on `deriveSignal`).
 
 ## Store
 
 ```ts
-createStore<T extends UnknownRecord>(obj: T, options?: { watched?, equals?, guard? }): Store<T>
+createStore<T extends UnknownRecord>(obj: T, options?: { watched?, equals?, guard? }): MutableStore<T>
 ```
 
-Reactive object — each property (recursively, for nested plain objects) becomes its own signal, exposed via a Proxy: `user.age.get()`, `user.age.update(v => v + 1)`. Direct proxy mutation (`user.age = 30`, `delete user.x`, `Object.defineProperty`) throws `InvalidStoreMutationError` — use `.set()`/`.update()` on the property signal, `.add(key, value)`/`.remove(key)` for dynamic keys, or `store.set(nextObj)` to replace the whole object. Iterate keys reactively with `.keys()`; access by key with `.byKey(key)`.
+Reactive object — each property (recursively, for nested plain objects) becomes its own signal, exposed via a Proxy: `user.age.get()`, `user.age.update(v => v + 1)`. Direct proxy mutation (`user.age = 30`, `delete user.x`, `Object.defineProperty`) throws `InvalidStoreMutationError` — use `.set()`/`.update()` on the property signal, `.add(key, value)`/`.remove(key)` for dynamic keys, or `store.set(nextObj)` to replace the whole object. Iterate keys reactively with `.keys()`; access by key with `.byKey(key)`. Deprecated type alias: `Store`.
 
-## List
+## MutableList
 
 ```ts
-createList<T extends {}>(arr: readonly T[], options?: { keyConfig?, watched?, equals?, guard? }): List<T>
+createList<T extends {}>(arr: readonly T[], options?: { keyConfig?, watched?, equals?, guard? }): MutableList<T>
 ```
 
-Reactive array with stable keys and per-item signals. `keyConfig` is either a string prefix (`'item-'` → `'item-0'`, `'item-1'`) or `(item: T) => string`. Keys are stable across sort/reorder. API: `.at(i)`, `.byKey(key)`, `.indexOfKey(key)`, `.keyAt(i)`, reactive `.length`, `.keys()`, `.add(item)` (returns the new key), `.remove(key)`, `.replace(key, value)`, `.sort()`, `.splice(...)`.
+Reactive array with stable keys and per-item signals. `keyConfig` is either a string prefix (`'item-'` → `'item-0'`, `'item-1'`) or `(item: T) => string`. Keys are stable across sort/reorder. API: `.at(i)`, `.byKey(key)`, `.indexOfKey(key)`, `.keyAt(i)`, reactive `.length`, `.keys()`, `.add(item)` (returns the new key), `.remove(key)`, `.replace(key, value)`, `.sort()`, `.splice(...)`. Deprecated type alias: `List`.
 
 **Update items with `.replace(key, value)`, not `.byKey(key).set()`.** `.byKey()` returns the item's own signal; calling `.set()` on it updates that item but is **not guaranteed** to reach subscribers that read the list structurally (`.keys()`, `.length`, the iterator). `.replace()` propagates to all subscribers regardless of how they subscribed. Unlike Store, deeply nested item properties are **not** converted to individual signals.
 
 Duplicate keys throw `DuplicateKeyError`.
 
-## Collection
+## DerivedList (deriveList)
 
 ```ts
-createCollection<T extends {}, S extends Signal<T> = Signal<T>>(
-  watched: (applyChanges: (changes: { add?, change?, remove? }) => void) => Cleanup,
-  options?: { keyConfig?, value?, equals?, guard? }
-): Collection<T>
-
-list.deriveCollection<R>(fn: (sourceValue: T) => R | Promise<R>): Collection<R>
-collection.deriveCollection<R>(fn: (sourceValue: T) => R | Promise<R>): Collection<R>
+deriveList<T extends {}>(input: () => T[], options?: DeriveListOptions<T>): DerivedList<T>
+deriveList<T extends {}>(input: (prev: T[], abort: AbortSignal) => Promise<T[]>,
+  options: DeriveListOptions<T> & { initial: T[] }): DerivedList<T>
+deriveList<T extends {}>(input: T[], options: DeriveListOptions<T> & { watched: ListCallback<T> }): DerivedList<T>
+deriveList<T extends {}, U extends {}>(input: ListSource<U>,
+  itemCallback: (sourceValue: U) => T, options?: DeriveListOptions<U>): DerivedList<T>
 ```
 
-Keyed collection with item-level memoization. Two flavors:
+Keyed derived list with item-level memoization. Three flavors:
 
-- **Externally-driven** (`createCollection`) — receives data from WebSocket / SSE / etc. via `applyChanges({ add, change, remove })`. Same lazy `watched` lifecycle as Sensor.
-- **Derived** (`.deriveCollection()` on a `List` or `Collection`) — sync or async mapping; chains compose data pipelines. **Watched propagation:** reading a derived collection activates the source's `watched` callback through every chain level; mutations on the source don't tear down the watcher; cleanup cascades upstream when the last effect disposes.
+- **Derived from a thunk or async function** — the fetch pipeline: `deriveList(fetchUsers, { initial: [], keyConfig })`. Cancellation and refresh are managed internally; `isPending(list)` exposes the async state.
+- **Externally-driven** (`deriveList(seed, { watched })`) — receives data from WebSocket / SSE / etc. via the watched callback. Same lazy lifecycle as Sensor. Deprecated alias: `createCollection`.
+- **Derived from another list** (`deriveList(list, itemFn)`) — sync or async per-item mapping; chains compose data pipelines. Replaces the deprecated `.deriveCollection()` method. **Watched propagation:** reading a derived list activates the source's `watched` callback through every chain level; mutations on the source don't tear down the watcher; cleanup cascades upstream when the last effect disposes.
+
+Deprecated type alias: `Collection`. `DerivedList` renames once more at 2.0 — it becomes the readonly `List` base there.
 
 ## Slot
 
@@ -190,8 +192,8 @@ An effect that writes to a signal it also reads re-runs until the graph settles;
 
 ## Polymorphic factories & predicates
 
-- `createSignal(value)` — infers type from value: array → `List`, plain object → `Store`, async fn → `Task`, sync fn → `Memo`, else → `State`. Returns the input unchanged if it's already a signal.
-- `createMutableSignal(value)` — same but restricted to `State`/`Store`/`List`; throws `InvalidSignalValueError` for functions or read-only signals.
-- Predicates: `isSignal` (all 9 types), `isMutableSignal` (`State`/`Store`/`List`), `isState`, `isMemo`, `isTask`, `isSensor`, `isSlot`, `isStore`, `isList`, `isCollection`, `isComputed` (`Memo`/`Task`).
+- `createSignal(value)` — infers type from value: array → `MutableList`, plain object → `MutableStore`, async fn → `Task`, sync fn → `Memo`, else → `State`. Returns the input unchanged if it's already a signal. Deprecated alias: `createMutableSignal` (same call, restricted to mutable results).
+- `isPending(signal)` — true while an async computation is in progress; reactive when read inside a computation; `false` without tracking for signals with no async origin. `abort(signal)` cancels the in-flight computation (no-op otherwise). Both work on any signal — asynchrony is an origin, not a shape.
+- Predicates: `isSignal` (all 9 types), `isMutableSignal` (`State`/`Store`/`List`), `isSlot`, `isMutableList`, `isDerivedList`, `isMutableStore`. The origin guards (`isState`, `isMemo`, `isTask`, `isSensor`, `isComputed`, `isList`, `isCollection`, `isStore`) are deprecated aliases — removed at 2.0 in favor of `isSignalOfType()`.
 
 All type checks use `Symbol.toStringTag` branding (`isSignalOfType`), not structural duck-typing.

@@ -1,19 +1,18 @@
 import {
 	type Cleanup,
-	type Collection,
-	createComputed,
 	createEffect,
 	createMemo,
 	createScope,
+	type DerivedList,
+	deriveSignal,
 	isComputed,
 	isFunction,
-	isMemo,
 	isRecord,
+	isSignal,
 	isSlot,
-	type List,
 	type MaybeCleanup,
 	type MaybePromise,
-	type Memo,
+	type MutableList,
 	type MutableSignal,
 	match,
 	type Signal,
@@ -47,7 +46,7 @@ import { bindFirst, type FirstElement } from './dom'
  *
  * A `Reactive<T, P>` source is one of three forms: a property name (reads
  * `host[name]` and tracks it as a signal dependency), a `Signal`, or a thunk
- * wrapped in `createComputed()`. `watch()` and `pass()` both resolve sources
+ * wrapped in `deriveSignal()`. `watch()` and `pass()` both resolve sources
  * through `toSignal()`.
  *
  * `pass()` accepts a read-only thunk, a mediated `{ get, set }` descriptor, a
@@ -69,7 +68,7 @@ import { bindFirst, type FirstElement } from './dom'
  * - `keyof P` — a string property name on the host; reads `host[name]` and
  *   registers it as a signal dependency automatically.
  * - `Signal<T>` — any signal; `.get()` is called inside the reactive effect.
- * - `() => T | Promise<T> | null | undefined` — a thunk wrapped in `createComputed`;
+ * - `() => T | Promise<T> | null | undefined` — a thunk wrapped in `deriveSignal`;
  *   all signals read inside are tracked in the pure phase. Returning `null` or
  *   `undefined` drives the `nil` path; an async thunk becomes a `Task` signal.
  */
@@ -132,7 +131,7 @@ type WatchHelper<P extends ComponentProps> = {
  * The `pass` helper type in `FactoryContext`.
  *
  * Passes reactive values to a descendant Le Truc component's Slot-backed
- * signals. Supports a single element or a `Memo<Element[]>` target, with
+ * signals. Supports a single element or a `Signal<Element[]>` target, with
  * per-element lifecycle for the latter.
  */
 type PassHelper<P extends ComponentProps> = {
@@ -141,7 +140,7 @@ type PassHelper<P extends ComponentProps> = {
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
 	<Q extends HTMLElement>(
-		target: Memo<Q[]> | Falsy,
+		target: Signal<Q[]> | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
 }
@@ -194,7 +193,7 @@ const forEachUnseen = (
 }
 
 /**
- * Drive per-element scopes from a `Memo<E[]>` with element-identity keying.
+ * Drive per-element scopes from a `Signal<E[]>` with element-identity keying.
  *
  * Entering elements get a scope created by `mount`; leaving elements get
  * exactly their own scope disposed. Surviving elements are untouched across
@@ -209,11 +208,11 @@ const forEachUnseen = (
  *   cleanup is what tears down still-live element scopes on disconnect.
  *
  * @since 2.2
- * @param {Memo<E[]>} memo - Memo of the current element collection
+ * @param {Signal<E[]>} memo - Signal of the current element collection
  * @param {(element: E) => MaybeCleanup} mount - Called once per entering element inside its scope; a returned cleanup registers on that scope
  */
 const keyedScopes = <E extends object>(
-	memo: Memo<E[]>,
+	memo: Signal<E[]>,
 	mount: (element: E) => MaybeCleanup,
 ): void => {
 	const scopes = new Map<E, () => void>()
@@ -246,7 +245,7 @@ const keyedScopes = <E extends object>(
  *
  * - String: looks up the signal in the component's signal map, or falls back
  *   to a computed reading `host[name]` (covers properties added via `Object.defineProperty`).
- * - Thunk `() => T | Promise<T> | null | undefined`: wrapped in `createComputed`.
+ * - Thunk `() => T | Promise<T> | null | undefined`: wrapped in `deriveSignal`.
  *   An async thunk becomes a Task signal.
  * - Signal: used directly.
  *
@@ -259,7 +258,7 @@ const toSignal = <T extends {}, P extends ComponentProps>(
 	host: HTMLElement & P,
 	source: Reactive<T, P> | SlotDescriptor<T>,
 ): Signal<T> | SlotDescriptor<T> => {
-	if (isFunction<T>(source)) return createComputed(source)
+	if (isFunction<T>(source)) return deriveSignal(source)
 	if (typeof source === 'string') {
 		const sig = getSignals(host)[source]
 		if (sig) return sig as Signal<T>
@@ -392,7 +391,7 @@ const makeWatch = <P extends ComponentProps>(
  * Create a `pass` helper bound to a specific component host.
  *
  * Swaps the target's Slot-backed signals for the given values and restores
- * the originals on disconnect. A `Memo<Element[]>` target swaps and restores
+ * the originals on disconnect. A `Signal<Element[]>` target swaps and restores
  * signals per element as it enters and leaves the collection.
  *
  * ```ts
@@ -525,17 +524,17 @@ const makePass = <P extends ComponentProps>(
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
 	function pass<Q extends HTMLElement>(
-		target: Memo<Q[]> | Falsy,
+		target: Signal<Q[]> | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor
 	function pass<Q extends HTMLElement>(
-		target: Q | Memo<Q[]> | Falsy,
+		target: Q | Signal<Q[]> | Falsy,
 		props: PassedProps<P, Q>,
 	): EffectDescriptor {
 		const descriptor: EffectDescriptor = () => {
 			if (!target) return
-			if (isMemo<Q[]>(target)) {
-				// Memo target: keyed per-element lifecycle
+			if (isSignal<Q[]>(target)) {
+				// Signal target: keyed per-element lifecycle
 				keyedScopes(target, el => {
 					const cleanup = swapSlots(el, props)
 					// swapSlots() links signals directly, bypassing this
@@ -562,7 +561,7 @@ const makePass = <P extends ComponentProps>(
 			} else {
 				// Single element: swap slots directly in current scope
 				swapSlots(target, props)
-				// See the Memo-target branch above for why this needs two
+				// See the Signal-target branch above for why this needs two
 				// independent effects.
 				if (process.env.DEV_MODE === 'true') {
 					createEffect(() => markIfDebugging(host, target, 'pass'))
@@ -580,7 +579,7 @@ const makePass = <P extends ComponentProps>(
 }
 
 /**
- * Create per-element reactive effects from a `Memo<Element[]>`.
+ * Create per-element reactive effects from a `Signal<Element[]>`.
  *
  * Entering elements get their own scope; when they leave, that scope — and
  * everything registered in it — is disposed.
@@ -598,7 +597,7 @@ const makePass = <P extends ComponentProps>(
  * @since 2.0
  */
 function each<E extends Element>(
-	memo: Memo<E[]>,
+	memo: Signal<E[]>,
 	callback: (
 		element: E,
 		first: FirstElement,
@@ -649,7 +648,7 @@ function each<E extends Element>(
  * @since 2.3
  * @param {Element} container - Container element whose children are reconciled
  * @param {HTMLTemplateElement} template - Template whose single root element is cloned for entering keys
- * @param {List<T> | Collection<T>} source - Keyed reactive data source
+ * @param {MutableList<T> | DerivedList<T>} source - Keyed reactive data source
  * @param {(element: HTMLElement, item: Signal<T>, key: string, first: FirstElement) => MaybeCleanup} bindItem - Mounted once per entering element inside an ambient collector; collected descriptors activate against the per-item scope, and any returned cleanup is that scope's teardown
  * @returns {EffectDescriptor} Effect descriptor to include in the component's factory result
  * @throws {InvalidTemplateError} if the template content does not contain exactly one root element
@@ -657,7 +656,7 @@ function each<E extends Element>(
 function reconcile<T extends {}, S extends MutableSignal<T>>(
 	container: Element,
 	template: HTMLTemplateElement,
-	source: List<T, S>,
+	source: MutableList<T, S>,
 	bindItem: (
 		element: HTMLElement,
 		item: S,
@@ -668,7 +667,7 @@ function reconcile<T extends {}, S extends MutableSignal<T>>(
 function reconcile<T extends {}, S extends Signal<T>>(
 	container: Element,
 	template: HTMLTemplateElement,
-	source: Collection<T, S>,
+	source: DerivedList<T, S>,
 	bindItem: (
 		element: HTMLElement,
 		item: S,
@@ -679,7 +678,7 @@ function reconcile<T extends {}, S extends Signal<T>>(
 function reconcile<T extends {}>(
 	container: Element,
 	template: HTMLTemplateElement,
-	source: List<T> | Collection<T>,
+	source: MutableList<T> | DerivedList<T>,
 	bindItem: (
 		element: HTMLElement,
 		item: Signal<T>,

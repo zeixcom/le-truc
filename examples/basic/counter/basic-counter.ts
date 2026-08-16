@@ -27,7 +27,10 @@ export default defineComponent<BasicCounterProps>(
 
 		expose({ count: asInteger()(count.textContent) })
 
-		const button = first('button', 'Add a native button element to increment the count.')
+		const button = first(
+			'button',
+			'Add a native button element to increment the count.',
+		)
 		on(button, 'click', () => ({ count: host.count + 1 }))
 		watch('count', bindText(count))
 	},

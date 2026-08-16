@@ -21,7 +21,7 @@ In `DEV_MODE`, using an unbranded function that resembles a parser triggers `con
 
 ## MethodProducer is Branded, Not Structurally Distinguished
 
-`isMethodProducer()` in `src/types.ts` checks for `METHOD_BRAND` only. An unbranded `() => void` function is treated as a `MemoCallback` (wrapped in `createComputed`), not a method producer.
+`isMethodProducer()` in `src/types.ts` checks for `METHOD_BRAND` only. An unbranded `() => void` function is treated as a `MemoCallback` (wrapped in `deriveSignal`), not a method producer.
 
 **Always wrap method producer initializers with `defineMethod()`.** The function IS the method — it is installed directly as `host[key] = fn`.
 

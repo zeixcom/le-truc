@@ -31,32 +31,34 @@ export default defineComponent<TestWatchProps>(
 			label: 'hello',
 		})
 
-			// Single prop string source
-			watch('count', n => {
-				output.textContent = String(n)
-			})
+		// Single prop string source
+		watch('count', n => {
+			output.textContent = String(n)
+		})
 
-			// Array form — two prop names
-			watch(['count', 'label'], ([n, l]) => {
-				combined.textContent = `${n}:${l}`
-			})
+		// Array form — two prop names
+		watch(['count', 'label'], ([n, l]) => {
+			combined.textContent = `${n}:${l}`
+		})
 
-			// Direct Signal source (not a prop name)
-			watch(externalSignal, v => {
-				direct.textContent = String(v)
-				direct.dataset.signal = String(v)
-			})
+		// Direct Signal source (not a prop name)
+		watch(externalSignal, v => {
+			direct.textContent = String(v)
+			direct.dataset.signal = String(v)
+		})
 
-			// MatchHandlers form — ok callback
-			watch('count', {
-				ok: n => {
-					handlers.textContent = `ok:${n}`
-				},
-			})
+		// MatchHandlers form — ok callback
+		watch('count', {
+			ok: n => {
+				handlers.textContent = `ok:${n}`
+			},
+		})
 
-			// Conditional falsy guards — must be filtered out and never activate
-			return [([false, undefined, null, '', 0, 0n] as const).map(
+		// Conditional falsy guards — must be filtered out and never activate
+		return [
+			([false, undefined, null, '', 0, 0n] as const).map(
 				falsy => falsy && watch('label', () => {}),
-			)]
+			),
+		]
 	},
 )

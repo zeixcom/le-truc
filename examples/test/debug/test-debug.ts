@@ -26,10 +26,7 @@ export default defineComponent<TestDebugProps>(
 	'test-debug',
 	({ expose, first, host, on, pass, watch }) => {
 		const btn = first('button', 'Add a <button> element.')
-		const attributed = first(
-			'#attributed',
-			'Add element with id="attributed".',
-		)
+		const attributed = first('#attributed', 'Add element with id="attributed".')
 		const unattributed = first(
 			'#unattributed',
 			'Add element with id="unattributed".',
