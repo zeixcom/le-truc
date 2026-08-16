@@ -1,0 +1,40 @@
+<form-tokenbox>
+  <label for="fruits-input">Fruits</label>
+  <div class="input" data-container>
+    <input type="text" id="fruits-input" data-unreconciled>
+  </div>
+  <template>
+    <span class="token" data-key>
+      <span class="token-label"><slot></slot></span>
+      <button type="button" class="remove" aria-label="Remove">✕</button>
+    </span>
+  </template>
+  <p class="error" role="alert" aria-live="assertive" id="fruits-error"></p>
+  <p class="description" aria-live="polite" id="fruits-description"></p>
+  <p class="status visually-hidden" role="status" aria-live="polite"></p>
+</form-tokenbox>
+
+<hr>
+
+<form-tokenbox name="recipients">
+  <label for="recipients-input">Recipients</label>
+  <div class="input" data-container>
+    <input
+      type="email"
+      id="recipients-input"
+      placeholder="name@example.com"
+      data-unreconciled
+    >
+  </div>
+  <template>
+    <span class="token" data-key>
+      <span class="token-label"><slot></slot></span>
+      <button type="button" class="remove" aria-label="Remove">✕</button>
+    </span>
+  </template>
+  <p class="error" role="alert" aria-live="assertive" id="recipients-error"></p>
+  <p class="description" aria-live="polite" id="recipients-description">
+    Each entry must be a valid email address.
+  </p>
+  <p class="status visually-hidden" role="status" aria-live="polite"></p>
+</form-tokenbox>

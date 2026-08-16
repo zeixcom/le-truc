@@ -1,0 +1,117 @@
+form-tokenbox {
+  display: block;
+  width: 100%;
+
+  & label,
+  & p {
+    opacity: var(--opacity-dimmed);
+    transition: opacity var(--transition-short) var(--easing-inout);
+  }
+
+  & label {
+    display: block;
+    font-size: var(--font-size-s);
+    color: var(--color-text);
+    margin-bottom: var(--space-xxs);
+  }
+
+  & .input {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xxs);
+    box-sizing: border-box;
+    min-height: var(--input-height);
+    background: var(--color-input);
+    border: none;
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-xxs);
+  }
+
+  & input {
+    flex: 1 1 8ch;
+    min-width: 8ch;
+    box-sizing: border-box;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--font-size-m);
+    padding: var(--space-xxs);
+    line-height: var(--line-height-s);
+
+    &:focus {
+      outline: none;
+      box-shadow: none;
+    }
+
+    &::placeholder {
+      color: var(--color-text);
+      opacity: var(--opacity-translucent);
+    }
+  }
+
+  & .input:has(input:focus-visible) {
+    box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
+  }
+
+  /* Native validity styling — matches form-textbox's :user-invalid hook. */
+  &:invalid .input:has(input:invalid) {
+    box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
+  }
+
+  & .token {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xxs);
+    background: var(--color-secondary);
+    color: var(--color-text);
+    border-radius: var(--space-l);
+    padding: 0 0 0 var(--space-m);
+    font-size: var(--font-size-s);
+    line-height: var(--line-height-s);
+
+    .remove {
+      border: 0;
+      border-radius: 50%;
+      font-size: var(--font-size-xs);
+      line-height: var(--line-height-xs);
+      color: var(--color-text-soft);
+      background-color: var(--color-secondary);
+      width: var(--space-l);
+      height: var(--space-l);
+      padding: 0;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--color-text);
+        background-color: var(--color-secondary-hover);
+      }
+    }
+  }
+
+  .error,
+  .description {
+    margin: var(--space-xs) 0 0;
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-s);
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  .error {
+    color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
+  }
+
+  .description {
+    color: var(--color-text-soft);
+  }
+
+  &:focus-within {
+    & label,
+    & p {
+      opacity: var(--opacity-solid);
+    }
+  }
+}

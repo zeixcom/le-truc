@@ -38,6 +38,7 @@ layout: 'page'
   - [Radiogroup](./examples/form-radiogroup.html)
   - [Spinbutton](./examples/form-spinbutton.html)
   - [Textbox](./examples/form-textbox.html)
+  - [Tokenbox](./examples/form-tokenbox.html)
 - Module
   - [Calctable](./examples/module-calctable.html)
   - [Carousel](./examples/module-carousel.html)
