@@ -1,4 +1,4 @@
-import { type Node, type Schema, Tag } from '@markdoc/markdoc'
+import { type Node, type NodeType, type Schema, Tag } from '@markdoc/markdoc'
 import { commonAttributes, richChildren } from '../markdoc-constants'
 import {
 	splitContentBySeparator,
@@ -7,7 +7,7 @@ import {
 
 const demo: Schema = {
 	render: 'module-demo',
-	children: [...richChildren, 'document', 'source'],
+	children: [...richChildren, 'document', 'source'] as NodeType[],
 	attributes: commonAttributes,
 	transform(node: Node, config) {
 		// Split content by HR separator

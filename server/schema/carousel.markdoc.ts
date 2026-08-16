@@ -1,4 +1,4 @@
-import { type Node, type Schema, Tag } from '@markdoc/markdoc'
+import { type Node, type NodeType, type Schema, Tag } from '@markdoc/markdoc'
 import { commonAttributes } from '../markdoc-constants'
 import {
 	createNavigationButton,
@@ -9,7 +9,7 @@ import {
 
 const carousel: Schema = {
 	render: 'module-carousel',
-	children: ['slide', 'tag'],
+	children: ['slide', 'tag'] as NodeType[],
 	attributes: {
 		...commonAttributes,
 		'auto-play': {

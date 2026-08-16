@@ -271,7 +271,7 @@ describe('children constants', () => {
 		expect(standardChildren).toContain('blockquote')
 		expect(standardChildren).toContain('hr')
 		expect(standardChildren).toContain('fence')
-		expect(standardChildren).toContain('callout')
+		expect(standardChildren as string[]).toContain('callout')
 		expect(standardChildren).toContain('tag')
 		expect(standardChildren).toContain('inline')
 	})

@@ -99,7 +99,7 @@ sources (List<FileInfo>)
 
 ### Effects
 
-Each effect factory calls `createEffect(() => match([...signals], { ok, err }))` and returns `{ cleanup: Cleanup, ready: Promise<void> }`. `ready` resolves after the first `ok`/`err` handler completes; `build()` awaits all `ready` promises to know when the initial build is done.
+Each effect factory calls `createBuildEffect(label, [...signals], run, onRebuild)` (`server/effects/build-effect.ts`) and returns `{ cleanup: Cleanup, ready: Promise<void> }`. `ready` resolves after the first successful run; `build()` awaits all `ready` promises to know when the initial build is done. A failure on that first run rejects `ready` instead — `run` throws to signal failure — so a one-shot `build:docs` fails loudly rather than silently shipping incomplete output; a failure on a later, file-watch-triggered run is logged and the effect just waits for the next change. See `references/effect-pattern.md` for the full contract.
 
 | Effect | Depends On | Output | Tool |
 |--------|-----------|--------|------|
