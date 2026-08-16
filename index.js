@@ -139,7 +139,7 @@ var batchDepth = 0;
 var flushing = false;
 var DEFAULT_EQUALITY = (a, b) => a === b;
 var SKIP_EQUALITY = (_a, _b) => false;
-var deepEqual = (a, b) => deepEqualInner(a, b, new WeakSet);
+var deepEqual = (a, b) => deepEqualInner(a, b, undefined);
 var deepEqualInner = (a, b, seen) => {
   if (Object.is(a, b))
     return true;
@@ -147,8 +147,9 @@ var deepEqualInner = (a, b, seen) => {
     return false;
   if (a == null || typeof a !== "object" || b == null || typeof b !== "object")
     return false;
-  if (seen.has(a))
+  if (seen?.has(a))
     return true;
+  seen ??= new WeakSet;
   seen.add(a);
   try {
     const aIsArray = Array.isArray(a);
@@ -536,6 +537,46 @@ function makeSubscribe(node, onWatch) {
       link(node, activeSink);
   };
 }
+function refreshComposite(node, buildValue, discoversKeys = false) {
+  if (node.sources) {
+    if (!node.flags)
+      return;
+    const result = discoversKeys ? untrack(buildValue) : undefined;
+    if (node.flags & FLAG_RELINK) {
+      node.flags = FLAG_DIRTY;
+      refresh(node);
+      if (node.error)
+        throw node.error;
+    } else {
+      node.value = discoversKeys ? result : untrack(buildValue);
+      node.flags = FLAG_CLEAN;
+    }
+  } else if (!discoversKeys || node.sinks) {
+    refresh(node);
+    if (node.error)
+      throw node.error;
+  } else {
+    node.value = untrack(buildValue);
+  }
+}
+var asyncSources = new WeakMap;
+function registerAsyncSource(signal, source) {
+  asyncSources.set(signal, source);
+}
+function getAsyncSource(signal) {
+  if (signal == null || typeof signal !== "object")
+    return;
+  const candidate = signal;
+  if (typeof candidate.isPending === "function" && typeof candidate.abort === "function")
+    return candidate;
+  return asyncSources.get(signal);
+}
+function isPending(signal) {
+  return getAsyncSource(signal)?.isPending() ?? false;
+}
+function abort(signal) {
+  getAsyncSource(signal)?.abort();
+}
 function createState(value, options) {
   validateSignalValue(TYPE_STATE, value, options?.guard);
   const node = {
@@ -745,23 +786,7 @@ function createList(value, options) {
     },
     get() {
       subscribe();
-      if (node.sources) {
-        if (node.flags) {
-          if (node.flags & FLAG_RELINK) {
-            node.flags = FLAG_DIRTY;
-            refresh(node);
-            if (node.error)
-              throw node.error;
-          } else {
-            node.value = untrack(buildValue);
-            node.flags = FLAG_CLEAN;
-          }
-        }
-      } else {
-        refresh(node);
-        if (node.error)
-          throw node.error;
-      }
+      refreshComposite(node, buildValue);
       return node.value;
     },
     set(next) {
@@ -931,8 +956,11 @@ function createList(value, options) {
   };
   return list;
 }
-function isList(value) {
+function isMutableList(value) {
   return isSignalOfType(value, TYPE_LIST);
+}
+function isList(value) {
+  return isMutableList(value);
 }
 function createMemo(fn, options) {
   validateCallback(TYPE_MEMO, fn, isSyncFunction);
@@ -1026,20 +1054,130 @@ function createTask(fn, options) {
 function isTask(value) {
   return isSignalOfType(value, TYPE_TASK);
 }
-function deriveCollection(source, callback) {
-  validateCallback(TYPE_COLLECTION, callback);
+function keyedAdapter(source, options) {
+  const [generateKey, contentBased] = getKeyGenerator(options?.keyConfig);
+  const itemEquals = options?.itemEquals ?? DEEP_EQUALITY;
+  const signals = new Map;
+  const indices = new Map;
+  let keys = [];
+  let prev = [];
+  let syncedFrom;
+  const readSource = () => {
+    try {
+      return source.get();
+    } catch (e) {
+      if (e instanceof UnsetSignalValueError)
+        return [];
+      throw e;
+    }
+  };
+  const ensureKeys = (next) => {
+    if (next === syncedFrom)
+      return;
+    syncedFrom = next;
+    const diff = diffArrays(prev, next, keys, generateKey, contentBased, itemEquals);
+    prev = next;
+    if (keysEqual(keys, diff.newKeys))
+      return;
+    keys = diff.newKeys;
+    indices.clear();
+    for (let i = 0;i < keys.length; i++)
+      indices.set(keys[i], i);
+  };
+  return {
+    keys() {
+      ensureKeys(readSource());
+      for (const key of Array.from(signals.keys()))
+        if (!indices.has(key))
+          signals.delete(key);
+      return keys.values();
+    },
+    byKey(key) {
+      if (!indices.has(key))
+        return;
+      let signal = signals.get(key);
+      if (!signal) {
+        signal = createMemo(() => {
+          const items = readSource();
+          ensureKeys(items);
+          const at = indices.get(key);
+          return at !== undefined ? items[at] : undefined;
+        }, { equals: itemEquals });
+        signals.set(key, signal);
+      }
+      return signal;
+    }
+  };
+}
+function collectionFacade(node, getKeys, signals, prepare, prepareValue) {
+  const collection = {
+    [Symbol.toStringTag]: TYPE_COLLECTION,
+    [Symbol.isConcatSpreadable]: true,
+    *[Symbol.iterator]() {
+      prepare();
+      for (const key of getKeys()) {
+        const signal = signals.get(key);
+        if (signal)
+          yield signal;
+      }
+    },
+    get length() {
+      prepare();
+      return getKeys().length;
+    },
+    keys() {
+      prepare();
+      return getKeys().values();
+    },
+    get() {
+      prepareValue();
+      return node.value;
+    },
+    at(index) {
+      prepare();
+      const key = getKeys()[index];
+      return key !== undefined ? signals.get(key) : undefined;
+    },
+    byKey(key) {
+      prepare();
+      return signals.get(key);
+    },
+    keyAt(index) {
+      prepare();
+      return getKeys()[index];
+    },
+    indexOfKey(key) {
+      prepare();
+      return getKeys().indexOf(key);
+    },
+    deriveCollection(cb) {
+      return deriveCollection(collection, cb);
+    }
+  };
+  return collection;
+}
+function deriveCollection(sourceInput, callback, options) {
+  if (callback)
+    validateCallback(TYPE_COLLECTION, callback);
+  const source = isMutableList(sourceInput) || isDerivedList(sourceInput) ? sourceInput : keyedAdapter(sourceInput, options);
   const isAsync = isAsyncFunction(callback);
   const signals = new Map;
   let keys = [];
   const addSignal = (key) => {
-    const signal = isAsync ? createTask(async (prev, abort) => {
+    if (!callback) {
+      const passthrough = untrack(() => source.byKey(key));
+      if (passthrough)
+        signals.set(key, passthrough);
+      return;
+    }
+    const signal = isAsync ? createTask(async (prev, abort2) => {
       const itemSignal = untrack(() => source.byKey(key));
       if (!itemSignal)
         return prev;
       const sourceValue = itemSignal.get();
       if (sourceValue == null)
         return prev;
-      return callback(sourceValue, abort);
+      return callback(sourceValue, abort2);
     }) : createMemo(() => {
       const itemSignal = untrack(() => source.byKey(key));
       if (!itemSignal)
@@ -1079,14 +1217,7 @@ function deriveCollection(source, callback) {
     }
     return result;
   }
-  const valuesEqual = (a, b) => {
-    if (a.length !== b.length)
-      return false;
-    for (let i = 0;i < a.length; i++)
-      if (a[i] !== b[i])
-        return false;
-    return true;
-  };
+  const valuesEqual = keysEqual;
   const node = {
     fn: buildValue,
     value: [],
@@ -1098,93 +1229,19 @@ function deriveCollection(source, callback) {
     equals: valuesEqual,
     error: undefined
   };
-  function ensureFresh() {
-    if (node.sources) {
-      if (node.flags) {
-        const result = untrack(buildValue);
-        if (node.flags & FLAG_RELINK) {
-          node.flags = FLAG_DIRTY;
-          refresh(node);
-          if (node.error)
-            throw node.error;
-        } else {
-          node.value = result;
-          node.flags = FLAG_CLEAN;
-        }
-      }
-    } else if (node.sinks) {
-      refresh(node);
-      if (node.error)
-        throw node.error;
-    } else {
-      node.value = untrack(buildValue);
-    }
-  }
+  const ensureFresh = () => {
+    refreshComposite(node, buildValue, true);
+  };
   const initialKeys = Array.from(untrack(() => source.keys()));
   for (const key of initialKeys)
     addSignal(key);
   keys = initialKeys;
-  const collection = {
-    [Symbol.toStringTag]: TYPE_COLLECTION,
-    [Symbol.isConcatSpreadable]: true,
-    *[Symbol.iterator]() {
-      if (activeSink)
-        link(node, activeSink);
-      ensureFresh();
-      for (const key of keys) {
-        const signal = signals.get(key);
-        if (signal)
-          yield signal;
-      }
-    },
-    get length() {
-      if (activeSink)
-        link(node, activeSink);
-      ensureFresh();
-      return keys.length;
-    },
-    keys() {
-      if (activeSink)
-        link(node, activeSink);
-      ensureFresh();
-      return keys.values();
-    },
-    get() {
-      if (activeSink)
-        link(node, activeSink);
-      ensureFresh();
-      return node.value;
-    },
-    at(index) {
-      if (activeSink)
-        link(node, activeSink);
-      ensureFresh();
-      const key = keys[index];
-      return key !== undefined ? signals.get(key) : undefined;
-    },
-    byKey(key) {
-      if (activeSink)
-        link(node, activeSink);
-      ensureFresh();
-      return signals.get(key);
-    },
-    keyAt(index) {
-      if (activeSink)
-        link(node, activeSink);
-      ensureFresh();
-      return keys[index];
-    },
-    indexOfKey(key) {
-      if (activeSink)
-        link(node, activeSink);
-      ensureFresh();
-      return keys.indexOf(key);
-    },
-    deriveCollection(cb) {
-      return deriveCollection(collection, cb);
-    }
+  const prepare = () => {
+    if (activeSink)
+      link(node, activeSink);
+    ensureFresh();
   };
-  return collection;
+  return collectionFacade(node, () => keys, signals, prepare, prepare);
 }
 function createCollection(watched, options) {
   const value = options?.value ?? [];
@@ -1286,71 +1343,37 @@ function createCollection(watched, options) {
     });
   };
   const subscribe = makeSubscribe(node, () => watched(onChanges));
-  const collection = {
-    [Symbol.toStringTag]: TYPE_COLLECTION,
-    [Symbol.isConcatSpreadable]: true,
-    *[Symbol.iterator]() {
-      subscribe();
-      for (const key of keys) {
-        const signal = signals.get(key);
-        if (signal)
-          yield signal;
-      }
-    },
-    get length() {
-      subscribe();
-      return keys.length;
-    },
-    keys() {
-      subscribe();
-      return keys.values();
-    },
-    get() {
-      subscribe();
-      if (node.sources) {
-        if (node.flags) {
-          if (node.flags & FLAG_RELINK) {
-            node.flags = FLAG_DIRTY;
-            refresh(node);
-            if (node.error)
-              throw node.error;
-          } else {
-            node.value = untrack(buildValue);
-            node.flags = FLAG_CLEAN;
-          }
-        }
-      } else {
-        refresh(node);
-        if (node.error)
-          throw node.error;
-      }
-      return node.value;
-    },
-    at(index) {
-      subscribe();
-      const key = keys[index];
-      return key !== undefined ? signals.get(key) : undefined;
-    },
-    byKey(key) {
-      subscribe();
-      return signals.get(key);
-    },
-    keyAt(index) {
-      subscribe();
-      return keys[index];
-    },
-    indexOfKey(key) {
-      subscribe();
-      return keys.indexOf(key);
-    },
-    deriveCollection(cb) {
-      return deriveCollection(collection, cb);
-    }
-  };
-  return collection;
+  return collectionFacade(node, () => keys, signals, subscribe, () => {
+    subscribe();
+    refreshComposite(node, buildValue);
+  });
+}
+function deriveList(input, itemOrOptions, maybeOptions) {
+  if (isFunction(itemOrOptions))
+    return deriveCollection(input, itemOrOptions, maybeOptions);
+  const options = itemOrOptions;
+  const passthrough = deriveCollection;
+  if (!isFunction(input)) {
+    validateSignalValue(TYPE_COLLECTION, input, Array.isArray);
+    validateCallback(TYPE_COLLECTION, options?.watched, isSyncFunction);
+    return createCollection(options?.watched, {
+      ...options,
+      value: input
+    });
+  }
+  if (isAsyncFunction(input)) {
+    const task = createTask(input, { value: options?.initial ?? [] });
+    const derived = passthrough(task, undefined, options);
+    registerAsyncSource(derived, task);
+    return derived;
+  }
+  return passthrough(createMemo(input), undefined, options);
+}
+function isDerivedList(value) {
+  return isSignalOfType(value, TYPE_COLLECTION);
 }
 function isCollection(value) {
-  return isSignalOfType(value, TYPE_COLLECTION);
+  return isDerivedList(value);
 }
 function createEffect(fn) {
   validateCallback("Effect", fn);
@@ -1456,6 +1479,39 @@ function createSensor(watched, options) {
 function isSensor(value) {
   return isSignalOfType(value, TYPE_SENSOR);
 }
+var storeProxyHandler = {
+  get(target, prop) {
+    if (prop in target)
+      return Reflect.get(target, prop);
+    if (typeof prop !== "symbol")
+      return target.byKey(prop);
+  },
+  set(_target, prop) {
+    throw new InvalidStoreMutationError(String(prop), "assign to");
+  },
+  deleteProperty(_target, prop) {
+    throw new InvalidStoreMutationError(String(prop), "delete");
+  },
+  defineProperty(_target, prop) {
+    throw new InvalidStoreMutationError(String(prop), "define");
+  },
+  has(target, prop) {
+    if (prop in target)
+      return true;
+    return target.byKey(String(prop)) !== undefined;
+  },
+  ownKeys(target) {
+    return Array.from(target.keys());
+  },
+  getOwnPropertyDescriptor(target, prop) {
+    if (prop in target)
+      return Reflect.getOwnPropertyDescriptor(target, prop);
+    if (typeof prop === "symbol")
+      return;
+    const signal = target.byKey(String(prop));
+    return signal ? { enumerable: true, configurable: true, writable: true, value: signal } : undefined;
+  }
+};
 function diffRecords(prev, next) {
   const add = {};
   const change = {};
@@ -1502,9 +1558,9 @@ function createStore(value, options) {
     return "state";
   };
   const signalCategory = (signal) => {
-    if (isList(signal))
+    if (isMutableList(signal))
       return "list";
-    if (isStore(signal))
+    if (isMutableStore(signal))
       return "store";
     return "state";
   };
@@ -1581,23 +1637,7 @@ function createStore(value, options) {
     },
     get() {
       subscribe();
-      if (node.sources) {
-        if (node.flags) {
-          if (node.flags & FLAG_RELINK) {
-            node.flags = FLAG_DIRTY;
-            refresh(node);
-            if (node.error)
-              throw node.error;
-          } else {
-            node.value = untrack(buildValue);
-            node.flags = FLAG_CLEAN;
-          }
-        }
-      } else {
-        refresh(node);
-        if (node.error)
-          throw node.error;
-      }
+      refreshComposite(node, buildValue);
       return node.value;
     },
     set(next) {
@@ -1636,44 +1676,124 @@ function createStore(value, options) {
       }
     }
   };
-  return new Proxy(store, {
-    get(target, prop) {
-      if (prop in target)
-        return Reflect.get(target, prop);
-      if (typeof prop !== "symbol")
-        return target.byKey(prop);
-    },
-    set(_target, prop) {
-      throw new InvalidStoreMutationError(String(prop), "assign to");
-    },
-    deleteProperty(_target, prop) {
-      throw new InvalidStoreMutationError(String(prop), "delete");
-    },
-    defineProperty(_target, prop) {
-      throw new InvalidStoreMutationError(String(prop), "define");
-    },
-    has(target, prop) {
-      if (prop in target)
-        return true;
-      return target.byKey(String(prop)) !== undefined;
-    },
-    ownKeys(target) {
-      return Array.from(target.keys());
-    },
-    getOwnPropertyDescriptor(target, prop) {
-      if (prop in target)
-        return Reflect.getOwnPropertyDescriptor(target, prop);
-      if (typeof prop === "symbol")
-        return;
-      const signal = target.byKey(String(prop));
-      return signal ? {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: signal
-      } : undefined;
+  return new Proxy(store, storeProxyHandler);
+}
+function deriveStore(input, options) {
+  if (!isFunction(input)) {
+    validateSignalValue(TYPE_STORE, input, isRecord);
+    const watched = options?.watched;
+    validateCallback(TYPE_STORE, watched, isSyncFunction);
+    let inner;
+    const emit = (patch) => {
+      inner.update((prev) => ({ ...prev, ...patch }));
+    };
+    inner = createStore(input, { watched: () => watched(emit) });
+    return readonlyFacade(() => inner.get(), () => inner.keys(), (key) => inner.byKey(key));
+  }
+  const task = isAsyncFunction(input) ? createTask(input, {
+    value: options?.initial ?? {}
+  }) : undefined;
+  const source = task ?? createMemo(input);
+  const readSource = () => {
+    try {
+      return source.get();
+    } catch (e) {
+      if (e instanceof UnsetSignalValueError)
+        return {};
+      throw e;
     }
+  };
+  const signals = new Map;
+  let keys = [];
+  const addSignal = (key) => {
+    signals.set(key, createMemo(() => readSource()[key], {
+      equals: DEEP_EQUALITY
+    }));
+  };
+  const syncKeys = (next) => {
+    const nextKeys = Object.keys(next);
+    if (keysEqual(keys, nextKeys))
+      return;
+    const nextSet = new Set(nextKeys);
+    for (const key of keys)
+      if (!nextSet.has(key))
+        signals.delete(key);
+    for (const key of nextKeys)
+      if (!signals.has(key))
+        addSignal(key);
+    keys = nextKeys;
+    node.flags |= FLAG_RELINK;
+  };
+  function buildValue() {
+    syncKeys(readSource());
+    const record = {};
+    for (const key of keys) {
+      try {
+        const v = signals.get(key)?.get();
+        if (v !== undefined)
+          record[key] = v;
+      } catch (e) {
+        if (!(e instanceof UnsetSignalValueError))
+          throw e;
+      }
+    }
+    return record;
+  }
+  const node = {
+    fn: buildValue,
+    value: options?.initial ?? {},
+    flags: FLAG_DIRTY,
+    sources: null,
+    sourcesTail: null,
+    sinks: null,
+    sinksTail: null,
+    equals: DEEP_EQUALITY,
+    error: undefined
+  };
+  const ensureFresh = () => {
+    refreshComposite(node, buildValue, true);
+  };
+  syncKeys(untrack(readSource));
+  node.flags = FLAG_DIRTY;
+  const derived = readonlyFacade(() => {
+    if (activeSink)
+      link(node, activeSink);
+    ensureFresh();
+    return node.value;
+  }, () => {
+    if (activeSink)
+      link(node, activeSink);
+    ensureFresh();
+    return keys.values();
+  }, (key) => {
+    ensureFresh();
+    return signals.get(key);
   });
+  if (task)
+    registerAsyncSource(derived, task);
+  return derived;
+}
+function readonlyFacade(read, readKeys, readByKey) {
+  const store = {
+    [Symbol.toStringTag]: TYPE_STORE,
+    [Symbol.isConcatSpreadable]: false,
+    *[Symbol.iterator]() {
+      for (const key of readKeys()) {
+        const signal = readByKey(key);
+        if (signal)
+          yield [key, signal];
+      }
+    },
+    keys: readKeys,
+    byKey(key) {
+      return readByKey(key);
+    },
+    get: read
+  };
+  return new Proxy(store, storeProxyHandler);
+}
+function isMutableStore(value) {
+  return isSignalOfType(value, TYPE_STORE) && typeof value.add === "function";
 }
 function isStore(value) {
   return isSignalOfType(value, TYPE_STORE);
@@ -1690,6 +1810,20 @@ var SIGNAL_TYPES = new Set([
 ]);
 function createComputed(callback, options) {
   return isAsyncFunction(callback) ? createTask(callback, options) : createMemo(callback, options);
+}
+function deriveSignal(input, options) {
+  if (isFunction(input)) {
+    const { initial, watched: watched2, ...rest2 } = options ?? {};
+    const computedOptions = {
+      ...rest2,
+      value: initial,
+      watched: watched2
+    };
+    return isAsyncFunction(input) ? createTask(input, computedOptions) : createMemo(input, computedOptions);
+  }
+  const { watched, ...rest } = options;
+  validateCallback("deriveSignal", watched, isSyncFunction);
+  return createSensor(watched, { ...rest, value: input });
 }
 function createSignal(value) {
   if (isSignal(value))
@@ -1724,7 +1858,7 @@ function isSignal(value) {
   return value != null && SIGNAL_TYPES.has(value[Symbol.toStringTag]);
 }
 function isMutableSignal(value) {
-  return isState(value) || isStore(value) || isList(value);
+  return isState(value) || isSignalOfType(value, TYPE_STORE) || isMutableList(value);
 }
 var settingSlots = new WeakSet;
 function isSignalOrDescriptor(value) {
@@ -2427,7 +2561,7 @@ var keyedScopes = (memo, mount) => {
 };
 var toSignal = (host, source) => {
   if (isFunction(source))
-    return createComputed(source);
+    return deriveSignal(source);
   if (typeof source === "string") {
     const sig = getSignals(host)[source];
     if (sig)
@@ -2524,7 +2658,7 @@ var makePass = (host) => {
     const descriptor = () => {
       if (!target)
         return;
-      if (isMemo(target)) {
+      if (isSignal(target)) {
         keyedScopes(target, (el) => {
           const cleanup = swapSlots(el, props);
           if (false) {}
@@ -2937,7 +3071,7 @@ function defineComponent(name, factory, extensions) {
       }
     }
     #setAccessor(key, value) {
-      const signal = isSignal(value) ? value : isFunction(value) ? createComputed(value) : createState(value);
+      const signal = isSignal(value) ? value : isFunction(value) ? deriveSignal(value) : createState(value);
       const signals = getSignals(this);
       const k = key;
       const prev = signals[k];
@@ -3303,12 +3437,16 @@ export {
   isSignal,
   isSensor,
   isRecord,
+  isPending,
   isParser,
+  isMutableStore,
   isMutableSignal,
+  isMutableList,
   isMethodProducer,
   isMemo,
   isList,
   isFunction,
+  isDerivedList,
   isComputed,
   isCollection,
   isAsyncFunction,
@@ -3316,6 +3454,9 @@ export {
   formAssociated,
   escapeHTML,
   each,
+  deriveStore,
+  deriveSignal,
+  deriveList,
   defineMethod,
   defineComponent,
   dangerouslyBindInnerHTML,
@@ -3350,6 +3491,7 @@ export {
   asEnum,
   asClampedInteger,
   asBoolean,
+  abort,
   UnsetSignalValueError,
   SKIP_EQUALITY,
   RequiredOwnerError,

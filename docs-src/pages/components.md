@@ -106,12 +106,50 @@ Le Truc re-exports the reactive primitives from [`@zeix/cause-effect`](https://g
 | [`Sensor`](./api.html#functions/createSensor) | External input (lazy) | Values that arrive from outside the graph — `matchMedia`, `IntersectionObserver`, geolocation. Seeds an initial value via `{ value }` |
 | [`Memo`](./api.html#functions/createMemo) | Sync derivation | A value computed from other signals — e.g. the sum of a spinbutton collection. For cheap one-off derivations, a plain thunk passed to `watch()` is often enough |
 | [`Task`](./api.html#functions/createTask) | Async derivation | `fetch`, dynamic imports, or any async work. Auto-cancels in-flight work when its dependencies change and exposes pending / error / ok states via `match()` |
-| [`Store`](./api.html#functions/createStore) | Reactive object | An object whose individual properties are each reactive |
-| [`List`](./api.html#functions/createList) | Reactive array | A keyed collection with stable item identity across add, remove, sort, and reorder |
-| [`Collection`](./api.html#functions/createCollection) | Reactive collection | Externally-driven streams (WebSocket, SSE) or derived pipelines |
+| [`MutableStore`](./api.html#functions/createStore) | Reactive object | An object whose individual properties are each reactive |
+| [`MutableList`](./api.html#functions/createList) | Reactive array | A keyed list with stable item identity across add, remove, sort, and reorder |
+| [`DerivedList`](./api.html#functions/deriveList) | Derived keyed list | Derived sequences — map another list per item with `deriveList(list, fn)`, or feed one from a fetch or an external stream |
 | [`Effect`](./api.html#functions/createEffect) | Side-effect sink | Terminal consumer for work outside the graph. Inside a component, prefer the factory's `watch()` / `on()` over a bare `createEffect()` |
 
 `Slot` is an integration primitive used internally by `pass()` to swap a child's backing signal. You rarely create one directly.
+
+### Prepare for Cause & Effect 2.0
+
+Cause & Effect 1.5 deprecates a set of names ahead of its 2.0 release. Le Truc re-exports each replacement next to the deprecated name, so migration is incremental. The deprecated names keep working for all of 1.x.
+
+Renames to apply now — the new name is final v2 vocabulary:
+
+| Deprecated | Use instead |
+|---|---|
+| `List` | `MutableList` |
+| `isList` | `isMutableList` |
+| `Store` | `MutableStore` |
+| `isStore` | `isMutableStore` |
+| `createComputed` | `deriveSignal` |
+| `createMutableSignal` | `createSignal` |
+| `createCollection` | `deriveList(seed, { watched })` |
+| `list.deriveCollection(fn)` | `deriveList(list, fn)` |
+| `CollectionSource` | `ListSource` |
+| `CollectionCallback` | `ListCallback` |
+| `CollectionChanges` | `ListChanges` |
+| `DeriveCollectionCallback` | `PerItemCallback` |
+
+Two of today's names are interim bridges. They rename once more at 2.0, when the readonly base takes the short name:
+
+| Today | At 2.0 | Deprecated alias today |
+|---|---|---|
+| `DerivedList` | `List` | `Collection` |
+| `isDerivedList` | `isList` | `isCollection` |
+
+The origin type names `State`, `Memo`, `Task`, and `Sensor` and their guards (`isState`, `isMemo`, `isTask`, `isSensor`, `isComputed`) are removed at 2.0 with no alias. The factories (`createState`, `createMemo`, `createTask`, `createSensor`) stay. Use `isSignalOfType()` where an origin check is required.
+
+The full guide, including a codemod, lives in [Cause & Effect's `MIGRATION-2.0.md`](https://github.com/zeixcom/cause-effect/blob/main/MIGRATION-2.0.md):
+
+```sh
+bun tools/codemod-v2.ts 'src/**/*.ts' --module @zeix/le-truc
+```
+
+The `--module` flag scopes the codemod to imports from `@zeix/le-truc`, so it works without a direct `@zeix/cause-effect` dependency. The `createComputed` → `deriveSignal` rename has no codemod rule — apply it by hand and rename `options.value` to `options.initial`.
 
 ### Characteristics and Special Values
 

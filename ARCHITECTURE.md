@@ -27,7 +27,7 @@ defineComponent('my-element', ({ expose, first, watch }) => {
 
 Properties are backed by signals from `@zeix/cause-effect`. The `#setAccessor` creates the appropriate signal based on the initializer:
 - Already a `Signal` → used directly
-- A function → wrapped in `createComputed` (read-only)
+- A function → wrapped in `deriveSignal` (read-only)
 - Anything else → wrapped in `createState` (read-write)
 
 Mutable signals are wrapped in a `Slot` to enable signal swapping for `pass()` (see [ADR 0004](adr/0004-slot-based-signal-swapping-for-inter-component-binding.md)).
@@ -64,11 +64,11 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 
 ### Event Binding
 
-`on(target, type, handler)` binds events with unified `(event, target)` signature. For `Memo<Element[]>` targets, uses event delegation with fallback to per-element listeners for non-bubbling events. Per-element lifecycles over `Memo<Element[]>` collections — `each()`, `pass()` with a Memo target, and the non-bubbling `on()` fallback — share the internal `keyedScopes` helper, which keys scopes by element identity so collection changes only mount entering elements and dispose leaving ones, leaving survivors untouched (see [ADR 0014](adr/0014-keyed-per-element-scopes-for-memo-collections.md)).
+`on(target, type, handler)` binds events with unified `(event, target)` signature. For `Memo<Element[]>` targets, uses event delegation with fallback to per-element listeners for non-bubbling events. Per-element lifecycles over reactive element collections — `each()` and `pass()` with a `Signal<Element[]>` target, and the non-bubbling `on()` fallback over `Memo<Element[]>` — share the internal `keyedScopes` helper, which keys scopes by element identity so collection changes only mount entering elements and dispose leaving ones, leaving survivors untouched (see [ADR 0014](adr/0014-keyed-per-element-scopes-for-memo-collections.md)).
 
 ### List Reconciliation
 
-`reconcile(container, template, source, bindItem)` syncs a keyed reactive data source (`List<T>` or `Collection<T>` from cause-effect) to a container's children. This is Le Truc's only data-driven DOM creation (see [ADR 0017](adr/0017-keyed-template-clone-reconciliation-for-lists.md)).
+`reconcile(container, template, source, bindItem)` syncs a keyed reactive data source (`MutableList<T>` or `DerivedList<T>` from cause-effect; the deprecated `List`/`Collection` aliases remain valid sources) to a container's children. This is Le Truc's only data-driven DOM creation (see [ADR 0017](adr/0017-keyed-template-clone-reconciliation-for-lists.md)).
 
 `reconcile()` is the ownership complement of `each()`:
 - `each()` enhances DOM the component doesn't own — DOM-driven, keyed by element identity.

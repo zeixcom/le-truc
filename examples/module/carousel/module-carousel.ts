@@ -1,4 +1,9 @@
-import { bindProperty, bindVisible, defineComponent, each } from '../../../index'
+import {
+	bindProperty,
+	bindVisible,
+	defineComponent,
+	each,
+} from '../../../index'
 
 export type ModuleCarouselProps = {
 	/** Zero-based index of the currently visible slide. */

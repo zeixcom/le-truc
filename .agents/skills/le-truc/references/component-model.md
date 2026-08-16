@@ -97,7 +97,7 @@ A fourth extension, `debug()`, is **not exported and never appears in this array
 | `MethodProducer` | Branded with `defineMethod()` | Function IS the method — installed as `host[key] = fn` |
 | `Signal` | Any `Signal<T>` | Used directly as backing signal |
 | Static value | Anything else (`string`, `number`, `boolean`, `[]`, ...) | Wrapped in `createState()` |
-| `MemoCallback<T>` | `() => T` (unbranded thunk) | Wrapped in `createComputed()` — reactive derived value |
+| `MemoCallback<T>` | `() => T` (unbranded thunk) | Wrapped in `deriveSignal()` — reactive derived value |
 
 ---
 
@@ -206,10 +206,11 @@ Le Truc re-exports full `@zeix/cause-effect` public API. Import from `@zeix/le-t
 ```typescript
 import {
   createState, createMemo, createSensor, createTask,
-  createEffect, createScope, createSlot, createStore,
-  createList, createCollection, deriveCollection,
+  createEffect, createScope, createSlot, createStore, createList,
+  deriveSignal, deriveList, deriveStore, isPending, abort,
   batch, untrack, unown, match,
   type State, type Memo, type Sensor, type Slot,
+  type MutableList, type MutableStore,
 } from '@zeix/le-truc'
 ```
 
