@@ -11,6 +11,7 @@ import {
 	type MemoCallback,
 	type MutableSignal,
 	type Signal,
+	type SlotDescriptor,
 	type TaskCallback,
 } from '@zeix/cause-effect'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
@@ -53,7 +54,7 @@ import {
 	type MethodProducer,
 	type Parser,
 } from './types'
-import { elementName } from './util'
+import { elementName, isSlotDescriptor } from './util'
 
 /* === Types === */
 
@@ -63,12 +64,20 @@ import { elementName } from './util'
  * - `Signal<T>` — used directly
  * - `MemoCallback<T>` — wrapped in `deriveSignal()`
  * - `TaskCallback<T>` — wrapped in `createTask()`
+ * - `SlotDescriptor<T>` (`{ get, set? }`) — used directly as the Slot's backing
+ *   signal, mirroring the mediated form `pass()` accepts. Distinguished from `T`
+ *   by `isSlotDescriptor()`: a plain object with a `get` function and no `Signal`
+ *   brand (`Symbol.toStringTag`). Use this form when the property needs both a
+ *   computed read and a validated write — e.g.
+ *   `expose({ value: { get: () => tokens.get().join(', '), set: v => tokens.set(parse(v)) } })`
+ *   replaces a pair of `watch()` calls kept in sync by hand.
  */
 type MaybeSignal<T extends {}> =
 	| T
 	| Signal<T>
 	| MemoCallback<T>
 	| TaskCallback<T>
+	| SlotDescriptor<T>
 
 /**
  * The `props` argument of `defineComponent` — a map from property names to their initializers.
@@ -79,9 +88,18 @@ type MaybeSignal<T extends {}> =
  *   at connect time.
  * - A **`MethodProducer`** (branded with `defineMethod()`) — assigned directly as the property
  *   value; the function IS the method. Per-instance state lives in factory scope.
+ * - A **`SlotDescriptor`** (`{ get, set? }`) — used directly as the property's backing
+ *   Slot, mirroring the mediated form `pass()` accepts. Listed explicitly (not left to
+ *   structurally match `Signal<P[K]>`) so an object literal with `set` type-checks without
+ *   excess-property errors.
  */
 type Initializers<P extends ComponentProps> = {
-	[K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K]> | MethodProducer
+	[K in keyof P]?:
+		| P[K]
+		| Signal<P[K]>
+		| Parser<P[K]>
+		| MethodProducer
+		| SlotDescriptor<P[K]>
 }
 
 /**
@@ -425,25 +443,27 @@ function defineComponent<P extends ComponentProps>(
 
 		/**
 		 * Create or replace the Slot-backed property accessor for a reactive property.
-		 * Mutable signals are wrapped in a Slot so their backing signal can be swapped
-		 * later (e.g. by `pass()`).
+		 * Mutable signals and `{ get, set? }` descriptors are wrapped in a Slot so
+		 * their backing signal can be swapped later (e.g. by `pass()`).
 		 *
 		 * @since 0.15.0
 		 * @param {K} key - Reactive property name
-		 * @param {MaybeSignal<P[K]>} value - Static value, signal, or computed callback
+		 * @param {MaybeSignal<P[K]>} value - Static value, signal, computed callback, or `{ get, set? }` descriptor
 		 */
 		#setAccessor<K extends keyof P>(key: K, value: MaybeSignal<P[K]>): void {
 			const signal = isSignal(value)
 				? value
-				: isFunction<P[K]>(value)
-					? deriveSignal(value)
-					: (createState(value) as MutableSignal<P[K]>)
+				: isSlotDescriptor<P[K]>(value)
+					? value
+					: isFunction<P[K]>(value)
+						? deriveSignal(value)
+						: (createState(value) as MutableSignal<P[K]>)
 			const signals = getSignals(this)
 			const k = key as string
 			const prev = signals[k]
 			if (isSlot(prev)) {
 				prev.replace(signal)
-			} else if (isMutableSignal(signal)) {
+			} else if (isMutableSignal(signal) || isSlotDescriptor<P[K]>(signal)) {
 				const slot = createSlot<P[K]>(signal)
 				signals[k] = slot
 				Object.defineProperty(this, key, slot)

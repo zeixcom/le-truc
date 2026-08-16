@@ -37,7 +37,7 @@ import type {
 	FactoryResult,
 	Falsy,
 } from '../types'
-import { elementName, isCustomElement } from '../util'
+import { elementName, isCustomElement, isSlotDescriptor } from '../util'
 import { bindFirst, type FirstElement } from './dom'
 
 /**
@@ -73,9 +73,7 @@ import { bindFirst, type FirstElement } from './dom'
  *   `undefined` drives the `nil` path; an async thunk becomes a `Task` signal.
  */
 type Reactive<T, P extends ComponentProps> =
-	| keyof P
-	| Signal<T & {}>
-	| (() => T | Promise<T> | null | undefined)
+	keyof P | Signal<T & {}> | (() => T | Promise<T> | null | undefined)
 
 /**
  * Map of child component property names to the reactive values `pass()` injects into them.
@@ -251,7 +249,7 @@ const keyedScopes = <E extends object>(
  *
  * @since 2.0
  * @param {HTMLElement & P} host - The component host element
- * @param {Reactive<T, P> | { get: () => T; set?: (value: T) => void }} source - Property name string, signal, thunk, or descriptor to resolve
+ * @param {Reactive<T, P> | SlotDescriptor<T>} source - Property name string, signal, thunk, or descriptor to resolve
  * @returns {Signal<T>} Resolved signal ready for use with `match()`
  */
 const toSignal = <T extends {}, P extends ComponentProps>(
@@ -264,14 +262,7 @@ const toSignal = <T extends {}, P extends ComponentProps>(
 		if (sig) return sig as Signal<T>
 		return createMemo(() => (host as any)[source])
 	}
-	if (
-		source &&
-		typeof source === 'object' &&
-		'get' in source &&
-		!(Symbol.toStringTag in source)
-	) {
-		return source as SlotDescriptor<T>
-	}
+	if (isSlotDescriptor(source)) return source as SlotDescriptor<T>
 	return source as Signal<T>
 }
 
@@ -324,8 +315,7 @@ const makeWatch = <P extends ComponentProps>(
 			| Reactive<NonNullable<unknown>, P>
 			| Array<Reactive<NonNullable<unknown>, P>>,
 		handlerOrHandlers:
-			| ((value: any) => MaybePromise<MaybeCleanup>)
-			| SingleMatchHandlers<any>,
+			((value: any) => MaybePromise<MaybeCleanup>) | SingleMatchHandlers<any>,
 	): EffectDescriptor {
 		const descriptor: EffectDescriptor = () => {
 			if (Array.isArray(source)) {
@@ -453,13 +443,13 @@ const makePass = <P extends ComponentProps>(
 				// in DEV_MODE. Detection is reversed — allow what is provably
 				// read-only, warn on everything else.
 				if (
-					process.env.DEV_MODE === 'true' &&
-					!isComputed(signal) &&
-					!(
-						signal &&
-						typeof signal === 'object' &&
-						'get' in signal &&
-						!(Symbol.toStringTag in signal)
+					process.env.DEV_MODE === 'true'
+					&& !isComputed(signal)
+					&& !(
+						signal
+						&& typeof signal === 'object'
+						&& 'get' in signal
+						&& !(Symbol.toStringTag in signal)
 					)
 				) {
 					console.warn(
@@ -704,8 +694,8 @@ function reconcile<T extends {}>(
 		const nextKeyed = (after: Element | null): Element | null => {
 			let node = after ? after.nextElementSibling : container.firstElementChild
 			while (
-				node &&
-				(!keyOf.has(node) || node.hasAttribute('data-unreconciled'))
+				node
+				&& (!keyOf.has(node) || node.hasAttribute('data-unreconciled'))
 			)
 				node = node.nextElementSibling
 			return node
@@ -738,9 +728,9 @@ function reconcile<T extends {}>(
 				}
 				const harvested = child.getAttribute('data-key')
 				if (
-					harvested !== null &&
-					keySet.has(harvested) &&
-					!current.has(harvested)
+					harvested !== null
+					&& keySet.has(harvested)
+					&& !current.has(harvested)
 				) {
 					keyOf.set(child, harvested)
 					current.set(harvested, child as HTMLElement)

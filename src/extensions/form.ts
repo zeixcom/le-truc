@@ -14,7 +14,7 @@ import type { ComponentExtension } from '../extension'
 import { getSignals, internalsMap, retainedInitializers } from '../internal'
 import type { FactoryResult } from '../types'
 import { isParser } from '../types'
-import { elementName } from '../util'
+import { elementName, isSlotDescriptor } from '../util'
 
 /* === Types === */
 
@@ -392,7 +392,10 @@ const makeFormAssociatedExtension = <Tag extends string>(
  * same-named attribute for a Parser (native `defaultValue`/`defaultChecked`
  * semantics), or restore a static value. No-op if signals are not yet
  * initialized or no initializer was retained (e.g. the prop was pre-set on
- * the instance before upgrade).
+ * the instance before upgrade). Also a no-op for a `Signal`, `MemoCallback`/
+ * `TaskCallback`, or `SlotDescriptor` (`{ get, set? }`) initializer — none of
+ * these carry a "default value" to restore; the prop already derives live
+ * from whatever backs it.
  *
  * Shared by `formAssociated()` (`prop: 'value'`) and `formAssociatedCheckbox()`
  * (`prop: 'checked'`) — the reset mechanics are identical, only the target
@@ -405,7 +408,11 @@ const makeResetCallback = (prop: string) =>
 		if (isParser(initializer)) {
 			const result = initializer(this.getAttribute(prop))
 			if (result != null) (this as any)[prop] = result
-		} else if (!isSignal(initializer) && !isFunction(initializer)) {
+		} else if (
+			!isSignal(initializer) &&
+			!isFunction(initializer) &&
+			!isSlotDescriptor(initializer)
+		) {
 			;(this as any)[prop] = initializer
 		}
 	}
