@@ -1,4 +1,4 @@
-// Le Truc 2.5.0
+// Le Truc 2.5.1
 
 // From Cause & Effect
 // Names deprecated by @zeix/cause-effect 1.5 ahead of its 2.0 keep their upstream
@@ -13,6 +13,7 @@ export {
 	type CollectionChanges,
 	type CollectionOptions,
 	type ComputedOptions,
+	createCell,
 	createCollection,
 	createComputed,
 	createEffect,
@@ -28,15 +29,17 @@ export {
 	createTask,
 	DEEP_EQUALITY,
 	DEFAULT_EQUALITY,
+	type DeriveCellOptions,
 	type DerivedList,
 	type DerivedStore,
-	deriveList,
 	type DeriveListOptions,
-	deriveSignal,
 	type DeriveSignalOptions,
-	deriveStore,
 	type DeriveStoreOptions,
 	DuplicateKeyError,
+	deriveCell,
+	deriveList,
+	deriveSignal,
+	deriveStore,
 	type EffectCallback,
 	EffectConvergenceError,
 	type Guard,
@@ -72,10 +75,10 @@ export {
 	type MaybePromise,
 	type Memo,
 	type MemoCallback,
-	match,
-	type MutableSignal,
 	type MutableList,
+	type MutableSignal,
 	type MutableStore,
+	match,
 	NullishSignalValueError,
 	type PerItemCallback,
 	PromiseValueError,

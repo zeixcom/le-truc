@@ -1,6 +1,6 @@
 # Cause & Effect — Primitive Reference
 
-Per-primitive signatures, laziness/`watched` activation, equality, and canonical examples. Sourced from `@zeix/cause-effect` 1.5.0 `src/` and README — when they disagree, `src/` wins. This file selects and warns; it does not mirror the README (read it directly in `node_modules/@zeix/cause-effect/README.md` for the full tour).
+Per-primitive signatures, laziness/`watched` activation, equality, and canonical examples. Sourced from `@zeix/cause-effect` 1.5.1 `src/` and README — when they disagree, `src/` wins. This file selects and warns; it does not mirror the README (read it directly in `node_modules/@zeix/cause-effect/README.md` for the full tour).
 
 All signals enforce `T extends {}` — `null` and `undefined` are rejected at the type level and throw `NullishSignalValueError` at runtime (see `pitfalls.md`).
 
@@ -63,6 +63,8 @@ Synchronous memoized derivation. Lazy — recomputes only when a tracked depende
 
 For cheap/simple derivations a **plain function** `() => count.get() * 2` is often faster than a Memo — reserve `createMemo` for expensive, shared, or stateful derivations.
 
+Deprecated type alias: `Memo` — no mechanical replacement (removed at 2.0; origin is no longer part of the consumption contract). Annotate with `Signal<T>` instead; use `isSignal()`/`isMutableSignal()` or a plain property check if you truly need to distinguish origin.
+
 `watched?: (invalidate: () => void) => Cleanup` activates when the memo gains its first reader; `invalidate()` marks it dirty and triggers recomputation (e.g. a `MutationObserver` for DOM-query memos — this is how le-truc's `all()` works). **Conditional reads delay activation** — if a read sits inside an untaken branch, `watched` won't fire until that branch runs. Read signals eagerly before conditional logic to force immediate activation.
 
 ```ts
@@ -90,6 +92,8 @@ Async derivation with automatic cancellation. When dependencies change mid-fligh
 
 Use Task — not a plain async function — when you need memoization, cancellation, and reactive pending/error states. Pending/error are first-class reactive values that compose naturally with `match()`.
 
+Deprecated type alias: `Task` — no mechanical replacement (removed at 2.0; origin is no longer part of the consumption contract). Annotate with `Signal<T>` instead; use the free functions `isPending(signal)`/`abort(signal)` in place of the deprecated `.isPending()`/`.abort()` methods.
+
 ```ts
 const data = createTask(async (oldValue, abort) => {
   const response = await fetch(`/api/users/${id.get()}`, { signal: abort })
@@ -99,18 +103,18 @@ const data = createTask(async (oldValue, abort) => {
 id.set(2) // cancels the previous fetch automatically
 ```
 
-## deriveSignal (sync-or-async auto-detect)
+## deriveCell (sync-or-async auto-detect)
 
 ```ts
-deriveSignal<T extends {}>(
-  callback: TaskCallback<T>, options?: DeriveSignalOptions<T>): Signal<T>
-deriveSignal<T extends {}>(
-  callback: MemoCallback<T>, options?: DeriveSignalOptions<T>): Signal<T>
+deriveCell<T extends {}>(
+  callback: TaskCallback<T>, options?: DeriveCellOptions<T>): Signal<T>
+deriveCell<T extends {}>(
+  callback: MemoCallback<T>, options?: DeriveCellOptions<T>): Signal<T>
 ```
 
 Returns a `Memo` or a `Task` depending on whether `callback` is `async`. The decision is made **statically, before the callback ever runs** (it inspects the function prototype, not the return value). This is why a non-`async` function returning a Promise becomes a `Memo` that later throws `PromiseValueError` — the library already committed to the sync path.
 
-`createMemo` and `createTask` are the explicit primitives; `deriveSignal` is the convenience dispatcher. Le Truc uses `deriveSignal` internally where the sync/async split is data-dependent. Deprecated alias: `createComputed` (same dispatch; its `options.value` is `options.initial` on `deriveSignal`).
+`createMemo` and `createTask` are the explicit primitives; `deriveCell` is the convenience dispatcher. Le Truc uses `deriveCell` internally where the sync/async split is data-dependent. Deprecated aliases: `createComputed` and `deriveSignal` (same dispatch; `options.value` is `options.initial` on `deriveCell`). `deriveSignal` was itself the terminal name for one release (1.5.0) before `deriveCell` replaced it in 1.5.1 — `Signal` stays the umbrella term, `Cell` names the single-value shape.
 
 ## Store
 

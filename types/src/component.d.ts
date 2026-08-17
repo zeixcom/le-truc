@@ -10,7 +10,7 @@ import { type ComponentProps, type MethodProducer, type Parser } from './types';
  * Any value that `#setAccessor` can turn into a signal:
  * - `T` — wrapped in `createState()`
  * - `Signal<T>` — used directly
- * - `MemoCallback<T>` — wrapped in `deriveSignal()`
+ * - `MemoCallback<T>` — wrapped in `deriveCell()`
  * - `TaskCallback<T>` — wrapped in `createTask()`
  * - `SlotDescriptor<T>` (`{ get, set? }`) — used directly as the Slot's backing
  *   signal, mirroring the mediated form `pass()` accepts. Distinguished from `T`

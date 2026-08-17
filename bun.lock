@@ -180,7 +180,7 @@
 
     "@xn-sakina/rml-win32-x64-msvc": ["@xn-sakina/rml-win32-x64-msvc@2.8.0", "", { "os": "win32", "cpu": "x64" }, "sha512-xeyoBIfccb7prfiUVLv0K+1HlLT4vnDfXHSkLpsp4wI0LtYR7sYbiGaMVgNdgR2nDHC+W+65inUHvhY5m7pbnw=="],
 
-    "@zeix/cause-effect": ["@zeix/cause-effect@1.5.0", "", { "peerDependencies": { "typescript": ">=5.8.0" }, "optionalPeers": ["typescript"] }, "sha512-k4InkB3bpQrG9QMwbL72A5LA06+4eDvWKjryAmLxHtiJKXYUA1taFZeQBgsuVvvEALXbUpM1mg4jZu2mQUFxtQ=="],
+    "@zeix/cause-effect": ["@zeix/cause-effect@1.5.1", "", { "peerDependencies": { "typescript": ">=5.8.0" }, "optionalPeers": ["typescript"] }, "sha512-/0N4QnxMEf6k/V5YmrtaJAadX4cWVUiklVSc3oeBaoyF3t9zN7lzPoiTsM+qipv1fmg55hfbOp0IsFWNAI4+tw=="],
 
     "@zeix/cem-plugin-le-truc": ["@zeix/cem-plugin-le-truc@0.3.3", "", { "peerDependencies": { "@custom-elements-manifest/analyzer": "^0.11", "typescript": "^5.0" } }, "sha512-01q3OIXVUQrZBo1l3jHgPIR2kuximNB1e16pHK4iWlDZHh+vJ072EggSLiwZcQCQnNJOxyqN/KcAQrURQ0xV9A=="],
 

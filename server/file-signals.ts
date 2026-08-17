@@ -1,10 +1,5 @@
 import Markdoc from '@markdoc/markdoc'
-import {
-	createComputed,
-	type List,
-	type Memo,
-	type Task,
-} from '@zeix/cause-effect'
+import { deriveCell, type List, type Signal } from '@zeix/cause-effect'
 import {
 	API_DIR,
 	COMPONENTS_DIR,
@@ -142,13 +137,13 @@ function extractFrontmatter(content: string): {
 
 const docsMarkdown: {
 	sources: WatchedFiles
-	processed: Memo<Map<string, FileInfo & { metadata: PageMetadata }>>
-	pageInfos: Memo<PageInfo[]>
-	fullyProcessed: Task<Map<string, ProcessedMarkdownFile>>
+	processed: Signal<Map<string, FileInfo & { metadata: PageMetadata }>>
+	pageInfos: Signal<PageInfo[]>
+	fullyProcessed: Signal<Map<string, ProcessedMarkdownFile>>
 } = await (async () => {
 	const sources = await watchFiles(PAGES_DIR, '**/*.md')
 
-	const processed = createComputed(() => {
+	const processed = deriveCell(() => {
 		const rawFiles = sources.get()
 
 		const files = new Map<string, FileInfo & { metadata: PageMetadata }>()
@@ -164,7 +159,7 @@ const docsMarkdown: {
 		return files
 	})
 
-	const pageInfos = createComputed(() => {
+	const pageInfos = deriveCell(() => {
 		const pageInfos: PageInfo[] = []
 		const files = processed.get()
 
@@ -187,103 +182,105 @@ const docsMarkdown: {
 		return pageInfos
 	})
 
-	const fullyProcessed = createComputed(async () => {
-		const files = processed.get()
+	const fullyProcessed = deriveCell<Map<string, ProcessedMarkdownFile>>(
+		async () => {
+			const files = processed.get()
 
-		const processedFiles = new Map<string, ProcessedMarkdownFile>()
+			const processedFiles = new Map<string, ProcessedMarkdownFile>()
 
-		for (const [path, file] of files) {
-			try {
-				// Calculate relative path from pages directory
-				const relativePath = getRelativePath(PAGES_DIR, path)?.replace(
-					/\\/g,
-					'/',
-				)
-				if (!relativePath) continue
-
-				// Calculate path info
-				const pathParts = relativePath.split('/')
-				const section = pathParts.length > 1 ? pathParts[0]! : undefined
-				const depth = pathParts.length - 1
-				const basePath = depth > 0 ? '../'.repeat(depth) : './'
-
-				// Extract frontmatter and content
-				const { metadata: frontmatter, content } = file
-
-				// Clean API content (remove everything above first H1)
-				let processedContent = content
-				if (section === 'api') {
-					const h1Match = content.match(/^(#\s+.+)$/m)
-					if (h1Match) {
-						const h1Index = content.indexOf(h1Match[0])
-						processedContent = content.substring(h1Index)
-					}
-				}
-
-				// Parse with Markdoc
-				const ast = Markdoc.parse(processedContent)
-
-				// Validate the document
-				const errors = Markdoc.validate(ast, markdocConfig)
-				if (errors.length > 0) {
-					console.warn(`Markdoc validation errors for ${path}:`, errors)
-				}
-
-				// Transform the AST (pass basePath and toc headings for template use)
-				const toc = extractTocItems(ast)
-				const transformed = Markdoc.transform(ast, {
-					...markdocConfig,
-					variables: { basePath, toc },
-				})
-
-				// Render to HTML
-				let htmlContent = Markdoc.renderers.html(transformed)
-
-				// Remove automatic <article> wrapper added by Markdoc
-				htmlContent = htmlContent.replace(
-					/^<article>([\s\S]*)<\/article>$/m,
-					'$1',
-				)
-
-				// Apply shared HTML shaping for code fences and demo previews.
-				htmlContent = await highlightCodeBlocks(htmlContent)
-				htmlContent = injectModuleDemoPreview(htmlContent)
-				htmlContent = resolveInternalLinks(htmlContent, basePath)
-				htmlContent = injectTableOfContents(htmlContent, toc)
-
-				// Extract title
-				let title = frontmatter.title
-				if (!title && section === 'api') {
-					const headingMatch = processedContent.match(
-						/^#\s+(Function|Type Alias|Variable):\s*(.+?)(?:\(\))?$/m,
+			for (const [path, file] of files) {
+				try {
+					// Calculate relative path from pages directory
+					const relativePath = getRelativePath(PAGES_DIR, path)?.replace(
+						/\\/g,
+						'/',
 					)
-					if (headingMatch) {
-						title = headingMatch[2]!.trim()
-					} else {
-						const fallbackMatch = processedContent.match(/^#\s+(.+)$/m)
-						if (fallbackMatch) {
-							title = fallbackMatch[1]!.replace(/\(.*?\)$/, '').trim()
+					if (!relativePath) continue
+
+					// Calculate path info
+					const pathParts = relativePath.split('/')
+					const section = pathParts.length > 1 ? pathParts[0]! : undefined
+					const depth = pathParts.length - 1
+					const basePath = depth > 0 ? '../'.repeat(depth) : './'
+
+					// Extract frontmatter and content
+					const { metadata: frontmatter, content } = file
+
+					// Clean API content (remove everything above first H1)
+					let processedContent = content
+					if (section === 'api') {
+						const h1Match = content.match(/^(#\s+.+)$/m)
+						if (h1Match) {
+							const h1Index = content.indexOf(h1Match[0])
+							processedContent = content.substring(h1Index)
 						}
 					}
+
+					// Parse with Markdoc
+					const ast = Markdoc.parse(processedContent)
+
+					// Validate the document
+					const errors = Markdoc.validate(ast, markdocConfig)
+					if (errors.length > 0) {
+						console.warn(`Markdoc validation errors for ${path}:`, errors)
+					}
+
+					// Transform the AST (pass basePath and toc headings for template use)
+					const toc = extractTocItems(ast)
+					const transformed = Markdoc.transform(ast, {
+						...markdocConfig,
+						variables: { basePath, toc },
+					})
+
+					// Render to HTML
+					let htmlContent = Markdoc.renderers.html(transformed)
+
+					// Remove automatic <article> wrapper added by Markdoc
+					htmlContent = htmlContent.replace(
+						/^<article>([\s\S]*)<\/article>$/m,
+						'$1',
+					)
+
+					// Apply shared HTML shaping for code fences and demo previews.
+					htmlContent = await highlightCodeBlocks(htmlContent)
+					htmlContent = injectModuleDemoPreview(htmlContent)
+					htmlContent = resolveInternalLinks(htmlContent, basePath)
+					htmlContent = injectTableOfContents(htmlContent, toc)
+
+					// Extract title
+					let title = frontmatter.title
+					if (!title && section === 'api') {
+						const headingMatch = processedContent.match(
+							/^#\s+(Function|Type Alias|Variable):\s*(.+?)(?:\(\))?$/m,
+						)
+						if (headingMatch) {
+							title = headingMatch[2]!.trim()
+						} else {
+							const fallbackMatch = processedContent.match(/^#\s+(.+)$/m)
+							if (fallbackMatch) {
+								title = fallbackMatch[1]!.replace(/\(.*?\)$/, '').trim()
+							}
+						}
+					}
+
+					processedFiles.set(path, {
+						...file,
+						processedContent,
+						htmlContent,
+						section,
+						depth,
+						relativePath,
+						basePath,
+						title: title || 'Untitled',
+					})
+				} catch (error) {
+					console.error(`Failed to process markdown file ${path}:`, error)
 				}
-
-				processedFiles.set(path, {
-					...file,
-					processedContent,
-					htmlContent,
-					section,
-					depth,
-					relativePath,
-					basePath,
-					title: title || 'Untitled',
-				})
-			} catch (error) {
-				console.error(`Failed to process markdown file ${path}:`, error)
 			}
-		}
 
-		return processedFiles
-	})
+			return processedFiles
+		},
+	)
 
 	return {
 		sources,

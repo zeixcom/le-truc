@@ -761,11 +761,10 @@ function createList(value, options) {
     const val = value[i];
     if (val == null)
       throw new NullishSignalValueError(`${TYPE_LIST} item ${i}`);
-    let key = keys[i];
-    if (!key) {
-      key = generateKey(val);
-      keys[i] = key;
-    }
+    const key = generateKey(val);
+    if (signals.has(key))
+      throw new DuplicateKeyError(TYPE_LIST, key, val);
+    keys[i] = key;
     signals.set(key, itemFactory(val));
   }
   node.value = value;
@@ -903,8 +902,8 @@ function createList(value, options) {
       let hasRemove = false;
       untrack(() => {
         for (let i = 0;i < actualDeleteCount; i++) {
-          const index = actualStart + i;
-          const key = keys[index];
+          const index2 = actualStart + i;
+          const key = keys[index2];
           if (key) {
             const signal = signals.get(key);
             if (signal) {
@@ -918,17 +917,22 @@ function createList(value, options) {
       const change = {};
       let hasAdd = false;
       let hasChange = false;
+      const staged = new Set;
+      let index = 0;
       for (const item of items) {
+        validateSignalValue(`${TYPE_LIST} item ${actualStart + index}`, item);
+        index++;
         const key = generateKey(item);
         if (key in remove) {
           delete remove[key];
           change[key] = item;
           hasChange = true;
-        } else if (signals.has(key)) {
+        } else if (signals.has(key) || staged.has(key)) {
           throw new DuplicateKeyError(TYPE_LIST, key, item);
         } else {
           add[key] = item;
           hasAdd = true;
+          staged.add(key);
         }
         newOrder.push(key);
       }
@@ -1283,6 +1287,8 @@ function createCollection(watched, options) {
   };
   for (const item of value) {
     const key = generateKey(item);
+    if (signals.has(key))
+      throw new DuplicateKeyError(TYPE_COLLECTION, key, item);
     signals.set(key, itemFactory(item));
     itemToKey.set(item, key);
     keys.push(key);
@@ -1683,12 +1689,42 @@ function deriveStore(input, options) {
     validateSignalValue(TYPE_STORE, input, isRecord);
     const watched = options?.watched;
     validateCallback(TYPE_STORE, watched, isSyncFunction);
-    let inner;
+    const inner = createStore(input);
+    const anchor = {
+      value: undefined,
+      sinks: null,
+      sinksTail: null,
+      stop: undefined
+    };
+    let stop;
+    const stopWatched = () => {
+      if (stop) {
+        stop();
+        stop = undefined;
+      }
+    };
+    const subscribe = () => {
+      if (!activeSink)
+        return;
+      if (!anchor.sinks) {
+        stop = watched(emit);
+        anchor.stop = stopWatched;
+      }
+      link(anchor, activeSink);
+    };
     const emit = (patch) => {
       inner.update((prev) => ({ ...prev, ...patch }));
     };
-    inner = createStore(input, { watched: () => watched(emit) });
-    return readonlyFacade(() => inner.get(), () => inner.keys(), (key) => inner.byKey(key));
+    return readonlyFacade(() => {
+      subscribe();
+      return inner.get();
+    }, () => {
+      subscribe();
+      return inner.keys();
+    }, (key) => {
+      subscribe();
+      return inner.byKey(key);
+    });
   }
   const task = isAsyncFunction(input) ? createTask(input, {
     value: options?.initial ?? {}
@@ -1811,7 +1847,7 @@ var SIGNAL_TYPES = new Set([
 function createComputed(callback, options) {
   return isAsyncFunction(callback) ? createTask(callback, options) : createMemo(callback, options);
 }
-function deriveSignal(input, options) {
+function deriveCell(input, options) {
   if (isFunction(input)) {
     const { initial, watched: watched2, ...rest2 } = options ?? {};
     const computedOptions = {
@@ -1822,8 +1858,12 @@ function deriveSignal(input, options) {
     return isAsyncFunction(input) ? createTask(input, computedOptions) : createMemo(input, computedOptions);
   }
   const { watched, ...rest } = options;
-  validateCallback("deriveSignal", watched, isSyncFunction);
+  validateCallback("deriveCell", watched, isSyncFunction);
   return createSensor(watched, { ...rest, value: input });
+}
+var deriveSignal = deriveCell;
+function createCell(value, options) {
+  return createState(value, options);
 }
 function createSignal(value) {
   if (isSignal(value))
@@ -2562,7 +2602,7 @@ var keyedScopes = (memo, mount) => {
 };
 var toSignal = (host, source) => {
   if (isFunction(source))
-    return deriveSignal(source);
+    return deriveCell(source);
   if (typeof source === "string") {
     const sig = getSignals(host)[source];
     if (sig)
@@ -2868,7 +2908,7 @@ var makeOn = (host) => {
       if (!("passive" in options)) {
         options = { ...options, passive: PASSIVE_EVENTS.has(type) };
       }
-      if (isMemo(target)) {
+      if (isSignal(target)) {
         if (NON_BUBBLING_EVENTS.has(type)) {
           if (false) {}
           return keyedScopes(target, (el) => {
@@ -3071,7 +3111,7 @@ function defineComponent(name, factory, extensions) {
       }
     }
     #setAccessor(key, value) {
-      const signal = isSignal(value) ? value : isSlotDescriptor(value) ? value : isFunction(value) ? deriveSignal(value) : createState(value);
+      const signal = isSignal(value) ? value : isSlotDescriptor(value) ? value : isFunction(value) ? deriveCell(value) : createState(value);
       const signals = getSignals(this);
       const k = key;
       const prev = signals[k];
@@ -3163,7 +3203,7 @@ var HOST_CONTRACT_DESCRIPTORS = {
   validity: {
     get() {
       const signal = getSignals(this)["validity"];
-      return isState(signal) ? signal.get() : internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE;
+      return isSignal(signal) ? signal.get() : internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE;
     },
     enumerable: true,
     configurable: true
@@ -3171,7 +3211,7 @@ var HOST_CONTRACT_DESCRIPTORS = {
   validationMessage: {
     get() {
       const signal = getSignals(this)["validationMessage"];
-      return isState(signal) ? signal.get() : internalsMap.get(this)?.validationMessage ?? "";
+      return isSignal(signal) ? signal.get() : internalsMap.get(this)?.validationMessage ?? "";
     },
     enumerable: true,
     configurable: true
@@ -3457,6 +3497,7 @@ export {
   deriveStore,
   deriveSignal,
   deriveList,
+  deriveCell,
   defineMethod,
   defineComponent,
   dangerouslyBindInnerHTML,
@@ -3475,6 +3516,7 @@ export {
   createContext,
   createComputed,
   createCollection,
+  createCell,
   bindVisible,
   bindText,
   bindStyle,

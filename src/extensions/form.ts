@@ -1,4 +1,5 @@
 import {
+	createCell,
 	createEffect,
 	createSlot,
 	createState,
@@ -6,7 +7,6 @@ import {
 	isFunction,
 	isSignal,
 	isSlot,
-	isState,
 	type MaybeCleanup,
 	type State,
 } from '@zeix/cause-effect'
@@ -158,8 +158,8 @@ const HOST_CONTRACT_DESCRIPTORS = {
 	validity: {
 		get(this: HTMLElement) {
 			const signal = getSignals(this)['validity']
-			return isState(signal)
-				? (signal.get() as ValidityState)
+			return isSignal<ValidityState>(signal)
+				? signal.get()
 				: (internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE)
 		},
 		enumerable: true,
@@ -168,8 +168,8 @@ const HOST_CONTRACT_DESCRIPTORS = {
 	validationMessage: {
 		get(this: HTMLElement) {
 			const signal = getSignals(this)['validationMessage']
-			return isState(signal)
-				? (signal.get() as string)
+			return isSignal<string>(signal)
+				? signal.get()
 				: (internalsMap.get(this)?.validationMessage ?? '')
 		},
 		enumerable: true,

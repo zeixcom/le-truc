@@ -1,6 +1,6 @@
 {
 	"name": "@zeix/le-truc",
-	"version": "2.5.0",
+	"version": "2.5.1",
 	"description": "Le Truc - the thing for type-safe reactive web components",
 	"keywords": [
 		"Le Truc",
@@ -75,7 +75,7 @@
 		"verify:cem": "bun run scripts/verify-cem.ts"
 	},
 	"dependencies": {
-		"@zeix/cause-effect": "^1.5.0"
+		"@zeix/cause-effect": "^1.5.1"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.8",

@@ -104,8 +104,8 @@ Le Truc re-exports the reactive primitives from [`@zeix/cause-effect`](https://g
 |------|------|----------------|
 | [`State`](./api.html#functions/createState) | Mutable source | Local mutable state you read and write inside the component |
 | [`Sensor`](./api.html#functions/createSensor) | External input (lazy) | Values that arrive from outside the graph — `matchMedia`, `IntersectionObserver`, geolocation. Seeds an initial value via `{ value }` |
-| [`Memo`](./api.html#functions/createMemo) | Sync derivation | A value computed from other signals — e.g. the sum of a spinbutton collection. For cheap one-off derivations, a plain thunk passed to `watch()` is often enough |
-| [`Task`](./api.html#functions/createTask) | Async derivation | `fetch`, dynamic imports, or any async work. Auto-cancels in-flight work when its dependencies change and exposes pending / error / ok states via `match()` |
+| [`createMemo()`](./api.html#functions/createMemo) | Sync derivation | A value computed from other signals — e.g. the sum of a spinbutton collection. Returns a `Signal`. For cheap one-off derivations, a plain thunk passed to `watch()` is often enough |
+| [`createTask()`](./api.html#functions/createTask) | Async derivation | `fetch`, dynamic imports, or any async work. Returns a `Signal`. Auto-cancels in-flight work when its dependencies change and exposes pending / error / ok states via `match()` |
 | [`MutableStore`](./api.html#functions/createStore) | Reactive object | An object whose individual properties are each reactive |
 | [`MutableList`](./api.html#functions/createList) | Reactive array | A keyed list with stable item identity across add, remove, sort, and reorder |
 | [`DerivedList`](./api.html#functions/deriveList) | Derived keyed list | Derived sequences — map another list per item with `deriveList(list, fn)`, or feed one from a fetch or an external stream |
@@ -179,7 +179,7 @@ defineComponent('basic-counter', ({ expose, first, host, on, watch }) => {
 
 ### all()
 
-`all()` queries all matching elements as a live `Memo<E[]>`:
+`all()` queries all matching elements as a live `Signal<E[]>`:
 
 ```js
 defineComponent('module-tabgroup', ({ all, expose, on, watch }) => {
@@ -197,7 +197,7 @@ defineComponent('module-tabgroup', ({ all, expose, on, watch }) => {
 
 Without a hint string (second argument), `first()` returns `undefined` if no match is found. Effects for that key are silently skipped. With a hint string, `first()` throws a `MissingElementError` if the element is missing. Use this when the element is truly required for the component to function.
 
-The `all()` function returns a `Memo<E[]>`, a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. The signal is reactive. Effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM. A malformed selector throws `InvalidSelectorError` immediately, at the `all()` call site.
+The `all()` function returns a `Signal<E[]>`, a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. The signal is reactive. Effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM. A malformed selector throws `InvalidSelectorError` immediately, at the `all()` call site.
 
 If a queried custom element is not yet defined, Le Truc waits up to 200 ms before running effects. This ensures child components are always ready before parent effects activate.
 
@@ -216,7 +216,7 @@ const items = queryAll(container, 'li')
 const label = query(item, '.label', 'Add a label to each item.')
 ```
 
-Both share `first()`/`all()`'s selector-to-type inference and `MissingElementError` behavior. Unlike `all()`, `queryAll()` returns a plain array, queried once — not a live `Memo`. Neither waits for an undefined custom element to be defined; that check only applies to `first()`/`all()` at the host level. See [Manage Dynamic Lists](data-flow.html#manage-dynamic-lists) for `reconcile()`'s and `each()`'s own scoped `first` parameter, a `query()` pre-bound to the current item.
+Both share `first()`/`all()`'s selector-to-type inference and `MissingElementError` behavior. Unlike `all()`, `queryAll()` returns a plain array, queried once — not a live `Signal`. Neither waits for an undefined custom element to be defined; that check only applies to `first()`/`all()` at the host level. See [Manage Dynamic Lists](data-flow.html#manage-dynamic-lists) for `reconcile()`'s and `each()`'s own scoped `first` parameter, a `query()` pre-bound to the current item.
 
 {% /section %}
 
@@ -227,7 +227,7 @@ Event listeners respond to user interactions. They are the main cause of changes
 
 ### on() — Event Handling
 
-Call `on(target, type, handler)` from the factory context with an explicit target element or `Memo<E[]>` collection:
+Call `on(target, type, handler)` from the factory context with an explicit target element or `Signal<E[]>` collection:
 
 ```js
 defineComponent('my-component', ({ all, expose, first, host, on }) => {
@@ -246,7 +246,7 @@ defineComponent('my-component', ({ all, expose, first, host, on }) => {
 })
 ```
 
-The handler receives `(event, element)`. For `Memo` targets, `element` is the matched item from the collection. The handler can also **return an object** to batch-update multiple host properties at once:
+The handler receives `(event, element)`. For `Signal` targets, `element` is the matched item from the collection. The handler can also **return an object** to batch-update multiple host properties at once:
 
 ```js
 on(button, 'click', () => ({
@@ -342,7 +342,7 @@ See [Reactive Styles](styling.html#reactive-styles) for examples of how CSS and 
 
 ### Per-element Effects with each()
 
-Use `each(memo, callback)` when you have a `Memo<E[]>` collection and need different effects for each element, not just one delegated listener. It creates a per-element reactive scope. Effects activate when elements enter the collection. They are disposed when elements leave.
+Use `each(memo, callback)` when you have a `Signal<E[]>` collection and need different effects for each element, not just one delegated listener. It creates a per-element reactive scope. Effects activate when elements enter the collection. They are disposed when elements leave.
 
 ```js
 defineComponent('module-carousel', ({ all, expose, host, watch }) => {
@@ -364,7 +364,7 @@ defineComponent('module-carousel', ({ all, expose, host, watch }) => {
 
 The callback receives a single element. It returns either a single `EffectDescriptor` or a `FactoryResult` array. Alternatively, it can call `watch()`, `on()`, or a nested `each()` directly, the same as the factory itself.
 
-{% callout .tip title="each() vs on() with a Memo target" %}
+{% callout .tip title="each() vs on() with a Signal target" %}
 Use `on(memo, type, handler)` when a single delegated listener on the host is enough. For example, use one click handler for all tabs.
 Use `each(memo, callback)` when you need per-element reactive effects that depend on both the element and a signal. For example, update `ariaSelected` on every dot when the selected index changes.
 {% /callout %}
