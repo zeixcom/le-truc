@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## 2.5.1
 
 Second bridge-name wave ahead of Cause & Effect 2.0: CE 1.5.1 deprecates `deriveSignal` — the very name `2.5.0` adopted as the non-deprecated replacement for `createComputed` — in favor of `deriveCell`, one release later. `Signal` stays the umbrella term; `Cell` is now the settled terminal name for the single-value shape. Non-breaking, same policy as `2.5.0`: deprecated re-exports keep working through Le Truc 2.x and are removed in Le Truc 3.0.
 
@@ -15,7 +15,6 @@ Second bridge-name wave ahead of Cause & Effect 2.0: CE 1.5.1 deprecates `derive
 - **Internal `deriveSignal`/`createComputed` usage replaced with `deriveCell`**: `toSignal()` and `pass()` in `src/helpers/reactive.ts`, `#setAccessor` in `src/component.ts`, and `processed`/`pageInfos`/`fullyProcessed` in `server/file-signals.ts` now derive through the current name. The async `fullyProcessed` site needed an explicit type argument (`deriveCell<Map<string, ProcessedMarkdownFile>>(async () => …)`) — `deriveCell`'s overload order (`MemoCallback` checked before `TaskCallback`) infers a bare `async () => T` as `Signal<Promise<T>>` instead of `Signal<T>` unless `T` is pinned externally; `tsc` did not catch the mistyping, only the stricter TypeDoc build did.
 - **`on()`'s collection-target overloads (`src/helpers/events.ts`) and `all()`/`createElementsMemo()` (`src/helpers/dom.ts`) widened from `Memo<E[]>` to `Signal<E[]>`**: pure type widening, mirroring the `each()`/`pass()` widening `2.5.0` already made. `on()`'s runtime dispatch moved from `isMemo(target)` to `isSignal(target)` in lockstep — behavior-identical, since a raw `Element` target never has `.get()`.
 - **`pass()`'s ADR-0012 DEV_MODE warning redesigned**: previously checked `isComputed(signal)` (now deprecated, no mechanical replacement) next to a structural fallback. Now checks the problematic case directly — a branded CE signal (`Symbol.toStringTag` present) exposing both `get` and `set` — which identifies any of CE's mutable signal types (`State`/`List`/`Store`/`Slot`, and `Cell` once released) without naming them individually, and still correctly exempts the unbranded mediated `{ get, set }` descriptor form. Behavior-preserving; verified against the existing test suite, including the case that first exposed the old check's blind spot (a bare `Slot` passed directly must still warn).
-- **`AGENTS.md`, `docs-src/pages/components.md`, the "Getting Ready for Cause & Effect 2.0" blog post, and 7 skill reference files** (`cause-effect`, `le-truc`, `le-truc-dev`) updated off `deriveSignal`/`createComputed`/`Memo`/`Task`/`isComputed`/`isMemo`/`isTask` to the current names. The blog post is corrected in place with an `{% callout %}` noting the second rename, rather than left to recommend a since-deprecated name. Skill files now document `deriveSignal` as a second deprecated alias alongside `createComputed`, consistent with the `2.5.0` entries they extend.
 
 ### Deprecated
 
