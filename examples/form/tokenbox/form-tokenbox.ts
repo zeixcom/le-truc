@@ -40,20 +40,6 @@ const splitTokens = (raw: string): string[] => {
 	return parts
 }
 
-// Content-based keys make duplicate text a real `DuplicateKeyError` (thrown
-// by `tokens.add()`/`tokens.set()`) instead of the harmless "two pills with
-// the same label" positional keys used to allow. Drop later duplicates
-// up front so neither call site ever hits that throw.
-/* const dedupeTokens = (values: string[]): string[] => {
-	const seen = new Set<string>()
-	return values.filter(v => {
-		const key = tokenKey(v)
-		if (seen.has(key)) return false
-		seen.add(key)
-		return true
-	})
-} */
-
 /**
  * A tokenized text input: typed text becomes a removable pill on `,` or on blur,
  * gated by the native input's own constraint validation (`pattern`, `maxlength`, …

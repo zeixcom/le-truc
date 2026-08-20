@@ -75,10 +75,10 @@
 		"verify:cem": "bun run scripts/verify-cem.ts"
 	},
 	"dependencies": {
-		"@zeix/cause-effect": "^1.5.1"
+		"@zeix/cause-effect": "^1.5.2"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.8",
+		"@biomejs/biome": "^2.5.9",
 		"@custom-elements-manifest/analyzer": "^0.11.0",
 		"@markdoc/markdoc": "^0.5.9",
 		"@playwright/test": "^1.62.1",
@@ -87,7 +87,7 @@
 		"@types/node": "^26.2.0",
 		"@zeix/cem-plugin-le-truc": "^0.3.3",
 		"culori": "^4.0.2",
-		"dompurify": "^3.4.13",
+		"dompurify": "^3.4.14",
 		"lightningcss-cli": "^1.33.0",
 		"shiki": "^4.4.3",
 		"typedoc": "^0.28.20",
