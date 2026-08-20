@@ -7,9 +7,7 @@
 // feature module. See ADR on the `ComponentExtension` mechanism.
 import { bindText, defineComponent } from '../../index'
 
-type MinimalCounterProps = { count: number }
-
-defineComponent<MinimalCounterProps>(
+defineComponent<{ count: number }>(
 	'minimal-counter',
 	({ expose, first, host, on, watch }) => {
 		const button = first('button', 'Needed to increment the count.')

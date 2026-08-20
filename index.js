@@ -91,6 +91,13 @@ class PromiseValueError extends TypeError {
   }
 }
 
+class UnresolvableKeyError extends Error {
+  constructor(where, value) {
+    super(`[${where}] Could not resolve a key for value ${valueString(value)} — a content-based keyConfig (item => key) is required to match change/remove entries against externally-sourced data, whose items are rarely reference-equal to what is already tracked`);
+    this.name = "UnresolvableKeyError";
+  }
+}
+
 class DuplicateKeyError extends Error {
   constructor(where, key, value) {
     super(`[${where}] Could not add key "${key}"${value != null ? ` with value ${JSON.stringify(value)}` : ""} because it already exists`);
@@ -577,6 +584,74 @@ function isPending(signal) {
 function abort(signal) {
   getAsyncSource(signal)?.abort();
 }
+function createMemo(fn, options) {
+  validateCallback(TYPE_MEMO, fn, isSyncFunction);
+  if (options?.value !== undefined)
+    validateSignalValue(TYPE_MEMO, options.value, options?.guard);
+  const node = {
+    fn,
+    value: options?.value,
+    flags: FLAG_DIRTY,
+    sources: null,
+    sourcesTail: null,
+    sinks: null,
+    sinksTail: null,
+    equals: options?.equals ?? DEFAULT_EQUALITY,
+    error: undefined,
+    stop: undefined
+  };
+  const watched = options?.watched;
+  const subscribe = makeSubscribe(node, watched ? () => watched(() => {
+    propagate(node);
+    if (batchDepth === 0)
+      flush();
+  }) : undefined);
+  return {
+    [Symbol.toStringTag]: TYPE_MEMO,
+    get() {
+      subscribe();
+      refresh(node);
+      if (node.error)
+        throw node.error;
+      validateReadValue(TYPE_MEMO, node.value);
+      return node.value;
+    }
+  };
+}
+function isMemo(value) {
+  return isSignalOfType(value, TYPE_MEMO);
+}
+function createSensor(watched, options) {
+  validateCallback(TYPE_SENSOR, watched, isSyncFunction);
+  if (options?.value !== undefined)
+    validateSignalValue(TYPE_SENSOR, options.value, options?.guard);
+  const node = {
+    value: options?.value,
+    sinks: null,
+    sinksTail: null,
+    equals: options?.equals ?? DEFAULT_EQUALITY,
+    guard: options?.guard,
+    stop: undefined
+  };
+  return {
+    [Symbol.toStringTag]: TYPE_SENSOR,
+    get() {
+      if (activeSink) {
+        if (!node.sinks)
+          node.stop = watched((next) => {
+            validateSignalValue(TYPE_SENSOR, next, node.guard);
+            setState(node, next);
+          });
+        link(node, activeSink);
+      }
+      validateReadValue(TYPE_SENSOR, node.value);
+      return node.value;
+    }
+  };
+}
+function isSensor(value) {
+  return isSignalOfType(value, TYPE_SENSOR);
+}
 function createState(value, options) {
   validateSignalValue(TYPE_STATE, value, options?.guard);
   const node = {
@@ -608,6 +683,92 @@ function createState(value, options) {
 function isState(value) {
   return isSignalOfType(value, TYPE_STATE);
 }
+function createTask(fn, options) {
+  validateCallback(TYPE_TASK, fn, isAsyncFunction);
+  if (options?.value !== undefined)
+    validateSignalValue(TYPE_TASK, options.value, options?.guard);
+  const pendingNode = {
+    value: false,
+    sinks: null,
+    sinksTail: null,
+    equals: DEFAULT_EQUALITY
+  };
+  const node = {
+    fn,
+    value: options?.value,
+    sources: null,
+    sourcesTail: null,
+    sinks: null,
+    sinksTail: null,
+    flags: FLAG_DIRTY,
+    equals: options?.equals ?? DEFAULT_EQUALITY,
+    controller: undefined,
+    error: undefined,
+    stop: undefined,
+    pendingNode
+  };
+  const watched = options?.watched;
+  const subscribe = makeSubscribe(node, watched ? () => watched(() => {
+    propagate(node);
+    if (batchDepth === 0)
+      flush();
+  }) : undefined);
+  const pendingSubscribe = makeSubscribe(pendingNode);
+  return {
+    [Symbol.toStringTag]: TYPE_TASK,
+    get() {
+      subscribe();
+      refresh(node);
+      if (node.error)
+        throw node.error;
+      validateReadValue(TYPE_TASK, node.value);
+      return node.value;
+    },
+    isPending() {
+      pendingSubscribe();
+      return node.pendingNode.value;
+    },
+    abort() {
+      node.controller?.abort();
+      node.controller = undefined;
+      setState(node.pendingNode, false);
+    }
+  };
+}
+function isTask(value) {
+  return isSignalOfType(value, TYPE_TASK);
+}
+function createComputed(callback, options) {
+  return isAsyncFunction(callback) ? createTask(callback, options) : createMemo(callback, options);
+}
+function deriveCell(input, options) {
+  if (isFunction(input)) {
+    const { initial, watched: watched2, ...rest2 } = options ?? {};
+    const computedOptions = {
+      ...rest2,
+      value: initial,
+      watched: watched2
+    };
+    return isAsyncFunction(input) ? createTask(input, computedOptions) : createMemo(input, computedOptions);
+  }
+  const { watched, ...rest } = options;
+  validateCallback("deriveCell", watched, isSyncFunction);
+  return createSensor(watched, { ...rest, value: input });
+}
+var deriveSignal = deriveCell;
+function createCell(value, options) {
+  return createState(value, options);
+}
+function isComputed(value) {
+  return isMemo(value) || isTask(value);
+}
+var CELL_TYPES = new Set([TYPE_STATE, TYPE_MEMO, TYPE_TASK, TYPE_SENSOR]);
+function isCell(value) {
+  return value != null && CELL_TYPES.has(value[Symbol.toStringTag]);
+}
+function isMutableCell(value) {
+  return isState(value);
+}
 function keysEqual(a, b) {
   if (a.length !== b.length)
     return false;
@@ -619,12 +780,14 @@ function keysEqual(a, b) {
 function getKeyGenerator(keyConfig) {
   let keyCounter = 0;
   const contentBased = typeof keyConfig === "function";
+  const positional = keyConfig === undefined;
   return [
     typeof keyConfig === "string" ? () => `${keyConfig}${keyCounter++}` : contentBased ? (item) => keyConfig(item) || String(keyCounter++) : () => String(keyCounter++),
-    contentBased
+    contentBased,
+    positional
   ];
 }
-function diffPositional(prev, next, prevKeys, generateKey, itemEquals) {
+function diffPositional(prev, next, prevKeys, generateKey, itemEquals, positional) {
   const add = {};
   const change = {};
   const remove = {};
@@ -633,10 +796,21 @@ function diffPositional(prev, next, prevKeys, generateKey, itemEquals) {
   const minLen = Math.min(prev.length, next.length);
   for (let i = 0;i < minLen; i++) {
     const key = prevKeys[i];
-    nextKeys.push(key);
-    if (!itemEquals(prev[i], next[i])) {
-      change[key] = next[i];
-      changed = true;
+    const prevItem = prev[i];
+    const nextItem = next[i];
+    if (itemEquals(prevItem, nextItem)) {
+      nextKeys.push(key);
+      continue;
+    }
+    changed = true;
+    if (positional) {
+      nextKeys.push(key);
+      change[key] = nextItem;
+    } else {
+      remove[key] = null;
+      const newKey = generateKey(nextItem);
+      nextKeys.push(newKey);
+      add[newKey] = nextItem;
     }
   }
   for (let i = minLen;i < next.length; i++) {
@@ -652,9 +826,9 @@ function diffPositional(prev, next, prevKeys, generateKey, itemEquals) {
   }
   return { add, change, remove, newKeys: nextKeys, changed };
 }
-function diffArrays(prev, next, prevKeys, generateKey, contentBased, itemEquals) {
+function diffArrays(prev, next, prevKeys, generateKey, contentBased, itemEquals, positional) {
   if (!contentBased)
-    return diffPositional(prev, next, prevKeys, generateKey, itemEquals);
+    return diffPositional(prev, next, prevKeys, generateKey, itemEquals, positional);
   const add = {};
   const change = {};
   const remove = {};
@@ -698,7 +872,7 @@ function createList(value, options) {
   validateSignalValue(TYPE_LIST, value, Array.isArray);
   const signals = new Map;
   let keys = [];
-  const [generateKey, contentBased] = getKeyGenerator(options?.keyConfig);
+  const [generateKey, contentBased, positional] = getKeyGenerator(options?.keyConfig);
   const itemEquals = options?.itemEquals ?? DEEP_EQUALITY;
   const itemFactory = options?.createItem ?? ((item) => createState(item, { equals: itemEquals }));
   const buildValue = () => {
@@ -790,7 +964,7 @@ function createList(value, options) {
     },
     set(next) {
       const prev = node.flags & FLAG_DIRTY ? untrack(buildValue) : node.value;
-      const changes = diffArrays(prev, next, keys, generateKey, contentBased, itemEquals);
+      const changes = diffArrays(prev, next, keys, generateKey, contentBased, itemEquals, positional);
       if (changes.changed) {
         keys = changes.newKeys;
         applyChanges(changes);
@@ -966,100 +1140,8 @@ function isMutableList(value) {
 function isList(value) {
   return isMutableList(value);
 }
-function createMemo(fn, options) {
-  validateCallback(TYPE_MEMO, fn, isSyncFunction);
-  if (options?.value !== undefined)
-    validateSignalValue(TYPE_MEMO, options.value, options?.guard);
-  const node = {
-    fn,
-    value: options?.value,
-    flags: FLAG_DIRTY,
-    sources: null,
-    sourcesTail: null,
-    sinks: null,
-    sinksTail: null,
-    equals: options?.equals ?? DEFAULT_EQUALITY,
-    error: undefined,
-    stop: undefined
-  };
-  const watched = options?.watched;
-  const subscribe = makeSubscribe(node, watched ? () => watched(() => {
-    propagate(node);
-    if (batchDepth === 0)
-      flush();
-  }) : undefined);
-  return {
-    [Symbol.toStringTag]: TYPE_MEMO,
-    get() {
-      subscribe();
-      refresh(node);
-      if (node.error)
-        throw node.error;
-      validateReadValue(TYPE_MEMO, node.value);
-      return node.value;
-    }
-  };
-}
-function isMemo(value) {
-  return isSignalOfType(value, TYPE_MEMO);
-}
-function createTask(fn, options) {
-  validateCallback(TYPE_TASK, fn, isAsyncFunction);
-  if (options?.value !== undefined)
-    validateSignalValue(TYPE_TASK, options.value, options?.guard);
-  const pendingNode = {
-    value: false,
-    sinks: null,
-    sinksTail: null,
-    equals: DEFAULT_EQUALITY
-  };
-  const node = {
-    fn,
-    value: options?.value,
-    sources: null,
-    sourcesTail: null,
-    sinks: null,
-    sinksTail: null,
-    flags: FLAG_DIRTY,
-    equals: options?.equals ?? DEFAULT_EQUALITY,
-    controller: undefined,
-    error: undefined,
-    stop: undefined,
-    pendingNode
-  };
-  const watched = options?.watched;
-  const subscribe = makeSubscribe(node, watched ? () => watched(() => {
-    propagate(node);
-    if (batchDepth === 0)
-      flush();
-  }) : undefined);
-  const pendingSubscribe = makeSubscribe(pendingNode);
-  return {
-    [Symbol.toStringTag]: TYPE_TASK,
-    get() {
-      subscribe();
-      refresh(node);
-      if (node.error)
-        throw node.error;
-      validateReadValue(TYPE_TASK, node.value);
-      return node.value;
-    },
-    isPending() {
-      pendingSubscribe();
-      return node.pendingNode.value;
-    },
-    abort() {
-      node.controller?.abort();
-      node.controller = undefined;
-      setState(node.pendingNode, false);
-    }
-  };
-}
-function isTask(value) {
-  return isSignalOfType(value, TYPE_TASK);
-}
 function keyedAdapter(source, options) {
-  const [generateKey, contentBased] = getKeyGenerator(options?.keyConfig);
+  const [generateKey, contentBased, positional] = getKeyGenerator(options?.keyConfig);
   const itemEquals = options?.itemEquals ?? DEEP_EQUALITY;
   const signals = new Map;
   const indices = new Map;
@@ -1079,7 +1161,7 @@ function keyedAdapter(source, options) {
     if (next === syncedFrom)
       return;
     syncedFrom = next;
-    const diff = diffArrays(prev, next, keys, generateKey, contentBased, itemEquals);
+    const diff = diffArrays(prev, next, keys, generateKey, contentBased, itemEquals, positional);
     prev = next;
     if (keysEqual(keys, diff.newKeys))
       return;
@@ -1318,10 +1400,14 @@ function createCollection(watched, options) {
         }
       }
       if (change) {
+        const resolved = [];
         for (const item of change) {
           const key = resolveKey(item);
           if (!key)
-            continue;
+            throw new UnresolvableKeyError(TYPE_COLLECTION, item);
+          resolved.push([key, item]);
+        }
+        for (const [key, item] of resolved) {
           const signal = signals.get(key);
           if (signal && isState(signal)) {
             itemToKey.delete(untrack(() => signal.get()));
@@ -1331,10 +1417,14 @@ function createCollection(watched, options) {
         }
       }
       if (remove) {
+        const resolved = [];
         for (const item of remove) {
           const key = resolveKey(item);
           if (!key)
-            continue;
+            throw new UnresolvableKeyError(TYPE_COLLECTION, item);
+          resolved.push([key, item]);
+        }
+        for (const [key, item] of resolved) {
           itemToKey.delete(item);
           signals.delete(key);
           const index = keys.indexOf(key);
@@ -1453,37 +1543,6 @@ function match(signalOrSignals, handlers) {
       err([e instanceof Error ? e : new Error(String(e))]);
     });
   }
-}
-function createSensor(watched, options) {
-  validateCallback(TYPE_SENSOR, watched, isSyncFunction);
-  if (options?.value !== undefined)
-    validateSignalValue(TYPE_SENSOR, options.value, options?.guard);
-  const node = {
-    value: options?.value,
-    sinks: null,
-    sinksTail: null,
-    equals: options?.equals ?? DEFAULT_EQUALITY,
-    guard: options?.guard,
-    stop: undefined
-  };
-  return {
-    [Symbol.toStringTag]: TYPE_SENSOR,
-    get() {
-      if (activeSink) {
-        if (!node.sinks)
-          node.stop = watched((next) => {
-            validateSignalValue(TYPE_SENSOR, next, node.guard);
-            setState(node, next);
-          });
-        link(node, activeSink);
-      }
-      validateReadValue(TYPE_SENSOR, node.value);
-      return node.value;
-    }
-  };
-}
-function isSensor(value) {
-  return isSignalOfType(value, TYPE_SENSOR);
 }
 var storeProxyHandler = {
   get(target, prop) {
@@ -1844,27 +1903,6 @@ var SIGNAL_TYPES = new Set([
   TYPE_COLLECTION,
   TYPE_STORE
 ]);
-function createComputed(callback, options) {
-  return isAsyncFunction(callback) ? createTask(callback, options) : createMemo(callback, options);
-}
-function deriveCell(input, options) {
-  if (isFunction(input)) {
-    const { initial, watched: watched2, ...rest2 } = options ?? {};
-    const computedOptions = {
-      ...rest2,
-      value: initial,
-      watched: watched2
-    };
-    return isAsyncFunction(input) ? createTask(input, computedOptions) : createMemo(input, computedOptions);
-  }
-  const { watched, ...rest } = options;
-  validateCallback("deriveCell", watched, isSyncFunction);
-  return createSensor(watched, { ...rest, value: input });
-}
-var deriveSignal = deriveCell;
-function createCell(value, options) {
-  return createState(value, options);
-}
 function createSignal(value) {
   if (isSignal(value))
     return value;
@@ -1890,9 +1928,6 @@ function createMutableSignal(value) {
   if (isRecord(value))
     return createStore(value);
   return createState(value);
-}
-function isComputed(value) {
-  return isMemo(value) || isTask(value);
 }
 function isSignal(value) {
   return value != null && SIGNAL_TYPES.has(value[Symbol.toStringTag]);
@@ -2391,12 +2426,12 @@ var makeProvideContexts = (host) => (contexts) => {
   return descriptor;
 };
 var makeRequestContext = (host) => (context, fallback) => {
-  const slot = createSlot(createState(fallback));
+  const slot = createSlot(createCell(fallback));
   let answered = false;
   const dispatch = () => {
     host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
       answered = true;
-      slot.replace(createMemo(getter));
+      slot.replace(deriveCell(getter));
     }));
   };
   dispatch();
@@ -3111,7 +3146,7 @@ function defineComponent(name, factory, extensions) {
       }
     }
     #setAccessor(key, value) {
-      const signal = isSignal(value) ? value : isSlotDescriptor(value) ? value : isFunction(value) ? deriveCell(value) : createState(value);
+      const signal = isSignal(value) ? value : isSlotDescriptor(value) ? value : isFunction(value) ? deriveCell(value) : createCell(value);
       const signals = getSignals(this);
       const k = key;
       const prev = signals[k];
@@ -3287,9 +3322,9 @@ var installManagedFormMembers = (proto, resetCallback, stateRestoreCallback) => 
   });
 };
 var createManagedProperties = (instance, internals) => {
-  const disabledSlot = createSlot(createState(instance.hasAttribute("disabled")));
-  const messageState = createState(internals.validationMessage);
-  const validityState = createState(snapshotValidity(internals.validity), {
+  const disabledSlot = createSlot(createCell(instance.hasAttribute("disabled")));
+  const messageState = createCell(internals.validationMessage);
+  const validityState = createCell(snapshotValidity(internals.validity), {
     equals: DEEP_EQUALITY
   });
   const signals = getSignals(instance);
@@ -3482,6 +3517,7 @@ export {
   isMutableStore,
   isMutableSignal,
   isMutableList,
+  isMutableCell,
   isMethodProducer,
   isMemo,
   isList,
@@ -3489,6 +3525,7 @@ export {
   isDerivedList,
   isComputed,
   isCollection,
+  isCell,
   isAsyncFunction,
   formAssociatedCheckbox,
   formAssociated,
@@ -3535,6 +3572,7 @@ export {
   asBoolean,
   abort,
   UnsetSignalValueError,
+  UnresolvableKeyError,
   SKIP_EQUALITY,
   RequiredOwnerError,
   ReadonlySignalError,

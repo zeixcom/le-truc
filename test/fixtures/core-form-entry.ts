@@ -7,9 +7,7 @@
 // underlying native control.
 import { bindProperty, defineComponent, formAssociated } from '../../index'
 
-type CoreFormTextboxProps = { value: string }
-
-defineComponent<CoreFormTextboxProps>(
+defineComponent<{ value: string }>(
 	'core-form-textbox',
 	({ expose, first, on, watch }) => {
 		const textbox = first('input, textarea', 'Needed for form input.')

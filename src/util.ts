@@ -8,7 +8,7 @@ import type { SlotDescriptor } from '@zeix/cause-effect'
  * `'Memo'`, `'Slot'`, …); a raw descriptor never does, which is what distinguishes
  * `expose({ value: { get, set } })` from `expose({ value: someSignal })`.
  *
- * @since 2.6.0
+ * @since 2.5.1
  * @param {unknown} value - Value to check
  * @returns {boolean} - True if `value` is a `{ get, set? }` descriptor, not a `Signal`
  */

@@ -1,7 +1,7 @@
 import {
+	createCell,
 	createScope,
 	createSlot,
-	createState,
 	deriveCell,
 	isFunction,
 	isMutableSignal,
@@ -9,7 +9,7 @@ import {
 	isSlot,
 	type MaybeCleanup,
 	type MemoCallback,
-	type MutableSignal,
+	type MutableCell,
 	type Signal,
 	type SlotDescriptor,
 	type TaskCallback,
@@ -457,7 +457,7 @@ function defineComponent<P extends ComponentProps>(
 					? value
 					: isFunction<P[K]>(value)
 						? deriveCell(value)
-						: (createState(value) as MutableSignal<P[K]>)
+						: (createCell(value) as MutableCell<P[K]>)
 			const signals = getSignals(this)
 			const k = key as string
 			const prev = signals[k]

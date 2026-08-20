@@ -1,4 +1,4 @@
-import { createEffect, createSlot, createState } from '@zeix/cause-effect'
+import { createCell, createEffect, createSlot } from '@zeix/cause-effect'
 import { bindState } from '../bindings'
 import type { ComponentExtension } from '../extension'
 import { getSignals } from '../internal'
@@ -330,7 +330,7 @@ const debug = (): ComponentExtension => ({
 	onConnect: (instance, internals): FactoryResult | void => {
 		injectDebugStyle()
 		installDebugToggle()
-		const state = createState(false)
+		const state = createCell(false)
 		const slot = createSlot(state)
 		const signals = getSignals(instance)
 		signals['debug'] = slot
