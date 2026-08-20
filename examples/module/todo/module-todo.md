@@ -57,17 +57,17 @@ None. This component orchestrates behavior by passing state and events between d
 - Live region for screen reader reorder announcements
 ---
 - `all('button.reorder')`
-- `Memo<HTMLButtonElement[]>`
+- `Cell<HTMLButtonElement[]>`
 - **required**
 - Drag handle and keyboard reorder buttons; disabled via `each()` + `pass()` when only one item remains
 ---
 - `all('form-checkbox')`
-- `Memo<(HTMLElement & FormCheckboxProps)[]>`
+- `Cell<(HTMLElement & FormCheckboxProps)[]>`
 - **required**
 - Per-item checkbox components; each receives its item's `completed` state signal directly via `pass()`
 ---
 - all('form-inplace-edit')
-- Memo&lt;HTMLElement[]&gt;
+- `Cell<HTMLElement[]>`
 - **required**
 - Per-item inline editors; each receives its item's `label` state signal directly via `pass()`
 ---

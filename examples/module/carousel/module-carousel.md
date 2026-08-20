@@ -47,17 +47,17 @@ A scroll-snap carousel with dot navigation and keyboard controls. It demonstrate
 - Button to navigate to the next slide
 ---
 - `all('[role="tab"]')`
-- `Memo<HTMLElement[]>`
+- `Cell<HTMLElement[]>`
 - optional
 - Dot/tab navigation elements; toggles `aria-selected` and `tabIndex`
 ---
 - `all('[role="tabpanel"]')`
-- `Memo<HTMLElement[]>`
+- `Cell<HTMLElement[]>`
 - optional
 - Slide panels; toggles `aria-current` based on `index`
 ---
 - `all('nav button')`
-- `Memo<HTMLElement[]>`
+- `Cell<HTMLElement[]>`
 - optional
 - Interactive navigation buttons handling click/keyboard events
 {% /table %}
