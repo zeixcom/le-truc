@@ -1,6 +1,6 @@
 # Cause & Effect — Pitfalls & Sharp Edges
 
-Verified against `@zeix/cause-effect` 1.5.0 `src/`. Each entry: the trap, why it happens, and the one-line fix. When the README and `src/` disagree, `src/` wins (two entries below correct common misreadings).
+Verified against `@zeix/cause-effect` 1.5.2 `src/`. Each entry: the trap, why it happens, and the one-line fix. When the README and `src/` disagree, `src/` wins (two entries below correct common misreadings).
 
 ## 1. `T extends {}` — no `null` / `undefined` in signal values
 
