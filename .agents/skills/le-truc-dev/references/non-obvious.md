@@ -21,7 +21,7 @@ In `DEV_MODE`, using an unbranded function that resembles a parser triggers `con
 
 ## MethodProducer is Branded, Not Structurally Distinguished
 
-`isMethodProducer()` in `src/types.ts` checks for `METHOD_BRAND` only. An unbranded `() => void` function is treated as a `MemoCallback` (wrapped in `deriveSignal`), not a method producer.
+`isMethodProducer()` in `src/types.ts` checks for `METHOD_BRAND` only. An unbranded `() => void` function is treated as a `MemoCallback` (wrapped in `deriveCell`), not a method producer.
 
 **Always wrap method producer initializers with `defineMethod()`.** The function IS the method — it is installed directly as `host[key] = fn`.
 
@@ -39,9 +39,9 @@ A raw hand-authored descriptor — `() => { setup(); return cleanup }`, with no 
 
 ## `all()` MutationObserver is Lazy
 
-The observer in `src/helpers/dom.ts` only activates when the `Memo` is **read inside a reactive effect**. If no effect reads the Memo, mutations are not tracked. This is intentional (avoids unnecessary observers) but can look like a bug.
+The observer in `src/helpers/dom.ts` only activates when the returned `Signal` is **read inside a reactive effect**. If no effect reads it, mutations are not tracked. This is intentional (avoids unnecessary observers) but can look like a bug.
 
-The observer watches only mutations implied by the CSS selector (class, ID, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the memo's `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
+The observer watches only mutations implied by the CSS selector (class, ID, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
 
 ## `reconcile()` Owns the Container; `each()` Does Not
 
@@ -64,7 +64,7 @@ The observer watches only mutations implied by the CSS selector (class, ID, `[at
 
 The original signal is captured and restored when the parent disconnects, so the child regains its own independent state after detachment.
 
-**The property-key (`'value'`) and bare-writable-signal short forms are deprecated (ADR 0012).** Both resolve to the parent's writable signal and grant the child unrestricted `.set()`; they warn in DEV_MODE and are removed in the next major. Use the thunk (`() => host.prop`, read-only) or descriptor (`{ get, set }`, mediated writable) forms. Read-only signals (`Memo`/`Task`) passed directly do not warn.
+**The property-key (`'value'`) and bare-writable-signal short forms are deprecated (ADR 0012).** Both resolve to the parent's writable signal and grant the child unrestricted `.set()`; they warn in DEV_MODE and are removed in the next major. Use the thunk (`() => host.prop`, read-only) or descriptor (`{ get, set }`, mediated writable) forms. The warning checks for the problematic shape directly — a branded CE signal exposing both `get` and `set` — rather than trying to prove read-only-ness; signals without a `.set()` (`Memo`/`Task`/`Sensor`) passed directly do not warn.
 
 **Every entry in `props` is validated before any signal is swapped (ADR 0011).** If a passed prop doesn't exist on the target, can't be resolved to a signal, or isn't Slot-backed — which is exactly what happens when the target is a non-Le-Truc element, or the prop is read-only/computed — `pass()` throws `InvalidPassPropertyError` naming every failing prop, instead of silently no-op'ing. This is a deferred-activation throw (ADR 0007): it happens inside `connectedCallback`, after the calling factory has already returned, so it cannot be caught by the factory's own code — it surfaces as an uncaught error (`pageerror`), the same way `InvalidPropertyNameError` does.
 
@@ -88,7 +88,7 @@ If a child custom element queried by `first()` or `all()` in `src/helpers/dom.ts
 
 ## `on()` Handler Return Value Updates Host
 
-If an event handler in `src/helpers/events.ts` returns `{ prop: value }`, all returned entries are applied to `host` in a `batch()`. Returning `void` (or `undefined`) is a no-op — no host update occurs. The handler always receives `(event, element)` — second arg is the element, useful for Memo targets.
+If an event handler in `src/helpers/events.ts` returns `{ prop: value }`, all returned entries are applied to `host` in a `batch()`. Returning `void` (or `undefined`) is a no-op — no host update occurs. The handler always receives `(event, element)` — second arg is the element, useful for `Signal` targets.
 
 ## Context Protocol is the Web Components Community Protocol
 

@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { createMemo, createState, type Memo } from '@zeix/cause-effect'
+import { createMemo, createState, type Signal } from '@zeix/cause-effect'
 import { makeOn } from '../helpers/events'
 import { installActiveCollector, restoreActiveCollector } from '../internal'
 import type { EffectDescriptor } from '../types'
@@ -156,9 +156,9 @@ describe('makeOn passive scheduling', () => {
 	})
 })
 
-/* === makeOn — Memo target: delegation vs per-element fallback === */
+/* === makeOn — Signal target: delegation vs per-element fallback === */
 
-describe('makeOn Memo target dispatch', () => {
+describe('makeOn Signal target dispatch', () => {
 	const makeFakeElement = () => {
 		const listeners = new Map<string, EventListener>()
 		const el = {
@@ -192,7 +192,7 @@ describe('makeOn Memo target dispatch', () => {
 		const el1 = makeFakeElement()
 		const el2 = makeFakeElement()
 		const host = makeHost()
-		const memo = createMemo(() => [el1, el2]) as unknown as Memo<Element[]>
+		const memo = createMemo(() => [el1, el2]) as unknown as Signal<Element[]>
 
 		const calls: Element[] = []
 		const on = makeOn(host)
@@ -211,10 +211,10 @@ describe('makeOn Memo target dispatch', () => {
 		expect(calls).toEqual([el1])
 	})
 
-	test('event whose path matches no Memo element is ignored', () => {
+	test('event whose path matches no Signal element is ignored', () => {
 		const el1 = makeFakeElement()
 		const host = makeHost()
-		const memo = createMemo(() => [el1]) as unknown as Memo<Element[]>
+		const memo = createMemo(() => [el1]) as unknown as Signal<Element[]>
 
 		let called = false
 		const on = makeOn(host)
@@ -232,7 +232,7 @@ describe('makeOn Memo target dispatch', () => {
 		const el1 = makeFakeElement()
 		const el2 = makeFakeElement()
 		const host = makeHost()
-		const memo = createMemo(() => [el1, el2]) as unknown as Memo<Element[]>
+		const memo = createMemo(() => [el1, el2]) as unknown as Signal<Element[]>
 
 		const on = makeOn(host)
 		const descriptor = on(memo, 'focus', () => {})
@@ -300,7 +300,7 @@ describe('makeOn Memo target dispatch', () => {
 			process.env.DEV_MODE = 'true'
 			const el1 = makeFakeElement()
 			const host = makeHost()
-			const memo = createMemo(() => [el1]) as unknown as Memo<Element[]>
+			const memo = createMemo(() => [el1]) as unknown as Signal<Element[]>
 			const on = makeOn(host)
 			on(memo, 'focus', () => {})()
 		} finally {
@@ -409,14 +409,14 @@ describe('makeOn debug companion listener ordering', () => {
 		expect(debugCalls.length).toBeGreaterThan(0)
 	})
 
-	test('Memo target (delegated, bubbling): debug companion fires even when the author handler calls stopImmediatePropagation()', () => {
+	test('Signal target (delegated, bubbling): debug companion fires even when the author handler calls stopImmediatePropagation()', () => {
 		const debugCalls = withDevModeDebugging(() => {
 			const el1 = makeOrderedFakeElement()
 			const hostRaw = makeOrderedFakeElement()
 			const host = Object.assign(hostRaw, {
 				debug: true,
 			}) as unknown as HTMLElement & { debug: boolean }
-			const memo = createMemo(() => [el1]) as unknown as Memo<Element[]>
+			const memo = createMemo(() => [el1]) as unknown as Signal<Element[]>
 
 			const on = makeOn(host)
 			let authorCalled = false
@@ -434,13 +434,13 @@ describe('makeOn debug companion listener ordering', () => {
 		expect(debugCalls.length).toBeGreaterThan(0)
 	})
 
-	test('Memo target (non-bubbling fallback): debug companion fires even when the author handler calls stopImmediatePropagation()', () => {
+	test('Signal target (non-bubbling fallback): debug companion fires even when the author handler calls stopImmediatePropagation()', () => {
 		const debugCalls = withDevModeDebugging(() => {
 			const el1 = makeOrderedFakeElement()
 			const host = Object.assign(makeOrderedFakeElement(), {
 				debug: true,
 			}) as unknown as HTMLElement & { debug: boolean }
-			const memo = createMemo(() => [el1]) as unknown as Memo<Element[]>
+			const memo = createMemo(() => [el1]) as unknown as Signal<Element[]>
 
 			const on = makeOn(host)
 			let authorCalled = false

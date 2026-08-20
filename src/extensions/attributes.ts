@@ -1,14 +1,3 @@
-/**
- * Opt-in attribute-driven reactivity — the interop escape hatch ADR 0003
- * reserved after properties became the primary reactive interface (motivated
- * chiefly by frameworks like React that set DOM attributes rather than
- * properties).
- *
- * Properties remain primary; this only re-parses an already-`expose()`d
- * Parser-backed prop when its attribute mutates after connect.
- * `component.ts` never imports this module at the value level.
- */
-
 import type { ComponentExtension } from '../extension'
 import { retainedInitializers } from '../internal'
 import { isParser } from '../types'

@@ -1,6 +1,6 @@
 # Cause & Effect — Primitive Reference
 
-Per-primitive signatures, laziness/`watched` activation, equality, and canonical examples. Sourced from `@zeix/cause-effect` 1.5.0 `src/` and README — when they disagree, `src/` wins. This file selects and warns; it does not mirror the README (read it directly in `node_modules/@zeix/cause-effect/README.md` for the full tour).
+Per-primitive signatures, laziness/`watched` activation, equality, and canonical examples. Sourced from `@zeix/cause-effect` 1.5.2 `src/` and README — when they disagree, `src/` wins. This file selects and warns; it does not mirror the README (read it directly in `node_modules/@zeix/cause-effect/README.md` for the full tour).
 
 All signals enforce `T extends {}` — `null` and `undefined` are rejected at the type level and throw `NullishSignalValueError` at runtime (see `pitfalls.md`).
 
@@ -13,7 +13,7 @@ Every signal has `.get()`. Inside an effect/memo/task, `.get()` both returns the
 - `equals?: (a: T, b: T) => boolean` — default `===` (`DEFAULT_EQUALITY`). When equal, propagation stops for this signal's **entire downstream subtree**, not just this signal. Built-ins: `DEEP_EQUALITY` (structural, cycle-safe), `SKIP_EQUALITY` (always re-propagate — for mutable objects observed by reference).
 - `guard?: (value: unknown) => value is T` — validates on `.set()`/`.update()`; throws `InvalidSignalValueError` on failure.
 
-## State
+## Cell
 
 ```ts
 createState<T extends {}>(value: T, options?: SignalOptions<T>): State<T>
@@ -90,6 +90,8 @@ Async derivation with automatic cancellation. When dependencies change mid-fligh
 
 Use Task — not a plain async function — when you need memoization, cancellation, and reactive pending/error states. Pending/error are first-class reactive values that compose naturally with `match()`.
 
+Deprecated type alias: `Task` — no mechanical replacement (removed at 2.0; origin is no longer part of the consumption contract). Annotate with `Signal<T>` instead, or the tighter `Cell<T>` (since 1.5.2) if the collection types (`List`/`Store`) genuinely don't apply; use the free functions `isPending(signal)`/`abort(signal)` in place of the deprecated `.isPending()`/`.abort()` methods.
+
 ```ts
 const data = createTask(async (oldValue, abort) => {
   const response = await fetch(`/api/users/${id.get()}`, { signal: abort })
@@ -99,18 +101,32 @@ const data = createTask(async (oldValue, abort) => {
 id.set(2) // cancels the previous fetch automatically
 ```
 
-## deriveSignal (sync-or-async auto-detect)
+## deriveCell (sync-or-async auto-detect)
 
 ```ts
-deriveSignal<T extends {}>(
-  callback: TaskCallback<T>, options?: DeriveSignalOptions<T>): Signal<T>
-deriveSignal<T extends {}>(
-  callback: MemoCallback<T>, options?: DeriveSignalOptions<T>): Signal<T>
+deriveCell<T extends {}>(
+  input: TaskCallback<T>, options?: DeriveCellOptions<T>): Cell<T>
+deriveCell<T extends {}>(
+  input: MemoCallback<T>, options?: DeriveCellOptions<T>): Cell<T>
 ```
 
 Returns a `Memo` or a `Task` depending on whether `callback` is `async`. The decision is made **statically, before the callback ever runs** (it inspects the function prototype, not the return value). This is why a non-`async` function returning a Promise becomes a `Memo` that later throws `PromiseValueError` — the library already committed to the sync path.
 
-`createMemo` and `createTask` are the explicit primitives; `deriveSignal` is the convenience dispatcher. Le Truc uses `deriveSignal` internally where the sync/async split is data-dependent. Deprecated alias: `createComputed` (same dispatch; its `options.value` is `options.initial` on `deriveSignal`).
+`createMemo` and `createTask` are the explicit primitives; `deriveCell` is the convenience dispatcher. Le Truc uses `deriveCell` internally where the sync/async split is data-dependent. Deprecated aliases: `createComputed` and `deriveSignal` (same dispatch; `options.value` is `options.initial` on `deriveCell`). `deriveSignal` was itself the terminal name for one release (1.5.0) before `deriveCell` replaced it in 1.5.1 — `Signal` stays the umbrella term, `Cell` names the single-value shape.
+
+Since 1.5.2, `deriveCell` (and its overloads) is typed to return `Cell<T>` — `State<T> | Memo<T> | Task<T> | Sensor<T>`; still assignable anywhere `Signal<T>` is expected.
+
+### Cell / MutableCell
+
+```ts
+type Cell<T extends {}> = State<T> | Memo<T> | Task<T> | Sensor<T>
+type MutableCell<T extends {}> = State<T>
+isCell<T extends {}>(value: unknown): value is Cell<T>
+isMutableCell<T extends {}>(value: unknown): value is MutableCell<T>
+createCell<T extends {}>(value: T, options?: SignalOptions<T>): MutableCell<T>  // alias of createState
+```
+
+`Cell<T>` is a 1.x bridge for the v2.0 shape-indexed type model: a genuine structural narrowing of `Signal<T>` (each origin already carries its own `Symbol.toStringTag`), excluding `List`/`Store`/`Collection` at the type level with no runtime tag change. Use `Cell<T>` in place of `Signal<T>` wherever a value is known to never be a list or store. `isMutableCell` is equivalent to `isState`, exported under the forward-compatible name.
 
 ## Store
 
@@ -146,7 +162,7 @@ deriveList<T extends {}, U extends {}>(input: ListSource<U>,
 Keyed derived list with item-level memoization. Three flavors:
 
 - **Derived from a thunk or async function** — the fetch pipeline: `deriveList(fetchUsers, { initial: [], keyConfig })`. Cancellation and refresh are managed internally; `isPending(list)` exposes the async state.
-- **Externally-driven** (`deriveList(seed, { watched })`) — receives data from WebSocket / SSE / etc. via the watched callback. Same lazy lifecycle as Sensor. Deprecated alias: `createCollection`.
+- **Externally-driven** (`deriveList(seed, { watched })`) — receives data from WebSocket / SSE / etc. via the watched callback. Same lazy lifecycle as Sensor. Deprecated alias: `createCollection`. Since 1.5.2, a `change`/`remove` entry passed to `applyChanges()` that doesn't match an existing key throws `UnresolvableKeyError` instead of being silently dropped.
 - **Derived from another list** (`deriveList(list, itemFn)`) — sync or async per-item mapping; chains compose data pipelines. Replaces the deprecated `.deriveCollection()` method. **Watched propagation:** reading a derived list activates the source's `watched` callback through every chain level; mutations on the source don't tear down the watcher; cleanup cascades upstream when the last effect disposes.
 
 Deprecated type alias: `Collection`. `DerivedList` renames once more at 2.0 — it becomes the readonly `List` base there.
@@ -194,6 +210,6 @@ An effect that writes to a signal it also reads re-runs until the graph settles;
 
 - `createSignal(value)` — infers type from value: array → `MutableList`, plain object → `MutableStore`, async fn → `Task`, sync fn → `Memo`, else → `State`. Returns the input unchanged if it's already a signal. Deprecated alias: `createMutableSignal` (same call, restricted to mutable results).
 - `isPending(signal)` — true while an async computation is in progress; reactive when read inside a computation; `false` without tracking for signals with no async origin. `abort(signal)` cancels the in-flight computation (no-op otherwise). Both work on any signal — asynchrony is an origin, not a shape.
-- Predicates: `isSignal` (all 9 types), `isMutableSignal` (`State`/`Store`/`List`), `isSlot`, `isMutableList`, `isDerivedList`, `isMutableStore`. The origin guards (`isState`, `isMemo`, `isTask`, `isSensor`, `isComputed`, `isList`, `isCollection`, `isStore`) are deprecated aliases — removed at 2.0 in favor of `isSignalOfType()`.
+- Predicates: `isSignal` (all 9 types), `isMutableSignal` (`MutableCell`/`MutableStore`/`MutableList`), `isSlot`, `isMutableList`, `isDerivedList`, `isMutableStore`, `isCell` (`State`/`Memo`/`Task`/`Sensor`, since 1.5.2), `isMutableCell` (`State`, since 1.5.2). The origin guards (`isState`, `isMemo`, `isTask`, `isSensor`, `isComputed`, `isList`, `isCollection`, `isStore`) are deprecated aliases — removed at 2.0 in favor of `isSignalOfType()`.
 
 All type checks use `Symbol.toStringTag` branding (`isSignalOfType`), not structural duck-typing.

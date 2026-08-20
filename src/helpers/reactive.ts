@@ -4,8 +4,7 @@ import {
 	createMemo,
 	createScope,
 	type DerivedList,
-	deriveSignal,
-	isComputed,
+	deriveCell,
 	isFunction,
 	isRecord,
 	isSignal,
@@ -46,7 +45,7 @@ import { bindFirst, type FirstElement } from './dom'
  *
  * A `Reactive<T, P>` source is one of three forms: a property name (reads
  * `host[name]` and tracks it as a signal dependency), a `Signal`, or a thunk
- * wrapped in `deriveSignal()`. `watch()` and `pass()` both resolve sources
+ * wrapped in `deriveCell()`. `watch()` and `pass()` both resolve sources
  * through `toSignal()`.
  *
  * `pass()` accepts a read-only thunk, a mediated `{ get, set }` descriptor, a
@@ -68,12 +67,14 @@ import { bindFirst, type FirstElement } from './dom'
  * - `keyof P` — a string property name on the host; reads `host[name]` and
  *   registers it as a signal dependency automatically.
  * - `Signal<T>` — any signal; `.get()` is called inside the reactive effect.
- * - `() => T | Promise<T> | null | undefined` — a thunk wrapped in `deriveSignal`;
+ * - `() => T | Promise<T> | null | undefined` — a thunk wrapped in `deriveCell`;
  *   all signals read inside are tracked in the pure phase. Returning `null` or
  *   `undefined` drives the `nil` path; an async thunk becomes a `Task` signal.
  */
 type Reactive<T, P extends ComponentProps> =
-	keyof P | Signal<T & {}> | (() => T | Promise<T> | null | undefined)
+	| keyof P
+	| Signal<T & {}>
+	| (() => T | Promise<T> | null | undefined)
 
 /**
  * Map of child component property names to the reactive values `pass()` injects into them.
@@ -243,7 +244,7 @@ const keyedScopes = <E extends object>(
  *
  * - String: looks up the signal in the component's signal map, or falls back
  *   to a computed reading `host[name]` (covers properties added via `Object.defineProperty`).
- * - Thunk `() => T | Promise<T> | null | undefined`: wrapped in `deriveSignal`.
+ * - Thunk `() => T | Promise<T> | null | undefined`: wrapped in `deriveCell`.
  *   An async thunk becomes a Task signal.
  * - Signal: used directly.
  *
@@ -256,7 +257,7 @@ const toSignal = <T extends {}, P extends ComponentProps>(
 	host: HTMLElement & P,
 	source: Reactive<T, P> | SlotDescriptor<T>,
 ): Signal<T> | SlotDescriptor<T> => {
-	if (isFunction<T>(source)) return deriveSignal(source)
+	if (isFunction<T>(source)) return deriveCell(source)
 	if (typeof source === 'string') {
 		const sig = getSignals(host)[source]
 		if (sig) return sig as Signal<T>
@@ -315,7 +316,8 @@ const makeWatch = <P extends ComponentProps>(
 			| Reactive<NonNullable<unknown>, P>
 			| Array<Reactive<NonNullable<unknown>, P>>,
 		handlerOrHandlers:
-			((value: any) => MaybePromise<MaybeCleanup>) | SingleMatchHandlers<any>,
+			| ((value: any) => MaybePromise<MaybeCleanup>)
+			| SingleMatchHandlers<any>,
 	): EffectDescriptor {
 		const descriptor: EffectDescriptor = () => {
 			if (Array.isArray(source)) {
@@ -440,17 +442,21 @@ const makePass = <P extends ComponentProps>(
 
 				// ADR-0012: the property-key and bare-writable-signal short forms
 				// hand the child unrestricted `.set()` on the parent's signal. Warn
-				// in DEV_MODE. Detection is reversed — allow what is provably
-				// read-only, warn on everything else.
+				// in DEV_MODE. Checks for the problematic case directly instead of
+				// trying to prove the opposite: a branded CE signal (`Symbol.toStringTag`)
+				// exposing both `get` and `set` is almost certainly one of CE's mutable
+				// signal types (`State`/`List`/`Store`/`Slot` in v1; `Cell` added in v2) —
+				// there is no non-deprecated origin check left to name them individually
+				// (CE 1.5.1 deprecates `isComputed`/`isMemo`/`isTask` with no mechanical
+				// replacement). A mediated `{ get, set }` descriptor is unbranded (no
+				// `Symbol.toStringTag`) and correctly does not match.
 				if (
-					process.env.DEV_MODE === 'true'
-					&& !isComputed(signal)
-					&& !(
-						signal
-						&& typeof signal === 'object'
-						&& 'get' in signal
-						&& !(Symbol.toStringTag in signal)
-					)
+					process.env.DEV_MODE === 'true' &&
+					signal &&
+					typeof signal === 'object' &&
+					Symbol.toStringTag in signal &&
+					'get' in signal &&
+					'set' in signal
 				) {
 					console.warn(
 						`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`,
@@ -694,8 +700,8 @@ function reconcile<T extends {}>(
 		const nextKeyed = (after: Element | null): Element | null => {
 			let node = after ? after.nextElementSibling : container.firstElementChild
 			while (
-				node
-				&& (!keyOf.has(node) || node.hasAttribute('data-unreconciled'))
+				node &&
+				(!keyOf.has(node) || node.hasAttribute('data-unreconciled'))
 			)
 				node = node.nextElementSibling
 			return node
@@ -728,9 +734,9 @@ function reconcile<T extends {}>(
 				}
 				const harvested = child.getAttribute('data-key')
 				if (
-					harvested !== null
-					&& keySet.has(harvested)
-					&& !current.has(harvested)
+					harvested !== null &&
+					keySet.has(harvested) &&
+					!current.has(harvested)
 				) {
 					keyOf.set(child, harvested)
 					current.set(harvested, child as HTMLElement)

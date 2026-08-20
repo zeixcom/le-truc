@@ -30,7 +30,7 @@ defineComponent('my-component', ({ expose, first, all, watch, on }) => {
   const el = first('selector')
   // Declare reactive properties
   expose({ /* ... */ })
-  // Call watch(), on(), each(), pass(), or provideContexts()
+  // Call watch(), on(), each(), reconcile(), pass(), or provideContexts()
   watch(/* source */, /* handler */)
   on(el, /* type */, /* handler */)
 })
@@ -63,7 +63,7 @@ The factory function runs inside `connectedCallback()`. Element queries, `expose
 
 ### Disconnected from the DOM
 
-In `disconnectedCallback()`, Le Truc runs all cleanup functions returned by effects during the setup phase in `connectedCallback()`. This removes all event listeners and unsubscribes all signals the component is subscribed to. You do not need to worry about memory leaks.
+In `disconnectedCallback()`, Le Truc runs all cleanup functions returned by effects during the setup phase in `connectedCallback()`. This removes event listeners and unsubscribes signals the component is subscribed to. You do not need to worry about memory leaks.
 
 If you subscribe to **external APIs** that live outside the component's reactive scope — a native `IntersectionObserver`, `ResizeObserver`, or similar — wrap the setup and its cleanup in a hand-authored `EffectDescriptor`. Register it with `watch(() => true, …)`:
 
@@ -102,20 +102,18 @@ Le Truc re-exports the reactive primitives from [`@zeix/cause-effect`](https://g
 
 | Type | Role | When to use it |
 |------|------|----------------|
-| [`State`](./api.html#functions/createState) | Mutable source | Local mutable state you read and write inside the component |
-| [`Sensor`](./api.html#functions/createSensor) | External input (lazy) | Values that arrive from outside the graph — `matchMedia`, `IntersectionObserver`, geolocation. Seeds an initial value via `{ value }` |
-| [`Memo`](./api.html#functions/createMemo) | Sync derivation | A value computed from other signals — e.g. the sum of a spinbutton collection. For cheap one-off derivations, a plain thunk passed to `watch()` is often enough |
-| [`Task`](./api.html#functions/createTask) | Async derivation | `fetch`, dynamic imports, or any async work. Auto-cancels in-flight work when its dependencies change and exposes pending / error / ok states via `match()` |
+| [`MutableCell`](./api.html#functions/createCell) | Mutable source | Local mutable state you read and write inside the component |
+| [`Cell`](./api.html#functions/deriveCell) | Sync or async derivation or external input | Values computed from other signals, content retrieved via async work, and values that arrive from outside the graph |
 | [`MutableStore`](./api.html#functions/createStore) | Reactive object | An object whose individual properties are each reactive |
 | [`MutableList`](./api.html#functions/createList) | Reactive array | A keyed list with stable item identity across add, remove, sort, and reorder |
-| [`DerivedList`](./api.html#functions/deriveList) | Derived keyed list | Derived sequences — map another list per item with `deriveList(list, fn)`, or feed one from a fetch or an external stream |
+| [`DerivedList`](./api.html#functions/deriveList) | Derived keyed list | Map another list per item, or feed one from a fetch or an external stream |
 | [`Effect`](./api.html#functions/createEffect) | Side-effect sink | Terminal consumer for work outside the graph. Inside a component, prefer the factory's `watch()` / `on()` over a bare `createEffect()` |
 
 `Slot` is an integration primitive used internally by `pass()` to swap a child's backing signal. You rarely create one directly.
 
 ### Migrating Deprecated Signal Names
 
-Le Truc re-exports each Cause & Effect replacement name next to its deprecated counterpart, so you can migrate incrementally. See [Cause & Effect's MIGRATION-2.0.md](https://github.com/zeixcom/cause-effect/blob/main/MIGRATION-2.0.md) for the full rename list and a codemod: 
+Upcoming Cause & Effect 2.0 will unify its signal types to `Cell` (was: `State`, `Memo`, `Task`, `Sensor`), `List`, `Store`, and their mutable counterparts. Le Truc re-exports each Cause & Effect replacement name next to its deprecated counterpart, so you can migrate incrementally. See [Cause & Effect's MIGRATION-2.0.md](https://github.com/zeixcom/cause-effect/blob/main/MIGRATION-2.0.md) for the full rename list and a codemod: 
 
 ```sh
 bun tools/codemod-v2.ts 'src/**/*.ts' --module @zeix/le-truc
@@ -128,15 +126,15 @@ Signals are **statically typed** and **non-nullable**. Effects need no null-chec
 - With **TypeScript**, assigning `null`, `undefined`, or a wrong type to a signal property is a compile-time error.
 - With vanilla **JavaScript**, setting a signal to `null` or `undefined` throws a `NullishSignalValueError` at runtime. Type mismatches are not caught.
 
-When a `watch()` reactive source produces `null` or `undefined`, the `nil` branch of `SingleMatchHandlers` fires if present:
+When a watched reactive source produces `null` or `undefined`, the `nil` branch of `SingleMatchHandlers` fires if present:
 
 - **`bindAttribute(el, name)`** nil branch: calls `el.removeAttribute(name)` — removes the attribute entirely
 - **`bindStyle(el, prop)`** nil branch: calls `el.style.removeProperty(prop)` — restores the CSS cascade value
 - Plain function handlers (`bindText`, `bindProperty`, `bindClass`, `bindVisible`) have no nil branch — a nil source leaves the DOM unchanged
 
-### Initialize State from Attributes
+### Parse from Attributes
 
-The standard way to set initial state is via **server-rendered attributes** on the component element. Pass a `Parser` function to `expose()`. Le Truc calls it with the attribute value at connect time. Bundled parsers cover common types. `asParser()` wraps any custom parser function.
+The standard way to set initial state is via **server-rendered attributes** on the component element. Pass a `Parser` function to `expose()`. Le Truc calls it with the attribute value at connect time. Bundled parsers cover common types. `asParser()` wraps any custom parser function. See the [Parsers section](api.html#parsers) in the API reference for detailed descriptions and usage examples of built-in parsers.
 
 ```js
 defineComponent('my-component', ({ expose }) => {
@@ -148,123 +146,38 @@ defineComponent('my-component', ({ expose }) => {
 ```
 
 {% callout .note title="Parsers run once at connect time" %}
-The attribute value drives the initial signal. Attribute changes after connection do not re-run the parser. Use event handlers or direct property writes to update state after connect. To make a Parser-backed prop re-parse on attribute mutations, pass the [`observedAttributes()`](#attribute-driven-reactivity) extension to `defineComponent()`. This matters for frameworks like React, which set attributes rather than properties.
+The attribute value drives the initial signal. Per default, attribute changes after connection do not re-run the parser. Use property writes to update state after connect. To make a Parser-backed prop re-parse on attribute mutations, pass the [`observedAttributes()`](#attribute-driven-reactivity) extension to `defineComponent()`. This matters for frameworks like React, which set attributes rather than properties.
 {% /callout %}
 
-### Bundled Attribute Parsers
+### Use Local Signals for Private State
 
-Le Truc provides several built-in parsers for common attribute types. See the [Parsers section](api.html#parsers) in the API reference for detailed descriptions and usage examples.
-
-{% /section %}
-
-{% section %}
-## Query Elements
-
-Use the provided selector utilities to find descendant elements within your component:
-
-### first()
-
-`first()` queries the first matching element:
+Local signals are useful for state that should not be exposed outside the component. Create them in the factory closure:
 
 ```js
-defineComponent('basic-counter', ({ expose, first, host, on, watch }) => {
-  const increment = first(
-    'button',
-    'Add a native button element to increment the count.',
-  )
-  const count = first('span', 'Add a span to display the count.')
-  // ...
+defineComponent('my-component', ({ first, on, watch }) => {
+  const increment = first('button.increment')
+  const count = first('.count')
+  const double = first('.double')
+
+  const countCell = createCell(0)
+  const doubleCell = deriveCell(() => countCell.get() * 2)
+
+  on(increment, 'click', () => { countCell.update(v => ++v) })
+  watch(countCell, bindText(count))
+  watch(doubleCell, bindText(double))
 })
 ```
 
-### all()
+Outside components cannot access the `countCell` or `doubleCell` signals.
 
-`all()` queries all matching elements as a live `Memo<E[]>`:
+### Read-Only Properties
 
-```js
-defineComponent('module-tabgroup', ({ all, expose, on, watch }) => {
-  const tabs = all(
-    'button[role="tab"]',
-    'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
-  )
-  const panels = all(
-    '[role="tabpanel"]',
-    'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
-  )
-  // ...
-})
-```
-
-Without a hint string (second argument), `first()` returns `undefined` if no match is found. Effects for that key are silently skipped. With a hint string, `first()` throws a `MissingElementError` if the element is missing. Use this when the element is truly required for the component to function.
-
-The `all()` function returns a `Memo<E[]>`, a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. The signal is reactive. Effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM. A malformed selector throws `InvalidSelectorError` immediately, at the `all()` call site.
-
-If a queried custom element is not yet defined, Le Truc waits up to 200 ms before running effects. This ensures child components are always ready before parent effects activate.
-
-{% callout .tip %}
-`all()` observes structural changes and re-runs effects accordingly. Prefer `first()` when targeting a single element known to be present at connection time.
-{% /callout %}
-
-### query() and queryAll()
-
-`first()` and `all()` always search from the component host. To search from an element you already have — inside a `reconcile()` `bindItem` or `each()` callback, or in a free-standing helper function that only receives an element — use `query()` and `queryAll()` instead. They take an explicit root as their first argument:
-
-```js
-import { query, queryAll } from '@zeix/le-truc'
-
-const items = queryAll(container, 'li')
-const label = query(item, '.label', 'Add a label to each item.')
-```
-
-Both share `first()`/`all()`'s selector-to-type inference and `MissingElementError` behavior. Unlike `all()`, `queryAll()` returns a plain array, queried once — not a live `Memo`. Neither waits for an undefined custom element to be defined; that check only applies to `first()`/`all()` at the host level. See [Manage Dynamic Lists](data-flow.html#manage-dynamic-lists) for `reconcile()`'s and `each()`'s own scoped `first` parameter, a `query()` pre-bound to the current item.
-
-{% /section %}
-
-{% section %}
-## Add Event Listeners
-
-Event listeners respond to user interactions. They are the main cause of changes in component state.
-
-### on() — Event Handling
-
-Call `on(target, type, handler)` from the factory context with an explicit target element or `Memo<E[]>` collection:
-
-```js
-defineComponent('my-component', ({ all, expose, first, host, on }) => {
-  const buttons = all('button')
-  const input = first('input')
-
-  expose({ active: 0, value: '' })
-
-  on(buttons, 'click', (_e, target) => {
-    // Set 'active' signal to value of data-index attribute of button
-    const index = parseInt(target.dataset.index ?? '0', 10)
-    host.active = Number.isInteger(index) ? index : 0
-  })
-  // Set 'value' signal to value of input element
-  on(input, 'change', () => ({ value: input.value }))
-})
-```
-
-The handler receives `(event, element)`. For `Memo` targets, `element` is the matched item from the collection. The handler can also **return an object** to batch-update multiple host properties at once:
-
-```js
-on(button, 'click', () => ({
-  count: host.count + 1,
-  lastClicked: Date.now(),
-}))
-```
-
-`on()` returns an `EffectDescriptor` that activates inside a reactive scope. Event listeners are automatically removed when the component disconnects.
-
-### Read-Only Event-Driven Properties
-
-To expose a property that consumers can read but never set, create a `State` in the factory closure. Expose only its getter. The `on()` handler updates the value:
+To expose a property that consumers can read but never set, create a `MutableCell` in the factory closure. Expose only its getter. The `on()` handler updates the value:
 
 ```js#my-input.ts
 defineComponent('my-input', ({ expose, first, on }) => {
   const textbox = first('input', 'A textbox is required.')
-  const length = createState(textbox.value.length)
+  const length = createCell(textbox.value.length)
 
   expose({
     value: textbox.value,
@@ -277,7 +190,7 @@ defineComponent('my-input', ({ expose, first, on }) => {
 })
 ```
 
-You make the property read-only by exposing `state.get` rather than the full `State`. To watch this property inside the same factory, pass the signal directly instead of a string prop name. This skips the host slot lookup:
+To watch this property inside the same factory, pass the signal directly:
 
 ```js
 watch(length, bindVisible(clearBtn))
@@ -285,7 +198,7 @@ watch(length, bindVisible(clearBtn))
 
 ### Expose Imperative Methods
 
-Not every property is a value you read or watch. Some are **commands**: functions a consumer calls imperatively from event handlers, like `reset()`, `stepUp()` / `stepDown()`, or `clear()`. Wrap the function in `defineMethod()`. Pass it to `expose()`:
+To expose **commands** on the element consumers can call from event handlers, wrap the function in `defineMethod()`:
 
 ```js#form-textbox.js
 defineComponent('form-textbox', ({ expose, first, host, on, watch }) => {
@@ -309,7 +222,7 @@ defineComponent('form-textbox', ({ expose, first, host, on, watch }) => {
 })
 ```
 
-Use methods to expose a function to other components. The function operates on the host and hides implementation details. You can expose both reactive values (`value`) and methods (`clear`) side by side.
+Common use cases include `reset()`, `stepUp()` / `stepDown()`, or `clear()`. The function operates on the host and hides implementation details. You can expose both reactive values (`value`) and methods (`clear`) side by side.
 
 {% callout .tip title="Always use defineMethod(), never a plain function" %}
 Le Truc identifies method producers by a brand symbol that `defineMethod()` attaches. Le Truc treats an unbranded function passed to `expose()` as a thunk instead. This creates a computed reactive property.
@@ -318,13 +231,114 @@ Le Truc identifies method producers by a brand symbol that `defineMethod()` atta
 {% /section %}
 
 {% section %}
+## Query Elements
+
+Use the provided query utilities to find descendant elements within your component:
+
+### first()
+
+`first()` returns the first matching element:
+
+```js
+defineComponent('basic-counter', ({ first }) => {
+  const increment = first(
+    'button',
+    'Add a native button element to increment the count.',
+  )
+  const count = first('span', 'Add a span to display the count.')
+  // ...
+})
+```
+
+### all()
+
+`all()` returns all matching elements as a live `Cell<E[]>`:
+
+```js
+defineComponent('module-tabgroup', ({ all }) => {
+  const tabs = all(
+    'button[role="tab"]',
+    'At least 2 tabs as children of a <[role="tablist"]> element are needed. Each tab must reference a unique id of a <[role="tabpanel"]> element.',
+  )
+  const panels = all(
+    '[role="tabpanel"]',
+    'At least 2 tabpanels are needed. Each tabpanel must have a unique id.',
+  )
+  // ...
+})
+```
+
+Without a hint string (second argument), `first()` returns `undefined` if no match is found. Effects for that key are silently skipped. With a hint string, `first()` throws a `MissingElementError` if the element is missing. Use this when the element is truly required for the component to function.
+
+The `all()` function returns a `Cell<E[]>`, a memoized, reactive signal of all elements matching the selector. Call `.get()` to unwrap the current array. The signal is reactive. Effects that read from it automatically re-run whenever matching elements are added, removed, or rearranged in the DOM. A malformed selector throws `InvalidSelectorError` immediately, at the `all()` call site.
+
+If a queried custom element is not yet defined, Le Truc waits up to 200 ms before running effects. This ensures child components are ready before parent effects activate.
+
+{% callout .tip %}
+`all()` observes structural changes and re-runs effects accordingly. Prefer `first()` when targeting a single element known to be present at connect time.
+{% /callout %}
+
+### query() and queryAll()
+
+`first()` and `all()` always search from the component host. To search from an element you already have — inside a callback in `reconcile()` or `each()`, or in a free-standing helper function that only receives an element — use `query()` and `queryAll()` instead. They take an explicit root as their first argument:
+
+```js
+import { query, queryAll } from '@zeix/le-truc'
+
+const items = queryAll(container, 'li')
+const label = query(item, '.label', 'Add a label to each item.')
+```
+
+Both share `first()`/`all()`'s selector-to-type inference and `MissingElementError` behavior. Unlike `all()`, `queryAll()` returns a plain array, queried once, not a live `Cell`. Neither waits for an undefined custom element to be defined. That check only applies to `first()`/`all()` at the host level.
+
+{% /section %}
+
+{% section %}
+## Add Event Listeners
+
+Event listeners respond to user interactions. They are the main cause of changes in component state.
+
+### on() — Event Handling
+
+Call `on(target, type, handler)` from the factory context with an explicit target element or `Cell<E[]>` collection:
+
+```js
+defineComponent('my-component', ({ all, expose, first, host, on }) => {
+  const buttons = all('button')
+  const input = first('input')
+
+  expose({ active: 0, value: '' })
+
+  on(buttons, 'click', (_e, target) => {
+    // Set 'active' signal to value of data-index attribute of button
+    const index = parseInt(target.dataset.index ?? '0', 10)
+    host.active = Number.isInteger(index) ? index : 0
+  })
+  // Set 'value' signal to value of input element
+  on(input, 'change', () => ({ value: input.value }))
+})
+```
+
+The handler receives `(event, element)`. For `Signal` targets, `element` is the matched item from the collection. The handler can also **return an object** to batch-update multiple host properties at once:
+
+```js
+on(button, 'click', () => ({
+  count: host.count + 1,
+  lastClicked: Date.now(),
+}))
+```
+
+Event listeners are automatically removed when the component disconnects.
+{% /section %}
+
+{% section %}
 ## Synchronize State with Effects
 
 Effects **automatically update the DOM** when signals change. You do not need manual DOM manipulation.
 
-### Apply Effects
+### Watch Reactive Sources
 
-`watch()`, `on()`, `each()`, `pass()`, and `provideContexts()` each produce an `EffectDescriptor` and register it automatically when called. You do not need `return`. If you write a hand-authored descriptor instead of using one of these five helpers, register it the same way, via `watch(() => true, descriptor)`. See [Disconnected from the DOM](#disconnected-from-the-dom) for details. The `watch(source, handler)` helper drives a DOM update from a declared reactive source:
+The `watch(source, handler)` helper drives a DOM update from a declared reactive source. Le Truc provides `bind*` helpers for common DOM update patterns. Each returns a handler to pass to `watch()`. See the [Helpers section](api.html#helpers) in the API reference for descriptions and usage examples.
 
 ```js
 watch('open', bindAttribute(host, 'open')) // set attribute from 'open' signal
@@ -339,64 +353,6 @@ The order of calls does not matter.
 
 See [Reactive Styles](styling.html#reactive-styles) for examples of how CSS and effects work together.
 {% /callout %}
-
-### Per-element Effects with each()
-
-Use `each(memo, callback)` when you have a `Memo<E[]>` collection and need different effects for each element, not just one delegated listener. It creates a per-element reactive scope. Effects activate when elements enter the collection. They are disposed when elements leave.
-
-```js
-defineComponent('module-carousel', ({ all, expose, host, watch }) => {
-  const dots = all('button[role="tab"]')
-
-  expose({ index: 0 })
-
-  each(dots, dot =>
-    watch(
-      () => dot.dataset.index === String(host.index),
-      selected => {
-        dot.ariaSelected = String(selected)
-        dot.tabIndex = selected ? 0 : -1
-      },
-    ),
-  )
-})
-```
-
-The callback receives a single element. It returns either a single `EffectDescriptor` or a `FactoryResult` array. Alternatively, it can call `watch()`, `on()`, or a nested `each()` directly, the same as the factory itself.
-
-{% callout .tip title="each() vs on() with a Memo target" %}
-Use `on(memo, type, handler)` when a single delegated listener on the host is enough. For example, use one click handler for all tabs.
-Use `each(memo, callback)` when you need per-element reactive effects that depend on both the element and a signal. For example, update `ariaSelected` on every dot when the selected index changes.
-{% /callout %}
-
-{% callout .tip title="each() nests to any depth" %}
-`each()` callbacks can call another `each()`, for example rows containing columns containing cells in a grid. There is no limit on depth. Ordinary inline arrow handlers work at any nesting level. If `watch()` reports a confusing "no overload matches" error, check the handler body. The usual cause is a handler that returns a value instead of `void` (e.g. a one-line `array.push(...)`).
-{% /callout %}
-
-### DOM Binding Helpers
-
-Le Truc provides `bind*` helpers for common DOM update patterns. Each returns a handler (or `SingleMatchHandlers` object) to pass to `watch()`. See the [Helpers section](api.html#helpers) in the API reference for descriptions and usage examples.
-
-### Use Local Signals for Private State
-
-Local signals are useful for state that should not be exposed outside the component. Create them in the factory closure:
-
-```js
-defineComponent('my-component', ({ first, on, watch }) => {
-  const increment = first('button.increment')
-  const count = first('.count')
-  const double = first('.double')
-
-  const countState = createState(0)
-  const doubleState = createMemo(() => countState.get() * 2)
-
-  on(increment, 'click', () => { countState.update(v => ++v) })
-  watch(countState, bindText(count))
-  watch(doubleState, bindText(double))
-})
-```
-
-Outside components cannot access the `countState` or `doubleState` signals.
 
 ### Use Functions for Ad-hoc Derived State
 
@@ -417,6 +373,39 @@ defineComponent('my-component', ({ expose, first, host, watch }) => {
 {% callout .tip title="When to use" %}
 - **Use a property name or a local signal** when the state is part of the component's public interface or internally reused.
 - **Use a thunk** when the derived value is only needed in this one place.
+{% /callout %}
+
+### Per-element Effects with each()
+
+Use `each(memo, callback)` when you have a `Cell<E[]>` collection and need different effects for each element. It creates a per-element reactive scope. Effects activate when elements enter the collection. They are disposed when elements leave.
+
+```js
+defineComponent('module-carousel', ({ all, expose, host, watch }) => {
+  const dots = all('button[role="tab"]')
+
+  expose({ index: 0 })
+
+  each(dots, dot => {
+    watch(
+      () => dot.dataset.index === String(host.index),
+      selected => {
+        dot.ariaSelected = String(selected)
+        dot.tabIndex = selected ? 0 : -1
+      },
+    )
+  })
+})
+```
+
+The callback receives a single element. Inside the callback you can use the reactive helpers (`watch()`, `on()`, `each()`, `pass()`) to define effects.
+
+{% callout .tip title="each() vs on() with a Cell target" %}
+Use `on(cell, type, handler)` when a single delegated listener on the host is enough. For example, use one click handler for all tabs.
+Use `each(cell, callback)` when you need per-element reactive effects that depend on both the element and a signal. For example, update `ariaSelected` on every dot when the selected index changes.
+{% /callout %}
+
+{% callout .tip title="each() nests to any depth" %}
+`each()` callbacks can call another `each()`, for example rows containing columns containing cells in a grid. There is no limit on depth. Ordinary inline arrow handlers work at any nesting level. If `watch()` reports a confusing "no overload matches" error, check the handler body. The usual cause is a handler that returns a value instead of `void`.
 {% /callout %}
 
 ### Bidirectional Binding with Native Elements
@@ -460,7 +449,7 @@ Use `bindProperty()` for properties that diverge from their attribute equivalent
 {% section %}
 ## Extensions
 
-The third argument to `defineComponent()` is an optional array of **extensions**. Extensions are small, tree-shakable modules that augment a component with opt-in capabilities without bloating the core. `component.ts` never statically imports feature-specific code, so a consumer who never calls an extension never bundles it.
+The third argument to `defineComponent()` is an optional array of **extensions**. Extensions are small, tree-shakable modules that augment a component with opt-in capabilities without bloating the core.
 
 Each extension implements the `ComponentExtension` interface:
 - A `name`
@@ -482,16 +471,16 @@ Le Truc ships three extensions, each imported separately:
 | [`formAssociatedCheckbox()`](#checkbox-shaped-controls) | Form participation keyed on a `checked: boolean` prop — submits nothing when unchecked |
 | [`observedAttributes()`](#attribute-driven-reactivity) | Re-parses Parser-backed props when their attribute mutates after connect |
 
-A fourth extension, [`debug()`](#debug-instrumentation), ships too — but it never appears in this table, because you never add it yourself.
+A fourth extension, [`debug()`](#debug-instrumentation), ships too — but it doesn't appear in this table, because you never add it yourself.
 
 ### Form Association
 
-The `formAssociated()` extension adapts a component to the [form-associated custom element](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-face-example) convention. Pass it as the first element of the extensions array. The factory's context then widens to expose the `internals` object alongside the usual helpers:
+The `formAssociated()` extension adapts a component to the [form-associated custom element](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-face-example) convention. Pass it as the first element of the extensions array:
 
 ```js#form-textbox.js
 defineComponent<FormTextboxProps>(
   'form-textbox',
-  ({ expose, first, host, internals, on, watch }) => {
+  ({ expose, first, host, internals, watch }) => {
     const textbox = first('input, textarea')
 
     expose({ value: textbox.value })
@@ -567,12 +556,12 @@ export default defineComponent(
 
 ### Attribute-Driven Reactivity
 
-Properties are the primary reactive interface. By design, a `Parser` passed to `expose()` reads its attribute once, at connect time. Attribute changes after connect do not re-run it. The `observedAttributes()` extension is the opt-in escape hatch. Use it when you need the parser to fire again on later attribute mutations. This matters chiefly for frameworks like React that set DOM attributes on custom elements rather than properties:
+Properties are the primary reactive interface. By design, a `Parser` passed to `expose()` reads its attribute once, at connect time. Attribute changes after connect do not re-run it. The `observedAttributes()` extension is the opt-in escape hatch. Use it when you need the parser to fire again on later attribute mutations. This matters for interoperability with frameworks like React that set DOM attributes on custom elements rather than properties:
 
 ```js#basic-gauge.js
 defineComponent<BasicGaugeProps>(
   'basic-gauge',
-  ({ expose, first, host, watch }) => {
+  ({ expose, watch }) => {
     expose({ value: asNumber() })
 
     watch('value', v => { /* update the gauge */ })
@@ -585,19 +574,19 @@ Le Truc adds named attributes to the class's `static observedAttributes`. On eac
 
 ### Debug Instrumentation
 
-`debug()` is not exported, and you never pass it to `defineComponent()`. Build your app with `DEV_MODE=true` (the default for local development), and every component gets a reactive `debug: boolean` property for free — including components you didn't write. This is the point: instrumenting one specific component instance shouldn't require editing its source.
+`debug()` is not exported, and you never pass it to `defineComponent()`. Build your app with `DEV_MODE="true"`, and every component gets a reactive `debug: boolean` property for free. Instrumenting one specific component instance shouldn't require editing its source.
 
 Toggle `debug` from the browser's properties panel, or hold `Cmd`/`Ctrl` and click the component. While `debug` is `true`:
 - The host carries a pulsing box-shadow indicator on every `on()`, `pass()`, or `watch()` firing
 - Target elements that `on()`, `pass()`, or a `bind*`-backed `watch()` handler act on get a presence-only marking attribute (`data-le-truc-on`, `-pass`, or `-watch`)
 - Each firing logs one `console.debug()` entry naming the component and, where known, the event or target
 
-A `watch()` handler not produced by a `bind*` helper (`bindText`, `bindProperty`, and so on) can't be traced back to an element — Le Truc shows the host-level pulse only, rather than guess.
+A `watch()` handler not produced by a `bind*` helper (`bindText`, `bindProperty`, and so on) can't be traced back to an element. Le Truc shows the host-level pulse only, rather than guess.
 
-`debug` does nothing in production. The property doesn't exist without `DEV_MODE`: setting `debug = true` on a production build is a no-op, because the extension that provides it was never added to the component.
+`debug` does nothing in production. The property doesn't exist without `DEV_MODE`, because the extension that provides it was never added to the component.
 
 {% callout .caution title="debug is a reserved property name in DEV_MODE" %}
-`expose({ debug: ... })` throws in a `DEV_MODE` build, on any component, whether or not it uses `debug()` itself — the name is reserved the moment `DEV_MODE` is on. The same component works fine in production, where the reservation doesn't exist. Avoid `debug` as a prop name.
+`expose({ debug: ... })` throws in a `DEV_MODE` build, on any component. The name is reserved the moment `DEV_MODE` is on. Avoid `debug` as a prop name.
 {% /callout %}
 
 {% /section %}

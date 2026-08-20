@@ -116,7 +116,7 @@ declare const makeProvideContexts: <P extends ComponentProps>(host: HTMLElement 
  * same bundle) and once after {@link CONTEXT_RETRY_DELAY} (covers providers
  * whose effect activation waited on `customElements.whenDefined()`). When a
  * provider answers late, the Slot's backing signal is swapped
- * (`slot.replace(createMemo(getter))`), so the consumer's value switches
+ * (`slot.replace(deriveCell(getter))`), so the consumer's value switches
  * from `fallback` to the provided value reactively. If no provider ever
  * answers, `fallback` is permanent for that connection, and a `DEV_MODE`
  * warning names the context and host.

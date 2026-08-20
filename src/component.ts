@@ -1,15 +1,15 @@
 import {
+	createCell,
 	createScope,
 	createSlot,
-	createState,
-	deriveSignal,
+	deriveCell,
 	isFunction,
 	isMutableSignal,
 	isSignal,
 	isSlot,
 	type MaybeCleanup,
 	type MemoCallback,
-	type MutableSignal,
+	type MutableCell,
 	type Signal,
 	type SlotDescriptor,
 	type TaskCallback,
@@ -62,7 +62,7 @@ import { elementName, isSlotDescriptor } from './util'
  * Any value that `#setAccessor` can turn into a signal:
  * - `T` — wrapped in `createState()`
  * - `Signal<T>` — used directly
- * - `MemoCallback<T>` — wrapped in `deriveSignal()`
+ * - `MemoCallback<T>` — wrapped in `deriveCell()`
  * - `TaskCallback<T>` — wrapped in `createTask()`
  * - `SlotDescriptor<T>` (`{ get, set? }`) — used directly as the Slot's backing
  *   signal, mirroring the mediated form `pass()` accepts. Distinguished from `T`
@@ -456,8 +456,8 @@ function defineComponent<P extends ComponentProps>(
 				: isSlotDescriptor<P[K]>(value)
 					? value
 					: isFunction<P[K]>(value)
-						? deriveSignal(value)
-						: (createState(value) as MutableSignal<P[K]>)
+						? deriveCell(value)
+						: (createCell(value) as MutableCell<P[K]>)
 			const signals = getSignals(this)
 			const k = key as string
 			const prev = signals[k]

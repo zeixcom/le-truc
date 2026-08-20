@@ -1,14 +1,13 @@
 import {
+	createCell,
 	createEffect,
 	createSlot,
-	createState,
 	DEEP_EQUALITY,
 	isFunction,
 	isSignal,
 	isSlot,
-	isState,
 	type MaybeCleanup,
-	type State,
+	type MutableCell,
 } from '@zeix/cause-effect'
 import type { ComponentExtension } from '../extension'
 import { getSignals, internalsMap, retainedInitializers } from '../internal'
@@ -91,7 +90,7 @@ const EMPTY_VALIDITY_STATE: ValidityState = {
 	badInput: false,
 	customError: false,
 	valid: true,
-} as ValidityState
+}
 
 /**
  * Snapshot a native `ValidityState` into a plain object. `ValidityState`'s
@@ -106,7 +105,7 @@ const snapshotValidity = (validity: ValidityState): ValidityState => {
 		EMPTY_VALIDITY_STATE,
 	) as (keyof ValidityState)[])
 		snapshot[key] = validity[key]
-	return snapshot as ValidityState
+	return snapshot
 }
 
 /**
@@ -158,8 +157,8 @@ const HOST_CONTRACT_DESCRIPTORS = {
 	validity: {
 		get(this: HTMLElement) {
 			const signal = getSignals(this)['validity']
-			return isState(signal)
-				? (signal.get() as ValidityState)
+			return isSignal<ValidityState>(signal)
+				? signal.get()
 				: (internalsMap.get(this)?.validity ?? EMPTY_VALIDITY_STATE)
 		},
 		enumerable: true,
@@ -168,8 +167,8 @@ const HOST_CONTRACT_DESCRIPTORS = {
 	validationMessage: {
 		get(this: HTMLElement) {
 			const signal = getSignals(this)['validationMessage']
-			return isState(signal)
-				? (signal.get() as string)
+			return isSignal<string>(signal)
+				? signal.get()
 				: (internalsMap.get(this)?.validationMessage ?? '')
 		},
 		enumerable: true,
@@ -318,12 +317,10 @@ const installManagedFormMembers = (
 const createManagedProperties = (
 	instance: HTMLElement,
 	internals: ElementInternals,
-): State<string> => {
-	const disabledSlot = createSlot(
-		createState(instance.hasAttribute('disabled')),
-	)
-	const messageState = createState(internals.validationMessage)
-	const validityState = createState(snapshotValidity(internals.validity), {
+): MutableCell<string> => {
+	const disabledSlot = createSlot(createCell(instance.hasAttribute('disabled')))
+	const messageState = createCell(internals.validationMessage)
+	const validityState = createCell(snapshotValidity(internals.validity), {
 		equals: DEEP_EQUALITY,
 	})
 	const signals = getSignals(instance)

@@ -1,10 +1,5 @@
 import Markdoc from '@markdoc/markdoc'
-import {
-	createComputed,
-	type List,
-	type Memo,
-	type Task,
-} from '@zeix/cause-effect'
+import { deriveCell, type List, type Signal } from '@zeix/cause-effect'
 import {
 	API_DIR,
 	COMPONENTS_DIR,
@@ -142,13 +137,13 @@ function extractFrontmatter(content: string): {
 
 const docsMarkdown: {
 	sources: WatchedFiles
-	processed: Memo<Map<string, FileInfo & { metadata: PageMetadata }>>
-	pageInfos: Memo<PageInfo[]>
-	fullyProcessed: Task<Map<string, ProcessedMarkdownFile>>
+	processed: Signal<Map<string, FileInfo & { metadata: PageMetadata }>>
+	pageInfos: Signal<PageInfo[]>
+	fullyProcessed: Signal<Map<string, ProcessedMarkdownFile>>
 } = await (async () => {
 	const sources = await watchFiles(PAGES_DIR, '**/*.md')
 
-	const processed = createComputed(() => {
+	const processed = deriveCell(() => {
 		const rawFiles = sources.get()
 
 		const files = new Map<string, FileInfo & { metadata: PageMetadata }>()
@@ -164,7 +159,7 @@ const docsMarkdown: {
 		return files
 	})
 
-	const pageInfos = createComputed(() => {
+	const pageInfos = deriveCell(() => {
 		const pageInfos: PageInfo[] = []
 		const files = processed.get()
 
@@ -187,7 +182,7 @@ const docsMarkdown: {
 		return pageInfos
 	})
 
-	const fullyProcessed = createComputed(async () => {
+	const fullyProcessed = deriveCell(async () => {
 		const files = processed.get()
 
 		const processedFiles = new Map<string, ProcessedMarkdownFile>()

@@ -57,12 +57,12 @@ Use `class` attribute to get a different style for the radio group.
 - Description
 ---
 - `all('input[type="radio"]')`
-- `Memo<HTMLInputElement[]>`
+- `Signal<HTMLInputElement[]>`
 - **required**
 - Native radio inputs (at least two)
 ---
 - `all('label')`
-- `Memo<HTMLLabelElement[]>`
+- `Signal<HTMLLabelElement[]>`
 - **required**
 - Labels wrapping radio inputs; toggles `selected` class
 {% /table %}
