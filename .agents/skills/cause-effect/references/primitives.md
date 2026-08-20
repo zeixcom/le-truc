@@ -13,7 +13,7 @@ Every signal has `.get()`. Inside an effect/memo/task, `.get()` both returns the
 - `equals?: (a: T, b: T) => boolean` — default `===` (`DEFAULT_EQUALITY`). When equal, propagation stops for this signal's **entire downstream subtree**, not just this signal. Built-ins: `DEEP_EQUALITY` (structural, cycle-safe), `SKIP_EQUALITY` (always re-propagate — for mutable objects observed by reference).
 - `guard?: (value: unknown) => value is T` — validates on `.set()`/`.update()`; throws `InvalidSignalValueError` on failure.
 
-## State
+## Cell
 
 ```ts
 createState<T extends {}>(value: T, options?: SignalOptions<T>): State<T>
@@ -62,8 +62,6 @@ createMemo<T extends {}>(
 Synchronous memoized derivation. Lazy — recomputes only when a tracked dependency actually changed **and** something reads it. The callback receives `prev` (the previous value, or `undefined` on first run), enabling reducer patterns with `{ value: T }`.
 
 For cheap/simple derivations a **plain function** `() => count.get() * 2` is often faster than a Memo — reserve `createMemo` for expensive, shared, or stateful derivations.
-
-Deprecated type alias: `Memo` — no mechanical replacement (removed at 2.0; origin is no longer part of the consumption contract). Annotate with `Signal<T>` instead, or the tighter `Cell<T>` (since 1.5.2) if the collection types (`List`/`Store`) genuinely don't apply; use `isSignal()`/`isMutableSignal()`/`isCell()` or a plain property check if you truly need to distinguish origin.
 
 `watched?: (invalidate: () => void) => Cleanup` activates when the memo gains its first reader; `invalidate()` marks it dirty and triggers recomputation (e.g. a `MutationObserver` for DOM-query memos — this is how le-truc's `all()` works). **Conditional reads delay activation** — if a read sits inside an untaken branch, `watched` won't fire until that branch runs. Read signals eagerly before conditional logic to force immediate activation.
 
@@ -116,9 +114,9 @@ Returns a `Memo` or a `Task` depending on whether `callback` is `async`. The dec
 
 `createMemo` and `createTask` are the explicit primitives; `deriveCell` is the convenience dispatcher. Le Truc uses `deriveCell` internally where the sync/async split is data-dependent. Deprecated aliases: `createComputed` and `deriveSignal` (same dispatch; `options.value` is `options.initial` on `deriveCell`). `deriveSignal` was itself the terminal name for one release (1.5.0) before `deriveCell` replaced it in 1.5.1 — `Signal` stays the umbrella term, `Cell` names the single-value shape.
 
-Since 1.5.2, `deriveCell` (and its overloads) is typed to return `Cell<T>` — `State<T> | Memo<T> | Task<T> | Sensor<T>` — rather than the wider `Signal<T>`; still assignable anywhere `Signal<T>` is expected.
+Since 1.5.2, `deriveCell` (and its overloads) is typed to return `Cell<T>` — `State<T> | Memo<T> | Task<T> | Sensor<T>`; still assignable anywhere `Signal<T>` is expected.
 
-### Cell / MutableCell (since 1.5.2)
+### Cell / MutableCell
 
 ```ts
 type Cell<T extends {}> = State<T> | Memo<T> | Task<T> | Sensor<T>

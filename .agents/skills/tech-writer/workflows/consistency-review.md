@@ -43,7 +43,7 @@ ls examples/
 
 #### `data-flow.md`
 - `pass()` callout about Le Truc-only scope is accurate
-- `createMemo`, `createState`, and other signal calls use current API; `createEventsSensor` was removed in v2.0
+- `createCell`, `deriveCell`, and other signal calls use current API
 - `defineMethod()` description is accurate
 
 #### `getting-started.md`

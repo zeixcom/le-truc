@@ -29,7 +29,7 @@ The cleanup in `pass()` restores the original signal when the parent disconnects
 
 ## Signal — `all()` Element Collection
 
-`all(selector, required?)` returns a `Signal<E[]>` created by `createElementsMemo()` in `src/helpers/dom.ts` (the function itself still calls `createMemo` internally — only the annotated return type changed). If `required` is a non-empty string and no elements match at query time, a `MissingElementError` is thrown before the Signal is returned.
+`all(selector, required?)` returns a `Cell<E[]>` created by `createElementsMemo()` in `src/helpers/dom.ts` (the function itself still calls `createMemo` internally — only the annotated return type changed). If `required` is a non-empty string and no elements match at query time, a `MissingElementError` is thrown before the Signal is returned.
 
 The `Signal` uses the `watched` option to set up a `MutationObserver` lazily — the observer only activates when the Signal has an active reactive reader.
 
