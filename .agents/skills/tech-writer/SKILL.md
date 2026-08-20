@@ -20,9 +20,9 @@ This skill maintains the **authored documentation** for the @zeix/le-truc librar
 
 **Read source before writing.** Always read the current state of the source file(s) and the target document before making any changes. Never update from memory.
 
-**Tone adapts to audience.** Each document has a distinct primary reader and register. See references/tone-guide.md. Violating the tone is as wrong as a factual error.
+**Tone adapts to audience and text type.** Each document has a distinct primary reader, and each section has a text type — landing, tutorial, how-to, explanation, reference, AI-optimized, narrative, community. The type sets the style dials. See references/tone-guide.md. Violating the tone is as wrong as a factual error.
 
-**Prose docs and JSDoc follow ASD-STE100.** Pages, `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, JSDoc, `server/SERVER.md`, and skill files use Simplified Technical English sentence and vocabulary rules — see references/ste100-style.md. Domain terms use the definitions in `CONTEXT.md`. Blog posts are exempt; they keep the narrative register in references/tone-guide.md `<blog>`.
+**Precision where the reader acts, voice where the reader learns.** Every document shares a plain-English baseline with `CONTEXT.md` domain terms (references/tone-guide.md, Layer 1). Reference and AI-optimized documents — JSDoc, `ARCHITECTURE.md`, `AGENTS.md`, `server/SERVER.md`, skill files, navigation pages — run Simplified Technical English at Full strength (references/ste100-style.md). Tutorials, how-to guides, explanations, `README.md`, and landing copy relax sentence discipline for connective prose and carry voice — journey, rhythm, opinion (references/tone-guide.md, Voice Techniques). Blog posts run the narrative register of references/tone-guide.md `<blog>`.
 
 **Concise over comprehensive.** Every sentence must justify its presence. Cut anything that does not add information the reader needs.
 
@@ -84,9 +84,9 @@ All in `references/`:
 | File | Contents |
 |---|---|
 | document-map.md | Each document's audience, scope, update triggers, and consistency checks |
-| tone-guide.md | Writing tone, register, and conciseness rules per document |
+| tone-guide.md | Style layers and text types: plain-English baseline, sentence discipline, voice techniques (journey, rhythm, opinion), and per-document registers |
 | markdoc-tags.md | Markdoc authoring reference: frontmatter, available tags, and usage patterns |
-| ste100-style.md | Simplified Technical English (ASD-STE100) sentence and vocabulary rules for prose docs and JSDoc; blog is exempt |
+| ste100-style.md | Simplified Technical English sentence discipline at three strengths (Full / Working / Off) with the scope per document type |
 
 ## Workflows Index
 All in `workflows/`:

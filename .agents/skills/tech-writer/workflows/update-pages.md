@@ -4,7 +4,7 @@
 1. references/markdoc-tags.md — Markdoc tag reference before editing any page
 2. references/document-map.md → the entry for the specific page being updated
 3. references/tone-guide.md → `<pages>` section
-4. references/ste100-style.md — sentence and vocabulary rules (does not apply to `blog/` posts, see workflows/write-blog-post.md)
+4. references/ste100-style.md — sentence and vocabulary rules at the strength the section's text type calls for (see references/tone-guide.md → Text Types; most pages mix Full-strength reference material with Working-strength explanation prose; `blog/` posts are narrative — see workflows/write-blog-post.md)
 
 ## Process
 
@@ -76,3 +76,4 @@ After editing, confirm:
 - Markdoc tags are syntactically correct
 - `examples.md` and `api.md` navigation lists are complete and ordered
 - No changelog language ("previously", "as of version X")
+- Each section carries the dials of its text type: reference sections are uniform and neutral; explanation sections open from the reader's problem, vary their rhythm, and commit to opinions with reasons

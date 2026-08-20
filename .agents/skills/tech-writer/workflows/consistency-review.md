@@ -2,7 +2,8 @@
 
 ## Required Reading
 - references/document-map.md — consistency checks for every document
-- references/ste100-style.md — sentence and vocabulary rules to spot-check against (all documents except blog)
+- references/tone-guide.md → Text Types and Voice Techniques — which strength each document runs at
+- references/ste100-style.md — sentence and vocabulary rules to spot-check against
 
 ## Process
 A consistency review checks that all authored documents accurately reflect the current state of the source code and examples. Work through each document in order.
@@ -73,9 +74,13 @@ For the most recently changed source files:
 - No `@param` tags reference removed parameters
 - `@since` tags present on all public functions
 
-### Step 7: Spot-check ASD-STE100 compliance
+### Step 7: Spot-check style compliance
 
-For each document except the blog, scan for: sentences over ~20 words, passive voice, gerund-noun phrasing, and inconsistent synonyms for the same `CONTEXT.md` domain term (e.g., "binding" and "connection" used for the same concept). See references/ste100-style.md.
+Two different scans, by strength (references/ste100-style.md → Strengths and Scope):
+
+**Full-strength documents** (JSDoc, `AGENTS.md`, skill files, `ARCHITECTURE.md`, `api.md`, `examples.md`, `blog.md`, `about.md`, `SERVER.md`): scan for sentences over ~20 words, passive voice, gerund-noun phrasing, and inconsistent synonyms for the same `CONTEXT.md` domain term (e.g., "binding" and "connection" used for the same concept).
+
+**Working-strength documents** (pages prose, `README.md`): apply the same scan to actionable text only — steps, instructions, warnings, callouts. Then check voice where the text type calls for it (references/tone-guide.md → Voice Techniques): explanation sections open from the reader's problem, landing copy and blog carry varied rhythm, and opinions come with a checkable reason. A fully uniform, opinion-free explanation section is a finding, not a pass.
 
 ### Step 8: Report findings
 

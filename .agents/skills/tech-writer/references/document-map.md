@@ -38,7 +38,7 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 
 ### `docs-src/pages/components.md`
 **Audience:** Developers learning to build Le Truc components
-**Register:** Tutorial — walks through real code with explanation; assumes JavaScript competence
+**Register:** Mixed — explanation prose around reference tables and hands-on fragments; set the dials per section (see references/tone-guide.md → Text Types). Assumes JavaScript competence
 **Scope:** `defineComponent` factory form — `FactoryContext` helpers (`first`, `all`, `host`, `expose`, `watch`, `on`, `pass`); prop initializers (parsers, static values, signals, sensors); `bind*` helpers (`bindText`, `bindProperty`, `bindClass`, `bindVisible`, `bindAttribute`, `bindStyle`); `defineMethod()` for imperative methods; `all()` + `each()` for dynamic collections
 
 **Update triggers:**
@@ -58,7 +58,7 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 
 ### `docs-src/pages/data-flow.md`
 **Audience:** Developers building multi-component UIs
-**Register:** Tutorial — builds from a concrete scenario; assumes the reader has read components.md
+**Register:** Explanation built on one worked scenario (the product catalog); assumes the reader has read components.md
 **Scope:** `pass()` for parent-to-child signal binding, `provideContexts`/`requestContext` for shared ancestor state, `createList()` for dynamic lists with DOM reconciliation, event delegation
 
 **Update triggers:**
