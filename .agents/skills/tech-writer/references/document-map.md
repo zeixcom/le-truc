@@ -143,7 +143,7 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 ### `docs-src/pages/async.md`
 **Audience:** Developers loading data inside components
 **Register:** Explanation with how-to fragments
-**Scope:** Chapter *Coordinating Components*, part 4 — `Task` and `match()` state routing (`nil`/`err`/`stale`/`ok`), the `module-lazyload` example, `deriveList()` fetching into a reconciled list
+**Scope:** Chapter *Coordinating Components*, part 4 — `Task` and `match()` state routing (`nil`/`err`/`stale`/`ok`), the `module-lazyload` example, `deriveList()` fetching into a reconciled list; embeds the `docs-task-states` interactive
 
 **Update triggers:**
 - Task state routing or `stale` semantics change
@@ -153,6 +153,7 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 **Consistency checks:**
 - State-precedence list matches `@zeix/cause-effect` behavior
 - `deriveList` example matches the `module-users` pattern and current API
+- The `docs-task-states` demo markup matches `examples/docs/task-states/docs-task-states.html`
 
 ### `docs-src/pages/styling.md`
 **Audience:** Frontend developers and designers adding styles to Le Truc components

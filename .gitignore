@@ -164,7 +164,7 @@ vite.config.ts.timestamp-*
 
 # Generated
 custom-elements.json
-docs/
+/docs/
 docs-src/api/
 docs-src/pages/api.md
 

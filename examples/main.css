@@ -11,6 +11,7 @@
 @import "./card/colorscale/card-colorscale.css";
 @import "./docs/lifecycle/docs-lifecycle.css";
 @import "./docs/reconcile/docs-reconcile.css";
+@import "./docs/task-states/docs-task-states.css";
 @import "./form/checkbox/form-checkbox.css";
 @import "./form/colorgraph/form-colorgraph.css";
 @import "./form/combobox/form-combobox.css";

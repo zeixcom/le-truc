@@ -88,6 +88,30 @@ The HTML provides all three regions up front. The `watch` handler toggles their 
 Do not `fetch` inside a plain `watch` callback. A `Task` receives an `AbortSignal`. It auto-cancels when its dependencies change, so switching `src` aborts the in-flight request. Its pending and error states become first-class reactive values that compose through `match()`.
 {% /callout %}
 
+The playground below is live. The first fetch starts on its own — watch `nil` light up while nothing has resolved, then give way to `ok`. Refetch and the old release stays visible under `stale` until the new one lands. Tick the failure box and the next refetch ends in `err`. Every log line is a real state transition of one `Task`.
+
+{% demo %}
+```html
+<docs-task-states>
+  <div class="states" data-state="" role="status">
+    <span class="state nil">nil</span>
+    <span class="state err">err</span>
+    <span class="state stale">stale</span>
+    <span class="state ok">ok</span>
+  </div>
+  <output class="value">no value resolved yet</output>
+  <p class="error" role="alert" hidden></p>
+  <div class="controls">
+    <button class="fetch" type="button">Fetch</button>
+    <label class="fail-toggle">
+      <input class="fail" type="checkbox" /> Let the next fetch fail
+    </label>
+  </div>
+  <ol class="log"></ol>
+</docs-task-states>
+```
+{% /demo %}
+
 {% /section %}
 
 {% section %}

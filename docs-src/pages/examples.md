@@ -60,6 +60,7 @@ layout: 'page'
 - Docs
   - [Lifecycle](./examples/docs-lifecycle.html)
   - [Reconcile](./examples/docs-reconcile.html)
+  - [Task States](./examples/docs-task-states.html)
 {% /listnav %}
 
 {% /section %}

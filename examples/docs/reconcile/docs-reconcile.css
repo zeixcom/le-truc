@@ -1,0 +1,42 @@
+docs-reconcile {
+	display: block;
+
+	& .controls {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-s);
+	}
+
+	& [data-container] {
+		margin: 0;
+		padding: 0;
+		margin-block-start: var(--space-m);
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xxs);
+	}
+
+	& li {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: var(--space-m);
+		padding: var(--space-xxs) var(--space-s);
+		border-radius: var(--space-xs);
+		background-color: var(--color-neutral-10);
+
+		& label {
+			display: flex;
+			align-items: baseline;
+			gap: var(--space-s);
+			font-weight: var(--font-weight-bold);
+		}
+
+		& small {
+			font-family: ui-monospace, monospace;
+			font-size: var(--font-size-s);
+			color: var(--color-text-soft);
+		}
+	}
+}

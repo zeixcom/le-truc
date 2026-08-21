@@ -1,0 +1,18 @@
+<!-- Task state playground — one Task, all four match() branches -->
+<docs-task-states>
+	<div class="states" data-state="" role="status">
+		<span class="state nil">nil</span>
+		<span class="state err">err</span>
+		<span class="state stale">stale</span>
+		<span class="state ok">ok</span>
+	</div>
+	<output class="value">no value resolved yet</output>
+	<p class="error" role="alert" hidden></p>
+	<div class="controls">
+		<button class="fetch" type="button">Fetch</button>
+		<label class="fail-toggle">
+			<input class="fail" type="checkbox" /> Let the next fetch fail
+		</label>
+	</div>
+	<ol class="log"></ol>
+</docs-task-states>
