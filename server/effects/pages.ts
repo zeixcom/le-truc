@@ -118,6 +118,9 @@ const analyzePageForPreloads = (htmlContent: string): string[] => {
 
 /* === Blog Helpers === */
 
+/** Posts featured as excerpt cards on the blog overview; the rest go to the archive list. */
+const FEATURED_POSTS = 3
+
 /** Compute reading time and blog tag HTML for a processed blog post. */
 export const getBlogVariables = (
 	processedFile: ProcessedMarkdownFile,
@@ -185,7 +188,7 @@ export const computeBlogPrevNext = (
 	return map
 }
 
-/** Generate blog overview excerpt cards for the 3 most-recent non-draft posts. */
+/** Generate blog overview excerpt cards for the most-recent non-draft posts. */
 export const generateBlogExcerpts = (
 	sortedPosts: ProcessedMarkdownFile[],
 	basePath: string = './',
@@ -193,7 +196,7 @@ export const generateBlogExcerpts = (
 	if (sortedPosts.length === 0) return '<p>No blog posts yet.</p>'
 
 	return sortedPosts
-		.slice(0, 3)
+		.slice(0, FEATURED_POSTS)
 		.map(post => {
 			const slug = post.relativePath.replace(/^blog\//, '').replace(/\.md$/, '')
 			const url = `${basePath}blog/${slug}.html`
@@ -249,6 +252,38 @@ export const generateBlogExcerpts = (
 			</card-blogpost>`
 		})
 		.join('\n')
+}
+
+/**
+ * Generate a compact archive list of non-draft posts beyond the featured
+ * cards: linked title + date per post, date-descending (caller sorts).
+ * Returns '' when every post fits the featured cards.
+ */
+export const generateBlogArchive = (
+	sortedPosts: ProcessedMarkdownFile[],
+	basePath: string = './',
+): string => {
+	const archived = sortedPosts.slice(FEATURED_POSTS)
+	if (archived.length === 0) return ''
+
+	const items = archived
+		.map(post => {
+			const slug = post.relativePath.replace(/^blog\//, '').replace(/\.md$/, '')
+			const url = `${basePath}blog/${slug}.html`
+			const date = post.metadata.date ?? ''
+			return html`<li>
+				<a href="${url}">${post.title}</a>
+				<time datetime="${date}">${date}</time>
+			</li>`
+		})
+		.join('\n')
+
+	return html`<section class="blog-archive" aria-labelledby="blog-archive-title">
+		<h2 id="blog-archive-title">Archive</h2>
+		<ul>
+			${raw(items)}
+		</ul>
+	</section>`
 }
 
 /* === Chapter Helpers === */
@@ -373,6 +408,10 @@ export const pagesEffect = (onRebuild?: () => void) =>
 				sortedBlogPosts,
 				blogOverviewBasePath,
 			)
+			const blogArchive = generateBlogArchive(
+				sortedBlogPosts,
+				blogOverviewBasePath,
+			)
 
 			// Root pages by slug, for chapter prev/next resolution
 			const rootPagesBySlug = new Map<string, ProcessedMarkdownFile>()
@@ -410,7 +449,8 @@ export const pagesEffect = (onRebuild?: () => void) =>
 								htmlContent: html`${raw(heroHtml)}
 									<section class="blog-posts">
 										${raw(blogExcerpts)}
-									</section>`,
+									</section>
+									${raw(blogArchive)}`,
 							}
 						} else if (processedFile.section === 'blog') {
 							// Add blog-specific template variables
