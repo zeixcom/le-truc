@@ -184,7 +184,7 @@ pass(child, {
 
 ### `each(memo, callback)`
 
-For per-element effects on `Signal<E[]>` from `all()`. Elements enter/leave collection with own reactive scope.
+For per-element effects on `Cell<E[]>` from `all()`. Elements enter/leave collection with own reactive scope.
 
 ```typescript
 const items = all('[role="option"]')

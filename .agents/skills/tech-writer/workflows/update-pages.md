@@ -10,17 +10,23 @@
 
 ### Step 1: Identify which page(s) to update
 
-Use the document map to confirm the page is the right target. Each page covers a distinct topic:
+Use the document map to confirm the page is the right target. Guide pages form two chapters (sidebar groups, prev/next steppers — see `CHAPTERS` in `server/config.ts`):
 
 | Page | Topic |
 |---|---|
 | `index.md` | Philosophy and positioning |
 | `getting-started.md` | Installation and first component |
-| `components.md` | `defineComponent` anatomy — `expose()`, `watch()`, `on()`, `bind*` helpers |
-| `data-flow.md` | Component coordination — `pass()`, context, `defineMethod()`, dynamic lists |
+| `components.md` | Chapter *Building Components* — anatomy, lifecycle, element queries |
+| `props.md` | Chapter *Building Components* — `expose()`, parsers, signal types, read-only props, methods |
+| `effects.md` | Chapter *Building Components* — `on()`, `watch()`, `bind*` helpers, `each()`, bidirectional binding |
+| `extensions.md` | Chapter *Building Components* — `formAssociated()`, `observedAttributes()`, `debug()` |
+| `data-flow.md` | Chapter *Coordinating Components* — mechanism choice, `pass()`, the catalog scenario |
+| `lists.md` | Chapter *Coordinating Components* — `createList()`, `reconcile()`, add/remove |
+| `context.md` | Chapter *Coordinating Components* — `createContext()`, `provideContexts()`, `requestContext()` |
+| `async.md` | Chapter *Coordinating Components* — `Task`, `match()` states, `deriveList()` fetch |
 | `styling.md` | CSS scoping and custom properties |
 | `examples.md` | Navigation list of all example components |
-| `api.md` | Navigation list of all exported API symbols |
+| `api.md` | **Generated** by `apiEffect` from TypeDoc output — never edit by hand |
 
 ### Step 2: Read the current page
 
@@ -34,6 +40,10 @@ Read the source file(s) that the page documents. Do not update from memory.
 
 Apply the minimum change needed. Do not rewrite accurate sections. Do not change the Markdoc tag structure unless it is genuinely wrong.
 
+Structural constraints:
+- A page needs **at least two `{% section %}` blocks with H2 headings** — the in-page table of contents renders only for ≥2 H2s.
+- The hero lead is one bold sentence plus at most two plain sentences. It states what the page teaches, not what it covers ("**Declare reactive properties with `expose()`.**", not "This page covers properties.").
+
 #### Updating a code example
 
 Replace the code in the fenced block. Preserve the `#filename` annotation if present. Verify the updated example compiles (check imports against `index.ts`, check API names against source files).
@@ -44,23 +54,17 @@ Follow the existing structure: wrap in `{% section %}`, use `## H2` for the head
 
 #### Updating `examples.md` navigation
 
-When an example component is added to `examples/`, add it to the `{% listnav %}` in the correct category group. Link format: `[ComponentName](./examples/component-name.html)`. Categories: Basic, Card, Context, Form, Module, Section.
+When an example component is added to `examples/`, add it to the `{% listnav %}` in the correct category group. Link format: `[ComponentName](./examples/component-name.html)`. Categories: Basic, Card, Context, Docs, Form, Module.
 
 When an example is removed or renamed, update or remove its entry.
 
-#### Updating `api.md` navigation
+#### Interactive teaching components
 
-When a new symbol is exported from `index.ts`, add it to the `{% listnav %}` in the correct category:
-- `Functions` — factory functions, effect factories, parsers, utilities
-- `Classes` — error classes, `ContextRequestEvent`
-- `Variables` — constants like `SKIP_EQUALITY`, `CONTEXT_REQUEST`
-- `Type Aliases` — TypeScript type exports
+Teaching components (prefixed `docs-`) live in `examples/docs/<name>/` and are ordinary example components: `<name>.ts`, `<name>.css`, `<name>.html` (test fixture), `<name>.md` (example doc — required, the examples effect keys off it), and a `<name>.spec.ts` Playwright spec. Register them in `examples/main.ts` and `examples/main.css`, list them in the `Docs` group of `examples.md`, and embed them on guide pages with `{% demo %}`. The page must still teach without the interactive — it is enhancement, not content.
 
-Link format: `[SymbolName](./api/{category}/SymbolName.html)` where `{category}` is `functions`, `classes`, `variables`, or `type-aliases`.
+#### `api.md` is generated
 
-Keep entries in alphabetical order within each category.
-
-When a symbol is removed, remove its link.
+`api.md` is written by `apiEffect` from TypeDoc output and is gitignored. New exports appear automatically after `bun run build:docs`. To change what appears there, update JSDoc in `src/` — never edit the file.
 
 ### Step 5: Verify Markdoc structure
 

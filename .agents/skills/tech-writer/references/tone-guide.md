@@ -82,6 +82,8 @@ These apply to every document without exception:
 **Register:** Approachable, direct address ("Le Truc lets you…", "Use `all()` when…"). Present tense. Active voice. Conversational without being casual.
 
 **Markdoc structure rules:**
+- The hero lead is one bold claim sentence plus at most two plain sentences. It states what the page teaches, not what it covers — "**Declare reactive properties with `expose()`.**", not "This page covers properties."
+- A page needs at least two `{% section %}` blocks with H2 headings — the in-page table of contents renders only for two or more H2s.
 - Use `{% callout .tip title="…" %}` for non-obvious constraints or important caveats that the reader is likely to miss. Do not overuse — one callout per major section at most.
 - Use `{% demo %}` blocks only when the full HTML markup adds genuine understanding; do not add demos for trivial snippets.
 - Code blocks in pages use the `#filename` annotation when the file context matters (e.g., ` ```js#module-catalog.ts `).
