@@ -23,7 +23,7 @@ Classify the section before writing or editing it. The type sets the dials.
 | How-to | Guide a task or decision | `styling.md` | High on instructions | Medium — trade-off opinions |
 | Explanation | Build understanding | Concept sections of `components.md`, `data-flow.md` | Medium | High — journey, rhythm, opinions |
 | Reference | Answer a lookup | `api.md`, `examples.md`, JSDoc, `ARCHITECTURE.md`, `server/SERVER.md` | Full | None — except trade-off notes in `ARCHITECTURE.md` |
-| AI-optimized | Feed a model | `AGENTS.md`, skill files | Full (articles may drop) | Directives only — no rhythm, no journey |
+| AI-optimized | Feed a model | `AGENTS.md`, skill files, `TODO.md`, `NOTES.md` | Full (articles may drop) | Directives only — no rhythm, no journey |
 | Narrative | Tell what happened and why | Blog posts | Low | High |
 | Community | Orient and invite | `about.md`, `blog.md` | Full | None |
 
@@ -69,7 +69,7 @@ These apply to every document without exception:
 
 - **Concise over comprehensive.** Every sentence must add information the reader needs. Cut throat-clearing, transitional padding, and restatements of what the code already shows.
 - **Technically accurate over reassuring.** Do not soften edge cases, paper over constraints, or omit behavior that is surprising but correct.
-- **Current shape, timeless rationale.** Documents state current truth: what the API is, not what it was. Never write "previously", "as of version X", "we changed", "now supports", or "will eventually". Timeless rationale — why the design is the way it is — is content in explanations, `ARCHITECTURE.md`, and blog; it is noise in reference entries and JSDoc. `CHANGELOG.md` (`changelog-keeper` skill) and ADRs (`adr-keeper` skill) own the timeline.
+- **Current shape, timeless rationale.** Documents state current truth: what the API is, not what it was. Never write "previously", "as of version X", "we changed", "now supports", or "will eventually". Timeless rationale — why the design is the way it is — is content in explanations, `ARCHITECTURE.md`, and blog; it is noise in reference entries and JSDoc. `CHANGELOG.md` (`changelog-keeper` skill) and ADRs (`adr-keeper` skill) own the timeline; their entry and section registers are defined in those skills.
 - **No meta-commentary.** Do not write "This section explains…" or "See below for…". Say the thing directly.
 - **Backtick all code.** Every API name, file name, type name, option key, tag name, and shell command is wrapped in backticks, even mid-sentence.
 - **Surgical edits only.** Update what changed. Do not rewrite accurate sections, and do not add commentary about what was updated.

@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **`tech-writer` `improve-docs-architecture.md` workflow**: tech-writer can now lead guide restructures — split or merge pages, improve navigation, add teaching components — routing pipeline code to `docs-server-dev` via `TODO.md`/`NOTES.md`.
+
+### Changed
+
+- **`changelog-keeper` `entry_style`**: entries now cap at 4 sentences (~300 characters), keep only user-facing rationale, and cut implementation internals. Version preambles cap at 3 sentences. New entries follow this; existing ones stay as history.
+- **`adr-keeper` concision rules**: rationales tightened — Context a few problem-first sentences, Decision commitment plus mechanism, Consequences compact lists, no appended postscripts (`adr-template.md`, `create-adr.md`).
+- **`architect` `architecture.md` Step 5**: now prescribes the `ARCHITECTURE.md` register — present-tense mechanisms, inline ADR citations, opinion-through-contrast, trade-off notes as the only voice moment.
+
 ## 2.5.1
 
 Second bridge-name wave ahead of Cause & Effect 2.0: CE 1.5.1 deprecates `deriveSignal` — the very name `2.5.0` adopted as the non-deprecated replacement for `createComputed` — in favor of `deriveCell`, one release later. `Signal` stays the umbrella term; `Cell` is now the settled terminal name for the single-value shape. Non-breaking, same policy as `2.5.0`: deprecated re-exports keep working through Le Truc 2.x and are removed in Le Truc 3.0.

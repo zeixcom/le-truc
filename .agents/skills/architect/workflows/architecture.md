@@ -44,7 +44,13 @@ Update the relevant sections to reflect the agreed design. For every significant
 | Decision | Choice | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
 
-Keep the document accurate and concise — it is the developer's primary reference.
+Prose rules — `ARCHITECTURE.md` is the developer's primary reference and a Reference-register document:
+- Present tense, declarative, third person. Neutral vocabulary from `CONTEXT.md`.
+- Describe mechanisms, not intentions: "when `watch(source, handler)` re-runs, the handler receives the new value" — not "this enables efficient updates".
+- Cite ADRs inline parenthetically at the first mention of a decided mechanism.
+- Opinion shows through contrast, not adjectives — state two mechanisms side by side and let the difference do the ranking. In-house exemplar: the `each()` vs `reconcile()` ownership contrast in the List Reconciliation section.
+- Trade-off notes are the one sanctioned voice moment: a short "why not the alternative" aside where a reader would otherwise wonder. Everything else stays flat and uniform.
+- Keep the document accurate and concise — every sentence must justify its presence.
 
 ## Step 6: Record ADR (for significant decisions)
 

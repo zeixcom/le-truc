@@ -27,6 +27,8 @@ This skill manages the **Architectural Decision Record (ADR) process** for @zeix
 **Status is explicit.** Each ADR must have a clear status: Proposed, Accepted, Rejected, Superseded.
 
 **Concise over comprehensive.** Focus on the decision, context, and consequences. Avoid unnecessary detail.
+
+**Length lives in the rationales — cut there first.** Context: a few tight sentences stating the problem, plus links to REQUIREMENTS.md / ARCHITECTURE.md — links, not history. Decision: the commitment and its mechanism, no design narrative; numbered sub-designs only when the decision has multiple genuine moving parts. Consequences: compact Good/Bad lists. No appended war-story postscripts — a hard-won lesson that matters long-term is promoted to `ARCHITECTURE.md` or its own ADR, not indented into an old one.
 </essential_principles>
 
 <intake>

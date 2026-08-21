@@ -26,6 +26,7 @@
    - Filename: `/adr/000X-title-in-kebab-case.md`
    - Set status to "🔄 Proposed" initially
    - Fill in all sections
+   - Keep sections tight per SKILL.md `<essential_principles>`: Context a few problem-first sentences, Decision commitment + mechanism, Consequences compact Good/Bad lists. No postscripts.
 
 5. **Update the index**
    - Add entry to `references/adr-index.md`

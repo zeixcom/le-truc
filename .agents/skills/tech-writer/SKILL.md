@@ -14,7 +14,7 @@ This skill maintains the **authored documentation** for the @zeix/le-truc librar
 - `examples/*/` — component source files; use the `le-truc` or `le-truc-dev` skill instead
 - `CHANGELOG.md` — use the `changelog-keeper` skill instead
 - `adr/` — use the `adr-keeper` skill instead
-- Build scripts, server code, or test infrastructure (other than `server/SERVER.md`)
+- Pipeline code in `server/` (effects, templates, schemas, routes) — write a `TODO.md` task for the `docs-server-dev` skill instead of editing it directly; only `server/SERVER.md` is in scope here
 
 ## Essential Principles
 
@@ -40,6 +40,7 @@ What do you need to do?
 3. **Update a specific document** — you know exactly which one
 4. **Write a blog post** — draft a new post for `docs-src/pages/blog/`
 5. **Update a skill file** — a skill description, reference, or workflow under `.agents/skills/` is inaccurate or incomplete
+6. **Improve the docs architecture** — restructure pages, navigation, or add interactive teaching components
 
 Wait for response before proceeding.
 
@@ -52,6 +53,7 @@ Wait for response before proceeding.
 | 3, "specific", or names a document | See document routing below |
 | 4, "write a blog post", "new blog post", "blog" | workflows/write-blog-post.md |
 | 5, "skill file", "skill doc", "update skill", names a skill | workflows/update-skills.md |
+| 6, "improve docs", "restructure", "split pages", "merge pages", "navigation", "teaching component" | workflows/improve-docs-architecture.md |
 
 **Document-specific routing (option 3):**
 
@@ -75,6 +77,7 @@ Wait for response before proceeding.
 - "write a blog post" / "new blog post" / "draft a post" → workflows/write-blog-post.md
 - "update skill" / "skill file is wrong" / "fix skill reference" → workflows/update-skills.md
 - "update SERVER.md" / "server docs" / "build pipeline changed" / "new effect" → workflows/update-server-md.md
+- "docs are too long" / "split this page" / "improve navigation" / "add a teaching component" / "restructure the guide" → workflows/improve-docs-architecture.md
 
 After identifying the workflow, read it and follow it exactly.
 
@@ -103,3 +106,21 @@ All in `workflows/`:
 | update-server-md.md | Update `server/SERVER.md` after dev server or build pipeline changes |
 | consistency-review.md | Review all documents for consistency with current source |
 | write-blog-post.md | Draft a new blog post in `docs-src/pages/blog/` |
+| improve-docs-architecture.md | Plan and lead a guide restructure — split or merge pages, improve navigation, add teaching components; coordinate pipeline work via `TODO.md` |
+
+## Post-Task Protocol
+
+When working a task assigned via `TODO.md`:
+
+1. **Content-only changes** (pages, `README.md`, skill files, `SERVER.md`, declarative config: `PAGE_ORDER`, `CHAPTERS`, `CURATED_PAGES`) → mark `— done ✓` and add a one-line `**Changed:**`.
+2. **Teaching-component code in `examples/` or edits beyond declarative config in `server/`** → mark `— done, pending review ⏳` and add the handoff:
+
+   ```
+   **Changed:** which file(s) and what (page, component, config key)
+   **How:** key implementation note (1-2 sentences)
+   **Check:** what the reviewer should focus on
+   ```
+
+3. **Blocked or deviating?** Append to `NOTES.md` using the format defined in the `architect` skill's `<notes_format>` section. Stop work on the task. Wait for Architect or user to resolve before proceeding.
+
+Task IDs, status suffixes, and the `**Skill:**` routing field follow the `architect` skill's `<todo_format>` — read it before writing to `TODO.md` for the first time.
