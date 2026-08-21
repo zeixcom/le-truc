@@ -4,7 +4,7 @@ description: Le Truc 2.5 backports Cause & Effect's new signal names so you can 
 emoji: 🌉
 layout: blog
 date: 2026-08-16
-modified-date: 2026-08-18
+modified-date: 2026-08-21
 author: Esther Brunner
 tags: release, migration, cause-effect
 ---
@@ -52,5 +52,5 @@ That's a real breaking change, not a rename you can skip. Code that types a vari
 
 Le Truc 3.0 will follow Cause & Effect 2.0 once it ships. The deprecated re-exports go away, and the type surface collapses from nine names to six. If you migrate to the new names now, that jump is a version bump, not a rewrite. The full reasoning behind the type collapse — including why `Collection` doesn't survive as a name and why `Sensor` merges into `State` — is in Cause & Effect's [ADR 0018](https://github.com/zeixcom/cause-effect/blob/main/adr/0018-shape-indexed-signal-types.md).
 
-One thing the codemod can't flag for you: `isSignal` and `isMutableSignal` keep their names in 2.0 but narrow what they match, from "any reactive value" to "single-value signal only". If you guard an `unknown` value with either today, check it by hand before you rely on it after the jump. The sooner your imports point at the new names, the smaller Le Truc 3.0 will feel when it arrives.
+One naming decision moved after this post first went up: `isSignal` and `isMutableSignal` stay the umbrella match — "any reactive value" — rather than narrowing to single-value only. The narrow single-value shape got its own name instead, `Cell`/`MutableCell`, with its own guards, `isCell`/`isMutableCell`. If you guard an `unknown` value and need the narrow match, reach for `isCell`/`isMutableCell`. The sooner your imports point at the new names, the smaller Le Truc 3.0 will feel when it arrives.
 {% /section %}
