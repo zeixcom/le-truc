@@ -27,8 +27,14 @@ const CURATED_PAGES = [
 	{ slug: 'index', title: 'Introduction' },
 	{ slug: 'getting-started', title: 'Getting Started' },
 	{ slug: 'components', title: 'Components' },
-	{ slug: 'styling', title: 'Styling' },
+	{ slug: 'props', title: 'Props & State' },
+	{ slug: 'effects', title: 'Events & Effects' },
+	{ slug: 'extensions', title: 'Extensions' },
 	{ slug: 'data-flow', title: 'Data Flow' },
+	{ slug: 'lists', title: 'Dynamic Lists' },
+	{ slug: 'context', title: 'Context' },
+	{ slug: 'async', title: 'Async State' },
+	{ slug: 'styling', title: 'Styling' },
 ] as const
 
 /**

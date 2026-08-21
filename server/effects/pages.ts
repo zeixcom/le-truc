@@ -1,5 +1,11 @@
 import pkg from '../../package.json'
-import { ASSETS_DIR, INCLUDES_DIR, LAYOUTS_DIR, OUTPUT_DIR } from '../config'
+import {
+	ASSETS_DIR,
+	CHAPTERS,
+	INCLUDES_DIR,
+	LAYOUTS_DIR,
+	OUTPUT_DIR,
+} from '../config'
 import { docsMarkdown, type ProcessedMarkdownFile } from '../file-signals'
 import {
 	calculateFileHash,
@@ -7,6 +13,7 @@ import {
 	getFilePath,
 	writeFileSafe,
 } from '../io'
+import { type ChapterLink, chapterNav } from '../templates/chapter-nav'
 import { performanceHints } from '../templates/performance-hints'
 import { escapeHtml, generateSlug, html, raw } from '../templates/utils'
 import { createBuildEffect } from './build-effect'
@@ -244,6 +251,42 @@ export const generateBlogExcerpts = (
 		.join('\n')
 }
 
+/* === Chapter Helpers === */
+
+const slugOf = (file: ProcessedMarkdownFile): string =>
+	file.filename.replace('.md', '')
+
+/**
+ * Compute the `chapter-nav` template variable for a page.
+ * Returns {} for pages outside every chapter, so the layout's
+ * `{{ chapter-nav }}` placeholder collapses to nothing for them.
+ * Missing siblings (a chapter page not present in the build) are skipped.
+ */
+export const getChapterVars = (
+	file: ProcessedMarkdownFile,
+	rootPagesBySlug: Map<string, ProcessedMarkdownFile>,
+): Record<string, string> => {
+	if (file.section) return {}
+	const slug = slugOf(file)
+	const chapter = CHAPTERS.find(c => c.pages.includes(slug as never))
+	if (!chapter) return {}
+	const pages = chapter.pages as readonly string[]
+	const index = pages.indexOf(slug)
+	const link = (s: string | undefined): ChapterLink | undefined => {
+		if (!s || !rootPagesBySlug.has(s)) return undefined
+		return { url: `${s}.html`, title: rootPagesBySlug.get(s)!.title }
+	}
+	return {
+		'chapter-nav': chapterNav(
+			chapter.title,
+			index + 1,
+			pages.length,
+			link(pages[index - 1]),
+			link(pages[index + 1]),
+		),
+	}
+}
+
 /* === Template Application === */
 
 const applyTemplate = async (
@@ -331,12 +374,21 @@ export const pagesEffect = (onRebuild?: () => void) =>
 				blogOverviewBasePath,
 			)
 
+			// Root pages by slug, for chapter prev/next resolution
+			const rootPagesBySlug = new Map<string, ProcessedMarkdownFile>()
+			for (const f of processedFiles.values()) {
+				if (!f.section) rootPagesBySlug.set(f.filename.replace('.md', ''), f)
+			}
+
 			// Process all markdown files
 			const processPromises = Array.from(processedFiles.values()).map(
 				async (processedFile: ProcessedMarkdownFile) => {
 					try {
 						let fileToRender = processedFile
-						let extra: Record<string, string> = {}
+						let extra: Record<string, string> = getChapterVars(
+							processedFile,
+							rootPagesBySlug,
+						)
 
 						if (processedFile.relativePath === 'blog.md') {
 							// Inject hero + excerpt cards into the blog overview

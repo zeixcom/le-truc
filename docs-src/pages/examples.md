@@ -57,6 +57,9 @@ layout: 'page'
   - [Tabgroup](./examples/module-tabgroup.html)
   - [Ticker](./examples/module-ticker.html)
   - [Todo](./examples/module-todo.html)
+- Docs
+  - [Lifecycle](./examples/docs-lifecycle.html)
+  - [Reconcile](./examples/docs-reconcile.html)
 {% /listnav %}
 
 {% /section %}

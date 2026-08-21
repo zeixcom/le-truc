@@ -457,7 +457,16 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 ### Page Ordering
 
 `PAGE_ORDER` controls navigation menu order:
-`index`, `getting-started`, `components`, `styling`, `data-flow`, `examples`, `api`, `blog`, `about`
+`index`, `getting-started`, `components`, `props`, `effects`, `extensions`, `data-flow`, `lists`, `context`, `async`, `styling`, `examples`, `api`, `blog`, `about`
+
+### Guide Chapters
+
+`CHAPTERS` groups guide pages into chapters with a shared sidebar heading and a prev/after stepper:
+
+- **Sidebar grouping:** `menu()` in `templates/menu.ts` inserts one `<li class="group" role="presentation">` heading before the first chapter member present in the sorted root pages. Styling lives in `examples/section/menu/section-menu.css` (`.group` spans the full grid row).
+- **Chapter stepper:** `getChapterVars()` in `effects/pages.ts` computes a `chapter-nav` template variable for every root page that belongs to a chapter. `chapterNav()` in `templates/chapter-nav.ts` renders `<nav class="content chapter-nav">` with "Part k of n" and prev/next links; the `{{ chapter-nav }}` placeholder in `layouts/page.html` collapses to nothing for non-member pages. Missing siblings (a chapter page absent from the build) are skipped; the stepper collapses entirely when no links remain. Styling lives in `examples/section/menu/chapter-nav.css`.
+
+Constraint: member slugs must appear in `PAGE_ORDER`, and each chapter's members should be contiguous in it — the group heading renders at the position of the first present member.
 
 ## Environment Variables
 

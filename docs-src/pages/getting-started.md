@@ -160,7 +160,7 @@ Add the following inside a `<script type="module">` tag, or in an external modul
 </script>
 ```
 
-The [Components](components.html) guide explains each piece in depth.
+The [Components](components.html) guide starts the Building Components chapter. [Props & State](props.html), [Events & Effects](effects.html), and [Extensions](extensions.html) follow it.
 
 {% /section %}
 
