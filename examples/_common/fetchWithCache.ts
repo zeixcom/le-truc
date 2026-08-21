@@ -96,6 +96,15 @@ export const fetchWithCache = async <T = string>(
 	parseResponse: (response: Response) => Promise<T> = (response: Response) =>
 		response.text() as Promise<T>,
 ): Promise<{ content: T; fromCache: boolean }> => {
+	// Same-origin http(s) only: the docs site must never fetch cross-origin
+	// or non-HTTP schemes on a component's behalf
+	const requested = new URL(url, location.href)
+	if (
+		requested.origin !== location.origin
+		|| (requested.protocol !== 'https:' && requested.protocol !== 'http:')
+	)
+		throw new Error('Invalid URL')
+
 	const cached = cache.get(url) as CacheEntry<T> | undefined
 	const headers: HeadersInit = {}
 

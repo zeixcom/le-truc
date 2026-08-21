@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "threatModel": {
+    "inherit": true,
+    "assets": [
+      "src/ — the published @zeix/le-truc library source",
+      "docs-src/ — hand-authored docs content",
+      "examples/ — published example components",
+      "server/ — docs build pipeline and dev server"
+    ],
+    "attackerControlledInputs": [
+      "custom element attributes and props parsed by component factories in consuming apps",
+      "HTTP request paths and query strings handled by server/serve.ts in local development",
+      "CLI arguments of developer scripts in scripts/ (trusted developer input)"
+    ],
+    "trustBoundaries": [
+      "attribute/property values entering parsers and signals",
+      "HTTP requests reaching the local dev server",
+      "URLs fetched by example components (browser-enforced same-origin)"
+    ],
+    "securityInvariants": [
+      "setAttribute blocks on* handlers and enforces a URL protocol allowlist",
+      "production library code never spawns processes or evaluates strings",
+      "docs/ is generated output and excluded from audit; its sources are audited instead"
+    ],
+    "exclusions": [
+      "docs/**",
+      "docs/"
+    ]
+  },
+  "network": {
+    "allowedProtocols": [
+      "https:"
+    ],
+    "allowedHosts": [],
+    "blockPrivateNetworks": false,
+    "maxRedirects": 10
+  },
+  "command": {
+    "forbidShell": false,
+    "allowedBinaries": []
+  },
+  "path": {
+    "allowedWriteRoots": [],
+    "requireBasename": true
+  },
+  "data": {
+    "allowedSortFields": [],
+    "requireOwnerScope": true
+  }
+}
