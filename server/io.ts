@@ -1,5 +1,5 @@
 import { createHash } from 'crypto'
-import { existsSync } from 'fs'
+import { existsSync, statSync } from 'fs'
 import { mkdir, readdir, stat } from 'fs/promises'
 import { basename, dirname, extname, join, relative } from 'path'
 import { brotliCompressSync, gzipSync } from 'zlib'
@@ -61,6 +61,15 @@ const createFileInfo = async (
 }
 
 const fileExists = (filePath: string): boolean => existsSync(filePath)
+
+/** Directories "exist" for existsSync — sending one fails in sendfile. */
+const isDirectory = (filePath: string): boolean => {
+	try {
+		return statSync(filePath).isDirectory()
+	} catch {
+		return false
+	}
+}
 
 const getCompressedBuffer = (
 	buffer: Buffer,
@@ -148,6 +157,7 @@ export {
 	getFileInfo,
 	getFilePath,
 	getRelativePath,
+	isDirectory,
 	isPlaywrightRunning,
 	writeFileSafe,
 }

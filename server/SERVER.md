@@ -317,7 +317,7 @@ The `fence` schema override provides:
 | `GET /:page` | Documentation page | `docs/<page>.html` |
 | `GET /favicon.ico` | Favicon | `docs/favicon.ico` |
 
-All HTML routes support `Accept: text/markdown` to return raw `.md` source from `docs-src/pages/`.
+All HTML routes support `Accept: text/markdown` to return raw `.md` source from `docs-src/pages/`. Bare section roots (`/blog`, `/examples`, `/api`) resolve to directories under `docs/` via `GET /:page` — they redirect 301 to the matching `<page>.html` when it exists and 404 otherwise; `handleStaticFile` 404s on directory paths generally, so no route can attempt `sendfile` on a directory.
 
 ### Layout and Template System
 
