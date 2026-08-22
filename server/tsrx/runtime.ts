@@ -217,7 +217,7 @@ export const sanitizeHtml = (html: string): string => {
 		if (next === current) break
 		current = next
 	} while (true)
-	return current
+	return current.replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 /** `@for` iteration helper over the items themselves (index unused). */
