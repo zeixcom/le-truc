@@ -51,6 +51,10 @@
 		"node_modules",
 		"docs",
 		"types",
+		// TSRX compiler output — generated code imports '@zeix/le-truc',
+		// which resolves to the built types/ artifact; it is typechecked by
+		// its own emit-then-check (server/tests/tsrx), not this project.
+		"server/generated",
 		"./server/typedoc-heading-shift.mjs",
 	],
 }

@@ -299,6 +299,7 @@ const [
 	componentMarkdownSources,
 	componentStylesSources,
 	componentScriptsSources,
+	componentTsrxSources,
 ] = await Promise.all([
 	watchFiles(INPUT_DIR, '*.css'),
 	watchFiles(INPUT_DIR, '*.ts'),
@@ -310,6 +311,7 @@ const [
 	watchFiles(COMPONENTS_DIR, '**/*.md'),
 	watchFiles(COMPONENTS_DIR, '**/*.css'),
 	watchFiles(COMPONENTS_DIR, '**/*.ts'),
+	watchFiles(COMPONENTS_DIR, '**/*.tsrx'),
 ])
 
 /* const layoutFiles = {
@@ -330,6 +332,7 @@ const componentMocks = { sources: componentMocksSources }
 const componentMarkdown = { sources: componentMarkdownSources }
 const componentStyles = { sources: componentStylesSources }
 const componentScripts = { sources: componentScriptsSources }
+const componentTsrx = { sources: componentTsrxSources }
 
 export {
 	apiMarkdown,
@@ -338,6 +341,7 @@ export {
 	componentMocks,
 	componentScripts,
 	componentStyles,
+	componentTsrx,
 	docsMarkdown,
 	docsScripts,
 	docsStyles,

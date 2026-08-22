@@ -15,6 +15,7 @@ import { serviceWorkerEffect } from './effects/service-worker'
 import { sitemapEffect } from './effects/sitemap'
 import { sourcesEffect } from './effects/sources'
 import { staticAssetsEffect } from './effects/static-assets'
+import { tsrxEffect } from './effects/tsrx'
 
 /**
  * Simple reactive build system orchestration with HMR integration
@@ -75,6 +76,7 @@ export async function build(
 		const mdMirror = mdMirrorEffect(scheduleReload)
 		const llmsManifest = llmsManifestEffect(scheduleReload)
 		const llmsFullManifest = llmsFullManifestEffect(scheduleReload)
+		const tsrx = tsrxEffect(scheduleReload)
 
 		// Wait for all effects to complete their first run
 		await Promise.all([
@@ -89,6 +91,7 @@ export async function build(
 			mdMirror.ready,
 			llmsManifest.ready,
 			llmsFullManifest.ready,
+			tsrx.ready,
 		])
 
 		const duration = performance.now() - startTime
@@ -116,6 +119,7 @@ export async function build(
 			mdMirror.cleanup?.()
 			llmsManifest.cleanup?.()
 			llmsFullManifest.cleanup?.()
+			tsrx.cleanup?.()
 			staticAssets.cleanup?.()
 		}
 	} catch (error) {

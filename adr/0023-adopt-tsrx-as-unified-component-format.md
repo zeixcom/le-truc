@@ -2,7 +2,7 @@
 
 ## Status
 
-🔄 Proposed — direction validated by Phase 0 spikes; to be Accepted only once a working prototype (emitter core + client codegen for the sanctioned subset, per the milestones in [`REPORT-unified.md`](../spike/tsrx-phase0/REPORT-unified.md)) demonstrates the shape holds. The recorded decisions below are the current direction, not a commitment.
+🔄 Proposed — the working prototype landed as the inlined compiler in `server/tsrx/` with the build effect in `server/effects/tsrx.ts` (milestones 1–2 of [`REPORT-unified.md`](../spike/tsrx-phase0/REPORT-unified.md)): server render functions with dependency-provable thunk evaluation, verbatim tag-scoped CSS byte-equal to the hand-written artifacts, and generated `defineComponent()` clients for the sanctioned subset (text/attribute/class bindings, event attributes, refs, server-data `@for` + `each()`, hoisted-const rebinding, harvest rules) — golden-tested in `server/tests/tsrx/` including an emit-then-check typecheck against the real `@zeix/le-truc` types. Reactive `@for` over a `List` (milestone 3) and the Volar type-flow wiring (milestone 4) remain open and tracked as LT-003/LT-004 in [`TODO.md`](../TODO.md).
 
 ## Context
 

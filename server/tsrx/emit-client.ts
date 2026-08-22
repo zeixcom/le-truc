@@ -1,0 +1,269 @@
+/**
+ * Client-module emitter (ADR 0023 milestone 2, LT-002).
+ *
+ * Renders the analysis plan into a `defineComponent()` factory whose
+ * imports come solely from `@zeix/le-truc` (signal constructors via the CE
+ * v2 bridge re-exported since 2.5.1) — the `.tsrx` source imports nothing.
+ *
+ * Factory layout, mirroring today's hand-written components:
+ * 1. element queries (`first()`/`all()`, selectors synthesized and
+ *    uniqueness-proven by analyze.ts)
+ * 2. signal declarations seeded by DOM harvest (ADR 0003 — the client
+ *    never sees the server args)
+ * 3. `expose()` verbatim
+ * 4. effects in document order: `each()` blocks for server-data `@for`
+ *    (hoisted consts rebound first), then `watch()`/`on()`/`pass()`
+ */
+
+import type { ComponentIR } from './compiler'
+import type { ClientPlan, ForClientPlan, ParserKind } from './analyze'
+
+/* === Types === */
+
+export type EmittedClientModule = {
+	/** Full TypeScript source of the generated module. */
+	code: string
+	/** `@zeix/le-truc` imports the module needs (sorted for emission). */
+	imports: Set<string>
+}
+
+/* === Internal Functions === */
+
+/** `aria-selected` → `ariaSelected` (ARIA reflection property name). */
+const ariaProperty = (attr: string): string | null => {
+	if (!attr.startsWith('aria-')) return null
+	return attr
+		.split('-')
+		.map((part, i) => (i === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)))
+		.join('')
+}
+
+const parserImport = (parser: ParserKind): string | null => parser
+
+const harvestInitializer = (
+	plan: ClientPlan['harvests'][number],
+	queries: ClientPlan['queries'],
+	imports: Set<string>,
+): string | null => {
+	const queryName = (name: string): string =>
+		queries.find(q => q.name === name)?.name ?? name
+	if (plan.kind === 'text') {
+		if (plan.parser && parserImport(plan.parser)) imports.add(plan.parser)
+		const read = `${queryName(plan.query)}.textContent`
+		return plan.parser ? `${plan.parser}()(${read})` : read
+	}
+	if (plan.kind === 'attr') {
+		if (plan.parser && parserImport(plan.parser)) imports.add(plan.parser)
+		const raw = `${queryName(plan.query)}.getAttribute('${plan.attr}')`
+		return plan.parser ? `${plan.parser}()(${raw})` : `${raw} ?? ''`
+	}
+	// membership: find the marked element in the collection, read its value
+	const markProp = ariaProperty(plan.markAttr)
+	const predicate = markProp
+		? `el => el.${markProp} === 'true'`
+		: `el => el.getAttribute('${plan.markAttr}') === 'true'`
+	return `${queryName(plan.collection)}.get().find(${predicate})?.getAttribute('${plan.valueAttr}') ?? ${plan.default}`
+}
+
+/**
+ * Push a statement, re-indenting multi-line slices (event handler bodies)
+ * so continuation lines land one level deeper than the head.
+ */
+const pushStatement = (lines: string[], text: string, depth: number): void => {
+	const statementLines = text.split('\n')
+	const rest = statementLines.slice(1)
+	const indents = rest
+		.filter(l => l.trim().length > 0)
+		.map(l => l.match(/^[ \t]*/)?.[0] ?? '')
+	const common = indents.length
+		? (indents.reduce((min, ind) => (ind.length < min.length ? ind : min)) ?? '')
+		: ''
+	const prefix = '\t'.repeat(depth)
+	lines.push(`${prefix}${statementLines[0] ?? ''}`)
+	for (const line of rest) {
+		if (line.trim().length === 0) {
+			lines.push('')
+			continue
+		}
+		lines.push(
+			`${'\t'.repeat(depth + 1)}${line.startsWith(common) ? line.slice(common.length) : line.trimStart()}`,
+		)
+	}
+}
+
+const emitEachBlock = (
+	plan: ForClientPlan,
+	imports: Set<string>,
+	depth: number,
+): string[] => {
+	imports.add('each')
+	const lines: string[] = []
+	pushStatement(lines, `each(${plan.collection}, ${plan.itemParam} => {`, depth)
+	for (const rebinding of plan.rebindings)
+		pushStatement(lines, `const ${rebinding.name} = ${rebinding.expr}`, depth + 1)
+	for (const effect of plan.effects) {
+		if (effect.kind === 'watch-attr') {
+			imports.add('watch')
+			imports.add('bindAttribute')
+			const source = effect.coerceToString
+				? `() => String((${effect.thunkText})())`
+				: effect.thunkText
+			pushStatement(
+				lines,
+				`watch(${source}, bindAttribute(${plan.itemParam}, '${effect.attr}'))`,
+				depth + 1,
+			)
+		} else if (effect.kind === 'watch-class') {
+			imports.add('watch')
+			imports.add('bindClass')
+			for (const key of effect.keys) {
+				pushStatement(
+					lines,
+					`watch(() => Boolean(((${effect.thunkText})()).${key}), bindClass(${plan.itemParam}, '${key}'))`,
+					depth + 1,
+				)
+			}
+		} else {
+			imports.add('on')
+			pushStatement(
+				lines,
+				`on(${plan.itemParam}, '${effect.event}', ${effect.handlerText})`,
+				depth + 1,
+			)
+		}
+	}
+	lines.push(`${'\t'.repeat(depth)}})`)
+	return lines
+}
+
+/* === Exported Functions === */
+
+/**
+ * Emit the generated client module for a component IR + analysis plan.
+ *
+ * @param component - Component IR from compileSource
+ * @param plan - Client plan from analyzeClient
+ * @param options.sourcePath - Source path for the generated header
+ */
+export const emitClientModule = (
+	component: ComponentIR,
+	plan: ClientPlan,
+	options: { sourcePath: string },
+): EmittedClientModule => {
+	const imports = new Set<string>(['defineComponent'])
+	const lines: string[] = []
+	const push = (text: string): void => pushStatement(lines, text, 2)
+
+	// Queries
+	for (const query of plan.queries) {
+		if (query.cardinality === 'one') {
+			imports.add('first')
+			push(
+				`const ${query.name} = first('${query.selector}', '${query.message}')`,
+			)
+		} else {
+			imports.add('all')
+			push(
+				`const ${query.name} = all('${query.selector}', '${query.message}')`,
+			)
+		}
+	}
+
+	// Signals seeded by DOM harvest
+	for (const signal of component.signals) {
+		const harvest = plan.harvests.find(h => h.signal === signal.name)
+		if (!harvest) continue
+		imports.add(signal.constructor)
+		const initializer = harvestInitializer(harvest, plan.queries, imports)
+		if (initializer)
+			push(`const ${signal.name} = ${signal.constructor}(${initializer})`)
+	}
+
+	// expose() verbatim
+	if (component.exposeText) {
+		imports.add('expose')
+		push(component.exposeText)
+	}
+
+	// Effects in document order
+	for (const effect of plan.effects) {
+		if (effect.kind === 'each') {
+			// Emitted at depth 3, stripped one tab so the block statement sits
+			// at factory-body level (2 tabs) and its contents one deeper.
+			for (const line of emitEachBlock(effect.for, imports, 3))
+				lines.push(line.replace(/^\t/, ''))
+			continue
+		}
+		if (effect.kind === 'watch-text') {
+			imports.add('watch')
+			imports.add('bindText')
+			push(`watch(${effect.source}, bindText(${effect.query}))`)
+			continue
+		}
+		if (effect.kind === 'watch-attr') {
+			imports.add('watch')
+			if (effect.attr.startsWith('class:')) {
+				imports.add('bindClass')
+				const key = effect.attr.slice('class:'.length)
+				push(
+					`watch(() => Boolean(((${effect.thunkText})()).${key}), bindClass(${effect.query}, '${key}'))`,
+				)
+			} else if (effect.dispatch === 'property') {
+				imports.add('bindProperty')
+				push(
+					`watch(${effect.thunkText}, bindProperty(${effect.query}, '${effect.attr}'))`,
+				)
+			} else {
+				imports.add('bindAttribute')
+				const source = effect.coerceToString
+					? `() => String((${effect.thunkText})())`
+					: effect.thunkText
+				push(
+					`watch(${source}, bindAttribute(${effect.query}, '${effect.attr}'))`,
+				)
+			}
+			continue
+		}
+		if (effect.kind === 'pass') {
+			imports.add('pass')
+			push(
+				`pass(${effect.query}, { ${effect.prop}: { get: ${effect.thunkText} } })`,
+			)
+			continue
+		}
+		imports.add('on')
+		push(`on(${effect.query}, '${effect.event}', ${effect.handlerText})`)
+	}
+
+	// Factory context vs module imports: expose/watch/on/pass/first/all are
+	// context members; each/defineComponent/bind*/parsers/signal
+	// constructors are '@zeix/le-truc' module exports.
+	const CONTEXT_HELPERS = ['all', 'expose', 'first', 'on', 'pass', 'watch']
+	const contextHelpers = [...imports].filter(h => CONTEXT_HELPERS.includes(h))
+	const context = contextHelpers.length
+		? `{ ${contextHelpers.sort().join(', ')} }`
+		: '{}'
+	const typeArg = component.propsTypeName ? `<${component.propsTypeName}>` : ''
+
+	const body: string[] = [
+		'/**',
+		' * Generated by the Le Truc TSRX compiler (ADR 0023, milestone 2) from',
+		` * ${options.sourcePath} — DO NOT EDIT. The server half lives in ${component.tag}.server.ts.`,
+		' */',
+	]
+	const importList = [...imports]
+		.filter(name => !CONTEXT_HELPERS.includes(name))
+		.sort()
+	body.push(`import { ${importList.join(', ')} } from '@zeix/le-truc'`)
+	body.push('')
+	for (const decl of component.typeDecls) body.push(decl, '')
+	if (component.globalDecl) body.push(component.globalDecl, '')
+	body.push(`export default defineComponent${typeArg}(`)
+	body.push(`\t'${component.tag}',`)
+	body.push(`\t(${context}) => {`)
+	for (const line of lines) body.push(line)
+	body.push('\t},')
+	body.push(')')
+
+	return { code: `${body.join('\n')}\n`, imports }
+}

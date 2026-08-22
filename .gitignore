@@ -167,6 +167,7 @@ custom-elements.json
 /docs/
 docs-src/api/
 docs-src/pages/api.md
+server/generated/
 
 # Local dev tooling
 .mcp.json

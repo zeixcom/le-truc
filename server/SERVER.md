@@ -118,6 +118,7 @@ Each effect factory calls `createBuildEffect(label, [...signals], run, onRebuild
 | `mdMirrorEffect` | `docsMarkdown.processed` | `docs/**/*.md` | Regex tag stripping |
 | `llmsManifestEffect` | `docsMarkdown.pageInfos` | `docs/llms.txt` | Template generation |
 | `llmsFullManifestEffect` | `docsMarkdown.processed` | `docs/llms-full.txt` | Curated concatenation |
+| `tsrxEffect` | `componentTsrx.sources` | `server/generated/tsrx/*` (gitignored) | Inlined TSRX compiler (ADR 0023) |
 
 ### Build Outputs
 
@@ -229,6 +230,16 @@ While `llms.txt` is a link index, `llms-full.txt` is the **authoritative concate
 4. `AGENTS.md` (repo root, plain Markdown — includes the factory form and the "Surprising Behaviors" gotchas)
 
 Sections are delimited by `---` and headed with an H1. Blog posts, `about.md`, `examples.md`, and the per-symbol TypeDoc API files are excluded to keep the file focused on authoring guidance. Narrative pages have Markdoc tags stripped; standalone root docs pass through unchanged (they are plain Markdown). Standalone docs are read from `ROOT` via `Bun.file().text()` inside the effect.
+
+### TSRX Compiler (`tsrxEffect`)
+
+**File:** `server/effects/tsrx.ts`  
+**Depends on:** `componentTsrx.sources` (`examples/**/*.tsrx`)  
+**Outputs:** `server/generated/tsrx/` — `<tag>.server.ts` (render function), `<tag>.client.ts` (generated `defineComponent` module), `<tag>.css` (verbatim tag-scoped CSS), and `registry.json`
+
+The inlined TSRX compiler (ADR 0023, milestones 1–2) compiles unified single-file `.tsrx` components — server args, signals, `expose()`, markup, event handlers, and scoped styles in one source — into the split compiler's two halves. The server module re-declares the `@{ }` setup verbatim against the runtime harness (`server/tsrx/runtime.ts`, where signals are their initial values in a box) and renders HTML strings; the client module is a generated factory importing solely from `@zeix/le-truc`. Nothing consumes the artifacts yet — the docs/examples migration is the follow-on — so the effect keeps the compiler exercised against the corpus on every build. Milestone gates (e.g. reactive `@for` over a `List`, TSRX001) log a warning and skip the file; errors fail the build.
+
+The compiler itself lives in `server/tsrx/`: `compiler.ts` is the only module importing the pinned `@tsrx/core` 0.1.60 (see `core-shim.d.ts`), `analyze.ts` produces the client emission plan (element addressing, harvest rules, hoisted-const rebinding), `emit-server.ts`/`emit-client.ts` render the artifacts, and `css.ts` dedents the `<style>` block's verbatim stylesheet. Golden tests in `server/tests/tsrx/` pin server renders, CSS bytes, client snapshots (regenerate with `UPDATE_SNAPSHOTS=1 bun test server/tests/tsrx`), diagnostics, and an emit-then-check typecheck of the generated client modules.
 
 ### Path Constants
 
