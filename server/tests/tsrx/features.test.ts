@@ -6,10 +6,35 @@
  * dynamic rendering, and parse-error hints for the newer-grammar constructs
  * (statement-form switch, {html}/{text}/{ref} keywords, await).
  */
-import { describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { compileComponent } from '../../tsrx'
+import { configureHtmlSanitizer } from '../../tsrx/runtime'
+
+// The runtime's default sanitizer (unconfigured state): escape everything,
+// safe but inert. Tests that configure a permissive/stripping sanitizer to
+// exercise `html={expr}` must restore this afterward — `configureHtmlSanitizer`
+// is process-wide, shared across every generated module.
+const escapeAll = (html: string): string =>
+	html.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+// A stand-in "consumer-supplied" sanitizer (what a host would wire up via
+// `configureHtmlSanitizer`, e.g. DOMPurify) — strips script blocks,
+// event-handler attributes, and unsafe URL schemes, but otherwise passes
+// markup through raw. Used only to exercise the hook in tests; the runtime
+// itself ships no such sanitizer (ADR 0010's posture, mirrored server-side).
+const stripDangerousMarkup = (html: string): string =>
+	html
+		.replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi, '')
+		.replace(/<script\b[^>]*\/?>/gi, '')
+		.replace(/\s+on[a-z]+\s*=\s*"[^"]*"/gi, '')
+		.replace(/\s+on[a-z]+\s*=\s*'[^']*'/gi, '')
+		.replace(/\s+on[a-z]+\s*=\s*[^\s"'`=<>]+/gi, '')
+		.replace(
+			/\s(href|src|action|formaction|xlink:href)\s*=\s*(["'])\s*(javascript|vbscript|data(?!:image\/(png|gif|jpeg|jpg|webp|svg\+xml)):)[^"']*\2/gi,
+			'',
+		)
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
@@ -170,16 +195,24 @@ describe('@pending — async boundaries (gated)', () => {
 describe('html={expr} — dynamic rendering', () => {
 	const { component, diagnostics } = compiled('<article html={markup} />')
 
-	test('renders server-known markup raw, sanitized', async () => {
+	afterEach(() => {
+		configureHtmlSanitizer(escapeAll)
+	})
+
+	test('escapes markup by default when no sanitizer is configured', async () => {
 		expect(diagnostics).toEqual([])
 		if (!component) throw new Error('html fixture must compile')
 		ensureEmitted('feat-html', component.serverCode)
+		configureHtmlSanitizer(escapeAll)
 		expect(
 			await render('feat-html', { markup: '<p>Rich <em>content</em></p>' }),
-		).toBe('<c-el><article><p>Rich <em>content</em></p></article></c-el>')
+		).toBe(
+			'<c-el><article>&lt;p&gt;Rich &lt;em&gt;content&lt;/em&gt;&lt;/p&gt;</article></c-el>',
+		)
 	})
 
-	test('sanitizer strips scripts, event handlers, and unsafe URLs', async () => {
+	test('a configured sanitizer strips scripts, event handlers, and unsafe URLs', async () => {
+		configureHtmlSanitizer(stripDangerousMarkup)
 		expect(
 			await render('feat-html', {
 				markup:
@@ -252,12 +285,17 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 		)
 	})
 
-	test('sanitizer strips unquoted event handlers', async () => {
-		expect(
-			await render('feat-html', {
-				markup: '<img src=x onerror=alert(1)>',
-			}),
-		).toBe('<c-el><article><img src=x></article></c-el>')
+	test('a configured sanitizer strips unquoted event handlers', async () => {
+		configureHtmlSanitizer(stripDangerousMarkup)
+		try {
+			expect(
+				await render('feat-html', {
+					markup: '<img src=x onerror=alert(1)>',
+				}),
+			).toBe('<c-el><article><img src=x></article></c-el>')
+		} finally {
+			configureHtmlSanitizer(escapeAll)
+		}
 	})
 
 	test('keyConfig-function returning empty string falls back like cause-effect', async () => {

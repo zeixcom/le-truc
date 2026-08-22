@@ -805,7 +805,7 @@ const lowerTry = (
 			diagnostic.unsupported(
 				ctx.source,
 				node.pending.start,
-				"@pending arms (async boundaries) await their lowering (LT-012): deriveCell(async …, { initial }) + isPending(signal) branch routing. Async data itself is authorable today — the await lives inside the async arrow, which is legal in the sync setup. Use @try/@catch (a render-time error boundary) meanwhile",
+				'@pending arms (async boundaries) await their lowering (LT-012): deriveCell(async …, { initial }) + isPending(signal) branch routing. Async data itself is authorable today — the await lives inside the async arrow, which is legal in the sync setup. Use @try/@catch (a render-time error boundary) meanwhile',
 			),
 		)
 		return null
