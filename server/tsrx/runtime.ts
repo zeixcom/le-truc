@@ -193,32 +193,31 @@ export const cls = (map: Record<string, unknown>): string =>
 		.join(' ')
 
 /**
- * Sanitize trusted-build-time HTML for the `html={expr}` dynamic-rendering
- * attribute (defense-in-depth, mirroring `setAttribute`'s own posture in
- * the library): strip script blocks, event-handler attributes, and unsafe
- * URL schemes (javascript:/vbscript:/data: except data:image). The input is
- * authored markup (docs content), not arbitrary user input — this catches
- * the common footguns rather than replacing a real sanitizer.
+ * The sanitizer applied to every `html={expr}` dynamic-rendering attribute
+ * across the whole compiled site. Defaults to escaping all markup (safe but
+ * inert — `<` and `>` become entities, so no element ever renders) until a
+ * host configures a real sanitizer via `configureHtmlSanitizer`, mirroring
+ * the client's `dangerouslyBindInnerHTML` `sanitize` hook (ADR 0010):
+ * the library — here, the generated server module — owns no sanitizer,
+ * the consumer supplies one appropriate to their trust level (e.g. DOMPurify).
  */
-export const sanitizeHtml = (html: string): string => {
-	let current = html
-	let next: string
-	do {
-		next = current
-			.replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi, '')
-			.replace(/<script\b[^>]*\/?>/gi, '')
-			.replace(/(^|[\s"'`])on[a-z]+\s*=\s*"[^"]*"/gi, '$1')
-			.replace(/(^|[\s"'`])on[a-z]+\s*=\s*'[^']*'/gi, '$1')
-			.replace(/(^|[\s"'`])on[a-z]+\s*=\s*[^\s"'`=<>]+/gi, '$1')
-			.replace(
-				/\s(href|src|action|formaction|xlink:href)\s*=\s*(["'])\s*(javascript|vbscript|data(?!:image\/(png|gif|jpeg|jpg|webp|svg\+xml)):)[^"']*\2/gi,
-				'',
-			)
-		if (next === current) break
-		current = next
-	} while (true)
-	return current.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+let htmlSanitizer: (html: string) => string = html =>
+	html.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+/**
+ * Configure the sanitizer used by `sanitizeHtml` for every `html={expr}`
+ * dynamic-rendering attribute in the compiled site. Call once at server
+ * startup, before any generated module renders.
+ */
+export const configureHtmlSanitizer = (sanitizer: (html: string) => string) => {
+	htmlSanitizer = sanitizer
 }
+
+/**
+ * Sanitize HTML for the `html={expr}` dynamic-rendering attribute by
+ * delegating to the configured sanitizer (see `configureHtmlSanitizer`).
+ */
+export const sanitizeHtml = (html: string): string => htmlSanitizer(html)
 
 /** `@for` iteration helper over the items themselves (index unused). */
 export const items = <T>(iterable: Iterable<T>): T[] => Array.from(iterable)
