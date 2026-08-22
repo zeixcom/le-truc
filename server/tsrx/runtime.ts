@@ -207,9 +207,9 @@ export const sanitizeHtml = (html: string): string => {
 		next = current
 			.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
 			.replace(/<script\b[^>]*\/?>/gi, '')
-			.replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, '')
-			.replace(/\son[a-z]+\s*=\s*'[^']*'/gi, '')
-			.replace(/\son[a-z]+\s*=[^\s>]+/gi, '')
+			.replace(/(^|[\s"'`])on[a-z]+\s*=\s*"[^"]*"/gi, '$1')
+			.replace(/(^|[\s"'`])on[a-z]+\s*=\s*'[^']*'/gi, '$1')
+			.replace(/(^|[\s"'`])on[a-z]+\s*=\s*[^\s"'`=<>]+/gi, '$1')
 			.replace(
 				/\s(href|src|action|formaction|xlink:href)\s*=\s*(["'])\s*(javascript|vbscript|data(?!:image\/(png|gif|jpeg|jpg|webp|svg\+xml)):)[^"']*\2/gi,
 				'',
