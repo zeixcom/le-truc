@@ -22,7 +22,12 @@ import type {
 	ReconcilePlan,
 } from './analyze'
 import type { ComponentIR, SignalIR } from './compiler'
-import { lineStartsInTemplate } from './indent'
+import {
+	appendWithSpans,
+	type SourceSlice,
+	type SourceSpan,
+	type SpanCursor,
+} from './spans'
 
 /* === Types === */
 
@@ -31,6 +36,12 @@ export type EmittedClientModule = {
 	code: string
 	/** `@zeix/le-truc` imports the module needs (sorted for emission). */
 	imports: Set<string>
+	/**
+	 * Generated-file ↔ `.tsrx`-source span table (LT-011): one entry per
+	 * verbatim setup statement, thunk, or event handler slice. `check:tsrx`
+	 * maps tsc diagnostics back through it onto the source location.
+	 */
+	spans: SourceSpan[]
 }
 
 /* === Internal Functions === */
@@ -78,41 +89,6 @@ const harvestInitializer = (
 }
 
 /**
- * Push a statement, re-indenting multi-line slices (expose blocks, event
- * handler bodies): the shallowest continuation line lands at the statement's
- * own depth, deeper lines keep their relative indent. Lines inside a
- * multi-line template literal pass through byte-identical — their leading
- * whitespace is string content, not indentation (LT-010).
- */
-const pushStatement = (lines: string[], text: string, depth: number): void => {
-	const statementLines = text.split('\n')
-	const rest = statementLines.slice(1)
-	const mask = lineStartsInTemplate(statementLines)
-	const indents = rest
-		.filter((l, i) => l.trim().length > 0 && !mask[i + 1])
-		.map(l => l.match(/^[ \t]*/)?.[0] ?? '')
-	const common = indents.length
-		? (indents.reduce((min, ind) => (ind.length < min.length ? ind : min)) ??
-			'')
-		: ''
-	const prefix = '\t'.repeat(depth)
-	lines.push(`${prefix}${statementLines[0] ?? ''}`)
-	for (const [i, line] of rest.entries()) {
-		if (mask[i + 1]) {
-			lines.push(line)
-			continue
-		}
-		if (line.trim().length === 0) {
-			lines.push('')
-			continue
-		}
-		lines.push(
-			`${'\t'.repeat(depth)}${line.startsWith(common) ? line.slice(common.length) : line.trimStart()}`,
-		)
-	}
-}
-
-/**
  * A reconciled List's declaration: the authored createList call with its
  * first argument (the seed) replaced by the DOM harvest when the seed is
  * arg-dependent — generics and keyConfig pass through verbatim, so the
@@ -135,20 +111,23 @@ const listDeclaration = (
 	return signal.text.slice(0, relStart) + harvested + signal.text.slice(relEnd)
 }
 
+const sliceOf = (text: string, start: number | undefined): SourceSlice[] =>
+	start === undefined ? [] : [{ text, start }]
+
 const emitEachBlock = (
 	plan: ForClientPlan,
 	imports: Set<string>,
+	lines: string[],
+	spans: SourceSpan[],
+	cursor: SpanCursor,
 	depth: number,
-): string[] => {
+): void => {
 	imports.add('each')
-	const lines: string[] = []
-	pushStatement(lines, `each(${plan.collection}, ${plan.itemParam} => {`, depth)
+	const append = (text: string, at: number, slices: SourceSlice[] = []): void =>
+		appendWithSpans(lines, text, at, slices, spans, cursor)
+	append(`each(${plan.collection}, ${plan.itemParam} => {`, depth)
 	for (const rebinding of plan.rebindings)
-		pushStatement(
-			lines,
-			`const ${rebinding.name} = ${rebinding.expr}`,
-			depth + 1,
-		)
+		append(`const ${rebinding.name} = ${rebinding.expr}`, depth + 1)
 	for (const effect of plan.effects) {
 		if (effect.kind === 'watch-attr') {
 			imports.add('watch')
@@ -156,32 +135,33 @@ const emitEachBlock = (
 			const source = effect.coerceToString
 				? `() => String((${effect.thunkText})())`
 				: effect.thunkText
-			pushStatement(
-				lines,
+			append(
 				`watch(${source}, bindAttribute(${plan.itemParam}, '${effect.attr}'))`,
 				depth + 1,
+				sliceOf(effect.thunkText, effect.sourceStart),
 			)
 		} else if (effect.kind === 'watch-class') {
 			imports.add('watch')
 			imports.add('bindClass')
 			for (const key of effect.keys) {
-				pushStatement(
-					lines,
+				append(
 					`watch(() => Boolean(((${effect.thunkText})()).${key}), bindClass(${plan.itemParam}, '${key}'))`,
 					depth + 1,
+					sliceOf(effect.thunkText, effect.sourceStart),
 				)
 			}
 		} else {
 			imports.add('on')
-			pushStatement(
-				lines,
+			append(
 				`on(${plan.itemParam}, '${effect.event}', ${effect.handlerText})`,
 				depth + 1,
+				sliceOf(effect.handlerText, effect.sourceStart),
 			)
 		}
 	}
-	lines.push(`${'\t'.repeat(depth)}})`)
-	return lines
+	const closing = `${'\t'.repeat(depth)}})`
+	lines.push(closing)
+	cursor.offset += closing.length + 1
 }
 
 /**
@@ -197,41 +177,43 @@ const emitEachBlock = (
 const emitReconcileBlock = (
 	plan: ReconcilePlan,
 	imports: Set<string>,
+	lines: string[],
+	spans: SourceSpan[],
+	cursor: SpanCursor,
 	depth: number,
-): string[] => {
+): void => {
 	imports.add('reconcile')
 	imports.add('watch')
 	imports.add('bindText')
-	const lines: string[] = []
+	const append = (text: string, at: number, slices: SourceSlice[] = []): void =>
+		appendWithSpans(lines, text, at, slices, spans, cursor)
 	const keyParam = plan.keyParam ?? '_key'
-	pushStatement(
-		lines,
+	append(
 		`reconcile(${plan.container}, ${plan.template}, ${plan.signal}, (_element, ${plan.itemParam}, ${keyParam}, first) => {`,
 		depth,
 	)
-	pushStatement(
-		lines,
+	append(
 		`watch(${plan.itemParam}, bindText(first('${plan.holeSelector}', '${plan.tag}: ${plan.holeSelector} missing')))`,
 		depth + 1,
 	)
 	for (const target of plan.itemEvents) {
 		if (target.selector !== null)
-			pushStatement(
-				lines,
+			append(
 				`const ${target.name} = first('${target.selector}', '${target.message}')`,
 				depth + 1,
 			)
 		for (const event of target.events) {
 			imports.add('on')
-			pushStatement(
-				lines,
+			append(
 				`on(${target.name}, '${event.event}', ${event.handlerText})`,
 				depth + 1,
+				sliceOf(event.handlerText, event.sourceStart),
 			)
 		}
 	}
-	lines.push(`${'\t'.repeat(depth)}})`)
-	return lines
+	const closing = `${'\t'.repeat(depth)}})`
+	lines.push(closing)
+	cursor.offset += closing.length + 1
 }
 
 /* === Exported Functions === */
@@ -258,7 +240,10 @@ export const emitClientModule = (
 	const imports = new Set<string>(['defineComponent'])
 	for (const ambient of component.exposeAmbients) imports.add(ambient)
 	const lines: string[] = []
-	const push = (text: string): void => pushStatement(lines, text, 2)
+	const spans: SourceSpan[] = []
+	const cursor: SpanCursor = { offset: 0 }
+	const push = (text: string, slices: SourceSlice[] = []): void =>
+		appendWithSpans(lines, text, 2, slices, spans, cursor)
 
 	// Queries
 	for (const query of plan.queries) {
@@ -280,7 +265,10 @@ export const emitClientModule = (
 		imports.add(signal.constructor)
 		if (harvest.kind === 'list') {
 			if (harvest.seed === 'verbatim') {
-				push(`const ${signal.name} = ${signal.text}`)
+				push(
+					`const ${signal.name} = ${signal.text}`,
+					sliceOf(signal.text, signal.textStart),
+				)
 			} else {
 				const substituted = listDeclaration(signal, harvest.seed)
 				if (substituted) push(`const ${signal.name} = ${substituted}`)
@@ -295,25 +283,25 @@ export const emitClientModule = (
 	// expose() verbatim
 	if (component.exposeText) {
 		imports.add('expose')
-		push(component.exposeText)
+		push(
+			component.exposeText,
+			sliceOf(component.exposeText, component.exposeRange?.start),
+		)
 	}
 
 	// Client-only setup side effects (LT-008): connect-time statements the
 	// server never runs — internals?.states.add('clearable') and friends.
-	for (const stmt of component.clientSetup) push(stmt)
+	for (const stmt of component.clientSetup)
+		push(stmt.text, sliceOf(stmt.text, stmt.range.start))
 
 	// Effects in document order
 	for (const effect of plan.effects) {
 		if (effect.kind === 'each') {
-			// Emitted at depth 3, stripped one tab so the block statement sits
-			// at factory-body level (2 tabs) and its contents one deeper.
-			for (const line of emitEachBlock(effect.for, imports, 3))
-				lines.push(line.replace(/^\t/, ''))
+			emitEachBlock(effect.for, imports, lines, spans, cursor, 2)
 			continue
 		}
 		if (effect.kind === 'reconcile') {
-			for (const line of emitReconcileBlock(effect.for, imports, 3))
-				lines.push(line.replace(/^\t/, ''))
+			emitReconcileBlock(effect.for, imports, lines, spans, cursor, 2)
 			continue
 		}
 		if (effect.kind === 'watch-text') {
@@ -324,16 +312,19 @@ export const emitClientModule = (
 		}
 		if (effect.kind === 'watch-attr') {
 			imports.add('watch')
+			const slices = sliceOf(effect.thunkText, effect.sourceStart)
 			if (effect.attr.startsWith('class:')) {
 				imports.add('bindClass')
 				const key = effect.attr.slice('class:'.length)
 				push(
 					`watch(() => Boolean(((${effect.thunkText})()).${key}), bindClass(${effect.query}, '${key}'))`,
+					slices,
 				)
 			} else if (effect.dispatch === 'property') {
 				imports.add('bindProperty')
 				push(
 					`watch(${effect.thunkText}, bindProperty(${effect.query}, '${effect.attr}'))`,
+					slices,
 				)
 			} else {
 				imports.add('bindAttribute')
@@ -342,6 +333,7 @@ export const emitClientModule = (
 					: effect.thunkText
 				push(
 					`watch(${source}, bindAttribute(${effect.query}, '${effect.attr}'))`,
+					slices,
 				)
 			}
 			continue
@@ -350,11 +342,15 @@ export const emitClientModule = (
 			imports.add('pass')
 			push(
 				`pass(${effect.query}, { ${effect.prop}: { get: ${effect.thunkText} } })`,
+				sliceOf(effect.thunkText, effect.sourceStart),
 			)
 			continue
 		}
 		imports.add('on')
-		push(`on(${effect.query}, '${effect.event}', ${effect.handlerText})`)
+		push(
+			`on(${effect.query}, '${effect.event}', ${effect.handlerText})`,
+			sliceOf(effect.handlerText, effect.sourceStart),
+		)
 	}
 
 	// Factory context vs module imports: expose/watch/on/pass/first/all are
@@ -427,10 +423,20 @@ export const emitClientModule = (
 	body.push(`export default defineComponent${typeArg}(`)
 	body.push(`\t'${component.tag}',`)
 	body.push(`\t(${context}) => {`)
+	// `spans` were recorded relative to `lines.join('\n')` — offset by the
+	// header/import/declaration text that precedes it in the final module.
+	const bodyBaseOffset = body.join('\n').length + 1
 	for (const line of lines) body.push(line)
 	body.push('\t},')
 	if (extensions.length > 0) body.push(`\t[${extensions.join(', ')}],`)
 	body.push(')')
 
-	return { code: `${body.join('\n')}\n`, imports }
+	return {
+		code: `${body.join('\n')}\n`,
+		imports,
+		spans: spans.map(s => ({
+			...s,
+			generatedStart: s.generatedStart + bodyBaseOffset,
+		})),
+	}
 }

@@ -27,6 +27,12 @@ import { type CompileDiagnostic, diagnostic } from './diagnostics'
 
 /* === Types === */
 
+/** A character range in the `.tsrx` source (LT-011 span table). */
+export type SourceRange = { start: number; end: number }
+
+/** A verbatim setup/side-effect statement, with its source range for LT-011. */
+export type SetupStmt = { text: string; range: SourceRange }
+
 /** Signal constructor names recognized in setup declarations. */
 export type SignalConstructor =
 	| 'createCell'
@@ -113,7 +119,13 @@ export type AttributeIR =
 	| { kind: 'static'; name: string; value: string | null }
 	| { kind: 'server'; name: string; exprText: string; node: TsrxNode }
 	| { kind: 'reactive'; name: string; thunk: TsrxNode; thunkText: string }
-	| { kind: 'class-map'; thunkText: string; object: TsrxNode }
+	| {
+			kind: 'class-map'
+			thunkText: string
+			/** The arrow function node — thunkText's own source range (LT-011). */
+			thunk: TsrxNode
+			object: TsrxNode
+	  }
 	| {
 			/**
 			 * Dynamic rendering: `html={expr}` — the .tsrx spelling of the
@@ -209,19 +221,22 @@ export type ComponentIR = {
 	/**
 	 * All setup statements verbatim, in source order — helper consts, signal
 	 * declarations, and `expose()`. The generated server render function
-	 * executes them as-is against the runtime harness.
+	 * executes them as-is against the runtime harness. Each carries its
+	 * source range for the LT-011 span table.
 	 */
-	setup: string[]
+	setup: SetupStmt[]
 	/**
 	 * Client-only setup side effects (LT-008): connect-time statements
 	 * (`internals?.states.add('clearable')`) whose free names are all
 	 * client-known. Emitted into the factory after expose(); the server never
 	 * runs them — they touch APIs that don't exist render-time.
 	 */
-	clientSetup: string[]
+	clientSetup: SetupStmt[]
 	signals: SignalIR[]
 	/** `expose({...})` statement text, verbatim. */
 	exposeText: string | null
+	/** Source range of `exposeText` (LT-011). */
+	exposeRange: SourceRange | null
 	/** Prop name → signal name, from `expose({ prop: signal.get })`. */
 	exposeProps: Map<string, string>
 	/**
@@ -1024,7 +1039,12 @@ const classifyAttribute = (
 		if (expr.type === 'ArrowFunctionExpression') {
 			const body = expr.body
 			if (name === 'class' && isNode(body) && body.type === 'ObjectExpression')
-				return { kind: 'class-map', thunkText: text(ctx, expr), object: body }
+				return {
+					kind: 'class-map',
+					thunkText: text(ctx, expr),
+					thunk: expr,
+					object: body,
+				}
 			if (!isNode(body))
 				return {
 					kind: 'invalid',
@@ -1707,12 +1727,13 @@ export const compileSource = (
 	// Setup statements: const declarations (signals vs. helpers) + expose() +
 	// client-only side effects.
 	const codeBlock = fn.body as TsrxNode
-	const setup: string[] = []
-	const clientSetup: string[] = []
+	const setup: SetupStmt[] = []
+	const clientSetup: SetupStmt[] = []
 	const signals: SignalIR[] = []
 	const signalByName = new Map<string, SignalIR>()
 	const setupInits = new Map<string, TsrxNode>()
 	let exposeText: string | null = null
+	let exposeRange: SourceRange | null = null
 	const exposeProps = new Map<string, string>()
 	const parserExposeProps = new Map<
 		string,
@@ -1743,7 +1764,13 @@ export const compileSource = (
 			}
 			const init = (decl as TsrxNode).init as TsrxNode
 			setupInits.set(declName, init)
-			setup.push(text(ctx, stmt))
+			setup.push({
+				text: text(ctx, stmt),
+				range: {
+					start: typeof stmt.start === 'number' ? stmt.start : 0,
+					end: typeof stmt.end === 'number' ? stmt.end : 0,
+				},
+			})
 			const calleeName = identifierName(init.callee)
 			if (calleeName && SIGNAL_CTORS.has(calleeName)) {
 				const args = asArray(init.arguments)
@@ -1769,7 +1796,17 @@ export const compileSource = (
 			identifierName(expression?.callee) === 'expose'
 		) {
 			exposeText = text(ctx, expression as TsrxNode)
-			setup.push(exposeText)
+			exposeRange = {
+				start:
+					typeof (expression as TsrxNode).start === 'number'
+						? ((expression as TsrxNode).start as number)
+						: 0,
+				end:
+					typeof (expression as TsrxNode).end === 'number'
+						? ((expression as TsrxNode).end as number)
+						: 0,
+			}
+			setup.push({ text: exposeText, range: exposeRange })
 			// prop → signal from expose({ prop: signal.get })
 			const arg = asArray(expression?.arguments)[0] ?? null
 			for (const name of freeIdentifiers(
@@ -1829,7 +1866,13 @@ export const compileSource = (
 				bad.push(name)
 			}
 			if (bad.length === 0) {
-				clientSetup.push(text(ctx, stmt))
+				clientSetup.push({
+					text: text(ctx, stmt),
+					range: {
+						start: typeof stmt.start === 'number' ? stmt.start : 0,
+						end: typeof stmt.end === 'number' ? stmt.end : 0,
+					},
+				})
 				continue
 			}
 		}
@@ -1956,6 +1999,7 @@ export const compileSource = (
 					clientSetup,
 					signals,
 					exposeText,
+					exposeRange,
 					exposeProps,
 					parserExposeProps,
 					exposeAmbients: [...exposeAmbients].sort(),

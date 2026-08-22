@@ -16,6 +16,7 @@ import type { CompileDiagnostic } from './diagnostics'
 import { emitClientModule } from './emit-client'
 import { emitServerModule } from './emit-server'
 import type { RegistryEntry } from './registry'
+import type { SourceSpan } from './spans'
 
 /* === Types === */
 
@@ -27,6 +28,11 @@ export type CompiledComponent = {
 	clientCode: string
 	/** Dedented verbatim CSS artifact. */
 	css: string
+	/**
+	 * Client-module span table (LT-011): `check:tsrx` maps tsc diagnostics
+	 * over `clientCode` back onto this component's `.tsrx` source through it.
+	 */
+	clientSpans: SourceSpan[]
 }
 
 export type CompileFileResult = {
@@ -69,6 +75,7 @@ export const compileComponent = (
 			serverCode: server.code,
 			clientCode: client.code,
 			css: component.css,
+			clientSpans: client.spans,
 		},
 		diagnostics,
 	}
@@ -86,3 +93,9 @@ export type { EmittedServerModule } from './emit-server'
 export { emitServerModule } from './emit-server'
 export type { ComponentRegistry, RegistryEntry } from './registry'
 export { registryJson } from './registry'
+export type { SourceSpan } from './spans'
+export {
+	fileLineColToOffset,
+	fileOffsetToLineCol,
+	findSpanForGeneratedOffset,
+} from './spans'

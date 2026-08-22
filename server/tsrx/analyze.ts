@@ -116,9 +116,24 @@ export type LoopEffectPlan =
 			thunkText: string
 			/** Number-valued thunks stringify — `bindAttribute` takes string|boolean. */
 			coerceToString: boolean
+			/** Source range of `thunkText` (LT-011 span table). */
+			sourceStart: number | undefined
+			sourceEnd: number | undefined
 	  }
-	| { kind: 'watch-class'; keys: string[]; thunkText: string }
-	| { kind: 'on'; event: string; handlerText: string }
+	| {
+			kind: 'watch-class'
+			keys: string[]
+			thunkText: string
+			sourceStart: number | undefined
+			sourceEnd: number | undefined
+	  }
+	| {
+			kind: 'on'
+			event: string
+			handlerText: string
+			sourceStart: number | undefined
+			sourceEnd: number | undefined
+	  }
 
 /** One `@for` over server data lowered to `each()`. */
 export type ForClientPlan = {
@@ -136,7 +151,12 @@ export type ReconcileItemEvents = {
 	selector: string | null
 	name: string
 	message: string
-	events: Array<{ event: string; handlerText: string }>
+	events: Array<{
+		event: string
+		handlerText: string
+		sourceStart: number | undefined
+		sourceEnd: number | undefined
+	}>
 }
 
 /** One reactive `@for` over a declared List lowered to `reconcile()`. */
@@ -168,9 +188,26 @@ export type TopEffectPlan =
 			dispatch: 'attribute' | 'property'
 			/** Number-valued thunks stringify — `bindAttribute` takes string|boolean. */
 			coerceToString: boolean
+			/** Source range of `thunkText` (LT-011 span table). */
+			sourceStart: number | undefined
+			sourceEnd: number | undefined
 	  }
-	| { kind: 'pass'; query: string; prop: string; thunkText: string }
-	| { kind: 'on'; query: string; event: string; handlerText: string }
+	| {
+			kind: 'pass'
+			query: string
+			prop: string
+			thunkText: string
+			sourceStart: number | undefined
+			sourceEnd: number | undefined
+	  }
+	| {
+			kind: 'on'
+			query: string
+			event: string
+			handlerText: string
+			sourceStart: number | undefined
+			sourceEnd: number | undefined
+	  }
 	| { kind: 'each'; for: ForClientPlan }
 	| { kind: 'reconcile'; for: ReconcilePlan }
 
@@ -663,6 +700,8 @@ export const analyzeClient = (
 					attr: attr.name,
 					thunkText: attr.thunkText,
 					coerceToString: returnsNumber(attr.thunk.body),
+					sourceStart: attr.thunk.start,
+					sourceEnd: attr.thunk.end,
 				})
 			} else if (attr.kind === 'class-map') {
 				checkClientNames(attr.object, 'Reactive class map')
@@ -670,6 +709,8 @@ export const analyzeClient = (
 					kind: 'watch-class',
 					keys: classMapKeys(attr.object),
 					thunkText: attr.thunkText,
+					sourceStart: attr.thunk.start,
+					sourceEnd: attr.thunk.end,
 				})
 			} else if (attr.kind === 'event') {
 				checkClientNames(attr.handler, `Event attribute \`${attr.name}\``)
@@ -677,6 +718,8 @@ export const analyzeClient = (
 					kind: 'on',
 					event: attr.event,
 					handlerText: attr.handlerText,
+					sourceStart: attr.handler.start,
+					sourceEnd: attr.handler.end,
 				})
 			}
 		}
@@ -919,6 +962,8 @@ export const analyzeClient = (
 					target.events.push({
 						event: attr.event,
 						handlerText: attr.handlerText,
+						sourceStart: attr.handler.start,
+						sourceEnd: attr.handler.end,
 					})
 				}
 			}
@@ -1405,6 +1450,8 @@ export const analyzeClient = (
 						query,
 						prop: attr.name,
 						thunkText: attr.thunkText,
+						sourceStart: attr.thunk.start,
+						sourceEnd: attr.thunk.end,
 					})
 				} else {
 					// A host-prop mirror always dispatches as a property —
@@ -1419,6 +1466,8 @@ export const analyzeClient = (
 						dispatch: mirror !== null || isCustom ? 'property' : 'attribute',
 						coerceToString:
 							mirror === null && !isCustom && returnsNumber(attr.thunk.body),
+						sourceStart: attr.thunk.start,
+						sourceEnd: attr.thunk.end,
 					})
 				}
 			} else if (attr.kind === 'class-map') {
@@ -1431,6 +1480,8 @@ export const analyzeClient = (
 						thunkText: attr.thunkText,
 						dispatch: 'attribute',
 						coerceToString: false,
+						sourceStart: attr.thunk.start,
+						sourceEnd: attr.thunk.end,
 					})
 				}
 			} else if (attr.kind === 'event') {
@@ -1440,6 +1491,8 @@ export const analyzeClient = (
 					query,
 					event: attr.event,
 					handlerText: attr.handlerText,
+					sourceStart: attr.handler.start,
+					sourceEnd: attr.handler.end,
 				})
 			}
 		}

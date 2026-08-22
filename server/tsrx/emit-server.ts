@@ -29,6 +29,7 @@ import {
 	type TemplateNode,
 } from './compiler'
 import { lineStartsInTemplate } from './indent'
+import { appendWithSpans, type SourceSpan, type SpanCursor } from './spans'
 
 /* === Types === */
 
@@ -37,6 +38,14 @@ export type EmittedServerModule = {
 	code: string
 	/** Runtime helper names the module imports. */
 	runtimeImports: Set<string>
+	/**
+	 * Generated-file ↔ `.tsrx`-source span table (LT-011) for the verbatim
+	 * setup statements re-declared in this module. The server half is not
+	 * type-checked by `check:tsrx` today (TS diagnostics only arise in code
+	 * that lowers into the client module), but the setup statements ARE
+	 * verbatim here too, so the table is recorded for parity and future use.
+	 */
+	spans: SourceSpan[]
 }
 
 type ElementNode = Extract<TemplateNode, { kind: 'element' }>
@@ -543,31 +552,22 @@ export const emitServerModule = (
 	// Setup statements keep their relative shape: the shallowest continuation
 	// line lands at one tab (statement depth), deeper lines keep their
 	// relative indent, template-literal interiors stay byte-identical (LT-010).
-	const pushSetup = (stmt: string): void => {
-		const stmtLines = stmt.split('\n')
-		const rest = stmtLines.slice(1)
-		const mask = lineStartsInTemplate(stmtLines)
-		const indents = rest
-			.filter((l, i) => l.trim().length > 0 && !mask[i + 1])
-			.map(l => l.match(/^[ \t]*/)?.[0] ?? '')
-		const common = indents.length
-			? (indents.reduce((min, ind) => (ind.length < min.length ? ind : min)) ??
-				'')
-			: ''
-		body.push(`\t${stmtLines[0] ?? ''}`)
-		for (const [i, line] of rest.entries()) {
-			if (mask[i + 1]) body.push(line)
-			else if (line.trim().length === 0) body.push('')
-			else
-				body.push(
-					'\t' +
-						(line.startsWith(common)
-							? line.slice(common.length)
-							: line.trimStart()),
-				)
-		}
-	}
-	for (const stmt of component.setup) pushSetup(stmt)
+	// Each statement is also verbatim source, so its span is recorded
+	// (LT-011) relative to `spanLines`, offset once by `setupBaseOffset`.
+	const spans: SourceSpan[] = []
+	const spanCursor: SpanCursor = { offset: 0 }
+	const spanLines: string[] = []
+	const setupBaseOffset = body.join('\n').length + 1
+	for (const stmt of component.setup)
+		appendWithSpans(
+			spanLines,
+			stmt.text,
+			1,
+			[{ text: stmt.text, start: stmt.range.start }],
+			spans,
+			spanCursor,
+		)
+	for (const line of spanLines) body.push(line)
 	body.push('\tconst __html: string[] = []')
 	body.push(`\t__html.push(${pushArgument(rootParts)})`)
 	body.push(...lines)
@@ -575,5 +575,12 @@ export const emitServerModule = (
 	body.push("\treturn __html.join('')")
 	body.push('}')
 
-	return { code: `${body.join('\n')}\n`, runtimeImports: used }
+	return {
+		code: `${body.join('\n')}\n`,
+		runtimeImports: used,
+		spans: spans.map(s => ({
+			...s,
+			generatedStart: s.generatedStart + setupBaseOffset,
+		})),
+	}
 }
