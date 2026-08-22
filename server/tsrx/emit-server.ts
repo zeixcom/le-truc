@@ -17,17 +17,18 @@
  * - `@for` over server data renders once per item, hoisted consts included
  */
 
+import type { TsrxNode } from '@tsrx/core'
 import {
+	type AttributeIR,
+	type ComponentIR,
+	type ForIR,
 	freeIdentifiers,
 	isVoidTag,
 	JS_GLOBALS,
 	MANAGED_TEXT_PROPS,
-	type AttributeIR,
-	type ComponentIR,
-	type ForIR,
 	type TemplateNode,
 } from './compiler'
-import type { TsrxNode } from '@tsrx/core'
+import { lineStartsInTemplate } from './indent'
 
 /* === Types === */
 
@@ -75,23 +76,32 @@ const dependenciesOf = (node: TsrxNode): Set<string> => {
 
 /**
  * Re-indent a verbatim slice for generated code: strip the source's common
- * indentation, apply `level` tabs (first line included).
+ * indentation, apply `level` tabs (first line included). Lines inside a
+ * multi-line template literal pass through byte-identical — their leading
+ * whitespace is string content, not indentation (LT-010).
  */
 const reindent = (slice: string, level: number): string => {
 	const lines = slice.split('\n')
+	const mask = lineStartsInTemplate(lines)
 	const indents = lines
-		.filter(line => line.trim().length > 0 && !line.trimStart().startsWith('*'))
+		.filter(
+			(line, i) =>
+				line.trim().length > 0 && !mask[i] && !line.trimStart().startsWith('*'),
+		)
 		.map(line => line.match(/^[ \t]*/)?.[0] ?? '')
 	const common = indents.length
-		? (indents.reduce((min, ind) => (ind.length < min.length ? ind : min)) ?? '')
+		? (indents.reduce((min, ind) => (ind.length < min.length ? ind : min)) ??
+			'')
 		: ''
 	const prefix = '\t'.repeat(level)
 	return lines
-		.map(line =>
-			line.trim().length === 0
-				? ''
-				: prefix + (line.startsWith(common) ? line.slice(common.length) : line),
-		)
+		.map((line, i) => {
+			if (mask[i]) return line
+			if (line.trim().length === 0) return ''
+			return (
+				prefix + (line.startsWith(common) ? line.slice(common.length) : line)
+			)
+		})
 		.join('\n')
 }
 
@@ -145,7 +155,11 @@ const hostPropMirrorExpr = (
 	if (!isTsrxNode(body) || body.type !== 'MemberExpression' || body.computed)
 		return null
 	const obj = body.object
-	if (!isTsrxNode(obj) || obj.type !== 'Identifier' || String(obj.name) !== 'host')
+	if (
+		!isTsrxNode(obj) ||
+		obj.type !== 'Identifier' ||
+		String(obj.name) !== 'host'
+	)
 		return null
 	const prop = body.property
 	if (!isTsrxNode(prop) || prop.type !== 'Identifier') return null
@@ -178,11 +192,28 @@ export const emitServerModule = (
 ): EmittedServerModule => {
 	const used = new Set<string>()
 	const lines: string[] = []
+	// Pushes target __html normally; @try arms render into an isolated __arm
+	// buffer so a mid-arm throw cannot leak partial markup into the output
+	// (the catch arm renders its own fresh buffer).
+	let buffer = '__html'
+	// @try arms render into uniquely named buffers: a nested @try must not
+	// shadow its enclosing arm's buffer (content would be lost).
+	let armCounter = 0
 	const tab = (depth: number) => '\t'.repeat(depth)
+	/**
+	 * Extracted reactive-list templates, one pending queue per open element:
+	 * `<template>` is emitted after its container's close tag (outside the
+	 * reconciled container's children — ADR 0017 removes unkeyed children).
+	 */
+	const templateQueue: string[][] = []
 
-	const emit = (node: TemplateNode, scope: ReadonlySet<string>, depth: number): void => {
+	const emit = (
+		node: TemplateNode,
+		scope: ReadonlySet<string>,
+		depth: number,
+	): void => {
 		if (node.kind === 'text') {
-			lines.push(`${tab(depth)}__html.push(${JSON.stringify(node.value)})`)
+			lines.push(`${tab(depth)}${buffer}.push(${JSON.stringify(node.value)})`)
 			return
 		}
 		if (node.kind === 'expr') {
@@ -190,7 +221,67 @@ export const emitServerModule = (
 			const value = node.lazy
 				? lazyValueExpression(component, node.exprText, node.expr)
 				: node.exprText
-			lines.push(`${tab(depth)}__html.push(esc(String(${value})))`)
+			lines.push(`${tab(depth)}${buffer}.push(esc(String(${value})))`)
+			return
+		}
+		if (node.kind === 'if') {
+			// The condition is server-known (validated at lowering) — the
+			// render function evaluates it against the real args.
+			lines.push(`${tab(depth)}if (${node.testText}) {`)
+			for (const child of node.then) emit(child, scope, depth + 1)
+			if (node.alternate.length > 0) {
+				lines.push(`${tab(depth)}} else {`)
+				for (const child of node.alternate) emit(child, scope, depth + 1)
+			}
+			lines.push(`${tab(depth)}}`)
+			return
+		}
+		if (node.kind === 'switch') {
+			// Arms are mutually exclusive — each case block breaks so JS
+			// fall-through cannot blend arms.
+			lines.push(`${tab(depth)}switch (${node.discriminantText}) {`)
+			for (const arm of node.cases) {
+				lines.push(
+					`${tab(depth + 1)}${arm.testText === null ? 'default' : `case ${arm.testText}`}: {`,
+				)
+				for (const child of arm.children) emit(child, scope, depth + 2)
+				lines.push(`${tab(depth + 2)}break`)
+				lines.push(`${tab(depth + 1)}}`)
+			}
+			lines.push(`${tab(depth)}}`)
+			return
+		}
+		if (node.kind === 'try') {
+			// Render-time error boundary. Arms render into an isolated
+			// buffer so a throw mid-arm (after partial pushes) cannot leak
+			// markup into the output — the catch arm starts fresh. The join
+			// targets the OUTER buffer; arm names are unique so a nested @try
+			// contributes through its own buffer, never shadowing.
+			const armName = `__arm${++armCounter}`
+			lines.push(`${tab(depth)}try {`)
+			lines.push(`${tab(depth + 1)}const ${armName}: string[] = []`)
+			const outerBuffer = buffer
+			buffer = armName
+			for (const child of node.children) emit(child, scope, depth + 1)
+			buffer = outerBuffer
+			lines.push(`${tab(depth + 1)}${outerBuffer}.push(${armName}.join(''))`)
+			if (node.catchChildren.length > 0) {
+				lines.push(
+					`${tab(depth)}} catch${node.catchParam ? ` (${node.catchParam})` : ''} {`,
+				)
+				const catchName = `__arm${++armCounter}`
+				lines.push(`${tab(depth + 1)}const ${catchName}: string[] = []`)
+				buffer = catchName
+				const catchScope = new Set(scope)
+				if (node.catchParam) catchScope.add(node.catchParam)
+				for (const child of node.catchChildren)
+					emit(child, catchScope, depth + 1)
+				buffer = outerBuffer
+				lines.push(
+					`${tab(depth + 1)}${outerBuffer}.push(${catchName}.join(''))`,
+				)
+			}
+			lines.push(`${tab(depth)}}`)
 			return
 		}
 		const loop = [...component.fors.values()].find(f => f.output === node)
@@ -198,17 +289,38 @@ export const emitServerModule = (
 			emitFor(loop, scope, depth)
 			return
 		}
+		// Reactive-for templates flush after this element's close tag — the
+		// spec shape (adopted items, </container>, then <template>) keeps the
+		// template out of the reconciled container's children.
+		templateQueue.push([])
 		emitElement(node, scope, depth)
+		// html={dataRef} renders as sanitized raw children before authored
+		// children (dependency-provable, else omitted for the client pass).
+		const htmlAttr = node.attrs.find(a => a.kind === 'html') as
+			| Extract<AttributeIR, { kind: 'html' }>
+			| undefined
+		if (htmlAttr && dependenciesOf(htmlAttr.node).isSubsetOf(scope)) {
+			used.add('sanitizeHtml')
+			lines.push(
+				`${tab(depth)}${buffer}.push(sanitizeHtml(String(${htmlAttr.exprText})))`,
+			)
+		}
 		for (const child of node.children) emit(child, scope, depth)
 		if (!isVoidTag(node.tag))
-			lines.push(`${tab(depth)}__html.push('</${node.tag}>')`)
+			lines.push(`${tab(depth)}${buffer}.push('</${node.tag}>')`)
+		lines.push(...(templateQueue.pop() ?? []))
 	}
 
-	const emitElement = (element: ElementNode, scope: ReadonlySet<string>, depth: number): void => {
+	const emitElement = (
+		element: ElementNode,
+		scope: ReadonlySet<string>,
+		depth: number,
+		extraAttrs: AttributeIR[] = [],
+	): void => {
 		const parts: Part[] = [{ static: `<${element.tag}` }]
 		let staticClass: string | null = null
 		let classExpr: string | null = null
-		for (const attr of element.attrs) {
+		for (const attr of [...extraAttrs, ...element.attrs]) {
 			switch (attr.kind) {
 				case 'static':
 					if (attr.name === 'class') staticClass = attr.value ?? ''
@@ -245,7 +357,9 @@ export const emitServerModule = (
 			}
 		}
 		if (classExpr || staticClass !== null) {
-			const prefix = staticClass ? `${escapeAttrValue(staticClass)}${classExpr ? ' ' : ''}` : ''
+			const prefix = staticClass
+				? `${escapeAttrValue(staticClass)}${classExpr ? ' ' : ''}`
+				: ''
 			if (classExpr) {
 				parts.push({ static: ` class="${prefix}` })
 				parts.push({ expr: classExpr })
@@ -255,10 +369,18 @@ export const emitServerModule = (
 			}
 		}
 		parts.push({ static: '>' })
-		lines.push(`${tab(depth)}__html.push(${pushArgument(parts)})`)
+		lines.push(`${tab(depth)}${buffer}.push(${pushArgument(parts)})`)
 	}
 
-	const emitFor = (loop: ForIR, scope: ReadonlySet<string>, depth: number): void => {
+	const emitFor = (
+		loop: ForIR,
+		scope: ReadonlySet<string>,
+		depth: number,
+	): void => {
+		if (loop.listSignal) {
+			emitListFor(loop, scope, depth)
+			return
+		}
 		const bodyText = [
 			...loop.hoisted.map(h => h.initText),
 			...loop.output.attrs.map(a =>
@@ -267,7 +389,8 @@ export const emitServerModule = (
 			...loop.output.children.map(c => ('exprText' in c ? c.exprText : '')),
 		].join(' ')
 		const usesIndex =
-			loop.indexName !== null && new RegExp(`\\b${loop.indexName}\\b`).test(bodyText)
+			loop.indexName !== null &&
+			new RegExp(`\\b${loop.indexName}\\b`).test(bodyText)
 		used.add(usesIndex ? 'entries' : 'items')
 		const loopScope = new Set(scope)
 		loopScope.add(loop.itemName)
@@ -282,12 +405,93 @@ export const emitServerModule = (
 		emitElement(loop.output, loopScope, depth + 1)
 		for (const child of loop.output.children) emit(child, loopScope, depth + 1)
 		if (!isVoidTag(loop.output.tag))
-			lines.push(`${tab(depth + 1)}__html.push('</${loop.output.tag}>')`)
+			lines.push(`${tab(depth + 1)}${buffer}.push('</${loop.output.tag}>')`)
 		lines.push(`${tab(depth)}}`)
 	}
 
+	/**
+	 * Reactive `@for` over a declared List (ADR 0023 sub-design 5): initial
+	 * keyed items render in place (adopted children are complete — values, no
+	 * slot markers) with `data-key` from the shim's cause-effect-parity key
+	 * generation, and the item shape is extracted as a sibling `<template>`
+	 * whose `&{item}` hole becomes a `<slot>` marker. `validateListBody`
+	 * (compiler) already proved the body is statics + events + the one hole.
+	 */
+	const emitListFor = (
+		loop: ForIR,
+		scope: ReadonlySet<string>,
+		depth: number,
+	): void => {
+		const keyVar = loop.keyName ?? '__key'
+		const loopScope = new Set(scope)
+		loopScope.add(loop.itemName)
+		if (loop.keyName) loopScope.add(keyVar)
+		lines.push(
+			`${tab(depth)}for (const [${keyVar}, ${loop.itemName}] of ${loop.listSignal}.entries()) {`,
+		)
+		const dataKey: AttributeIR = {
+			kind: 'server',
+			name: 'data-key',
+			exprText: keyVar,
+			node: loop.node,
+		}
+		emitElement(loop.output, loopScope, depth + 1, [dataKey])
+		for (const child of loop.output.children) emit(child, loopScope, depth + 1)
+		if (!isVoidTag(loop.output.tag))
+			lines.push(`${tab(depth + 1)}${buffer}.push('</${loop.output.tag}>')`)
+		lines.push(`${tab(depth)}}`)
+
+		// Extracted template → the innermost open element's pending queue
+		// (flushed after that element's close tag).
+		const queue = templateQueue.at(-1)
+		if (queue) queue.push(...listTemplateLines(loop, depth))
+	}
+
+	/** The extracted `<template>`: statics render, the hole becomes a slot. */
+	const listTemplateLines = (loop: ForIR, depth: number): string[] => {
+		const out: string[] = [`${tab(depth)}${buffer}.push('<template>')`]
+		const shape = (node: TemplateNode, atDepth: number): void => {
+			if (node.kind === 'text') {
+				out.push(`${tab(atDepth)}${buffer}.push(${JSON.stringify(node.value)})`)
+				return
+			}
+			if (node.kind === 'expr') {
+				if (
+					node.lazy &&
+					node.expr.type === 'Identifier' &&
+					node.exprText === loop.itemName
+				)
+					out.push(`${tab(atDepth)}${buffer}.push('<slot></slot>')`)
+				return
+			}
+			// Statics only — validateListBody rejected everything else, and
+			// events/refs never render server-side.
+			if (node.kind !== 'element') return
+			const parts: Part[] = [{ static: `<${node.tag}` }]
+			for (const attr of node.attrs) {
+				if (attr.kind !== 'static') continue
+				if (attr.value === null) parts.push({ static: ` ${attr.name}` })
+				else
+					parts.push({
+						static: ` ${attr.name}="${escapeAttrValue(attr.value)}"`,
+					})
+			}
+			parts.push({ static: '>' })
+			out.push(`${tab(atDepth)}${buffer}.push(${pushArgument(parts)})`)
+			for (const child of node.children) shape(child, atDepth)
+			if (!isVoidTag(node.tag))
+				out.push(`${tab(atDepth)}${buffer}.push('</${node.tag}>')`)
+		}
+		shape(loop.output, depth + 1)
+		out.push(`${tab(depth)}${buffer}.push('</template>')`)
+		return out
+	}
+
+	// Root-level reactive lists flush their template before the root close.
+	templateQueue.push([])
 	for (const child of component.root.children)
 		emit(child, component.serverKnown, 1)
+	lines.push(...(templateQueue.pop() ?? []))
 
 	// Root element opening: only static and server-definitive attributes
 	// render; reactive/event/ref constructs on the root are the client
@@ -295,9 +499,10 @@ export const emitServerModule = (
 	const rootParts: Part[] = [{ static: `<${component.tag}` }]
 	for (const attr of component.root.attrs) {
 		if (attr.kind === 'static' && attr.value !== null)
-			rootParts.push({ static: ` ${attr.name}="${escapeAttrValue(attr.value)}"` })
-		else if (attr.kind === 'static')
-			rootParts.push({ static: ` ${attr.name}` })
+			rootParts.push({
+				static: ` ${attr.name}="${escapeAttrValue(attr.value)}"`,
+			})
+		else if (attr.kind === 'static') rootParts.push({ static: ` ${attr.name}` })
 		else if (attr.kind === 'server') {
 			used.add('attr')
 			rootParts.push({ expr: `attr('${attr.name}', ${attr.exprText})` })
@@ -317,7 +522,9 @@ export const emitServerModule = (
 	]
 	if (used.size > 0) {
 		const imports = [...used].sort()
-		body.push(`import { ${imports.join(', ')} } from '${options.runtimeImport}'`)
+		body.push(
+			`import { ${imports.join(', ')} } from '${options.runtimeImport}'`,
+		)
 	}
 	body.push('')
 	for (const decl of component.typeDecls) body.push(decl, '')
@@ -326,12 +533,41 @@ export const emitServerModule = (
 	const paramLines = reindent(component.paramsText, 2).split('\n')
 	const paramFirst = paramLines[0]?.replace(/^\t\t/, '') ?? ''
 	if (paramLines.length === 1) {
-		body.push(`export function render${component.name}(${paramFirst}): string {`)
+		body.push(
+			`export function render${component.name}(${paramFirst}): string {`,
+		)
 	} else {
 		body.push(`export function render${component.name}(${paramFirst}`)
 		body.push(...paramLines.slice(1), '): string {')
 	}
-	for (const stmt of component.setup) body.push(reindent(stmt, 1))
+	// Setup statements keep their relative shape: the shallowest continuation
+	// line lands at one tab (statement depth), deeper lines keep their
+	// relative indent, template-literal interiors stay byte-identical (LT-010).
+	const pushSetup = (stmt: string): void => {
+		const stmtLines = stmt.split('\n')
+		const rest = stmtLines.slice(1)
+		const mask = lineStartsInTemplate(stmtLines)
+		const indents = rest
+			.filter((l, i) => l.trim().length > 0 && !mask[i + 1])
+			.map(l => l.match(/^[ \t]*/)?.[0] ?? '')
+		const common = indents.length
+			? (indents.reduce((min, ind) => (ind.length < min.length ? ind : min)) ??
+				'')
+			: ''
+		body.push(`\t${stmtLines[0] ?? ''}`)
+		for (const [i, line] of rest.entries()) {
+			if (mask[i + 1]) body.push(line)
+			else if (line.trim().length === 0) body.push('')
+			else
+				body.push(
+					'\t' +
+						(line.startsWith(common)
+							? line.slice(common.length)
+							: line.trimStart()),
+				)
+		}
+	}
+	for (const stmt of component.setup) pushSetup(stmt)
 	body.push('\tconst __html: string[] = []')
 	body.push(`\t__html.push(${pushArgument(rootParts)})`)
 	body.push(...lines)

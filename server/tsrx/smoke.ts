@@ -6,10 +6,10 @@
  *   bun server/tsrx/smoke.ts
  */
 import * as fs from 'node:fs'
-import { compileSource } from './compiler'
 import { analyzeClient } from './analyze'
-import { emitServerModule } from './emit-server'
+import { compileSource } from './compiler'
 import { emitClientModule } from './emit-client'
+import { emitServerModule } from './emit-server'
 
 const ROOT = new URL('../..', import.meta.url).pathname
 const OUT_DIR = 'server/generated/tsrx'
@@ -37,9 +37,14 @@ for (const rel of CASES) {
 }
 
 for (const { rel, tag } of compiled) {
-	const { component } = compileSource(fs.readFileSync(`${ROOT}${rel}`, 'utf8'), rel)
+	const { component } = compileSource(
+		fs.readFileSync(`${ROOT}${rel}`, 'utf8'),
+		rel,
+	)
 	if (!component) continue
-	const diagnostics = [...compileSource(fs.readFileSync(`${ROOT}${rel}`, 'utf8'), rel).diagnostics]
+	const diagnostics = [
+		...compileSource(fs.readFileSync(`${ROOT}${rel}`, 'utf8'), rel).diagnostics,
+	]
 	const server = emitServerModule(component, {
 		runtimeImport: '../../tsrx/runtime',
 		sourcePath: rel,
@@ -59,20 +64,20 @@ for (const { tag } of compiled) {
 		console.log(mod.renderBasicCounter({}))
 		console.log(mod.renderBasicCounter({ start: 100 }))
 	}
-		if (tag === 'module-tabgroup') {
-			const tabs = [
-				{ id: '1', label: 'Tab 1', content: 'Tab 1 content' },
-				{ id: '2', label: 'Tab 2', content: 'Tab 2 content' },
-				{ id: '3', label: 'Tab 3', content: 'Tab 3 content' },
-			]
-			console.log(mod.renderModuleTabgroup({ tabs }))
-		}
-		if (tag === 'form-textbox') {
-			console.log(
-				mod.renderFormTextbox({ name: 'name', label: 'Name', required: true }),
-			)
-			console.log(
-				mod.renderFormTextbox({ name: 'nick', label: 'Nickname', value: 'Ada' }),
-			)
-		}
+	if (tag === 'module-tabgroup') {
+		const tabs = [
+			{ id: '1', label: 'Tab 1', content: 'Tab 1 content' },
+			{ id: '2', label: 'Tab 2', content: 'Tab 2 content' },
+			{ id: '3', label: 'Tab 3', content: 'Tab 3 content' },
+		]
+		console.log(mod.renderModuleTabgroup({ tabs }))
+	}
+	if (tag === 'form-textbox') {
+		console.log(
+			mod.renderFormTextbox({ name: 'name', label: 'Name', required: true }),
+		)
+		console.log(
+			mod.renderFormTextbox({ name: 'nick', label: 'Nickname', value: 'Ada' }),
+		)
+	}
 }

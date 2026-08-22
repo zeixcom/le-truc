@@ -19,24 +19,43 @@ const ROOT = path.resolve(import.meta.dir, '../../..')
 const read = (rel: string): string =>
 	fs.readFileSync(path.isAbsolute(rel) ? rel : path.join(ROOT, rel), 'utf8')
 
-const registry = new Set<string>(['basic-counter', 'module-tabgroup', 'form-textbox'])
+const registry = new Set<string>([
+	'basic-counter',
+	'module-tabgroup',
+	'form-textbox',
+	'form-checkbox',
+	'module-list',
+	'basic-button',
+])
+// Child-module map: migrated tags → generated clients, hand-written tags →
+// their example sources (the child authors its element interface inline via
+// declare global; the generated client side-effect-imports the module).
+const childImports = new Map<string, string>([
+	['basic-counter', './basic-counter.client'],
+	['module-tabgroup', './module-tabgroup.client'],
+	['form-textbox', './form-textbox.client'],
+	['form-checkbox', './form-checkbox.client'],
+	['module-list', './module-list.client'],
+	['basic-button', '../../../examples/basic/button/basic-button'],
+])
 const SOURCES = [
 	'examples/basic/counter/basic-counter.tsrx',
 	'examples/module/tabgroup/module-tabgroup.tsrx',
 	'examples/form/textbox/form-textbox.tsrx',
+	'examples/form/checkbox/form-checkbox.tsrx',
+	'examples/module/list/module-list.tsrx',
 ] as const
 
 const compiled = SOURCES.map(rel => ({
 	rel,
-	result: compileComponent(read(rel), rel, registry),
+	result: compileComponent(read(rel), rel, registry, childImports),
 }))
 
 describe('client golden — generated modules match snapshots', () => {
 	for (const { rel, result } of compiled) {
 		test(`${rel} → snapshot`, () => {
 			const { component, diagnostics } = result
-			for (const d of diagnostics)
-				console.warn(`[${d.code}] ${d.message}`)
+			for (const d of diagnostics) console.warn(`[${d.code}] ${d.message}`)
 			if (!component) throw new Error(`${rel} did not compile`)
 			const snapshotPath = path.join(
 				ROOT,
@@ -56,21 +75,25 @@ describe('client golden — generated modules match snapshots', () => {
 describe('client golden — convergence with the hand-written trio', () => {
 	test('basic-counter: same seed, handler, and binding as the hand-written component', () => {
 		const code = compiled[0]?.result.component?.clientCode ?? ''
-		expect(code).toContain("import { asInteger, bindText, createCell, defineComponent } from '@zeix/le-truc'")
+		expect(code).toContain(
+			"import { asInteger, bindText, createCell, defineComponent } from '@zeix/le-truc'",
+		)
 		expect(code).toContain("first('span'")
 		expect(code).toContain('createCell(asInteger()(span.textContent))')
-		expect(code).toContain("on(button, 'click', () => count.set(count.get() + 1))")
+		expect(code).toContain(
+			"on(button, 'click', () => count.set(count.get() + 1))",
+		)
 		expect(code).toContain('watch(count, bindText(span))')
 	})
 
 	test('module-tabgroup: DOM-seeded selection, per-tab effects, hoisted-const rebinding', () => {
 		const code = compiled[1]?.result.component?.clientCode ?? ''
-		expect(code).toContain("all('button[role=\"tab\"]'")
-		expect(code).toContain("all('[role=\"tabpanel\"]'")
+		expect(code).toContain('all(\'button[role="tab"]\'')
+		expect(code).toContain('all(\'[role="tabpanel"]\'')
 		expect(code).toContain(
 			"tabs.get().find(el => el.ariaSelected === 'true')?.getAttribute('aria-controls') ?? ''",
 		)
-		expect(code).toContain("each(tabs, tab => {")
+		expect(code).toContain('each(tabs, tab => {')
 		expect(code).toContain("const pid = tab.getAttribute('aria-controls')!")
 		expect(code).toContain(
 			"watch(() => String(selected.get() === pid), bindAttribute(tab, 'aria-selected'))",
@@ -78,7 +101,7 @@ describe('client golden — convergence with the hand-written trio', () => {
 		expect(code).toContain("on(tab, 'click', () => selected.set(pid))")
 		expect(code).toContain('const pid = tab.id')
 		expect(code).toContain(
-			'watch(() => selected.get() !== pid, bindAttribute(tab, \'hidden\'))',
+			"watch(() => selected.get() !== pid, bindAttribute(tab, 'hidden'))",
 		)
 	})
 
@@ -87,23 +110,92 @@ describe('client golden — convergence with the hand-written trio', () => {
 		// Extension activation (sub-design 8): formAssociated leads the
 		// emitted array — the FormFactoryContext overload selector.
 		expect(code).toContain(
-			'\t[formAssociated(), observedAttributes([\'value\'])],',
+			"\t[formAssociated(), observedAttributes(['value'])],",
 		)
 		expect(code).toContain(
-			"import { asString, bindProperty, bindText, defineComponent, defineMethod, formAssociated, observedAttributes } from '@zeix/le-truc'",
+			"import { asString, bindAttribute, bindProperty, bindText, createCell, defineComponent, defineMethod, formAssociated, observedAttributes } from '@zeix/le-truc'",
 		)
 		expect(code).toContain(
 			"import type { FormAssociatedElement } from '@zeix/le-truc'",
 		)
-		// host/internals destructure from the factory context (ambients)
-		expect(code).toContain('({ expose, first, host, on, watch }) => {')
+		// host/internals destructure from the factory context (ambients —
+		// internals arrives via the client-only setup side effect)
+		expect(code).toContain(
+			'({ expose, first, host, internals, on, watch }) => {',
+		)
 		// Attribute-driven prop + method producer, verbatim expose shape
 		expect(code).toContain("value: asString(''),")
+		expect(code).toContain('length: length.get,')
+		// Arg-substituted seed (LT-008): the param's mirror site is the live
+		// input — the hand-written seeds createState(textbox.value.length).
+		expect(code).toContain('const length = createCell(input.value.length)')
+		// @if union addressing: whichever branch rendered is the element found
+		expect(code).toContain(
+			"const input = first('textarea, input', 'form-textbox: textarea, input missing')",
+		)
+		// Client-only setup side effect: runs in the factory, never on the server
+		expect(code).toContain("internals?.states.add('clearable')")
 		expect(code).toContain('clear: defineMethod(() => {')
 		// The host-prop mirror lowers to a property dispatch (AGENTS.md rule)
-		expect(code).toContain('watch(() => host.value, bindProperty(input, \'value\'))')
+		expect(code).toContain(
+			"watch(() => host.value, bindProperty(input, 'value'))",
+		)
 		// Managed form prop as watch source — exists only on FormFactoryContext
 		expect(code).toContain("watch('validationMessage', bindText(error))")
+	})
+
+	test('form-checkbox: formAssociatedCheckbox leads, checked mirror, return-update handler', () => {
+		const code = compiled[3]?.result.component?.clientCode ?? ''
+		expect(code).toContain(
+			"import { asBoolean, bindProperty, defineComponent, formAssociatedCheckbox } from '@zeix/le-truc'",
+		)
+		expect(code).toContain('\t[formAssociatedCheckbox()],')
+		expect(code).toContain('checked: asBoolean(false),')
+		// Both mirrors dispatch as properties — checked from the parser-exposed
+		// prop, disabled from the extension member (FormAssociatedElement).
+		expect(code).toContain(
+			"watch(() => host.checked, bindProperty(checkbox, 'checked'))",
+		)
+		expect(code).toContain(
+			"watch(() => host.disabled, bindProperty(checkbox, 'disabled'))",
+		)
+		// The on() return-update form passes through verbatim
+		expect(code).toContain(
+			"on(checkbox, 'change', () => ({ checked: checkbox.checked }))",
+		)
+	})
+
+	test('module-list: reconcile() with generated bindItem, DOM-seeded list, pass() on registry child', () => {
+		const code = compiled[4]?.result.component?.clientCode ?? ''
+		expect(code).toContain(
+			"import { bindText, createList, defineComponent, reconcile } from '@zeix/le-truc'",
+		)
+		// Static seed passes through verbatim — the server rendered from the
+		// same literal, so the DOM agrees by construction.
+		expect(code).toContain('const items = createList<string>([], {')
+		expect(code).toContain(
+			"const template = first('template', 'module-list: template missing')",
+		)
+		// The spec lowering (unified-lowerings.md §3), hardened in review: the
+		// value site is bound reactively (bindItem runs once per entering
+		// element — a one-shot read goes stale on in-place updates), and the
+		// textContent write is idempotent for adopted items while replacing
+		// the template's slot in clones.
+		expect(code).toContain(
+			'reconcile(container, template, items, (_element, item, k, first) => {',
+		)
+		expect(code).toContain(
+			"watch(item, bindText(first('span', 'module-list: span missing')))",
+		)
+		expect(code).toContain(
+			"const button = first('button', 'module-list: button missing')",
+		)
+		expect(code).toContain("on(button, 'click', () => items.remove(k))")
+		// Registry-aware dispatch: basic-button is a known component, so the
+		// reactive attribute lowers to mediated pass(), not bindProperty.
+		expect(code).toContain(
+			'pass(basicButton, { disabled: { get: () => !textbox.length } })',
+		)
 	})
 
 	test('registry entry records both halves', () => {
@@ -147,6 +239,11 @@ describe('client golden — emit-then-check (ADR 0023 sub-design 6)', () => {
 				'--lib',
 				'esnext,dom',
 				'--skipLibCheck',
+				// Child-module side-effect imports pull hand-written examples
+				// (and through them src/) into the program; src/ reads
+				// process.env.DEV_MODE, typed by @types/node as in tsconfig.
+				'--types',
+				'node',
 				...files,
 			],
 			{ stdout: 'pipe', stderr: 'pipe', cwd: ROOT },

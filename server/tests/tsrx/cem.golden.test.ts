@@ -30,7 +30,11 @@ const GENERATED = path.join(ROOT, 'server/generated/tsrx')
 const read = (rel: string): string =>
 	fs.readFileSync(path.isAbsolute(rel) ? rel : path.join(ROOT, rel), 'utf8')
 
-const registry = new Set<string>(['basic-counter', 'module-tabgroup', 'form-textbox'])
+const registry = new Set<string>([
+	'basic-counter',
+	'module-tabgroup',
+	'form-textbox',
+])
 const SOURCES = [
 	'examples/basic/counter/basic-counter.tsrx',
 	'examples/module/tabgroup/module-tabgroup.tsrx',
@@ -47,6 +51,10 @@ export default {
 	globs: ['server/generated/tsrx/*.client.ts'],
 	exclude: [],
 	outdir: 'server/generated/tsrx',
+	// The analyzer defaults packagejson: true and would rewrite the ROOT
+	// package.json "customElements" field to this shadow outdir — never
+	// enable it for a shadow manifest.
+	packagejson: false,
 	plugins: [leTrucPlugin(() => typeChecker)],
 	overrideModuleCreation({ ts, globs }) {
 		const program = ts.createProgram(globs, {
@@ -67,9 +75,12 @@ type CemDeclaration = Record<string, unknown> & { tagName: string }
 const declarationsByTag = async (): Promise<Map<string, CemDeclaration>> => {
 	// Compile the corpus fresh and stage the generated clients.
 	for (const rel of SOURCES) {
-		const { component, diagnostics } = compileComponent(read(rel), rel, registry)
-		for (const d of diagnostics)
-			console.warn(`[${d.code}] ${d.message}`)
+		const { component, diagnostics } = compileComponent(
+			read(rel),
+			rel,
+			registry,
+		)
+		for (const d of diagnostics) console.warn(`[${d.code}] ${d.message}`)
 		if (!component) throw new Error(`${rel} did not compile`)
 		fs.writeFileSync(
 			path.join(GENERATED, component.entry.clientModule),
@@ -94,8 +105,7 @@ const declarationsByTag = async (): Promise<Map<string, CemDeclaration>> => {
 		new Response(proc.stderr).text(),
 		proc.exited,
 	])
-	if (exitCode !== 0)
-		throw new Error(`cem analyze failed: ${stdout}${stderr}`)
+	if (exitCode !== 0) throw new Error(`cem analyze failed: ${stdout}${stderr}`)
 
 	const manifest = JSON.parse(
 		fs.readFileSync(path.join(GENERATED, 'custom-elements.json'), 'utf8'),
@@ -126,7 +136,8 @@ describe('CEM golden — generated clients extract like hand-written components'
 					kind: 'field',
 					name: 'count',
 					type: { text: 'number' },
-					description: 'Current counter value. Increments on each button click.',
+					description:
+						'Current counter value. Increments on each button click.',
 				},
 			],
 			demos: [
@@ -136,7 +147,7 @@ describe('CEM golden — generated clients extract like hand-written components'
 				},
 			],
 		})
-	})
+	}, 90000)
 
 	test('module-tabgroup declaration is byte-equal to the hand-written entry', async () => {
 		const tabgroup = (await declarationsByTag()).get('module-tabgroup')
@@ -165,7 +176,7 @@ describe('CEM golden — generated clients extract like hand-written components'
 				},
 			],
 		})
-	})
+	}, 90000)
 
 	test('form-textbox: hand-written entries plus the Parser-exposed attribute', async () => {
 		const textbox = (await declarationsByTag()).get('form-textbox')
@@ -188,11 +199,15 @@ describe('CEM golden — generated clients extract like hand-written components'
 				description: 'Interactive preview and usage examples',
 			},
 		])
-		// The fixture's Props (value, clear) + the formAssociated() member set.
+		// The fixture's Props (value, length, clear) + the formAssociated()
+		// member set.
 		expect(
-			(textbox.members as Array<{ kind: string; name: string }>).map(m => m.name),
+			(textbox.members as Array<{ kind: string; name: string }>).map(
+				m => m.name,
+			),
 		).toEqual([
 			'value',
+			'length',
 			'clear',
 			'form',
 			'name',
@@ -209,7 +224,46 @@ describe('CEM golden — generated clients extract like hand-written components'
 		// extension members); its default is the plugin's literal rendering of
 		// asString('') — a quoted empty string.
 		expect(textbox.attributes).toEqual([
-			{ name: 'value', fieldName: 'value', type: { text: 'string' }, default: '""' },
+			{
+				name: 'value',
+				fieldName: 'value',
+				type: { text: 'string' },
+				default: '""',
+			},
+			{ name: 'name', fieldName: 'name', type: { text: 'string' } },
+			{ name: 'disabled', fieldName: 'disabled', type: { text: 'boolean' } },
+		])
+	}, 90000)
+
+	test('form-checkbox: formAssociatedCheckbox extension + Parser-exposed attribute', async () => {
+		const checkbox = (await declarationsByTag()).get('form-checkbox')
+		if (!checkbox) throw new Error('form-checkbox declaration missing')
+		expect(
+			(checkbox.members as Array<{ kind: string; name: string }>).map(
+				m => m.name,
+			),
+		).toEqual([
+			'checked',
+			'label',
+			'form',
+			'name',
+			'disabled',
+			'labels',
+			'validity',
+			'validationMessage',
+			'willValidate',
+			'checkValidity',
+			'reportValidity',
+			'setCustomValidity',
+		])
+		// The checked variant's Parser-exposed boolean with its literal default
+		expect(checkbox.attributes).toEqual([
+			{
+				name: 'checked',
+				fieldName: 'checked',
+				type: { text: 'boolean' },
+				default: 'false',
+			},
 			{ name: 'name', fieldName: 'name', type: { text: 'string' } },
 			{ name: 'disabled', fieldName: 'disabled', type: { text: 'boolean' } },
 		])

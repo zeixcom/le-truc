@@ -18,12 +18,36 @@ import { join, relative } from 'node:path'
 import { componentTsrx, type FileInfo } from '../file-signals'
 import { getFilePath, writeFileSafe } from '../io'
 import { compileComponent } from '../tsrx'
-import { registryJson, type RegistryEntry } from '../tsrx/registry'
+import { type RegistryEntry, registryJson } from '../tsrx/registry'
 import { createBuildEffect } from './build-effect'
 
 /* === Internal Functions === */
 
 const GENERATED_DIR = join(import.meta.dir, '..', 'generated', 'tsrx')
+const ROOT = join(import.meta.dir, '..', '..')
+
+/**
+ * Custom element tags of the hand-written example components, mapped to
+ * their source paths (relative to the generated dir). Registry-aware
+ * attribute dispatch needs the tags too: a reactive attribute on ANY example
+ * custom element the docs pages load alongside (e.g. `basic-button` inside
+ * module-list) lowers to `pass()`, exactly as for migrated .tsrx tags — and
+ * the generated client imports the module for its `declare global` entry.
+ */
+export const handwrittenExampleModules = (): Map<string, string> => {
+	const modules = new Map<string, string>()
+	const glob = new Bun.Glob('examples/**\/*.ts')
+	for (const rel of glob.scanSync({ cwd: ROOT })) {
+		const tag = (rel.split('/').pop() ?? '').replace(/\.ts$/, '')
+		// Component files are named for their tag (dashed); helpers (main.ts,
+		// copyToClipboard.ts) and tests carry no dash or a dot suffix.
+		if (!/^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)+$/.test(tag)) continue
+		// Specifiers are relative to the generated dir (server/generated/tsrx)
+		// and extensionless (bundler-style resolution, TS5097-safe).
+		modules.set(tag, `../../../${rel.replace(/\.ts$/, '')}`)
+	}
+	return modules
+}
 
 /**
  * Compile the whole corpus (exported for the standalone `scripts/build-tsrx.ts`
@@ -36,8 +60,10 @@ export const compileTsrxCorpus = async (files: FileInfo[]): Promise<void> => {
 	// Registry-aware dispatch needs every compilable tag up front: first
 	// pass collects tags (warnings already skip their files), second pass
 	// compiles against the full registry.
-	const registry = new Set<string>()
+	const childImports = handwrittenExampleModules()
+	const registry = new Set<string>(childImports.keys())
 	const compilable = new Map<string, string>()
+	const compiledTags = new Set<string>()
 	for (const file of files) {
 		const rel = relative(join(import.meta.dir, '..', '..'), file.path)
 		const { component, diagnostics } = compileComponent(
@@ -52,13 +78,22 @@ export const compileTsrxCorpus = async (files: FileInfo[]): Promise<void> => {
 		}
 		if (component) {
 			registry.add(component.entry.tag)
+			compiledTags.add(component.entry.tag)
 			compilable.set(rel, file.content)
 		}
 	}
+	// Migrated tags import their generated clients (side-effect: the tag-map
+	// augmentation and the runtime registration arrive together).
+	for (const tag of compiledTags) childImports.set(tag, `./${tag}.client`)
 
 	const entries: RegistryEntry[] = []
 	for (const [rel, content] of compilable) {
-		const { component, diagnostics } = compileComponent(content, rel, registry)
+		const { component, diagnostics } = compileComponent(
+			content,
+			rel,
+			registry,
+			childImports,
+		)
 		for (const d of diagnostics) {
 			const label = `[${d.code}] ${d.line ? `line ${d.line}: ` : ''}${d.message}`
 			if (d.severity === 'error') console.error(`❌ ${rel} — ${label}`)

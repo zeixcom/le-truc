@@ -23,6 +23,8 @@ export type ServerCell<T> = {
 /** Server-side stand-in for a `List`: iterates its seed, never mutates. */
 export type ServerList<T> = ServerCell<T[]> & {
 	[Symbol.iterator]: () => Iterator<T>
+	/** Key/value pairs mirroring cause-effect's keyConfig generation. */
+	entries: () => Array<[string, T]>
 }
 
 /* === Exported Functions === */
@@ -33,18 +35,41 @@ export const createCell = <T>(initial: T): ServerCell<T> => ({
 	set: () => {},
 })
 
-/** `createList(seed, …)` → iterable box over the seed items. */
-export const createList = <T>(seed: Iterable<T> = []): ServerList<T> => {
+/**
+ * `createList(seed, { keyConfig })` → iterable box over the seed items, with
+ * key/value entries that mirror cause-effect's `getKeyGenerator` exactly
+ * (string prefix → `prefix0…`, function → `fn(item) ?? auto`, none →
+ * positional `0…`) — the server render's `data-key` values must match the
+ * keys the client's real `createList` generates for the same seed, or
+ * `reconcile()` adoption fails (ADR 0023 sub-design 3: one seeding story).
+ */
+export const createList = <T>(
+	seed: Iterable<T> = [],
+	options?: { keyConfig?: string | ((item: T) => string | undefined) },
+): ServerList<T> => {
 	const items = Array.from(seed)
+	let keyCounter = 0
+	const keyConfig = options?.keyConfig
+	const keyOf = (item: T): string =>
+		typeof keyConfig === 'string'
+			? `${keyConfig}${keyCounter++}`
+			: typeof keyConfig === 'function'
+				? keyConfig(item) || String(keyCounter++)
+				: String(keyCounter++)
+	const keyed = items.map(item => [keyOf(item), item] as [string, T])
 	return {
 		get: () => items,
 		set: () => {},
 		[Symbol.iterator]: () => items[Symbol.iterator](),
+		entries: () => keyed,
 	}
 }
 
 /** `createStore(initial)` → box over `initial`. */
 export const createStore = <T>(initial: T): ServerCell<T> => createCell(initial)
+
+/** `createState(initial)` → same box as createCell (the v2 name). */
+export const createState = <T>(initial: T): ServerCell<T> => createCell(initial)
 
 /** `deriveCell(fn)` → box over `fn()` evaluated once. */
 export const deriveCell = <T>(compute: () => T): ServerCell<T> =>
@@ -70,7 +95,9 @@ export const expose = (_props: Record<string, unknown>): void => {}
  * matters only to the client's `expose()` dispatch, and the method body is
  * never invoked during server evaluation.
  */
-export const defineMethod = <T extends (...args: unknown[]) => void>(fn: T): T => fn
+export const defineMethod = <T extends (...args: unknown[]) => void>(
+	fn: T,
+): T => fn
 
 /**
  * Parser-factory shims (`asString` etc.). The verbatim setup calls them when
@@ -107,6 +134,27 @@ export const asEnum =
 	(value: string | null | undefined): string =>
 		valid.includes(value as string) ? (value as string) : valid[0]
 
+/** Clamped-integer shim mirroring src/parsers/number.ts (min/max clamp). */
+export const asClampedInteger =
+	(min: number = 0, max: number = Number.MAX_SAFE_INTEGER) =>
+	(value: string | null | undefined): number => {
+		const n = Number(value)
+		const parsed = value != null && Number.isFinite(n) ? Math.trunc(n) : min
+		return Math.max(min, Math.min(parsed, max))
+	}
+
+/** JSON shim mirroring src/parsers/json.ts (fallback on null/unparseable). */
+export const asJSON =
+	<T extends {}>(fallback: T) =>
+	(value: string | null | undefined): T => {
+		if (value == null || value === '') return fallback
+		try {
+			return JSON.parse(value) as T
+		} catch {
+			return fallback
+		}
+	}
+
 /**
  * HTML-escape interpolated values — same semantics as the docs pipeline's
  * `escapeHtml` (server/templates/utils.ts).
@@ -135,12 +183,34 @@ export const attr = (name: string, value: unknown): string => {
 	return ` ${name}="${esc(String(value))}"`
 }
 
-/** Render a class map's truthy keys as a class list (`{ a: true, b: x }` → `"a"`). */
+/**
+ * Render a class map's truthy keys as a class list (`{ a: true, b: x }` → `"a"`).
+ */
 export const cls = (map: Record<string, unknown>): string =>
 	Object.entries(map)
 		.filter(([, on]) => Boolean(on))
 		.map(([token]) => token)
 		.join(' ')
+
+/**
+ * Sanitize trusted-build-time HTML for the `html={expr}` dynamic-rendering
+ * attribute (defense-in-depth, mirroring `setAttribute`'s own posture in
+ * the library): strip script blocks, event-handler attributes, and unsafe
+ * URL schemes (javascript:/vbscript:/data: except data:image). The input is
+ * authored markup (docs content), not arbitrary user input — this catches
+ * the common footguns rather than replacing a real sanitizer.
+ */
+export const sanitizeHtml = (html: string): string =>
+	html
+		.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+		.replace(/<script\b[^>]*\/?>/gi, '')
+		.replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, '')
+		.replace(/\son[a-z]+\s*=\s*'[^']*'/gi, '')
+		.replace(/\son[a-z]+\s*=[^\s>]+/gi, '')
+		.replace(
+			/\s(href|src|action|formaction|xlink:href)\s*=\s*(["'])\s*(javascript|vbscript|data(?!:image\/(png|gif|jpeg|jpg|webp|svg\+xml)):)[^"']*\2/gi,
+			'',
+		)
 
 /** `@for` iteration helper over the items themselves (index unused). */
 export const items = <T>(iterable: Iterable<T>): T[] => Array.from(iterable)

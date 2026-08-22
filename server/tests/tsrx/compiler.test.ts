@@ -3,6 +3,7 @@
  * JSX text collapsing, free-identifier scoping, and template classification.
  */
 import { describe, expect, test } from 'bun:test'
+import { compileComponent } from '../../tsrx'
 import {
 	collapseJsxText,
 	compileSource,
@@ -12,12 +13,45 @@ import {
 
 type ElementNode = Extract<TemplateNode, { kind: 'element' }>
 
-const firstElementChild = (node: TemplateNode | undefined): ElementNode | undefined => {
+const firstElementChild = (
+	node: TemplateNode | undefined,
+): ElementNode | undefined => {
 	if (node?.kind !== 'element') return undefined
-	return node.children.find(
-		(c): c is ElementNode => c.kind === 'element',
-	)
+	return node.children.find((c): c is ElementNode => c.kind === 'element')
 }
+
+describe('attribute shorthand `{name}`', () => {
+	// @tsrx/core parses `<c-el {name}>` to the same JSXAttribute shape as
+	// `name={name}`, so the whole pipeline treats them identically. This test
+	// pins that equivalence — a parser pin upgrade must not silently drop it.
+	const compile = (attr: string) => {
+		const source = `export function C({ name }: { name?: string })
+	@{
+		expose({})
+		<>
+			<c-el ${attr}>ok</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		if (!component)
+			throw new Error(
+				`shorthand ${attr} must compile: ${JSON.stringify(diagnostics)}`,
+			)
+		return { server: component.serverCode, client: component.clientCode }
+	}
+
+	test('{name} lowers identically to name={name} in both halves', () => {
+		const shorthand = compile('{name}')
+		const longhand = compile('name={name}')
+		expect(shorthand.server).toBe(longhand.server)
+		expect(shorthand.client).toBe(longhand.client)
+	})
+})
 
 describe('collapseJsxText', () => {
 	test('strips indentation around newlines', () => {
@@ -245,7 +279,11 @@ export function C({ value = '' }: { value?: string })
 			fallbackText: '0',
 		})
 		expect(component?.parserExposeProps.has('clear')).toBe(false)
-		expect(component?.exposeAmbients).toEqual(['asInteger', 'asString', 'defineMethod'])
+		expect(component?.exposeAmbients).toEqual([
+			'asInteger',
+			'asString',
+			'defineMethod',
+		])
 	})
 
 	test('host/internals references inside expose initializers collect as context refs', () => {

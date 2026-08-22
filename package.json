@@ -43,7 +43,7 @@
     "custom-elements.json",
     "SECURITY.md"
   ],
-  "customElements": "server/generated/tsrx/custom-elements.json",
+  "customElements": "custom-elements.json",
   "directories": {
     "doc": "docs",
     "example": "examples"

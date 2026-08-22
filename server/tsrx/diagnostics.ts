@@ -11,7 +11,7 @@
 /* === Types === */
 
 export type DiagnosticCode =
-	| 'TSRX001' // reactive @for over a List — milestone 3 (template extraction + reconcile)
+	| 'TSRX001' // @for over a reactive source that is not a declared createList
 	| 'TSRX002' // loop variable referenced inside a reactive thunk — hoist it first
 	| 'TSRX003' // hoisted const not rebindable to a server-rendered attribute
 	| 'TSRX004' // signal with no harvestable initial-DOM site
@@ -20,6 +20,7 @@ export type DiagnosticCode =
 	| 'TSRX007' // template structure the compiler cannot address
 	| 'TSRX008' // source shape violation (root tag, exports, style placement)
 	| 'TSRX009' // invalid `export const config` extension declaration
+	| 'TSRX010' // managed form prop used without formAssociated
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -49,8 +50,12 @@ const warning = (
 		? { code, severity: 'warning', message }
 		: { code, severity: 'warning', message, line }
 
-const lineOf = (source: string, offset: number | undefined): number | undefined => {
-	if (offset === undefined || offset < 0 || offset > source.length) return undefined
+const lineOf = (
+	source: string,
+	offset: number | undefined,
+): number | undefined => {
+	if (offset === undefined || offset < 0 || offset > source.length)
+		return undefined
 	let line = 1
 	for (let i = 0; i < offset; i++) if (source.charCodeAt(i) === 10) line++
 	return line
@@ -59,11 +64,18 @@ const lineOf = (source: string, offset: number | undefined): number | undefined 
 /* === Exported Functions === */
 
 export const diagnostic = {
-	/** `@for` over a reactive `List` — lands with milestone 3 (`reconcile()`). */
-	reactiveForNotSupported: (source: string, offset?: number, iterable?: string) =>
+	/**
+	 * `@for` over a reactive source that is not a declared `createList` — the
+	 * reconcile lowering (milestone 3) covers declared Lists only.
+	 */
+	reactiveForNotSupported: (
+		source: string,
+		offset?: number,
+		iterable?: string,
+	) =>
 		warning(
 			'TSRX001',
-			`@for over a reactive List${iterable ? ` (${iterable})` : ''} is milestone 3 of ADR 0023 (template extraction + reconcile()); the sanctioned milestone-2 subset covers @for over server data only. File skipped.`,
+			`@for over reactive source \`${iterable ?? '?'}\` — only declared createList(…) signals lower (reconcile(), ADR 0017); derived or non-List reactive sources are not supported. File skipped.`,
 			lineOf(source, offset),
 		),
 
@@ -93,7 +105,11 @@ export const diagnostic = {
 		),
 
 	/** Signal the client cannot seed from the server-rendered DOM. */
-	signalNotHarvestable: (source: string, offset: number | undefined, name: string) =>
+	signalNotHarvestable: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+	) =>
 		error(
 			'TSRX004',
 			`Signal \`${name}\` is never rendered into the DOM, so the client cannot harvest its initial value (ADR 0003: DOM is the truth at load time). Render it — &{${name}} as a child or an attribute thunk — or remove it.`,
@@ -109,12 +125,18 @@ export const diagnostic = {
 		),
 
 	/** Attribute shape the classifier does not accept. */
-	invalidAttribute: (source: string, offset: number | undefined, what: string) =>
-		error('TSRX006', what, lineOf(source, offset)),
+	invalidAttribute: (
+		source: string,
+		offset: number | undefined,
+		what: string,
+	) => error('TSRX006', what, lineOf(source, offset)),
 
 	/** Element the generated client cannot address deterministically. */
-	unaddressableElement: (source: string, offset: number | undefined, what: string) =>
-		error('TSRX007', what, lineOf(source, offset)),
+	unaddressableElement: (
+		source: string,
+		offset: number | undefined,
+		what: string,
+	) => error('TSRX007', what, lineOf(source, offset)),
 
 	/** Source-level structure violations. */
 	invalidSource: (what: string) => error('TSRX008', what, undefined),
@@ -123,8 +145,27 @@ export const diagnostic = {
 	invalidConfig: (source: string, offset: number | undefined, what: string) =>
 		error('TSRX009', what, lineOf(source, offset)),
 
+	/**
+	 * Managed form prop (`&{'validationMessage'}`) without `formAssociated` —
+	 * the watch source exists only on FormFactoryContext (LT-008).
+	 */
+	managedPropWithoutForm: (
+		source: string,
+		offset: number | undefined,
+		prop: string,
+	) =>
+		error(
+			'TSRX010',
+			`Lazy child &{'${prop}'} names a managed form prop — it is watchable only when formAssociated() leads the extensions. Declare \`export const config = { formAssociated: true }\` or expose a prop of that name.`,
+			lineOf(source, offset),
+		),
+
 	/** Recompute a diagnostic's line from a node offset (keeps messages stable). */
-	withLine: (d: CompileDiagnostic, source: string, offset: number | undefined) => ({
+	withLine: (
+		d: CompileDiagnostic,
+		source: string,
+		offset: number | undefined,
+	) => ({
 		...d,
 		line: lineOf(source, offset),
 	}),

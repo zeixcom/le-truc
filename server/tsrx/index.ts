@@ -40,6 +40,7 @@ export const compileComponent = (
 	source: string,
 	filename: string,
 	registry: ReadonlySet<string>,
+	childImports?: ReadonlyMap<string, string>,
 ): CompileFileResult => {
 	const { component, diagnostics } = compileSource(source, filename)
 	if (!component) return { component: null, diagnostics }
@@ -50,7 +51,10 @@ export const compileComponent = (
 		runtimeImport: '../../tsrx/runtime',
 		sourcePath: filename,
 	})
-	const client = emitClientModule(component, plan, { sourcePath: filename })
+	const client = emitClientModule(component, plan, {
+		sourcePath: filename,
+		childImports,
+	})
 	return {
 		component: {
 			entry: {
@@ -70,15 +74,15 @@ export const compileComponent = (
 	}
 }
 
-export { compileSource } from './compiler'
-export { analyzeClient } from './analyze'
-export { emitServerModule } from './emit-server'
-export { emitClientModule } from './emit-client'
-export { dedentCss } from './css'
-export { registryJson } from './registry'
-export type { RegistryEntry, ComponentRegistry } from './registry'
 export type { ClientPlan } from './analyze'
-export type { ComponentIR, CompileResult } from './compiler'
+export { analyzeClient } from './analyze'
+export type { CompileResult, ComponentIR } from './compiler'
+export { compileSource } from './compiler'
+export { dedentCss } from './css'
 export type { CompileDiagnostic, DiagnosticCode } from './diagnostics'
-export type { EmittedServerModule } from './emit-server'
 export type { EmittedClientModule } from './emit-client'
+export { emitClientModule } from './emit-client'
+export type { EmittedServerModule } from './emit-server'
+export { emitServerModule } from './emit-server'
+export type { ComponentRegistry, RegistryEntry } from './registry'
+export { registryJson } from './registry'

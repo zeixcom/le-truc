@@ -26,6 +26,8 @@ export const config = {
 export type FormTextboxProps = {
 	/** Current text value. Synced with the native input or textarea. */
 	value: string
+	/** Character length of the current value (read-only). */
+	readonly length: number
 	/** Method to clear the textbox and emit input/change events */
 	clear: () => void
 }
@@ -55,19 +57,23 @@ export function FormTextbox(
 		label,
 		value = '',
 		required = false,
+		multiline = false,
 	}:
 		{
 			name: string
 			label: string
 			value?: string
 			required?: boolean
+			multiline?: boolean
 		},
 )
 @{
 	const inputId = `${name}-input`
+	const length = createCell(value.length)
 
 	expose({
 		value: asString(''),
+		length: length.get,
 		clear: defineMethod(() => {
 			host.value = ''
 			input.value = ''
@@ -79,26 +85,54 @@ export function FormTextbox(
 		}),
 	})
 
+	internals?.states.add('clearable')
+
 	<>
 		<form-textbox name={name} value={value}>
 			<label for={inputId}>{label}</label>
 			<div class="input">
-				<input
-					type="text"
-					id={inputId}
-					autocomplete="off"
-					required={required}
-					value={() => host.value}
-					ref={input}
-					onInput={() => {
-						host.value = input.value
-					}}
-					onChange={() => {
-						input.checkValidity()
-						host.setCustomValidity(input.validationMessage ?? '')
-					}}
-				/>
-				<button type="button" class="clear" aria-label="Clear input" onClick={() => host.clear()}>
+				@if (multiline) {
+					<textarea
+						id={inputId}
+						name={name}
+						autocomplete="off"
+						required={required}
+						rows={3}
+						value={() => host.value}
+						ref={input}
+						onInput={() => {
+							host.value = input.value
+						}}
+						onChange={() => {
+							input.checkValidity()
+							host.setCustomValidity(input.validationMessage ?? '')
+						}}
+					/>
+				} @else {
+					<input
+						type="text"
+						id={inputId}
+						name={name}
+						autocomplete="off"
+						required={required}
+						value={() => host.value}
+						ref={input}
+						onInput={() => {
+							host.value = input.value
+						}}
+						onChange={() => {
+							input.checkValidity()
+							host.setCustomValidity(input.validationMessage ?? '')
+						}}
+					/>
+				}
+				<button
+					type="button"
+					class="clear"
+					aria-label="Clear input"
+					hidden={() => length.get() === 0}
+					onClick={() => host.clear()}
+				>
 					✕
 				</button>
 			</div>

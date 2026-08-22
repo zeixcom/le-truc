@@ -23,13 +23,14 @@ import {
 	type TsrxNode,
 } from '@tsrx/core'
 import { dedentCss } from './css'
-import { diagnostic, type CompileDiagnostic } from './diagnostics'
+import { type CompileDiagnostic, diagnostic } from './diagnostics'
 
 /* === Types === */
 
 /** Signal constructor names recognized in setup declarations. */
 export type SignalConstructor =
 	| 'createCell'
+	| 'createState'
 	| 'createList'
 	| 'createStore'
 	| 'deriveCell'
@@ -41,6 +42,8 @@ export type SignalIR = {
 	name: string
 	/** Declaring expression text, e.g. `createCell(start)`. */
 	text: string
+	/** Start offset of `text` in the source (relative spans for arg surgery). */
+	textStart: number
 	constructor: SignalConstructor
 	/** Initializer expression node (first call argument). */
 	init: TsrxNode | null
@@ -65,12 +68,66 @@ export type TemplateNode =
 			lazy: boolean
 			node: TsrxNode
 	  }
+	| {
+			/**
+			 * `@if (cond) { … } else { … }` — server-known conditional markup.
+			 * The server renders the taken branch; the client addresses BOTH
+			 * branch roots through a union selector (DOM-is-truth: whichever
+			 * branch rendered is the element the factory finds).
+			 */
+			kind: 'if'
+			testText: string
+			test: TsrxNode
+			then: TemplateNode[]
+			alternate: TemplateNode[]
+			node: TsrxNode
+	  }
+	| {
+			/**
+			 * `@switch (disc) { @case expr: { … } @default: { … } }` — the
+			 * multi-branch sibling of `@if`: server-known discriminant, the
+			 * server renders the matching arm, arms are mutually exclusive.
+			 */
+			kind: 'switch'
+			discriminantText: string
+			discriminant: TsrxNode
+			cases: Array<{ testText: string | null; children: TemplateNode[] }>
+			node: TsrxNode
+	  }
+	| {
+			/**
+			 * `@try { … } @catch (e) { … }` — a render-time error boundary:
+			 * the server renders the body inside a real try/catch; if the
+			 * body throws (a server expression over args), the catch arm
+			 * renders instead. `@pending` arms are gated (async boundaries).
+			 */
+			kind: 'try'
+			children: TemplateNode[]
+			catchParam: string | null
+			catchChildren: TemplateNode[]
+			pendingChildren: TemplateNode[] | null
+			node: TsrxNode
+	  }
 
 export type AttributeIR =
 	| { kind: 'static'; name: string; value: string | null }
 	| { kind: 'server'; name: string; exprText: string; node: TsrxNode }
 	| { kind: 'reactive'; name: string; thunk: TsrxNode; thunkText: string }
 	| { kind: 'class-map'; thunkText: string; object: TsrxNode }
+	| {
+			/**
+			 * Dynamic rendering: `html={expr}` — the .tsrx spelling of the
+			 * upstream `{html expr}` keyword (newer grammar than the pinned
+			 * parser). Server-known expressions render as raw, TRUSTED HTML
+			 * children (no escaping — the same trust contract as the docs
+			 * pipeline's rendered markup); the reactive form lowers to an
+			 * `innerHTML` property binding.
+			 */
+			kind: 'html'
+			exprText: string
+			node: TsrxNode
+			reactive: boolean
+	  }
 	| {
 			kind: 'event'
 			name: string
@@ -80,11 +137,21 @@ export type AttributeIR =
 	  }
 	| { kind: 'ref'; name: string }
 
-/** A server-data `@for` loop (reactive lists are gated — diagnostic TSRX001). */
+/**
+ * A `@for` loop. Over server data (`listSignal` null) it lowers to `each()`;
+ * over a declared reactive `List` (ADR 0023 sub-design 5, milestone 3) the
+ * server renders initial keyed items in place plus an extracted `<template>`
+ * whose item hole becomes a `<slot>` marker, and the client lowers to
+ * `reconcile()` (ADR 0017).
+ */
 export type ForIR = {
 	itemName: string
 	indexName: string | null
 	keyText: string | null
+	/** Key binding name when the key clause is a bare identifier (`key k`). */
+	keyName: string | null
+	/** Declared createList signal name for reactive loops, else null. */
+	listSignal: string | null
 	iterableText: string
 	iterableName: string | null
 	/** const declarations before the output element, in order. */
@@ -112,6 +179,8 @@ export const PARSER_FACTORIES: ReadonlySet<string> = new Set<string>([
 	'asNumber',
 	'asBoolean',
 	'asEnum',
+	'asClampedInteger',
+	'asJSON',
 ])
 
 /** Context members usable as free names in any client code position. */
@@ -143,6 +212,13 @@ export type ComponentIR = {
 	 * executes them as-is against the runtime harness.
 	 */
 	setup: string[]
+	/**
+	 * Client-only setup side effects (LT-008): connect-time statements
+	 * (`internals?.states.add('clearable')`) whose free names are all
+	 * client-known. Emitted into the factory after expose(); the server never
+	 * runs them — they touch APIs that don't exist render-time.
+	 */
+	clientSetup: string[]
 	signals: SignalIR[]
 	/** `expose({...})` statement text, verbatim. */
 	exposeText: string | null
@@ -153,7 +229,10 @@ export type ComponentIR = {
 	 * attribute-driven state (ADR 0003): the host attribute seeds the prop at
 	 * connect; `observedAttributes` re-parses it on mutation.
 	 */
-	parserExposeProps: Map<string, { parser: string; fallbackText: string | null }>
+	parserExposeProps: Map<
+		string,
+		{ parser: string; fallbackText: string | null }
+	>
 	/** Ambient names `expose()` uses (parser factories, `defineMethod`). */
 	exposeAmbients: string[]
 	/** Context members referenced from setup/expose code (`host`, `internals`). */
@@ -191,12 +270,20 @@ export type CompileResult = {
 
 const SIGNAL_CTORS: ReadonlySet<string> = new Set<string>([
 	'createCell',
+	'createState',
 	'createList',
 	'createStore',
 	'deriveCell',
 	'deriveList',
 	'deriveStore',
 ])
+
+/**
+ * The recognized signal-constructor names — exported for the globals.d.ts
+ * coverage contract (LT-004): the ambient declarations in
+ * server/tsrx/globals.d.ts must stay in lockstep with this set.
+ */
+export const SIGNAL_CONSTRUCTORS: ReadonlySet<string> = SIGNAL_CTORS
 
 /**
  * JS standard globals never count against dependency provability — reading
@@ -374,7 +461,10 @@ export const freeIdentifiers = (node: TsrxNode): Set<string> => {
  * above the generated `export default defineComponent(` so CEM extraction
  * (ADR 0023, LT-006) reads the authored description and tags.
  */
-export const leadingDocComment = (source: string, before: number): string | null => {
+export const leadingDocComment = (
+	source: string,
+	before: number,
+): string | null => {
 	const head = source.slice(0, before)
 	const close = head.lastIndexOf('*/')
 	if (close === -1) return null
@@ -385,7 +475,10 @@ export const leadingDocComment = (source: string, before: number): string | null
 }
 
 /** Names declared by a binding pattern (params, declarator ids). */
-export const collectBoundNames = (pattern: unknown, into: Set<string>): void => {
+export const collectBoundNames = (
+	pattern: unknown,
+	into: Set<string>,
+): void => {
 	if (Array.isArray(pattern)) {
 		for (const p of pattern) collectBoundNames(p, into)
 		return
@@ -426,7 +519,8 @@ export const collapseJsxText = (raw: string): string => {
 	return raw
 }
 
-const attrName = (attr: TsrxNode): string => jsxName(attr.name) ?? String(attr.name)
+const attrName = (attr: TsrxNode): string =>
+	jsxName(attr.name) ?? String(attr.name)
 
 /** `onClick` → `click`; `onKeyup` → `keyup`. */
 const eventNameFromAttr = (name: string): string => {
@@ -437,12 +531,322 @@ const eventNameFromAttr = (name: string): string => {
 type ExtractContext = {
 	source: string
 	diagnostics: CompileDiagnostic[]
+	/** Names server-known at template evaluation time (args, setup). */
+	serverKnown: Set<string>
 }
 
-const text = (ctx: ExtractContext, node: TsrxNode | null | undefined): string =>
+const text = (
+	ctx: ExtractContext,
+	node: TsrxNode | null | undefined,
+): string =>
 	node && typeof node.start === 'number' && typeof node.end === 'number'
 		? ctx.source.slice(node.start, node.end)
 		: ''
+
+/**
+ * When a parse fails, check the error position for signatures of the NEWER
+ * TSRX grammar (statement-form `switch` in templates, the `{html …}`,
+ * `{text …}`, `{ref …}` keywords, setup `await`, `component` declarations) —
+ * constructs the pinned @tsrx/core 0.1.60 cannot parse at all. The hint
+ * turns a bare "Unexpected token" into an actionable diagnosis (pin
+ * upgrades are reviewed changes, ADR 0023 sub-design 2).
+ */
+const newerGrammarHint = (source: string, error: unknown): string => {
+	const pos =
+		error &&
+		typeof error === 'object' &&
+		typeof (error as { pos?: unknown }).pos === 'number'
+			? (error as { pos: number }).pos
+			: undefined
+	const around =
+		pos !== undefined ? source.slice(Math.max(0, pos - 24), pos + 48) : ''
+	const signatures: Array<[RegExp, string]> = [
+		[/\bswitch\b/, 'statement-form switch'],
+		[/\{\s*html\b/, 'the {html expr} keyword'],
+		[/\{\s*text\b/, 'the {text expr} keyword'],
+		[/\{\s*ref\b/, 'the {ref value} keyword'],
+		[/\bawait\b/, 'await'],
+		[/^\s*component\b/, 'the component keyword'],
+	]
+	for (const [pattern, what] of signatures)
+		if (pattern.test(around))
+			return ` — ${what} is newer TSRX grammar than @tsrx/core 0.1.60 (the latest published release; the tsrx.dev docs track upstream unreleased grammar — see ADR 0023 sub-design 2)`
+	return ''
+}
+
+/**
+ * Validate a control-flow condition (`@if` test, `@switch` discriminant):
+ * server-known at render time (args, setup consts, globals) and never a
+ * signal read — the DOM keeps the initially rendered branch.
+ */
+const validateCondition = (
+	ctx: ExtractContext,
+	signals: ReadonlyMap<string, SignalIR>,
+	test: TsrxNode,
+	what: string,
+): boolean => {
+	const free = freeIdentifiers(test)
+	for (const global of JS_GLOBALS) free.delete(global)
+	const signalReads = [...free].filter(name => signals.has(name))
+	if (signalReads.length > 0) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				test.start,
+				`${what} reads signal(s) ${signalReads.map(n => `\`${n}\``).join(', ')} — the DOM keeps the initially rendered branch, so a signal condition would silently stop matching. Conditions must derive from args or setup consts evaluated once at render time`,
+			),
+		)
+		return false
+	}
+	const unknown = [...free].filter(name => !ctx.serverKnown.has(name))
+	if (unknown.length > 0) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				test.start,
+				`${what} references non-server-known name(s) ${unknown.map(n => `\`${n}\``).join(', ')} — conditions must evaluate at render time (args and setup); client-side conditional rendering is outside the model`,
+			),
+		)
+		return false
+	}
+	return true
+}
+
+/**
+ * Lower an `@if` directive: the condition must be server-known at render
+ * time (args, setup names, globals) — client-side conditional rendering is
+ * outside the enhance-don't-render model. Branch bodies lower like any
+ * children; client constructs must sit on the branch ROOT elements (the
+ * analyzer union-addresses them).
+ */
+const lowerIf = (
+	ctx: ExtractContext,
+	node: TsrxNode,
+	signals: ReadonlyMap<string, SignalIR>,
+	fors: Map<TsrxNode, ForIR>,
+): (TemplateNode & { kind: 'if' }) | null => {
+	const test = node.test
+	if (!isNode(test)) return null
+	if (!validateCondition(ctx, signals, test, '@if condition')) return null
+	const lowerBranch = (block: unknown): TemplateNode[] =>
+		lowerBodyStatements(
+			ctx,
+			isNode(block) && Array.isArray(block.body) ? block.body : [],
+			signals,
+			fors,
+		)
+	const then = lowerBranch(node.consequent)
+	const alternate = lowerBranch(node.alternate)
+	if (then.length === 0 && alternate.length === 0) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				node.start,
+				'@if branches must contain output elements',
+			),
+		)
+		return null
+	}
+	return {
+		kind: 'if',
+		testText: text(ctx, test),
+		test,
+		then,
+		alternate,
+		node,
+	}
+}
+
+/**
+ * Lower an `@switch` directive (`@case expr: { … }` / `@default: { … }`
+ * arms) — the multi-branch sibling of `@if`.
+ */
+const lowerSwitch = (
+	ctx: ExtractContext,
+	node: TsrxNode,
+	signals: ReadonlyMap<string, SignalIR>,
+	fors: Map<TsrxNode, ForIR>,
+): (TemplateNode & { kind: 'switch' }) | null => {
+	const discriminant = node.discriminant
+	if (!isNode(discriminant)) return null
+	if (!validateCondition(ctx, signals, discriminant, '@switch discriminant'))
+		return null
+	const rawCases = Array.isArray(node.cases) ? node.cases : []
+	if (rawCases.length === 0) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				node.start,
+				'@switch must contain at least one @case or @default arm',
+			),
+		)
+		return null
+	}
+	const cases: Array<{ testText: string | null; children: TemplateNode[] }> = []
+	for (const raw of rawCases as TsrxNode[]) {
+		const children = lowerBodyStatements(ctx, raw.consequent, signals, fors)
+		if (children.length === 0) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					raw.start ?? node.start,
+					'@case/@default arms must contain output elements',
+				),
+			)
+			return null
+		}
+		cases.push({
+			testText: isNode(raw.test) ? text(ctx, raw.test) : null,
+			children,
+		})
+	}
+	return {
+		kind: 'switch',
+		discriminantText: text(ctx, discriminant),
+		discriminant,
+		cases,
+		node,
+	}
+}
+
+/**
+ * Lower an `@try { … } @catch (e) { … }` error boundary: a render-time
+ * boundary — the server renders the body inside a real try/catch, so a
+ * throwing server expression falls back to the catch arm. `@pending` arms
+ * (async boundaries) are gated until the LT-012 lowering lands
+ * (deriveCell(async …) + isPending(signal) branch routing — the async data
+ * itself is authorable today); `@finally` is gated outright.
+ */
+/**
+ * Lower a control-flow branch body (a statement list): elements, text,
+ * fragments, and NESTED control-flow directives — a branch body is a
+ * complete output context with the same contract as `lowerChildren`;
+ * anything unsupported reports a diagnostic instead of being silently
+ * dropped.
+ */
+const lowerBodyStatements = (
+	ctx: ExtractContext,
+	statements: unknown,
+	signals: ReadonlyMap<string, SignalIR>,
+	fors: Map<TsrxNode, ForIR>,
+): TemplateNode[] => {
+	const body = Array.isArray(statements) ? statements : []
+	const out: TemplateNode[] = []
+	for (const stmt of body) {
+		if (stmt.type === 'JSXElement') {
+			out.push(lowerElement(ctx, stmt, signals, fors))
+			continue
+		}
+		if (stmt.type === 'JSXText') {
+			const collapsed = collapseJsxText(String(stmt.value ?? ''))
+			if (collapsed) out.push({ kind: 'text', value: collapsed })
+			continue
+		}
+		if (stmt.type === 'JSXFragment') {
+			out.push(...lowerChildren(ctx, stmt, signals, fors))
+			continue
+		}
+		if (isTemplateForOfNode(stmt)) {
+			const lowered = lowerFor(ctx, stmt, signals, fors)
+			if (lowered) out.push(lowered)
+			continue
+		}
+		if (stmt.type === 'JSXIfExpression') {
+			const lowered = lowerIf(ctx, stmt, signals, fors)
+			if (lowered) out.push(lowered)
+			continue
+		}
+		if (stmt.type === 'JSXSwitchExpression') {
+			const lowered = lowerSwitch(ctx, stmt, signals, fors)
+			if (lowered) out.push(lowered)
+			continue
+		}
+		if (stmt.type === 'JSXTryExpression') {
+			const lowered = lowerTry(ctx, stmt, signals, fors)
+			if (lowered) out.push(lowered)
+			continue
+		}
+		if (stmt.type === 'JSXStyleElement') {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					stmt.start,
+					'<style> blocks inside control-flow branches (styles are component-scoped)',
+				),
+			)
+			continue
+		}
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				stmt.start,
+				'Statements inside control-flow branches other than output elements and nested directives',
+			),
+		)
+	}
+	return out
+}
+
+const lowerTry = (
+	ctx: ExtractContext,
+	node: TsrxNode,
+	signals: ReadonlyMap<string, SignalIR>,
+	fors: Map<TsrxNode, ForIR>,
+): (TemplateNode & { kind: 'try' }) | null => {
+	const lowerBlock = (block: unknown): TemplateNode[] =>
+		lowerBodyStatements(
+			ctx,
+			isNode(block) && Array.isArray(block.body) ? block.body : [],
+			signals,
+			fors,
+		)
+	if (isNode(node.pending)) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				node.pending.start,
+				"@pending arms (async boundaries) await their lowering (LT-012): deriveCell(async …, { initial }) + isPending(signal) branch routing. Async data itself is authorable today — the await lives inside the async arrow, which is legal in the sync setup. Use @try/@catch (a render-time error boundary) meanwhile",
+			),
+		)
+		return null
+	}
+	if (isNode(node.finalizer)) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				node.finalizer.start,
+				'@finally arms on template @try blocks',
+			),
+		)
+		return null
+	}
+	const children = lowerBlock(node.block)
+	const handler = isNode(node.handler) ? node.handler : null
+	let catchParam: string | null = null
+	let catchChildren: TemplateNode[] = []
+	if (handler) {
+		catchParam = identifierName(handler.param)
+		catchChildren = lowerBlock(handler.body)
+	}
+	if (children.length === 0 && catchChildren.length === 0) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				node.start,
+				'@try blocks must contain output elements',
+			),
+		)
+		return null
+	}
+	return {
+		kind: 'try',
+		children,
+		catchParam,
+		catchChildren,
+		pendingChildren: null,
+		node,
+	}
+}
 
 type TypeContext = {
 	paramsNode: TsrxNode | null
@@ -589,6 +993,28 @@ const classifyAttribute = (
 			handlerText: text(ctx, expr),
 		}
 	}
+	// Dynamic rendering: html={dataRef} — the .tsrx spelling of the upstream
+	// {html expr} keyword (newer grammar than the pinned parser). Only data
+	// references are accepted; the emitters route the value through the
+	// runtime's sanitizeHtml before it reaches the output.
+	if (name === 'html') {
+		const expr =
+			isNode(value) && value.type === 'JSXExpressionContainer'
+				? value.expression
+				: value
+		if (!isNode(expr) || !/^(Identifier|MemberExpression)$/.test(expr.type))
+			return {
+				kind: 'invalid',
+				reason:
+					'html={…} expects a data reference (identifier or member expression) — computed markup and reactive thunks are not supported.',
+			}
+		return {
+			kind: 'html',
+			exprText: text(ctx, expr),
+			node: expr,
+			reactive: false,
+		}
+	}
 	if (!isNode(value)) return { kind: 'static', name, value: null }
 	if (value.type === 'Literal')
 		return { kind: 'static', name, value: String(value.value ?? '') }
@@ -705,6 +1131,38 @@ const lowerChildren = (
 			i += 1
 			continue
 		}
+		if (child.type === 'JSXIfExpression') {
+			const lowered = lowerIf(ctx, child, signals, fors)
+			if (lowered) out.push(lowered)
+			i += 1
+			continue
+		}
+		if (child.type === 'JSXSwitchExpression') {
+			const lowered = lowerSwitch(ctx, child, signals, fors)
+			if (lowered) out.push(lowered)
+			i += 1
+			continue
+		}
+		if (child.type === 'JSXTryExpression') {
+			const lowered = lowerTry(ctx, child, signals, fors)
+			if (lowered) out.push(lowered)
+			i += 1
+			continue
+		}
+		if (
+			child.type === 'JSXForExpression' &&
+			String(child.statementType) === 'ForInStatement'
+		) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					child.start,
+					'@for-in loops (iterating object keys) — use @for-of over an array',
+				),
+			)
+			i += 1
+			continue
+		}
 		if (child.type === 'JSXStyleElement') {
 			// Style blocks become placeholder elements (tag 'style'); the CSS
 			// is extracted via getStyleElementStylesheet, never rendered.
@@ -773,7 +1231,11 @@ const lowerElement = (
 	}
 }
 
-/** Lower a `@for` loop. Reactive iterables are gated with TSRX001. */
+/**
+ * Lower a `@for` loop. Server-data iterables lower to `each()`; reactive
+ * `createList` iterables to the milestone-3 reconcile lowering; other
+ * reactive sources stay gated (TSRX001).
+ */
 const lowerFor = (
 	ctx: ExtractContext,
 	node: TsrxNode,
@@ -800,11 +1262,19 @@ const lowerFor = (
 		return null
 	}
 	const iterableName = identifierName(node.right)
-	if (iterableName && signals.has(iterableName)) {
-		ctx.diagnostics.push(
-			diagnostic.reactiveForNotSupported(ctx.source, node.start, iterableName),
-		)
-		return null
+	const iterableSignal = iterableName ? signals.get(iterableName) : undefined
+	if (iterableSignal) {
+		if (iterableSignal.constructor !== 'createList') {
+			ctx.diagnostics.push(
+				diagnostic.reactiveForNotSupported(
+					ctx.source,
+					node.start,
+					iterableSignal.name,
+				),
+			)
+			return null
+		}
+		return lowerListFor(ctx, node, itemName, iterableSignal.name, signals, fors)
 	}
 	const bodyStmts = isNode(node.body) ? asArray(node.body.body) : []
 	const hoisted: ForIR['hoisted'] = []
@@ -833,7 +1303,11 @@ const lowerFor = (
 					)
 					continue
 				}
-				hoisted.push({ name: declName, initText: text(ctx, decl.init), node: decl })
+				hoisted.push({
+					name: declName,
+					initText: text(ctx, decl.init),
+					node: decl,
+				})
 			}
 			continue
 		}
@@ -874,9 +1348,183 @@ const lowerFor = (
 		itemName,
 		indexName: identifierName(node.index),
 		keyText: isNode(node.key) ? text(ctx, node.key) : null,
+		keyName: isNode(node.key) ? identifierName(node.key) : null,
+		listSignal: null,
 		iterableText: text(ctx, node.right as TsrxNode),
 		iterableName,
 		hoisted,
+		output,
+		node,
+	}
+	fors.set(node, forIR)
+	return output
+}
+
+/**
+ * Validate the reactive-list body shape (ADR 0023 sub-design 5): statics and
+ * event attributes anywhere, exactly one lazy `&{item}` hole (the slot fill),
+ * no dynamic attributes, refs, or non-item expressions — those need per-item
+ * client bindings beyond the slot-fill contract and are gated so the emitted
+ * template is provably complete.
+ */
+const validateListBody = (
+	ctx: ExtractContext,
+	output: TemplateNode & { kind: 'element' },
+	itemName: string,
+): void => {
+	let holes = 0
+	const walk = (node: TemplateNode): void => {
+		if (node.kind === 'expr') {
+			const isItemHole =
+				node.lazy &&
+				node.expr.type === 'Identifier' &&
+				node.exprText === itemName
+			if (isItemHole) holes++
+			else if (node.lazy)
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						node.node.start,
+						`Lazy children inside a reactive-list @for body must be the bare item (&{${itemName}}) — the slot fill. &{${node.exprText}} needs per-item bindings outside the milestone-3 subset.`,
+					),
+				)
+			else
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						node.node.start,
+						`Expressions inside a reactive-list @for body must be lazy (&{${itemName}}) — server-data interpolation {${node.exprText}} has no per-item client binding.`,
+					),
+				)
+			return
+		}
+		if (node.kind !== 'element') {
+			if (node.kind === 'if' || node.kind === 'switch' || node.kind === 'try')
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						node.node.start,
+						'Control-flow directives (@if/@switch/@try) inside a reactive-list @for body — the extracted template is static markup',
+					),
+				)
+			return
+		}
+		for (const attr of node.attrs) {
+			if (attr.kind === 'event') continue
+			if (attr.kind === 'static') continue
+			if (attr.kind === 'ref')
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						node.node.start,
+						'ref={…} inside a reactive-list @for body (per-item element refs are bindItem-scoped, not host-scoped)',
+					),
+				)
+			else
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						node.node.start,
+						`Dynamic attribute \`${'name' in attr ? attr.name : attr.kind}\` inside a reactive-list @for body — per-item attribute bindings are outside the milestone-3 subset`,
+					),
+				)
+		}
+		for (const child of node.children) walk(child)
+	}
+	walk(output)
+	if (holes !== 1) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				output.node.start,
+				`A reactive-list @for body must render the item exactly once via &{${itemName}} — that hole is the template slot the client fills (found ${holes}).`,
+			),
+		)
+	}
+}
+
+const lowerListFor = (
+	ctx: ExtractContext,
+	node: TsrxNode,
+	itemName: string,
+	listSignal: string,
+	signals: ReadonlyMap<string, SignalIR>,
+	fors: Map<TsrxNode, ForIR>,
+): (TemplateNode & { kind: 'element' }) | null => {
+	const indexNode = isNode(node.index) ? node.index : null
+	const indexName = identifierName(indexNode)
+	if (indexName) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				indexNode?.start,
+				'Index bindings in a reactive-list @for — index identity does not survive keyed reconciliation',
+			),
+		)
+		return null
+	}
+	let keyName: string | null = null
+	if (isNode(node.key)) {
+		keyName = identifierName(node.key)
+		if (!keyName) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					node.key.start,
+					'The key clause of a reactive-list @for must name the key binding (a bare identifier, e.g. `key k`) — it becomes reconcile() bindItem’s key parameter',
+				),
+			)
+			return null
+		}
+	}
+	if (itemName === 'first' || keyName === 'first' || itemName === 'element') {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				node.start,
+				'Loop variable or key binding named `first`/`element` — reserved parameters of reconcile() bindItem',
+			),
+		)
+		return null
+	}
+	const bodyStmts = isNode(node.body) ? asArray(node.body.body) : []
+	let outputNode: TsrxNode | null = null
+	for (const stmt of bodyStmts) {
+		if (stmt.type === 'JSXElement' && !outputNode) {
+			outputNode = stmt
+			continue
+		}
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				stmt.start,
+				stmt.type === 'VariableDeclaration'
+					? 'Hoisted consts inside a reactive-list @for body (derive at use sites; per-item const rebinding is outside the milestone-3 subset)'
+					: 'Statements other than the output element inside a reactive-list @for body',
+			),
+		)
+	}
+	if (!outputNode) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				node.start,
+				'@for bodies must contain an output element',
+			),
+		)
+		return null
+	}
+	const output = lowerElement(ctx, outputNode, signals, fors)
+	validateListBody(ctx, output, itemName)
+	const forIR: ForIR = {
+		itemName,
+		indexName: null,
+		keyText: isNode(node.key) ? text(ctx, node.key) : null,
+		keyName,
+		listSignal,
+		iterableText: text(ctx, node.right as TsrxNode),
+		iterableName: listSignal,
+		hoisted: [],
 		output,
 		node,
 	}
@@ -950,7 +1598,11 @@ const readConfig = (ctx: ExtractContext, stmt: TsrxNode): ConfigIR | null => {
 				continue
 			}
 			for (const element of asArray(value.elements)) {
-				if (isNode(element) && element.type === 'Literal' && typeof element.value === 'string')
+				if (
+					isNode(element) &&
+					element.type === 'Literal' &&
+					typeof element.value === 'string'
+				)
 					config.observedAttributes.push(String(element.value))
 				else
 					ctx.diagnostics.push(
@@ -985,7 +1637,11 @@ export const compileSource = (
 	source: string,
 	filename: string,
 ): CompileResult => {
-	const ctx: ExtractContext = { source, diagnostics: [] }
+	const ctx: ExtractContext = {
+		source,
+		diagnostics: [],
+		serverKnown: new Set<string>(),
+	}
 	let ast: TsrxNode
 	try {
 		ast = parseModule(source, filename)
@@ -994,7 +1650,7 @@ export const compileSource = (
 			component: null,
 			diagnostics: [
 				diagnostic.invalidSource(
-					`Failed to parse ${filename}: ${e instanceof Error ? e.message : String(e)}`,
+					`Failed to parse ${filename}: ${e instanceof Error ? e.message : String(e)}${newerGrammarHint(source, e)}`,
 				),
 			],
 		}
@@ -1048,9 +1704,11 @@ export const compileSource = (
 	const paramNames = new Set<string>()
 	collectBoundNames(paramsNode, paramNames)
 
-	// Setup statements: const declarations (signals vs. helpers) + expose().
+	// Setup statements: const declarations (signals vs. helpers) + expose() +
+	// client-only side effects.
 	const codeBlock = fn.body as TsrxNode
 	const setup: string[] = []
+	const clientSetup: string[] = []
 	const signals: SignalIR[] = []
 	const signalByName = new Map<string, SignalIR>()
 	const setupInits = new Map<string, TsrxNode>()
@@ -1092,6 +1750,7 @@ export const compileSource = (
 				const signal: SignalIR = {
 					name: declName,
 					text: text(ctx, init),
+					textStart: typeof init.start === 'number' ? init.start : 0,
 					constructor: calleeName as SignalConstructor,
 					init: args[0] ?? null,
 					inferredType: inferType(args[0] ?? null, typeCtx),
@@ -1105,12 +1764,18 @@ export const compileSource = (
 			stmt.type === 'ExpressionStatement'
 				? (stmt.expression as TsrxNode | undefined)
 				: undefined
-		if (stmt.type === 'ExpressionStatement' && identifierName(expression?.callee) === 'expose') {
+		if (
+			stmt.type === 'ExpressionStatement' &&
+			identifierName(expression?.callee) === 'expose'
+		) {
 			exposeText = text(ctx, expression as TsrxNode)
 			setup.push(exposeText)
 			// prop → signal from expose({ prop: signal.get })
 			const arg = asArray(expression?.arguments)[0] ?? null
-			for (const name of freeIdentifiers(arg ?? ({ type: 'ObjectExpression', properties: [] } as unknown as TsrxNode))) {
+			for (const name of freeIdentifiers(
+				arg ??
+					({ type: 'ObjectExpression', properties: [] } as unknown as TsrxNode),
+			)) {
 				if (CONTEXT_NAMES.has(name)) contextRefs.add(name)
 			}
 			for (const prop of asArray(arg?.properties)) {
@@ -1145,11 +1810,34 @@ export const compileSource = (
 			}
 			continue
 		}
+		if (stmt.type === 'ExpressionStatement' && expression) {
+			// Client-only setup side effect (LT-008): connect-time statements
+			// (`internals?.states.add('clearable')`) whose free names are all
+			// client-known — context members, signals, expose ambients, JS
+			// globals. The server never runs them: they touch connect-time
+			// APIs (ElementInternals, DOM) that don't exist render-time.
+			const free = freeIdentifiers(expression)
+			const bad: string[] = []
+			for (const name of free) {
+				if (JS_GLOBALS.has(name)) continue
+				if (CONTEXT_NAMES.has(name)) {
+					contextRefs.add(name)
+					continue
+				}
+				if (signalByName.has(name)) continue
+				if (exposeAmbients.has(name)) continue
+				bad.push(name)
+			}
+			if (bad.length === 0) {
+				clientSetup.push(text(ctx, stmt))
+				continue
+			}
+		}
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				source,
 				stmt.start,
-				'Setup statements other than const declarations and expose()',
+				'Setup statements other than const declarations, expose(), and client-only side effects (over host/internals/signals)',
 			),
 		)
 	}
@@ -1165,6 +1853,11 @@ export const compileSource = (
 		return { component: null, diagnostics: ctx.diagnostics }
 	}
 	const fors = new Map<TsrxNode, ForIR>()
+	// @if conditions validate against server-known names — args and setup
+	// declarations, all parsed by this point.
+	ctx.serverKnown = new Set<string>([...paramNames])
+	for (const s of signals) ctx.serverKnown.add(s.name)
+	for (const n of setupInits.keys()) ctx.serverKnown.add(n)
 	const lowered = lowerChildren(ctx, render, signalByName, fors)
 	const root = lowered.find(
 		(n): n is TemplateNode & { kind: 'element' } =>
@@ -1260,6 +1953,7 @@ export const compileSource = (
 					paramsText: text(ctx, paramsNode),
 					paramNames: [...paramNames],
 					setup,
+					clientSetup,
 					signals,
 					exposeText,
 					exposeProps,

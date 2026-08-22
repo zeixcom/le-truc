@@ -23,7 +23,8 @@ import * as path from 'node:path'
 import { compileComponent } from '../../tsrx'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
-const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8')
+const read = (rel: string): string =>
+	fs.readFileSync(path.join(ROOT, rel), 'utf8')
 
 const registry = new Set<string>(['basic-counter', 'module-tabgroup'])
 const counter = compileComponent(
@@ -41,8 +42,43 @@ const formTextbox = compileComponent(
 	'examples/form/textbox/form-textbox.tsrx',
 	new Set<string>([...registry, 'form-textbox']),
 )
+const moduleList = compileComponent(
+	read('examples/module/list/module-list.tsrx'),
+	'examples/module/list/module-list.tsrx',
+	new Set<string>([...registry, 'form-textbox', 'module-list', 'basic-button']),
+)
+const formCheckbox = compileComponent(
+	read('examples/form/checkbox/form-checkbox.tsrx'),
+	'examples/form/checkbox/form-checkbox.tsrx',
+	new Set<string>([...registry, 'form-textbox', 'form-checkbox']),
+)
+// Arg-seeded reactive list (LT-003): initial items render in place with
+// data-key, the item shape is extracted as a <template>, and the client's
+// List declaration harvests the adopted children (see client.golden.test.ts).
+const seededSource = `export function Seeded({ initial }: { initial?: string[] })
+	@{
+		const items = createList<string>(initial, { keyConfig: 'item' })
+		<>
+			<c-el>
+				<ul data-container>
+					@for (const item of items; key k) {
+						<li><span>&{item}</span></li>
+					}
+				</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+const seeded = compileComponent(seededSource, 'seeded.tsrx', new Set<string>())
 
-if (!counter.component || !tabgroup.component || !formTextbox.component)
+if (
+	!counter.component ||
+	!tabgroup.component ||
+	!formTextbox.component ||
+	!moduleList.component ||
+	!formCheckbox.component ||
+	!seeded.component
+)
 	throw new Error('corpus components must compile for golden tests')
 
 // Generated server modules must exist for in-process execution; the effect
@@ -55,11 +91,19 @@ const ensureEmitted = (tag: string, code: string): void => {
 ensureEmitted('basic-counter', counter.component.serverCode)
 ensureEmitted('module-tabgroup', tabgroup.component.serverCode)
 ensureEmitted('form-textbox', formTextbox.component.serverCode)
+ensureEmitted('module-list', moduleList.component.serverCode)
+ensureEmitted('form-checkbox', formCheckbox.component.serverCode)
+ensureEmitted('c-el', seeded.component.serverCode)
 
-const render = async (name: string, tag: string, args: unknown): Promise<string> => {
+const render = async (
+	name: string,
+	tag: string,
+	args: unknown,
+): Promise<string> => {
 	const mod = await import(`../../generated/tsrx/${tag}.server.ts`)
 	const fn = mod[`render${name}`] as (args: unknown) => string
-	if (typeof fn !== 'function') throw new Error(`render function for ${tag} missing`)
+	if (typeof fn !== 'function')
+		throw new Error(`render function for ${tag} missing`)
 	return fn(args)
 }
 
@@ -83,7 +127,11 @@ describe('server golden — basic-counter variants', () => {
 })
 
 describe('server golden — module-tabgroup variants', () => {
-	const tab = (id: string, label: string, content: string) => ({ id, label, content })
+	const tab = (id: string, label: string, content: string) => ({
+		id,
+		label,
+		content,
+	})
 
 	test('default: first tab selected', async () => {
 		const html = await render('ModuleTabgroup', 'module-tabgroup', {
@@ -157,7 +205,10 @@ describe('server golden — module-tabgroup variants', () => {
 
 	test('two tabs — minimal demo shape', async () => {
 		const html = await render('ModuleTabgroup', 'module-tabgroup', {
-			tabs: [tab('15', 'Only Tab', 'Only panel content'), tab('16', 'Second Tab', 'Second panel content')],
+			tabs: [
+				tab('15', 'Only Tab', 'Only panel content'),
+				tab('16', 'Second Tab', 'Second panel content'),
+			],
 		})
 		expect(html).toBe(
 			'<module-tabgroup><div role="tablist" aria-label="Tabs">' +
@@ -179,28 +230,34 @@ describe('server golden — module-tabgroup variants', () => {
 	})
 })
 
-describe('server golden — form-textbox variants (extensions, Parser-expose)', () => {
+describe('server golden — form-textbox variants (extensions, Parser-expose, @if)', () => {
 	const formTextboxHtml = ({
 		name,
 		label,
 		value = '',
 		required = false,
+		multiline = false,
 	}: {
 		name: string
 		label: string
 		value?: string
 		required?: boolean
+		multiline?: boolean
 	}): string =>
 		`<form-textbox name="${name}" value="${value}">` +
 		`<label for="${name}-input">${label}</label>` +
 		'<div class="input">' +
-		`<input type="text" id="${name}-input" autocomplete="off"${required ? ' required' : ''} value="${value}">` +
-		'<button type="button" aria-label="Clear input" class="clear">✕</button>' +
+		(multiline
+			? `<textarea id="${name}-input" name="${name}" autocomplete="off"${required ? ' required' : ''} rows="3" value="${value}"></textarea>`
+			: `<input type="text" id="${name}-input" name="${name}" autocomplete="off"${required ? ' required' : ''} value="${value}">`) +
+		// Reactive hidden over the length signal is dependency-provable —
+		// renders the initial state (empty value ⇒ hidden).
+		`<button type="button" aria-label="Clear input"${value === '' ? ' hidden' : ''} class="clear">✕</button>` +
 		'</div>' +
 		'<p role="alert" aria-live="assertive" class="error"></p>' +
 		'</form-textbox>'
 
-	test('default: empty value, optional field', async () => {
+	test('default: empty value, optional field, clear button hidden', async () => {
 		const html = await render('FormTextbox', 'form-textbox', {
 			name: 'name',
 			label: 'Name',
@@ -225,7 +282,26 @@ describe('server golden — form-textbox variants (extensions, Parser-expose)', 
 			label: 'Nickname',
 			value: 'Ada',
 		})
-		expect(html).toBe(formTextboxHtml({ name: 'nick', label: 'Nickname', value: 'Ada' }))
+		expect(html).toBe(
+			formTextboxHtml({ name: 'nick', label: 'Nickname', value: 'Ada' }),
+		)
+	})
+
+	test('multiline: @if renders the textarea branch with the same constructs', async () => {
+		const html = await render('FormTextbox', 'form-textbox', {
+			name: 'notes',
+			label: 'Notes',
+			multiline: true,
+			required: true,
+		})
+		expect(html).toBe(
+			formTextboxHtml({
+				name: 'notes',
+				label: 'Notes',
+				multiline: true,
+				required: true,
+			}),
+		)
 	})
 
 	test('special characters escape in both the root attribute and the mirror', async () => {
@@ -240,6 +316,85 @@ describe('server golden — form-textbox variants (extensions, Parser-expose)', 
 				label: 'A &amp; B &lt;test&gt;',
 				value: 'q&quot;uote',
 			}),
+		)
+	})
+})
+
+describe('server golden — module-list (reactive @for → template extraction)', () => {
+	const itemTemplate =
+		'<template><li><span><slot></slot></span>' +
+		'<basic-button class="remove">' +
+		'<button type="button" class="tertiary destructive small">Remove</button>' +
+		'</basic-button></li></template>'
+
+	test('empty seed: form renders, empty container, extracted template', async () => {
+		const html = await render('ModuleList', 'module-list', {})
+		expect(html).toBe(
+			'<module-list><form action="#">' +
+				'<form-textbox clearable><label for="new-item-input">New item</label>' +
+				'<div class="input">' +
+				'<input type="text" id="new-item-input" name="new-item" autocomplete="off">' +
+				'<button type="button" aria-label="Clear input" hidden class="clear">✕</button>' +
+				'</div></form-textbox>' +
+				'<basic-button class="submit"><button type="submit" class="constructive">Add</button></basic-button>' +
+				'</form>' +
+				// disabled={() => !textbox.length} reads a child component's live
+				// prop — omitted server-side (dependency-provable evaluation).
+				'<ul data-container></ul>' +
+				itemTemplate +
+				'</module-list>',
+		)
+	})
+
+	test('arg-seeded list: keyed items render in place with values, no slot markers', async () => {
+		const html = await render('Seeded', 'c-el', {
+			initial: ['Apples', 'Pears'],
+		})
+		expect(html).toBe(
+			'<c-el><ul data-container>' +
+				'<li data-key="item0"><span>Apples</span></li>' +
+				'<li data-key="item1"><span>Pears</span></li>' +
+				'</ul>' +
+				'<template><li><span><slot></slot></span></li></template>' +
+				'</c-el>',
+		)
+	})
+
+	test('arg-seeded list: values escape through the item hole', async () => {
+		const html = await render('Seeded', 'c-el', {
+			initial: ['<b>A & B</b>'],
+		})
+		expect(html).toContain(
+			'<li data-key="item0"><span>&lt;b&gt;A &amp; B&lt;/b&gt;</span></li>',
+		)
+	})
+})
+
+describe('server golden — form-checkbox (formAssociatedCheckbox)', () => {
+	test('default: unchecked — no checked attributes anywhere', async () => {
+		const html = await render('FormCheckbox', 'form-checkbox', {
+			name: 'agree',
+			label: 'I agree',
+		})
+		expect(html).toBe(
+			'<form-checkbox name="agree"><label>' +
+				'<input type="checkbox">' +
+				'<span class="label">I agree</span>' +
+				'</label></form-checkbox>',
+		)
+	})
+
+	test('checked arg seeds host attribute AND the mirrored input', async () => {
+		const html = await render('FormCheckbox', 'form-checkbox', {
+			name: 'agree',
+			label: 'I agree',
+			checked: true,
+		})
+		expect(html).toBe(
+			'<form-checkbox name="agree" checked><label>' +
+				'<input type="checkbox" checked>' +
+				'<span class="label">I agree</span>' +
+				'</label></form-checkbox>',
 		)
 	})
 })
@@ -326,6 +481,41 @@ describe('CSS golden — verbatim tag-scoped extraction', () => {
 
 		&:empty {
 			display: none;
+		}
+	}
+}
+`)
+	})
+
+	// The module-list fixture's style is the Phase-0 spike's own stylesheet —
+	// deliberately not the current hand-written module-list.css (different
+	// spacing tokens, no @container block). Sync it when module-list migrates
+	// for the docs; until then the golden pins verbatim extraction.
+	test('module-list.css equals the fixture style byte for byte', () => {
+		expect(moduleList.component?.css).toBe(`module-list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-s);
+
+	> form {
+		display: flex;
+		gap: var(--space-s);
+		align-items: flex-start;
+	}
+
+	> [data-container] {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xs);
+		margin: 0;
+		padding: 0;
+		list-style: none;
+
+		> li {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: var(--space-s);
 		}
 	}
 }

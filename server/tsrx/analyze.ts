@@ -16,24 +16,27 @@
  * composite fallback.
  */
 
+import type { TsrxNode } from '@tsrx/core'
 import {
+	type AttributeIR,
 	CONTEXT_NAMES,
+	type ComponentIR,
+	type ForIR,
 	freeIdentifiers,
 	JS_GLOBALS,
 	MANAGED_TEXT_PROPS,
-	type AttributeIR,
-	type ComponentIR,
-	type ForIR,
 	type TemplateNode,
 } from './compiler'
-import type { TsrxNode } from '@tsrx/core'
-import { diagnostic } from './diagnostics'
 import type { CompileDiagnostic } from './diagnostics'
+import { diagnostic } from './diagnostics'
 
 /* === Types === */
 
 type ElementNode = Extract<TemplateNode, { kind: 'element' }>
 type ExprNode = Extract<TemplateNode, { kind: 'expr' }>
+type IfNode = Extract<TemplateNode, { kind: 'if' }>
+type SwitchNode = Extract<TemplateNode, { kind: 'switch' }>
+type TryNode = Extract<TemplateNode, { kind: 'try' }>
 
 export type ParserKind = 'asInteger' | 'asBoolean' | 'asString' | null
 
@@ -74,6 +77,30 @@ export type HarvestPlan =
 			valueAttr: string
 			default: string
 	  }
+	| {
+			/**
+			 * Arg-substituted seed (LT-008): the initializer reads server args
+			 * (e.g. `createCell(value.length)`); the client seeds from the
+			 * args' rendered DOM sites — the param identifier is replaced by
+			 * an element-derived read (DOM-is-truth, ADR 0023 sub-design 3).
+			 */
+			kind: 'substitute'
+			signal: string
+			/** Initializer text with param identifiers replaced by DOM reads. */
+			expr: string
+	  }
+	| {
+			/** Reactive List reconciled over the adopted DOM (milestone 3). */
+			kind: 'list'
+			signal: string
+			/**
+			 * 'verbatim' — the declared seed is a pure literal; the server
+			 * rendered from the same seed, so the DOM agrees by construction.
+			 * Otherwise the seed is arg-dependent and the client harvests the
+			 * container's adopted children (keys regenerate identically).
+			 */
+			seed: 'verbatim' | { container: string; valueSelector: string }
+	  }
 
 /** A hoisted const rebound to a server-rendered attribute inside each(). */
 export type RebindingPlan = {
@@ -93,7 +120,7 @@ export type LoopEffectPlan =
 	| { kind: 'watch-class'; keys: string[]; thunkText: string }
 	| { kind: 'on'; event: string; handlerText: string }
 
-/** One `@for` lowered to `each()`. */
+/** One `@for` over server data lowered to `each()`. */
 export type ForClientPlan = {
 	/** Collection query variable (`tabs`). */
 	collection: string
@@ -101,6 +128,34 @@ export type ForClientPlan = {
 	itemParam: string
 	rebindings: RebindingPlan[]
 	effects: LoopEffectPlan[]
+}
+
+/** Events on one element inside a reactive-list item, mounted in bindItem. */
+export type ReconcileItemEvents = {
+	/** bindItem-scoped variable for the element (null target = item root). */
+	selector: string | null
+	name: string
+	message: string
+	events: Array<{ event: string; handlerText: string }>
+}
+
+/** One reactive `@for` over a declared List lowered to `reconcile()`. */
+export type ReconcilePlan = {
+	/** Component tag (query messages). */
+	tag: string
+	/** Container query variable (`container`). */
+	container: string
+	/** Extracted-template query variable (`template`). */
+	template: string
+	/** The declared createList signal (`items`). */
+	signal: string
+	/** bindItem's item-signal parameter, named after the loop variable. */
+	itemParam: string
+	/** bindItem's key parameter, from `key k` (null → `_key`). */
+	keyParam: string | null
+	/** Scoped selector of the element carrying the &{item} hole. */
+	holeSelector: string
+	itemEvents: ReconcileItemEvents[]
 }
 
 export type TopEffectPlan =
@@ -117,6 +172,7 @@ export type TopEffectPlan =
 	| { kind: 'pass'; query: string; prop: string; thunkText: string }
 	| { kind: 'on'; query: string; event: string; handlerText: string }
 	| { kind: 'each'; for: ForClientPlan }
+	| { kind: 'reconcile'; for: ReconcilePlan }
 
 export type ClientPlan = {
 	queries: QueryPlan[]
@@ -128,6 +184,14 @@ export type ClientPlan = {
 	 * setup's expose() initializers (compiler.ts `contextRefs`).
 	 */
 	ambientContext: string[]
+	/**
+	 * Registry tags this component addresses (ref/pass targets) other than
+	 * itself. The generated client side-effect-imports their modules so the
+	 * children's `declare global` HTMLElementTagNameMap entries resolve in
+	 * the client's own type scope (ADR 0023 sub-design 6: type flow by
+	 * projection — the child authors its element interface inline).
+	 */
+	childTags: string[]
 }
 
 /* === Internal Functions === */
@@ -135,7 +199,9 @@ export type ClientPlan = {
 const isElement = (n: TemplateNode): n is ElementNode => n.kind === 'element'
 
 const nodeType = (node: unknown): string | null =>
-	node && typeof node === 'object' && typeof (node as TsrxNode).type === 'string'
+	node &&
+	typeof node === 'object' &&
+	typeof (node as TsrxNode).type === 'string'
 		? String((node as TsrxNode).type)
 		: null
 
@@ -186,7 +252,9 @@ const buildSelector = (
 
 /** Does `candidate` structurally match a synthesized selector string? */
 const matchesSelector = (candidate: ElementNode, selector: string): boolean => {
-	const match = selector.match(/^([a-z][a-z0-9-]*)?(?:\[([^\]="]+)="([^"]*)"\])?$/)
+	const match = selector.match(
+		/^([a-z][a-z0-9-]*)?(?:\[([^\]="]+)="([^"]*)"\])?$/,
+	)
 	if (!match) return false
 	const [, tag, attr, value] = match
 	if (tag && candidate.tag !== tag) return false
@@ -195,10 +263,38 @@ const matchesSelector = (candidate: ElementNode, selector: string): boolean => {
 }
 
 /** Structural match count for a selector over the whole template. */
-const countForSelector = (
-	node: TemplateNode,
-	selector: string,
-): number => {
+const countForSelector = (node: TemplateNode, selector: string): number => {
+	if (node.kind === 'if')
+		// Branches are mutually exclusive at runtime: an @if contributes the
+		// max of its branch counts, never the sum (same-tag branch roots
+		// would otherwise always look ambiguous).
+		return Math.max(
+			...[node.then, node.alternate].map(branch =>
+				branch.reduce(
+					(sum, child) => sum + countForSelector(child, selector),
+					0,
+				),
+			),
+		)
+	if (node.kind === 'switch')
+		// Same exclusivity rule, N arms.
+		return Math.max(
+			...node.cases.map(arm =>
+				arm.children.reduce(
+					(sum, child) => sum + countForSelector(child, selector),
+					0,
+				),
+			),
+		)
+	if (node.kind === 'try')
+		// Body XOR catch renders (pending is gated at lowering).
+		return Math.max(
+			node.children.reduce((sum, c) => sum + countForSelector(c, selector), 0),
+			node.catchChildren.reduce(
+				(sum, c) => sum + countForSelector(c, selector),
+				0,
+			),
+		)
 	if (!isElement(node)) return 0
 	let count = matchesSelector(node, selector) ? 1 : 0
 	for (const child of node.children) count += countForSelector(child, selector)
@@ -207,10 +303,12 @@ const countForSelector = (
 
 /**
  * Resolve the selector for an element: try role, bare, then upgrade to a
- * discriminator; accept the first structurally unique candidate.
+ * discriminator; accept the first structurally unique candidate. Counting is
+ * scoped to `tree` — the whole template, or a loop output subtree for
+ * bindItem-scoped element queries.
  */
-const resolveSelector = (
-	component: ComponentIR,
+const resolveSelectorIn = (
+	tree: ElementNode,
 	element: ElementNode,
 ): { selector: string; unique: boolean } => {
 	const candidates = [
@@ -219,11 +317,17 @@ const resolveSelector = (
 		buildSelector(element, 'discriminator'),
 	].filter((s): s is string => s !== null)
 	for (const selector of candidates) {
-		if (countForSelector(component.root, selector) === 1)
+		if (countForSelector(tree, selector) === 1)
 			return { selector, unique: true }
 	}
 	return { selector: candidates[0] ?? element.tag, unique: false }
 }
+
+const resolveSelector = (
+	component: ComponentIR,
+	element: ElementNode,
+): { selector: string; unique: boolean } =>
+	resolveSelectorIn(component.root, element)
 
 const dependenciesOf = (node: TsrxNode): Set<string> => {
 	const free = freeIdentifiers(node)
@@ -251,7 +355,10 @@ const isSignalGetCall = (node: unknown, signal: string): boolean => {
  */
 const membershipConst = (thunk: TsrxNode, signal: string): string | null => {
 	const body = thunk.body
-	if (nodeType(body) !== 'BinaryExpression' && nodeType(body) !== 'CallExpression')
+	if (
+		nodeType(body) !== 'BinaryExpression' &&
+		nodeType(body) !== 'CallExpression'
+	)
 		return null
 	let comparison = body as TsrxNode
 	if (nodeType(body) === 'CallExpression') {
@@ -292,7 +399,8 @@ const classMapKeys = (object: TsrxNode): string[] => {
 	for (const prop of props) {
 		if (nodeType(prop) !== 'Property') continue
 		const key = (prop as TsrxNode).key
-		if (nodeType(key) === 'Identifier') keys.push(String((key as TsrxNode).name))
+		if (nodeType(key) === 'Identifier')
+			keys.push(String((key as TsrxNode).name))
 	}
 	return keys
 }
@@ -331,13 +439,13 @@ const returnsNumber = (body: unknown): boolean => {
 	return false
 }
 
-const lazyWatchSource = (
-	component: ComponentIR,
-	child: ExprNode,
-): string => {
+const lazyWatchSource = (component: ComponentIR, child: ExprNode): string => {
 	const expr = child.expr
 	if (nodeType(expr) === 'Identifier') return child.exprText
-	if (nodeType(expr) === 'Literal' && typeof (expr as TsrxNode).value === 'string') {
+	if (
+		nodeType(expr) === 'Literal' &&
+		typeof (expr as TsrxNode).value === 'string'
+	) {
 		const value = String((expr as TsrxNode).value)
 		// A string literal in a lazy position names a prop: an exposed signal
 		// prop, or a managed form prop (FormFactoryContext only — its watch
@@ -391,6 +499,7 @@ export const analyzeClient = (
 	const queries: QueryPlan[] = []
 	const harvests: HarvestPlan[] = []
 	const effects: TopEffectPlan[] = []
+	const childTags = new Set<string>()
 	const ambient = new Set<string>(component.contextRefs)
 	const collectAmbient = (node: TsrxNode | null | undefined): void => {
 		if (!node) return
@@ -420,6 +529,17 @@ export const analyzeClient = (
 			q => q.selector === selector && q.cardinality === cardinality,
 		)
 		if (existing) return existing.name
+		// Addressing another registry component means needing its element
+		// interface — the generated client imports its module for the tag-map
+		// augmentation (type flow by projection).
+		const tag = /^[a-z][a-z0-9-]*/.exec(selector)?.[0] ?? ''
+		if (
+			tag.includes('-') &&
+			tag !== component.tag &&
+			registry.has(tag) &&
+			!childTags.has(tag)
+		)
+			childTags.add(tag)
 		const name = uniqueName(base)
 		queries.push({
 			name,
@@ -433,6 +553,20 @@ export const analyzeClient = (
 	// Pre-collect ref names — thunks may reference any ref in the template.
 	const refNames = new Set<string>()
 	const collectRefs = (node: TemplateNode): void => {
+		if (node.kind === 'if') {
+			for (const child of [...node.then, ...node.alternate]) collectRefs(child)
+			return
+		}
+		if (node.kind === 'switch') {
+			for (const arm of node.cases)
+				for (const child of arm.children) collectRefs(child)
+			return
+		}
+		if (node.kind === 'try') {
+			for (const child of [...node.children, ...node.catchChildren])
+				collectRefs(child)
+			return
+		}
 		if (!isElement(node)) return
 		for (const attr of node.attrs)
 			if (attr.kind === 'ref') refNames.add(attr.name)
@@ -447,6 +581,7 @@ export const analyzeClient = (
 
 	const forPlans = new Map<ForIR, ForClientPlan>()
 	for (const loop of component.fors.values()) {
+		if (loop.listSignal) continue // reactive loops → pass 1b (reconcile)
 		const output = loop.output
 		const { selector, unique } = resolveSelector(component, output)
 		if (!unique) {
@@ -551,11 +686,12 @@ export const analyzeClient = (
 					diagnostic.unsupported(
 						source,
 						node.node.start,
-						'Lazy &{ } children inside @for bodies lower to template slots (milestone 3, reconcile())',
+						'Lazy &{ } children inside server-data @for bodies have no lowering (each() scopes own no template slots)',
 					),
 				)
 			}
-			if (node.kind === 'element') for (const child of node.children) gatedLazyChild(child)
+			if (node.kind === 'element')
+				for (const child of node.children) gatedLazyChild(child)
 			return undefined
 		}
 		gatedLazyChild(loop.output)
@@ -579,11 +715,227 @@ export const analyzeClient = (
 			}
 			rebindings.push({
 				name: hoisted.name,
-				expr: attr === 'id' ? `${itemParam}.id` : `${itemParam}.getAttribute('${attr}')!`,
+				expr:
+					attr === 'id'
+						? `${itemParam}.id`
+						: `${itemParam}.getAttribute('${attr}')!`,
 			})
 		}
 
-		forPlans.set(loop, { collection, itemParam, rebindings, effects: effectsPlan })
+		forPlans.set(loop, {
+			collection,
+			itemParam,
+			rebindings,
+			effects: effectsPlan,
+		})
+	}
+
+	// --- Pass 1b: reactive-list @for → reconcile() plans (milestone 3) -------
+
+	const reconcilePlans = new Map<ForIR, ReconcilePlan>()
+
+	const parentOf = (target: TemplateNode): ElementNode | null => {
+		const walk = (node: TemplateNode): ElementNode | null => {
+			if (!isElement(node)) return null
+			for (const child of node.children) {
+				if (child === target) return node
+				const found = walk(child)
+				if (found) return found
+			}
+			return null
+		}
+		return walk(component.root)
+	}
+
+	for (const loop of component.fors.values()) {
+		if (!loop.listSignal) continue
+		// One reactive list per component: every extracted template would
+		// match the same `first('template')` query, and the second list's
+		// reconcile would clone the FIRST list's item shape with no
+		// diagnostic. Scoped template addressing (sibling selectors) is the
+		// follow-up if a corpus component ever needs two lists.
+		if (reconcilePlans.size > 0) {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					loop.output.node.start,
+					'Only one reactive-list @for per component is supported — a second list would share the extracted <template> selector. Split into components or use server-data lists.',
+				),
+			)
+			continue
+		}
+		const output = loop.output
+
+		// Container: the parent element holding the loop output. The host
+		// itself cannot be the container (no self-query).
+		const container = parentOf(output)
+		if (!container || container === component.root) {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					output.node.start,
+					'A reactive-list @for directly under the component root — reconcile() needs a container element distinct from the host (wrap the loop in one).',
+				),
+			)
+			continue
+		}
+		const containerSelector = resolveSelector(component, container)
+		if (!containerSelector.unique) {
+			diagnostics.push(
+				diagnostic.unaddressableElement(
+					source,
+					container.node.start,
+					`No unique selector for the @for container <${container.tag}>; add a distinguishing static attribute (role, class, or data-*).`,
+				),
+			)
+		}
+		const containerName = addQuery(
+			'container',
+			containerSelector.selector,
+			'one',
+		)
+
+		// The extracted <template> is compiler-emitted; an authored one would
+		// collide with the emitted selector.
+		if (countForSelector(component.root, 'template') > 0) {
+			diagnostics.push(
+				diagnostic.unaddressableElement(
+					source,
+					output.node.start,
+					'An authored <template> collides with the compiler-extracted item template of the reactive-list @for.',
+				),
+			)
+		}
+		const templateName = addQuery('template', 'template', 'one')
+
+		// The item hole's parent element — the item value's DOM site, used by
+		// the arg-seeded harvest read.
+		const findHoleParent = (node: TemplateNode): ElementNode | null => {
+			if (!isElement(node)) return null
+			for (const child of node.children) {
+				if (
+					child.kind === 'expr' &&
+					child.lazy &&
+					child.exprText === loop.itemName
+				)
+					return node
+				const found = findHoleParent(child)
+				if (found) return found
+			}
+			return null
+		}
+		const holeParent = findHoleParent(output)
+		const holeSelector = holeParent
+			? resolveSelectorIn(output, holeParent).selector
+			: output.tag
+
+		// Per-item events, grouped per target element, bindItem-scoped.
+		const itemEvents: ReconcileItemEvents[] = []
+		const takenNames = new Set<string>([
+			loop.itemName,
+			...(loop.keyName ? [loop.keyName] : []),
+			'first',
+			'_element',
+		])
+		const checkItemHandler = (handler: TsrxNode, what: string): void => {
+			collectAmbient(handler)
+			const free = dependenciesOf(handler)
+			if (free.has(loop.itemName)) {
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						handler.start,
+						`${what} references the loop item \`${loop.itemName}\` — inside reconcile()'s bindItem it is a Signal, not the value; render it via &{${loop.itemName}} instead.`,
+					),
+				)
+			}
+			const bad = [...free].filter(
+				name =>
+					name !== loop.itemName &&
+					name !== loop.keyName &&
+					!component.signals.some(s => s.name === name) &&
+					!refNames.has(name) &&
+					!JS_GLOBALS.has(name) &&
+					!CONTEXT_NAMES.has(name),
+			)
+			if (bad.length > 0) {
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						handler.start,
+						`${what} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')} inside a reactive-list @for body; the client only knows signals, refs, the key binding, and globals`,
+					),
+				)
+			}
+		}
+		const collectItemEvents = (
+			node: TemplateNode,
+			isItemRoot: boolean,
+		): void => {
+			if (!isElement(node)) return
+			const elementEvents = node.attrs.filter(a => a.kind === 'event') as Array<
+				Extract<AttributeIR, { kind: 'event' }>
+			>
+			if (elementEvents.length > 0) {
+				let target: ReconcileItemEvents | undefined
+				if (isItemRoot) {
+					target = itemEvents.find(e => e.selector === null)
+					if (!target) {
+						target = {
+							selector: null,
+							name: '_element',
+							message: '',
+							events: [],
+						}
+						itemEvents.push(target)
+					}
+				} else {
+					const scoped = resolveSelectorIn(output, node)
+					if (!scoped.unique) {
+						diagnostics.push(
+							diagnostic.unaddressableElement(
+								source,
+								node.node.start,
+								`No unique selector for <${node.tag}> inside the @for item template; add a distinguishing static attribute.`,
+							),
+						)
+					}
+					target = itemEvents.find(e => e.selector === scoped.selector)
+					if (!target) {
+						let name = sanitizeVarName(node.tag)
+						while (takenNames.has(name)) name = `${name}El`
+						takenNames.add(name)
+						target = {
+							selector: scoped.selector,
+							name,
+							message: `${component.tag}: ${scoped.selector} missing`,
+							events: [],
+						}
+						itemEvents.push(target)
+					}
+				}
+				for (const attr of elementEvents) {
+					checkItemHandler(attr.handler, `Event attribute \`${attr.name}\``)
+					target.events.push({
+						event: attr.event,
+						handlerText: attr.handlerText,
+					})
+				}
+			}
+			for (const child of node.children) collectItemEvents(child, false)
+		}
+		collectItemEvents(output, true)
+
+		reconcilePlans.set(loop, {
+			tag: component.tag,
+			container: containerName,
+			template: templateName,
+			signal: loop.listSignal,
+			itemParam: loop.itemName,
+			keyParam: loop.keyName,
+			holeSelector,
+			itemEvents,
+		})
 	}
 
 	// --- Pass 2: signal render sites (document order) ------------------------
@@ -591,8 +943,21 @@ export const analyzeClient = (
 	// canonical harvest site is the first direct site by document order,
 	// else the first membership mark.
 	type Site =
-		| { kind: 'text' | 'attr'; signal: string; element: ElementNode; attr?: string; order: number }
-		| { kind: 'membership'; signal: string; element: ElementNode; attr: string; constName: string; order: number }
+		| {
+				kind: 'text' | 'attr'
+				signal: string
+				element: ElementNode
+				attr?: string
+				order: number
+		  }
+		| {
+				kind: 'membership'
+				signal: string
+				element: ElementNode
+				attr: string
+				constName: string
+				order: number
+		  }
 	const sites: Site[] = []
 	let documentOrder = 0
 
@@ -604,7 +969,13 @@ export const analyzeClient = (
 			const order = documentOrder++
 			for (const signal of component.signals.map(s => s.name)) {
 				if (isDirectAttrThunk(attr.thunk, signal)) {
-					sites.push({ kind: 'attr', signal, element: node, attr: attr.name, order })
+					sites.push({
+						kind: 'attr',
+						signal,
+						element: node,
+						attr: attr.name,
+						order,
+					})
 					break
 				}
 				const constName = membershipConst(attr.thunk, signal)
@@ -622,7 +993,12 @@ export const analyzeClient = (
 			}
 		}
 		for (const child of node.children) {
-			if (child.kind === 'expr' && child.lazy && !insideLoopOutput && !isLoopOutput) {
+			if (
+				child.kind === 'expr' &&
+				child.lazy &&
+				!insideLoopOutput &&
+				!isLoopOutput
+			) {
 				const order = documentOrder++
 				const expr = child.expr
 				if (nodeType(expr) === 'Identifier') {
@@ -633,7 +1009,9 @@ export const analyzeClient = (
 					nodeType(expr) === 'Literal' &&
 					typeof (expr as TsrxNode).value === 'string'
 				) {
-					const signal = component.exposeProps.get(String((expr as TsrxNode).value))
+					const signal = component.exposeProps.get(
+						String((expr as TsrxNode).value),
+					)
 					if (signal) sites.push({ kind: 'text', signal, element: node, order })
 				} else if (nodeType(expr) === 'ArrowFunctionExpression') {
 					const body = (expr as TsrxNode).body
@@ -651,13 +1029,271 @@ export const analyzeClient = (
 	recordSites(component.root, false)
 
 	// --- Pass 3: harvest plans ------------------------------------------------
+
+	/**
+	 * The @if node whose branches hold `target` as a direct branch root, if
+	 * any — elements inside conditional branches address through the union
+	 * of all branch roots (whichever rendered is the one in the DOM).
+	 */
+	const enclosingIfOf = (target: ElementNode): IfNode | null => {
+		const walk = (node: TemplateNode): IfNode | null => {
+			if (node.kind === 'if') {
+				if ([...node.then, ...node.alternate].includes(target)) return node
+				for (const child of [...node.then, ...node.alternate]) {
+					const found = walk(child)
+					if (found) return found
+				}
+				return null
+			}
+			if (!isElement(node)) return null
+			for (const child of node.children) {
+				const found = walk(child)
+				if (found) return found
+			}
+			return null
+		}
+		return walk(component.root)
+	}
+
+	/** Selector for an element, union-addressed when it is an @if branch root. */
+	const selectorFor = (
+		el: ElementNode,
+	): { selector: string; unique: boolean } => {
+		const enclosing = enclosingIfOf(el)
+		if (!enclosing) return resolveSelector(component, el)
+		const roots = [...enclosing.then, ...enclosing.alternate].filter(isElement)
+		const clauses: string[] = []
+		for (const root of roots) {
+			const self = resolveSelectorIn(root, root)
+			if (countForSelector(component.root, self.selector) !== 1)
+				return { selector: self.selector, unique: false }
+			if (!clauses.includes(self.selector)) clauses.push(self.selector)
+		}
+		return { selector: clauses.join(', '), unique: true }
+	}
+
+	/**
+	 * DOM read expression for a server arg, traced to its rendered site:
+	 * a host-prop mirror (`value={() => host.value}` where the root renders
+	 * the parser-exposed prop from this arg) wins — read the target element's
+	 * property; then a plain element attribute rendering the arg bare; then
+	 * the root attribute via `host.getAttribute`. Null when the arg renders
+	 * nowhere (the signal stays unharvestable).
+	 */
+	const paramDomRead = (param: string): string | null => {
+		const childrenOf = (node: TemplateNode): TemplateNode[] =>
+			node.kind === 'if'
+				? [...node.then, ...node.alternate]
+				: isElement(node)
+					? node.children
+					: []
+		const findMirror = (
+			node: TemplateNode,
+		): {
+			el: ElementNode
+			attr: Extract<AttributeIR, { kind: 'reactive' }>
+		} | null => {
+			if (isElement(node)) {
+				for (const attr of node.attrs) {
+					if (attr.kind !== 'reactive') continue
+					const prop = hostPropMirrorOf(attr.thunk)
+					if (!prop || !component.parserExposeProps.has(prop)) continue
+					const rootAttr = component.root.attrs.find(
+						a => a.kind === 'server' && a.name === prop,
+					) as Extract<AttributeIR, { kind: 'server' }> | undefined
+					if (rootAttr && rootAttr.exprText === param) return { el: node, attr }
+				}
+			}
+			for (const child of childrenOf(node)) {
+				const found = findMirror(child)
+				if (found) return found
+			}
+			return null
+		}
+		const mirror = findMirror(component.root)
+		if (mirror) {
+			const resolved = selectorFor(mirror.el)
+			if (!resolved.unique) {
+				diagnostics.push(
+					diagnostic.unaddressableElement(
+						source,
+						mirror.el.node.start,
+						`No unique selector for the DOM site of server arg \`${param}\` (<${mirror.el.tag}>); add a distinguishing static attribute.`,
+					),
+				)
+				return null
+			}
+			const refAttr = mirror.el.attrs.find(a => a.kind === 'ref') as
+				| { kind: 'ref'; name: string }
+				| undefined
+			const query = addQuery(
+				refAttr?.name ?? sanitizeVarName(mirror.el.tag),
+				resolved.selector,
+				'one',
+			)
+			return `${query}.${mirror.attr.name}`
+		}
+		const findAttrSite = (
+			node: TemplateNode,
+		): {
+			el: ElementNode
+			attr: Extract<AttributeIR, { kind: 'server' }>
+		} | null => {
+			if (isElement(node))
+				for (const attr of node.attrs)
+					if (attr.kind === 'server' && attr.exprText === param)
+						return { el: node, attr }
+			for (const child of childrenOf(node)) {
+				const found = findAttrSite(child)
+				if (found) return found
+			}
+			return null
+		}
+		const site = findAttrSite(component.root)
+		if (site && site.el !== component.root) {
+			const resolved = selectorFor(site.el)
+			if (!resolved.unique) return null
+			const refAttr = site.el.attrs.find(a => a.kind === 'ref') as
+				| { kind: 'ref'; name: string }
+				| undefined
+			const query = addQuery(
+				refAttr?.name ?? sanitizeVarName(site.el.tag),
+				resolved.selector,
+				'one',
+			)
+			return `(${query}.getAttribute('${site.attr.name}') ?? '')`
+		}
+		const rootAttr = component.root.attrs.find(
+			a => a.kind === 'server' && a.name !== null && a.exprText === param,
+		) as Extract<AttributeIR, { kind: 'server' }> | undefined
+		if (rootAttr) {
+			ambient.add('host')
+			return `(host.getAttribute('${rootAttr.name}') ?? '')`
+		}
+		return null
+	}
+
+	/**
+	 * Rewrite a pure-arg initializer by replacing each param identifier with
+	 * its DOM read (`value.length` → `input.value.length`), right-to-left by
+	 * source range so surrounding text is untouched.
+	 */
+	const substituteArgExpr = (init: TsrxNode): string | null => {
+		const free = dependenciesOf(init)
+		if (
+			[...free].some(
+				n => !JS_GLOBALS.has(n) && !component.paramNames.includes(n),
+			)
+		)
+			return null
+		const params = [...free].filter(n => component.paramNames.includes(n))
+		if (params.length === 0) return null
+		const reads = new Map<string, string>()
+		for (const param of params) {
+			const read = paramDomRead(param)
+			if (!read) return null
+			reads.set(param, read)
+		}
+		if (typeof init.start !== 'number' || typeof init.end !== 'number')
+			return null
+		const ranges: Array<[number, number, string]> = []
+		const collect = (node: unknown): void => {
+			if (Array.isArray(node)) {
+				for (const child of node) collect(child)
+				return
+			}
+			if (
+				!node ||
+				typeof node !== 'object' ||
+				typeof (node as TsrxNode).type !== 'string'
+			)
+				return
+			const current = node as TsrxNode & Record<string, unknown>
+			if (current.type === 'Identifier') {
+				const name = String(current.name)
+				if (
+					reads.has(name) &&
+					typeof current.start === 'number' &&
+					typeof current.end === 'number'
+				)
+					ranges.push([current.start, current.end, reads.get(name) as string])
+				return
+			}
+			for (const [key, value] of Object.entries(current)) {
+				if (key === 'loc' || key === 'range' || key === 'parent') continue
+				// Non-computed member properties and object keys are positions,
+				// not reads — same scoping as freeIdentifiers.
+				if (
+					key === 'property' &&
+					current.type === 'MemberExpression' &&
+					!current.computed
+				)
+					continue
+				if (key === 'key' && current.type === 'Property' && !current.computed)
+					continue
+				if (value && typeof value === 'object') collect(value)
+			}
+		}
+		collect(init)
+		let expr = source.slice(init.start, init.end)
+		for (const [start, end, read] of ranges.sort((a, b) => b[0] - a[0]))
+			expr =
+				expr.slice(0, start - (init.start as number)) +
+				read +
+				expr.slice(end - (init.start as number))
+		return expr
+	}
+
 	for (const signal of component.signals) {
+		// A reconciled List seeds from the adopted DOM, not a text/attr site.
+		const listPlan = [...reconcilePlans.values()].find(
+			p => p.signal === signal.name,
+		)
+		if (listPlan) {
+			const free = signal.init ? dependenciesOf(signal.init) : new Set<string>()
+			if ([...free].every(name => JS_GLOBALS.has(name))) {
+				harvests.push({ kind: 'list', signal: signal.name, seed: 'verbatim' })
+			} else if ([...free].every(name => component.paramNames.includes(name))) {
+				harvests.push({
+					kind: 'list',
+					signal: signal.name,
+					seed: {
+						container: listPlan.container,
+						valueSelector: listPlan.holeSelector,
+					},
+				})
+			} else {
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						signal.init?.start,
+						`List seed of \`${signal.name}\` must be a pure literal or derive from server args — the client either reuses the literal (the server rendered from it) or harvests the container's adopted children.`,
+					),
+				)
+			}
+			continue
+		}
 		const own = sites
 			.filter(s => s.signal === signal.name)
 			.sort((a, b) => a.order - b.order)
 		if (own.length === 0) {
+			// No rendered site: an initializer over server args can still seed
+			// from the args' DOM sites (LT-008 substitution rule).
+			const substituted = signal.init ? substituteArgExpr(signal.init) : null
+			if (substituted) {
+				harvests.push({
+					kind: 'substitute',
+					signal: signal.name,
+					expr: substituted,
+				})
+				continue
+			}
 			diagnostics.push(
-				diagnostic.signalNotHarvestable(source, signal.init?.start, signal.name),
+				diagnostic.signalNotHarvestable(
+					source,
+					signal.init?.start,
+					signal.name,
+				),
 			)
 			continue
 		}
@@ -717,7 +1353,11 @@ export const analyzeClient = (
 			: undefined
 		if (!loop || !plan || !valueAttr) {
 			diagnostics.push(
-				diagnostic.signalNotHarvestable(source, signal.init?.start, signal.name),
+				diagnostic.signalNotHarvestable(
+					source,
+					signal.init?.start,
+					signal.name,
+				),
 			)
 			continue
 		}
@@ -732,10 +1372,276 @@ export const analyzeClient = (
 	}
 
 	// --- Pass 4: top-level effects (document order) ----------------------------
+
+	/**
+	 * Emit the effects of one element's client constructs against `query` —
+	 * the shared body for plain elements and @if branch-root unions alike.
+	 */
+	const emitConstructEffects = (el: ElementNode, query: string): void => {
+		const isCustom = el.tag.includes('-')
+		for (const attr of el.attrs) {
+			if (attr.kind === 'reactive') {
+				collectAmbient(attr.thunk)
+				const free = dependenciesOf(attr.thunk)
+				const bad = [...free].filter(
+					name =>
+						!component.signals.some(s => s.name === name) &&
+						!refNames.has(name) &&
+						!JS_GLOBALS.has(name) &&
+						!CONTEXT_NAMES.has(name),
+				)
+				if (bad.length > 0) {
+					diagnostics.push(
+						diagnostic.unsupported(
+							source,
+							attr.thunk.start,
+							`Reactive attribute \`${attr.name}\` references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
+						),
+					)
+				}
+				if (isCustom && registry.has(el.tag)) {
+					effects.push({
+						kind: 'pass',
+						query,
+						prop: attr.name,
+						thunkText: attr.thunkText,
+					})
+				} else {
+					// A host-prop mirror always dispatches as a property —
+					// attribute dispatch would be wrong for
+					// property-backed targets like `input.value`.
+					const mirror = hostPropMirrorOf(attr.thunk)
+					effects.push({
+						kind: 'watch-attr',
+						query,
+						attr: attr.name,
+						thunkText: attr.thunkText,
+						dispatch: mirror !== null || isCustom ? 'property' : 'attribute',
+						coerceToString:
+							mirror === null && !isCustom && returnsNumber(attr.thunk.body),
+					})
+				}
+			} else if (attr.kind === 'class-map') {
+				collectAmbient(attr.object)
+				for (const key of classMapKeys(attr.object)) {
+					effects.push({
+						kind: 'watch-attr',
+						query,
+						attr: `class:${key}`,
+						thunkText: attr.thunkText,
+						dispatch: 'attribute',
+						coerceToString: false,
+					})
+				}
+			} else if (attr.kind === 'event') {
+				collectAmbient(attr.handler)
+				effects.push({
+					kind: 'on',
+					query,
+					event: attr.event,
+					handlerText: attr.handlerText,
+				})
+			}
+		}
+		for (const child of el.children) {
+			if (child.kind !== 'expr' || !child.lazy) continue
+			// A managed form prop as a lazy child requires the widened
+			// FormFactoryContext — formAssociated() must lead the extensions.
+			if (
+				nodeType(child.expr) === 'Literal' &&
+				typeof (child.expr as TsrxNode).value === 'string'
+			) {
+				const prop = String((child.expr as TsrxNode).value)
+				if (
+					MANAGED_TEXT_PROPS.has(prop) &&
+					!component.exposeProps.has(prop) &&
+					!component.config?.form
+				)
+					diagnostics.push(
+						diagnostic.managedPropWithoutForm(source, child.node.start, prop),
+					)
+			}
+			collectAmbient(child.expr)
+			effects.push({
+				kind: 'watch-text',
+				query,
+				source: lazyWatchSource(component, child),
+			})
+		}
+	}
+
+	/**
+	 * @if branches (LT-008): client constructs must sit on the branch ROOT
+	 * elements; the client addresses whichever branch rendered through a
+	 * union selector (`first('textarea, input[type="text"]')`). Construct
+	 * texts must be identical across branches — one effect covers all.
+	 */
+	const handleIfEffects = (node: IfNode): void => {
+		const roots = [...node.then, ...node.alternate].filter(isElement)
+		const hasDeepConstruct = (el: ElementNode): boolean =>
+			el.children.some(
+				child =>
+					(child.kind === 'expr' && child.lazy) ||
+					(child.kind === 'element' &&
+						(child.attrs.some(
+							a =>
+								a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
+						) ||
+							hasDeepConstruct(child))),
+			)
+		for (const root of roots)
+			if (hasDeepConstruct(root))
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						root.node.start,
+						'Client constructs inside @if branches must sit on the branch root elements — deeper elements exist only when their branch rendered',
+					),
+				)
+		// html={dataRef} is server-rendered only — not a client construct.
+		const hasConstructs = roots.some(
+			r =>
+				r.attrs.some(
+					a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
+				) || r.children.some(c => c.kind === 'expr' && c.lazy),
+		)
+		if (!hasConstructs) return
+		const primary = roots.find(r =>
+			r.attrs.some(
+				a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
+			),
+		)
+		if (!primary) return
+		const resolved = selectorFor(primary)
+		if (!resolved.unique) {
+			diagnostics.push(
+				diagnostic.unaddressableElement(
+					source,
+					primary.node.start,
+					`No unique selector for the @if branch root <${primary.tag}> — add a distinguishing static attribute`,
+				),
+			)
+			return
+		}
+		const refAttr = primary.attrs.find(a => a.kind === 'ref') as
+			| { kind: 'ref'; name: string }
+			| undefined
+		const query = addQuery(
+			refAttr?.name ?? sanitizeVarName(primary.tag),
+			resolved.selector,
+			'one',
+		)
+		// Same-named constructs must agree across branches.
+		const textsByKey = new Map<string, Set<string>>()
+		for (const root of roots)
+			for (const attr of root.attrs) {
+				if (attr.kind === 'static' || attr.kind === 'server') continue
+				const key = `${attr.kind === 'event' ? 'on' : 'bind'}:${'name' in attr ? attr.name : attr.kind}`
+				const attrText =
+					attr.kind === 'event'
+						? attr.handlerText
+						: attr.kind === 'reactive' || attr.kind === 'class-map'
+							? attr.thunkText
+							: ''
+				const texts = textsByKey.get(key) ?? new Set<string>()
+				texts.add(attrText)
+				textsByKey.set(key, texts)
+			}
+		for (const [key, texts] of textsByKey)
+			if (texts.size > 1)
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						node.node.start,
+						`@if branch constructs differ for \`${key}\` — union addressing requires identical client behavior in every branch`,
+					),
+				)
+		emitConstructEffects(primary, query)
+	}
+
+	/** Does a subtree carry client constructs (client-side-only elements)? */
+	const hasClientConstructs = (node: TemplateNode): boolean => {
+		if (node.kind === 'expr') return node.lazy
+		if (node.kind === 'if' || node.kind === 'switch' || node.kind === 'try')
+			return false
+		if (!isElement(node)) return false
+		if (
+			node.attrs.some(
+				a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
+			)
+		)
+			return true
+		return node.children.some(hasClientConstructs)
+	}
+
+	/**
+	 * @switch arms render exclusively — a construct in one arm would make
+	 * its element missing whenever another arm renders, so arms must be
+	 * construct-free markup (use @if with identical branch constructs for
+	 * interactive alternatives).
+	 */
+	const handleSwitchEffects = (node: SwitchNode): void => {
+		for (const arm of node.cases)
+			for (const child of arm.children)
+				if (hasClientConstructs(child))
+					diagnostics.push(
+						diagnostic.unsupported(
+							source,
+							(child as ElementNode).node?.start ?? node.node.start,
+							'Client constructs inside @switch arms — arms render exclusively, so the element is not guaranteed to exist. Keep arms to static/server markup, or use @if branches with identical constructs (union addressing).',
+						),
+					)
+	}
+
+	/**
+	 * @try error boundaries: the catch arm renders instead on error, so
+	 * constructs in the body are not guaranteed (first() would throw on the
+	 * error path); interactive error boundaries need optional addressing,
+	 * which is outside the current subset. Catch arms must be static.
+	 */
+	const handleTryEffects = (node: TryNode): void => {
+		for (const child of node.children)
+			if (hasClientConstructs(child))
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						(child as ElementNode).node?.start ?? node.node.start,
+						'Client constructs inside @try bodies — the catch arm renders instead on error, so the element is not guaranteed to exist; error boundaries over interactive markup need optional addressing (tracked in TODO). Keep the body to static/server markup.',
+					),
+				)
+		for (const child of node.catchChildren)
+			if (hasClientConstructs(child))
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						(child as ElementNode).node?.start ?? node.node.start,
+						'Client constructs inside @catch arms — the arm renders only on error; keep it to static/server markup.',
+					),
+				)
+	}
+
 	const emitTopEffects = (node: TemplateNode): void => {
+		if (node.kind === 'if') {
+			handleIfEffects(node)
+			return
+		}
+		if (node.kind === 'switch') {
+			handleSwitchEffects(node)
+			return
+		}
+		if (node.kind === 'try') {
+			handleTryEffects(node)
+			return
+		}
 		if (!isElement(node)) return
 		if (node !== component.root && loopFor(node)) {
-			const plan = forPlans.get(loopFor(node) as ForIR)
+			const loop = loopFor(node) as ForIR
+			if (loop.listSignal) {
+				const plan = reconcilePlans.get(loop)
+				if (plan) effects.push({ kind: 'reconcile', for: plan })
+				return
+			}
+			const plan = forPlans.get(loop)
 			if (plan) effects.push({ kind: 'each', for: plan })
 			return
 		}
@@ -745,6 +1651,7 @@ export const analyzeClient = (
 					attr.kind === 'event' ||
 					attr.kind === 'reactive' ||
 					attr.kind === 'class-map' ||
+					attr.kind === 'html' ||
 					attr.kind === 'ref'
 				) {
 					diagnostics.push(
@@ -759,8 +1666,9 @@ export const analyzeClient = (
 			}
 		} else {
 			const hasClientConstruct =
-				node.attrs.some(a => a.kind !== 'static' && a.kind !== 'server') ||
-				node.children.some(c => c.kind === 'expr' && c.lazy)
+				node.attrs.some(
+					a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
+				) || node.children.some(c => c.kind === 'expr' && c.lazy)
 			if (hasClientConstruct) {
 				const { selector, unique } = resolveSelector(component, node)
 				if (!unique) {
@@ -775,87 +1683,23 @@ export const analyzeClient = (
 				const refAttr = node.attrs.find(a => a.kind === 'ref') as
 					| { kind: 'ref'; name: string }
 					| undefined
-				const query = addQuery(refAttr?.name ?? sanitizeVarName(node.tag), selector, 'one')
-				const isCustom = node.tag.includes('-')
-				for (const attr of node.attrs) {
-					if (attr.kind === 'reactive') {
-						collectAmbient(attr.thunk)
-						const free = dependenciesOf(attr.thunk)
-						const bad = [...free].filter(
-							name =>
-								!component.signals.some(s => s.name === name) &&
-								!refNames.has(name) &&
-								!JS_GLOBALS.has(name) &&
-								!CONTEXT_NAMES.has(name),
-						)
-						if (bad.length > 0) {
-							diagnostics.push(
-								diagnostic.unsupported(
-									source,
-									attr.thunk.start,
-									`Reactive attribute \`${attr.name}\` references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
-								),
-							)
-						}
-						if (isCustom && registry.has(node.tag)) {
-							effects.push({
-								kind: 'pass',
-								query,
-								prop: attr.name,
-								thunkText: attr.thunkText,
-							})
-						} else {
-							// A host-prop mirror always dispatches as a property —
-							// attribute dispatch would be wrong for
-							// property-backed targets like `input.value`.
-							const mirror = hostPropMirrorOf(attr.thunk)
-							effects.push({
-								kind: 'watch-attr',
-								query,
-								attr: attr.name,
-								thunkText: attr.thunkText,
-								dispatch:
-									mirror !== null || isCustom ? 'property' : 'attribute',
-								coerceToString:
-									mirror === null && !isCustom && returnsNumber(attr.thunk.body),
-							})
-						}
-					} else if (attr.kind === 'class-map') {
-						collectAmbient(attr.object)
-						for (const key of classMapKeys(attr.object)) {
-							effects.push({
-								kind: 'watch-attr',
-								query,
-								attr: `class:${key}`,
-								thunkText: attr.thunkText,
-								dispatch: 'attribute',
-								coerceToString: false,
-							})
-						}
-					} else if (attr.kind === 'event') {
-						collectAmbient(attr.handler)
-						effects.push({
-							kind: 'on',
-							query,
-							event: attr.event,
-							handlerText: attr.handlerText,
-						})
-					}
-				}
-				for (const child of node.children) {
-					if (child.kind !== 'expr' || !child.lazy) continue
-					collectAmbient(child.expr)
-					effects.push({
-						kind: 'watch-text',
-						query,
-						source: lazyWatchSource(component, child),
-					})
-				}
+				const query = addQuery(
+					refAttr?.name ?? sanitizeVarName(node.tag),
+					selector,
+					'one',
+				)
+				emitConstructEffects(node, query)
 			}
 		}
 		for (const child of node.children) emitTopEffects(child)
 	}
 	emitTopEffects(component.root)
 
-	return { queries, harvests, effects, ambientContext: [...ambient].sort() }
+	return {
+		queries,
+		harvests,
+		effects,
+		ambientContext: [...ambient].sort(),
+		childTags: [...childTags].sort(),
+	}
 }

@@ -6,7 +6,7 @@
 import { describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { compileComponent } from '../../tsrx'
+import { compileComponent, compileSource } from '../../tsrx'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
@@ -113,31 +113,151 @@ export function C({ label }: { label?: string })
 			),
 		).toBe(true)
 	})
+
+	test('asClampedInteger and asJSON are recognized parser ambients', () => {
+		const source = `export function C({ max }: { max?: number })
+	@{
+		expose({ count: asClampedInteger(0, 10), data: asJSON({}) })
+		<>
+			<c-el count={max}><span>ok</span></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileSource(source, 'c.tsrx')
+		expect(diagnostics).toEqual([])
+		expect(component?.parserExposeProps.has('count')).toBe(true)
+		expect(component?.parserExposeProps.has('data')).toBe(true)
+	})
+
+	test('managed lazy child without formAssociated is TSRX010', () => {
+		const source = `export function C({}: {})
+	@{
+		expose({})
+		<>
+			<c-el><p class="error">&{'validationMessage'}</p></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX010')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('formAssociated')
+	})
+
+	test('setup side effect over a server arg is TSRX005 (client-only subset)', () => {
+		const source = `export function C({ note }: { note?: string })
+	@{
+		expose({})
+		console.log(note)
+		<>
+			<c-el><span>ok</span></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(
+			diagnostics.some(
+				d => d.code === 'TSRX005' && d.message.includes('side effects'),
+			),
+		).toBe(true)
+	})
+})
+
+describe('@if conditional markup (LT-008)', () => {
+	test('server-known condition compiles and renders per args', () => {
+		const source = `export function C({ big }: { big?: boolean })
+	@{
+		expose({})
+		<>
+			<c-el>
+				@if (big) {
+					<strong>big</strong>
+				} @else {
+					<small>small</small>
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+	})
+
+	test('@if over a reactive signal is TSRX005', () => {
+		const source = `export function C({}: {})
+	@{
+		const open = createCell(false)
+		expose({ open: open.get })
+		<>
+			<c-el>
+				@if (open.get()) {
+					<strong>open</strong>
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(
+			diagnostics.some(
+				d =>
+					d.code === 'TSRX005' &&
+					d.message.includes('signal(s)') &&
+					d.message.includes('initially rendered branch'),
+			),
+		).toBe(true)
+	})
+
+	test('@if construct differing between branches is TSRX005', () => {
+		const source = `export function C({ big }: { big?: boolean })
+	@{
+		expose({})
+		<>
+			<c-el>
+				@if (big) {
+					<strong onClick={() => {}}>a</strong>
+				} @else {
+					<strong onClick={() => { }}>b</strong>
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(
+			diagnostics.some(d => d.message.includes('branch constructs differ')),
+		).toBe(true)
+	})
 })
 
 describe('milestone gates', () => {
-	test('module-list: reactive @for is TSRX001, file skipped, not an error', () => {
+	test('module-list compiles cleanly now (reactive @for → reconcile)', () => {
 		const source = fs.readFileSync(
 			path.join(ROOT, 'examples/module/list/module-list.tsrx'),
 			'utf8',
 		)
-		const { component, diagnostics } = compileComponent(source, 'module-list.tsrx', new Set())
-		expect(component).toBeNull()
-		expect(diagnostics.some(d => d.code === 'TSRX001' && d.severity === 'warning')).toBe(
-			true,
+		const { component, diagnostics } = compileComponent(
+			source,
+			'module-list.tsrx',
+			new Set(['basic-button']),
 		)
-		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
+		expect(component).not.toBeNull()
+		expect(diagnostics).toEqual([])
 	})
 
-	test('inline: @for over a declared List warns TSRX001', () => {
+	test('inline: @for over deriveList still warns TSRX001', () => {
 		const source = `export function C({}: {})
 	@{
-		const items = createList<string>([], { keyConfig: 'item' })
-		expose({})
+		const items = deriveList(() => ['a'])
 		<>
 			<c-el>
 				@for (const item of items; key k) {
-					<li>{item}</li>
+					<li>&{item}</li>
 				}
 			</c-el>
 			<style>c-el { color: red }</style>
@@ -145,6 +265,125 @@ describe('milestone gates', () => {
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'TSRX001')).toBe(true)
+	})
+})
+
+describe('reactive-list rewrite rules (milestone 3)', () => {
+	const listSource = (body: string): string =>
+		`export function C({}: {})
+	@{
+		const items = createList<string>([], { keyConfig: 'item' })
+		<>
+			<c-el>
+				<ul data-container>
+					@for (const item of items; key k) {
+						${body}
+					}
+				</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+
+	test('well-formed body compiles: hole, statics, key-bound event', () => {
+		const { component, diagnostics } = compileComponent(
+			listSource(
+				'<li><span>&{item}</span><button type="button" onClick={() => items.remove(k)}>✕</button></li>',
+			),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+	})
+
+	test('reactive attribute inside the body is TSRX005', () => {
+		const { diagnostics } = compileComponent(
+			listSource('<li class={() => item}>no</li>'),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.some(
+				d => d.code === 'TSRX005' && d.message.includes('Dynamic attribute'),
+			),
+		).toBe(true)
+	})
+
+	test('non-lazy item expression is TSRX005', () => {
+		const { diagnostics } = compileComponent(
+			listSource('<li>{item}</li>'),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.message.includes('must be lazy'))).toBe(true)
+	})
+
+	test('missing or duplicated item hole is TSRX005', () => {
+		const { diagnostics } = compileComponent(
+			listSource('<li>static</li>'),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.message.includes('exactly once'))).toBe(true)
+	})
+
+	test('handler referencing the loop item is TSRX005 (bindItem Signal)', () => {
+		const { diagnostics } = compileComponent(
+			listSource(
+				'<li><span>&{item}</span><button type="button" onClick={() => items.remove(item)}>✕</button></li>',
+			),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.some(
+				d =>
+					d.code === 'TSRX005' && d.message.includes('Signal, not the value'),
+			),
+		).toBe(true)
+	})
+
+	test('index binding is TSRX005', () => {
+		const source = `export function C({}: {})
+	@{
+		const items = createList<string>(['a'], { keyConfig: 'item' })
+		<>
+			<c-el>
+				<ul>
+					@for (const item of items; index i; key k) {
+						<li>&{item}</li>
+					}
+				</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.message.includes('Index bindings'))).toBe(
+			true,
+		)
+	})
+
+	test('list directly under the root is TSRX005 (no container)', () => {
+		const source = `export function C({}: {})
+	@{
+		const items = createList<string>(['a'], { keyConfig: 'item' })
+		<>
+			<c-el>
+				@for (const item of items; key k) {
+					<li>&{item}</li>
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(
+			diagnostics.some(d =>
+				d.message.includes('container element distinct from the host'),
+			),
+		).toBe(true)
 	})
 })
 
@@ -214,9 +453,9 @@ describe('rewrite-rule enforcement', () => {
 			}`,
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(
-			diagnostics.some(d => d.message.includes('template slots')),
-		).toBe(true)
+		expect(diagnostics.some(d => d.message.includes('template slots'))).toBe(
+			true,
+		)
 	})
 
 	test('client constructs on the root element are outside the subset', () => {
@@ -230,9 +469,7 @@ describe('rewrite-rule enforcement', () => {
 		</>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(
-			diagnostics.some(d => d.message.includes('root element')),
-		).toBe(true)
+		expect(diagnostics.some(d => d.message.includes('root element'))).toBe(true)
 	})
 
 	test('ambiguous selector is TSRX007', () => {
