@@ -205,7 +205,7 @@ export const sanitizeHtml = (html: string): string => {
 	let next: string
 	do {
 		next = current
-			.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+			.replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi, '')
 			.replace(/<script\b[^>]*\/?>/gi, '')
 			.replace(/(^|[\s"'`])on[a-z]+\s*=\s*"[^"]*"/gi, '$1')
 			.replace(/(^|[\s"'`])on[a-z]+\s*=\s*'[^']*'/gi, '$1')
