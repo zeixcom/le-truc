@@ -200,17 +200,25 @@ export const cls = (map: Record<string, unknown>): string =>
  * authored markup (docs content), not arbitrary user input — this catches
  * the common footguns rather than replacing a real sanitizer.
  */
-export const sanitizeHtml = (html: string): string =>
-	html
-		.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
-		.replace(/<script\b[^>]*\/?>/gi, '')
-		.replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, '')
-		.replace(/\son[a-z]+\s*=\s*'[^']*'/gi, '')
-		.replace(/\son[a-z]+\s*=[^\s>]+/gi, '')
-		.replace(
-			/\s(href|src|action|formaction|xlink:href)\s*=\s*(["'])\s*(javascript|vbscript|data(?!:image\/(png|gif|jpeg|jpg|webp|svg\+xml)):)[^"']*\2/gi,
-			'',
-		)
+export const sanitizeHtml = (html: string): string => {
+	let current = html
+	let next: string
+	do {
+		next = current
+			.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+			.replace(/<script\b[^>]*\/?>/gi, '')
+			.replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, '')
+			.replace(/\son[a-z]+\s*=\s*'[^']*'/gi, '')
+			.replace(/\son[a-z]+\s*=[^\s>]+/gi, '')
+			.replace(
+				/\s(href|src|action|formaction|xlink:href)\s*=\s*(["'])\s*(javascript|vbscript|data(?!:image\/(png|gif|jpeg|jpg|webp|svg\+xml)):)[^"']*\2/gi,
+				'',
+			)
+		if (next === current) break
+		current = next
+	} while (true)
+	return current
+}
 
 /** `@for` iteration helper over the items themselves (index unused). */
 export const items = <T>(iterable: Iterable<T>): T[] => Array.from(iterable)
