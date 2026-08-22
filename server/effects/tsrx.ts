@@ -25,7 +25,12 @@ import { createBuildEffect } from './build-effect'
 
 const GENERATED_DIR = join(import.meta.dir, '..', 'generated', 'tsrx')
 
-const compileAll = async (files: FileInfo[]): Promise<void> => {
+/**
+ * Compile the whole corpus (exported for the standalone `scripts/build-tsrx.ts`
+ * runner — `build:cem` needs the generated clients on disk before `cem
+ * analyze` reads them).
+ */
+export const compileTsrxCorpus = async (files: FileInfo[]): Promise<void> => {
 	await mkdir(GENERATED_DIR, { recursive: true })
 
 	// Registry-aware dispatch needs every compilable tag up front: first
@@ -89,7 +94,7 @@ export const tsrxEffect = (onRebuild?: () => void) =>
 		[componentTsrx.sources],
 		async ([files]) => {
 			console.log('🔄 Compiling TSRX components...')
-			await compileAll(files)
+			await compileTsrxCorpus(files)
 		},
 		onRebuild,
 	)

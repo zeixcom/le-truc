@@ -186,3 +186,106 @@ describe('template classification', () => {
 		expect(loop?.hoisted.map(h => h.name)).toEqual(['pid'])
 	})
 })
+
+describe('extension activation — export const config (sub-design 8)', () => {
+	const configSource = (config: string): string =>
+		`export const config = ${config}
+export function C({ value = '' }: { value?: string })
+@{
+	expose({ value: asString('') })
+	<>
+		<c-el value={value}><input value={() => host.value} /></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+
+	test('formAssociated + observedAttributes parse into ConfigIR', () => {
+		const { component, diagnostics } = compileSource(
+			configSource(`{ formAssociated: true, observedAttributes: ['value'] }`),
+			'c.tsrx',
+		)
+		expect(diagnostics).toEqual([])
+		expect(component?.config).toEqual({
+			form: 'value',
+			observedAttributes: ['value'],
+		})
+	})
+
+	test('formAssociatedCheckbox selects the checked variant', () => {
+		const { component, diagnostics } = compileSource(
+			configSource(`{ formAssociatedCheckbox: true }`),
+			'c.tsrx',
+		)
+		expect(diagnostics).toEqual([])
+		expect(component?.config?.form).toBe('checked')
+	})
+
+	test('Parser-expose props collect factory and fallback; defineMethod marks ambients', () => {
+		const { component } = compileSource(
+			`export function C({}: {})
+			@{
+				expose({
+					value: asString('x'),
+					count: asInteger(0),
+					clear: defineMethod(() => {}),
+				})
+				<>
+					<c-el><span>ok</span></c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+		)
+		expect(component?.parserExposeProps.get('value')).toEqual({
+			parser: 'asString',
+			fallbackText: "'x'",
+		})
+		expect(component?.parserExposeProps.get('count')).toEqual({
+			parser: 'asInteger',
+			fallbackText: '0',
+		})
+		expect(component?.parserExposeProps.has('clear')).toBe(false)
+		expect(component?.exposeAmbients).toEqual(['asInteger', 'asString', 'defineMethod'])
+	})
+
+	test('host/internals references inside expose initializers collect as context refs', () => {
+		const { component } = compileSource(
+			`export function C({}: {})
+			@{
+				expose({
+					value: asString(''),
+					clear: defineMethod(() => {
+						host.value = ''
+						internals?.states.add('on')
+					}),
+				})
+				<>
+					<c-el><span>ok</span></c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+		)
+		expect(component?.contextRefs).toEqual(['host', 'internals'])
+	})
+
+	test('managed lazy child requires form config to be more than text', () => {
+		// Without config.form, `&{'validationMessage'}` is an ordinary
+		// string-literal child — the managed-prop lowering never applies.
+		const { component } = compileSource(
+			`export function C({}: {})
+			@{
+				expose({})
+				<>
+					<c-el><p>&{'validationMessage'}</p></c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+		)
+		expect(component?.config).toBeNull()
+		const p = firstElementChild(component?.root)
+		const expr = p?.children.find(c => c.kind === 'expr')
+		expect(expr).toMatchObject({ lazy: true, exprText: "'validationMessage'" })
+	})
+})

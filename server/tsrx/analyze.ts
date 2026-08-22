@@ -17,8 +17,10 @@
  */
 
 import {
+	CONTEXT_NAMES,
 	freeIdentifiers,
 	JS_GLOBALS,
+	MANAGED_TEXT_PROPS,
 	type AttributeIR,
 	type ComponentIR,
 	type ForIR,
@@ -120,6 +122,12 @@ export type ClientPlan = {
 	queries: QueryPlan[]
 	harvests: HarvestPlan[]
 	effects: TopEffectPlan[]
+	/**
+	 * Context members the generated factory must destructure (`host`,
+	 * `internals`) — collected from every client code position plus the
+	 * setup's expose() initializers (compiler.ts `contextRefs`).
+	 */
+	ambientContext: string[]
 }
 
 /* === Internal Functions === */
@@ -329,13 +337,37 @@ const lazyWatchSource = (
 ): string => {
 	const expr = child.expr
 	if (nodeType(expr) === 'Identifier') return child.exprText
-	if (
-		nodeType(expr) === 'Literal' &&
-		typeof (expr as TsrxNode).value === 'string' &&
-		component.exposeProps.has(String((expr as TsrxNode).value))
-	)
-		return `'${String((expr as TsrxNode).value)}'`
+	if (nodeType(expr) === 'Literal' && typeof (expr as TsrxNode).value === 'string') {
+		const value = String((expr as TsrxNode).value)
+		// A string literal in a lazy position names a prop: an exposed signal
+		// prop, or a managed form prop (FormFactoryContext only — its watch
+		// accepts 'validationMessage' exactly when formAssociated() leads).
+		if (
+			component.exposeProps.has(value) ||
+			(component.config?.form && MANAGED_TEXT_PROPS.has(value))
+		)
+			return `'${value}'`
+	}
 	return child.exprText
+}
+
+/**
+ * `() => host.<prop>` — the host-prop mirror. Lowers to `bindProperty` (the
+ * host prop is a Slot-backed reactive read; attribute dispatch would be wrong
+ * for property-backed targets like `input.value`), and server-renders from the
+ * root attribute expression of the parser-exposed prop it reads.
+ */
+const hostPropMirrorOf = (thunk: TsrxNode): string | null => {
+	const body = thunk.body
+	if (nodeType(body) !== 'MemberExpression') return null
+	const member = body as TsrxNode
+	if (
+		nodeType(member.object) !== 'Identifier' ||
+		String((member.object as TsrxNode).name) !== 'host'
+	)
+		return null
+	if (member.computed || nodeType(member.property) !== 'Identifier') return null
+	return String((member.property as TsrxNode).name)
 }
 
 /* === Exported Functions === */
@@ -359,6 +391,12 @@ export const analyzeClient = (
 	const queries: QueryPlan[] = []
 	const harvests: HarvestPlan[] = []
 	const effects: TopEffectPlan[] = []
+	const ambient = new Set<string>(component.contextRefs)
+	const collectAmbient = (node: TsrxNode | null | undefined): void => {
+		if (!node) return
+		for (const name of freeIdentifiers(node))
+			if (CONTEXT_NAMES.has(name)) ambient.add(name)
+	}
 	const usedNames = new Set<string>([
 		component.tag.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()),
 		...component.signals.map(s => s.name),
@@ -449,6 +487,7 @@ export const analyzeClient = (
 		 * hoist-first error; anything else is server-only.
 		 */
 		const checkClientNames = (node: TsrxNode, what: string): void => {
+			collectAmbient(node)
 			const free = dependenciesOf(node)
 			const loopRefs = [...free].filter(name => loopBound.has(name))
 			if (loopRefs.length > 0) {
@@ -466,6 +505,7 @@ export const analyzeClient = (
 				}
 				if (refNames.has(name)) continue
 				if (JS_GLOBALS.has(name)) continue
+				if (CONTEXT_NAMES.has(name)) continue
 				bad.push(name)
 			}
 			if (bad.length > 0) {
@@ -721,17 +761,17 @@ export const analyzeClient = (
 			const hasClientConstruct =
 				node.attrs.some(a => a.kind !== 'static' && a.kind !== 'server') ||
 				node.children.some(c => c.kind === 'expr' && c.lazy)
-		if (hasClientConstruct) {
-			const { selector, unique } = resolveSelector(component, node)
-			if (!unique) {
-				diagnostics.push(
-					diagnostic.unaddressableElement(
-						source,
-						node.node.start,
-						`No unique selector for <${node.tag}> in the rendered template; add a distinguishing static attribute (role, class, or data-*).`,
-					),
-				)
-			}
+			if (hasClientConstruct) {
+				const { selector, unique } = resolveSelector(component, node)
+				if (!unique) {
+					diagnostics.push(
+						diagnostic.unaddressableElement(
+							source,
+							node.node.start,
+							`No unique selector for <${node.tag}> in the rendered template; add a distinguishing static attribute (role, class, or data-*).`,
+						),
+					)
+				}
 				const refAttr = node.attrs.find(a => a.kind === 'ref') as
 					| { kind: 'ref'; name: string }
 					| undefined
@@ -739,19 +779,21 @@ export const analyzeClient = (
 				const isCustom = node.tag.includes('-')
 				for (const attr of node.attrs) {
 					if (attr.kind === 'reactive') {
+						collectAmbient(attr.thunk)
 						const free = dependenciesOf(attr.thunk)
 						const bad = [...free].filter(
 							name =>
 								!component.signals.some(s => s.name === name) &&
 								!refNames.has(name) &&
-								!JS_GLOBALS.has(name),
+								!JS_GLOBALS.has(name) &&
+								!CONTEXT_NAMES.has(name),
 						)
 						if (bad.length > 0) {
 							diagnostics.push(
 								diagnostic.unsupported(
 									source,
 									attr.thunk.start,
-									`Reactive attribute \`${attr.name}\` references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, and globals`,
+									`Reactive attribute \`${attr.name}\` references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
 								),
 							)
 						}
@@ -763,17 +805,23 @@ export const analyzeClient = (
 								thunkText: attr.thunkText,
 							})
 						} else {
+							// A host-prop mirror always dispatches as a property —
+							// attribute dispatch would be wrong for
+							// property-backed targets like `input.value`.
+							const mirror = hostPropMirrorOf(attr.thunk)
 							effects.push({
 								kind: 'watch-attr',
 								query,
 								attr: attr.name,
 								thunkText: attr.thunkText,
-								dispatch: isCustom ? 'property' : 'attribute',
+								dispatch:
+									mirror !== null || isCustom ? 'property' : 'attribute',
 								coerceToString:
-									!isCustom && returnsNumber(attr.thunk.body),
+									mirror === null && !isCustom && returnsNumber(attr.thunk.body),
 							})
 						}
 					} else if (attr.kind === 'class-map') {
+						collectAmbient(attr.object)
 						for (const key of classMapKeys(attr.object)) {
 							effects.push({
 								kind: 'watch-attr',
@@ -785,6 +833,7 @@ export const analyzeClient = (
 							})
 						}
 					} else if (attr.kind === 'event') {
+						collectAmbient(attr.handler)
 						effects.push({
 							kind: 'on',
 							query,
@@ -795,6 +844,7 @@ export const analyzeClient = (
 				}
 				for (const child of node.children) {
 					if (child.kind !== 'expr' || !child.lazy) continue
+					collectAmbient(child.expr)
 					effects.push({
 						kind: 'watch-text',
 						query,
@@ -807,5 +857,5 @@ export const analyzeClient = (
 	}
 	emitTopEffects(component.root)
 
-	return { queries, harvests, effects }
+	return { queries, harvests, effects, ambientContext: [...ambient].sort() }
 }

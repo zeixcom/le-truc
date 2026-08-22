@@ -19,10 +19,11 @@ const ROOT = path.resolve(import.meta.dir, '../../..')
 const read = (rel: string): string =>
 	fs.readFileSync(path.isAbsolute(rel) ? rel : path.join(ROOT, rel), 'utf8')
 
-const registry = new Set<string>(['basic-counter', 'module-tabgroup'])
+const registry = new Set<string>(['basic-counter', 'module-tabgroup', 'form-textbox'])
 const SOURCES = [
 	'examples/basic/counter/basic-counter.tsrx',
 	'examples/module/tabgroup/module-tabgroup.tsrx',
+	'examples/form/textbox/form-textbox.tsrx',
 ] as const
 
 const compiled = SOURCES.map(rel => ({
@@ -79,6 +80,30 @@ describe('client golden — convergence with the hand-written trio', () => {
 		expect(code).toContain(
 			'watch(() => selected.get() !== pid, bindAttribute(tab, \'hidden\'))',
 		)
+	})
+
+	test('form-textbox: extensions array, Parser-expose, defineMethod, host-mirror, managed watch', () => {
+		const code = compiled[2]?.result.component?.clientCode ?? ''
+		// Extension activation (sub-design 8): formAssociated leads the
+		// emitted array — the FormFactoryContext overload selector.
+		expect(code).toContain(
+			'\t[formAssociated(), observedAttributes([\'value\'])],',
+		)
+		expect(code).toContain(
+			"import { asString, bindProperty, bindText, defineComponent, defineMethod, formAssociated, observedAttributes } from '@zeix/le-truc'",
+		)
+		expect(code).toContain(
+			"import type { FormAssociatedElement } from '@zeix/le-truc'",
+		)
+		// host/internals destructure from the factory context (ambients)
+		expect(code).toContain('({ expose, first, host, on, watch }) => {')
+		// Attribute-driven prop + method producer, verbatim expose shape
+		expect(code).toContain("value: asString(''),")
+		expect(code).toContain('clear: defineMethod(() => {')
+		// The host-prop mirror lowers to a property dispatch (AGENTS.md rule)
+		expect(code).toContain('watch(() => host.value, bindProperty(input, \'value\'))')
+		// Managed form prop as watch source — exists only on FormFactoryContext
+		expect(code).toContain("watch('validationMessage', bindText(error))")
 	})
 
 	test('registry entry records both halves', () => {

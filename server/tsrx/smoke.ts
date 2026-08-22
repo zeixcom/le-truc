@@ -17,6 +17,7 @@ const CASES = [
 	'examples/basic/counter/basic-counter.tsrx',
 	'examples/module/tabgroup/module-tabgroup.tsrx',
 	'examples/module/list/module-list.tsrx',
+	'examples/form/textbox/form-textbox.tsrx',
 ] as const
 
 fs.mkdirSync(`${ROOT}${OUT_DIR}`, { recursive: true })
@@ -58,12 +59,20 @@ for (const { tag } of compiled) {
 		console.log(mod.renderBasicCounter({}))
 		console.log(mod.renderBasicCounter({ start: 100 }))
 	}
-	if (tag === 'module-tabgroup') {
-		const tabs = [
-			{ id: '1', label: 'Tab 1', content: 'Tab 1 content' },
-			{ id: '2', label: 'Tab 2', content: 'Tab 2 content' },
-			{ id: '3', label: 'Tab 3', content: 'Tab 3 content' },
-		]
-		console.log(mod.renderModuleTabgroup({ tabs }))
-	}
+		if (tag === 'module-tabgroup') {
+			const tabs = [
+				{ id: '1', label: 'Tab 1', content: 'Tab 1 content' },
+				{ id: '2', label: 'Tab 2', content: 'Tab 2 content' },
+				{ id: '3', label: 'Tab 3', content: 'Tab 3 content' },
+			]
+			console.log(mod.renderModuleTabgroup({ tabs }))
+		}
+		if (tag === 'form-textbox') {
+			console.log(
+				mod.renderFormTextbox({ name: 'name', label: 'Name', required: true }),
+			)
+			console.log(
+				mod.renderFormTextbox({ name: 'nick', label: 'Nickname', value: 'Ada' }),
+			)
+		}
 }

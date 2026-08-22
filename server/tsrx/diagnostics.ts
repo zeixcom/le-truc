@@ -19,6 +19,7 @@ export type DiagnosticCode =
 	| 'TSRX006' // malformed or unsupported attribute shape
 	| 'TSRX007' // template structure the compiler cannot address
 	| 'TSRX008' // source shape violation (root tag, exports, style placement)
+	| 'TSRX009' // invalid `export const config` extension declaration
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -117,6 +118,10 @@ export const diagnostic = {
 
 	/** Source-level structure violations. */
 	invalidSource: (what: string) => error('TSRX008', what, undefined),
+
+	/** Invalid `export const config` declaration (ADR 0023 sub-design 8). */
+	invalidConfig: (source: string, offset: number | undefined, what: string) =>
+		error('TSRX009', what, lineOf(source, offset)),
 
 	/** Recompute a diagnostic's line from a node offset (keeps messages stable). */
 	withLine: (d: CompileDiagnostic, source: string, offset: number | undefined) => ({

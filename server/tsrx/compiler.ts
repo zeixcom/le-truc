@@ -93,6 +93,38 @@ export type ForIR = {
 	node: TsrxNode
 }
 
+/**
+ * Extension activation declared as `export const config = { … }` (ADR 0023
+ * sub-design 8). Zero-import, statically-analyzable; the compiler validates
+ * the keys and lowers them to `defineComponent`'s third argument.
+ */
+export type ConfigIR = {
+	/** Which form-association extension leads the array (host-typing widener). */
+	form: 'value' | 'checked' | null
+	/** Attribute names re-parsed post-connect; must be Parser-exposed props. */
+	observedAttributes: string[]
+}
+
+/** Parser factory names recognized as ambients in `expose()` initializers. */
+export const PARSER_FACTORIES: ReadonlySet<string> = new Set<string>([
+	'asString',
+	'asInteger',
+	'asNumber',
+	'asBoolean',
+	'asEnum',
+])
+
+/** Context members usable as free names in any client code position. */
+export const CONTEXT_NAMES: ReadonlySet<string> = new Set<string>([
+	'host',
+	'internals',
+])
+
+/** Managed form props usable as string-literal lazy children (text-bindable). */
+export const MANAGED_TEXT_PROPS: ReadonlySet<string> = new Set<string>([
+	'validationMessage',
+])
+
 /** A complete component extracted from one `.tsrx` source. */
 export type ComponentIR = {
 	/** Function name, e.g. `BasicCounter`. */
@@ -116,6 +148,18 @@ export type ComponentIR = {
 	exposeText: string | null
 	/** Prop name → signal name, from `expose({ prop: signal.get })`. */
 	exposeProps: Map<string, string>
+	/**
+	 * Prop name → Parser factory, from `expose({ prop: asString('') })` —
+	 * attribute-driven state (ADR 0003): the host attribute seeds the prop at
+	 * connect; `observedAttributes` re-parses it on mutation.
+	 */
+	parserExposeProps: Map<string, { parser: string; fallbackText: string | null }>
+	/** Ambient names `expose()` uses (parser factories, `defineMethod`). */
+	exposeAmbients: string[]
+	/** Context members referenced from setup/expose code (`host`, `internals`). */
+	contextRefs: string[]
+	/** Extension activation from `export const config`, when declared. */
+	config: ConfigIR | null
 	/** Template root element IR (style block removed). */
 	root: TemplateNode & { kind: 'element' }
 	/** `@for` loops, keyed by their template node. */
@@ -128,6 +172,12 @@ export type ComponentIR = {
 	globalDecl: string | null
 	/** Name of the exported `<Name>Props` type, when authored. */
 	propsTypeName: string | null
+	/**
+	 * Doc comment immediately above the component function, verbatim —
+	 * carried above the generated `export default defineComponent(` so CEM
+	 * extraction reads the authored description and tags (LT-006).
+	 */
+	componentDoc: string | null
 	/** Names considered server-known at template evaluation time. */
 	serverKnown: ReadonlySet<string>
 }
@@ -314,6 +364,24 @@ export const freeIdentifiers = (node: TsrxNode): Set<string> => {
 	}
 	visit(node, new Set())
 	return free
+}
+
+/**
+ * The doc comment immediately preceding a declaration, sliced verbatim.
+ * The whitespace-only guard between comment close and declaration keeps a
+ * module-level doc from being mistaken for the component's own when other
+ * statements (type declarations, `declare global`) sit in between. Carried
+ * above the generated `export default defineComponent(` so CEM extraction
+ * (ADR 0023, LT-006) reads the authored description and tags.
+ */
+export const leadingDocComment = (source: string, before: number): string | null => {
+	const head = source.slice(0, before)
+	const close = head.lastIndexOf('*/')
+	if (close === -1) return null
+	const open = head.lastIndexOf('/**', close)
+	if (open === -1) return null
+	if (head.slice(close + 2).trim() !== '') return null
+	return source.slice(open, close + 2)
 }
 
 /** Names declared by a binding pattern (params, declarator ids). */
@@ -594,7 +662,13 @@ const lowerChildren = (
 		const child = children[i] as TsrxNode
 		if (child.type === 'JSXText') {
 			const next = children[i + 1] as TsrxNode | undefined
-			if (child.value === '&' && next?.type === 'JSXExpressionContainer') {
+			const raw = String(child.value ?? '')
+			// `&{expr}` lazy child: the parser emits the sigil as a text node
+			// ENDING in '&' immediately before the expression container — the
+			// '&' may carry leading whitespace when formatted on its own line.
+			if (next?.type === 'JSXExpressionContainer' && raw.endsWith('&')) {
+				const leading = collapseJsxText(raw.slice(0, -1))
+				if (leading) out.push({ kind: 'text', value: leading })
 				const expr = next.expression
 				if (isNode(expr))
 					out.push({
@@ -607,7 +681,7 @@ const lowerChildren = (
 				i += 2
 				continue
 			}
-			const collapsed = collapseJsxText(String(child.value ?? ''))
+			const collapsed = collapseJsxText(raw)
 			if (collapsed) out.push({ kind: 'text', value: collapsed })
 			i += 1
 			continue
@@ -810,6 +884,96 @@ const lowerFor = (
 	return output
 }
 
+/**
+ * Extract and validate `export const config = { … }` — extension activation
+ * (ADR 0023 sub-design 8). Unknown keys, wrong value shapes, and combined
+ * form variants are errors; the observedAttributes ⊆ Parser-expose check
+ * happens after the setup loop (expose is parsed later in source order).
+ */
+const readConfig = (ctx: ExtractContext, stmt: TsrxNode): ConfigIR | null => {
+	const decl =
+		stmt.type === 'ExportNamedDeclaration' && isNode(stmt.declaration)
+			? stmt.declaration
+			: stmt
+	if (decl.type !== 'VariableDeclaration' || decl.kind !== 'const') return null
+	const declarator = asArray(decl.declarations)[0] ?? null
+	if (identifierName(declarator?.id) !== 'config' || !isNode(declarator?.init))
+		return null
+	const init = declarator.init
+	if (init.type !== 'ObjectExpression') {
+		ctx.diagnostics.push(
+			diagnostic.invalidConfig(
+				ctx.source,
+				decl.start,
+				'`export const config` must be an object literal.',
+			),
+		)
+		return null
+	}
+	const config: ConfigIR = { form: null, observedAttributes: [] }
+	for (const prop of asArray(init.properties)) {
+		if (prop.type !== 'Property') continue
+		const key = identifierName(prop.key)
+		const value = prop.value
+		if (!key || !isNode(value)) continue
+		if (key === 'formAssociated' || key === 'formAssociatedCheckbox') {
+			if (!(value.type === 'Literal' && value.value === true)) {
+				ctx.diagnostics.push(
+					diagnostic.invalidConfig(
+						ctx.source,
+						prop.start,
+						`config.${key} must be \`true\`.`,
+					),
+				)
+				continue
+			}
+			if (config.form) {
+				ctx.diagnostics.push(
+					diagnostic.invalidConfig(
+						ctx.source,
+						prop.start,
+						'config cannot combine formAssociated and formAssociatedCheckbox — the runtime throws ExtensionCollisionError.',
+					),
+				)
+				continue
+			}
+			config.form = key === 'formAssociated' ? 'value' : 'checked'
+		} else if (key === 'observedAttributes') {
+			if (value.type !== 'ArrayExpression') {
+				ctx.diagnostics.push(
+					diagnostic.invalidConfig(
+						ctx.source,
+						prop.start,
+						'config.observedAttributes must be an array of string literals.',
+					),
+				)
+				continue
+			}
+			for (const element of asArray(value.elements)) {
+				if (isNode(element) && element.type === 'Literal' && typeof element.value === 'string')
+					config.observedAttributes.push(String(element.value))
+				else
+					ctx.diagnostics.push(
+						diagnostic.invalidConfig(
+							ctx.source,
+							isNode(element) ? element.start : value.start,
+							'config.observedAttributes must contain string literals only.',
+						),
+					)
+			}
+		} else {
+			ctx.diagnostics.push(
+				diagnostic.invalidConfig(
+					ctx.source,
+					prop.start,
+					`Unknown config key \`${key}\`. Known keys: formAssociated, formAssociatedCheckbox, observedAttributes.`,
+				),
+			)
+		}
+	}
+	return config
+}
+
 /* === Exported Functions === */
 
 /**
@@ -838,6 +1002,7 @@ export const compileSource = (
 
 	// Locate the exported component function (body = JSXCodeBlock).
 	let fn: TsrxNode | null = null
+	let fnStmtStart = 0
 	for (const stmt of asArray(ast.body)) {
 		const decl =
 			stmt.type === 'ExportNamedDeclaration' && isNode(stmt.declaration)
@@ -854,7 +1019,10 @@ export const compileSource = (
 						`${filename}: multiple component functions per file are outside the sanctioned subset.`,
 					),
 				)
-			} else fn = decl
+			} else {
+				fn = decl
+				fnStmtStart = typeof stmt.start === 'number' ? stmt.start : 0
+			}
 		}
 	}
 	if (!fn) {
@@ -888,6 +1056,12 @@ export const compileSource = (
 	const setupInits = new Map<string, TsrxNode>()
 	let exposeText: string | null = null
 	const exposeProps = new Map<string, string>()
+	const parserExposeProps = new Map<
+		string,
+		{ parser: string; fallbackText: string | null }
+	>()
+	const exposeAmbients = new Set<string>()
+	const contextRefs = new Set<string>()
 	const typeCtx: TypeContext = { paramsNode, setupInits }
 	for (const stmt of asArray(codeBlock.body)) {
 		if (stmt.type === 'VariableDeclaration') {
@@ -936,6 +1110,9 @@ export const compileSource = (
 			setup.push(exposeText)
 			// prop → signal from expose({ prop: signal.get })
 			const arg = asArray(expression?.arguments)[0] ?? null
+			for (const name of freeIdentifiers(arg ?? ({ type: 'ObjectExpression', properties: [] } as unknown as TsrxNode))) {
+				if (CONTEXT_NAMES.has(name)) contextRefs.add(name)
+			}
 			for (const prop of asArray(arg?.properties)) {
 				if (prop.type !== 'Property') continue
 				const propName = identifierName(prop.key)
@@ -948,6 +1125,22 @@ export const compileSource = (
 				) {
 					const sigName = identifierName(value.object)
 					if (sigName) exposeProps.set(propName, sigName)
+				}
+				// Parser-backed attribute-driven props and method producers:
+				// the initializer is an ambient factory call, verbatim in the
+				// generated client (imports) and shimmed on the server.
+				if (propName && isNode(value) && value.type === 'CallExpression') {
+					const callee = identifierName(value.callee)
+					if (callee && PARSER_FACTORIES.has(callee)) {
+						const fallback = asArray(value.arguments)[0] ?? null
+						parserExposeProps.set(propName, {
+							parser: callee,
+							fallbackText: fallback ? text(ctx, fallback) : null,
+						})
+						exposeAmbients.add(callee)
+					} else if (callee === 'defineMethod') {
+						exposeAmbients.add(callee)
+					}
 				}
 			}
 			continue
@@ -1015,7 +1208,13 @@ export const compileSource = (
 	const typeDecls: string[] = []
 	let globalDecl: string | null = null
 	let propsTypeName: string | null = null
+	let config: ConfigIR | null = null
 	for (const stmt of asArray(ast.body)) {
+		const declaredConfig = readConfig(ctx, stmt)
+		if (declaredConfig) {
+			config = declaredConfig
+			continue
+		}
 		if (
 			stmt.type === 'ExportNamedDeclaration' &&
 			isNode(stmt.declaration) &&
@@ -1029,6 +1228,19 @@ export const compileSource = (
 		if (stmt.type === 'TSModuleDeclaration' && String(stmt.kind) === 'global')
 			globalDecl = text(ctx, stmt)
 	}
+	// observedAttributes only fires for Parser-backed initializers — a name
+	// that is not Parser-exposed would make the extension silently inert.
+	if (config)
+		for (const attrName of config.observedAttributes) {
+			if (!parserExposeProps.has(attrName))
+				ctx.diagnostics.push(
+					diagnostic.invalidConfig(
+						source,
+						undefined,
+						`config.observedAttributes names \`${attrName}\`, which is not a Parser-exposed prop — the extension would be inert. Declare it as expose({ ${attrName}: asString(…) }).`,
+					),
+				)
+		}
 
 	const serverKnown = new Set<string>([...paramNames])
 	for (const s of signals) serverKnown.add(s.name)
@@ -1051,12 +1263,17 @@ export const compileSource = (
 					signals,
 					exposeText,
 					exposeProps,
+					parserExposeProps,
+					exposeAmbients: [...exposeAmbients].sort(),
+					contextRefs: [...contextRefs].sort(),
+					config,
 					root,
 					fors,
 					css,
 					typeDecls,
 					globalDecl,
 					propsTypeName,
+					componentDoc: leadingDocComment(source, fnStmtStart),
 					serverKnown,
 				},
 		diagnostics: ctx.diagnostics,

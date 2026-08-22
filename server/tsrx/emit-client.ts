@@ -66,8 +66,9 @@ const harvestInitializer = (
 }
 
 /**
- * Push a statement, re-indenting multi-line slices (event handler bodies)
- * so continuation lines land one level deeper than the head.
+ * Push a statement, re-indenting multi-line slices (expose blocks, event
+ * handler bodies): the shallowest continuation line lands at the statement's
+ * own depth, deeper lines keep their relative indent.
  */
 const pushStatement = (lines: string[], text: string, depth: number): void => {
 	const statementLines = text.split('\n')
@@ -86,7 +87,7 @@ const pushStatement = (lines: string[], text: string, depth: number): void => {
 			continue
 		}
 		lines.push(
-			`${'\t'.repeat(depth + 1)}${line.startsWith(common) ? line.slice(common.length) : line.trimStart()}`,
+			`${'\t'.repeat(depth)}${line.startsWith(common) ? line.slice(common.length) : line.trimStart()}`,
 		)
 	}
 }
@@ -151,6 +152,7 @@ export const emitClientModule = (
 	options: { sourcePath: string },
 ): EmittedClientModule => {
 	const imports = new Set<string>(['defineComponent'])
+	for (const ambient of component.exposeAmbients) imports.add(ambient)
 	const lines: string[] = []
 	const push = (text: string): void => pushStatement(lines, text, 2)
 
@@ -237,13 +239,45 @@ export const emitClientModule = (
 
 	// Factory context vs module imports: expose/watch/on/pass/first/all are
 	// context members; each/defineComponent/bind*/parsers/signal
-	// constructors are '@zeix/le-truc' module exports.
+	// constructors are '@zeix/le-truc' module exports. host/internals are
+	// context members too, collected by the analyzer from every client code
+	// position (ambientContext).
 	const CONTEXT_HELPERS = ['all', 'expose', 'first', 'on', 'pass', 'watch']
-	const contextHelpers = [...imports].filter(h => CONTEXT_HELPERS.includes(h))
-	const context = contextHelpers.length
-		? `{ ${contextHelpers.sort().join(', ')} }`
-		: '{}'
+	const contextMembers = [
+		...new Set([
+			...[...imports].filter(h => CONTEXT_HELPERS.includes(h)),
+			...plan.ambientContext,
+		]),
+	].sort()
+	const context = contextMembers.length ? `{ ${contextMembers.join(', ')} }` : '{}'
 	const typeArg = component.propsTypeName ? `<${component.propsTypeName}>` : ''
+
+	// Extension activation (ADR 0023 sub-design 8): config keys lower to the
+	// third argument. The form variant always leads — that is what selects
+	// the FormFactoryContext overload (ADR 0019's ordering rule, enforced
+	// structurally by construction).
+	const extensions: string[] = []
+	if (component.config?.form === 'value') {
+		imports.add('formAssociated')
+		extensions.push('formAssociated()')
+	} else if (component.config?.form === 'checked') {
+		imports.add('formAssociatedCheckbox')
+		extensions.push('formAssociatedCheckbox()')
+	}
+	if (component.config && component.config.observedAttributes.length > 0) {
+		imports.add('observedAttributes')
+		extensions.push(
+			`observedAttributes([${component.config.observedAttributes.map(n => `'${n}'`).join(', ')}])`,
+		)
+	}
+	// The widened host typing (FormAssociatedElement & P) is authored via
+	// `declare global` — carry its type import when the declarations use it.
+	const needsFormType =
+		component.config?.form !== null &&
+		component.config?.form !== undefined &&
+		[component.globalDecl, ...component.typeDecls].some(t =>
+			(t ?? '').includes('FormAssociatedElement'),
+		)
 
 	const body: string[] = [
 		'/**',
@@ -255,14 +289,21 @@ export const emitClientModule = (
 		.filter(name => !CONTEXT_HELPERS.includes(name))
 		.sort()
 	body.push(`import { ${importList.join(', ')} } from '@zeix/le-truc'`)
+	if (needsFormType)
+		body.push("import type { FormAssociatedElement } from '@zeix/le-truc'")
 	body.push('')
 	for (const decl of component.typeDecls) body.push(decl, '')
 	if (component.globalDecl) body.push(component.globalDecl, '')
+	// The authored component JSDoc rides above the generated default export:
+	// identical comment text ⇒ identical CEM extraction (LT-006), and the
+	// generated client documents itself.
+	if (component.componentDoc) body.push(component.componentDoc, '')
 	body.push(`export default defineComponent${typeArg}(`)
 	body.push(`\t'${component.tag}',`)
 	body.push(`\t(${context}) => {`)
 	for (const line of lines) body.push(line)
 	body.push('\t},')
+	if (extensions.length > 0) body.push(`\t[${extensions.join(', ')}],`)
 	body.push(')')
 
 	return { code: `${body.join('\n')}\n`, imports }

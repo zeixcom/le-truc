@@ -21,6 +21,8 @@ import {
 	freeIdentifiers,
 	isVoidTag,
 	JS_GLOBALS,
+	MANAGED_TEXT_PROPS,
+	type AttributeIR,
 	type ComponentIR,
 	type ForIR,
 	type TemplateNode,
@@ -97,6 +99,8 @@ const reindent = (slice: string, level: number): string => {
  * A lazy child's initial server value: a signal identifier reads `.get()`,
  * a thunk is invoked, an exposed-prop string key resolves through
  * `expose()`'s prop→signal map, anything else is the expression itself.
+ * A managed form prop (`validationMessage`) renders empty — the library
+ * owns its value, and empty is its connect-time state.
  */
 const lazyValueExpression = (
 	component: ComponentIR,
@@ -116,9 +120,48 @@ const lazyValueExpression = (
 		const signal = component.exposeProps.get(String(expr.value)) as string
 		return `${signal}.get()`
 	}
+	if (
+		expr.type === 'Literal' &&
+		typeof expr.value === 'string' &&
+		component.config?.form &&
+		MANAGED_TEXT_PROPS.has(String(expr.value))
+	)
+		return "''"
 	if (expr.type === 'ArrowFunctionExpression') return `(${exprText})()`
 	return exprText
 }
+
+/**
+ * The server expression for a `() => host.<prop>` mirror: the parser-exposed
+ * prop's value at render time IS the root attribute's server expression
+ * (DOM-is-truth — the host attribute is the prop's seed, ADR 0003). Null when
+ * the prop is not Parser-exposed or the root does not render its attribute.
+ */
+const hostPropMirrorExpr = (
+	component: ComponentIR,
+	thunk: TsrxNode,
+): string | null => {
+	const body = thunk.body
+	if (!isTsrxNode(body) || body.type !== 'MemberExpression' || body.computed)
+		return null
+	const obj = body.object
+	if (!isTsrxNode(obj) || obj.type !== 'Identifier' || String(obj.name) !== 'host')
+		return null
+	const prop = body.property
+	if (!isTsrxNode(prop) || prop.type !== 'Identifier') return null
+	const propName = String(prop.name)
+	if (!component.parserExposeProps.has(propName)) return null
+	const rootAttr = component.root.attrs.find(
+		(a): a is Extract<AttributeIR, { kind: 'server' }> =>
+			a.kind === 'server' && a.name === propName,
+	)
+	return rootAttr ? rootAttr.exprText : null
+}
+
+const isTsrxNode = (value: unknown): value is TsrxNode =>
+	!!value &&
+	typeof value === 'object' &&
+	typeof (value as TsrxNode).type === 'string'
 
 /* === Exported Functions === */
 
@@ -179,12 +222,17 @@ export const emitServerModule = (
 					used.add('attr')
 					parts.push({ expr: `attr('${attr.name}', ${attr.exprText})` })
 					break
-				case 'reactive':
-					if (dependenciesOf(attr.thunk).isSubsetOf(scope)) {
+				case 'reactive': {
+					const mirror = hostPropMirrorExpr(component, attr.thunk)
+					if (mirror !== null) {
+						used.add('attr')
+						parts.push({ expr: `attr('${attr.name}', ${mirror})` })
+					} else if (dependenciesOf(attr.thunk).isSubsetOf(scope)) {
 						used.add('attr')
 						parts.push({ expr: `attr('${attr.name}', (${attr.thunkText})())` })
 					}
 					break
+				}
 				case 'class-map':
 					if (dependenciesOf(attr.object).isSubsetOf(scope)) {
 						used.add('cls')
@@ -259,6 +307,7 @@ export const emitServerModule = (
 
 	for (const signal of component.signals) used.add(signal.constructor)
 	if (component.exposeText) used.add('expose')
+	for (const ambient of component.exposeAmbients) used.add(ambient)
 
 	const body: string[] = [
 		'/**',

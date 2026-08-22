@@ -36,8 +36,13 @@ const tabgroup = compileComponent(
 	'examples/module/tabgroup/module-tabgroup.tsrx',
 	registry,
 )
+const formTextbox = compileComponent(
+	read('examples/form/textbox/form-textbox.tsrx'),
+	'examples/form/textbox/form-textbox.tsrx',
+	new Set<string>([...registry, 'form-textbox']),
+)
 
-if (!counter.component || !tabgroup.component)
+if (!counter.component || !tabgroup.component || !formTextbox.component)
 	throw new Error('corpus components must compile for golden tests')
 
 // Generated server modules must exist for in-process execution; the effect
@@ -49,6 +54,7 @@ const ensureEmitted = (tag: string, code: string): void => {
 }
 ensureEmitted('basic-counter', counter.component.serverCode)
 ensureEmitted('module-tabgroup', tabgroup.component.serverCode)
+ensureEmitted('form-textbox', formTextbox.component.serverCode)
 
 const render = async (name: string, tag: string, args: unknown): Promise<string> => {
 	const mod = await import(`../../generated/tsrx/${tag}.server.ts`)
@@ -173,6 +179,71 @@ describe('server golden — module-tabgroup variants', () => {
 	})
 })
 
+describe('server golden — form-textbox variants (extensions, Parser-expose)', () => {
+	const formTextboxHtml = ({
+		name,
+		label,
+		value = '',
+		required = false,
+	}: {
+		name: string
+		label: string
+		value?: string
+		required?: boolean
+	}): string =>
+		`<form-textbox name="${name}" value="${value}">` +
+		`<label for="${name}-input">${label}</label>` +
+		'<div class="input">' +
+		`<input type="text" id="${name}-input" autocomplete="off"${required ? ' required' : ''} value="${value}">` +
+		'<button type="button" aria-label="Clear input" class="clear">✕</button>' +
+		'</div>' +
+		'<p role="alert" aria-live="assertive" class="error"></p>' +
+		'</form-textbox>'
+
+	test('default: empty value, optional field', async () => {
+		const html = await render('FormTextbox', 'form-textbox', {
+			name: 'name',
+			label: 'Name',
+		})
+		expect(html).toBe(formTextboxHtml({ name: 'name', label: 'Name' }))
+	})
+
+	test('required: boolean arg renders the bare attribute', async () => {
+		const html = await render('FormTextbox', 'form-textbox', {
+			name: 'name',
+			label: 'Name',
+			required: true,
+		})
+		expect(html).toBe(
+			formTextboxHtml({ name: 'name', label: 'Name', required: true }),
+		)
+	})
+
+	test('seeded value reaches the host attribute AND the mirrored input value', async () => {
+		const html = await render('FormTextbox', 'form-textbox', {
+			name: 'nick',
+			label: 'Nickname',
+			value: 'Ada',
+		})
+		expect(html).toBe(formTextboxHtml({ name: 'nick', label: 'Nickname', value: 'Ada' }))
+	})
+
+	test('special characters escape in both the root attribute and the mirror', async () => {
+		const html = await render('FormTextbox', 'form-textbox', {
+			name: 'x',
+			label: 'A & B <test>',
+			value: 'q"uote',
+		})
+		expect(html).toBe(
+			formTextboxHtml({
+				name: 'x',
+				label: 'A &amp; B &lt;test&gt;',
+				value: 'q&quot;uote',
+			}),
+		)
+	})
+})
+
 describe('CSS golden — verbatim tag-scoped extraction', () => {
 	test('basic-counter.css equals the hand-written artifact byte for byte', () => {
 		expect(counter.component?.css).toBe(
@@ -183,5 +254,81 @@ describe('CSS golden — verbatim tag-scoped extraction', () => {
 		expect(tabgroup.component?.css).toBe(
 			read('examples/module/tabgroup/module-tabgroup.css'),
 		)
+	})
+	// The form fixture's style is authored in the .tsrx (a subset of the
+	// hand-written form-textbox.css — no :state(clearable), no textarea),
+	// so the golden is the fixture's own dedented block: extraction must be
+	// verbatim, byte for byte.
+	test('form-textbox.css equals the fixture style byte for byte', () => {
+		expect(formTextbox.component?.css).toBe(`form-textbox {
+	display: block;
+	width: 100%;
+
+	& label {
+		display: block;
+		font-size: var(--font-size-s);
+		color: var(--color-text);
+		margin-bottom: var(--space-xxs);
+	}
+
+	& .input {
+		position: relative;
+	}
+
+	& input {
+		display: inline-block;
+		box-sizing: border-box;
+		background: var(--color-input);
+		color: var(--color-text);
+		border: none;
+		border-bottom: 1px solid var(--color-border);
+		padding: var(--space-xs) var(--space-xxs);
+		font-size: var(--font-size-m);
+		width: 100%;
+		height: var(--input-height);
+
+		&::placeholder {
+			color: var(--color-text);
+			opacity: var(--opacity-translucent);
+		}
+	}
+
+	&:user-invalid input {
+		box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
+	}
+
+	& .clear {
+		position: absolute;
+		bottom: 0;
+		right: 0;
+		border: 0;
+		border-radius: 50%;
+		font-size: var(--font-size-xs);
+		line-height: var(--line-height-xs);
+		color: var(--color-input);
+		background-color: var(--color-text-soft);
+		width: calc(0.6 * var(--input-height));
+		height: calc(0.6 * var(--input-height));
+		margin: calc(0.2 * var(--input-height));
+		padding: 0;
+		cursor: pointer;
+
+		&:hover {
+			background-color: var(--color-text);
+		}
+	}
+
+	.error {
+		margin: var(--space-xs) 0 0;
+		font-size: var(--font-size-xs);
+		line-height: var(--line-height-s);
+		color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
+
+		&:empty {
+			display: none;
+		}
+	}
+}
+`)
 	})
 })

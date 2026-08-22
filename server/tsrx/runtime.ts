@@ -66,6 +66,48 @@ export const deriveStore = <T>(compute: () => T): ServerCell<T> =>
 export const expose = (_props: Record<string, unknown>): void => {}
 
 /**
+ * `defineMethod(fn)` — identity on the server: the branded MethodProducer
+ * matters only to the client's `expose()` dispatch, and the method body is
+ * never invoked during server evaluation.
+ */
+export const defineMethod = <T extends (...args: unknown[]) => void>(fn: T): T => fn
+
+/**
+ * Parser-factory shims (`asString` etc.). The verbatim setup calls them when
+ * `expose()` carries Parser-backed attribute-driven props (ADR 0023
+ * sub-design 8); their results are metadata on the server — the real parsers
+ * run in the browser at connect time against the host attribute (ADR 0003).
+ */
+export const asString =
+	(fallback: string = '') =>
+	(value: string | null | undefined): string =>
+		value ?? fallback
+
+export const asInteger =
+	(fallback: number = 0) =>
+	(value: string | null | undefined): number => {
+		const n = Number(value)
+		return value != null && Number.isFinite(n) ? Math.trunc(n) : fallback
+	}
+
+export const asNumber =
+	(fallback: number = 0) =>
+	(value: string | null | undefined): number => {
+		const n = Number(value)
+		return value != null && Number.isFinite(n) ? n : fallback
+	}
+
+export const asBoolean =
+	(fallback: boolean = false) =>
+	(value: string | null | undefined): boolean =>
+		value == null ? fallback : value !== 'false'
+
+export const asEnum =
+	(valid: readonly [string, ...string[]]) =>
+	(value: string | null | undefined): string =>
+		valid.includes(value as string) ? (value as string) : valid[0]
+
+/**
  * HTML-escape interpolated values — same semantics as the docs pipeline's
  * `escapeHtml` (server/templates/utils.ts).
  */

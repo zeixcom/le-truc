@@ -21,6 +21,100 @@ const wrap = (template: string): string =>
 		</>
 	}`
 
+describe('extension activation (TSRX009)', () => {
+	const configSource = (config: string): string =>
+		`export const config = ${config}
+export function C({ value = '' }: { value?: string })
+@{
+	expose({ value: asString('') })
+	<>
+		<c-el value={value}><span>ok</span></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+
+	test('unknown config key is TSRX009', () => {
+		const { diagnostics } = compileComponent(
+			configSource(`{ formAssociated: true, reactivity: true }`),
+			'c.tsrx',
+			new Set(),
+		)
+		const hit = diagnostics.find(d => d.code === 'TSRX009')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('`reactivity`')
+		expect(hit?.message).toContain('Known keys')
+	})
+
+	test('combining formAssociated and formAssociatedCheckbox is TSRX009', () => {
+		const { diagnostics } = compileComponent(
+			configSource(`{ formAssociated: true, formAssociatedCheckbox: true }`),
+			'c.tsrx',
+			new Set(),
+		)
+		const hit = diagnostics.find(d => d.code === 'TSRX009')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('ExtensionCollisionError')
+	})
+
+	test('formAssociated with a non-true literal is TSRX009', () => {
+		const { diagnostics } = compileComponent(
+			configSource(`{ formAssociated: 'yes' }`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.some(
+				d => d.code === 'TSRX009' && d.message.includes('must be `true`'),
+			),
+		).toBe(true)
+	})
+
+	test('observedAttributes must be an array of string literals', () => {
+		const { diagnostics } = compileComponent(
+			configSource(`{ observedAttributes: 'value' }`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.some(
+				d =>
+					d.code === 'TSRX009' &&
+					d.message.includes('array of string literals'),
+			),
+		).toBe(true)
+	})
+
+	test('observedAttributes naming a non-Parser prop is TSRX009 (inert extension)', () => {
+		const source = `export const config = { observedAttributes: ['label'] }
+export function C({ label }: { label?: string })
+@{
+	expose({ label })
+	<>
+		<c-el><span>{label}</span></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX009')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('`label`')
+		expect(hit?.message).toContain('inert')
+	})
+
+	test('non-object config declaration is TSRX009', () => {
+		const { diagnostics } = compileComponent(
+			configSource(`[formAssociated]`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.some(
+				d => d.code === 'TSRX009' && d.message.includes('object literal'),
+			),
+		).toBe(true)
+	})
+})
+
 describe('milestone gates', () => {
 	test('module-list: reactive @for is TSRX001, file skipped, not an error', () => {
 		const source = fs.readFileSync(

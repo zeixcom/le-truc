@@ -86,6 +86,19 @@ function main() {
 	// and unresolvable declarations become `anonymous_N`.
 	const GARBAGE_NAMES = new Set(['Truc', 'J'])
 
+	// The migrated .tsrx corpus is read from gitignored generated clients
+	// (ADR 0023, LT-006). If `cem analyze` ran against a stale or empty
+	// server/generated/tsrx/, the corpus tags silently vanish from the
+	// manifest — this guard turns that into a build failure with the fix.
+	const REQUIRED_TAGS = ['basic-counter', 'module-tabgroup', 'form-textbox']
+	const present = new Set(customElements.map(d => d.tagName))
+	const missing = REQUIRED_TAGS.filter(tag => !present.has(tag))
+	if (missing.length > 0) {
+		fail(
+			`${MANIFEST_PATH} is missing the migrated corpus tag(s) ${missing.map(t => `<${t}>`).join(', ')} — the tsrx compile probably did not run. Use \`bun run build:cem\` (it compiles the corpus before analyzing).`,
+		)
+	}
+
 	const bad: string[] = []
 	for (const decl of customElements) {
 		const name = decl.name ?? ''

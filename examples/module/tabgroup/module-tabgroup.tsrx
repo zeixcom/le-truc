@@ -30,6 +30,12 @@ export type ModuleTabgroupTab = {
 	content: string
 }
 
+/**
+ * An accessible tab group with keyboard navigation (Arrow, Home, End keys) and reactive panel switching.
+ * Use it for tabbed interfaces — provides ARIA tab/tabpanel semantics, focus management
+ * with roving tabindex, and keyboard accessibility per the WAI-ARIA tabs pattern.
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#module-tabgroup} Interactive preview and usage examples
+ **/
 export function ModuleTabgroup(
 	{
 		label = 'Tabs',
