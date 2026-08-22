@@ -176,3 +176,5 @@ dataset/
 !.mimosa/security-policy.json
 .playwright-mcp/
 .zcode/plans/
+spike/tsrx-phase0/.mimosa/
+adr/.mimosa/

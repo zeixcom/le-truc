@@ -1,11 +1,18 @@
 # NOTES
 
-Deviation notes and unexpected challenges from agent sessions, newest first.
+Deviation notes and unexpected challenges from agent sessions, newest first. Entries are transitory — resolved entries are deleted once incorporated elsewhere (code headers, ADRs, TODO tasks).
 
-## 2026-08-21 — TSRX compiler milestones 1–2 (LT-001/LT-002)
+---
 
-- **TypeScript 6.0.3 fails to parse `/** … */` comments containing `**`.** Any doc comment whose text includes `examples/**/*.tsrx` (or any other `**` glob) produces `TS1109: Expression expected` at the `**` — the scanner seems to apply markdown-bold parsing inside JSDoc. Backticks make no difference; plain `@for` and backticked `` `@for` `` are fine. Workaround across `server/tsrx/` and `server/effects/tsrx.ts`: write globs as "every `.tsrx` source under `examples/`". Worth isolating and reporting upstream if it reproduces on a clean 6.0.x install.
-- **`@tsrx/core` 0.1.60 AST facts that are easy to get wrong** (encoded in `server/tsrx/compiler.ts`): tag/attribute names are `JSXIdentifier` nodes, not `Identifier`; `<style>` is a distinct `JSXStyleElement` node type (not `JSXElement`) with its stylesheet reachable via `getStyleElementStylesheet().source`; the `@{ }` container is `JSXCodeBlock` with `.body` (setup statements) and `.render` (output fragment); `@for` is `JSXForExpression` whose body's trailing `JSXElement` is the output; the lazy `&{expr}` child arrives as a `JSXText("&")` node immediately preceding a `JSXExpressionContainer` — the sigil survives as text. `isEventAttribute` throws on plain attributes and `normalizeEventName` chops two leading characters off non-event names, so the compiler implements its own `on[A-Z]` rule (the ADR's).
-- **Generated code vs. library surface**: `expose`/`watch`/`on`/`pass`/`first`/`all` are factory-context members, NOT module exports — only `each`, `defineComponent`, the `bind*` helpers, parsers, and the CE v2 signal constructors are importable from `@zeix/le-truc`. The client emitter splits accordingly. Number-valued reactive attributes (e.g. `tabindex`) stringify at emission (`bindAttribute` accepts `string | boolean`), matching the ADR's dispatch table.
-- **`bun test` has no DOM**, so behavioral tests of generated clients wait for the docs migration (Playwright); the milestone-2 acceptance evidence is the emit-then-check typecheck in `server/tests/tsrx/client.golden.test.ts` plus snapshot convergence with the hand-written trio.
-- **Golden `.html` pages are example pages**, not single-component render fixtures: demo blocks carry wrapper ids, per-demo button labels, `<hr>` chrome — and one tabgroup demo is intentionally broken. Per owner guidance, the golden tests assert every demo *variant* is representable as `render(args)` with exact expected markup, rather than byte-matching page chrome.
+## LT-007 — TypeScript 6.0.3 fails to parse doc comments containing `**`
+**Date:** 2026-08-21 | **Skill:** le-truc-dev
+**Issue:** Any `/** … */` comment whose text includes `**` — e.g. the glob `examples/**/*.tsrx` — produces `TS1109: Expression expected` at the `**` under TypeScript 6.0.3, apparently from markdown-bold handling inside JSDoc. Backticks make no difference; plain `@for` and backticked `` `@for` `` are fine.
+**Options:** (a) verify on a clean install, minimize, report upstream (queued as LT-007); (b) repo workaround only — spell globs without `**` in doc comments (currently applied across `server/tsrx/`).
+**Question:** None — workaround in place; upstream report pending LT-007.
+
+## Resolved 2026-08-21 (architect review of LT-001/LT-002)
+
+- `@tsrx/core` 0.1.60 AST gotchas — incorporated in `server/tsrx/core-shim.d.ts` and `compiler.ts` headers (JSXIdentifier names, `JSXStyleElement`, `JSXCodeBlock`/`JSXForExpression` shapes, `&`-as-text lazy child, broken `isEventAttribute`/`normalizeEventName` helpers).
+- Generated-code vs. library surface — factory-context members are not module exports; number-valued attribute thunks stringify. Encoded in `emit-client.ts` and pinned by the emit-then-check test.
+- Golden `.html` pages are example pages, not render fixtures — resolved by owner decision: golden tests assert every demo *variant* is representable as `render(args)` (see `server/tests/tsrx/server.golden.test.ts` header).
+- No DOM in `bun test` — behavioral E2E of generated clients is deferred to the docs/examples migration (Playwright); acceptance evidence is emit-then-check plus snapshot convergence.
