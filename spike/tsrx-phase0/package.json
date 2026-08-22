@@ -1,0 +1,8 @@
+{
+	"name": "tsrx-phase0-spike",
+	"private": true,
+	"type": "module",
+	"devDependencies": {
+		"@tsrx/core": "0.1.60"
+	}
+}
