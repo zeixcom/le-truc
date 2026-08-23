@@ -340,10 +340,15 @@ export const emitClientModule = (
 		}
 		if (effect.kind === 'pass') {
 			imports.add('pass')
-			push(
-				`pass(${effect.query}, { ${effect.prop}: { get: ${effect.thunkText} } })`,
-				sliceOf(effect.thunkText, effect.sourceStart),
-			)
+			const accessors = effect.setThunkText
+				? `{ get: ${effect.thunkText}, set: ${effect.setThunkText} }`
+				: `{ get: ${effect.thunkText} }`
+			push(`pass(${effect.query}, { ${effect.prop}: ${accessors} })`, [
+				...sliceOf(effect.thunkText, effect.sourceStart),
+				...(effect.setThunkText
+					? sliceOf(effect.setThunkText, effect.setSourceStart)
+					: []),
+			])
 			continue
 		}
 		imports.add('on')

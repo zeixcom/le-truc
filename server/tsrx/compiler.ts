@@ -1,20 +1,21 @@
 /**
- * TSRX compiler front end — the ONE module importing `@tsrx/core` (pinned
- * 0.1.60, ADR 0023 sub-design 2). Everything downstream consumes the
- * component IR produced here; a pin upgrade touches only this file and
- * core-shim.d.ts.
+ * TSRX compiler front end — the ONE module importing `@tsrx/core` VALUES
+ * (pinned 0.1.60, ADR 0023 sub-design 2; siblings may still import its
+ * TYPES, e.g. `TsrxNode`, which erase at compile time and carry no pin
+ * footprint). Everything downstream consumes the component IR produced
+ * here; a pin upgrade touches only this file and core-shim.d.ts.
  *
- * Responsibilities:
- * - parse a `.tsrx` module and locate the exported component function whose
- *   body is an `@{ }` statement container (`JSXCodeBlock`)
- * - slice setup statements, params, and type declarations verbatim
- * - lower the output template into a typed IR whose attribute/child
- *   classification encodes the author-declared reactivity rules: function-
- *   valued binding positions are reactive, `on*`-prefixed are events,
- *   `&{ }` marks the lazy child, everything else is server-definitive
+ * Owns parsing (`compileSource`: locate the exported component function
+ * whose body is an `@{ }` statement container, slice setup statements,
+ * params, and type declarations verbatim) and the IR type vocabulary
+ * (`TemplateNode`, `AttributeIR`, `ComponentIR`, …) shared by the rest of
+ * the compiler. Template lowering lives in `lower-template.ts`, attribute
+ * classification in `classify-attributes.ts`, signal type inference in
+ * `infer-type.ts`, `export const config` extraction and compose-import
+ * resolution in `config.ts`, and shared AST predicates/vocabulary constants
+ * in `ast-utils.ts` — this file wires them together.
  */
 
-import { posix } from 'node:path'
 import {
 	getStyleElementStylesheet,
 	isStyleElement,
@@ -23,19 +24,34 @@ import {
 	parseModule,
 	type TsrxNode,
 } from '@tsrx/core'
+import {
+	asArray,
+	CONTEXT_NAMES,
+	collectBoundNames,
+	freeIdentifiers,
+	identifierName,
+	isNode,
+	JS_GLOBALS,
+	PARSER_FACTORIES,
+	SIGNAL_CONSTRUCTORS,
+	text,
+} from './ast-utils'
+import { parseComposeImports, readConfig } from './config'
 import { dedentCss } from './css'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
+import { inferType, type TypeContext } from './infer-type'
+import { lowerChildren } from './lower-template'
 
 /* === Types === */
 
 /** A character range in the `.tsrx` source (LT-011 span table). */
-export type SourceRange = { start: number; end: number }
+type SourceRange = { start: number; end: number }
 
 /** A verbatim setup/side-effect statement, with its source range for LT-011. */
-export type SetupStmt = { text: string; range: SourceRange }
+type SetupStmt = { text: string; range: SourceRange }
 
 /** Signal constructor names recognized in setup declarations. */
-export type SignalConstructor =
+type SignalConstructor =
 	| 'createCell'
 	| 'createState'
 	| 'createList'
@@ -133,14 +149,16 @@ export type TemplateNode =
 	  }
 
 /**
- * One `pass={{ prop: thunk }}` entry (ADR 0023 sub-design 10). Only
- * getter-only thunks lower today; `{ get, set }` two-way descriptors are
- * parsed as a distinct rejection (LT-017 follow-up), not silently dropped.
+ * One `pass={{ prop: thunk }}` entry (ADR 0023 sub-design 10). `thunk`/
+ * `thunkText` is always the getter; a `{ get, set }` descriptor additionally
+ * carries `setThunk`/`setThunkText` for the write-back accessor (LT-017).
  */
 export type PassEntryIR = {
 	prop: string
 	thunk: TsrxNode
 	thunkText: string
+	setThunk?: TsrxNode
+	setThunkText?: string
 }
 
 export type AttributeIR =
@@ -226,28 +244,6 @@ export type ConfigIR = {
 	observedAttributes: string[]
 }
 
-/** Parser factory names recognized as ambients in `expose()` initializers. */
-export const PARSER_FACTORIES: ReadonlySet<string> = new Set<string>([
-	'asString',
-	'asInteger',
-	'asNumber',
-	'asBoolean',
-	'asEnum',
-	'asClampedInteger',
-	'asJSON',
-])
-
-/** Context members usable as free names in any client code position. */
-export const CONTEXT_NAMES: ReadonlySet<string> = new Set<string>([
-	'host',
-	'internals',
-])
-
-/** Managed form props usable as string-literal lazy children (text-bindable). */
-export const MANAGED_TEXT_PROPS: ReadonlySet<string> = new Set<string>([
-	'validationMessage',
-])
-
 /** A complete component extracted from one `.tsrx` source. */
 export type ComponentIR = {
 	/** Function name, e.g. `BasicCounter`. */
@@ -323,269 +319,11 @@ export type CompileResult = {
 	diagnostics: CompileDiagnostic[]
 }
 
-/* === Internal Functions === */
-
-const SIGNAL_CTORS: ReadonlySet<string> = new Set<string>([
-	'createCell',
-	'createState',
-	'createList',
-	'createStore',
-	'deriveCell',
-	'deriveList',
-	'deriveStore',
-])
-
 /**
- * The recognized signal-constructor names — exported for the globals.d.ts
- * coverage contract (LT-004): the ambient declarations in
- * server/tsrx/globals.d.ts must stay in lockstep with this set.
+ * Shared lowering/classification context, threaded through `compileSource`,
+ * `lower-template.ts`, `classify-attributes.ts`, and `config.ts`.
  */
-export const SIGNAL_CONSTRUCTORS: ReadonlySet<string> = SIGNAL_CTORS
-
-/**
- * JS standard globals never count against dependency provability — reading
- * `String(...)` does not make a thunk unprovable.
- */
-export const JS_GLOBALS: ReadonlySet<string> = new Set<string>([
-	'Array',
-	'BigInt',
-	'Boolean',
-	'Date',
-	'Error',
-	'Infinity',
-	'JSON',
-	'Math',
-	'NaN',
-	'Number',
-	'Object',
-	'RegExp',
-	'String',
-	'Symbol',
-	'decodeURIComponent',
-	'decodeURI',
-	'encodeURI',
-	'encodeURIComponent',
-	'globalThis',
-	'isFinite',
-	'isNaN',
-	'parseFloat',
-	'parseInt',
-	'undefined',
-	// DOM globals (generated handlers reference element/event types)
-	'console',
-	'crypto',
-	'document',
-	'window',
-	'navigator',
-	'performance',
-	'CustomEvent',
-	'DOMTokenList',
-	'Document',
-	'Element',
-	'Event',
-	'EventTarget',
-	'FocusEvent',
-	'FormData',
-	'HTMLButtonElement',
-	'HTMLDivElement',
-	'HTMLElement',
-	'HTMLFormElement',
-	'HTMLInputElement',
-	'HTMLSelectElement',
-	'HTMLSpanElement',
-	'HTMLTemplateElement',
-	'HTMLTextAreaElement',
-	'InputEvent',
-	'Intl',
-	'KeyboardEvent',
-	'MouseEvent',
-	'Node',
-	'NodeList',
-	'SubmitEvent',
-	'URL',
-	'URLSearchParams',
-	'queueMicrotask',
-	'requestAnimationFrame',
-	'setInterval',
-	'setTimeout',
-	'structuredClone',
-])
-
-const isNode = (value: unknown): value is TsrxNode =>
-	!!value &&
-	typeof value === 'object' &&
-	typeof (value as TsrxNode).type === 'string'
-
-const asArray = (value: unknown): TsrxNode[] =>
-	Array.isArray(value) ? (value.filter(isNode) as TsrxNode[]) : []
-
-const identifierName = (node: unknown): string | null =>
-	isNode(node) && node.type === 'Identifier' ? String(node.name) : null
-
-/** Tag/attribute names arrive as `JSXIdentifier` nodes, not `Identifier`. */
-const jsxName = (node: unknown): string | null =>
-	isNode(node) &&
-	(node.type === 'Identifier' || node.type === 'JSXIdentifier') &&
-	typeof node.name === 'string'
-		? node.name
-		: null
-
-/**
- * Collect the identifiers a node reads that are NOT bound within it — its
- * free variables. Scope-aware enough for the sanctioned shapes: function
- * params, local declarators, property keys, and non-computed member
- * properties never count as reads.
- */
-export const freeIdentifiers = (node: TsrxNode): Set<string> => {
-	const free = new Set<string>()
-	const visit = (current: unknown, bound: ReadonlySet<string>) => {
-		if (Array.isArray(current)) {
-			for (const child of current) visit(child, bound)
-			return
-		}
-		if (!isNode(current)) return
-		switch (current.type) {
-			case 'Identifier':
-				if (!bound.has(String(current.name))) free.add(String(current.name))
-				return
-			case 'MemberExpression':
-				visit(current.object, bound)
-				if (current.computed) visit(current.property, bound)
-				return
-			case 'Property':
-				if (current.computed) visit(current.key, bound)
-				visit(current.value, bound)
-				return
-			case 'ArrowFunctionExpression':
-			case 'FunctionExpression':
-			case 'FunctionDeclaration': {
-				const inner = new Set(bound)
-				const paramNames = new Set<string>()
-				for (const param of asArray(current.params))
-					collectBoundNames(param, paramNames)
-				for (const n of paramNames) inner.add(n)
-				visit(current.body, inner)
-				return
-			}
-			case 'VariableDeclarator': {
-				visit(current.init, bound)
-				const declared = new Set<string>()
-				collectBoundNames(current.id, declared)
-				visit(current.id, new Set([...bound, ...declared]))
-				return
-			}
-			case 'BlockStatement':
-			case 'Program': {
-				// Statements execute in order: a declaration adds its names to
-				// scope for every statement that follows it.
-				const inner = new Set(bound)
-				for (const stmt of asArray(current.body)) {
-					if (stmt.type === 'VariableDeclaration') {
-						for (const decl of asArray(stmt.declarations))
-							visit(decl.init, inner)
-						const declared = new Set<string>()
-						for (const decl of asArray(stmt.declarations))
-							collectBoundNames(decl.id, declared)
-						for (const name of declared) inner.add(name)
-					} else if (
-						stmt.type === 'FunctionDeclaration' &&
-						identifierName(stmt.id)
-					) {
-						inner.add(identifierName(stmt.id) as string)
-						visit(stmt, inner)
-					} else {
-						visit(stmt, inner)
-					}
-				}
-				return
-			}
-			default:
-				for (const [key, value] of Object.entries(current)) {
-					if (key === 'loc' || key === 'range' || key === 'parent') continue
-					if (isNode(value) || Array.isArray(value)) visit(value, bound)
-				}
-		}
-	}
-	visit(node, new Set())
-	return free
-}
-
-/**
- * The doc comment immediately preceding a declaration, sliced verbatim.
- * The whitespace-only guard between comment close and declaration keeps a
- * module-level doc from being mistaken for the component's own when other
- * statements (type declarations, `declare global`) sit in between. Carried
- * above the generated `export default defineComponent(` so CEM extraction
- * (ADR 0023, LT-006) reads the authored description and tags.
- */
-export const leadingDocComment = (
-	source: string,
-	before: number,
-): string | null => {
-	const head = source.slice(0, before)
-	const close = head.lastIndexOf('*/')
-	if (close === -1) return null
-	const open = head.lastIndexOf('/**', close)
-	if (open === -1) return null
-	if (head.slice(close + 2).trim() !== '') return null
-	return source.slice(open, close + 2)
-}
-
-/** Names declared by a binding pattern (params, declarator ids). */
-export const collectBoundNames = (
-	pattern: unknown,
-	into: Set<string>,
-): void => {
-	if (Array.isArray(pattern)) {
-		for (const p of pattern) collectBoundNames(p, into)
-		return
-	}
-	if (!isNode(pattern)) return
-	switch (pattern.type) {
-		case 'Identifier':
-			into.add(String(pattern.name))
-			return
-		case 'AssignmentPattern':
-			collectBoundNames(pattern.left, into)
-			return
-		case 'ObjectPattern':
-			for (const prop of asArray(pattern.properties)) {
-				if (prop.type === 'RestElement') collectBoundNames(prop.argument, into)
-				else if (prop.type === 'Property') collectBoundNames(prop.value, into)
-			}
-			return
-		case 'ArrayPattern':
-			for (const element of asArray(pattern.elements))
-				collectBoundNames(element, into)
-			return
-		case 'RestElement':
-			collectBoundNames(pattern.argument, into)
-			return
-		default:
-	}
-}
-
-/**
- * JSX text semantics: whitespace touching a newline boundary collapses; a
- * whitespace-only node containing a newline disappears (returns "").
- */
-export const collapseJsxText = (raw: string): string => {
-	if (/^[ \t]*\n/.test(raw)) raw = raw.replace(/^[ \t]*\n[ \t]*/, '')
-	if (/\n[ \t]*$/.test(raw)) raw = raw.replace(/\n[ \t]*$/, '')
-	if (raw.includes('\n')) raw = raw.replace(/\s*\n[ \t]*/g, ' ')
-	return raw
-}
-
-const attrName = (attr: TsrxNode): string =>
-	jsxName(attr.name) ?? String(attr.name)
-
-/** `onClick` → `click`; `onKeyup` → `keyup`. */
-const eventNameFromAttr = (name: string): string => {
-	const rest = name.slice(2)
-	return rest.charAt(0).toLowerCase() + rest.slice(1)
-}
-
-type ExtractContext = {
+export type ExtractContext = {
 	source: string
 	diagnostics: CompileDiagnostic[]
 	/** Names server-known at template evaluation time (args, setup). */
@@ -597,13 +335,25 @@ type ExtractContext = {
 	composeImports: ReadonlyMap<string, string>
 }
 
-const text = (
-	ctx: ExtractContext,
-	node: TsrxNode | null | undefined,
-): string =>
-	node && typeof node.start === 'number' && typeof node.end === 'number'
-		? ctx.source.slice(node.start, node.end)
-		: ''
+/* === Internal Functions === */
+
+/**
+ * The doc comment immediately preceding a declaration, sliced verbatim.
+ * The whitespace-only guard between comment close and declaration keeps a
+ * module-level doc from being mistaken for the component's own when other
+ * statements (type declarations, `declare global`) sit in between. Carried
+ * above the generated `export default defineComponent(` so CEM extraction
+ * (ADR 0023, LT-006) reads the authored description and tags.
+ */
+const leadingDocComment = (source: string, before: number): string | null => {
+	const head = source.slice(0, before)
+	const close = head.lastIndexOf('*/')
+	if (close === -1) return null
+	const open = head.lastIndexOf('/**', close)
+	if (open === -1) return null
+	if (head.slice(close + 2).trim() !== '') return null
+	return source.slice(open, close + 2)
+}
 
 /**
  * When a parse fails, check the error position for signatures of the NEWER
@@ -636,1297 +386,15 @@ const newerGrammarHint = (source: string, error: unknown): string => {
 	return ''
 }
 
-/**
- * Validate a control-flow condition (`@if` test, `@switch` discriminant):
- * server-known at render time (args, setup consts, globals) and never a
- * signal read — the DOM keeps the initially rendered branch.
- */
-const validateCondition = (
-	ctx: ExtractContext,
-	signals: ReadonlyMap<string, SignalIR>,
-	test: TsrxNode,
-	what: string,
-): boolean => {
-	const free = freeIdentifiers(test)
-	for (const global of JS_GLOBALS) free.delete(global)
-	const signalReads = [...free].filter(name => signals.has(name))
-	if (signalReads.length > 0) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				test.start,
-				`${what} reads signal(s) ${signalReads.map(n => `\`${n}\``).join(', ')} — the DOM keeps the initially rendered branch, so a signal condition would silently stop matching. Conditions must derive from args or setup consts evaluated once at render time`,
-			),
-		)
-		return false
-	}
-	const unknown = [...free].filter(name => !ctx.serverKnown.has(name))
-	if (unknown.length > 0) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				test.start,
-				`${what} references non-server-known name(s) ${unknown.map(n => `\`${n}\``).join(', ')} — conditions must evaluate at render time (args and setup); client-side conditional rendering is outside the model`,
-			),
-		)
-		return false
-	}
-	return true
-}
-
-/**
- * Lower an `@if` directive: the condition must be server-known at render
- * time (args, setup names, globals) — client-side conditional rendering is
- * outside the enhance-don't-render model. Branch bodies lower like any
- * children; client constructs must sit on the branch ROOT elements (the
- * analyzer union-addresses them).
- */
-const lowerIf = (
-	ctx: ExtractContext,
-	node: TsrxNode,
-	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
-): (TemplateNode & { kind: 'if' }) | null => {
-	const test = node.test
-	if (!isNode(test)) return null
-	if (!validateCondition(ctx, signals, test, '@if condition')) return null
-	const lowerBranch = (block: unknown): TemplateNode[] =>
-		lowerBodyStatements(
-			ctx,
-			isNode(block) && Array.isArray(block.body) ? block.body : [],
-			signals,
-			fors,
-		)
-	const then = lowerBranch(node.consequent)
-	const alternate = lowerBranch(node.alternate)
-	if (then.length === 0 && alternate.length === 0) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'@if branches must contain output elements',
-			),
-		)
-		return null
-	}
-	return {
-		kind: 'if',
-		testText: text(ctx, test),
-		test,
-		then,
-		alternate,
-		node,
-	}
-}
-
-/**
- * Lower an `@switch` directive (`@case expr: { … }` / `@default: { … }`
- * arms) — the multi-branch sibling of `@if`.
- */
-const lowerSwitch = (
-	ctx: ExtractContext,
-	node: TsrxNode,
-	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
-): (TemplateNode & { kind: 'switch' }) | null => {
-	const discriminant = node.discriminant
-	if (!isNode(discriminant)) return null
-	if (!validateCondition(ctx, signals, discriminant, '@switch discriminant'))
-		return null
-	const rawCases = Array.isArray(node.cases) ? node.cases : []
-	if (rawCases.length === 0) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'@switch must contain at least one @case or @default arm',
-			),
-		)
-		return null
-	}
-	const cases: Array<{ testText: string | null; children: TemplateNode[] }> = []
-	for (const raw of rawCases as TsrxNode[]) {
-		const children = lowerBodyStatements(ctx, raw.consequent, signals, fors)
-		if (children.length === 0) {
-			ctx.diagnostics.push(
-				diagnostic.unsupported(
-					ctx.source,
-					raw.start ?? node.start,
-					'@case/@default arms must contain output elements',
-				),
-			)
-			return null
-		}
-		cases.push({
-			testText: isNode(raw.test) ? text(ctx, raw.test) : null,
-			children,
-		})
-	}
-	return {
-		kind: 'switch',
-		discriminantText: text(ctx, discriminant),
-		discriminant,
-		cases,
-		node,
-	}
-}
-
-/**
- * Lower an `@try { … } @catch (e) { … }` error boundary: a render-time
- * boundary — the server renders the body inside a real try/catch, so a
- * throwing server expression falls back to the catch arm. `@pending` arms
- * (async boundaries) are gated until the LT-012 lowering lands
- * (deriveCell(async …) + isPending(signal) branch routing — the async data
- * itself is authorable today); `@finally` is gated outright.
- */
-/**
- * Lower a control-flow branch body (a statement list): elements, text,
- * fragments, and NESTED control-flow directives — a branch body is a
- * complete output context with the same contract as `lowerChildren`;
- * anything unsupported reports a diagnostic instead of being silently
- * dropped.
- */
-const lowerBodyStatements = (
-	ctx: ExtractContext,
-	statements: unknown,
-	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
-): TemplateNode[] => {
-	const body = Array.isArray(statements) ? statements : []
-	const out: TemplateNode[] = []
-	for (const stmt of body) {
-		if (stmt.type === 'JSXElement') {
-			const tag = jsxName(
-				isNode(stmt.openingElement) ? stmt.openingElement.name : null,
-			)
-			const lowered =
-				tag && /^[A-Z]/.test(tag)
-					? lowerComposeElement(ctx, stmt, tag)
-					: lowerElement(ctx, stmt, signals, fors)
-			if (lowered) out.push(lowered)
-			continue
-		}
-		if (stmt.type === 'JSXText') {
-			const collapsed = collapseJsxText(String(stmt.value ?? ''))
-			if (collapsed) out.push({ kind: 'text', value: collapsed })
-			continue
-		}
-		if (stmt.type === 'JSXFragment') {
-			out.push(...lowerChildren(ctx, stmt, signals, fors))
-			continue
-		}
-		if (isTemplateForOfNode(stmt)) {
-			const lowered = lowerFor(ctx, stmt, signals, fors)
-			if (lowered) out.push(lowered)
-			continue
-		}
-		if (stmt.type === 'JSXIfExpression') {
-			const lowered = lowerIf(ctx, stmt, signals, fors)
-			if (lowered) out.push(lowered)
-			continue
-		}
-		if (stmt.type === 'JSXSwitchExpression') {
-			const lowered = lowerSwitch(ctx, stmt, signals, fors)
-			if (lowered) out.push(lowered)
-			continue
-		}
-		if (stmt.type === 'JSXTryExpression') {
-			const lowered = lowerTry(ctx, stmt, signals, fors)
-			if (lowered) out.push(lowered)
-			continue
-		}
-		if (stmt.type === 'JSXStyleElement') {
-			ctx.diagnostics.push(
-				diagnostic.unsupported(
-					ctx.source,
-					stmt.start,
-					'<style> blocks inside control-flow branches (styles are component-scoped)',
-				),
-			)
-			continue
-		}
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				stmt.start,
-				'Statements inside control-flow branches other than output elements and nested directives',
-			),
-		)
-	}
-	return out
-}
-
-const lowerTry = (
-	ctx: ExtractContext,
-	node: TsrxNode,
-	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
-): (TemplateNode & { kind: 'try' }) | null => {
-	const lowerBlock = (block: unknown): TemplateNode[] =>
-		lowerBodyStatements(
-			ctx,
-			isNode(block) && Array.isArray(block.body) ? block.body : [],
-			signals,
-			fors,
-		)
-	if (isNode(node.pending)) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.pending.start,
-				'@pending arms (async boundaries) await their lowering (LT-012): deriveCell(async …, { initial }) + isPending(signal) branch routing. Async data itself is authorable today — the await lives inside the async arrow, which is legal in the sync setup. Use @try/@catch (a render-time error boundary) meanwhile',
-			),
-		)
-		return null
-	}
-	if (isNode(node.finalizer)) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.finalizer.start,
-				'@finally arms on template @try blocks',
-			),
-		)
-		return null
-	}
-	const children = lowerBlock(node.block)
-	const handler = isNode(node.handler) ? node.handler : null
-	let catchParam: string | null = null
-	let catchChildren: TemplateNode[] = []
-	if (handler) {
-		catchParam = identifierName(handler.param)
-		catchChildren = lowerBlock(handler.body)
-	}
-	if (children.length === 0 && catchChildren.length === 0) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'@try blocks must contain output elements',
-			),
-		)
-		return null
-	}
-	return {
-		kind: 'try',
-		children,
-		catchParam,
-		catchChildren,
-		pendingChildren: null,
-		node,
-	}
-}
-
-type TypeContext = {
-	paramsNode: TsrxNode | null
-	setupInits: Map<string, TsrxNode>
-}
-
-/** Infer a signal's TS-ish value type, for parser and harvest defaults. */
-const inferType = (
-	init: TsrxNode | null,
-	ctx: TypeContext,
-	depth = 0,
-): 'string' | 'number' | 'boolean' | 'unknown' => {
-	if (!init || depth > 6) return 'unknown'
-	switch (init.type) {
-		case 'Literal': {
-			const value = init.value
-			if (typeof value === 'number') return 'number'
-			if (typeof value === 'boolean') return 'boolean'
-			if (typeof value === 'string') return 'string'
-			return 'unknown'
-		}
-		case 'TemplateLiteral':
-			return 'string'
-		case 'Identifier': {
-			const name = String(init.name)
-			const annotation = typeAnnotationForBinding(ctx.paramsNode, name)
-			if (annotation) return typeOfAnnotation(annotation)
-			const setupInit = ctx.setupInits.get(name)
-			if (setupInit && setupInit !== init)
-				return inferType(setupInit, ctx, depth + 1)
-			return 'unknown'
-		}
-		case 'CallExpression':
-		case 'OptionalCallExpression': {
-			const calleeName = identifierName(init.callee)
-			if (calleeName) {
-				const fn = ctx.setupInits.get(calleeName)
-				if (fn && fn !== init) return returnTypeOfFunction(fn, ctx, depth + 1)
-			}
-			return 'unknown'
-		}
-		default:
-			return 'unknown'
-	}
-}
-
-/** Return-type heuristic for setup helper arrows (`(id) => \`panel-${id}\``). */
-const returnTypeOfFunction = (
-	fn: TsrxNode,
-	ctx: TypeContext,
-	depth: number,
-): 'string' | 'number' | 'boolean' | 'unknown' => {
-	if (isNode(fn.returnType)) {
-		const t = typeOfAnnotation(fn.returnType as TsrxNode)
-		if (t !== 'unknown') return t
-	}
-	const body = fn.body
-	if (!isNode(body)) return 'unknown'
-	if (body.type === 'BlockStatement') {
-		const stmts = asArray(body.body)
-		const ret = stmts.find(s => s.type === 'ReturnStatement')
-		if (ret && isNode(ret.argument)) return inferType(ret.argument, ctx, depth)
-		return 'unknown'
-	}
-	return inferType(body, ctx, depth)
-}
-
-const typeAnnotationForBinding = (
-	paramsNode: TsrxNode | null,
-	bindingName: string,
-): TsrxNode | null => {
-	if (!paramsNode || !isNode(paramsNode.typeAnnotation)) return null
-	const wrapped = paramsNode.typeAnnotation as TsrxNode
-	const literal =
-		wrapped.type === 'TSTypeAnnotation' && isNode(wrapped.typeAnnotation)
-			? (wrapped.typeAnnotation as TsrxNode)
-			: wrapped
-	if (literal.type !== 'TSTypeLiteral') return null
-	for (const member of asArray(literal.members)) {
-		if (member.type !== 'TSPropertySignature') continue
-		if (
-			identifierName(member.key) === bindingName &&
-			isNode(member.typeAnnotation)
-		)
-			return member.typeAnnotation as TsrxNode
-	}
-	return null
-}
-
-const typeOfAnnotation = (
-	annotation: TsrxNode,
-): 'string' | 'number' | 'boolean' | 'unknown' => {
-	const inner =
-		annotation.type === 'TSTypeAnnotation' && isNode(annotation.typeAnnotation)
-			? (annotation.typeAnnotation as TsrxNode)
-			: annotation
-	switch (inner.type) {
-		case 'TSStringKeyword':
-			return 'string'
-		case 'TSNumberKeyword':
-			return 'number'
-		case 'TSBooleanKeyword':
-			return 'boolean'
-		default:
-			return 'unknown'
-	}
-}
-
-/**
- * Parse `pass={{ prop: thunk, … }}` entries — shared by raw dashed tags and
- * composed elements (ADR 0023 sub-design 10: one dispatch path, not two). A
- * `{ get, set }` descriptor entry is recognized but not yet lowered (LT-017);
- * anything else is an outright invalid entry.
- */
-const classifyPassEntries = (
-	ctx: ExtractContext,
-	attr: TsrxNode,
-): PassEntryIR[] | { kind: 'invalid'; reason: string } => {
-	const value = attr.value
-	const expr =
-		isNode(value) && value.type === 'JSXExpressionContainer'
-			? value.expression
-			: null
-	if (!isNode(expr) || expr.type !== 'ObjectExpression')
-		return {
-			kind: 'invalid',
-			reason:
-				'pass={{ … }} expects an object literal of prop: thunk entries (pass={{ value: () => x.get() }}).',
-		}
-	const entries: PassEntryIR[] = []
-	for (const prop of asArray(expr.properties)) {
-		const propName = identifierName(prop.key)
-		if (prop.type !== 'Property' || !propName)
-			return {
-				kind: 'invalid',
-				reason: 'pass={{ … }} entries must be named properties.',
-			}
-		const entryValue = prop.value
-		if (isNode(entryValue) && entryValue.type === 'ArrowFunctionExpression') {
-			if (!isNode(entryValue.body))
-				return {
-					kind: 'invalid',
-					reason: `pass entry \`${propName}\` must be a thunk with a body (() => value).`,
-				}
-			entries.push({
-				prop: propName,
-				thunk: entryValue,
-				thunkText: text(ctx, entryValue),
-			})
-			continue
-		}
-		if (isNode(entryValue) && entryValue.type === 'ObjectExpression') {
-			const props = asArray(entryValue.properties)
-			const has = (key: string) =>
-				props.some(
-					p => p.type === 'Property' && (identifierName(p.key) ?? '') === key,
-				)
-			if (has('get') && has('set'))
-				return {
-					kind: 'invalid',
-					reason: `Two-way { get, set } pass entry \`${propName}\` lands with the follow-up milestone (pass() write-back).`,
-				}
-		}
-		return {
-			kind: 'invalid',
-			reason: `pass entry \`${propName}\` must be a thunk (() => value) or a { get, set } descriptor.`,
-		}
-	}
-	return entries
-}
-
-/** Classify one JSXAttribute into the attribute IR. */
-const classifyAttribute = (
-	ctx: ExtractContext,
-	attr: TsrxNode,
-): AttributeIR | { kind: 'invalid'; reason: string } => {
-	const name = attrName(attr)
-	const value = attr.value
-	if (name === 'pass') {
-		const entries = classifyPassEntries(ctx, attr)
-		if ('reason' in entries) return entries
-		return { kind: 'pass', entries }
-	}
-	if (name === 'ref') {
-		const target =
-			isNode(value) && value.type === 'JSXExpressionContainer'
-				? value.expression
-				: value
-		const refName = identifierName(target)
-		if (!refName)
-			return {
-				kind: 'invalid',
-				reason: 'ref={…} expects a bare identifier (ref={textbox}).',
-			}
-		return { kind: 'ref', name: refName }
-	}
-	if (/^on[A-Z]/.test(name)) {
-		const expr =
-			isNode(value) && value.type === 'JSXExpressionContainer'
-				? value.expression
-				: value
-		if (!isNode(expr) || !/Function(Expression)?$/.test(expr.type))
-			return {
-				kind: 'invalid',
-				reason: `Event attribute ${name}={…} must be a function.`,
-			}
-		return {
-			kind: 'event',
-			name,
-			event: eventNameFromAttr(name),
-			handler: expr,
-			handlerText: text(ctx, expr),
-		}
-	}
-	// Dynamic rendering: html={dataRef} — the .tsrx spelling of the upstream
-	// {html expr} keyword (newer grammar than the pinned parser). Only data
-	// references are accepted; the emitters route the value through the
-	// runtime's sanitizeHtml before it reaches the output.
-	if (name === 'html') {
-		const expr =
-			isNode(value) && value.type === 'JSXExpressionContainer'
-				? value.expression
-				: value
-		if (!isNode(expr) || !/^(Identifier|MemberExpression)$/.test(expr.type))
-			return {
-				kind: 'invalid',
-				reason:
-					'html={…} expects a data reference (identifier or member expression) — computed markup and reactive thunks are not supported.',
-			}
-		return {
-			kind: 'html',
-			exprText: text(ctx, expr),
-			node: expr,
-			reactive: false,
-		}
-	}
-	if (!isNode(value)) return { kind: 'static', name, value: null }
-	if (value.type === 'Literal')
-		return { kind: 'static', name, value: String(value.value ?? '') }
-	if (value.type === 'JSXExpressionContainer') {
-		const expr = value.expression
-		if (!isNode(expr)) return { kind: 'static', name, value: '' }
-		if (expr.type === 'ArrowFunctionExpression') {
-			const body = expr.body
-			if (name === 'class' && isNode(body) && body.type === 'ObjectExpression')
-				return {
-					kind: 'class-map',
-					thunkText: text(ctx, expr),
-					thunk: expr,
-					object: body,
-				}
-			if (!isNode(body))
-				return {
-					kind: 'invalid',
-					reason: `Reactive attribute ${name}={…} must be a thunk with a body (() => value).`,
-				}
-			return {
-				kind: 'reactive',
-				name,
-				thunk: expr,
-				thunkText: text(ctx, expr),
-			}
-		}
-		if (expr.type === 'FunctionExpression')
-			return {
-				kind: 'invalid',
-				reason: `Attribute \`${name}\` uses an unsupported function form; write a thunk (() => value).`,
-			}
-		return {
-			kind: 'server',
-			name,
-			exprText: text(ctx, expr),
-			node: expr,
-		}
-	}
-	return {
-		kind: 'invalid',
-		reason: `Attribute \`${name}\` uses an unsupported value form.`,
-	}
-}
-
-/**
- * Classify one JSXAttribute on a composed (PascalCase) element. `ref` keeps
- * its usual meaning; `pass={{ … }}` is the sole client-prop interop channel
- * (ADR 0023 sub-design 10 — same dispatch as raw dashed tags); everything
- * else is a server arg forwarded verbatim into the child's `render<Name>()`
- * call — no reactive-shape inference (amends sub-design 4's raw-element
- * dispatch).
- */
-const classifyComposeAttribute = (
-	ctx: ExtractContext,
-	attr: TsrxNode,
-): ComposeAttrIR | { kind: 'invalid'; reason: string } => {
-	const name = attrName(attr)
-	const value = attr.value
-	if (name === 'pass') {
-		const entries = classifyPassEntries(ctx, attr)
-		if ('reason' in entries) return entries
-		return { kind: 'pass', entries }
-	}
-	if (name === 'ref') {
-		const target =
-			isNode(value) && value.type === 'JSXExpressionContainer'
-				? value.expression
-				: value
-		const refName = identifierName(target)
-		if (!refName)
-			return {
-				kind: 'invalid',
-				reason: 'ref={…} expects a bare identifier (ref={textbox}).',
-			}
-		return { kind: 'ref', name: refName }
-	}
-	if (!isNode(value)) return { kind: 'arg', name, exprText: 'true', node: null }
-	if (value.type === 'Literal')
-		return {
-			kind: 'arg',
-			name,
-			exprText: JSON.stringify(value.value ?? ''),
-			node: null,
-		}
-	if (value.type === 'JSXExpressionContainer') {
-		const expr = value.expression
-		if (!isNode(expr))
-			return { kind: 'invalid', reason: `Attribute \`${name}\` is empty.` }
-		return { kind: 'arg', name, exprText: text(ctx, expr), node: expr }
-	}
-	return {
-		kind: 'invalid',
-		reason: `Attribute \`${name}\` uses an unsupported value form.`,
-	}
-}
-
-/**
- * Lower a composed (PascalCase) element: resolve its tag against the file's
- * `import { Name } from '….tsrx'` map, classify attributes as server args
- * (regardless of value shape), `ref`, or `pass={{ }}` (client-prop interop,
- * ADR 0023 sub-design 10), and diagnose the constructs this milestone does
- * not support yet — children (default-slot substitution, follow-up task).
- */
-const lowerComposeElement = (
-	ctx: ExtractContext,
-	element: TsrxNode,
-	tag: string,
-): (TemplateNode & { kind: 'compose' }) | null => {
-	const source = ctx.composeImports.get(tag)
-	if (!source) {
-		ctx.diagnostics.push(
-			diagnostic.unresolvedComposedComponent(ctx.source, element.start, tag),
-		)
-		return null
-	}
-	const opening = element.openingElement
-	const attrs: ComposeAttrIR[] = []
-	if (isNode(opening) && Array.isArray(opening.attributes)) {
-		for (const attr of asArray(opening.attributes)) {
-			if (attr.type !== 'JSXAttribute') {
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						attr.start,
-						'Spread attributes on a composed element',
-					),
-				)
-				continue
-			}
-			const classified = classifyComposeAttribute(ctx, attr)
-			if ('reason' in classified) {
-				ctx.diagnostics.push(
-					diagnostic.invalidAttribute(
-						ctx.source,
-						attr.start,
-						`${classified.reason} (attribute \`${attrName(attr)}\`)`,
-					),
-				)
-				continue
-			}
-			attrs.push(classified)
-		}
-	}
-	const hasChildren = asArray(element.children).some(
-		child =>
-			child.type !== 'JSXText' ||
-			collapseJsxText(String(child.value ?? '')) !== '',
-	)
-	if (hasChildren)
-		ctx.diagnostics.push(
-			diagnostic.composedElementUnsupported(
-				ctx.source,
-				element.start,
-				'Children (default-slot substitution)',
-			),
-		)
-	return {
-		kind: 'compose',
-		component: tag,
-		source,
-		attrs,
-		children: [],
-		node: element,
-	}
-}
-
-/**
- * Lower template children into IR. `&{expr}` arrives from the parser as a
- * `JSXText("&")` node immediately preceding a `JSXExpressionContainer` —
- * the sigil is detected by that adjacency.
- */
-const lowerChildren = (
-	ctx: ExtractContext,
-	parent: TsrxNode,
-	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
-): TemplateNode[] => {
-	const out: TemplateNode[] = []
-	const children =
-		parent.type === 'JSXElement' || parent.type === 'JSXFragment'
-			? asArray(parent.children)
-			: []
-	let i = 0
-	while (i < children.length) {
-		const child = children[i] as TsrxNode
-		if (child.type === 'JSXText') {
-			const next = children[i + 1] as TsrxNode | undefined
-			const raw = String(child.value ?? '')
-			// `&{expr}` lazy child: the parser emits the sigil as a text node
-			// ENDING in '&' immediately before the expression container — the
-			// '&' may carry leading whitespace when formatted on its own line.
-			if (next?.type === 'JSXExpressionContainer' && raw.endsWith('&')) {
-				const leading = collapseJsxText(raw.slice(0, -1))
-				if (leading) out.push({ kind: 'text', value: leading })
-				const expr = next.expression
-				if (isNode(expr))
-					out.push({
-						kind: 'expr',
-						expr,
-						exprText: text(ctx, expr),
-						lazy: true,
-						node: next as TsrxNode,
-					})
-				i += 2
-				continue
-			}
-			const collapsed = collapseJsxText(raw)
-			if (collapsed) out.push({ kind: 'text', value: collapsed })
-			i += 1
-			continue
-		}
-		if (child.type === 'JSXExpressionContainer') {
-			const expr = child.expression
-			if (isNode(expr))
-				out.push({
-					kind: 'expr',
-					expr,
-					exprText: text(ctx, expr),
-					lazy: false,
-					node: child,
-				})
-			i += 1
-			continue
-		}
-		if (isTemplateForOfNode(child)) {
-			const lowered = lowerFor(ctx, child, signals, fors)
-			if (lowered) out.push(lowered)
-			i += 1
-			continue
-		}
-		if (child.type === 'JSXIfExpression') {
-			const lowered = lowerIf(ctx, child, signals, fors)
-			if (lowered) out.push(lowered)
-			i += 1
-			continue
-		}
-		if (child.type === 'JSXSwitchExpression') {
-			const lowered = lowerSwitch(ctx, child, signals, fors)
-			if (lowered) out.push(lowered)
-			i += 1
-			continue
-		}
-		if (child.type === 'JSXTryExpression') {
-			const lowered = lowerTry(ctx, child, signals, fors)
-			if (lowered) out.push(lowered)
-			i += 1
-			continue
-		}
-		if (
-			child.type === 'JSXForExpression' &&
-			String(child.statementType) === 'ForInStatement'
-		) {
-			ctx.diagnostics.push(
-				diagnostic.unsupported(
-					ctx.source,
-					child.start,
-					'@for-in loops (iterating object keys) — use @for-of over an array',
-				),
-			)
-			i += 1
-			continue
-		}
-		if (child.type === 'JSXStyleElement') {
-			// Style blocks become placeholder elements (tag 'style'); the CSS
-			// is extracted via getStyleElementStylesheet, never rendered.
-			out.push({
-				kind: 'element',
-				tag: 'style',
-				attrs: [],
-				children: [],
-				node: child,
-			})
-			i += 1
-			continue
-		}
-		if (child.type === 'JSXElement') {
-			const tag = jsxName(
-				isNode(child.openingElement) ? child.openingElement.name : null,
-			)
-			const lowered =
-				tag && /^[A-Z]/.test(tag)
-					? lowerComposeElement(ctx, child, tag)
-					: lowerElement(ctx, child, signals, fors)
-			if (lowered) out.push(lowered)
-			i += 1
-			continue
-		}
-		if (child.type === 'JSXFragment') {
-			out.push(...lowerChildren(ctx, child, signals, fors))
-			i += 1
-			continue
-		}
-		i += 1
-	}
-	return out
-}
-
-const lowerElement = (
-	ctx: ExtractContext,
-	element: TsrxNode,
-	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
-): TemplateNode & { kind: 'element' } => {
-	const opening = element.openingElement
-	const tag = jsxName(isNode(opening) ? opening.name : null) ?? ''
-	if (/^[A-Z]/.test(tag))
-		ctx.diagnostics.push(
-			diagnostic.composedElementUnsupported(
-				ctx.source,
-				element.start,
-				`Composed element \`<${tag}>\` in this position (@for output, or another non-child-list context)`,
-			),
-		)
-	const attrs: AttributeIR[] = []
-	if (isNode(opening) && Array.isArray(opening.attributes)) {
-		for (const attr of asArray(opening.attributes)) {
-			if (attr.type !== 'JSXAttribute') {
-				ctx.diagnostics.push(
-					diagnostic.unsupported(ctx.source, attr.start, 'Spread attributes'),
-				)
-				continue
-			}
-			const classified = classifyAttribute(ctx, attr)
-			if ('reason' in classified) {
-				ctx.diagnostics.push(
-					diagnostic.invalidAttribute(
-						ctx.source,
-						attr.start,
-						`${classified.reason} (attribute \`${attrName(attr)}\`)`,
-					),
-				)
-				continue
-			}
-			attrs.push(classified)
-		}
-	}
-	return {
-		kind: 'element',
-		tag,
-		attrs,
-		children: lowerChildren(ctx, element, signals, fors),
-		node: element,
-	}
-}
-
-/**
- * Lower a `@for` loop. Server-data iterables lower to `each()`; reactive
- * `createList` iterables to the milestone-3 reconcile lowering; other
- * reactive sources stay gated (TSRX001).
- */
-const lowerFor = (
-	ctx: ExtractContext,
-	node: TsrxNode,
-	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
-): (TemplateNode & { kind: 'element' }) | null => {
-	const declarations = isNode(node.left) ? asArray(node.left.declarations) : []
-	const itemName =
-		declarations.length === 1 ? (identifierName(declarations[0]?.id) ?? '') : ''
-	if (!itemName) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'@for with a destructuring loop variable',
-			),
-		)
-		return null
-	}
-	if (isNode(node.empty)) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(ctx.source, node.start, '@empty blocks'),
-		)
-		return null
-	}
-	const iterableName = identifierName(node.right)
-	const iterableSignal = iterableName ? signals.get(iterableName) : undefined
-	if (iterableSignal) {
-		if (iterableSignal.constructor !== 'createList') {
-			ctx.diagnostics.push(
-				diagnostic.reactiveForNotSupported(
-					ctx.source,
-					node.start,
-					iterableSignal.name,
-				),
-			)
-			return null
-		}
-		return lowerListFor(ctx, node, itemName, iterableSignal.name, signals, fors)
-	}
-	const bodyStmts = isNode(node.body) ? asArray(node.body.body) : []
-	const hoisted: ForIR['hoisted'] = []
-	let outputNode: TsrxNode | null = null
-	for (const stmt of bodyStmts) {
-		if (stmt.type === 'VariableDeclaration') {
-			if (stmt.kind !== 'const') {
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						stmt.start,
-						'Non-const declarations inside @for bodies',
-					),
-				)
-				continue
-			}
-			for (const decl of asArray(stmt.declarations)) {
-				const declName = identifierName(decl.id)
-				if (!declName || !isNode(decl.init)) {
-					ctx.diagnostics.push(
-						diagnostic.unsupported(
-							ctx.source,
-							stmt.start,
-							'Destructuring declarations inside @for bodies',
-						),
-					)
-					continue
-				}
-				hoisted.push({
-					name: declName,
-					initText: text(ctx, decl.init),
-					node: decl,
-				})
-			}
-			continue
-		}
-		if (stmt.type === 'JSXElement' && !outputNode) {
-			outputNode = stmt
-			continue
-		}
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				stmt.start,
-				'Statements other than const declarations inside @for bodies',
-			),
-		)
-	}
-	if (!outputNode) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'@for bodies must contain an output element',
-			),
-		)
-		return null
-	}
-	const output = lowerElement(ctx, outputNode, signals, fors)
-	if (!output.tag) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'@for output must be a single element',
-			),
-		)
-		return null
-	}
-	const forIR: ForIR = {
-		itemName,
-		indexName: identifierName(node.index),
-		keyText: isNode(node.key) ? text(ctx, node.key) : null,
-		keyName: isNode(node.key) ? identifierName(node.key) : null,
-		listSignal: null,
-		iterableText: text(ctx, node.right as TsrxNode),
-		iterableName,
-		hoisted,
-		output,
-		node,
-	}
-	fors.set(node, forIR)
-	return output
-}
-
-/**
- * Validate the reactive-list body shape (ADR 0023 sub-design 5): statics and
- * event attributes anywhere, exactly one lazy `&{item}` hole (the slot fill),
- * no dynamic attributes, refs, or non-item expressions — those need per-item
- * client bindings beyond the slot-fill contract and are gated so the emitted
- * template is provably complete.
- */
-const validateListBody = (
-	ctx: ExtractContext,
-	output: TemplateNode & { kind: 'element' },
-	itemName: string,
-): void => {
-	let holes = 0
-	const walk = (node: TemplateNode): void => {
-		if (node.kind === 'expr') {
-			const isItemHole =
-				node.lazy &&
-				node.expr.type === 'Identifier' &&
-				node.exprText === itemName
-			if (isItemHole) holes++
-			else if (node.lazy)
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						node.node.start,
-						`Lazy children inside a reactive-list @for body must be the bare item (&{${itemName}}) — the slot fill. &{${node.exprText}} needs per-item bindings outside the milestone-3 subset.`,
-					),
-				)
-			else
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						node.node.start,
-						`Expressions inside a reactive-list @for body must be lazy (&{${itemName}}) — server-data interpolation {${node.exprText}} has no per-item client binding.`,
-					),
-				)
-			return
-		}
-		if (node.kind !== 'element') {
-			if (node.kind === 'if' || node.kind === 'switch' || node.kind === 'try')
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						node.node.start,
-						'Control-flow directives (@if/@switch/@try) inside a reactive-list @for body — the extracted template is static markup',
-					),
-				)
-			return
-		}
-		for (const attr of node.attrs) {
-			if (attr.kind === 'event') continue
-			if (attr.kind === 'static') continue
-			if (attr.kind === 'ref')
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						node.node.start,
-						'ref={…} inside a reactive-list @for body (per-item element refs are bindItem-scoped, not host-scoped)',
-					),
-				)
-			else
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						node.node.start,
-						`Dynamic attribute \`${'name' in attr ? attr.name : attr.kind}\` inside a reactive-list @for body — per-item attribute bindings are outside the milestone-3 subset`,
-					),
-				)
-		}
-		for (const child of node.children) walk(child)
-	}
-	walk(output)
-	if (holes !== 1) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				output.node.start,
-				`A reactive-list @for body must render the item exactly once via &{${itemName}} — that hole is the template slot the client fills (found ${holes}).`,
-			),
-		)
-	}
-}
-
-const lowerListFor = (
-	ctx: ExtractContext,
-	node: TsrxNode,
-	itemName: string,
-	listSignal: string,
-	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
-): (TemplateNode & { kind: 'element' }) | null => {
-	const indexNode = isNode(node.index) ? node.index : null
-	const indexName = identifierName(indexNode)
-	if (indexName) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				indexNode?.start,
-				'Index bindings in a reactive-list @for — index identity does not survive keyed reconciliation',
-			),
-		)
-		return null
-	}
-	let keyName: string | null = null
-	if (isNode(node.key)) {
-		keyName = identifierName(node.key)
-		if (!keyName) {
-			ctx.diagnostics.push(
-				diagnostic.unsupported(
-					ctx.source,
-					node.key.start,
-					'The key clause of a reactive-list @for must name the key binding (a bare identifier, e.g. `key k`) — it becomes reconcile() bindItem’s key parameter',
-				),
-			)
-			return null
-		}
-	}
-	if (itemName === 'first' || keyName === 'first' || itemName === 'element') {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'Loop variable or key binding named `first`/`element` — reserved parameters of reconcile() bindItem',
-			),
-		)
-		return null
-	}
-	const bodyStmts = isNode(node.body) ? asArray(node.body.body) : []
-	let outputNode: TsrxNode | null = null
-	for (const stmt of bodyStmts) {
-		if (stmt.type === 'JSXElement' && !outputNode) {
-			outputNode = stmt
-			continue
-		}
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				stmt.start,
-				stmt.type === 'VariableDeclaration'
-					? 'Hoisted consts inside a reactive-list @for body (derive at use sites; per-item const rebinding is outside the milestone-3 subset)'
-					: 'Statements other than the output element inside a reactive-list @for body',
-			),
-		)
-	}
-	if (!outputNode) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'@for bodies must contain an output element',
-			),
-		)
-		return null
-	}
-	const output = lowerElement(ctx, outputNode, signals, fors)
-	validateListBody(ctx, output, itemName)
-	const forIR: ForIR = {
-		itemName,
-		indexName: null,
-		keyText: isNode(node.key) ? text(ctx, node.key) : null,
-		keyName,
-		listSignal,
-		iterableText: text(ctx, node.right as TsrxNode),
-		iterableName: listSignal,
-		hoisted: [],
-		output,
-		node,
-	}
-	fors.set(node, forIR)
-	return output
-}
-
-/**
- * Extract and validate `export const config = { … }` — extension activation
- * (ADR 0023 sub-design 8). Unknown keys, wrong value shapes, and combined
- * form variants are errors; the observedAttributes ⊆ Parser-expose check
- * happens after the setup loop (expose is parsed later in source order).
- */
-const readConfig = (ctx: ExtractContext, stmt: TsrxNode): ConfigIR | null => {
-	const decl =
-		stmt.type === 'ExportNamedDeclaration' && isNode(stmt.declaration)
-			? stmt.declaration
-			: stmt
-	if (decl.type !== 'VariableDeclaration' || decl.kind !== 'const') return null
-	const declarator = asArray(decl.declarations)[0] ?? null
-	if (identifierName(declarator?.id) !== 'config' || !isNode(declarator?.init))
-		return null
-	const init = declarator.init
-	if (init.type !== 'ObjectExpression') {
-		ctx.diagnostics.push(
-			diagnostic.invalidConfig(
-				ctx.source,
-				decl.start,
-				'`export const config` must be an object literal.',
-			),
-		)
-		return null
-	}
-	const config: ConfigIR = { form: null, observedAttributes: [] }
-	for (const prop of asArray(init.properties)) {
-		if (prop.type !== 'Property') continue
-		const key = identifierName(prop.key)
-		const value = prop.value
-		if (!key || !isNode(value)) continue
-		if (key === 'formAssociated' || key === 'formAssociatedCheckbox') {
-			if (!(value.type === 'Literal' && value.value === true)) {
-				ctx.diagnostics.push(
-					diagnostic.invalidConfig(
-						ctx.source,
-						prop.start,
-						`config.${key} must be \`true\`.`,
-					),
-				)
-				continue
-			}
-			if (config.form) {
-				ctx.diagnostics.push(
-					diagnostic.invalidConfig(
-						ctx.source,
-						prop.start,
-						'config cannot combine formAssociated and formAssociatedCheckbox — the runtime throws ExtensionCollisionError.',
-					),
-				)
-				continue
-			}
-			config.form = key === 'formAssociated' ? 'value' : 'checked'
-		} else if (key === 'observedAttributes') {
-			if (value.type !== 'ArrayExpression') {
-				ctx.diagnostics.push(
-					diagnostic.invalidConfig(
-						ctx.source,
-						prop.start,
-						'config.observedAttributes must be an array of string literals.',
-					),
-				)
-				continue
-			}
-			for (const element of asArray(value.elements)) {
-				if (
-					isNode(element) &&
-					element.type === 'Literal' &&
-					typeof element.value === 'string'
-				)
-					config.observedAttributes.push(String(element.value))
-				else
-					ctx.diagnostics.push(
-						diagnostic.invalidConfig(
-							ctx.source,
-							isNode(element) ? element.start : value.start,
-							'config.observedAttributes must contain string literals only.',
-						),
-					)
-			}
-		} else {
-			ctx.diagnostics.push(
-				diagnostic.invalidConfig(
-					ctx.source,
-					prop.start,
-					`Unknown config key \`${key}\`. Known keys: formAssociated, formAssociatedCheckbox, observedAttributes.`,
-				),
-			)
-		}
-	}
-	return config
-}
-
-/**
- * Named imports of other `.tsrx` modules (ADR 0023 sub-design 10): local
- * binding name → import specifier resolved to a repo-relative path.
- * `filename` is itself repo-relative, so the specifier resolves against its
- * directory. Only `.tsrx` specifiers compose — anything else (a `.ts`
- * component, a library import) is not a composable import.
- */
-const parseComposeImports = (
-	ast: TsrxNode,
-	filename: string,
-): Map<string, string> => {
-	const imports = new Map<string, string>()
-	const dir = posix.dirname(filename)
-	for (const stmt of asArray(ast.body)) {
-		if (stmt.type !== 'ImportDeclaration') continue
-		const specifierNode = stmt.source
-		const specifier =
-			isNode(specifierNode) &&
-			specifierNode.type === 'Literal' &&
-			typeof specifierNode.value === 'string'
-				? specifierNode.value
-				: null
-		if (!specifier || !specifier.endsWith('.tsrx')) continue
-		const resolved = posix.normalize(posix.join(dir, specifier))
-		for (const spec of asArray(stmt.specifiers)) {
-			if (spec.type !== 'ImportSpecifier') continue
-			const local = identifierName(spec.local)
-			if (local) imports.set(local, resolved)
-		}
-	}
-	return imports
-}
-
 /* === Exported Functions === */
+
+/**
+ * Whether an AST node is a `@for` loop — a thin re-export of `@tsrx/core`'s
+ * own predicate so `lower-template.ts` doesn't need its own `@tsrx/core`
+ * value import (this file stays the sole one, mirroring `isVoidTag` below).
+ */
+export const isForOfNode = (node: TsrxNode): boolean =>
+	isTemplateForOfNode(node)
 
 /**
  * Parse and extract the single exported component from a `.tsrx` source.
@@ -2047,18 +515,18 @@ export const compileSource = (
 			const init = (decl as TsrxNode).init as TsrxNode
 			setupInits.set(declName, init)
 			setup.push({
-				text: text(ctx, stmt),
+				text: text(ctx.source, stmt),
 				range: {
 					start: typeof stmt.start === 'number' ? stmt.start : 0,
 					end: typeof stmt.end === 'number' ? stmt.end : 0,
 				},
 			})
 			const calleeName = identifierName(init.callee)
-			if (calleeName && SIGNAL_CTORS.has(calleeName)) {
+			if (calleeName && SIGNAL_CONSTRUCTORS.has(calleeName)) {
 				const args = asArray(init.arguments)
 				const signal: SignalIR = {
 					name: declName,
-					text: text(ctx, init),
+					text: text(ctx.source, init),
 					textStart: typeof init.start === 'number' ? init.start : 0,
 					constructor: calleeName as SignalConstructor,
 					init: args[0] ?? null,
@@ -2077,7 +545,7 @@ export const compileSource = (
 			stmt.type === 'ExpressionStatement' &&
 			identifierName(expression?.callee) === 'expose'
 		) {
-			exposeText = text(ctx, expression as TsrxNode)
+			exposeText = text(ctx.source, expression as TsrxNode)
 			exposeRange = {
 				start:
 					typeof (expression as TsrxNode).start === 'number'
@@ -2119,7 +587,7 @@ export const compileSource = (
 						const fallback = asArray(value.arguments)[0] ?? null
 						parserExposeProps.set(propName, {
 							parser: callee,
-							fallbackText: fallback ? text(ctx, fallback) : null,
+							fallbackText: fallback ? text(ctx.source, fallback) : null,
 						})
 						exposeAmbients.add(callee)
 					} else if (callee === 'defineMethod') {
@@ -2149,7 +617,7 @@ export const compileSource = (
 			}
 			if (bad.length === 0) {
 				clientSetup.push({
-					text: text(ctx, stmt),
+					text: text(ctx.source, stmt),
 					range: {
 						start: typeof stmt.start === 'number' ? stmt.start : 0,
 						end: typeof stmt.end === 'number' ? stmt.end : 0,
@@ -2239,23 +707,23 @@ export const compileSource = (
 			(stmt.declaration.type === 'TSTypeAliasDeclaration' ||
 				stmt.declaration.type === 'TSInterfaceDeclaration')
 		) {
-			typeDecls.push(text(ctx, stmt))
+			typeDecls.push(text(ctx.source, stmt))
 			const declName = identifierName(stmt.declaration.id)
 			if (declName === `${name}Props`) propsTypeName = declName
 		}
 		if (stmt.type === 'TSModuleDeclaration' && String(stmt.kind) === 'global')
-			globalDecl = text(ctx, stmt)
+			globalDecl = text(ctx.source, stmt)
 	}
 	// observedAttributes only fires for Parser-backed initializers — a name
 	// that is not Parser-exposed would make the extension silently inert.
 	if (config)
-		for (const attrName of config.observedAttributes) {
-			if (!parserExposeProps.has(attrName))
+		for (const attr of config.observedAttributes) {
+			if (!parserExposeProps.has(attr))
 				ctx.diagnostics.push(
 					diagnostic.invalidConfig(
 						source,
 						undefined,
-						`config.observedAttributes names \`${attrName}\`, which is not a Parser-exposed prop — the extension would be inert. Declare it as expose({ ${attrName}: asString(…) }).`,
+						`config.observedAttributes names \`${attr}\`, which is not a Parser-exposed prop — the extension would be inert. Declare it as expose({ ${attr}: asString(…) }).`,
 					),
 				)
 		}
@@ -2275,7 +743,7 @@ export const compileSource = (
 					name,
 					source,
 					tag: root.tag,
-					paramsText: text(ctx, paramsNode),
+					paramsText: text(ctx.source, paramsNode),
 					paramNames: [...paramNames],
 					setup,
 					clientSetup,

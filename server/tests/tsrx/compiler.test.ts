@@ -4,12 +4,8 @@
  */
 import { describe, expect, test } from 'bun:test'
 import { compileComponent } from '../../tsrx'
-import {
-	collapseJsxText,
-	compileSource,
-	freeIdentifiers,
-	type TemplateNode,
-} from '../../tsrx/compiler'
+import { collapseJsxText, freeIdentifiers } from '../../tsrx/ast-utils'
+import { compileSource, type TemplateNode } from '../../tsrx/compiler'
 
 type ElementNode = Extract<TemplateNode, { kind: 'element' }>
 

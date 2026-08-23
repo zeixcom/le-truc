@@ -16,7 +16,7 @@ import {
 	CONTEXT_NAMES,
 	PARSER_FACTORIES,
 	SIGNAL_CONSTRUCTORS,
-} from '../../tsrx/compiler'
+} from '../../tsrx/ast-utils'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 const GLOBALS = fs.readFileSync(

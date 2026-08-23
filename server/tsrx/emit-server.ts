@@ -18,14 +18,12 @@
  */
 
 import type { TsrxNode } from '@tsrx/core'
+import { freeIdentifiers, JS_GLOBALS, MANAGED_TEXT_PROPS } from './ast-utils'
 import {
 	type AttributeIR,
 	type ComponentIR,
 	type ForIR,
-	freeIdentifiers,
 	isVoidTag,
-	JS_GLOBALS,
-	MANAGED_TEXT_PROPS,
 	type TemplateNode,
 } from './compiler'
 import { lineStartsInTemplate } from './indent'

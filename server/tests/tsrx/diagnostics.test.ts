@@ -432,13 +432,13 @@ describe('rewrite-rule enforcement', () => {
 		expect(hit?.message).toContain('`ghost`')
 	})
 
-	test('mediated { get, set } pass entry is gated as a follow-up milestone', () => {
+	test('a { get, set } pass entry missing set is invalid (TSRX006)', () => {
 		const source = `export function C({}: {})
 	@{
 		const value = createCell('x')
 		expose({ value: value.get })
 		<>
-			<c-el pass={{ value: { get: () => value.get(), set: (v: string) => value.set(v) } }}>ok</c-el>
+			<c-el pass={{ value: { get: () => value.get() } }}>ok</c-el>
 			<style>c-el { color: red }</style>
 		</>
 	}`

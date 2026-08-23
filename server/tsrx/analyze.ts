@@ -18,14 +18,17 @@
 
 import type { TsrxNode } from '@tsrx/core'
 import {
-	type AttributeIR,
 	CONTEXT_NAMES,
-	type ComponentIR,
-	type ForIR,
 	freeIdentifiers,
 	JS_GLOBALS,
 	MANAGED_TEXT_PROPS,
-	type TemplateNode,
+} from './ast-utils'
+import type {
+	AttributeIR,
+	ComponentIR,
+	ForIR,
+	PassEntryIR,
+	TemplateNode,
 } from './compiler'
 import type { CompileDiagnostic } from './diagnostics'
 import { diagnostic } from './diagnostics'
@@ -201,6 +204,10 @@ export type TopEffectPlan =
 			thunkText: string
 			sourceStart: number | undefined
 			sourceEnd: number | undefined
+			/** `{ get, set }` descriptor's write-back accessor (LT-017). */
+			setThunkText: string | undefined
+			setSourceStart: number | undefined
+			setSourceEnd: number | undefined
 	  }
 	| {
 			kind: 'on'
@@ -683,6 +690,51 @@ export const analyzeClient = (
 				!JS_GLOBALS.has(name) &&
 				!CONTEXT_NAMES.has(name),
 		)
+
+	/**
+	 * Validate and lower one target's `pass={{ }}` entries into `pass` effect
+	 * plans — shared by raw dashed-tag elements and composed elements, the
+	 * two `pass={{ }}` addressing paths (ADR 0023 sub-design 10).
+	 */
+	const emitPassEntries = (entries: PassEntryIR[], query: string): void => {
+		for (const entry of entries) {
+			collectAmbient(entry.thunk)
+			const bad = badFreeNames(entry.thunk)
+			if (bad.length > 0) {
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						entry.thunk.start,
+						`pass entry \`${entry.prop}\` references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
+					),
+				)
+			}
+			if (entry.setThunk) {
+				collectAmbient(entry.setThunk)
+				const badSet = badFreeNames(entry.setThunk)
+				if (badSet.length > 0) {
+					diagnostics.push(
+						diagnostic.unsupported(
+							source,
+							entry.setThunk.start,
+							`pass entry \`${entry.prop}\` (set) references server-only name(s) ${badSet.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
+						),
+					)
+				}
+			}
+			effects.push({
+				kind: 'pass',
+				query,
+				prop: entry.prop,
+				thunkText: entry.thunkText,
+				sourceStart: entry.thunk.start,
+				sourceEnd: entry.thunk.end,
+				setThunkText: entry.setThunkText,
+				setSourceStart: entry.setThunk?.start,
+				setSourceEnd: entry.setThunk?.end,
+			})
+		}
+	}
 
 	const loopFor = (node: TemplateNode): ForIR | null =>
 		[...component.fors.values()].find(f => f.output === node) ?? null
@@ -1547,27 +1599,7 @@ export const analyzeClient = (
 					)
 					continue
 				}
-				for (const entry of attr.entries) {
-					collectAmbient(entry.thunk)
-					const bad = badFreeNames(entry.thunk)
-					if (bad.length > 0) {
-						diagnostics.push(
-							diagnostic.unsupported(
-								source,
-								entry.thunk.start,
-								`pass entry \`${entry.prop}\` references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
-							),
-						)
-					}
-					effects.push({
-						kind: 'pass',
-						query,
-						prop: entry.prop,
-						thunkText: entry.thunkText,
-						sourceStart: entry.thunk.start,
-						sourceEnd: entry.thunk.end,
-					})
-				}
+				emitPassEntries(attr.entries, query)
 			} else if (attr.kind === 'class-map') {
 				collectAmbient(attr.object)
 				for (const key of classMapKeys(attr.object)) {
@@ -1823,27 +1855,10 @@ export const analyzeClient = (
 			return
 		}
 		const query = addQuery(refAttr.name, childTag, 'one')
-		for (const entry of passAttrs.flatMap(a => a.entries)) {
-			collectAmbient(entry.thunk)
-			const bad = badFreeNames(entry.thunk)
-			if (bad.length > 0) {
-				diagnostics.push(
-					diagnostic.unsupported(
-						source,
-						entry.thunk.start,
-						`pass entry \`${entry.prop}\` references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
-					),
-				)
-			}
-			effects.push({
-				kind: 'pass',
-				query,
-				prop: entry.prop,
-				thunkText: entry.thunkText,
-				sourceStart: entry.thunk.start,
-				sourceEnd: entry.thunk.end,
-			})
-		}
+		emitPassEntries(
+			passAttrs.flatMap(a => a.entries),
+			query,
+		)
 	}
 
 	const emitTopEffects = (node: TemplateNode): void => {

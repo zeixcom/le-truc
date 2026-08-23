@@ -107,6 +107,53 @@ describe('pass={{ }} on raw dashed custom-element tags', () => {
 		expect(component.clientCode).toContain('bindAttribute')
 	})
 
+	test('a { get, set } descriptor entry lowers to a two-way pass()', () => {
+		const source = `export function C({}: {})
+	@{
+		const value = createCell('x')
+		expose({ value: value.get })
+		<>
+			<c-el>
+				<span>&{value}</span>
+				<basic-child pass={{ value: { get: () => value.get(), set: v => value.set(v) } }}></basic-child>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['basic-child']),
+		)
+		if (!component)
+			throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+		expect(component.clientCode).toContain(
+			'pass(basicChild, { value: { get: () => value.get(), set: v => value.set(v) } })',
+		)
+	})
+
+	test('a bare thunk entry still emits getter-only pass()', () => {
+		const source = `export function C({}: {})
+	@{
+		<>
+			<c-el>
+				<basic-child pass={{ label: () => 'x' }}></basic-child>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['basic-child']),
+		)
+		if (!component)
+			throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+		expect(component.clientCode).toContain(
+			"pass(basicChild, { label: { get: () => 'x' } })",
+		)
+	})
+
 	test('pass={{ }} with a non-object value is invalid (TSRX006)', () => {
 		const source = `export function C({}: {})
 	@{
