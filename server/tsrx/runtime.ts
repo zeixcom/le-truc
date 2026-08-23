@@ -71,9 +71,60 @@ export const createStore = <T>(initial: T): ServerCell<T> => createCell(initial)
 /** `createState(initial)` → same box as createCell (the v2 name). */
 export const createState = <T>(initial: T): ServerCell<T> => createCell(initial)
 
-/** `deriveCell(fn)` → box over `fn()` evaluated once. */
-export const deriveCell = <T>(compute: () => T): ServerCell<T> =>
-	createCell(compute())
+/**
+ * Marks a `ServerCell` as pending (ADR 0023 sub-design 13, async boundaries,
+ * LT-012) — never exposed on the type; `isPending` is the only sanctioned way
+ * to read it.
+ */
+const ASYNC_PENDING = Symbol('tsrx-async-pending')
+
+/** Runtime check for an `async` function, without invoking it. */
+const isAsyncFunction = (fn: (...args: never[]) => unknown): boolean =>
+	(fn as { constructor?: { name?: string } })?.constructor?.name ===
+	'AsyncFunction'
+
+/**
+ * `deriveCell(fn, options?)` → box over `fn()` evaluated once, UNLESS `fn` is
+ * an `async` function (ADR 0023 sub-design 13): the server render is
+ * synchronous and never awaits, so an async compute is never invoked at
+ * all — calling it would produce a dangling, uncaught Promise. Instead: an
+ * `{ initial }` option seeds the retained value directly (the `ok` arm,
+ * matching the client's own no-JS-safe seed); otherwise the cell is PENDING
+ * at render time (the `nil`/`@pending` arm) — `.get()` throws if read without
+ * an `isPending()` guard, same contract a real Task-backed cell enforces.
+ * A SYNC compute function's behavior is completely unchanged from before
+ * this feature landed — existing non-async `deriveCell` usage (e.g. a
+ * `description` memo) is unaffected.
+ */
+export const deriveCell = <T>(
+	compute: () => T | Promise<T>,
+	options?: { initial?: T },
+): ServerCell<T> => {
+	if (!isAsyncFunction(compute as (...args: never[]) => unknown))
+		return createCell(compute() as T)
+	if (options && 'initial' in options) return createCell(options.initial as T)
+	return {
+		get: () => {
+			throw new Error(
+				'deriveCell(...) is pending (no { initial } seed) — read it only inside an isPending()-guarded branch (ADR 0023 async boundaries).',
+			)
+		},
+		set: () => {},
+		[ASYNC_PENDING]: true,
+	} as ServerCell<T>
+}
+
+/**
+ * Whether an async-derived cell is pending at render time (ADR 0023 sub-
+ * design 13) — `@try`/`@pending`/`@catch` async boundaries route on this,
+ * mirroring `@zeix/cause-effect`'s real `isPending()` behaviorally (a
+ * different underlying representation server-side, since the server shim
+ * never runs the reactive graph).
+ */
+export const isPending = (signal: unknown): boolean =>
+	!!signal &&
+	typeof signal === 'object' &&
+	(signal as Record<symbol, unknown>)[ASYNC_PENDING] === true
 
 /** `deriveList(fn)` → list box over `fn()` evaluated once. */
 export const deriveList = <T>(compute: () => Iterable<T>): ServerList<T> =>

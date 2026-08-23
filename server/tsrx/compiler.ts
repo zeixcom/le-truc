@@ -26,6 +26,7 @@ import {
 } from '@tsrx/core'
 import {
 	asArray,
+	CLIENT_ONLY_PRIMITIVES,
 	CONTEXT_NAMES,
 	collectBoundNames,
 	freeIdentifiers,
@@ -567,6 +568,48 @@ export const compileSource = (
 				}
 				signals.push(signal)
 				signalByName.set(declName, signal)
+			} else if (init.type === 'ConditionalExpression') {
+				// A ternary between two constructor calls isn't recognized as a
+				// signal at all (no single `.callee`) — diagnose it explicitly
+				// rather than silently treating it as an ordinary setup const
+				// (ADR 0023 sub-design 12).
+				const consequentName = identifierName(
+					(init.consequent as TsrxNode | undefined)?.callee,
+				)
+				const alternateName = identifierName(
+					(init.alternate as TsrxNode | undefined)?.callee,
+				)
+				if (
+					consequentName &&
+					SIGNAL_CONSTRUCTORS.has(consequentName) &&
+					alternateName &&
+					SIGNAL_CONSTRUCTORS.has(alternateName)
+				) {
+					ctx.diagnostics.push(
+						diagnostic.conditionalSignalConstructor(
+							source,
+							stmt.start,
+							declName,
+						),
+					)
+				}
+			} else {
+				// A plain setup const calling a client-only primitive directly —
+				// `component.setup` is emitted verbatim into the SERVER render
+				// function too, where these don't exist (ADR 0023 sub-design 12).
+				const badPrimitives = [...freeIdentifiers(init)]
+					.filter(n => CLIENT_ONLY_PRIMITIVES.has(n))
+					.sort()
+				if (badPrimitives.length > 0) {
+					ctx.diagnostics.push(
+						diagnostic.clientOnlySetupConst(
+							source,
+							stmt.start,
+							declName,
+							badPrimitives,
+						),
+					)
+				}
 			}
 			continue
 		}

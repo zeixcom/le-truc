@@ -142,7 +142,7 @@ describe('client golden — convergence with the hand-written trio', () => {
 			"\t[formAssociated(), observedAttributes(['value'])],",
 		)
 		expect(code).toContain(
-			"import { asString, bindAttribute, bindProperty, bindText, createCell, defineComponent, defineMethod, formAssociated, observedAttributes } from '@zeix/le-truc'",
+			"import { asString, bindAttribute, bindProperty, bindText, createCell, defineComponent, defineMethod, deriveCell, formAssociated, observedAttributes } from '@zeix/le-truc'",
 		)
 		expect(code).toContain(
 			"import type { FormAssociatedElement } from '@zeix/le-truc'",
@@ -176,8 +176,24 @@ describe('client golden — convergence with the hand-written trio', () => {
 			"watch(() => host.value, bindProperty(input, 'value'))",
 		)
 		// Managed form prop as watch source — exists only on FormFactoryContext
-		expect(code).toContain('const p = first(\'p[role="alert"]\')')
-		expect(code).toContain("watch('validationMessage', bindText(p))")
+		// (named p2: the description paragraph claimed `p` first, harvested
+		// via arg-substitution rather than a direct site — ADR 0023 sub-design 12)
+		expect(code).toContain('const p2 = first(\'p[role="alert"]\')')
+		expect(code).toContain("watch('validationMessage', bindText(p2))")
+		// description: a deriveCell harvested via arg-substitution (LT-024) —
+		// the raw template is traced to the paragraph's own data-remaining
+		// attribute (not the root), and `maxlength` to the input's plain
+		// attribute — both descendant sites, not the root's own mirror.
+		expect(code).toContain('const p = first(\'p[class="description"]\')')
+		expect(code).toContain('const descriptionCell = deriveCell(() => {')
+		expect(code).toContain(
+			"const template = (p?.getAttribute('data-remaining') ?? '');",
+		)
+		expect(code).toContain(
+			"Number((input.getAttribute('maxlength') ?? '')) > 0",
+		)
+		expect(code).toContain('if (p) {')
+		expect(code).toContain('watch(descriptionCell, bindText(p))')
 	})
 
 	test('form-checkbox: formAssociatedCheckbox leads, checked mirror, return-update handler', () => {

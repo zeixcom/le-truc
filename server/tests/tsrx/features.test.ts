@@ -170,20 +170,127 @@ describe('@try — error boundaries', () => {
 	})
 })
 
-describe('@pending — async boundaries (gated)', () => {
-	test('pending arm is TSRX005 with the lowering reason', () => {
-		const { diagnostics } = compiled(`@try {
-			<user-profile id={1} />
-		} @pending {
-			<p>Loading</p>
-		} @catch (e) {
-			<p>Failed</p>
-		}`)
-		const hit = diagnostics.find(d => d.message.includes('@pending arms'))
-		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('isPending(signal)')
-		// Async data is authorable TODAY — the message must not claim otherwise
-		expect(hit?.message).toContain('deriveCell(async')
+describe('@pending — async boundaries (ADR 0023 sub-design 13, LT-012)', () => {
+	const asyncComponent = (deriveExpr: string): string =>
+		`export function C({}: {})
+	@{
+		const data = deriveCell(${deriveExpr})
+		expose({ data: data.get })
+		<>
+			<c-el>
+				@try {
+					<div class="content">&{data}</div>
+				} @pending {
+					<p class="loading">Loading</p>
+				} @catch (e) {
+					<p class="error">&{e.message}</p>
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+
+	test('no @catch is diagnosed — an async boundary needs all three arms routed together', () => {
+		const { diagnostics } = compileComponent(
+			`export function C({}: {})
+	@{
+		const data = deriveCell(async () => 'x')
+		expose({ data: data.get })
+		<>
+			<c-el>
+				@try {
+					<div class="content">&{data}</div>
+				} @pending {
+					<p class="loading">Loading</p>
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.message.includes('requires a @catch'))).toBe(
+			true,
+		)
+	})
+
+	test('a @try body with no lazy reference to a deriveCell signal is diagnosed', () => {
+		const { diagnostics } = compileComponent(
+			`export function C({}: {})
+	@{
+		const data = deriveCell(async () => 'x')
+		expose({ data: data.get })
+		<>
+			<c-el>
+				@try {
+					<div class="content">static</div>
+				} @pending {
+					<p class="loading">Loading</p>
+				} @catch (e) {
+					<p class="error">&{e.message}</p>
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.some(d => d.message.includes('drives isPending() routing')),
+		).toBe(true)
+	})
+
+	test('pending arm renders when the async signal has no { initial } seed (isPending at render time)', async () => {
+		const { component, diagnostics } = compileComponent(
+			asyncComponent("async () => 'loaded'"),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('async fixture must compile')
+		ensureEmitted('feat-async', component.serverCode)
+		const html = await render('feat-async', {})
+		expect(html).toContain('<p class="loading">Loading</p>')
+		expect(html).toContain('hidden class="content"')
+		expect(html).toContain('hidden class="error"')
+	})
+
+	test('the try body renders (ok) when { initial } seeds a retained value', async () => {
+		const { component, diagnostics } = compileComponent(
+			asyncComponent("async () => 'loaded', { initial: 'seed' }"),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('async fixture must compile')
+		ensureEmitted('feat-async-ok', component.serverCode)
+		const html = await render('feat-async-ok', {})
+		expect(html).toContain('<div class="content">seed</div>')
+		expect(html).toContain('hidden class="loading"')
+		expect(html).toContain('hidden class="error"')
+	})
+
+	test('client codegen: one watch() call toggles all three roots, no client DOM creation', () => {
+		const { component, diagnostics } = compileComponent(
+			asyncComponent("async () => 'loaded', { initial: 'seed' }"),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		const code = component?.clientCode ?? ''
+		// watch/first are FactoryContext members (destructured), not module
+		// imports — only deriveCell/defineComponent come from '@zeix/le-truc'.
+		expect(code).toContain('({ expose, first, watch }) => {')
+		expect(code).toContain('watch(data, {')
+		expect(code).toContain('ok: value => {')
+		expect(code).toContain('.hidden = true')
+		expect(code).toContain('.hidden = false')
+		expect(code).toContain('.textContent = String(value)')
+		expect(code).toContain('nil: () => {')
+		expect(code).toContain('err: error => {')
+		expect(code).toContain('.textContent = String(error.message)')
 	})
 })
 

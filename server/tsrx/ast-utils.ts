@@ -47,6 +47,22 @@ export const MANAGED_TEXT_PROPS: ReadonlySet<string> = new Set<string>([
 ])
 
 /**
+ * Client-only context helpers (query/effect primitives) that exist only in
+ * the generated client factory's context object — never in the server render
+ * function's scope, even though `component.setup`'s plain `const` statements
+ * are emitted verbatim into both (ADR 0023 sub-design 12). A setup const that
+ * calls one of these directly is silently broken server-side; diagnosed as
+ * TSRX013 rather than left to surface as a raw tsc "cannot find name" error.
+ */
+export const CLIENT_ONLY_PRIMITIVES: ReadonlySet<string> = new Set<string>([
+	'first',
+	'all',
+	'watch',
+	'on',
+	'pass',
+])
+
+/**
  * JS standard globals never count against dependency provability — reading
  * `String(...)` does not make a thunk unprovable.
  */

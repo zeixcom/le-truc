@@ -486,4 +486,39 @@ describe('rewrite-rule enforcement', () => {
 		expect(hits.length).toBeGreaterThan(0)
 		expect(hits.some(h => h.message.includes('span'))).toBe(true)
 	})
+
+	test('a signal conditionally choosing between two constructors is TSRX013', () => {
+		const source = `export function C({ big = false }: { big?: boolean })
+	@{
+		const n = big ? deriveCell(() => 1) : createCell(0)
+		expose({ n: n.get })
+		<>
+			<c-el><span>&{n}</span></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX013')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('`n`')
+		expect(hit?.message).toContain('conditionally chooses')
+	})
+
+	test('a plain setup const calling a client-only primitive directly is TSRX013', () => {
+		const source = `export function C({}: {})
+	@{
+		const n = createCell(1)
+		const el = first('.foo')
+		expose({ n: n.get })
+		<>
+			<c-el><span>&{n}</span></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX013')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('`el`')
+		expect(hit?.message).toContain('`first`')
+	})
 })

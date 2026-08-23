@@ -293,6 +293,110 @@ export const emitServerModule = (
 			lines.push(`${tab(depth)}}`)
 			return
 		}
+		if (node.kind === 'try' && node.pendingChildren !== null) {
+			// Async boundary (ADR 0023 sub-design 13, LT-012): all three arms
+			// render UNCONDITIONALLY (analyzeClient already proved each is a
+			// single root element and found the guarded signal — errors would
+			// have failed the build before emitServerModule runs), each
+			// `hidden` unless it's the arm that won at render time. The
+			// client's later `watch(signal, { ok, err, nil })` flips the same
+			// `hidden` property going forward — no separate client rendering
+			// path, no divergent markup.
+			used.add('isPending')
+			const asyncId = ++armCounter
+			const stateVar = `__async${asyncId}`
+			const errVar = `__async${asyncId}Err`
+			const okRoot = node.children.find(
+				(c): c is ElementNode => c.kind === 'element',
+			) as ElementNode
+			const pendingRoot = node.pendingChildren.find(
+				(c): c is ElementNode => c.kind === 'element',
+			) as ElementNode
+			const errRoot = node.catchChildren.find(
+				(c): c is ElementNode => c.kind === 'element',
+			) as ElementNode
+			const signalChild = okRoot.children.find(
+				(c): c is TemplateNode & { kind: 'expr' } =>
+					c.kind === 'expr' && c.lazy && c.expr.type === 'Identifier',
+			)
+			const signalName = signalChild
+				? String((signalChild.expr as TsrxNode).name)
+				: ''
+			const errChild = errRoot.children.find(
+				(c): c is TemplateNode & { kind: 'expr' } =>
+					c.kind === 'expr' && c.lazy,
+			)
+			lines.push(
+				`${tab(depth)}let ${stateVar}: 'pending' | 'ok' | 'err' = 'pending'`,
+			)
+			lines.push(`${tab(depth)}let ${errVar}: unknown = undefined`)
+			lines.push(`${tab(depth)}if (!isPending(${signalName})) {`)
+			lines.push(`${tab(depth + 1)}try {`)
+			lines.push(`${tab(depth + 2)}${signalName}.get()`)
+			lines.push(`${tab(depth + 2)}${stateVar} = 'ok'`)
+			lines.push(`${tab(depth + 1)}} catch (e) {`)
+			lines.push(`${tab(depth + 2)}${errVar} = e`)
+			lines.push(`${tab(depth + 2)}${stateVar} = 'err'`)
+			lines.push(`${tab(depth + 1)}}`)
+			lines.push(`${tab(depth)}}`)
+			const hiddenAttr = (cond: string): AttributeIR => ({
+				kind: 'server',
+				name: 'hidden',
+				exprText: cond,
+				node: node.node,
+			})
+			// The ok/err arms' own recognized lazy child (the guarded signal;
+			// the catch param or a member read over it) must NOT evaluate its
+			// real expression except in the arm that actually won: `data.get()`
+			// throws while pending, and the catch param is `undefined` outside
+			// the err arm. Emitting it unconditionally (the generic `emit()`
+			// walker's usual behavior) would crash rendering the OTHER two
+			// arms' hidden copies — guard each with the same tri-state var, and
+			// let the ternary's short-circuiting keep the unsafe branch unread.
+			const emitGuardedChild = (
+				child: TemplateNode,
+				armScope: ReadonlySet<string>,
+				guardedExpr: string | null,
+			): void => {
+				if (guardedExpr !== null && child.kind === 'expr' && child.lazy) {
+					used.add('esc')
+					lines.push(`${tab(depth)}${buffer}.push(esc(String(${guardedExpr})))`)
+					return
+				}
+				emit(child, armScope, depth)
+			}
+			const emitArmRoot = (
+				root: ElementNode,
+				armScope: ReadonlySet<string>,
+				hiddenCond: string,
+				guardedExpr: string | null,
+			): void => {
+				emitElement(root, armScope, depth, [hiddenAttr(hiddenCond)])
+				for (const child of root.children)
+					emitGuardedChild(child, armScope, guardedExpr)
+				if (!isVoidTag(root.tag))
+					lines.push(`${tab(depth)}${buffer}.push('</${root.tag}>')`)
+			}
+			emitArmRoot(pendingRoot, scope, `${stateVar} !== 'pending'`, null)
+			emitArmRoot(
+				okRoot,
+				scope,
+				`${stateVar} !== 'ok'`,
+				`${stateVar} === 'ok' ? ${signalName}.get() : ''`,
+			)
+			const errScope = new Set(scope)
+			if (node.catchParam) {
+				lines.push(`${tab(depth)}const ${node.catchParam} = ${errVar}`)
+				errScope.add(node.catchParam)
+			}
+			emitArmRoot(
+				errRoot,
+				errScope,
+				`${stateVar} !== 'err'`,
+				errChild ? `${stateVar} === 'err' ? (${errChild.exprText}) : ''` : null,
+			)
+			return
+		}
 		if (node.kind === 'try') {
 			// Render-time error boundary. Arms render into an isolated
 			// buffer so a throw mid-arm (after partial pushes) cannot leak

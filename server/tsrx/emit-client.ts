@@ -364,6 +364,42 @@ export const emitClientModule = (
 			at(effect.text, sliceOf(effect.text, effect.sourceStart))
 			return
 		}
+		if (effect.kind === 'async') {
+			// Async boundary (ADR 0023 sub-design 13, LT-012): one watch() call
+			// mirrors the server's own state routing — all three roots already
+			// exist server-rendered, `hidden` toggled here going forward. `ok`'s
+			// `value` is the resolved signal value (the arm's own lazy text
+			// child); `err`'s `error` is the SingleMatchHandlers Error (bound to
+			// the authored catch param — bare or a member read, e.g. `.message`).
+			imports.add('watch')
+			const append = (text: string, atDepth: number): void =>
+				appendWithSpans(lines, text, atDepth, [], spans, cursor)
+			append(`watch(${effect.signal}, {`, depth)
+			append('ok: value => {', depth + 1)
+			append(`${effect.pendingQuery}.hidden = true`, depth + 2)
+			append(`${effect.errQuery}.hidden = true`, depth + 2)
+			append(`${effect.okQuery}.hidden = false`, depth + 2)
+			if (effect.okText)
+				append(`${effect.okQuery}.textContent = String(value)`, depth + 2)
+			append('},', depth + 1)
+			append('nil: () => {', depth + 1)
+			append(`${effect.okQuery}.hidden = true`, depth + 2)
+			append(`${effect.errQuery}.hidden = true`, depth + 2)
+			append(`${effect.pendingQuery}.hidden = false`, depth + 2)
+			append('},', depth + 1)
+			append('err: error => {', depth + 1)
+			append(`${effect.pendingQuery}.hidden = true`, depth + 2)
+			append(`${effect.okQuery}.hidden = true`, depth + 2)
+			append(`${effect.errQuery}.hidden = false`, depth + 2)
+			if (effect.errText)
+				append(
+					`${effect.errQuery}.textContent = String(${effect.errText})`,
+					depth + 2,
+				)
+			append('},', depth + 1)
+			append('})', depth)
+			return
+		}
 		if (effect.kind === 'guarded') {
 			// A single-branch @if (no @else) root, addressed with a
 			// non-throwing query — every effect it owns only applies when

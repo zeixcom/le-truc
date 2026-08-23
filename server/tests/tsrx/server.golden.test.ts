@@ -272,6 +272,10 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 		const describedBy = description
 			? ` aria-describedby="${name}-description"`
 			: ''
+		const descriptionText =
+			Number(maxlength) > 0 && description.includes('${n}')
+				? description.replace('${n}', String(Number(maxlength) - value.length))
+				: description
 		return (
 			`<form-textbox name="${name}" value="${value}">` +
 			`<label for="${name}-input">${label}</label>` +
@@ -287,7 +291,7 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 				? `<p role="alert" aria-live="assertive" id="${name}-error" class="error"></p>`
 				: '') +
 			(description
-				? `<p aria-live="polite" id="${name}-description" class="description">${description}</p>`
+				? `<p aria-live="polite" id="${name}-description" data-remaining="${description}" class="description">${descriptionText}</p>`
 				: '') +
 			'</form-textbox>'
 		)

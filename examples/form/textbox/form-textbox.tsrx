@@ -77,10 +77,17 @@ export function FormTextbox(
 )
 @{
 	const length = createCell(value.length);
+	const descriptionCell = deriveCell(() => {
+		const template = description;
+		return Number(maxlength) > 0 && template.includes('${n}')
+			? template.replace('${n}', String(Number(maxlength) - length.get()))
+			: template;
+	});
 
 	expose({
 		value: asString(''),
 		length: length.get,
+		description: descriptionCell.get,
 		clear: defineMethod(() => {
 			host.value = ''
 			input.value = ''
@@ -158,7 +165,7 @@ export function FormTextbox(
 				</p>
 			}
 			@if (description) {
-				<p class="description" aria-live="polite" id={descriptionId}>{description}</p>
+				<p class="description" aria-live="polite" id={descriptionId} data-remaining={description}>&{descriptionCell}</p>
 			}
 		</form-textbox>
 

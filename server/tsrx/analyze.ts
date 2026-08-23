@@ -246,6 +246,24 @@ export type TopEffectPlan =
 			query: string
 			effects: TopEffectPlan[]
 	  }
+	| {
+			/**
+			 * An async boundary (`@try`/`@pending`/`@catch`, ADR 0023 sub-design
+			 * 13, LT-012): one `watch(signal, { ok, err, nil })` call toggles the
+			 * three server-rendered roots' `hidden` property — pure enhance, no
+			 * client DOM creation, mirroring `module-lazyload.ts`'s hand-written
+			 * shape. `okText`/`errText`, when present, are the arm's own lazy
+			 * text child — the resolved value for `okQuery`, the error (or a
+			 * member expression over it, e.g. `error.message`) for `errQuery`.
+			 */
+			kind: 'async'
+			signal: string
+			pendingQuery: string
+			okQuery: string
+			errQuery: string
+			okText: boolean
+			errText: string | null
+	  }
 
 export type ClientPlan = {
 	queries: QueryPlan[]
@@ -359,8 +377,26 @@ const countForSelector = (node: TemplateNode, selector: string): number => {
 				),
 			),
 		)
-	if (node.kind === 'try')
-		// Body XOR catch renders (pending is gated at lowering).
+	if (node.kind === 'try') {
+		// An async boundary (@pending present, ADR 0023 sub-design 13): all
+		// three arms coexist in the DOM simultaneously (hidden-toggled, not
+		// mutually exclusive) — sum, don't max, and include pendingChildren.
+		if (node.pendingChildren !== null)
+			return (
+				node.children.reduce(
+					(sum, c) => sum + countForSelector(c, selector),
+					0,
+				) +
+				node.pendingChildren.reduce(
+					(sum, c) => sum + countForSelector(c, selector),
+					0,
+				) +
+				node.catchChildren.reduce(
+					(sum, c) => sum + countForSelector(c, selector),
+					0,
+				)
+			)
+		// Plain error boundary: body XOR catch renders.
 		return Math.max(
 			node.children.reduce((sum, c) => sum + countForSelector(c, selector), 0),
 			node.catchChildren.reduce(
@@ -368,6 +404,7 @@ const countForSelector = (node: TemplateNode, selector: string): number => {
 				0,
 			),
 		)
+	}
 	if (!isElement(node)) return 0
 	let count = matchesSelector(node, selector) ? 1 : 0
 	for (const child of node.children) count += countForSelector(child, selector)
@@ -1363,12 +1400,21 @@ export const analyzeClient = (
 			const refAttr = site.el.attrs.find(a => a.kind === 'ref') as
 				| { kind: 'ref'; name: string }
 				| undefined
+			// A DOM-read site inside a single-branch @if (no @else) may not
+			// exist at all — address it the same way its own branch-root query
+			// would (non-throwing 'maybe'), and null-guard the read, instead of
+			// a throwing `first()` the substituted expression could crash on
+			// (ADR 0023 sub-design 12).
+			const enclosing = enclosingIfOf(site.el)
+			const optional = !!enclosing && enclosing.alternate.length === 0
 			const query = addQuery(
 				refAttr?.name ?? sanitizeVarName(site.el.tag),
 				resolved.selector,
-				'one',
+				optional ? 'maybe' : 'one',
 			)
-			return `(${query}.getAttribute('${site.attr.name}') ?? '')`
+			return optional
+				? `(${query}?.getAttribute('${site.attr.name}') ?? '')`
+				: `(${query}.getAttribute('${site.attr.name}') ?? '')`
 		}
 		const rootAttr = component.root.attrs.find(
 			a => a.kind === 'server' && a.name !== null && a.exprText === param,
@@ -1383,26 +1429,56 @@ export const analyzeClient = (
 	/**
 	 * Rewrite a pure-arg initializer by replacing each param identifier with
 	 * its DOM read (`value.length` → `input.value.length`), right-to-left by
-	 * source range so surrounding text is untouched.
+	 * source range so surrounding text is untouched. Free names that are
+	 * already client-known by another route (another signal declared earlier
+	 * in the factory, a ref, a context member) pass through unrewritten — only
+	 * server args need a DOM substitution (ADR 0023 sub-design 12: a `deriveCell`
+	 * callback may read both a param, needing substitution, and a sibling
+	 * signal, needing none).
 	 */
-	const substituteArgExpr = (init: TsrxNode): string | null => {
+	const substituteArgExpr = (
+		init: TsrxNode,
+		/**
+		 * Allow a no-params-to-substitute initializer to pass through
+		 * verbatim (ADR 0023 sub-design 13): sound only for `deriveCell`/
+		 * `deriveStore` signals, which are FORCED through this path
+		 * unconditionally (no direct-site harvest is even attempted for
+		 * them) — a `createCell`/`createState` signal with a literal,
+		 * unrendered initializer must still fail (TSRX004): those DO have a
+		 * direct-site harvest route, and a silently-never-rendered signal is
+		 * exactly the drift ADR 0003 exists to catch.
+		 */
+		allowVerbatim: boolean,
+	): string | null => {
 		const free = dependenciesOf(init)
+		const signalNames = new Set(component.signals.map(s => s.name))
 		if (
 			[...free].some(
-				n => !JS_GLOBALS.has(n) && !component.paramNames.includes(n),
+				n =>
+					!JS_GLOBALS.has(n) &&
+					!component.paramNames.includes(n) &&
+					!signalNames.has(n) &&
+					!CONTEXT_NAMES.has(n) &&
+					!refNames.has(n),
 			)
 		)
 			return null
 		const params = [...free].filter(n => component.paramNames.includes(n))
-		if (params.length === 0) return null
+		if (typeof init.start !== 'number' || typeof init.end !== 'number')
+			return null
+		// Nothing to substitute: the initializer has no server-arg dependency
+		// at all (e.g. a niladic async compute), so it is already portable,
+		// identical JS on both sides — reuse it verbatim, exactly like a pure
+		// literal list seed (ADR 0023 sub-design 13). Only sound for signals
+		// with no direct-site harvest route at all (see `allowVerbatim`'s doc).
+		if (params.length === 0)
+			return allowVerbatim ? source.slice(init.start, init.end) : null
 		const reads = new Map<string, string>()
 		for (const param of params) {
 			const read = paramDomRead(param)
 			if (!read) return null
 			reads.set(param, read)
 		}
-		if (typeof init.start !== 'number' || typeof init.end !== 'number')
-			return null
 		const ranges: Array<[number, number, string]> = []
 		const collect = (node: unknown): void => {
 			if (Array.isArray(node)) {
@@ -1480,13 +1556,27 @@ export const analyzeClient = (
 			}
 			continue
 		}
-		const own = sites
-			.filter(s => s.signal === signal.name)
-			.sort((a, b) => a.order - b.order)
+		// `deriveCell`/`deriveStore` initializers are callbacks, not raw values
+		// — a 'text'/'attr' direct-site harvest would splice the DOM read in
+		// place of the whole function (ADR 0023 sub-design 12). A rendered
+		// lazy child of the signal's own name still exists for the WATCH
+		// target/initial value (Pass 4 wires it independently of harvest
+		// selection here), but harvesting always goes through the arg-
+		// substitution route for these constructors.
+		const isDerivedCallback =
+			signal.constructor === 'deriveCell' ||
+			signal.constructor === 'deriveStore'
+		const own = isDerivedCallback
+			? []
+			: sites
+					.filter(s => s.signal === signal.name)
+					.sort((a, b) => a.order - b.order)
 		if (own.length === 0) {
 			// No rendered site: an initializer over server args can still seed
 			// from the args' DOM sites (LT-008 substitution rule).
-			const substituted = signal.init ? substituteArgExpr(signal.init) : null
+			const substituted = signal.init
+				? substituteArgExpr(signal.init, isDerivedCallback)
+				: null
 			if (substituted) {
 				harvests.push({
 					kind: 'substitute',
@@ -1945,13 +2035,214 @@ export const analyzeClient = (
 					)
 	}
 
+	/** A direct lazy child of `el` whose expr is a bare Identifier, if any. */
+	const directLazyIdentifier = (el: ElementNode): string | null => {
+		for (const child of el.children) {
+			if (
+				child.kind === 'expr' &&
+				child.lazy &&
+				nodeType(child.expr) === 'Identifier'
+			)
+				return String((child.expr as TsrxNode).name)
+		}
+		return null
+	}
+
+	/**
+	 * A direct lazy child of `el` referencing the catch param — bare (`e`) or
+	 * a non-computed member read (`e.message`) — as the client-side error
+	 * expression (`error`/`error.message`), or null if no such child exists.
+	 */
+	const directLazyCatchRef = (
+		el: ElementNode,
+		catchParam: string,
+	): string | null => {
+		for (const child of el.children) {
+			if (child.kind !== 'expr' || !child.lazy) continue
+			const expr = child.expr
+			if (
+				nodeType(expr) === 'Identifier' &&
+				String((expr as TsrxNode).name) === catchParam
+			)
+				return 'error'
+			if (
+				nodeType(expr) === 'MemberExpression' &&
+				!(expr as TsrxNode).computed
+			) {
+				const obj = (expr as TsrxNode).object
+				const prop = (expr as TsrxNode).property
+				if (
+					nodeType(obj) === 'Identifier' &&
+					String((obj as TsrxNode).name) === catchParam &&
+					nodeType(prop) === 'Identifier'
+				)
+					return `error.${String((prop as TsrxNode).name)}`
+			}
+		}
+		return null
+	}
+
+	/**
+	 * An async boundary (`@try`/`@pending`/`@catch`, ADR 0023 sub-design 13,
+	 * LT-012): `lowerTry` already proved each arm has exactly one root
+	 * element. All three render server-side (`emit-server.ts`), toggled
+	 * `hidden` by which state won at render time; the client wires a single
+	 * `watch(signal, { ok, err, nil })` call that flips the same `hidden`
+	 * property going forward — pure enhance, no client DOM creation.
+	 */
+	const handleAsyncBoundary = (node: TryNode): void => {
+		const okRoot = node.children.find(isElement) as ElementNode
+		const pendingRoot = (node.pendingChildren as TemplateNode[]).find(
+			isElement,
+		) as ElementNode
+		const errRoot = node.catchChildren.find(isElement) as ElementNode
+		const catchParam = node.catchParam
+
+		if (
+			hasDeepConstruct(okRoot) ||
+			hasDeepConstruct(pendingRoot) ||
+			hasDeepConstruct(errRoot)
+		) {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					node.node.start,
+					"Client constructs inside an async boundary must sit on each arm's own root element — deeper elements have no addressing (ADR 0023 sub-design 13)",
+				),
+			)
+			return
+		}
+		if (hasOwnConstruct(pendingRoot)) {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					pendingRoot.node.start,
+					'@pending arm of an async boundary must be static/server markup — nothing watches it once resolved',
+				),
+			)
+			return
+		}
+
+		const okLazyName = directLazyIdentifier(okRoot)
+		const boundaryCandidates = component.signals.filter(
+			s => s.constructor === 'deriveCell' && s.name === okLazyName,
+		)
+		if (!okLazyName || boundaryCandidates.length !== 1) {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					okRoot.node.start,
+					"An async boundary's @try body must render the async signal it guards as a direct lazy child (e.g. `&{data}`), where `data` is a `deriveCell(async …)` signal — the compiler discovers which signal drives isPending() routing from that reference.",
+				),
+			)
+			return
+		}
+		const signal = boundaryCandidates[0]?.name as string
+
+		if (
+			okRoot.attrs.some(
+				a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
+			)
+		) {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					okRoot.node.start,
+					"An async boundary's @try body root may only carry static/server attributes and its one lazy signal child — other reactive constructs have no addressing here yet",
+				),
+			)
+			return
+		}
+		if (
+			errRoot.attrs.some(
+				a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
+			)
+		) {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					errRoot.node.start,
+					'@catch arm of an async boundary may only carry static/server attributes and its one lazy error child',
+				),
+			)
+			return
+		}
+
+		const okSelector = resolveSelector(component, okRoot)
+		const pendingSelector = resolveSelector(component, pendingRoot)
+		const errSelector = resolveSelector(component, errRoot)
+		for (const [label, resolved, el] of [
+			['@try body', okSelector, okRoot],
+			['@pending arm', pendingSelector, pendingRoot],
+			['@catch arm', errSelector, errRoot],
+		] as const) {
+			if (!resolved.unique)
+				diagnostics.push(
+					diagnostic.unaddressableElement(
+						source,
+						el.node.start,
+						`No unique selector for the ${label}'s root <${el.tag}> of an async boundary; add a distinguishing static attribute (role, class, or data-*).`,
+					),
+				)
+		}
+		const okQuery = addQuery(
+			sanitizeVarName(okRoot.tag),
+			okSelector.selector,
+			'one',
+		)
+		const pendingQuery = addQuery(
+			sanitizeVarName(pendingRoot.tag),
+			pendingSelector.selector,
+			'one',
+		)
+		const errQuery = addQuery(
+			sanitizeVarName(errRoot.tag),
+			errSelector.selector,
+			'one',
+		)
+
+		const errText = catchParam ? directLazyCatchRef(errRoot, catchParam) : null
+		if (
+			errRoot.children.some(c => c.kind === 'expr' && c.lazy) &&
+			errText === null
+		) {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					errRoot.node.start,
+					`@catch arm's lazy child must reference the catch param \`${catchParam ?? 'e'}\` (bare, or a member read like \`${catchParam ?? 'e'}.message\`)`,
+				),
+			)
+			return
+		}
+
+		effects.push({
+			kind: 'async',
+			signal,
+			pendingQuery,
+			okQuery,
+			errQuery,
+			okText: true,
+			errText,
+		})
+	}
+
 	/**
 	 * @try error boundaries: the catch arm renders instead on error, so
 	 * constructs in the body are not guaranteed (first() would throw on the
 	 * error path); interactive error boundaries need optional addressing,
 	 * which is outside the current subset. Catch arms must be static.
+	 *
+	 * A `@pending` arm present routes to `handleAsyncBoundary` instead (ADR
+	 * 0023 sub-design 13, LT-012) — a fundamentally different shape (all
+	 * three arms render unconditionally, toggled `hidden`) from this plain
+	 * mutually-exclusive error boundary.
 	 */
 	const handleTryEffects = (node: TryNode): void => {
+		if (node.pendingChildren !== null) {
+			handleAsyncBoundary(node)
+			return
+		}
 		for (const child of node.children)
 			if (hasClientConstructs(child))
 				diagnostics.push(

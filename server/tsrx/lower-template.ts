@@ -268,13 +268,35 @@ const lowerBodyStatements = (
 	return out
 }
 
+/** The sole element child among a control-flow arm's children, or null. */
+const singleRootOf = (
+	children: TemplateNode[],
+): (TemplateNode & { kind: 'element' }) | null => {
+	const roots = children.filter(
+		(c): c is TemplateNode & { kind: 'element' } => c.kind === 'element',
+	)
+	return roots.length === 1
+		? (roots[0] as TemplateNode & { kind: 'element' })
+		: null
+}
+
 /**
- * Lower an `@try { … } @catch (e) { … }` error boundary: a render-time
- * boundary — the server renders the body inside a real try/catch, so a
- * throwing server expression falls back to the catch arm. `@pending` arms
- * (async boundaries) are gated until the LT-012 lowering lands
- * (deriveCell(async …) + isPending(signal) branch routing — the async data
- * itself is authorable today); `@finally` is gated outright.
+ * Lower an `@try { … } @catch (e) { … }` error boundary, in one of two
+ * distinct modes:
+ *
+ * - No `@pending` arm: a render-time error boundary — the server renders the
+ *   body inside a real try/catch, so a throwing server expression falls back
+ *   to the catch arm; mutually exclusive, like `@switch`.
+ * - A `@pending` arm present: an ASYNC BOUNDARY (ADR 0023 sub-design 13,
+ *   LT-012) — `@try`/`@pending`/`@catch` route on `isPending(signal)` against
+ *   the ONE async-derived signal (`deriveCell(async …)`) the body renders.
+ *   Unlike the plain error boundary, all three arms render UNCONDITIONALLY
+ *   (each needs exactly one root element, toggled `hidden` server-side by
+ *   which state won at render time, then reactively by the client's single
+ *   `watch(signal, { ok, err, nil })` call — no client DOM creation, pure
+ *   enhance, mirroring `module-lazyload.ts`'s hand-written shape).
+ *
+ * `@finally` is gated outright in both modes.
  */
 export const lowerTry = (
 	ctx: ExtractContext,
@@ -289,16 +311,6 @@ export const lowerTry = (
 			signals,
 			fors,
 		)
-	if (isNode(node.pending)) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.pending.start,
-				'@pending arms (async boundaries) await their lowering (LT-012): deriveCell(async …, { initial }) + isPending(signal) branch routing. Async data itself is authorable today — the await lives inside the async arrow, which is legal in the sync setup. Use @try/@catch (a render-time error boundary) meanwhile',
-			),
-		)
-		return null
-	}
 	if (isNode(node.finalizer)) {
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
@@ -317,6 +329,50 @@ export const lowerTry = (
 		catchParam = identifierName(handler.param)
 		catchChildren = lowerBlock(handler.body)
 	}
+	let pendingChildren: TemplateNode[] | null = null
+	if (isNode(node.pending)) {
+		pendingChildren = lowerBlock(node.pending)
+		if (!handler) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					node.start,
+					'@pending requires a @catch (e) arm — an async boundary routes pending/ok/err together (ADR 0023 sub-design 13)',
+				),
+			)
+			return null
+		}
+		if (!singleRootOf(children)) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					(isNode(node.block) ? node.block.start : node.start) as number,
+					"An async boundary's @try body must render exactly one root element (its own `hidden` toggle and client addressing need a single target)",
+				),
+			)
+			return null
+		}
+		if (!singleRootOf(pendingChildren)) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					node.pending.start,
+					'@pending arm must render exactly one root element',
+				),
+			)
+			return null
+		}
+		if (!singleRootOf(catchChildren)) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					(node.handler as TsrxNode).start,
+					'@catch arm of an async boundary must render exactly one root element',
+				),
+			)
+			return null
+		}
+	}
 	if (children.length === 0 && catchChildren.length === 0) {
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
@@ -332,7 +388,7 @@ export const lowerTry = (
 		children,
 		catchParam,
 		catchChildren,
-		pendingChildren: null,
+		pendingChildren,
 		node,
 	}
 }

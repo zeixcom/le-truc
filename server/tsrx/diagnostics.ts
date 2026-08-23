@@ -23,6 +23,7 @@ export type DiagnosticCode =
 	| 'TSRX010' // managed form prop used without formAssociated
 	| 'TSRX011' // composed (PascalCase) element with no resolvable .tsrx import
 	| 'TSRX012' // pass={{ }}/reactive dispatch legality on a custom-element target
+	| 'TSRX013' // signal declared with a conditionally-chosen constructor, or a client-only primitive called from a plain setup const
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -250,6 +251,42 @@ export const diagnostic = {
 		error(
 			'TSRX012',
 			`pass={{ … }} on <${component}> needs an explicit ref={name} — a composed element's server args aren't guaranteed to render as DOM attributes, so it can't be auto-addressed the way native/raw custom elements are.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A setup const's initializer conditionally chooses between two signal-
+	 * constructor calls (`cond ? deriveCell(...) : createCell(...)`) — the
+	 * initializer must be a SINGLE, unconditional call to a recognized
+	 * constructor; conditional logic belongs inside the callback, not as a
+	 * choice between constructors (ADR 0023 sub-design 12).
+	 */
+	conditionalSignalConstructor: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+	) =>
+		error(
+			'TSRX013',
+			`\`${name}\`'s initializer conditionally chooses between two signal-constructor calls — a signal must be a single, unconditional call to a recognized constructor (createCell/createState/deriveCell/…). Move the condition inside the callback instead (e.g. \`deriveCell(() => cond ? a : b)\`).`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A plain (non-signal) setup const calls a client-only DOM/context
+	 * primitive directly — `component.setup` is emitted verbatim into the
+	 * SERVER render function, where `first`/`all`/`watch`/`on`/`pass` don't
+	 * exist (ADR 0023 sub-design 12).
+	 */
+	clientOnlySetupConst: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+		primitives: string[],
+	) =>
+		error(
+			'TSRX013',
+			`\`${name}\` calls client-only primitive(s) ${primitives.map(p => `\`${p}\``).join(', ')} — plain setup consts run server-side too (component.setup is emitted verbatim into the render function), where these don't exist. Use a signal constructor (the client seeds it from the DOM) or a client-only setup statement instead.`,
 			lineOf(source, offset),
 		),
 
