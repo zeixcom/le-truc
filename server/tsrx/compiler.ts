@@ -14,6 +14,7 @@
  *   `&{ }` marks the lazy child, everything else is server-definitive
  */
 
+import { posix } from 'node:path'
 import {
 	getStyleElementStylesheet,
 	isStyleElement,
@@ -114,6 +115,22 @@ export type TemplateNode =
 			pendingChildren: TemplateNode[] | null
 			node: TsrxNode
 	  }
+	| {
+			/**
+			 * A capitalized JSX tag bound to an `import` of another `.tsrx`
+			 * module (ADR 0023 sub-design 10) — composes that component: the
+			 * server splices its `render<Name>()` output inline. `source` is
+			 * the import specifier resolved to a repo-relative path, used to
+			 * look up the child's registry entry (name, tag, generated server
+			 * module) at emit time.
+			 */
+			kind: 'compose'
+			component: string
+			source: string
+			attrs: ComposeAttrIR[]
+			children: TemplateNode[]
+			node: TsrxNode
+	  }
 
 export type AttributeIR =
 	| { kind: 'static'; name: string; value: string | null }
@@ -148,6 +165,18 @@ export type AttributeIR =
 			handlerText: string
 	  }
 	| { kind: 'ref'; name: string }
+
+/**
+ * Attributes on a composed (PascalCase) element (ADR 0023 sub-design 10).
+ * Every non-`ref` attribute is a **server arg** — passed verbatim into the
+ * child's `render<Name>()` call regardless of value shape (a callback-typed
+ * param stays a callback; it is never reinterpreted as a reactive binding).
+ * `pass={{ … }}` (client props) is a distinct mechanism, not yet lowered
+ * here — see the follow-up composition tasks.
+ */
+export type ComposeAttrIR =
+	| { kind: 'ref'; name: string }
+	| { kind: 'arg'; name: string; exprText: string; node: TsrxNode | null }
 
 /**
  * A `@for` loop. Over server data (`listSignal` null) it lowers to `each()`;
@@ -548,6 +577,11 @@ type ExtractContext = {
 	diagnostics: CompileDiagnostic[]
 	/** Names server-known at template evaluation time (args, setup). */
 	serverKnown: Set<string>
+	/**
+	 * Local name → import specifier resolved to a repo-relative `.tsrx` path,
+	 * for composed (PascalCase) elements (ADR 0023 sub-design 10).
+	 */
+	composeImports: ReadonlyMap<string, string>
 }
 
 const text = (
@@ -749,7 +783,14 @@ const lowerBodyStatements = (
 	const out: TemplateNode[] = []
 	for (const stmt of body) {
 		if (stmt.type === 'JSXElement') {
-			out.push(lowerElement(ctx, stmt, signals, fors))
+			const tag = jsxName(
+				isNode(stmt.openingElement) ? stmt.openingElement.name : null,
+			)
+			const lowered =
+				tag && /^[A-Z]/.test(tag)
+					? lowerComposeElement(ctx, stmt, tag)
+					: lowerElement(ctx, stmt, signals, fors)
+			if (lowered) out.push(lowered)
 			continue
 		}
 		if (stmt.type === 'JSXText') {
@@ -1088,6 +1129,131 @@ const classifyAttribute = (
 }
 
 /**
+ * Classify one JSXAttribute on a composed (PascalCase) element. `ref` keeps
+ * its usual meaning; everything else is a server arg forwarded verbatim into
+ * the child's `render<Name>()` call — no reactive-shape inference (ADR 0023
+ * sub-design 10, amending sub-design 4's raw-element dispatch).
+ */
+const classifyComposeAttribute = (
+	ctx: ExtractContext,
+	attr: TsrxNode,
+): ComposeAttrIR | { kind: 'invalid'; reason: string } => {
+	const name = attrName(attr)
+	const value = attr.value
+	if (name === 'ref') {
+		const target =
+			isNode(value) && value.type === 'JSXExpressionContainer'
+				? value.expression
+				: value
+		const refName = identifierName(target)
+		if (!refName)
+			return {
+				kind: 'invalid',
+				reason: 'ref={…} expects a bare identifier (ref={textbox}).',
+			}
+		return { kind: 'ref', name: refName }
+	}
+	if (!isNode(value)) return { kind: 'arg', name, exprText: 'true', node: null }
+	if (value.type === 'Literal')
+		return {
+			kind: 'arg',
+			name,
+			exprText: JSON.stringify(value.value ?? ''),
+			node: null,
+		}
+	if (value.type === 'JSXExpressionContainer') {
+		const expr = value.expression
+		if (!isNode(expr))
+			return { kind: 'invalid', reason: `Attribute \`${name}\` is empty.` }
+		return { kind: 'arg', name, exprText: text(ctx, expr), node: expr }
+	}
+	return {
+		kind: 'invalid',
+		reason: `Attribute \`${name}\` uses an unsupported value form.`,
+	}
+}
+
+/**
+ * Lower a composed (PascalCase) element: resolve its tag against the file's
+ * `import { Name } from '….tsrx'` map, classify attributes as server args
+ * (regardless of value shape) or `ref`, and diagnose the constructs this
+ * milestone does not support yet — client props (`pass={{ }}`, follow-up
+ * task) and children (default-slot substitution, follow-up task).
+ */
+const lowerComposeElement = (
+	ctx: ExtractContext,
+	element: TsrxNode,
+	tag: string,
+): (TemplateNode & { kind: 'compose' }) | null => {
+	const source = ctx.composeImports.get(tag)
+	if (!source) {
+		ctx.diagnostics.push(
+			diagnostic.unresolvedComposedComponent(ctx.source, element.start, tag),
+		)
+		return null
+	}
+	const opening = element.openingElement
+	const attrs: ComposeAttrIR[] = []
+	if (isNode(opening) && Array.isArray(opening.attributes)) {
+		for (const attr of asArray(opening.attributes)) {
+			if (attr.type !== 'JSXAttribute') {
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						attr.start,
+						'Spread attributes on a composed element',
+					),
+				)
+				continue
+			}
+			if (attrName(attr) === 'pass') {
+				ctx.diagnostics.push(
+					diagnostic.composedElementUnsupported(
+						ctx.source,
+						attr.start,
+						'`pass={{ … }}` (client-prop interop)',
+					),
+				)
+				continue
+			}
+			const classified = classifyComposeAttribute(ctx, attr)
+			if ('reason' in classified) {
+				ctx.diagnostics.push(
+					diagnostic.invalidAttribute(
+						ctx.source,
+						attr.start,
+						`${classified.reason} (attribute \`${attrName(attr)}\`)`,
+					),
+				)
+				continue
+			}
+			attrs.push(classified)
+		}
+	}
+	const hasChildren = asArray(element.children).some(
+		child =>
+			child.type !== 'JSXText' ||
+			collapseJsxText(String(child.value ?? '')) !== '',
+	)
+	if (hasChildren)
+		ctx.diagnostics.push(
+			diagnostic.composedElementUnsupported(
+				ctx.source,
+				element.start,
+				'Children (default-slot substitution)',
+			),
+		)
+	return {
+		kind: 'compose',
+		component: tag,
+		source,
+		attrs,
+		children: [],
+		node: element,
+	}
+}
+
+/**
  * Lower template children into IR. `&{expr}` arrives from the parser as a
  * `JSXText("&")` node immediately preceding a `JSXExpressionContainer` —
  * the sigil is detected by that adjacency.
@@ -1197,7 +1363,14 @@ const lowerChildren = (
 			continue
 		}
 		if (child.type === 'JSXElement') {
-			out.push(lowerElement(ctx, child, signals, fors))
+			const tag = jsxName(
+				isNode(child.openingElement) ? child.openingElement.name : null,
+			)
+			const lowered =
+				tag && /^[A-Z]/.test(tag)
+					? lowerComposeElement(ctx, child, tag)
+					: lowerElement(ctx, child, signals, fors)
+			if (lowered) out.push(lowered)
 			i += 1
 			continue
 		}
@@ -1219,6 +1392,14 @@ const lowerElement = (
 ): TemplateNode & { kind: 'element' } => {
 	const opening = element.openingElement
 	const tag = jsxName(isNode(opening) ? opening.name : null) ?? ''
+	if (/^[A-Z]/.test(tag))
+		ctx.diagnostics.push(
+			diagnostic.composedElementUnsupported(
+				ctx.source,
+				element.start,
+				`Composed element \`<${tag}>\` in this position (@for output, or another non-child-list context)`,
+			),
+		)
 	const attrs: AttributeIR[] = []
 	if (isNode(opening) && Array.isArray(opening.attributes)) {
 		for (const attr of asArray(opening.attributes)) {
@@ -1646,6 +1827,39 @@ const readConfig = (ctx: ExtractContext, stmt: TsrxNode): ConfigIR | null => {
 	return config
 }
 
+/**
+ * Named imports of other `.tsrx` modules (ADR 0023 sub-design 10): local
+ * binding name → import specifier resolved to a repo-relative path.
+ * `filename` is itself repo-relative, so the specifier resolves against its
+ * directory. Only `.tsrx` specifiers compose — anything else (a `.ts`
+ * component, a library import) is not a composable import.
+ */
+const parseComposeImports = (
+	ast: TsrxNode,
+	filename: string,
+): Map<string, string> => {
+	const imports = new Map<string, string>()
+	const dir = posix.dirname(filename)
+	for (const stmt of asArray(ast.body)) {
+		if (stmt.type !== 'ImportDeclaration') continue
+		const specifierNode = stmt.source
+		const specifier =
+			isNode(specifierNode) &&
+			specifierNode.type === 'Literal' &&
+			typeof specifierNode.value === 'string'
+				? specifierNode.value
+				: null
+		if (!specifier || !specifier.endsWith('.tsrx')) continue
+		const resolved = posix.normalize(posix.join(dir, specifier))
+		for (const spec of asArray(stmt.specifiers)) {
+			if (spec.type !== 'ImportSpecifier') continue
+			const local = identifierName(spec.local)
+			if (local) imports.set(local, resolved)
+		}
+	}
+	return imports
+}
+
 /* === Exported Functions === */
 
 /**
@@ -1661,6 +1875,7 @@ export const compileSource = (
 		source,
 		diagnostics: [],
 		serverKnown: new Set<string>(),
+		composeImports: new Map<string, string>(),
 	}
 	let ast: TsrxNode
 	try {
@@ -1675,6 +1890,7 @@ export const compileSource = (
 			],
 		}
 	}
+	ctx.composeImports = parseComposeImports(ast, filename)
 
 	// Locate the exported component function (body = JSXCodeBlock).
 	let fn: TsrxNode | null = null
@@ -2020,3 +2236,42 @@ export const compileSource = (
 
 /** Whether a tag renders as void (`<input>` etc.) — no closing tag. */
 export const isVoidTag = (tag: string): boolean => isVoidElement(tag)
+
+/**
+ * Every composed (PascalCase) element in a component's template, for
+ * cross-file resolution against the corpus-wide registry (ADR 0023
+ * sub-design 10) — composed elements never carry children yet, so there is
+ * nothing to recurse into below one.
+ */
+export const collectComposeElements = (
+	component: ComponentIR,
+): Array<TemplateNode & { kind: 'compose' }> => {
+	const out: Array<TemplateNode & { kind: 'compose' }> = []
+	const walk = (node: TemplateNode): void => {
+		switch (node.kind) {
+			case 'compose':
+				out.push(node)
+				return
+			case 'element':
+				for (const child of node.children) walk(child)
+				return
+			case 'if':
+				for (const child of node.then) walk(child)
+				for (const child of node.alternate) walk(child)
+				return
+			case 'switch':
+				for (const arm of node.cases)
+					for (const child of arm.children) walk(child)
+				return
+			case 'try':
+				for (const child of node.children) walk(child)
+				for (const child of node.catchChildren) walk(child)
+				return
+			default:
+				return
+		}
+	}
+	walk(component.root)
+	for (const loop of component.fors.values()) walk(loop.output)
+	return out
+}

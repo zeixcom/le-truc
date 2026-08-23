@@ -11,8 +11,8 @@
  */
 
 import { analyzeClient } from './analyze'
-import { compileSource } from './compiler'
-import type { CompileDiagnostic } from './diagnostics'
+import { collectComposeElements, compileSource } from './compiler'
+import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import { emitClientModule } from './emit-client'
 import { emitServerModule } from './emit-server'
 import type { RegistryEntry } from './registry'
@@ -47,15 +47,37 @@ export const compileComponent = (
 	filename: string,
 	registry: ReadonlySet<string>,
 	childImports?: ReadonlyMap<string, string>,
+	/**
+	 * Composed (PascalCase) elements' targets, keyed by resolved `.tsrx`
+	 * source path (ADR 0023 sub-design 10) — built corpus-wide from every
+	 * component's own registry entry (`server/effects/tsrx.ts`). Undefined
+	 * during registry-discovery passes (composition isn't validated yet, the
+	 * same tolerance an empty `registry` gets for raw-tag `pass()` dispatch).
+	 */
+	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
 ): CompileFileResult => {
 	const { component, diagnostics } = compileSource(source, filename)
 	if (!component) return { component: null, diagnostics }
+	if (composeRegistry) {
+		for (const node of collectComposeElements(component)) {
+			if (!composeRegistry.has(node.source))
+				diagnostics.push(
+					diagnostic.composedComponentNotCompiled(
+						component.source,
+						node.node.start,
+						node.component,
+						node.source,
+					),
+				)
+		}
+	}
 	const plan = analyzeClient(component, registry, diagnostics)
 	if (diagnostics.some(d => d.severity === 'error'))
 		return { component: null, diagnostics }
 	const server = emitServerModule(component, {
 		runtimeImport: '../../tsrx/runtime',
 		sourcePath: filename,
+		composeRegistry,
 	})
 	const client = emitClientModule(component, plan, {
 		sourcePath: filename,

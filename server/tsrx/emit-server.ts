@@ -29,6 +29,7 @@ import {
 	type TemplateNode,
 } from './compiler'
 import { lineStartsInTemplate } from './indent'
+import type { RegistryEntry } from './registry'
 import { appendWithSpans, type SourceSpan, type SpanCursor } from './spans'
 
 /* === Types === */
@@ -197,10 +198,22 @@ const isTsrxNode = (value: unknown): value is TsrxNode =>
  */
 export const emitServerModule = (
 	component: ComponentIR,
-	options: { runtimeImport: string; sourcePath: string },
+	options: {
+		runtimeImport: string
+		sourcePath: string
+		/**
+		 * Composed (PascalCase) elements' targets, keyed by resolved `.tsrx`
+		 * source path (ADR 0023 sub-design 10). A compose node whose `source`
+		 * is missing here was already diagnosed as an error upstream
+		 * (`index.ts`), so `emit` never needs to handle a missing entry.
+		 */
+		composeRegistry?: ReadonlyMap<string, RegistryEntry> | undefined
+	},
 ): EmittedServerModule => {
 	const used = new Set<string>()
 	const lines: string[] = []
+	/** Composed component name → generated server module specifier. */
+	const composeImports = new Map<string, string>()
 	// Pushes target __html normally; @try arms render into an isolated __arm
 	// buffer so a mid-arm throw cannot leak partial markup into the output
 	// (the catch arm renders its own fresh buffer).
@@ -291,6 +304,24 @@ export const emitServerModule = (
 				)
 			}
 			lines.push(`${tab(depth)}}`)
+			return
+		}
+		if (node.kind === 'compose') {
+			// Composed elements never had their diagnostics escalate to an
+			// error (index.ts validates every `node.source` against
+			// composeRegistry before emitServerModule runs at all).
+			const entry = options.composeRegistry?.get(node.source)
+			if (!entry) return
+			composeImports.set(entry.name, `./${entry.tag}.server`)
+			const args = node.attrs
+				.filter(
+					(a): a is Extract<typeof a, { kind: 'arg' }> => a.kind === 'arg',
+				)
+				.map(a => `${JSON.stringify(a.name)}: ${a.exprText}`)
+				.join(', ')
+			lines.push(
+				`${tab(depth)}${buffer}.push(render${entry.name}({ ${args} }))`,
+			)
 			return
 		}
 		const loop = [...component.fors.values()].find(f => f.output === node)
@@ -535,6 +566,8 @@ export const emitServerModule = (
 			`import { ${imports.join(', ')} } from '${options.runtimeImport}'`,
 		)
 	}
+	for (const [name, specifier] of [...composeImports].sort())
+		body.push(`import { render${name} } from '${specifier}'`)
 	body.push('')
 	for (const decl of component.typeDecls) body.push(decl, '')
 	// Verbatim param slice, re-indented: first line inline in the signature,

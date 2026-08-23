@@ -72,11 +72,17 @@ export const compileTsrxCorpus = async (
 
 	// Registry-aware dispatch needs every compilable tag up front: first
 	// pass collects tags (warnings already skip their files), second pass
-	// compiles against the full registry.
+	// compiles against the full registry. The same first pass also builds
+	// the compose registry (ADR 0023 sub-design 10) — a composed element's
+	// import specifier resolves to another file's own repo-relative path,
+	// so every file's entry is keyed by that path for the second pass to
+	// look up regardless of compile order (composition is not order-dependent
+	// the way registry-tag `pass()` dispatch is).
 	const childImports = handwrittenExampleModules()
 	const registry = new Set<string>(childImports.keys())
 	const compilable = new Map<string, string>()
 	const compiledTags = new Set<string>()
+	const composeRegistry = new Map<string, RegistryEntry>()
 	for (const file of files) {
 		const rel = relative(join(import.meta.dir, '..', '..'), file.path)
 		const { component, diagnostics } = compileComponent(
@@ -93,6 +99,7 @@ export const compileTsrxCorpus = async (
 			registry.add(component.entry.tag)
 			compiledTags.add(component.entry.tag)
 			compilable.set(rel, file.content)
+			composeRegistry.set(rel, component.entry)
 		}
 	}
 	// Migrated tags import their generated clients (side-effect: the tag-map
@@ -107,6 +114,7 @@ export const compileTsrxCorpus = async (
 			rel,
 			registry,
 			childImports,
+			composeRegistry,
 		)
 		for (const d of diagnostics) {
 			const label = `[${d.code}] ${d.line ? `line ${d.line}: ` : ''}${d.message}`

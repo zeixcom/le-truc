@@ -21,6 +21,7 @@ export type DiagnosticCode =
 	| 'TSRX008' // source shape violation (root tag, exports, style placement)
 	| 'TSRX009' // invalid `export const config` extension declaration
 	| 'TSRX010' // managed form prop used without formAssociated
+	| 'TSRX011' // composed (PascalCase) element with no resolvable .tsrx import
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -157,6 +158,51 @@ export const diagnostic = {
 		error(
 			'TSRX010',
 			`Lazy child &{'${prop}'} names a managed form prop — it is watchable only when formAssociated() leads the extensions. Declare \`export const config = { formAssociated: true }\` or expose a prop of that name.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A capitalized JSX tag with no matching `import { Name } from '….tsrx'`
+	 * (ADR 0023 sub-design 10) — composition resolves by import, never falls
+	 * back to raw custom-element treatment.
+	 */
+	unresolvedComposedComponent: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+	) =>
+		error(
+			'TSRX011',
+			`\`<${name}>\` has no matching \`import { ${name} } from '….tsrx'\` — composed (capitalized) tags must import the component they compose (ADR 0023 sub-design 10). A lowercase dashed tag addresses a raw custom element instead.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A composed element's import resolved to a `.tsrx` path, but that file
+	 * did not compile (or does not exist) — a cross-file resolution failure,
+	 * distinct from the "no matching import" case above.
+	 */
+	composedComponentNotCompiled: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+		path: string,
+	) =>
+		error(
+			'TSRX011',
+			`\`<${name}>\` composes \`${path}\`, but that file did not compile (or was not found) — fix its own diagnostics first.`,
+			lineOf(source, offset),
+		),
+
+	/** A construct on a composed element that composition does not support yet. */
+	composedElementUnsupported: (
+		source: string,
+		offset: number | undefined,
+		what: string,
+	) =>
+		error(
+			'TSRX011',
+			`${what} on a composed element is not supported yet (queued: ADR 0023 sub-design 10 follow-up tasks).`,
 			lineOf(source, offset),
 		),
 
