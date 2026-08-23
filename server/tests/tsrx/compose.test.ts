@@ -244,7 +244,7 @@ export function BasicParent({ title }: { title: string })
 		expect(diagnostics.some(d => d.code === 'TSRX011')).toBe(true)
 	})
 
-	test('`pass={{ }}` on a composed element is diagnosed as not yet supported', () => {
+	test('`pass={{ }}` on a composed element without a `ref` is diagnosed', () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
 
@@ -261,12 +261,40 @@ export function BasicParent({ title }: { title: string })
 		const { component, diagnostics } = compileComponent(
 			parent,
 			'examples/parent/basic-parent.tsrx',
-			new Set(),
+			new Set(['basic-child']),
 			undefined,
 			composeRegistryOf(childComponent.entry),
 		)
 		expect(component).toBeNull()
-		expect(diagnostics.some(d => d.code === 'TSRX011')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'TSRX012')).toBe(true)
+	})
+
+	test('`pass={{ }}` on a composed element with a `ref` lowers to pass() on the child tag', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild label={title} ref={child} pass={{ value: () => 'x' }} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		if (!component)
+			throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+		expect(component.clientCode).toContain(
+			"pass(child, { value: { get: () => 'x' } })",
+		)
 	})
 
 	test('a raw lowercase dashed tag is unaffected by composition', () => {

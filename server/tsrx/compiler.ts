@@ -132,10 +132,22 @@ export type TemplateNode =
 			node: TsrxNode
 	  }
 
+/**
+ * One `pass={{ prop: thunk }}` entry (ADR 0023 sub-design 10). Only
+ * getter-only thunks lower today; `{ get, set }` two-way descriptors are
+ * parsed as a distinct rejection (LT-017 follow-up), not silently dropped.
+ */
+export type PassEntryIR = {
+	prop: string
+	thunk: TsrxNode
+	thunkText: string
+}
+
 export type AttributeIR =
 	| { kind: 'static'; name: string; value: string | null }
 	| { kind: 'server'; name: string; exprText: string; node: TsrxNode }
 	| { kind: 'reactive'; name: string; thunk: TsrxNode; thunkText: string }
+	| { kind: 'pass'; entries: PassEntryIR[] }
 	| {
 			kind: 'class-map'
 			thunkText: string
@@ -177,6 +189,7 @@ export type AttributeIR =
 export type ComposeAttrIR =
 	| { kind: 'ref'; name: string }
 	| { kind: 'arg'; name: string; exprText: string; node: TsrxNode | null }
+	| { kind: 'pass'; entries: PassEntryIR[] }
 
 /**
  * A `@for` loop. Over server data (`listSignal` null) it lowers to `each()`;
@@ -1011,6 +1024,69 @@ const typeOfAnnotation = (
 	}
 }
 
+/**
+ * Parse `pass={{ prop: thunk, … }}` entries — shared by raw dashed tags and
+ * composed elements (ADR 0023 sub-design 10: one dispatch path, not two). A
+ * `{ get, set }` descriptor entry is recognized but not yet lowered (LT-017);
+ * anything else is an outright invalid entry.
+ */
+const classifyPassEntries = (
+	ctx: ExtractContext,
+	attr: TsrxNode,
+): PassEntryIR[] | { kind: 'invalid'; reason: string } => {
+	const value = attr.value
+	const expr =
+		isNode(value) && value.type === 'JSXExpressionContainer'
+			? value.expression
+			: null
+	if (!isNode(expr) || expr.type !== 'ObjectExpression')
+		return {
+			kind: 'invalid',
+			reason:
+				'pass={{ … }} expects an object literal of prop: thunk entries (pass={{ value: () => x.get() }}).',
+		}
+	const entries: PassEntryIR[] = []
+	for (const prop of asArray(expr.properties)) {
+		const propName = identifierName(prop.key)
+		if (prop.type !== 'Property' || !propName)
+			return {
+				kind: 'invalid',
+				reason: 'pass={{ … }} entries must be named properties.',
+			}
+		const entryValue = prop.value
+		if (isNode(entryValue) && entryValue.type === 'ArrowFunctionExpression') {
+			if (!isNode(entryValue.body))
+				return {
+					kind: 'invalid',
+					reason: `pass entry \`${propName}\` must be a thunk with a body (() => value).`,
+				}
+			entries.push({
+				prop: propName,
+				thunk: entryValue,
+				thunkText: text(ctx, entryValue),
+			})
+			continue
+		}
+		if (isNode(entryValue) && entryValue.type === 'ObjectExpression') {
+			const props = asArray(entryValue.properties)
+			const has = (key: string) =>
+				props.some(
+					p => p.type === 'Property' && (identifierName(p.key) ?? '') === key,
+				)
+			if (has('get') && has('set'))
+				return {
+					kind: 'invalid',
+					reason: `Two-way { get, set } pass entry \`${propName}\` lands with the follow-up milestone (pass() write-back).`,
+				}
+		}
+		return {
+			kind: 'invalid',
+			reason: `pass entry \`${propName}\` must be a thunk (() => value) or a { get, set } descriptor.`,
+		}
+	}
+	return entries
+}
+
 /** Classify one JSXAttribute into the attribute IR. */
 const classifyAttribute = (
 	ctx: ExtractContext,
@@ -1018,6 +1094,11 @@ const classifyAttribute = (
 ): AttributeIR | { kind: 'invalid'; reason: string } => {
 	const name = attrName(attr)
 	const value = attr.value
+	if (name === 'pass') {
+		const entries = classifyPassEntries(ctx, attr)
+		if ('reason' in entries) return entries
+		return { kind: 'pass', entries }
+	}
 	if (name === 'ref') {
 		const target =
 			isNode(value) && value.type === 'JSXExpressionContainer'
@@ -1098,18 +1179,6 @@ const classifyAttribute = (
 				thunkText: text(ctx, expr),
 			}
 		}
-		if (expr.type === 'ObjectExpression') {
-			const props = asArray(expr.properties)
-			const has = (key: string) =>
-				props.some(
-					p => p.type === 'Property' && (identifierName(p.key) ?? '') === key,
-				)
-			if (has('get') && has('set'))
-				return {
-					kind: 'invalid',
-					reason: `Mediated two-way { get, set } attribute on \`${name}\` lands with the milestone-3 client subset (pass() write-back).`,
-				}
-		}
 		if (expr.type === 'FunctionExpression')
 			return {
 				kind: 'invalid',
@@ -1130,9 +1199,11 @@ const classifyAttribute = (
 
 /**
  * Classify one JSXAttribute on a composed (PascalCase) element. `ref` keeps
- * its usual meaning; everything else is a server arg forwarded verbatim into
- * the child's `render<Name>()` call — no reactive-shape inference (ADR 0023
- * sub-design 10, amending sub-design 4's raw-element dispatch).
+ * its usual meaning; `pass={{ … }}` is the sole client-prop interop channel
+ * (ADR 0023 sub-design 10 — same dispatch as raw dashed tags); everything
+ * else is a server arg forwarded verbatim into the child's `render<Name>()`
+ * call — no reactive-shape inference (amends sub-design 4's raw-element
+ * dispatch).
  */
 const classifyComposeAttribute = (
 	ctx: ExtractContext,
@@ -1140,6 +1211,11 @@ const classifyComposeAttribute = (
 ): ComposeAttrIR | { kind: 'invalid'; reason: string } => {
 	const name = attrName(attr)
 	const value = attr.value
+	if (name === 'pass') {
+		const entries = classifyPassEntries(ctx, attr)
+		if ('reason' in entries) return entries
+		return { kind: 'pass', entries }
+	}
 	if (name === 'ref') {
 		const target =
 			isNode(value) && value.type === 'JSXExpressionContainer'
@@ -1176,9 +1252,9 @@ const classifyComposeAttribute = (
 /**
  * Lower a composed (PascalCase) element: resolve its tag against the file's
  * `import { Name } from '….tsrx'` map, classify attributes as server args
- * (regardless of value shape) or `ref`, and diagnose the constructs this
- * milestone does not support yet — client props (`pass={{ }}`, follow-up
- * task) and children (default-slot substitution, follow-up task).
+ * (regardless of value shape), `ref`, or `pass={{ }}` (client-prop interop,
+ * ADR 0023 sub-design 10), and diagnose the constructs this milestone does
+ * not support yet — children (default-slot substitution, follow-up task).
  */
 const lowerComposeElement = (
 	ctx: ExtractContext,
@@ -1202,16 +1278,6 @@ const lowerComposeElement = (
 						ctx.source,
 						attr.start,
 						'Spread attributes on a composed element',
-					),
-				)
-				continue
-			}
-			if (attrName(attr) === 'pass') {
-				ctx.diagnostics.push(
-					diagnostic.composedElementUnsupported(
-						ctx.source,
-						attr.start,
-						'`pass={{ … }}` (client-prop interop)',
 					),
 				)
 				continue

@@ -29,6 +29,7 @@ import {
 } from './compiler'
 import type { CompileDiagnostic } from './diagnostics'
 import { diagnostic } from './diagnostics'
+import type { RegistryEntry } from './registry'
 
 /* === Types === */
 
@@ -37,6 +38,7 @@ type ExprNode = Extract<TemplateNode, { kind: 'expr' }>
 type IfNode = Extract<TemplateNode, { kind: 'if' }>
 type SwitchNode = Extract<TemplateNode, { kind: 'switch' }>
 type TryNode = Extract<TemplateNode, { kind: 'try' }>
+type ComposeNode = Extract<TemplateNode, { kind: 'compose' }>
 
 export type ParserKind = 'asInteger' | 'asBoolean' | 'asString' | null
 
@@ -339,6 +341,55 @@ const countForSelector = (node: TemplateNode, selector: string): number => {
 }
 
 /**
+ * Structural match count for composed elements over the whole template,
+ * grouped by their resolved `.tsrx` source path — the proxy for "this
+ * composed target is unique" used by `pass={{ }}` addressing (ADR 0023
+ * sub-design 10). Composed elements don't carry reliably-rendered static
+ * attributes to build a role/discriminator selector from (they're server
+ * args to the child's render call, not guaranteed DOM attributes), so only
+ * the count-by-source-identity check is attempted; an author with more than
+ * one instance of the same composed child needs a mechanism this milestone
+ * doesn't offer yet.
+ */
+const countComposeBySource = (node: TemplateNode, source: string): number => {
+	if (node.kind === 'if')
+		return Math.max(
+			...[node.then, node.alternate].map(branch =>
+				branch.reduce(
+					(sum, child) => sum + countComposeBySource(child, source),
+					0,
+				),
+			),
+		)
+	if (node.kind === 'switch')
+		return Math.max(
+			...node.cases.map(arm =>
+				arm.children.reduce(
+					(sum, child) => sum + countComposeBySource(child, source),
+					0,
+				),
+			),
+		)
+	if (node.kind === 'try')
+		return Math.max(
+			node.children.reduce(
+				(sum, c) => sum + countComposeBySource(c, source),
+				0,
+			),
+			node.catchChildren.reduce(
+				(sum, c) => sum + countComposeBySource(c, source),
+				0,
+			),
+		)
+	if (node.kind === 'compose') return node.source === source ? 1 : 0
+	if (!isElement(node)) return 0
+	let count = 0
+	for (const child of node.children)
+		count += countComposeBySource(child, source)
+	return count
+}
+
+/**
  * Resolve the selector for an element: try role, bare, then upgrade to a
  * discriminator; accept the first structurally unique candidate. Counting is
  * scoped to `tree` — the whole template, or a loop output subtree for
@@ -531,6 +582,13 @@ export const analyzeClient = (
 	component: ComponentIR,
 	registry: ReadonlySet<string>,
 	diagnostics: CompileDiagnostic[],
+	/**
+	 * Composed (PascalCase) elements' targets, keyed by resolved `.tsrx`
+	 * source path (ADR 0023 sub-design 10) — needed only to resolve the
+	 * underlying custom-element tag for a `pass={{ }}`-addressed composed
+	 * target's query selector text.
+	 */
+	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
 ): ClientPlan => {
 	const source = component.source
 	const queries: QueryPlan[] = []
@@ -604,12 +662,27 @@ export const analyzeClient = (
 				collectRefs(child)
 			return
 		}
+		if (node.kind === 'compose') {
+			for (const attr of node.attrs)
+				if (attr.kind === 'ref') refNames.add(attr.name)
+			return
+		}
 		if (!isElement(node)) return
 		for (const attr of node.attrs)
 			if (attr.kind === 'ref') refNames.add(attr.name)
 		for (const child of node.children) collectRefs(child)
 	}
 	collectRefs(component.root)
+
+	/** Free names in a reactive/pass thunk the client cannot resolve. */
+	const badFreeNames = (node: TsrxNode): string[] =>
+		[...dependenciesOf(node)].filter(
+			name =>
+				!component.signals.some(s => s.name === name) &&
+				!refNames.has(name) &&
+				!JS_GLOBALS.has(name) &&
+				!CONTEXT_NAMES.has(name),
+		)
 
 	const loopFor = (node: TemplateNode): ForIR | null =>
 		[...component.fors.values()].find(f => f.output === node) ?? null
@@ -1427,14 +1500,7 @@ export const analyzeClient = (
 		for (const attr of el.attrs) {
 			if (attr.kind === 'reactive') {
 				collectAmbient(attr.thunk)
-				const free = dependenciesOf(attr.thunk)
-				const bad = [...free].filter(
-					name =>
-						!component.signals.some(s => s.name === name) &&
-						!refNames.has(name) &&
-						!JS_GLOBALS.has(name) &&
-						!CONTEXT_NAMES.has(name),
-				)
+				const bad = badFreeNames(attr.thunk)
 				if (bad.length > 0) {
 					diagnostics.push(
 						diagnostic.unsupported(
@@ -1444,30 +1510,62 @@ export const analyzeClient = (
 						),
 					)
 				}
-				if (isCustom && registry.has(el.tag)) {
+				if (isCustom) {
+					// ADR 0023 sub-design 4 (amended by sub-design 10): a
+					// function-valued attribute is only ever a reactive binding
+					// on NATIVE elements. Custom-element interop is solely
+					// through the explicit `pass={{ }}` attribute below — one
+					// dispatch path, not two shape-inferred ones.
+					diagnostics.push(
+						diagnostic.reactiveAttrOnCustomElement(
+							source,
+							attr.thunk.start,
+							el.tag,
+							attr.name,
+						),
+					)
+					continue
+				}
+				// A host-prop mirror always dispatches as a property —
+				// attribute dispatch would be wrong for property-backed
+				// targets like `input.value`.
+				const mirror = hostPropMirrorOf(attr.thunk)
+				effects.push({
+					kind: 'watch-attr',
+					query,
+					attr: attr.name,
+					thunkText: attr.thunkText,
+					dispatch: mirror !== null ? 'property' : 'attribute',
+					coerceToString: mirror === null && returnsNumber(attr.thunk.body),
+					sourceStart: attr.thunk.start,
+					sourceEnd: attr.thunk.end,
+				})
+			} else if (attr.kind === 'pass') {
+				if (!isCustom || !registry.has(el.tag)) {
+					diagnostics.push(
+						diagnostic.passTargetNotCustom(source, el.node.start, el.tag),
+					)
+					continue
+				}
+				for (const entry of attr.entries) {
+					collectAmbient(entry.thunk)
+					const bad = badFreeNames(entry.thunk)
+					if (bad.length > 0) {
+						diagnostics.push(
+							diagnostic.unsupported(
+								source,
+								entry.thunk.start,
+								`pass entry \`${entry.prop}\` references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
+							),
+						)
+					}
 					effects.push({
 						kind: 'pass',
 						query,
-						prop: attr.name,
-						thunkText: attr.thunkText,
-						sourceStart: attr.thunk.start,
-						sourceEnd: attr.thunk.end,
-					})
-				} else {
-					// A host-prop mirror always dispatches as a property —
-					// attribute dispatch would be wrong for
-					// property-backed targets like `input.value`.
-					const mirror = hostPropMirrorOf(attr.thunk)
-					effects.push({
-						kind: 'watch-attr',
-						query,
-						attr: attr.name,
-						thunkText: attr.thunkText,
-						dispatch: mirror !== null || isCustom ? 'property' : 'attribute',
-						coerceToString:
-							mirror === null && !isCustom && returnsNumber(attr.thunk.body),
-						sourceStart: attr.thunk.start,
-						sourceEnd: attr.thunk.end,
+						prop: entry.prop,
+						thunkText: entry.thunkText,
+						sourceStart: entry.thunk.start,
+						sourceEnd: entry.thunk.end,
 					})
 				}
 			} else if (attr.kind === 'class-map') {
@@ -1673,6 +1771,81 @@ export const analyzeClient = (
 				)
 	}
 
+	/**
+	 * `pass={{ }}` on a composed element (ADR 0023 sub-design 10 — same
+	 * dispatch as raw dashed tags). Composed elements aren't otherwise
+	 * addressed at all yet (server args aren't guaranteed to render as DOM
+	 * attributes, LT-018's children are the only other construct they'll
+	 * carry): an explicit `ref` is required, and the target must be the sole
+	 * composed instance of that child in the template (`countComposeBySource`)
+	 * since there's no attribute-based discriminator to fall back on.
+	 */
+	const emitComposeEffects = (node: ComposeNode): void => {
+		const passAttrs = node.attrs.filter(
+			(a): a is Extract<(typeof node.attrs)[number], { kind: 'pass' }> =>
+				a.kind === 'pass',
+		)
+		if (passAttrs.length === 0) return
+		const refAttr = node.attrs.find(
+			(a): a is Extract<(typeof node.attrs)[number], { kind: 'ref' }> =>
+				a.kind === 'ref',
+		)
+		if (!refAttr) {
+			diagnostics.push(
+				diagnostic.composedPassRequiresRef(
+					source,
+					node.node.start,
+					node.component,
+				),
+			)
+			return
+		}
+		if (countComposeBySource(component.root, node.source) !== 1) {
+			diagnostics.push(
+				diagnostic.unaddressableElement(
+					source,
+					node.node.start,
+					`Multiple <${node.component}> instances compose the same child — pass={{ }} needs a target this milestone can uniquely identify.`,
+				),
+			)
+			return
+		}
+		const childTag = composeRegistry?.get(node.source)?.tag ?? null
+		if (!childTag) {
+			diagnostics.push(
+				diagnostic.composedComponentNotCompiled(
+					source,
+					node.node.start,
+					node.component,
+					node.source,
+				),
+			)
+			return
+		}
+		const query = addQuery(refAttr.name, childTag, 'one')
+		for (const entry of passAttrs.flatMap(a => a.entries)) {
+			collectAmbient(entry.thunk)
+			const bad = badFreeNames(entry.thunk)
+			if (bad.length > 0) {
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						entry.thunk.start,
+						`pass entry \`${entry.prop}\` references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
+					),
+				)
+			}
+			effects.push({
+				kind: 'pass',
+				query,
+				prop: entry.prop,
+				thunkText: entry.thunkText,
+				sourceStart: entry.thunk.start,
+				sourceEnd: entry.thunk.end,
+			})
+		}
+	}
+
 	const emitTopEffects = (node: TemplateNode): void => {
 		if (node.kind === 'if') {
 			handleIfEffects(node)
@@ -1684,6 +1857,10 @@ export const analyzeClient = (
 		}
 		if (node.kind === 'try') {
 			handleTryEffects(node)
+			return
+		}
+		if (node.kind === 'compose') {
+			emitComposeEffects(node)
 			return
 		}
 		if (!isElement(node)) return
@@ -1705,7 +1882,8 @@ export const analyzeClient = (
 					attr.kind === 'reactive' ||
 					attr.kind === 'class-map' ||
 					attr.kind === 'html' ||
-					attr.kind === 'ref'
+					attr.kind === 'ref' ||
+					attr.kind === 'pass'
 				) {
 					diagnostics.push(
 						diagnostic.unsupported(

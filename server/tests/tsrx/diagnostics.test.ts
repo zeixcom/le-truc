@@ -432,17 +432,21 @@ describe('rewrite-rule enforcement', () => {
 		expect(hit?.message).toContain('`ghost`')
 	})
 
-	test('mediated { get, set } attribute is gated as milestone-3', () => {
+	test('mediated { get, set } pass entry is gated as a follow-up milestone', () => {
 		const source = `export function C({}: {})
 	@{
 		const value = createCell('x')
 		expose({ value: value.get })
 		<>
-			<c-el value={{ get: () => value.get(), set: (v: string) => value.set(v) }}>ok</c-el>
+			<c-el pass={{ value: { get: () => value.get(), set: (v: string) => value.set(v) } }}>ok</c-el>
 			<style>c-el { color: red }</style>
 		</>
 	}`
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
 		expect(diagnostics.some(d => d.code === 'TSRX006')).toBe(true)
 	})
 

@@ -22,6 +22,7 @@ export type DiagnosticCode =
 	| 'TSRX009' // invalid `export const config` extension declaration
 	| 'TSRX010' // managed form prop used without formAssociated
 	| 'TSRX011' // composed (PascalCase) element with no resolvable .tsrx import
+	| 'TSRX012' // pass={{ }}/reactive dispatch legality on a custom-element target
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -203,6 +204,52 @@ export const diagnostic = {
 		error(
 			'TSRX011',
 			`${what} on a composed element is not supported yet (queued: ADR 0023 sub-design 10 follow-up tasks).`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A function-valued attribute on a custom-element target (ADR 0023
+	 * sub-design 4, amended by sub-design 10) — reactive-shape inference on
+	 * custom elements is gone; `pass={{ }}` is the sole client-prop channel.
+	 */
+	reactiveAttrOnCustomElement: (
+		source: string,
+		offset: number | undefined,
+		tag: string,
+		attr: string,
+	) =>
+		error(
+			'TSRX012',
+			`Reactive attribute \`${attr}={…}\` on custom element <${tag}> is no longer bound to anything (ADR 0023 sub-design 10) — use \`pass={{ ${attr}: ${attr} }}\` for client-side signal interop, or a plain value for a static attribute.`,
+			lineOf(source, offset),
+		),
+
+	/** `pass={{ }}` on a native element or an unregistered/unknown custom tag. */
+	passTargetNotCustom: (
+		source: string,
+		offset: number | undefined,
+		tag: string,
+	) =>
+		error(
+			'TSRX012',
+			`pass={{ … }} on <${tag}> — its target must be a registry-known custom element (ADR 0023 sub-design 10); native elements use reactive attribute bindings instead.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `pass={{ }}` on a composed element without an explicit `ref` — selector
+	 * synthesis for a composed target isn't attempted from server args (they
+	 * aren't guaranteed to render as DOM attributes), so addressing needs the
+	 * author's own `ref`.
+	 */
+	composedPassRequiresRef: (
+		source: string,
+		offset: number | undefined,
+		component: string,
+	) =>
+		error(
+			'TSRX012',
+			`pass={{ … }} on <${component}> needs an explicit ref={name} — a composed element's server args aren't guaranteed to render as DOM attributes, so it can't be auto-addressed the way native/raw custom elements are.`,
 			lineOf(source, offset),
 		),
 

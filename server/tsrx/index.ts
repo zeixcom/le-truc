@@ -71,7 +71,7 @@ export const compileComponent = (
 				)
 		}
 	}
-	const plan = analyzeClient(component, registry, diagnostics)
+	const plan = analyzeClient(component, registry, diagnostics, composeRegistry)
 	if (diagnostics.some(d => d.severity === 'error'))
 		return { component: null, diagnostics }
 	const server = emitServerModule(component, {

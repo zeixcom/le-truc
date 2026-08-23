@@ -5,8 +5,8 @@
  *   server renders initial items in place + extracts the item shape into a
  *   `<template>` whose holes become `<slot>` markers; client lowers to
  *   `reconcile()` with a generated `bindItem` that fills the slots.
- * - `disabled={() => …}` on a child custom element → `pass()` lowering
- *   (function-valued attribute = reactive binding; child is in the registry)
+ * - `pass={{ disabled: () => … }}` on a child custom element → `pass()`
+ *   lowering (explicit client-prop attribute, ADR 0023 sub-design 10)
  * - `ref={textbox}` → generated `first()` query (element addressing)
  * - `onClick` inside `@for` → per-item listener in the `bindItem` scope
  *   (ADR 0017 collector parity) — delegation becomes an optimization
@@ -49,7 +49,10 @@ export function ModuleList({}: {})
 							</button>
 						</div>
 					</form-textbox>
-					<basic-button class="submit" disabled={() => !textbox.length}>
+					<basic-button
+					class="submit"
+					pass={{ disabled: () => !textbox.length }}
+				>
 						<button type="submit" class="constructive">Add</button>
 					</basic-button>
 				</form>
