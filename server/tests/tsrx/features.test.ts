@@ -9,6 +9,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import sanitizeHtml from 'sanitize-html'
 import { compileComponent } from '../../tsrx'
 import { configureHtmlSanitizer } from '../../tsrx/runtime'
 
@@ -20,21 +21,15 @@ const escapeAll = (html: string): string =>
 	html.replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 // A stand-in "consumer-supplied" sanitizer (what a host would wire up via
-// `configureHtmlSanitizer`, e.g. DOMPurify) — strips script blocks,
-// event-handler attributes, and unsafe URL schemes, but otherwise passes
-// markup through raw. Used only to exercise the hook in tests; the runtime
-// itself ships no such sanitizer (ADR 0010's posture, mirrored server-side).
+// `configureHtmlSanitizer`) — a real sanitize-html instance, since the
+// runtime itself ships no sanitizer (ADR 0010's posture, mirrored
+// server-side). Unlike DOMPurify, sanitize-html works on plain strings, no
+// DOM required — a better fit for server-side use.
 const stripDangerousMarkup = (html: string): string =>
-	html
-		.replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi, '')
-		.replace(/<script\b[^>]*\/?>/gi, '')
-		.replace(/\s+on[a-z]+\s*=\s*"[^"]*"/gi, '')
-		.replace(/\s+on[a-z]+\s*=\s*'[^']*'/gi, '')
-		.replace(/\s+on[a-z]+\s*=\s*[^\s"'`=<>]+/gi, '')
-		.replace(
-			/\s(href|src|action|formaction|xlink:href)\s*=\s*(["'])\s*(javascript|vbscript|data(?!:image\/(png|gif|jpeg|jpg|webp|svg\+xml)):)[^"']*\2/gi,
-			'',
-		)
+	sanitizeHtml(html, {
+		allowedTags: sanitizeHtml.defaults.allowedTags.concat('img'),
+		allowedAttributes: sanitizeHtml.defaults.allowedAttributes,
+	})
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
@@ -292,7 +287,7 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 				await render('feat-html', {
 					markup: '<img src=x onerror=alert(1)>',
 				}),
-			).toBe('<c-el><article><img src=x></article></c-el>')
+			).toBe('<c-el><article><img src="x" /></article></c-el>')
 		} finally {
 			configureHtmlSanitizer(escapeAll)
 		}
