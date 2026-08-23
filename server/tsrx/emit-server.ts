@@ -130,21 +130,30 @@ const lazyValueExpression = (
 		if (component.signals.some(s => s.name === name)) return `${name}.get()`
 		return exprText
 	}
-	if (
-		expr.type === 'Literal' &&
-		typeof expr.value === 'string' &&
-		component.exposeProps.has(String(expr.value))
-	) {
-		const signal = component.exposeProps.get(String(expr.value)) as string
-		return `${signal}.get()`
+	if (expr.type === 'Literal' && typeof expr.value === 'string') {
+		const propName = String(expr.value)
+		if (component.exposeProps.has(propName)) {
+			const signal = component.exposeProps.get(propName) as string
+			return `${signal}.get()`
+		}
+		// A Parser-exposed prop (`asString`/`asBoolean`/…) as a string-literal
+		// lazy child — `&{'label'}` — is the same general "watch this exposed
+		// prop by name" mechanism `&{'validationMessage'}` already uses for
+		// managed form props (`WatchHelper`'s `K extends keyof P & string`
+		// overload, `src/helpers/reactive.ts`), just not form-specific: the
+		// prop's server truth IS the root attribute that seeds it (DOM-is-
+		// truth, ADR 0003), exactly like the host-prop-mirror ATTRIBUTE thunk
+		// (`hostPropMirrorExpr`) above — same lookup, keyed by name instead of
+		// an authored `() => host.<prop>` thunk.
+		if (component.parserExposeProps.has(propName)) {
+			const rootAttr = component.root.attrs.find(
+				(a): a is Extract<AttributeIR, { kind: 'server' }> =>
+					a.kind === 'server' && a.name === propName,
+			)
+			if (rootAttr) return rootAttr.exprText
+		}
+		if (component.config?.form && MANAGED_TEXT_PROPS.has(propName)) return "''"
 	}
-	if (
-		expr.type === 'Literal' &&
-		typeof expr.value === 'string' &&
-		component.config?.form &&
-		MANAGED_TEXT_PROPS.has(String(expr.value))
-	)
-		return "''"
 	if (expr.type === 'ArrowFunctionExpression') return `(${exprText})()`
 	return exprText
 }

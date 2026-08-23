@@ -224,6 +224,21 @@ export const freeIdentifiers = (node: TsrxNode): Set<string> => {
 			default:
 				for (const [key, value] of Object.entries(current)) {
 					if (key === 'loc' || key === 'range' || key === 'parent') continue
+					// TS type positions name TYPES, not values — a cast's operand
+					// type (`x as Foo[]`), a declaration's annotation, a function's
+					// return type/generics, etc. Walking these generically would
+					// count a type name (`Foo`) as a free VALUE identifier, wrongly
+					// failing the harvest/thunk free-name gates for any initializer
+					// that happens to use a type annotation or cast (LT-027).
+					if (
+						key === 'typeAnnotation' ||
+						key === 'returnType' ||
+						key === 'typeParameters' ||
+						key === 'typeArguments' ||
+						key === 'superTypeParameters' ||
+						key === 'superTypeArguments'
+					)
+						continue
 					if (isNode(value) || Array.isArray(value)) visit(value, bound)
 				}
 		}
