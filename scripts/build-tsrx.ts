@@ -11,9 +11,9 @@
  * and that output is gitignored — a fresh checkout has none until compiled.
  */
 
-import { Glob } from 'bun'
 import { readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { Glob } from 'bun'
 import { compileTsrxCorpus } from '../server/effects/tsrx'
 
 const ROOT = resolve(import.meta.dir, '..')

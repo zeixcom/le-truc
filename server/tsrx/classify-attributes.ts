@@ -129,14 +129,23 @@ export const classifyAttribute = (
 		return { kind: 'ref', name: refName }
 	}
 	if (/^on[A-Z]/.test(name)) {
-		const expr =
+		const raw =
 			isNode(value) && value.type === 'JSXExpressionContainer'
 				? value.expression
 				: value
+		// A bare identifier (`{onInput}`, i.e. `onInput={onInput}`) resolves
+		// against a hoisted setup const — the handler is exactly its
+		// initializer, so two `@if` branches sharing the identifier get
+		// identical handler text automatically (union addressing requires
+		// this, ADR 0023 LT-008).
+		const resolvedName =
+			isNode(raw) && raw.type === 'Identifier' ? identifierName(raw) : null
+		const resolved = resolvedName ? ctx.setupInits.get(resolvedName) : undefined
+		const expr = resolved ?? raw
 		if (!isNode(expr) || !/Function(Expression)?$/.test(expr.type))
 			return {
 				kind: 'invalid',
-				reason: `Event attribute ${name}={…} must be a function.`,
+				reason: `Event attribute ${name}={…} must be a function, or an identifier bound to one by a hoisted \`const\`.`,
 			}
 		return {
 			kind: 'event',

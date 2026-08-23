@@ -50,8 +50,13 @@ export type QueryPlan = {
 	/** Variable name in the generated factory. */
 	name: string
 	selector: string
-	/** `first()` or `all()`. */
-	cardinality: 'one' | 'many'
+	/**
+	 * `first(sel, message)` (throws if missing) / `all(sel, message)` / a
+	 * non-throwing `first(sel)` for an element that only exists when a
+	 * single-branch `@if` (no `@else`) actually rendered it — `message` is
+	 * unused for `'maybe'`.
+	 */
+	cardinality: 'one' | 'many' | 'maybe'
 	message: string
 }
 
@@ -219,6 +224,28 @@ export type TopEffectPlan =
 	  }
 	| { kind: 'each'; for: ForClientPlan }
 	| { kind: 'reconcile'; for: ReconcilePlan }
+	| {
+			/**
+			 * A verbatim client-only statement (`internals?.states.add(…)`)
+			 * lowered from a control-flow branch — always wrapped in a
+			 * `'guarded'` effect, never emitted bare (see below).
+			 */
+			kind: 'raw'
+			text: string
+			sourceStart: number | undefined
+			sourceEnd: number | undefined
+	  }
+	| {
+			/**
+			 * Effects that only apply when a single-branch `@if` (no `@else`)
+			 * actually rendered — `query` was addressed with a non-throwing
+			 * `first()`, so the generated `if (query) { … }` block is the
+			 * client-side mirror of the server's own `if (cond) { … }`.
+			 */
+			kind: 'guarded'
+			query: string
+			effects: TopEffectPlan[]
+	  }
 
 export type ClientPlan = {
 	queries: QueryPlan[]
@@ -625,7 +652,7 @@ export const analyzeClient = (
 	const addQuery = (
 		base: string,
 		selector: string,
-		cardinality: 'one' | 'many',
+		cardinality: 'one' | 'many' | 'maybe',
 	): string => {
 		const existing = queries.find(
 			q => q.selector === selector && q.cardinality === cardinality,
@@ -696,7 +723,11 @@ export const analyzeClient = (
 	 * plans — shared by raw dashed-tag elements and composed elements, the
 	 * two `pass={{ }}` addressing paths (ADR 0023 sub-design 10).
 	 */
-	const emitPassEntries = (entries: PassEntryIR[], query: string): void => {
+	const emitPassEntries = (
+		entries: PassEntryIR[],
+		query: string,
+		sink: TopEffectPlan[] = effects,
+	): void => {
 		for (const entry of entries) {
 			collectAmbient(entry.thunk)
 			const bad = badFreeNames(entry.thunk)
@@ -722,7 +753,7 @@ export const analyzeClient = (
 					)
 				}
 			}
-			effects.push({
+			sink.push({
 				kind: 'pass',
 				query,
 				prop: entry.prop,
@@ -1234,9 +1265,15 @@ export const analyzeClient = (
 		const roots = [...enclosing.then, ...enclosing.alternate].filter(isElement)
 		const clauses: string[] = []
 		for (const root of roots) {
-			const self = resolveSelectorIn(root, root)
-			if (countForSelector(component.root, self.selector) !== 1)
-				return { selector: self.selector, unique: false }
+			// Global tree (not `root` itself) — `resolveSelectorIn` tries
+			// role → bare tag → discriminator IN ORDER and stops at the first
+			// one unique WITHIN the tree it's given; passing `root` as its
+			// own tree made every candidate trivially "unique" (an element is
+			// always unique among itself), so a same-tag sibling elsewhere in
+			// the template (two plain `<p>`s, one per @if) was never caught
+			// and the bare-tag candidate always won even when ambiguous.
+			const self = resolveSelectorIn(component.root, root)
+			if (!self.unique) return { selector: self.selector, unique: false }
 			if (!clauses.includes(self.selector)) clauses.push(self.selector)
 		}
 		return { selector: clauses.join(', '), unique: true }
@@ -1547,7 +1584,11 @@ export const analyzeClient = (
 	 * Emit the effects of one element's client constructs against `query` —
 	 * the shared body for plain elements and @if branch-root unions alike.
 	 */
-	const emitConstructEffects = (el: ElementNode, query: string): void => {
+	const emitConstructEffects = (
+		el: ElementNode,
+		query: string,
+		sink: TopEffectPlan[] = effects,
+	): void => {
 		const isCustom = el.tag.includes('-')
 		for (const attr of el.attrs) {
 			if (attr.kind === 'reactive') {
@@ -1582,7 +1623,7 @@ export const analyzeClient = (
 				// attribute dispatch would be wrong for property-backed
 				// targets like `input.value`.
 				const mirror = hostPropMirrorOf(attr.thunk)
-				effects.push({
+				sink.push({
 					kind: 'watch-attr',
 					query,
 					attr: attr.name,
@@ -1599,11 +1640,11 @@ export const analyzeClient = (
 					)
 					continue
 				}
-				emitPassEntries(attr.entries, query)
+				emitPassEntries(attr.entries, query, sink)
 			} else if (attr.kind === 'class-map') {
 				collectAmbient(attr.object)
 				for (const key of classMapKeys(attr.object)) {
-					effects.push({
+					sink.push({
 						kind: 'watch-attr',
 						query,
 						attr: `class:${key}`,
@@ -1616,7 +1657,7 @@ export const analyzeClient = (
 				}
 			} else if (attr.kind === 'event') {
 				collectAmbient(attr.handler)
-				effects.push({
+				sink.push({
 					kind: 'on',
 					query,
 					event: attr.event,
@@ -1645,7 +1686,7 @@ export const analyzeClient = (
 					)
 			}
 			collectAmbient(child.expr)
-			effects.push({
+			sink.push({
 				kind: 'watch-text',
 				query,
 				source: lazyWatchSource(component, child),
@@ -1653,25 +1694,39 @@ export const analyzeClient = (
 		}
 	}
 
+	/** Does this element carry a construct of its own (not a nested one)? */
+	const hasOwnConstruct = (el: ElementNode): boolean =>
+		el.attrs.some(
+			a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
+		) || el.children.some(c => c.kind === 'expr' && c.lazy)
+
+	// A lazy text child of the branch ROOT itself is a legitimate construct
+	// (watched via the root's own query, exactly like a reactive attribute)
+	// — only a NESTED element's own lazy child or construct attrs make the
+	// construct unaddressable, hence the depth guard.
+	const hasDeepConstruct = (el: ElementNode, depth = 0): boolean =>
+		el.children.some(
+			child =>
+				(depth > 0 && child.kind === 'expr' && child.lazy) ||
+				(child.kind === 'element' &&
+					(child.attrs.some(
+						a =>
+							a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
+					) ||
+						hasDeepConstruct(child, depth + 1))),
+		)
+
 	/**
-	 * @if branches (LT-008): client constructs must sit on the branch ROOT
-	 * elements; the client addresses whichever branch rendered through a
-	 * union selector (`first('textarea, input[type="text"]')`). Construct
-	 * texts must be identical across branches — one effect covers all.
+	 * A single-branch `@if` (no `@else`) whose root may not exist at all —
+	 * the DOM-derived mirror of the hand-written `if (clearBtn) { … }`
+	 * pattern. The root (if any carries client constructs) is addressed with
+	 * a non-throwing `first()`; its own construct effects, plus any bare
+	 * client-only statement sitting beside it in the branch (LT-008), are all
+	 * wrapped in one `'guarded'` effect emitted client-side as
+	 * `if (query) { … }`.
 	 */
-	const handleIfEffects = (node: IfNode): void => {
-		const roots = [...node.then, ...node.alternate].filter(isElement)
-		const hasDeepConstruct = (el: ElementNode): boolean =>
-			el.children.some(
-				child =>
-					(child.kind === 'expr' && child.lazy) ||
-					(child.kind === 'element' &&
-						(child.attrs.some(
-							a =>
-								a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
-						) ||
-							hasDeepConstruct(child))),
-			)
+	const handleOptionalIfEffects = (node: IfNode): void => {
+		const roots = node.then.filter(isElement)
 		for (const root of roots)
 			if (hasDeepConstruct(root))
 				diagnostics.push(
@@ -1681,13 +1736,126 @@ export const analyzeClient = (
 						'Client constructs inside @if branches must sit on the branch root elements — deeper elements exist only when their branch rendered',
 					),
 				)
-		// html={dataRef} is server-rendered only — not a client construct.
-		const hasConstructs = roots.some(
-			r =>
-				r.attrs.some(
-					a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
-				) || r.children.some(c => c.kind === 'expr' && c.lazy),
+		const clientStmts = node.then.filter(
+			(n): n is TemplateNode & { kind: 'client-stmt' } =>
+				n.kind === 'client-stmt',
 		)
+		const constructedRoots = roots.filter(hasOwnConstruct)
+		if (constructedRoots.length > 1) {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					node.node.start,
+					'Multiple addressable elements with client constructs inside one @if branch — only one root can be addressed per branch; split into separate @if blocks, or address the extra element through a hoisted const referenced from the first',
+				),
+			)
+			return
+		}
+		const primary = constructedRoots[0] ?? roots[0] ?? null
+		const hasConstructs =
+			clientStmts.length > 0 || (primary ? hasOwnConstruct(primary) : false)
+		if (!hasConstructs) return
+		if (!primary) {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					node.node.start,
+					'A bare client-only statement inside a single-branch @if needs an element sibling in the same branch to test whether the branch rendered',
+				),
+			)
+			return
+		}
+		const resolved = selectorFor(primary)
+		if (!resolved.unique) {
+			diagnostics.push(
+				diagnostic.unaddressableElement(
+					source,
+					primary.node.start,
+					`No unique selector for the @if branch root <${primary.tag}> — add a distinguishing static attribute`,
+				),
+			)
+			return
+		}
+		const refAttr = primary.attrs.find(a => a.kind === 'ref') as
+			| { kind: 'ref'; name: string }
+			| undefined
+		const query = addQuery(
+			refAttr?.name ?? sanitizeVarName(primary.tag),
+			resolved.selector,
+			'maybe',
+		)
+		const guarded: TopEffectPlan[] = []
+		for (const stmt of node.then) {
+			if (stmt.kind === 'client-stmt') {
+				collectAmbient(stmt.node)
+				guarded.push({
+					kind: 'raw',
+					text: stmt.text,
+					sourceStart: stmt.node.start,
+					sourceEnd: stmt.node.end,
+				})
+				continue
+			}
+			if (stmt === primary) emitConstructEffects(primary, query, guarded)
+		}
+		effects.push({ kind: 'guarded', query, effects: guarded })
+	}
+
+	/**
+	 * @if branches (LT-008): client constructs must sit on the branch ROOT
+	 * elements; the client addresses whichever branch rendered through a
+	 * union selector (`first('textarea, input[type="text"]')`). Construct
+	 * texts must be identical across branches — one effect covers all. A
+	 * branch with no `@else` may not render at all — see
+	 * `handleOptionalIfEffects` for that (DOM-existence-guarded) case.
+	 */
+	const handleIfEffects = (node: IfNode): void => {
+		if (node.alternate.length === 0) {
+			handleOptionalIfEffects(node)
+			return
+		}
+		const roots = [...node.then, ...node.alternate].filter(isElement)
+		for (const root of roots)
+			if (hasDeepConstruct(root))
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						root.node.start,
+						'Client constructs inside @if branches must sit on the branch root elements — deeper elements exist only when their branch rendered',
+					),
+				)
+		const clientStmts = [...node.then, ...node.alternate].filter(
+			(n): n is TemplateNode & { kind: 'client-stmt' } =>
+				n.kind === 'client-stmt',
+		)
+		for (const stmt of clientStmts)
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					stmt.node.start,
+					'A bare client-only statement inside an @if with @else — union addressing needs identical constructs in every branch; use a single-branch @if (no @else) instead',
+				),
+			)
+		// Each branch may only carry ONE addressable element of its own —
+		// the union query addresses "whichever branch rendered", not
+		// multiple distinct siblings within a single branch.
+		for (const branch of [node.then, node.alternate]) {
+			const constructedInBranch = branch
+				.filter(isElement)
+				.filter(hasOwnConstruct)
+			if (constructedInBranch.length > 1) {
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						node.node.start,
+						'Multiple addressable elements with client constructs inside one @if branch — union addressing addresses a single root per branch; split into separate @if blocks, or address the extra element through a hoisted const referenced from the first',
+					),
+				)
+				return
+			}
+		}
+		// html={dataRef} is server-rendered only — not a client construct.
+		const hasConstructs = roots.some(hasOwnConstruct)
 		if (!hasConstructs) return
 		const primary = roots.find(r =>
 			r.attrs.some(
@@ -1744,6 +1912,7 @@ export const analyzeClient = (
 
 	/** Does a subtree carry client constructs (client-side-only elements)? */
 	const hasClientConstructs = (node: TemplateNode): boolean => {
+		if (node.kind === 'client-stmt') return true
 		if (node.kind === 'expr') return node.lazy
 		if (node.kind === 'if' || node.kind === 'switch' || node.kind === 'try')
 			return false
@@ -1804,24 +1973,27 @@ export const analyzeClient = (
 	}
 
 	/**
-	 * `pass={{ }}` on a composed element (ADR 0023 sub-design 10 — same
-	 * dispatch as raw dashed tags). Composed elements aren't otherwise
-	 * addressed at all yet (server args aren't guaranteed to render as DOM
-	 * attributes, LT-018's children are the only other construct they'll
-	 * carry): an explicit `ref` is required, and the target must be the sole
-	 * composed instance of that child in the template (`countComposeBySource`)
-	 * since there's no attribute-based discriminator to fall back on.
+	 * `ref={name}` and/or `pass={{ }}` on a composed element (ADR 0023
+	 * sub-design 10). Composed elements aren't otherwise addressed at all yet
+	 * (server args aren't guaranteed to render as DOM attributes, LT-018's
+	 * children are the only other construct they'll carry): an explicit
+	 * `ref` is required for BOTH — a bare `ref` (no `pass`) still needs the
+	 * query so the name resolves in the factory (e.g. reading `textbox.value`
+	 * from an event handler elsewhere in the template) — and the target must
+	 * be the sole composed instance of that child in the template
+	 * (`countComposeBySource`) since there's no attribute-based discriminator
+	 * to fall back on.
 	 */
 	const emitComposeEffects = (node: ComposeNode): void => {
 		const passAttrs = node.attrs.filter(
 			(a): a is Extract<(typeof node.attrs)[number], { kind: 'pass' }> =>
 				a.kind === 'pass',
 		)
-		if (passAttrs.length === 0) return
 		const refAttr = node.attrs.find(
 			(a): a is Extract<(typeof node.attrs)[number], { kind: 'ref' }> =>
 				a.kind === 'ref',
 		)
+		if (passAttrs.length === 0 && !refAttr) return
 		if (!refAttr) {
 			diagnostics.push(
 				diagnostic.composedPassRequiresRef(
@@ -1837,12 +2009,17 @@ export const analyzeClient = (
 				diagnostic.unaddressableElement(
 					source,
 					node.node.start,
-					`Multiple <${node.component}> instances compose the same child — pass={{ }} needs a target this milestone can uniquely identify.`,
+					`Multiple <${node.component}> instances compose the same child — ref={{ }}/pass={{ }} need a target this milestone can uniquely identify.`,
 				),
 			)
 			return
 		}
-		const childTag = composeRegistry?.get(node.source)?.tag ?? null
+		// `composeRegistry` is `undefined` during the corpus-wide registry-
+		// discovery pass (compileComponent's own tolerance, LT-015) — this
+		// component's OWN entry is all that pass needs; the composed child's
+		// tag isn't resolvable yet, and that's fine, not an error.
+		if (!composeRegistry) return
+		const childTag = composeRegistry.get(node.source)?.tag ?? null
 		if (!childTag) {
 			diagnostics.push(
 				diagnostic.composedComponentNotCompiled(
@@ -1855,10 +2032,11 @@ export const analyzeClient = (
 			return
 		}
 		const query = addQuery(refAttr.name, childTag, 'one')
-		emitPassEntries(
-			passAttrs.flatMap(a => a.entries),
-			query,
-		)
+		if (passAttrs.length > 0)
+			emitPassEntries(
+				passAttrs.flatMap(a => a.entries),
+				query,
+			)
 	}
 
 	const emitTopEffects = (node: TemplateNode): void => {

@@ -46,9 +46,38 @@ const SOURCES = [
 	'examples/module/list/module-list.tsrx',
 ] as const
 
+// module-list composes FormTextbox (ADR 0023 sub-design 10, LT-020) — the
+// compose registry must be built before it compiles, keyed by form-textbox's
+// own repo-relative source path (mirroring server/effects/tsrx.ts).
+const formTextboxResult = compileComponent(
+	read('examples/form/textbox/form-textbox.tsrx'),
+	'examples/form/textbox/form-textbox.tsrx',
+	registry,
+	childImports,
+)
+const composeRegistry = new Map(
+	formTextboxResult.component
+		? [
+				[
+					'examples/form/textbox/form-textbox.tsrx',
+					formTextboxResult.component.entry,
+				],
+			]
+		: [],
+)
+
 const compiled = SOURCES.map(rel => ({
 	rel,
-	result: compileComponent(read(rel), rel, registry, childImports),
+	result:
+		rel === 'examples/form/textbox/form-textbox.tsrx'
+			? formTextboxResult
+			: compileComponent(
+					read(rel),
+					rel,
+					registry,
+					childImports,
+					composeRegistry,
+				),
 }))
 
 describe('client golden — generated modules match snapshots', () => {
@@ -133,7 +162,13 @@ describe('client golden — convergence with the hand-written trio', () => {
 		expect(code).toContain(
 			"const input = first('textarea, input', 'form-textbox: textarea, input missing')",
 		)
-		// Client-only setup side effect: runs in the factory, never on the server
+		// `clearable`/`validatable` each gate an optional element (LT-008,
+		// single-branch @if, no @else): the button/error-paragraph queries are
+		// non-throwing `first()`, and their effects — including the bare
+		// client-only `internals?.states.add('clearable')` statement sitting
+		// beside the button in the branch — only run guarded by presence.
+		expect(code).toContain("const button = first('button')")
+		expect(code).toContain('if (button) {')
 		expect(code).toContain("internals?.states.add('clearable')")
 		expect(code).toContain('clear: defineMethod(() => {')
 		// The host-prop mirror lowers to a property dispatch (AGENTS.md rule)
@@ -141,7 +176,8 @@ describe('client golden — convergence with the hand-written trio', () => {
 			"watch(() => host.value, bindProperty(input, 'value'))",
 		)
 		// Managed form prop as watch source — exists only on FormFactoryContext
-		expect(code).toContain("watch('validationMessage', bindText(error))")
+		expect(code).toContain('const p = first(\'p[role="alert"]\')')
+		expect(code).toContain("watch('validationMessage', bindText(p))")
 	})
 
 	test('form-checkbox: formAssociatedCheckbox leads, checked mirror, return-update handler', () => {

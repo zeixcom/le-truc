@@ -6,21 +6,6 @@ import { bindText, createList, defineComponent, reconcile } from '@zeix/le-truc'
 import '../../../examples/basic/button/basic-button'
 import './form-textbox.client'
 
-/**
- * Unified-format spike: module-list — exercises `@for` over a reactive List.
- *
- * - `@for (const item of items; key k)` over a declared reactive List →
- *   server renders initial items in place + extracts the item shape into a
- *   `<template>` whose holes become `<slot>` markers; client lowers to
- *   `reconcile()` with a generated `bindItem` that fills the slots.
- * - `pass={{ disabled: () => … }}` on a child custom element → `pass()`
- *   lowering (explicit client-prop attribute, ADR 0023 sub-design 10)
- * - `ref={textbox}` → generated `first()` query (element addressing)
- * - `onClick` inside `@for` → per-item listener in the `bindItem` scope
- *   (ADR 0017 collector parity) — delegation becomes an optimization
- * - ZERO imports: createList auto-imported from '@zeix/le-truc' (v2 bridge)
- */
-
 export default defineComponent(
 	'module-list',
 	({ first, on, pass, watch }) => {

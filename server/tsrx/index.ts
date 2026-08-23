@@ -33,6 +33,14 @@ export type CompiledComponent = {
 	 * over `clientCode` back onto this component's `.tsrx` source through it.
 	 */
 	clientSpans: SourceSpan[]
+	/**
+	 * Server-module span table (LT-019, extends LT-011): composition is the
+	 * first construct that makes server modules import each other's real
+	 * types (LT-015/LT-018), so `check:tsrx` now type-checks generated server
+	 * modules too — a missing/mistyped server arg or `children` composition
+	 * argument is a real tsc diagnostic, remapped through this table.
+	 */
+	serverSpans: SourceSpan[]
 }
 
 export type CompileFileResult = {
@@ -98,6 +106,7 @@ export const compileComponent = (
 			clientCode: client.code,
 			css: component.css,
 			clientSpans: client.spans,
+			serverSpans: server.spans,
 		},
 		diagnostics,
 	}

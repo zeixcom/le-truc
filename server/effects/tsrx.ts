@@ -22,7 +22,11 @@ import { type RegistryEntry, registryJson } from '../tsrx/registry'
 import type { SourceSpan } from '../tsrx/spans'
 import { createBuildEffect } from './build-effect'
 
-/** One compiled component's generated-client span table (LT-011, `check:tsrx`). */
+/**
+ * One compiled component's generated-module span tables (LT-011, `check:tsrx`;
+ * server coverage added by LT-019 — composition is the first construct that
+ * makes server modules import each other's real types).
+ */
 export type CompiledSpanInfo = {
 	tag: string
 	/** `.tsrx` source path, relative to the repo root. */
@@ -30,6 +34,9 @@ export type CompiledSpanInfo = {
 	/** Generated client module path on disk, absolute. */
 	clientModulePath: string
 	spans: SourceSpan[]
+	/** Generated server module path on disk, absolute. */
+	serverModulePath: string
+	serverSpans: SourceSpan[]
 }
 
 /* === Internal Functions === */
@@ -85,10 +92,15 @@ export const compileTsrxCorpus = async (
 	const composeRegistry = new Map<string, RegistryEntry>()
 	for (const file of files) {
 		const rel = relative(join(import.meta.dir, '..', '..'), file.path)
+		// Pass 1 must see the hand-written tags too (`registry` starts seeded
+		// from `childImports`, LT-020 fix): a raw-tag `pass={{ }}` target
+		// (e.g. `basic-button`) is otherwise flagged "not registry-known" in
+		// THIS pass even though it always was, silently dropping the whole
+		// file before pass 2 ever gets a chance to compile it for real.
 		const { component, diagnostics } = compileComponent(
 			file.content,
 			rel,
-			new Set<string>(),
+			registry,
 		)
 		for (const d of diagnostics) {
 			const label = `[${d.code}] ${d.line ? `line ${d.line}: ` : ''}${d.message}`
@@ -124,10 +136,8 @@ export const compileTsrxCorpus = async (
 		if (!component) continue
 		const { entry } = component
 		const clientModulePath = getFilePath(GENERATED_DIR, entry.clientModule)
-		await writeFileSafe(
-			getFilePath(GENERATED_DIR, entry.serverModule),
-			component.serverCode,
-		)
+		const serverModulePath = getFilePath(GENERATED_DIR, entry.serverModule)
+		await writeFileSafe(serverModulePath, component.serverCode)
 		await writeFileSafe(clientModulePath, component.clientCode)
 		await writeFileSafe(getFilePath(GENERATED_DIR, entry.css), component.css)
 		entries.push(entry)
@@ -136,6 +146,8 @@ export const compileTsrxCorpus = async (
 			source: rel,
 			clientModulePath,
 			spans: component.clientSpans,
+			serverModulePath,
+			serverSpans: component.serverSpans,
 		})
 		console.log(`✅ Compiled ${entry.tag} from ${rel}`)
 	}

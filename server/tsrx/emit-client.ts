@@ -20,6 +20,7 @@ import type {
 	ForClientPlan,
 	ParserKind,
 	ReconcilePlan,
+	TopEffectPlan,
 } from './analyze'
 import type { ComponentIR, SignalIR } from './compiler'
 import {
@@ -247,7 +248,13 @@ export const emitClientModule = (
 
 	// Queries
 	for (const query of plan.queries) {
-		if (query.cardinality === 'one') {
+		if (query.cardinality === 'maybe') {
+			// A single-branch @if (no @else) root: `first()` without a
+			// `required` message returns `Element | undefined` instead of
+			// throwing — the element only exists when that branch rendered.
+			imports.add('first')
+			push(`const ${query.name} = first('${query.selector}')`)
+		} else if (query.cardinality === 'one') {
 			imports.add('first')
 			push(
 				`const ${query.name} = first('${query.selector}', '${query.message}')`,
@@ -295,20 +302,22 @@ export const emitClientModule = (
 		push(stmt.text, sliceOf(stmt.text, stmt.range.start))
 
 	// Effects in document order
-	for (const effect of plan.effects) {
+	const emitTopEffect = (effect: TopEffectPlan, depth: number): void => {
+		const at = (text: string, slices: SourceSlice[] = []): void =>
+			appendWithSpans(lines, text, depth, slices, spans, cursor)
 		if (effect.kind === 'each') {
-			emitEachBlock(effect.for, imports, lines, spans, cursor, 2)
-			continue
+			emitEachBlock(effect.for, imports, lines, spans, cursor, depth)
+			return
 		}
 		if (effect.kind === 'reconcile') {
-			emitReconcileBlock(effect.for, imports, lines, spans, cursor, 2)
-			continue
+			emitReconcileBlock(effect.for, imports, lines, spans, cursor, depth)
+			return
 		}
 		if (effect.kind === 'watch-text') {
 			imports.add('watch')
 			imports.add('bindText')
-			push(`watch(${effect.source}, bindText(${effect.query}))`)
-			continue
+			at(`watch(${effect.source}, bindText(${effect.query}))`)
+			return
 		}
 		if (effect.kind === 'watch-attr') {
 			imports.add('watch')
@@ -316,13 +325,13 @@ export const emitClientModule = (
 			if (effect.attr.startsWith('class:')) {
 				imports.add('bindClass')
 				const key = effect.attr.slice('class:'.length)
-				push(
+				at(
 					`watch(() => Boolean(((${effect.thunkText})()).${key}), bindClass(${effect.query}, '${key}'))`,
 					slices,
 				)
 			} else if (effect.dispatch === 'property') {
 				imports.add('bindProperty')
-				push(
+				at(
 					`watch(${effect.thunkText}, bindProperty(${effect.query}, '${effect.attr}'))`,
 					slices,
 				)
@@ -331,32 +340,48 @@ export const emitClientModule = (
 				const source = effect.coerceToString
 					? `() => String((${effect.thunkText})())`
 					: effect.thunkText
-				push(
+				at(
 					`watch(${source}, bindAttribute(${effect.query}, '${effect.attr}'))`,
 					slices,
 				)
 			}
-			continue
+			return
 		}
 		if (effect.kind === 'pass') {
 			imports.add('pass')
 			const accessors = effect.setThunkText
 				? `{ get: ${effect.thunkText}, set: ${effect.setThunkText} }`
 				: `{ get: ${effect.thunkText} }`
-			push(`pass(${effect.query}, { ${effect.prop}: ${accessors} })`, [
+			at(`pass(${effect.query}, { ${effect.prop}: ${accessors} })`, [
 				...sliceOf(effect.thunkText, effect.sourceStart),
 				...(effect.setThunkText
 					? sliceOf(effect.setThunkText, effect.setSourceStart)
 					: []),
 			])
-			continue
+			return
+		}
+		if (effect.kind === 'raw') {
+			at(effect.text, sliceOf(effect.text, effect.sourceStart))
+			return
+		}
+		if (effect.kind === 'guarded') {
+			// A single-branch @if (no @else) root, addressed with a
+			// non-throwing query — every effect it owns only applies when
+			// that branch actually rendered.
+			at(`if (${effect.query}) {`)
+			for (const inner of effect.effects) emitTopEffect(inner, depth + 1)
+			const closing = `${'\t'.repeat(depth)}}`
+			lines.push(closing)
+			cursor.offset += closing.length + 1
+			return
 		}
 		imports.add('on')
-		push(
+		at(
 			`on(${effect.query}, '${effect.event}', ${effect.handlerText})`,
 			sliceOf(effect.handlerText, effect.sourceStart),
 		)
 	}
+	for (const effect of plan.effects) emitTopEffect(effect, 2)
 
 	// Factory context vs module imports: expose/watch/on/pass/first/all are
 	// context members; each/defineComponent/bind*/parsers/signal

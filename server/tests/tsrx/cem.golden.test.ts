@@ -199,8 +199,11 @@ describe('CEM golden — generated clients extract like hand-written components'
 				description: 'Interactive preview and usage examples',
 			},
 		])
-		// The fixture's Props (value, length, clear) + the formAssociated()
-		// member set.
+		// The fixture's Props (value, length, description, clear) + the
+		// formAssociated() member set. `description` isn't wired through
+		// expose() (it's authored render-time content, not a live DOM-derived
+		// prop like the hand-written .ts's descriptionMemo) but it's still a
+		// real member of FormTextboxProps, so CEM extraction picks it up.
 		expect(
 			(textbox.members as Array<{ kind: string; name: string }>).map(
 				m => m.name,
@@ -208,6 +211,7 @@ describe('CEM golden — generated clients extract like hand-written components'
 		).toEqual([
 			'value',
 			'length',
+			'description',
 			'clear',
 			'form',
 			'name',

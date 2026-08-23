@@ -219,6 +219,9 @@ export const emitServerModule = (
 	// @try arms render into uniquely named buffers: a nested @try must not
 	// shadow its enclosing arm's buffer (content would be lost).
 	let armCounter = 0
+	// Composed elements' children (LT-018) render into their own uniquely
+	// named buffers, for the same reason.
+	let childrenCounter = 0
 	const tab = (depth: number) => '\t'.repeat(depth)
 	/**
 	 * Extracted reactive-list templates, one pending queue per open element:
@@ -232,11 +235,30 @@ export const emitServerModule = (
 		scope: ReadonlySet<string>,
 		depth: number,
 	): void => {
+		if (node.kind === 'client-stmt') {
+			// Client-only side effect beside conditionally rendered markup
+			// (`internals?.states.add('clearable')`) — the server never runs
+			// connect-time DOM/ElementInternals APIs, so this renders nothing.
+			return
+		}
 		if (node.kind === 'text') {
 			lines.push(`${tab(depth)}${buffer}.push(${JSON.stringify(node.value)})`)
 			return
 		}
 		if (node.kind === 'expr') {
+			// The reserved `{children}` insertion point (ADR 0023 sub-design 10,
+			// LT-018): a composed call already rendered this component's own
+			// children into an HTML string — trusted, compiler-generated markup,
+			// not user input, so it renders UNESCAPED here (analogous to the
+			// MANAGED_TEXT_PROPS/host-prop-mirror special-casing above).
+			if (
+				!node.lazy &&
+				node.expr.type === 'Identifier' &&
+				node.exprText === 'children'
+			) {
+				lines.push(`${tab(depth)}${buffer}.push(String(children))`)
+				return
+			}
 			used.add('esc')
 			const value = node.lazy
 				? lazyValueExpression(component, node.exprText, node.expr)
@@ -316,9 +338,21 @@ export const emitServerModule = (
 					(a): a is Extract<typeof a, { kind: 'arg' }> => a.kind === 'arg',
 				)
 				.map(a => `${JSON.stringify(a.name)}: ${a.exprText}`)
-				.join(', ')
+			// A composed element's children (LT-018) render into their own
+			// buffer, once, server-side — the joined string is forwarded as
+			// the child's `children` server arg (self-closing tags pass none,
+			// matching "no children supplied" at the type level).
+			if (node.children.length > 0) {
+				const childrenVar = `__children${++childrenCounter}`
+				lines.push(`${tab(depth)}const ${childrenVar}: string[] = []`)
+				const outerBuffer = buffer
+				buffer = childrenVar
+				for (const child of node.children) emit(child, scope, depth)
+				buffer = outerBuffer
+				args.push(`children: ${childrenVar}.join('')`)
+			}
 			lines.push(
-				`${tab(depth)}${buffer}.push(render${entry.name}({ ${args} }))`,
+				`${tab(depth)}${buffer}.push(render${entry.name}({ ${args.join(', ')} }))`,
 			)
 			return
 		}
@@ -579,6 +613,25 @@ export const emitServerModule = (
 	} else {
 		body.push(`export function render${component.name}(${paramFirst}`)
 		body.push(...paramLines.slice(1), '): string {')
+	}
+	// A method-producer body inside expose() (`defineMethod(() => { host.value
+	// = ''; input.value = '' })`) may close over client-only ambients — context
+	// members, refs — the server render function never declares. The closure
+	// is dead code server-side (`defineMethod` is identity there, never
+	// invoked), but the module still needs it to TYPE-CHECK (LT-019): stub any
+	// such free name as `any`, scoped to this function, so it resolves without
+	// pretending it has real server behavior.
+	if (component.exposeArgNode) {
+		const stubNames = [...freeIdentifiers(component.exposeArgNode)]
+			.filter(
+				name =>
+					!JS_GLOBALS.has(name) &&
+					name !== 'expose' &&
+					!component.serverKnown.has(name) &&
+					!component.exposeAmbients.includes(name),
+			)
+			.sort()
+		for (const name of stubNames) body.push(`\tconst ${name}: any = undefined`)
 	}
 	// Setup statements keep their relative shape: the shallowest continuation
 	// line lands at one tab (statement depth), deeper lines keep their

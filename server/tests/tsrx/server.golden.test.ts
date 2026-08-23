@@ -46,6 +46,20 @@ const moduleList = compileComponent(
 	read('examples/module/list/module-list.tsrx'),
 	'examples/module/list/module-list.tsrx',
 	new Set<string>([...registry, 'form-textbox', 'module-list', 'basic-button']),
+	undefined,
+	// module-list composes FormTextbox (ADR 0023 sub-design 10, LT-020) —
+	// keyed by form-textbox's own repo-relative source path, mirroring
+	// server/effects/tsrx.ts's corpus-wide compose registry.
+	new Map(
+		formTextbox.component
+			? [
+					[
+						'examples/form/textbox/form-textbox.tsrx',
+						formTextbox.component.entry,
+					],
+				]
+			: [],
+	),
 )
 const formCheckbox = compileComponent(
 	read('examples/form/checkbox/form-checkbox.tsrx'),
@@ -231,33 +245,55 @@ describe('server golden — module-tabgroup variants', () => {
 })
 
 describe('server golden — form-textbox variants (extensions, Parser-expose, @if)', () => {
+	// `clearable` and `validatable` (required || maxlength != null) each gate
+	// an entire optional element — the clear button and the error paragraph
+	// only render when true, not merely hidden/empty (a single-branch @if,
+	// no @else, LT-008's DOM-existence-guarded addressing).
 	const formTextboxHtml = ({
 		name,
 		label,
 		value = '',
 		required = false,
+		maxlength,
 		multiline = false,
+		clearable = false,
+		description = '',
 	}: {
 		name: string
 		label: string
 		value?: string
 		required?: boolean
+		maxlength?: number
 		multiline?: boolean
-	}): string =>
-		`<form-textbox name="${name}" value="${value}">` +
-		`<label for="${name}-input">${label}</label>` +
-		'<div class="input">' +
-		(multiline
-			? `<textarea id="${name}-input" name="${name}" autocomplete="off"${required ? ' required' : ''} rows="3" value="${value}"></textarea>`
-			: `<input type="text" id="${name}-input" name="${name}" autocomplete="off"${required ? ' required' : ''} value="${value}">`) +
-		// Reactive hidden over the length signal is dependency-provable —
-		// renders the initial state (empty value ⇒ hidden).
-		`<button type="button" aria-label="Clear input"${value === '' ? ' hidden' : ''} class="clear">✕</button>` +
-		'</div>' +
-		'<p role="alert" aria-live="assertive" class="error"></p>' +
-		'</form-textbox>'
+		clearable?: boolean
+		description?: string
+	}): string => {
+		const validatable = required || maxlength != null
+		const describedBy = description
+			? ` aria-describedby="${name}-description"`
+			: ''
+		return (
+			`<form-textbox name="${name}" value="${value}">` +
+			`<label for="${name}-input">${label}</label>` +
+			'<div class="input">' +
+			(multiline
+				? `<textarea id="${name}-input" value="${value}" autocomplete="off"${required ? ' required' : ''}${maxlength !== undefined ? ` maxlength="${maxlength}"` : ''} rows="3"></textarea>`
+				: `<input type="text" id="${name}-input" value="${value}" autocomplete="off"${required ? ' required' : ''}${maxlength !== undefined ? ` maxlength="${maxlength}"` : ''}${describedBy}>`) +
+			(clearable
+				? `<button type="button" aria-label="Clear input"${value === '' ? ' hidden' : ''} class="clear">✕</button>`
+				: '') +
+			'</div>' +
+			(validatable
+				? `<p role="alert" aria-live="assertive" id="${name}-error" class="error"></p>`
+				: '') +
+			(description
+				? `<p aria-live="polite" id="${name}-description" class="description">${description}</p>`
+				: '') +
+			'</form-textbox>'
+		)
+	}
 
-	test('default: empty value, optional field, clear button hidden', async () => {
+	test('default: empty value, optional field, no clear button, no error paragraph', async () => {
 		const html = await render('FormTextbox', 'form-textbox', {
 			name: 'name',
 			label: 'Name',
@@ -265,7 +301,7 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 		expect(html).toBe(formTextboxHtml({ name: 'name', label: 'Name' }))
 	})
 
-	test('required: boolean arg renders the bare attribute', async () => {
+	test('required: boolean arg renders the bare attribute and the error paragraph', async () => {
 		const html = await render('FormTextbox', 'form-textbox', {
 			name: 'name',
 			label: 'Name',
@@ -318,6 +354,59 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 			}),
 		)
 	})
+
+	test('clearable: false by default, the clear button and its @if branch simply do not render', async () => {
+		const html = await render('FormTextbox', 'form-textbox', {
+			name: 'q',
+			label: 'Search',
+		})
+		expect(html).not.toContain('class="clear"')
+	})
+
+	test('clearable: true renders the clear button, hidden while the value is empty', async () => {
+		const html = await render('FormTextbox', 'form-textbox', {
+			name: 'q',
+			label: 'Search',
+			clearable: true,
+		})
+		expect(html).toBe(
+			formTextboxHtml({ name: 'q', label: 'Search', clearable: true }),
+		)
+	})
+
+	test('clearable: true with a seeded value renders the clear button visible', async () => {
+		const html = await render('FormTextbox', 'form-textbox', {
+			name: 'q',
+			label: 'Search',
+			clearable: true,
+			value: 'abc',
+		})
+		expect(html).toBe(
+			formTextboxHtml({
+				name: 'q',
+				label: 'Search',
+				clearable: true,
+				value: 'abc',
+			}),
+		)
+	})
+
+	test('maxlength alone makes the field validatable (error paragraph) and describes the description paragraph', async () => {
+		const html = await render('FormTextbox', 'form-textbox', {
+			name: 'q',
+			label: 'Search',
+			maxlength: 10,
+			description: 'Max 10 characters',
+		})
+		expect(html).toBe(
+			formTextboxHtml({
+				name: 'q',
+				label: 'Search',
+				maxlength: 10,
+				description: 'Max 10 characters',
+			}),
+		)
+	})
 })
 
 describe('server golden — module-list (reactive @for → template extraction)', () => {
@@ -331,11 +420,20 @@ describe('server golden — module-list (reactive @for → template extraction)'
 		const html = await render('ModuleList', 'module-list', {})
 		expect(html).toBe(
 			'<module-list><form action="#">' +
-				'<form-textbox clearable><label for="new-item-input">New item</label>' +
+				// FormTextbox is composed (ADR 0023 sub-design 10, LT-020): this
+				// is form-textbox.tsrx's OWN render output for
+				// { name: 'new-item', label: 'New item', clearable: true } —
+				// value="" (unauthored default, now real, not hand-copied), the
+				// clear button (module-list passes bare `clearable`), and no
+				// error paragraph (no `required`/`maxlength` — nothing to
+				// validate, so the branch simply doesn't render at all).
+				'<form-textbox name="new-item" value="">' +
+				'<label for="new-item-input">New item</label>' +
 				'<div class="input">' +
-				'<input type="text" id="new-item-input" name="new-item" autocomplete="off">' +
+				'<input type="text" id="new-item-input" value="" autocomplete="off">' +
 				'<button type="button" aria-label="Clear input" hidden class="clear">✕</button>' +
-				'</div></form-textbox>' +
+				'</div>' +
+				'</form-textbox>' +
 				'<basic-button class="submit"><button type="submit" class="constructive">Add</button></basic-button>' +
 				'</form>' +
 				// disabled={() => !textbox.length} reads a child component's live
@@ -410,14 +508,22 @@ describe('CSS golden — verbatim tag-scoped extraction', () => {
 			read('examples/module/tabgroup/module-tabgroup.css'),
 		)
 	})
-	// The form fixture's style is authored in the .tsrx (a subset of the
-	// hand-written form-textbox.css — no :state(clearable), no textarea),
-	// so the golden is the fixture's own dedented block: extraction must be
-	// verbatim, byte for byte.
+	// The form fixture's style is authored in the .tsrx — now the fuller
+	// migration (LT-020 follow-up): dimmed/focus-within opacity on
+	// label/p/button, textarea alongside input, a `:state(clearable)`
+	// custom-state hook instead of an author-set class, and `.description`
+	// alongside `.error`. Extraction must still be verbatim, byte for byte.
 	test('form-textbox.css equals the fixture style byte for byte', () => {
 		expect(formTextbox.component?.css).toBe(`form-textbox {
 	display: block;
 	width: 100%;
+
+	& label,
+	& p,
+	& button {
+		opacity: var(--opacity-dimmed);
+		transition: opacity var(--transition-short) var(--easing-inout);
+	}
 
 	& label {
 		display: block;
@@ -426,11 +532,8 @@ describe('CSS golden — verbatim tag-scoped extraction', () => {
 		margin-bottom: var(--space-xxs);
 	}
 
-	& .input {
-		position: relative;
-	}
-
-	& input {
+	& input,
+	& textarea {
 		display: inline-block;
 		box-sizing: border-box;
 		background: var(--color-input);
@@ -440,7 +543,6 @@ describe('CSS golden — verbatim tag-scoped extraction', () => {
 		padding: var(--space-xs) var(--space-xxs);
 		font-size: var(--font-size-m);
 		width: 100%;
-		height: var(--input-height);
 
 		&::placeholder {
 			color: var(--color-text);
@@ -448,39 +550,70 @@ describe('CSS golden — verbatim tag-scoped extraction', () => {
 		}
 	}
 
-	&:user-invalid input {
+	/* Native validity styling — replaces the old aria-invalid attribute hook.
+	   :user-invalid matches after user interaction (the right UX for required
+	   fields); :invalid would match immediately on page load. */
+	&:user-invalid input,
+	&:user-invalid textarea {
 		box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
 	}
 
-	& .clear {
-		position: absolute;
-		bottom: 0;
-		right: 0;
-		border: 0;
-		border-radius: 50%;
-		font-size: var(--font-size-xs);
-		line-height: var(--line-height-xs);
-		color: var(--color-input);
-		background-color: var(--color-text-soft);
-		width: calc(0.6 * var(--input-height));
-		height: calc(0.6 * var(--input-height));
-		margin: calc(0.2 * var(--input-height));
-		padding: 0;
-		cursor: pointer;
+	& input {
+		height: var(--input-height);
+	}
 
-		&:hover {
-			background-color: var(--color-text);
+	&:state(clearable) .input {
+		position: relative;
+
+		& input {
+			padding-right: var(--input-height);
+		}
+
+		.clear {
+			position: absolute;
+			bottom: 0;
+			right: 0;
+			border: 0;
+			border-radius: 50%;
+			font-size: var(--font-size-xs);
+			line-height: var(--line-height-xs);
+			color: var(--color-input);
+			background-color: var(--color-text-soft);
+			width: calc(0.6 * var(--input-height));
+			height: calc(0.6 * var(--input-height));
+			margin: calc(0.2 * var(--input-height));
+			padding: 0;
+
+			&:hover {
+				background-color: var(--color-text);
+			}
+		}
+	}
+
+	.error,
+	.description {
+		margin: var(--space-xs) 0 0;
+		font-size: var(--font-size-xs);
+		line-height: var(--line-height-s);
+
+		&:empty {
+			display: none;
 		}
 	}
 
 	.error {
-		margin: var(--space-xs) 0 0;
-		font-size: var(--font-size-xs);
-		line-height: var(--line-height-s);
 		color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
+	}
 
-		&:empty {
-			display: none;
+	.description {
+		color: var(--color-text-soft);
+	}
+
+	&:focus-within {
+		& label,
+		& p,
+		& button {
+			opacity: var(--opacity-solid);
 		}
 	}
 }

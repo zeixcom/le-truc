@@ -28,6 +28,8 @@ export type FormTextboxProps = {
 	value: string
 	/** Character length of the current value (read-only). */
 	readonly length: number
+	/** Helper text shown below the input. May include a remaining-characters template. */
+	description: string
 	/** Method to clear the textbox and emit input/change events */
 	clear: () => void
 }
@@ -57,19 +59,24 @@ export function FormTextbox(
 		label,
 		value = '',
 		required = false,
+		maxlength = null,
 		multiline = false,
+		clearable = false,
+		description = '',
 	}:
 		{
 			name: string
 			label: string
 			value?: string
 			required?: boolean
+			maxlength?: number | null
 			multiline?: boolean
-		},
+			clearable?: boolean
+			description?: string
+		}
 )
 @{
-	const inputId = `${name}-input`
-	const length = createCell(value.length)
+	const length = createCell(value.length);
 
 	expose({
 		value: asString(''),
@@ -83,134 +90,182 @@ export function FormTextbox(
 			input.dispatchEvent(new Event('change', { bubbles: true }))
 			input.focus()
 		}),
-	})
+	});
 
-	internals?.states.add('clearable')
+	const inputId = `${name}-input`;
+	const errorId = `${name}-error`;
+	const descriptionId = `${name}-description`;
+	// Whether native validation can ever produce a validationMessage at all —
+	// gates rendering the error paragraph (form-textbox.ts always rendered
+	// it; here it's genuinely optional markup, so it's genuinely conditional).
+	const validatable = required || maxlength != null;
+
+	const onInput = () => {
+		length.set(input.value.length);
+	};
+	const onChange = () => {
+		input.checkValidity();
+		host.setCustomValidity(input.validationMessage ?? '');
+		host.value = input.value;
+	};
 
 	<>
-		<form-textbox name={name} value={value}>
+		<form-textbox {name} {value}>
 			<label for={inputId}>{label}</label>
 			<div class="input">
 				@if (multiline) {
 					<textarea
 						id={inputId}
-						name={name}
-						autocomplete="off"
-						required={required}
-						rows={3}
 						value={() => host.value}
+						autocomplete="off"
+						{required}
+						{maxlength}
+						rows={3}
 						ref={input}
-						onInput={() => {
-							host.value = input.value
-						}}
-						onChange={() => {
-							input.checkValidity()
-							host.setCustomValidity(input.validationMessage ?? '')
-						}}
+						{onInput}
+						{onChange}
 					/>
 				} @else {
 					<input
 						type="text"
 						id={inputId}
-						name={name}
-						autocomplete="off"
-						required={required}
 						value={() => host.value}
+						autocomplete="off"
+						{required}
+						{maxlength}
+						aria-describedby={description ? descriptionId : null}
 						ref={input}
-						onInput={() => {
-							host.value = input.value
-						}}
-						onChange={() => {
-							input.checkValidity()
-							host.setCustomValidity(input.validationMessage ?? '')
-						}}
+						{onInput}
+						{onChange}
 					/>
 				}
-				<button
-					type="button"
-					class="clear"
-					aria-label="Clear input"
-					hidden={() => length.get() === 0}
-					onClick={() => host.clear()}
-				>
-					✕
-				</button>
+				@if (clearable) {
+					internals?.states.add('clearable');
+					<button
+						type="button"
+						class="clear"
+						aria-label="Clear input"
+						hidden={() => length.get() === 0}
+						onClick={() => host.clear()}
+					>
+						✕
+					</button>
+				}
 			</div>
-			<p class="error" role="alert" aria-live="assertive" ref={error}>
-				&{'validationMessage'}
-			</p>
+			@if (validatable) {
+				<p class="error" role="alert" aria-live="assertive" id={errorId}>
+					&{'validationMessage'}
+				</p>
+			}
+			@if (description) {
+				<p class="description" aria-live="polite" id={descriptionId}>{description}</p>
+			}
 		</form-textbox>
 
 		<style>
-		form-textbox {
-			display: block;
-			width: 100%;
-
-			& label {
+			form-textbox {
 				display: block;
-				font-size: var(--font-size-s);
-				color: var(--color-text);
-				margin-bottom: var(--space-xxs);
-			}
-
-			& .input {
-				position: relative;
-			}
-
-			& input {
-				display: inline-block;
-				box-sizing: border-box;
-				background: var(--color-input);
-				color: var(--color-text);
-				border: none;
-				border-bottom: 1px solid var(--color-border);
-				padding: var(--space-xs) var(--space-xxs);
-				font-size: var(--font-size-m);
 				width: 100%;
-				height: var(--input-height);
 
-				&::placeholder {
+				& label,
+				& p,
+				& button {
+					opacity: var(--opacity-dimmed);
+					transition: opacity var(--transition-short) var(--easing-inout);
+				}
+
+				& label {
+					display: block;
+					font-size: var(--font-size-s);
 					color: var(--color-text);
-					opacity: var(--opacity-translucent);
+					margin-bottom: var(--space-xxs);
+				}
+
+				& input,
+				& textarea {
+					display: inline-block;
+					box-sizing: border-box;
+					background: var(--color-input);
+					color: var(--color-text);
+					border: none;
+					border-bottom: 1px solid var(--color-border);
+					padding: var(--space-xs) var(--space-xxs);
+					font-size: var(--font-size-m);
+					width: 100%;
+
+					&::placeholder {
+						color: var(--color-text);
+						opacity: var(--opacity-translucent);
+					}
+				}
+
+				/* Native validity styling — replaces the old aria-invalid attribute hook.
+				   :user-invalid matches after user interaction (the right UX for required
+				   fields); :invalid would match immediately on page load. */
+				&:user-invalid input,
+				&:user-invalid textarea {
+					box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
+				}
+
+				& input {
+					height: var(--input-height);
+				}
+
+				&:state(clearable) .input {
+					position: relative;
+
+					& input {
+						padding-right: var(--input-height);
+					}
+
+					.clear {
+						position: absolute;
+						bottom: 0;
+						right: 0;
+						border: 0;
+						border-radius: 50%;
+						font-size: var(--font-size-xs);
+						line-height: var(--line-height-xs);
+						color: var(--color-input);
+						background-color: var(--color-text-soft);
+						width: calc(0.6 * var(--input-height));
+						height: calc(0.6 * var(--input-height));
+						margin: calc(0.2 * var(--input-height));
+						padding: 0;
+
+						&:hover {
+							background-color: var(--color-text);
+						}
+					}
+				}
+
+				.error,
+				.description {
+					margin: var(--space-xs) 0 0;
+					font-size: var(--font-size-xs);
+					line-height: var(--line-height-s);
+
+					&:empty {
+						display: none;
+					}
+				}
+
+				.error {
+					color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
+				}
+
+				.description {
+					color: var(--color-text-soft);
+				}
+
+				&:focus-within {
+					& label,
+					& p,
+					& button {
+						opacity: var(--opacity-solid);
+					}
 				}
 			}
-
-			&:user-invalid input {
-				box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
-			}
-
-			& .clear {
-				position: absolute;
-				bottom: 0;
-				right: 0;
-				border: 0;
-				border-radius: 50%;
-				font-size: var(--font-size-xs);
-				line-height: var(--line-height-xs);
-				color: var(--color-input);
-				background-color: var(--color-text-soft);
-				width: calc(0.6 * var(--input-height));
-				height: calc(0.6 * var(--input-height));
-				margin: calc(0.2 * var(--input-height));
-				padding: 0;
-				cursor: pointer;
-
-				&:hover {
-					background-color: var(--color-text);
-				}
-			}
-
-			.error {
-				margin: var(--space-xs) 0 0;
-				font-size: var(--font-size-xs);
-				line-height: var(--line-height-s);
-				color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
-
-				&:empty {
-					display: none;
-				}
-			}
-		}
 		</style>
 	</>
 }

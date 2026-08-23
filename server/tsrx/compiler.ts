@@ -147,6 +147,19 @@ export type TemplateNode =
 			children: TemplateNode[]
 			node: TsrxNode
 	  }
+	| {
+			/**
+			 * A bare JS statement inside a control-flow branch body (e.g.
+			 * `internals?.states.add('clearable')` beside a conditionally
+			 * rendered element) — a client-only side effect, same free-name
+			 * contract as a top-level `clientSetup` statement (host/internals/
+			 * signals/globals only). The server never runs it; analyze.ts
+			 * decides whether/how it can be safely guarded client-side.
+			 */
+			kind: 'client-stmt'
+			text: string
+			node: TsrxNode
+	  }
 
 /**
  * One `pass={{ prop: thunk }}` entry (ADR 0023 sub-design 10). `thunk`/
@@ -275,6 +288,16 @@ export type ComponentIR = {
 	exposeText: string | null
 	/** Source range of `exposeText` (LT-011). */
 	exposeRange: SourceRange | null
+	/**
+	 * `expose({...})`'s argument object node (LT-019): method-producer bodies
+	 * inside it (`defineMethod(() => { host.value = ''; input.value = '' })`)
+	 * may close over client-only ambients — context members, refs — that the
+	 * server render function never declares (the closure itself is dead code
+	 * server-side, `defineMethod` is identity there and never invokes it, but
+	 * the generated module still needs it to TYPE-CHECK). `emit-server.ts`
+	 * uses this node to find those free names and stub them.
+	 */
+	exposeArgNode: TsrxNode | null
 	/** Prop name → signal name, from `expose({ prop: signal.get })`. */
 	exposeProps: Map<string, string>
 	/**
@@ -333,6 +356,14 @@ export type ExtractContext = {
 	 * for composed (PascalCase) elements (ADR 0023 sub-design 10).
 	 */
 	composeImports: ReadonlyMap<string, string>
+	/**
+	 * Setup-level `const name = init` initializers, by name — lets an event
+	 * attribute reference a hoisted handler by identifier (`{onInput}`)
+	 * instead of only accepting an inline function expression; the resolved
+	 * initializer is treated exactly like an inline one (same handler text,
+	 * so `@if` branches that share the identifier automatically agree).
+	 */
+	setupInits: ReadonlyMap<string, TsrxNode>
 }
 
 /* === Internal Functions === */
@@ -410,6 +441,7 @@ export const compileSource = (
 		diagnostics: [],
 		serverKnown: new Set<string>(),
 		composeImports: new Map<string, string>(),
+		setupInits: new Map<string, TsrxNode>(),
 	}
 	let ast: TsrxNode
 	try {
@@ -484,6 +516,7 @@ export const compileSource = (
 	const setupInits = new Map<string, TsrxNode>()
 	let exposeText: string | null = null
 	let exposeRange: SourceRange | null = null
+	let exposeArgNode: TsrxNode | null = null
 	const exposeProps = new Map<string, string>()
 	const parserExposeProps = new Map<
 		string,
@@ -559,6 +592,7 @@ export const compileSource = (
 			setup.push({ text: exposeText, range: exposeRange })
 			// prop → signal from expose({ prop: signal.get })
 			const arg = asArray(expression?.arguments)[0] ?? null
+			exposeArgNode = arg
 			for (const name of freeIdentifiers(
 				arg ??
 					({ type: 'ObjectExpression', properties: [] } as unknown as TsrxNode),
@@ -651,6 +685,7 @@ export const compileSource = (
 	ctx.serverKnown = new Set<string>([...paramNames])
 	for (const s of signals) ctx.serverKnown.add(s.name)
 	for (const n of setupInits.keys()) ctx.serverKnown.add(n)
+	ctx.setupInits = setupInits
 	const lowered = lowerChildren(ctx, render, signalByName, fors)
 	const root = lowered.find(
 		(n): n is TemplateNode & { kind: 'element' } =>
@@ -750,6 +785,7 @@ export const compileSource = (
 					signals,
 					exposeText,
 					exposeRange,
+					exposeArgNode,
 					exposeProps,
 					parserExposeProps,
 					exposeAmbients: [...exposeAmbients].sort(),

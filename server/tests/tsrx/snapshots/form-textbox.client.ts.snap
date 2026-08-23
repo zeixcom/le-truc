@@ -10,6 +10,8 @@ export type FormTextboxProps = {
 	value: string
 	/** Character length of the current value (read-only). */
 	readonly length: number
+	/** Helper text shown below the input. May include a remaining-characters template. */
+	description: string
 	/** Method to clear the textbox and emit input/change events */
 	clear: () => void
 }
@@ -38,8 +40,8 @@ export default defineComponent<FormTextboxProps>(
 	'form-textbox',
 	({ expose, first, host, internals, on, watch }) => {
 		const input = first('textarea, input', 'form-textbox: textarea, input missing')
-		const button = first('button', 'form-textbox: button missing')
-		const error = first('p[role="alert"]', 'form-textbox: p[role="alert"] missing')
+		const button = first('button')
+		const p = first('p[role="alert"]')
 		const length = createCell(input.value.length)
 		expose({
 			value: asString(''),
@@ -54,18 +56,23 @@ export default defineComponent<FormTextboxProps>(
 				input.focus()
 			}),
 		})
-		internals?.states.add('clearable')
 		watch(() => host.value, bindProperty(input, 'value'))
 		on(input, 'input', () => {
-			host.value = input.value
+			length.set(input.value.length);
 		})
 		on(input, 'change', () => {
-			input.checkValidity()
-			host.setCustomValidity(input.validationMessage ?? '')
+			input.checkValidity();
+			host.setCustomValidity(input.validationMessage ?? '');
+			host.value = input.value;
 		})
-		watch(() => length.get() === 0, bindAttribute(button, 'hidden'))
-		on(button, 'click', () => host.clear())
-		watch('validationMessage', bindText(error))
+		if (button) {
+			internals?.states.add('clearable');
+			watch(() => length.get() === 0, bindAttribute(button, 'hidden'))
+			on(button, 'click', () => host.clear())
+		}
+		if (p) {
+			watch('validationMessage', bindText(p))
+		}
 	},
 	[formAssociated(), observedAttributes(['value'])],
 )

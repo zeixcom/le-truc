@@ -1,17 +1,24 @@
 /**
- * Unified-format spike: module-list — exercises `@for` over a reactive List.
+ * Unified-format spike: module-list — exercises `@for` over a reactive List
+ * and component composition (ADR 0023 sub-design 10).
  *
+ * - `<FormTextbox ... />` composes `form-textbox.tsrx`: the server splices
+ *   its `renderFormTextbox()` output inline instead of hand-duplicating its
+ *   markup, and `ref={textbox}` addresses the rendered custom element for
+ *   client-side reads (`textbox.value`, `textbox.clear()`) exactly as a raw
+ *   dashed tag would.
  * - `@for (const item of items; key k)` over a declared reactive List →
  *   server renders initial items in place + extracts the item shape into a
  *   `<template>` whose holes become `<slot>` markers; client lowers to
  *   `reconcile()` with a generated `bindItem` that fills the slots.
  * - `pass={{ disabled: () => … }}` on a child custom element → `pass()`
  *   lowering (explicit client-prop attribute, ADR 0023 sub-design 10)
- * - `ref={textbox}` → generated `first()` query (element addressing)
  * - `onClick` inside `@for` → per-item listener in the `bindItem` scope
  *   (ADR 0017 collector parity) — delegation becomes an optimization
  * - ZERO imports: createList auto-imported from '@zeix/le-truc' (v2 bridge)
  */
+import { FormTextbox } from '../../form/textbox/form-textbox.tsrx'
+
 export function ModuleList({}: {})
 	@{
 		const items = createList<string>([], {
@@ -30,29 +37,11 @@ export function ModuleList({}: {})
 						textbox.clear()
 					}}
 				>
-					<form-textbox clearable ref={textbox}>
-						<label for="new-item-input">New item</label>
-						<div class="input">
-							<input
-								type="text"
-								id="new-item-input"
-								name="new-item"
-								autocomplete="off"
-							/>
-							<button
-								type="button"
-								class="clear"
-								aria-label="Clear input"
-								hidden
-							>
-								✕
-							</button>
-						</div>
-					</form-textbox>
+					<FormTextbox name="new-item" label="New item" ref={textbox} clearable />
 					<basic-button
-					class="submit"
-					pass={{ disabled: () => !textbox.length }}
-				>
+						class="submit"
+						pass={{ disabled: () => !textbox.length }}
+					>
 						<button type="submit" class="constructive">Add</button>
 					</basic-button>
 				</form>

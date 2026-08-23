@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 
 /**
- * `check:tsrx` (LT-011, ADR 0023 sub-design 6 amendment, stage 1).
+ * `check:tsrx` (LT-011, ADR 0023 sub-design 6 amendment, stage 1; server
+ * coverage added by LT-019).
  *
  * Compiles the whole `.tsrx` corpus, runs `tsc --noEmit` against the
  * generated client modules (the same emit-then-check already exercised in
@@ -11,7 +12,13 @@
  * ever arise in CODE positions (setup, thunks, handlers) — every code
  * position lowers into the client module, so the span table only needs to
  * cover those, never template markup (which lowers into the server half and
- * is never type-checked).
+ * is never type-checked) — UNTIL component composition (ADR 0023 sub-design
+ * 10): a composed call is a real typed function call between two generated
+ * SERVER modules (`render<Name>({ … })`), so a missing/mistyped server arg
+ * or `children` argument (LT-018) is a tsc diagnostic that only ever shows up
+ * there. Generated server modules are therefore type-checked too, through
+ * their own span table (recorded by `emit-server.ts` since LT-011, unused for
+ * this purpose until now).
  *
  * This is the CLI-first half of LT-011: zero editor tooling, just `bun run
  * check:tsrx` reporting type errors at their authored `.tsrx` location.
@@ -28,6 +35,7 @@ import {
 	fileLineColToOffset,
 	fileOffsetToLineCol,
 	findSpanForGeneratedOffset,
+	type SourceSpan,
 } from '../server/tsrx/spans'
 
 const ROOT = resolve(import.meta.dir, '..')
@@ -62,9 +70,25 @@ if (spanInfos.length === 0) {
 	process.exit(1)
 }
 
-const byClientPath = new Map(
-	spanInfos.map(info => [info.clientModulePath, info]),
-)
+type ResolvedSpanInfo = {
+	source: string
+	modulePath: string
+	spans: SourceSpan[]
+}
+
+const byGeneratedPath = new Map<string, ResolvedSpanInfo>()
+for (const info of spanInfos) {
+	byGeneratedPath.set(info.clientModulePath, {
+		source: info.source,
+		modulePath: info.clientModulePath,
+		spans: info.spans,
+	})
+	byGeneratedPath.set(info.serverModulePath, {
+		source: info.source,
+		modulePath: info.serverModulePath,
+		spans: info.serverSpans,
+	})
+}
 
 const proc = Bun.spawn(
 	[
@@ -87,6 +111,7 @@ const proc = Bun.spawn(
 		'--types',
 		'node',
 		...spanInfos.map(info => info.clientModulePath),
+		...spanInfos.map(info => info.serverModulePath),
 	],
 	{ stdout: 'pipe', stderr: 'pipe', cwd: ROOT },
 )
@@ -115,13 +140,13 @@ for (const line of stdout.split('\n')) {
 		code,
 		message,
 	} = match.groups
-	const info = byClientPath.get(resolve(ROOT, file as string))
+	const info = byGeneratedPath.get(resolve(ROOT, file as string))
 	if (!info) {
 		console.log(line)
 		unmapped++
 		continue
 	}
-	const generatedText = readFileSync(info.clientModulePath, 'utf8')
+	const generatedText = readFileSync(info.modulePath, 'utf8')
 	const generatedOffset = fileLineColToOffset(
 		generatedText,
 		Number(lineStr),

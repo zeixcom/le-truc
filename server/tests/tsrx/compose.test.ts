@@ -217,8 +217,23 @@ export function BasicParent({}: {})
 		expect(diagnostics.some(d => d.code === 'TSRX011')).toBe(true)
 	})
 
-	test('children on a composed element are diagnosed as not yet supported', () => {
-		const childComponent = compileChild('examples/child/basic-child.tsrx')
+	const childWithChildren = `export function BasicChild({ label, children }: { label: string; children?: string })
+	@{
+		expose({})
+		<>
+			<basic-child>
+				<span>{label}</span>
+				{children}
+			</basic-child>
+			<style>basic-child { display: block }</style>
+		</>
+	}`
+
+	test("children between a composed element's tags splice into the render call as the `children` server arg", () => {
+		const childComponent = compileChild(
+			'examples/child/basic-child.tsrx',
+			childWithChildren,
+		)
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
 
 export function BasicParent({ title }: { title: string })
@@ -228,6 +243,81 @@ export function BasicParent({ title }: { title: string })
 			<basic-parent>
 				<BasicChild label={title}>
 					<span>nope</span>
+				</BasicChild>
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		if (!component)
+			throw new Error(`parent must compile: ${JSON.stringify(diagnostics)}`)
+		expect(component.serverCode).toContain('const __children1: string[] = []')
+		expect(component.serverCode).toContain(
+			'renderBasicChild({ "label": title, children: __children1.join(\'\') })',
+		)
+	})
+
+	test('a self-closing composed element passes no `children` arg', () => {
+		const childComponent = compileChild(
+			'examples/child/basic-child.tsrx',
+			childWithChildren,
+		)
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild label={title} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		if (!component)
+			throw new Error(`parent must compile: ${JSON.stringify(diagnostics)}`)
+		expect(component.serverCode).toContain(
+			'renderBasicChild({ "label": title })',
+		)
+		expect(component.serverCode).not.toContain('children')
+	})
+
+	test('the reserved `{children}` insertion point renders unescaped, not through esc()', () => {
+		const childComponent = compileChild(
+			'examples/child/basic-child.tsrx',
+			childWithChildren,
+		)
+		expect(childComponent.serverCode).toContain('__html.push(String(children))')
+		expect(childComponent.serverCode).not.toContain('esc(String(children))')
+	})
+
+	test('a construct requiring client wiring inside composed-element children is diagnosed (TSRX011)', () => {
+		const childComponent = compileChild(
+			'examples/child/basic-child.tsrx',
+			childWithChildren,
+		)
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild label={title}>
+					<button onClick={() => {}}>nope</button>
 				</BasicChild>
 			</basic-parent>
 			<style>basic-parent { display: block }</style>

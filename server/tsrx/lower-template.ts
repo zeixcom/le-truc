@@ -10,6 +10,7 @@ import type { TsrxNode } from '@tsrx/core'
 import {
 	asArray,
 	attrName,
+	CONTEXT_NAMES,
 	collapseJsxText,
 	freeIdentifiers,
 	identifierName,
@@ -190,7 +191,7 @@ const lowerBodyStatements = (
 			)
 			const lowered =
 				tag && /^[A-Z]/.test(tag)
-					? lowerComposeElement(ctx, stmt, tag)
+					? lowerComposeElement(ctx, stmt, tag, signals, fors)
 					: lowerElement(ctx, stmt, signals, fors)
 			if (lowered) out.push(lowered)
 			continue
@@ -233,6 +234,28 @@ const lowerBodyStatements = (
 				),
 			)
 			continue
+		}
+		if (stmt.type === 'ExpressionStatement' && isNode(stmt.expression)) {
+			// A bare client-only side effect beside conditionally rendered
+			// markup (`internals?.states.add('clearable')` next to the
+			// button it describes) — same free-name contract as a top-level
+			// clientSetup statement (host/internals/signals/globals only).
+			// analyze.ts decides whether the enclosing branch can guard it.
+			const free = freeIdentifiers(stmt.expression)
+			const bad = [...free].filter(
+				name =>
+					!JS_GLOBALS.has(name) &&
+					!CONTEXT_NAMES.has(name) &&
+					!signals.has(name),
+			)
+			if (bad.length === 0) {
+				out.push({
+					kind: 'client-stmt',
+					text: text(ctx.source, stmt),
+					node: stmt,
+				})
+				continue
+			}
 		}
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
@@ -315,16 +338,74 @@ export const lowerTry = (
 }
 
 /**
+ * Composed-element children (ADR 0023 sub-design 10, LT-018): the markup
+ * between a composed element's opening/closing tags substitutes into the
+ * child's own template wherever it writes a bare `{children}` expression —
+ * compile-time content substitution, not a live client binding (that markup
+ * is rendered once, server-side, into the string forwarded as the child's
+ * `children` server arg). Anything that would need CLIENT wiring — refs,
+ * events, reactive/pass attributes, nested control-flow, or further
+ * composition — has no meaning at a content-substitution site, so it is
+ * diagnosed instead of silently dropped or silently inert.
+ */
+const validateComposedChildren = (
+	ctx: ExtractContext,
+	children: TemplateNode[],
+): void => {
+	const walk = (node: TemplateNode): void => {
+		if (node.kind === 'text') return
+		if (node.kind === 'expr') {
+			if (node.lazy)
+				ctx.diagnostics.push(
+					diagnostic.composedElementUnsupported(
+						ctx.source,
+						node.node.start,
+						'A lazy child (&{expr})',
+					),
+				)
+			return
+		}
+		if (node.kind !== 'element') {
+			ctx.diagnostics.push(
+				diagnostic.composedElementUnsupported(
+					ctx.source,
+					node.node.start,
+					node.kind === 'compose'
+						? 'A nested composed element'
+						: 'A control-flow directive (@if/@switch/@try)',
+				),
+			)
+			return
+		}
+		for (const attr of node.attrs) {
+			if (attr.kind === 'static' || attr.kind === 'server') continue
+			ctx.diagnostics.push(
+				diagnostic.composedElementUnsupported(
+					ctx.source,
+					node.node.start,
+					`A \`${attr.kind}\` attribute`,
+				),
+			)
+		}
+		for (const child of node.children) walk(child)
+	}
+	for (const child of children) walk(child)
+}
+
+/**
  * Lower a composed (PascalCase) element: resolve its tag against the file's
  * `import { Name } from '….tsrx'` map, classify attributes as server args
  * (regardless of value shape), `ref`, or `pass={{ }}` (client-prop interop,
- * ADR 0023 sub-design 10), and diagnose the constructs this milestone does
- * not support yet — children (default-slot substitution, follow-up task).
+ * ADR 0023 sub-design 10), and lower any children into the reserved
+ * `children` substitution (LT-018) — validated to statics/server expressions
+ * only (`validateComposedChildren` above).
  */
 export const lowerComposeElement = (
 	ctx: ExtractContext,
 	element: TsrxNode,
 	tag: string,
+	signals: ReadonlyMap<string, SignalIR>,
+	fors: Map<TsrxNode, ForIR>,
 ): (TemplateNode & { kind: 'compose' }) | null => {
 	const source = ctx.composeImports.get(tag)
 	if (!source) {
@@ -361,25 +442,14 @@ export const lowerComposeElement = (
 			attrs.push(classified)
 		}
 	}
-	const hasChildren = asArray(element.children).some(
-		child =>
-			child.type !== 'JSXText' ||
-			collapseJsxText(String(child.value ?? '')) !== '',
-	)
-	if (hasChildren)
-		ctx.diagnostics.push(
-			diagnostic.composedElementUnsupported(
-				ctx.source,
-				element.start,
-				'Children (default-slot substitution)',
-			),
-		)
+	const children = lowerChildren(ctx, element, signals, fors)
+	validateComposedChildren(ctx, children)
 	return {
 		kind: 'compose',
 		component: tag,
 		source,
 		attrs,
-		children: [],
+		children,
 		node: element,
 	}
 }
@@ -499,7 +569,7 @@ export const lowerChildren = (
 			)
 			const lowered =
 				tag && /^[A-Z]/.test(tag)
-					? lowerComposeElement(ctx, child, tag)
+					? lowerComposeElement(ctx, child, tag, signals, fors)
 					: lowerElement(ctx, child, signals, fors)
 			if (lowered) out.push(lowered)
 			i += 1
