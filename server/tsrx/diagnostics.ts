@@ -24,6 +24,7 @@ export type DiagnosticCode =
 	| 'TSRX011' // composed (PascalCase) element with no resolvable .tsrx import
 	| 'TSRX012' // pass={{ }}/reactive dispatch legality on a custom-element target
 	| 'TSRX013' // signal declared with a conditionally-chosen constructor, or a client-only primitive called from a plain setup const
+	| 'TSRX014' // plain (non-.tsrx) import whose bindings are never used anywhere the compiler can place them
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -287,6 +288,24 @@ export const diagnostic = {
 		error(
 			'TSRX013',
 			`\`${name}\` calls client-only primitive(s) ${primitives.map(p => `\`${p}\``).join(', ')} — plain setup consts run server-side too (component.setup is emitted verbatim into the render function), where these don't exist. Use a signal constructor (the client seeds it from the DOM) or a client-only setup statement instead.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A plain (non-`.tsrx`) import whose local bindings never appear as a
+	 * free identifier anywhere in setup or the template (LT-034, ADR 0024
+	 * sub-design 14) — placement is inferred from usage, so an import with no
+	 * detectable usage would otherwise be silently dropped rather than fail
+	 * loudly.
+	 */
+	unusedPlainImport: (
+		source: string,
+		offset: number | undefined,
+		names: string[],
+	) =>
+		warning(
+			'TSRX014',
+			`Import ${names.map(n => `\`${n}\``).join(', ')} is never referenced in setup code or the template — it would be dropped from both generated modules. Remove it, or use it so the compiler can place it.`,
 			lineOf(source, offset),
 		),
 

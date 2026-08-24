@@ -124,6 +124,7 @@ const lazyValueExpression = (
 	component: ComponentIR,
 	exprText: string,
 	expr: TsrxNode,
+	scope: ReadonlySet<string>,
 ): string => {
 	if (expr.type === 'Identifier') {
 		const name = String(expr.name)
@@ -154,6 +155,18 @@ const lazyValueExpression = (
 		}
 		if (component.config?.form && MANAGED_TEXT_PROPS.has(propName)) return "''"
 	}
+	// Anything else (a call expression, an arrow thunk, a bare non-signal
+	// identifier, …) is only safe to render verbatim if its dependency
+	// closure is server-known — the same rule attribute thunks already
+	// follow (`dependenciesOf(...).isSubsetOf(scope)` above `emit`). A lazy
+	// child referencing `host` (a client-only ambient, e.g. `formatHex(host
+	// .value)`) has no server value at all: render nothing initially, the
+	// client's `watch()` for this lazy child corrects it on connect (DOM-is-
+	// truth, ADR 0003) — same posture as an omitted non-server-known thunk
+	// attribute. Found and fixed alongside LT-034 (`card-colorscale.tsrx`'s
+	// hex-value lazy child called `formatHex(host.value)`, which used to
+	// render verbatim server-side where `host` doesn't exist).
+	if (!dependenciesOf(expr).isSubsetOf(scope)) return "''"
 	if (expr.type === 'ArrowFunctionExpression') return `(${exprText})()`
 	return exprText
 }
@@ -270,7 +283,7 @@ export const emitServerModule = (
 			}
 			used.add('esc')
 			const value = node.lazy
-				? lazyValueExpression(component, node.exprText, node.expr)
+				? lazyValueExpression(component, node.exprText, node.expr, scope)
 				: node.exprText
 			lines.push(`${tab(depth)}${buffer}.push(esc(String(${value})))`)
 			return
@@ -743,6 +756,7 @@ export const emitServerModule = (
 	}
 	for (const [name, specifier] of [...composeImports].sort())
 		body.push(`import { render${name} } from '${specifier}'`)
+	for (const importText of component.imports.server) body.push(importText)
 	body.push('')
 	for (const decl of component.typeDecls) body.push(decl, '')
 	// Verbatim param slice, re-indented: first line inline in the signature,
@@ -771,7 +785,11 @@ export const emitServerModule = (
 					!JS_GLOBALS.has(name) &&
 					name !== 'expose' &&
 					!component.serverKnown.has(name) &&
-					!component.exposeAmbients.includes(name),
+					!component.exposeAmbients.includes(name) &&
+					// LT-034: a custom Parser factory (e.g. `asOklch`) may now
+					// resolve to a real plain import instead — stubbing it as
+					// `any` would shadow that import with a broken local const.
+					!component.imports.serverLocalNames.has(name),
 			)
 			.sort()
 		for (const name of stubNames) body.push(`\tconst ${name}: any = undefined`)

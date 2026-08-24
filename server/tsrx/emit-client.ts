@@ -23,6 +23,7 @@ import type {
 	TopEffectPlan,
 } from './analyze'
 import type { ComponentIR, SignalIR } from './compiler'
+import { computeClientNeededNames } from './plain-imports'
 import {
 	appendWithSpans,
 	type SourceSlice,
@@ -264,6 +265,20 @@ export const emitClientModule = (
 			push(`const ${query.name} = all('${query.selector}', '${query.message}')`)
 		}
 	}
+
+	// Plain (non-signal) setup consts — documented as available in both
+	// generated modules (ast-utils.ts, diagnostics.ts), but only the SERVER
+	// module (emit-server.ts) actually emitted them until now; found and
+	// fixed alongside LT-034 (`card-colorscale.tsrx` needed a pure helper
+	// function usable from a `style-map` thunk). Only the subset actually
+	// reachable from a client-emitted position is included — one referenced
+	// only from an `@if` condition (server-only branch selection) would
+	// otherwise be a "Cannot find name" client-side (`form-textbox.tsrx`'s
+	// `validatable`).
+	const clientNeededNames = computeClientNeededNames(component)
+	for (const stmt of component.plainSetup)
+		if (stmt.name && clientNeededNames.has(stmt.name))
+			push(stmt.text, sliceOf(stmt.text, stmt.range.start))
 
 	// Signals seeded by DOM harvest
 	for (const signal of component.signals) {
@@ -507,6 +522,7 @@ export const emitClientModule = (
 		const specifier = options.childImports?.get(tag)
 		if (specifier) body.push(`import '${specifier}'`)
 	}
+	for (const importText of component.imports.client) body.push(importText)
 	body.push('')
 	for (const decl of component.typeDecls) body.push(decl, '')
 	if (component.globalDecl) body.push(component.globalDecl, '')

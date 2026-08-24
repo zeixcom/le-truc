@@ -42,6 +42,7 @@ import { dedentCss } from './css'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import { inferType, type TypeContext } from './infer-type'
 import { lowerChildren } from './lower-template'
+import { parsePlainImports, placePlainImports } from './plain-imports'
 
 /* === Types === */
 
@@ -49,7 +50,14 @@ import { lowerChildren } from './lower-template'
 type SourceRange = { start: number; end: number }
 
 /** A verbatim setup/side-effect statement, with its source range for LT-011. */
-type SetupStmt = { text: string; range: SourceRange }
+type SetupStmt = {
+	text: string
+	range: SourceRange
+	/** The statement's own free-name-bearing expression (LT-034 import placement). */
+	node: TsrxNode
+	/** Declared const name (signals, plain consts), or `null` for `expose()`. */
+	name: string | null
+}
 
 /** Signal constructor names recognized in setup declarations. */
 type SignalConstructor =
@@ -300,6 +308,14 @@ export type ComponentIR = {
 	 * runs them — they touch APIs that don't exist render-time.
 	 */
 	clientSetup: SetupStmt[]
+	/**
+	 * Plain (non-signal, non-`expose()`) setup consts — a subset of `setup`,
+	 * carried separately because the client factory needs to emit exactly
+	 * this subset too (signals are already client-emitted via harvest;
+	 * `expose()` is already client-emitted separately) — `setup` as a whole
+	 * is the SERVER-only verbatim re-declaration.
+	 */
+	plainSetup: SetupStmt[]
 	signals: SignalIR[]
 	/** `expose({...})` statement text, verbatim. */
 	exposeText: string | null
@@ -352,6 +368,21 @@ export type ComponentIR = {
 	componentDoc: string | null
 	/** Names considered server-known at template evaluation time. */
 	serverKnown: ReadonlySet<string>
+	/**
+	 * Plain (non-`.tsrx`) top-level imports, placed by where their bindings
+	 * are actually used (LT-034, ADR 0024 sub-design 14) — verbatim import
+	 * statement text, ready to splice into the generated module(s) that need
+	 * it. An import used in both is present in both arrays. `serverLocalNames`
+	 * is every locally-bound name a server import resolves — `emit-server.ts`
+	 * uses it to skip the `exposeArgNode` `any`-stub for a name that already
+	 * has a real import (LT-019's stub predates plain-import support, when a
+	 * custom Parser's factory name could never resolve server-side at all).
+	 */
+	imports: {
+		server: string[]
+		client: string[]
+		serverLocalNames: ReadonlySet<string>
+	}
 }
 
 export type CompileResult = {
@@ -474,6 +505,7 @@ export const compileSource = (
 		}
 	}
 	ctx.composeImports = parseComposeImports(ast, filename)
+	const plainImports = parsePlainImports(ctx, ast, filename)
 
 	// Locate the exported component function (body = JSXCodeBlock).
 	let fn: TsrxNode | null = null
@@ -528,6 +560,14 @@ export const compileSource = (
 	const codeBlock = fn.body as TsrxNode
 	const setup: SetupStmt[] = []
 	const clientSetup: SetupStmt[] = []
+	// Plain (non-signal) setup consts (LT-034 follow-up fix): `component.setup`
+	// is emitted verbatim into the SERVER module only (`emit-server.ts`) —
+	// this subset also needs emitting into the CLIENT factory, since a plain
+	// const is documented (ast-utils.ts, diagnostics.ts) as available in
+	// both, but nothing previously emitted it client-side. Signals are
+	// excluded (already client-emitted via harvest); `expose()` is excluded
+	// (already client-emitted separately).
+	const plainSetup: SetupStmt[] = []
 	const signals: SignalIR[] = []
 	const signalByName = new Map<string, SignalIR>()
 	const setupInits = new Map<string, TsrxNode>()
@@ -564,13 +604,16 @@ export const compileSource = (
 			}
 			const init = (decl as TsrxNode).init as TsrxNode
 			setupInits.set(declName, init)
-			setup.push({
+			const setupStmt: SetupStmt = {
 				text: text(ctx.source, stmt),
 				range: {
 					start: typeof stmt.start === 'number' ? stmt.start : 0,
 					end: typeof stmt.end === 'number' ? stmt.end : 0,
 				},
-			})
+				node: init,
+				name: declName,
+			}
+			setup.push(setupStmt)
 			const calleeName = identifierName(init.callee)
 			if (calleeName && SIGNAL_CONSTRUCTORS.has(calleeName)) {
 				const args = asArray(init.arguments)
@@ -608,8 +651,11 @@ export const compileSource = (
 							declName,
 						),
 					)
+				} else {
+					plainSetup.push(setupStmt)
 				}
 			} else {
+				plainSetup.push(setupStmt)
 				// A plain setup const calling a client-only primitive directly —
 				// `component.setup` is emitted verbatim into the SERVER render
 				// function too, where these don't exist (ADR 0023 sub-design 12).
@@ -648,10 +694,15 @@ export const compileSource = (
 						? ((expression as TsrxNode).end as number)
 						: 0,
 			}
-			setup.push({ text: exposeText, range: exposeRange })
 			// prop → signal from expose({ prop: signal.get })
 			const arg = asArray(expression?.arguments)[0] ?? null
 			exposeArgNode = arg
+			setup.push({
+				text: exposeText,
+				range: exposeRange,
+				node: arg ?? (expression as TsrxNode),
+				name: null,
+			})
 			for (const name of freeIdentifiers(
 				arg ??
 					({ type: 'ObjectExpression', properties: [] } as unknown as TsrxNode),
@@ -715,6 +766,8 @@ export const compileSource = (
 						start: typeof stmt.start === 'number' ? stmt.start : 0,
 						end: typeof stmt.end === 'number' ? stmt.end : 0,
 					},
+					node: expression,
+					name: null,
 				})
 				continue
 			}
@@ -826,6 +879,12 @@ export const compileSource = (
 	for (const s of signals) serverKnown.add(s.name)
 	for (const n of setupInits.keys()) serverKnown.add(n)
 
+	const imports = placePlainImports(
+		ctx,
+		{ root, setup, plainSetup, clientSetup, signals, serverKnown },
+		plainImports,
+	)
+
 	// A milestone gate (reactive @for) skips the whole file: rendering the
 	// remaining markup without the gated construct would be silently wrong.
 	const gated = ctx.diagnostics.some(d => d.code === 'TSRX001')
@@ -841,6 +900,7 @@ export const compileSource = (
 					paramNames: [...paramNames],
 					setup,
 					clientSetup,
+					plainSetup,
 					signals,
 					exposeText,
 					exposeRange,
@@ -858,6 +918,7 @@ export const compileSource = (
 					propsTypeName,
 					componentDoc: leadingDocComment(source, fnStmtStart),
 					serverKnown,
+					imports,
 				},
 		diagnostics: ctx.diagnostics,
 	}
