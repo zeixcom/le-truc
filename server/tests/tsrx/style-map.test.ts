@@ -84,17 +84,17 @@ describe('style-map on the component root (targets host)', () => {
 
 describe('style-map on a descendant custom element bypasses the reactive-attribute gate', () => {
 	const source = `export function C({}: {})
-	@{
-		const color = createCell('red')
-		expose({})
-		<>
-			<c-el>
-				<p>&{color}</p>
-				<sub-el style={() => ({ '--x': color.get() })}>ok</sub-el>
-			</c-el>
-			<style>c-el { color: red }</style>
-		</>
-	}`
+@{
+	const color = createCell('red')
+	expose({})
+	<>
+		<c-el>
+			<p>&{color}</p>
+			<sub-el style={() => ({ '--x': color.get() })}>ok</sub-el>
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
 
 	test('compiles without a reactiveAttrOnCustomElement diagnostic', () => {
 		const { diagnostics, component } = compileComponent(
@@ -111,5 +111,58 @@ describe('style-map on a descendant custom element bypasses the reactive-attribu
 	test('client lowers via bindStyle, not pass()', () => {
 		const { component } = compileComponent(source, 'c.tsrx', new Set())
 		expect(component?.clientCode).toContain("bindStyle(subEl, ['--x'])")
+	})
+})
+
+describe('signal used only inside the style-map thunk (LT-036)', () => {
+	const descendant = `export function C({}: {})
+@{
+	const color = createCell('red')
+	expose({})
+	<>
+		<c-el>
+			<span style={() => ({ color: color.get() })}>ok</span>
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+	const root = `export function C({}: {})
+@{
+	const color = createCell('red')
+	expose({})
+	<>
+		<c-el style={() => ({ color: color.get() })}>
+			<span>ok</span>
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+
+	test('descendant case: no TSRX004, client seeds by initializer reuse', () => {
+		const { component, diagnostics } = compileComponent(
+			descendant,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
+		expect(component).not.toBeNull()
+		// The map object can't be splice-harvested; both halves construct the
+		// cell from the identical initializer, so the DOM agrees by
+		// construction.
+		expect(component?.clientCode).toContain("createCell('red')")
+		expect(component?.serverCode).toContain("createCell('red')")
+		expect(component?.clientCode).toContain(
+			"watch(() => ({ color: color.get() }), bindStyle(span, ['color']))",
+		)
+	})
+
+	test('root case (targets host): no TSRX004 either', () => {
+		const { component, diagnostics } = compileComponent(
+			root,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
+		expect(component?.clientCode).toContain("bindStyle(host, ['color'])")
 	})
 })

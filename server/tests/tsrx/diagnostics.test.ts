@@ -432,6 +432,27 @@ describe('rewrite-rule enforcement', () => {
 		expect(hit?.message).toContain('`ghost`')
 	})
 
+	test('signal read only in a computed reactive thunk is NOT TSRX004 (LT-036)', () => {
+		const source = `export function C({}: {})
+@{
+	const prefix = createCell('a')
+	expose({})
+	<>
+		<c-el><span title={() => prefix.get() + '!'}>ok</span></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
+		// Not a direct site, so no DOM read-back: both halves reuse the
+		// identical initializer, like a derived callback.
+		expect(component?.clientCode).toContain("createCell('a')")
+	})
+
 	test('a { get, set } pass entry missing set is invalid (TSRX006)', () => {
 		const source = `export function C({}: {})
 	@{

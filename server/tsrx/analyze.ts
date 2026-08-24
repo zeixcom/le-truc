@@ -540,6 +540,28 @@ const isSignalGetCall = (node: unknown, signal: string): boolean => {
 }
 
 /**
+ * `sig.get()` read anywhere inside a node (LT-036): a style-map/class-map
+ * object or a computed reactive thunk still renders the signal's value into
+ * the DOM, even though no part of it can serve as a splice-harvest site.
+ */
+const containsSignalGet = (node: unknown, signal: string): boolean => {
+	if (Array.isArray(node)) {
+		return node.some(child => containsSignalGet(child, signal))
+	}
+	if (
+		!node ||
+		typeof node !== 'object' ||
+		typeof (node as TsrxNode).type !== 'string'
+	)
+		return false
+	for (const [key, value] of Object.entries(node)) {
+		if (key === 'loc' || key === 'range' || key === 'parent') continue
+		if (containsSignalGet(value, signal)) return true
+	}
+	return isSignalGetCall(node, signal)
+}
+
+/**
  * Match the membership mark: `() => String(sig.get() === C)` or
  * `() => sig.get() === C`. Returns the const identifier.
  */
@@ -1245,7 +1267,11 @@ export const analyzeClient = (
 	// --- Pass 2: signal render sites (document order) ------------------------
 	// Direct sites (text child, direct attribute) and membership marks; the
 	// canonical harvest site is the first direct site by document order,
-	// else the first membership mark.
+	// else the first membership mark. Signals whose values reach the DOM
+	// only through thunks none of these can splice into — style-map/class-map
+	// objects, computed (non-`sig.get()`) reactive thunks — are credited in
+	// `thunkRendered` instead (LT-036): rendered, so not TSRX004-dead, but
+	// never a harvest site; Pass 3 seeds them by initializer reuse.
 	type Site =
 		| {
 				kind: 'text' | 'attr'
@@ -1263,14 +1289,26 @@ export const analyzeClient = (
 				order: number
 		  }
 	const sites: Site[] = []
+	const thunkRendered = new Set<string>()
 	let documentOrder = 0
 
 	const recordSites = (node: TemplateNode, insideLoopOutput: boolean): void => {
 		if (!isElement(node)) return
 		const isLoopOutput = !!loopFor(node)
 		for (const attr of node.attrs) {
-			if (attr.kind !== 'reactive') continue
+			if (
+				attr.kind !== 'reactive' &&
+				attr.kind !== 'style-map' &&
+				attr.kind !== 'class-map'
+			)
+				continue
 			const order = documentOrder++
+			if (attr.kind === 'style-map' || attr.kind === 'class-map') {
+				for (const signal of component.signals.map(s => s.name)) {
+					if (containsSignalGet(attr.object, signal)) thunkRendered.add(signal)
+				}
+				continue
+			}
 			for (const signal of component.signals.map(s => s.name)) {
 				if (isDirectAttrThunk(attr.thunk, signal)) {
 					sites.push({
@@ -1294,6 +1332,10 @@ export const analyzeClient = (
 					})
 					break
 				}
+				// A computed thunk (`() => prefix.get() + '!'`) renders the
+				// signal without being its direct site — same credit as a
+				// map thunk, same initializer-reuse seed in Pass 3.
+				if (containsSignalGet(attr.thunk, signal)) thunkRendered.add(signal)
 			}
 		}
 		for (const child of node.children) {
@@ -1506,13 +1548,18 @@ export const analyzeClient = (
 		init: TsrxNode,
 		/**
 		 * Allow a no-params-to-substitute initializer to pass through
-		 * verbatim (ADR 0023 sub-design 13): sound only for `deriveCell`/
+		 * verbatim (ADR 0023 sub-design 13): sound for `deriveCell`/
 		 * `deriveStore` signals, which are FORCED through this path
 		 * unconditionally (no direct-site harvest is even attempted for
-		 * them) — a `createCell`/`createState` signal with a literal,
-		 * unrendered initializer must still fail (TSRX004): those DO have a
-		 * direct-site harvest route, and a silently-never-rendered signal is
-		 * exactly the drift ADR 0003 exists to catch.
+		 * them), and since LT-036 also for any signal credited in
+		 * `thunkRendered` — its value flows into the DOM through a
+		 * style-map/class-map object or a computed reactive thunk, so it is
+		 * provably not dead, and the server rendered that output from this
+		 * same initializer (DOM agrees by construction). A `createCell`/
+		 * `createState` signal with a literal initializer and NO rendered
+		 * site at all must still fail (TSRX004): those DO have a direct-site
+		 * harvest route, and a silently-never-rendered signal is exactly
+		 * the drift ADR 0003 exists to catch.
 		 */
 		allowVerbatim: boolean,
 	): string | null => {
@@ -1646,9 +1693,15 @@ export const analyzeClient = (
 					.sort((a, b) => a.order - b.order)
 		if (own.length === 0) {
 			// No rendered site: an initializer over server args can still seed
-			// from the args' DOM sites (LT-008 substitution rule).
+			// from the args' DOM sites (LT-008 substitution rule). A signal
+			// rendered only through a map/computed thunk (LT-036) may also
+			// reuse its initializer verbatim — same soundness as a derived
+			// callback, per `allowVerbatim`'s contract above.
 			const substituted = signal.init
-				? substituteArgExpr(signal.init, isDerivedCallback)
+				? substituteArgExpr(
+						signal.init,
+						isDerivedCallback || thunkRendered.has(signal.name),
+					)
 				: null
 			if (substituted) {
 				harvests.push({

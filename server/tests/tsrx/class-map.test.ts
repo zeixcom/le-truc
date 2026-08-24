@@ -114,3 +114,53 @@ describe('class-map on a descendant custom element bypasses the reactive-attribu
 		expect(component?.clientCode).toContain("bindClass(subEl, ['open'])")
 	})
 })
+
+describe('signal used only inside the class-map thunk (LT-036)', () => {
+	const descendant = `export function C({}: {})
+@{
+	const on = createCell(true)
+	expose({})
+	<>
+		<c-el>
+			<span class={() => ({ active: on.get() })}>ok</span>
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+	const root = `export function C({}: {})
+@{
+	const on = createCell(true)
+	expose({})
+	<>
+		<c-el class={() => ({ active: on.get() })}>
+			<span>ok</span>
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+
+	test('descendant case: no TSRX004, client seeds by initializer reuse', () => {
+		const { component, diagnostics } = compileComponent(
+			descendant,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
+		expect(component).not.toBeNull()
+		expect(component?.clientCode).toContain('createCell(true)')
+		expect(component?.serverCode).toContain('createCell(true)')
+		expect(component?.clientCode).toContain(
+			"watch(() => ({ active: on.get() }), bindClass(span, ['active']))",
+		)
+	})
+
+	test('root case (targets host): no TSRX004 either', () => {
+		const { component, diagnostics } = compileComponent(
+			root,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
+		expect(component?.clientCode).toContain("bindClass(host, ['active'])")
+	})
+})

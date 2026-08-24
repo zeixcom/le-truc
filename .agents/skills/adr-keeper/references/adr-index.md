@@ -29,8 +29,9 @@ This file is auto-generated. Do not edit manually.
 | [0022](0022-debug-extension-for-visual-and-console-instrumentation.md) | `debug()` Extension for Visual and Console Instrumentation | ✅ Accepted | S3, N1, M5, M6 |
 | [0023](0023-map-form-overloads-for-bind-helpers.md) | Map-Form Overloads for `bindStyle`/`bindAttribute`/`bindClass`/`bindProperty`/`bindState` | ✅ Accepted | M5 |
 | [0024](0024-adopt-tsrx-as-isomorphic-component-format.md) | Adopt TSRX as the Isomorphic Component Format | ✅ Accepted | M1, M3, M4, §1, §5, §7 |
+| [0025](0025-client-side-tsrx-playground.md) | Client-Side TSRX Playground | 🔄 Proposed | §1, M12, M13, S2 |
 
 ---
 
-**Last updated:** 2026-08-24
-**Total ADRs:** 24 (excluding template)
+**Last updated:** 2026-08-25
+**Total ADRs:** 25 (excluding template)
