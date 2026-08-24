@@ -59,7 +59,15 @@ type SetupStmt = {
 	name: string | null
 }
 
-/** Signal constructor names recognized in setup declarations. */
+/**
+ * Signal constructor names recognized in setup declarations. `requestContext`
+ * (LT-035, ADR 0024 sub-design 15) is signal-SHAPED downstream (`.get()`,
+ * usable in reactive attrs/lazy text exactly like `createCell`/`deriveCell`)
+ * but is not a real reactive primitive — it's a client-only `FactoryContext`
+ * member bound to `host`, with no server behavior at all. It is recognized
+ * separately from `SIGNAL_CONSTRUCTORS` (ast-utils.ts) precisely because its
+ * emission differs in both generated modules; see `fallbackText` below.
+ */
 type SignalConstructor =
 	| 'createCell'
 	| 'createState'
@@ -68,6 +76,7 @@ type SignalConstructor =
 	| 'deriveCell'
 	| 'deriveList'
 	| 'deriveStore'
+	| 'requestContext'
 
 /** A signal declared in the component's setup. */
 export type SignalIR = {
@@ -77,9 +86,22 @@ export type SignalIR = {
 	/** Start offset of `text` in the source (relative spans for arg surgery). */
 	textStart: number
 	constructor: SignalConstructor
-	/** Initializer expression node (first call argument). */
+	/**
+	 * Initializer expression node: the first call argument for a real signal
+	 * constructor; the FALLBACK argument (second call argument) for
+	 * `requestContext` — the value the server substitutes for the whole call.
+	 */
 	init: TsrxNode | null
 	inferredType: 'string' | 'number' | 'boolean' | 'unknown'
+	/**
+	 * `requestContext`-only (LT-035): the fallback argument's verbatim source
+	 * text. `requestContext` itself doesn't exist server-side (no `host`, no
+	 * DOM to dispatch a context-request against) — `emit-server.ts` substitutes
+	 * `createCell(${fallbackText})` for the whole setup statement instead of
+	 * emitting it verbatim, the one signal constructor whose server text
+	 * diverges from its client text. `null` for every other signal.
+	 */
+	fallbackText: string | null
 }
 
 /** Template IR — the shared input of both emitters. */
@@ -344,7 +366,11 @@ export type ComponentIR = {
 	>
 	/** Ambient names `expose()` uses (parser factories, `defineMethod`). */
 	exposeAmbients: string[]
-	/** Context members referenced from setup/expose code (`host`, `internals`). */
+	/**
+	 * Context members referenced from setup/expose code (`host`, `internals`,
+	 * and — LT-035 — `requestContext`/`provideContexts`) — flows into the
+	 * generated client factory's destructured context parameter.
+	 */
 	contextRefs: string[]
 	/** Extension activation from `export const config`, when declared. */
 	config: ConfigIR | null
@@ -615,7 +641,52 @@ export const compileSource = (
 			}
 			setup.push(setupStmt)
 			const calleeName = identifierName(init.callee)
-			if (calleeName && SIGNAL_CONSTRUCTORS.has(calleeName)) {
+			if (calleeName === 'requestContext') {
+				// Consumer side of the context protocol (LT-035, ADR 0024
+				// sub-design 15): `const motion = requestContext(MEDIA_MOTION,
+				// 'unknown')`. Recognized separately from SIGNAL_CONSTRUCTORS —
+				// `requestContext` has no server behavior at all (it dispatches a
+				// DOM event against `host`), so the server substitutes the
+				// fallback argument as the signal's render-time value instead of
+				// running the call (emit-server.ts). The fallback must therefore
+				// be resolvable with what's server-known so far (params + prior
+				// setup names) — the same names `ctx.serverKnown` is built from.
+				const args = asArray(init.arguments)
+				if (args.length !== 2) {
+					ctx.diagnostics.push(
+						diagnostic.invalidRequestContextCall(source, stmt.start, declName),
+					)
+				} else {
+					const fallbackNode = args[1] as TsrxNode
+					const knownSoFar = new Set([...paramNames, ...setupInits.keys()])
+					const badFallbackNames = [...freeIdentifiers(fallbackNode)].filter(
+						n => !JS_GLOBALS.has(n) && !knownSoFar.has(n),
+					)
+					if (badFallbackNames.length > 0) {
+						ctx.diagnostics.push(
+							diagnostic.contextFallbackNotServerKnown(
+								source,
+								stmt.start,
+								declName,
+								badFallbackNames,
+							),
+						)
+					} else {
+						const signal: SignalIR = {
+							name: declName,
+							text: text(ctx.source, init),
+							textStart: typeof init.start === 'number' ? init.start : 0,
+							constructor: 'requestContext',
+							init: fallbackNode,
+							inferredType: inferType(fallbackNode, typeCtx),
+							fallbackText: text(ctx.source, fallbackNode),
+						}
+						signals.push(signal)
+						signalByName.set(declName, signal)
+						contextRefs.add('requestContext')
+					}
+				}
+			} else if (calleeName && SIGNAL_CONSTRUCTORS.has(calleeName)) {
 				const args = asArray(init.arguments)
 				const signal: SignalIR = {
 					name: declName,
@@ -624,6 +695,7 @@ export const compileSource = (
 					constructor: calleeName as SignalConstructor,
 					init: args[0] ?? null,
 					inferredType: inferType(args[0] ?? null, typeCtx),
+					fallbackText: null,
 				}
 				signals.push(signal)
 				signalByName.set(declName, signal)

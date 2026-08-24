@@ -1594,6 +1594,13 @@ export const analyzeClient = (
 	}
 
 	for (const signal of component.signals) {
+		// requestContext-backed signals (LT-035) never need a harvest site —
+		// the client re-dispatches the context-request itself and owns its
+		// own initial value (a Slot seeded with the fallback), rather than
+		// reading it back from server-rendered DOM. TSRX004 ("signal never
+		// rendered") does not apply: emit-client.ts emits them through a
+		// dedicated verbatim path, never this harvest machinery.
+		if (signal.constructor === 'requestContext') continue
 		// A reconciled List seeds from the adopted DOM, not a text/attr site.
 		const listPlan = [...reconcilePlans.values()].find(
 			p => p.signal === signal.name,

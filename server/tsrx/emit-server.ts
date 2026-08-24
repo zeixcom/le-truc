@@ -738,7 +738,19 @@ export const emitServerModule = (
 	}
 	rootParts.push({ static: '>' })
 
-	for (const signal of component.signals) used.add(signal.constructor)
+	for (const signal of component.signals) {
+		// requestContext-declared signals (LT-035): `requestContext` doesn't
+		// exist server-side (no `host` to dispatch a context-request against)
+		// — the setup-statement loop below substitutes `createCell(fallback)`
+		// for the whole call, so the runtime import needed is `createCell`,
+		// not `requestContext` (which isn't even a `@zeix/le-truc` top-level
+		// export — it's a `FactoryContext` member bound per-host).
+		if (signal.constructor === 'requestContext') {
+			used.add('createCell')
+			continue
+		}
+		used.add(signal.constructor)
+	}
 	if (component.exposeText) used.add('expose')
 	for (const ambient of component.exposeAmbients) used.add(ambient)
 
@@ -803,15 +815,31 @@ export const emitServerModule = (
 	const spanCursor: SpanCursor = { offset: 0 }
 	const spanLines: string[] = []
 	const setupBaseOffset = body.join('\n').length + 1
-	for (const stmt of component.setup)
+	for (const stmt of component.setup) {
+		// requestContext-declared signals (LT-035): `stmt.text` is the verbatim
+		// `requestContext(Context, fallback)` call, which doesn't exist
+		// server-side — substitute a `createCell(fallback)` declaration
+		// instead, so `.get()` still works the same way any other signal's
+		// does for the rest of the server-rendering pipeline (lazy children,
+		// reactive attrs). The span still points at the original statement's
+		// source range — coarse (the generated text no longer matches
+		// character-for-character), same trade-off as the exposeArgNode
+		// any-stubs above, which aren't span-tracked at all.
+		const ctxSignal = component.signals.find(
+			s => s.constructor === 'requestContext' && s.name === stmt.name,
+		)
+		const stmtText = ctxSignal
+			? `const ${ctxSignal.name} = createCell(${ctxSignal.fallbackText})`
+			: stmt.text
 		appendWithSpans(
 			spanLines,
-			stmt.text,
+			stmtText,
 			1,
-			[{ text: stmt.text, start: stmt.range.start }],
+			[{ text: stmtText, start: stmt.range.start }],
 			spans,
 			spanCursor,
 		)
+	}
 	for (const line of spanLines) body.push(line)
 	body.push('\tconst __html: string[] = []')
 	body.push(`\t__html.push(${pushArgument(rootParts)})`)

@@ -38,6 +38,19 @@ declare const expose: (
 	props: import('@zeix/le-truc').Initializers<Record<string, unknown>>,
 ) => void
 
+/**
+ * Web Components Community Protocol helpers (LT-035, ADR 0024 sub-design 15)
+ * — `FactoryContext` members, never module imports. `requestContext` is
+ * signal-SHAPED downstream (`.get()`) but has no server behavior at all; see
+ * `compiler.ts`'s `SignalIR.fallbackText` for the server-side substitution.
+ */
+declare const requestContext: import('@zeix/le-truc').FactoryContext<
+	Record<string, unknown>
+>['requestContext']
+declare const provideContexts: import('@zeix/le-truc').FactoryContext<
+	Record<string, unknown>
+>['provideContexts']
+
 /** Parser factories recognized in expose() initializers (PARSER_FACTORIES). */
 declare const asString: LeTruc['asString']
 declare const asInteger: LeTruc['asInteger']

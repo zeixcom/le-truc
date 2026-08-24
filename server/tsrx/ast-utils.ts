@@ -35,10 +35,18 @@ export const PARSER_FACTORIES: ReadonlySet<string> = new Set<string>([
 	'asJSON',
 ])
 
-/** Context members usable as free names in any client code position. */
+/**
+ * Context members usable as free names in any client code position —
+ * `host`/`internals` plus the Web Components Community Protocol helpers
+ * (LT-035, ADR 0024 sub-design 15): `requestContext(Context, fallback)` in a
+ * setup const declaration and `provideContexts([...])` as a bare setup
+ * statement. Both are `FactoryContext` members, never module imports.
+ */
 export const CONTEXT_NAMES: ReadonlySet<string> = new Set<string>([
 	'host',
 	'internals',
+	'requestContext',
+	'provideContexts',
 ])
 
 /** Managed form props usable as string-literal lazy children (text-bindable). */
@@ -60,6 +68,8 @@ export const CLIENT_ONLY_PRIMITIVES: ReadonlySet<string> = new Set<string>([
 	'watch',
 	'on',
 	'pass',
+	'requestContext',
+	'provideContexts',
 ])
 
 /**

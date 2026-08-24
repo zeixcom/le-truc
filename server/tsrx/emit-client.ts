@@ -302,6 +302,22 @@ export const emitClientModule = (
 			push(`const ${signal.name} = ${signal.constructor}(${initializer})`)
 	}
 
+	// requestContext-backed signals (LT-035, ADR 0024 sub-design 15): no DOM
+	// harvest at all — the client re-dispatches the context-request itself
+	// (a `FactoryContext` member, destructured via `plan.ambientContext`
+	// below, never a module import) and owns the initial value (a Slot
+	// seeded with the fallback until a provider answers). Never matched by
+	// the harvest loop above (analyze.ts never records a harvest site for
+	// them), so this is a fully separate emission, verbatim, same posture as
+	// `expose()`/`clientSetup` just below.
+	for (const signal of component.signals) {
+		if (signal.constructor !== 'requestContext') continue
+		push(
+			`const ${signal.name} = ${signal.text}`,
+			sliceOf(signal.text, signal.textStart),
+		)
+	}
+
 	// expose() verbatim
 	if (component.exposeText) {
 		imports.add('expose')

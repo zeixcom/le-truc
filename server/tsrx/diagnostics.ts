@@ -25,6 +25,8 @@ export type DiagnosticCode =
 	| 'TSRX012' // pass={{ }}/reactive dispatch legality on a custom-element target
 	| 'TSRX013' // signal declared with a conditionally-chosen constructor, or a client-only primitive called from a plain setup const
 	| 'TSRX014' // plain (non-.tsrx) import whose bindings are never used anywhere the compiler can place them
+	| 'TSRX015' // requestContext() called with other than exactly two arguments
+	| 'TSRX016' // requestContext()'s fallback argument is not server-known
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -306,6 +308,42 @@ export const diagnostic = {
 		warning(
 			'TSRX014',
 			`Import ${names.map(n => `\`${n}\``).join(', ')} is never referenced in setup code or the template — it would be dropped from both generated modules. Remove it, or use it so the compiler can place it.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `requestContext(...)` called with other than exactly two arguments
+	 * (LT-035, ADR 0024 sub-design 15) — `requestContext(context, fallback)`
+	 * is the only recognized shape; the server needs the second argument as
+	 * the signal's render-time value (there is no ancestor DOM to walk).
+	 */
+	invalidRequestContextCall: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+	) =>
+		error(
+			'TSRX015',
+			`\`${name} = requestContext(...)\` must be called with exactly two arguments: the context key and a fallback value. The fallback is what the server renders (ADR 0024 sub-design 15) — there is no ancestor DOM to walk at render time.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `requestContext(context, fallback)`'s fallback argument references a
+	 * name the server cannot resolve (LT-035) — the server substitutes the
+	 * fallback for the whole call (`requestContext` itself is a client-only
+	 * ambient), so the fallback must be a literal or an expression over
+	 * server args/setup, the same rule other server-rendered thunks follow.
+	 */
+	contextFallbackNotServerKnown: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+		names: string[],
+	) =>
+		error(
+			'TSRX016',
+			`\`${name}\`'s fallback argument references ${names.map(n => `\`${n}\``).join(', ')}, which the server cannot resolve — requestContext()'s fallback must be a literal or an expression over server args/setup, since the server renders using it directly (no ancestor DOM to walk at render time).`,
 			lineOf(source, offset),
 		),
 
