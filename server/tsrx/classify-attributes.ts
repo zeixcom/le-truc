@@ -192,6 +192,13 @@ export const classifyAttribute = (
 					thunk: expr,
 					object: body,
 				}
+			if (name === 'style' && isNode(body) && body.type === 'ObjectExpression')
+				return {
+					kind: 'style-map',
+					thunkText: text(ctx.source, expr),
+					thunk: expr,
+					object: body,
+				}
 			if (!isNode(body))
 				return {
 					kind: 'invalid',

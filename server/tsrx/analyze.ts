@@ -222,6 +222,23 @@ export type TopEffectPlan =
 			sourceStart: number | undefined
 			sourceEnd: number | undefined
 	  }
+	| {
+			/**
+			 * `style={() => ({ … })}` (LT-028): one `watch(thunk, bindStyle(el,
+			 * keys))` call against `bindStyle()`'s map-form overload (LT-029) —
+			 * unlike `class-map`'s per-key expansion, every declared CSS
+			 * property is set from the single evaluated map in one dispatch.
+			 * `query` is `'host'` for the component-root case (LT-028's
+			 * motivating gap): the target is the ambient `host`, not a queried
+			 * descendant.
+			 */
+			kind: 'watch-style'
+			query: string
+			keys: string[]
+			thunkText: string
+			sourceStart: number | undefined
+			sourceEnd: number | undefined
+	  }
 	| { kind: 'each'; for: ForClientPlan }
 	| { kind: 'reconcile'; for: ReconcilePlan }
 	| {
@@ -560,6 +577,30 @@ const classMapKeys = (object: TsrxNode): string[] => {
 		const key = (prop as TsrxNode).key
 		if (nodeType(key) === 'Identifier')
 			keys.push(String((key as TsrxNode).name))
+	}
+	return keys
+}
+
+/**
+ * Property names of a style-map's object literal. Unlike `classMapKeys`,
+ * also accepts string-literal keys — CSS custom properties (`'--gauge-color'`)
+ * are not valid JS identifiers and must be quoted at the call site.
+ */
+const styleMapKeys = (object: TsrxNode): string[] => {
+	const keys: string[] = []
+	if (nodeType(object) !== 'ObjectExpression') return keys
+	const props = object.properties
+	if (!Array.isArray(props)) return keys
+	for (const prop of props) {
+		if (nodeType(prop) !== 'Property') continue
+		const key = (prop as TsrxNode).key
+		if (nodeType(key) === 'Identifier')
+			keys.push(String((key as TsrxNode).name))
+		else if (
+			nodeType(key) === 'Literal' &&
+			typeof (key as TsrxNode).value === 'string'
+		)
+			keys.push(String((key as TsrxNode).value))
 	}
 	return keys
 }
@@ -1745,6 +1786,16 @@ export const analyzeClient = (
 						sourceEnd: attr.thunk.end,
 					})
 				}
+			} else if (attr.kind === 'style-map') {
+				collectAmbient(attr.object)
+				sink.push({
+					kind: 'watch-style',
+					query,
+					keys: styleMapKeys(attr.object),
+					thunkText: attr.thunkText,
+					sourceStart: attr.thunk.start,
+					sourceEnd: attr.thunk.end,
+				})
 			} else if (attr.kind === 'event') {
 				collectAmbient(attr.handler)
 				sink.push({
@@ -1981,7 +2032,9 @@ export const analyzeClient = (
 				const attrText =
 					attr.kind === 'event'
 						? attr.handlerText
-						: attr.kind === 'reactive' || attr.kind === 'class-map'
+						: attr.kind === 'reactive' ||
+								attr.kind === 'class-map' ||
+								attr.kind === 'style-map'
 							? attr.thunkText
 							: ''
 				const texts = textsByKey.get(key) ?? new Set<string>()
@@ -2361,6 +2414,22 @@ export const analyzeClient = (
 		}
 		if (node === component.root) {
 			for (const attr of component.root.attrs) {
+				if (attr.kind === 'style-map') {
+					// LT-028: the root's own reactive style is the one construct
+					// addressable without a query — the target is the ambient
+					// `host`, not a queried descendant.
+					collectAmbient(attr.object)
+					ambient.add('host')
+					effects.push({
+						kind: 'watch-style',
+						query: 'host',
+						keys: styleMapKeys(attr.object),
+						thunkText: attr.thunkText,
+						sourceStart: attr.thunk.start,
+						sourceEnd: attr.thunk.end,
+					})
+					continue
+				}
 				if (
 					attr.kind === 'event' ||
 					attr.kind === 'reactive' ||

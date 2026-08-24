@@ -244,6 +244,21 @@ export const cls = (map: Record<string, unknown>): string =>
 		.join(' ')
 
 /**
+ * Render a style map's non-nil entries as an inline style declaration list
+ * (`{ color: 'red', '--x': null }` → `"color: red"`), matching `bindStyle()`'s
+ * map-form client dispatch (LT-028, LT-029): a `null`/`undefined` value is
+ * omitted, same as `removeProperty` on the client. Returns `''` when every
+ * entry is nil.
+ */
+export const styleAttr = (
+	map: Record<string, string | null | undefined>,
+): string =>
+	Object.entries(map)
+		.filter(([, v]) => v != null)
+		.map(([prop, v]) => `${prop}: ${v}`)
+		.join('; ')
+
+/**
  * The sanitizer applied to every `html={expr}` dynamic-rendering attribute
  * across the whole compiled site. Defaults to escaping all markup (safe but
  * inert — `<` and `>` become entities, so no element ever renders) until a

@@ -1,26 +1,12 @@
 /**
- * Unified-format migration: basic-gauge — composes `basic-number.tsrx`
- * (ADR 0023 sub-design 10) and derives a threshold `qualification` (label +
+ * Isomorphic-format migration: basic-gauge — composes `basic-number.tsrx`
+ * (ADR 0024 sub-design 10) and derives a threshold `qualification` (label +
  * color) reactively from `value` and a JSON `thresholds` arg via
- * `deriveCell` + the widened arg→DOM-site substitution (sub-design 12).
- *
- * **Gap discovered by this migration, not fixed here (see TODO.md):** the
- * hand-written `basic-gauge.ts` also reactively sets two CSS custom
- * properties on the HOST itself (`--basic-gauge-degree`, `--basic-gauge-color`)
- * inside an arbitrary `watch()` callback body (`host.style.setProperty(...)`,
- * `labelEl.textContent = …`) — a shape the sanctioned subset has no lowering
- * for: (1) a function-valued attribute is REJECTED outright on any
- * custom-element target, including the root itself (sub-design 4's
- * `pass`-only interop rule — `reactiveAttrOnCustomElement`), so
- * `style={() => …}` on `<basic-gauge>` doesn't compile; (2) there is no
- * general "custom watch effect" `TopEffectPlan` kind — every reactive
- * attribute lowers to a fixed `bindProperty`/`bindAttribute` dispatch, never
- * an arbitrary callback body. This component therefore renders the gauge's
- * ring color/rotation as a STATIC `style` attribute computed once at server
- * render time (correct initial paint, matching `value` at connect) but,
- * unlike the hand-written version, does NOT update the ring visually when
- * `value` changes after connect — only the qualification `<small>` label and
- * the composed `<basic-number>` (via `pass`) stay live.
+ * `deriveCell` + the widened arg→DOM-site substitution (sub-design 12). The
+ * root's reactive `style={() => ({ … })}` lowers to one
+ * `watch(thunk, bindStyle(host, keys))` call (LT-028), so the ring's color
+ * and rotation stay live when `value` changes after connect — parity with
+ * the hand-written `basic-gauge.ts`.
  */
 export type BasicGaugeProps = {
 	/** Current gauge value in the range [0, 1]. */
@@ -58,12 +44,11 @@ export function BasicGauge(
 	@{
 		const qualification = deriveCell(() => {
 			const parsed = JSON.parse(thresholds);
-			return (
-				parsed.find((t: BasicGaugeThreshold) => Number(value) >= t.min) ?? {
-					label: '',
-					color: 'var(--color-primary)',
-				}
-			);
+			const found = parsed.find((t: BasicGaugeThreshold) => Number(value) >= t.min) ?? {
+				label: '',
+				color: 'var(--color-primary)',
+			};
+			return { ...found, degree: `${240 * Number(value)}deg` };
 		});
 
 		expose({ value: asNumber() });
@@ -72,10 +57,10 @@ export function BasicGauge(
 			<basic-gauge
 				{value}
 				{thresholds}
-				style={`
-					--basic-gauge-color: ${qualification.get().color};
-					--basic-gauge-degree: ${240 * Number(value)}deg;
-				`}
+				style={() => ({
+					'--basic-gauge-color': qualification.get().color,
+					'--basic-gauge-degree': qualification.get().degree,
+				})}
 			>
 				<p id="basic-gauge-label">{label}</p>
 				<meter class="visually-hidden" {value} aria-labelledby="basic-gauge-label"></meter>

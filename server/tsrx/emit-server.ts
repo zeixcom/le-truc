@@ -536,6 +536,15 @@ export const emitServerModule = (
 						classExpr = `cls((${attr.thunkText})())`
 					}
 					break
+				case 'style-map':
+					if (dependenciesOf(attr.object).isSubsetOf(scope)) {
+						used.add('attr')
+						used.add('styleAttr')
+						parts.push({
+							expr: `attr('style', styleAttr((${attr.thunkText})()) || null)`,
+						})
+					}
+					break
 				case 'event':
 				case 'ref':
 					break
@@ -691,6 +700,17 @@ export const emitServerModule = (
 		else if (attr.kind === 'server') {
 			used.add('attr')
 			rootParts.push({ expr: `attr('${attr.name}', ${attr.exprText})` })
+		} else if (attr.kind === 'style-map') {
+			// LT-028: the root's reactive style is the one construct the client
+			// analyzer accepts (targeting `host`) — render its initial value here
+			// the same way `class-map` does for descendants.
+			if (dependenciesOf(attr.object).isSubsetOf(component.serverKnown)) {
+				used.add('attr')
+				used.add('styleAttr')
+				rootParts.push({
+					expr: `attr('style', styleAttr((${attr.thunkText})()) || null)`,
+				})
+			}
 		}
 	}
 	rootParts.push({ static: '>' })

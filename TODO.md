@@ -90,27 +90,17 @@
 
 ---
 
-- [ ] LT-030: Merge `feat/bindings-multiple-overloads` — map-form `bind*()` overloads
+- [x] LT-030: Merge `feat/bindings-multiple-overloads` — map-form `bind*()` overloads — done ✓
   **Skill:** le-truc-dev
-  **Context:** This branch implements the map-form overloads for `bindStyle()`/`bindAttribute()`/`bindClass()`/`bindProperty()` proposed in LT-029. Merge it into `docs/server-components` (or `main`, per current branch strategy), then reconcile its implementation against LT-029's proposal below and close out any gaps. Unblocks LT-029 and, through it, LT-028.
+  **Summary:** Merged into `docs/server-components` (4 conflicts resolved: adr-index, CHANGELOG, package.json, docs-src restructure). Delivered `bindStyle`/`bindAttribute`/`bindClass`/`bindProperty`/`bindState` array-target overloads exactly matching LT-029's proposed shape, with full test coverage — no gaps to close.
 
-- [ ] LT-029: Add map-form overloads to `bindStyle()`/`bindAttribute()`/`bindClass()`/`bindProperty()` (`src/bindings.ts`) — library API change
+- [x] LT-029: Add map-form overloads to `bindStyle()`/`bindAttribute()`/`bindClass()`/`bindProperty()` (`src/bindings.ts`) — done ✓ (delivered by LT-030's merge)
   **Skill:** le-truc-dev
-  **Context:** All four helpers hard-code a single target (one CSS property, attribute, class token, or object key). A component whose one computed value drives several of these at once (e.g. `basic-gauge`'s ring: two CSS custom properties from one threshold lookup) needs a map-form overload — additive, keyed on the target parameter being a `readonly string[]` instead of a bare `string`. See LT-030: `feat/bindings-multiple-overloads` may already deliver this: verify against the proposal shape below before doing net-new work.
-  ```ts
-  bindStyle<P extends string>(element, props: readonly P[]): SingleMatchHandlers<Partial<Record<P, string | null>>>
-  bindAttribute<N extends string>(element, names: readonly N[], allowUnsafe?): SingleMatchHandlers<Partial<Record<N, string | boolean>>>
-  bindClass<Tk extends string>(element, tokens: readonly Tk[]): (value: Partial<Record<Tk, boolean>>) => void
-  bindProperty<O, K extends keyof O & string>(object, keys: readonly K[]): (value: Partial<Pick<O, K>>) => void
-  ```
-  `bindStyle`/`bindAttribute`: `ok(map)` sets/removes each declared key per its presence; `nil()` removes all declared keys. `bindClass`: `ok(map)` toggles every declared token (absent = off). `bindProperty`: `ok(map)` is a partial patch — assigns only keys present in `map`.
-  **Check:** New unit tests per helper's map form: multiple targets set in one `ok`, an absent/`null` key cleared individually, `nil` clearing every declared key/attribute, `bindClass`'s all-declared-tokens toggle, `bindProperty`'s partial-patch behavior. Existing single-target usage unaffected (additive, non-breaking).
+  **Summary:** Verified the merged implementation against the proposed signatures and semantics — exact match, including test coverage for multi-target `ok`, per-key/`nil` clearing, and `bindProperty`'s partial-patch behavior. No net-new work needed.
 
-- [ ] LT-028: No sanctioned `.tsrx` lowering for reactive host-level style/CSS-custom-property updates (found migrating `basic-gauge.tsrx`; depends on LT-029)
+- [x] LT-028: No sanctioned `.tsrx` lowering for reactive host-level style/CSS-custom-property updates — done ✓
   **Skill:** le-truc-dev
-  **Context:** `basic-gauge.ts`'s hand-written original reactively sets two CSS custom properties on the host from one `watch()` call. Blocked today by (1) sub-design 4's `pass`-only custom-element interop rule rejecting `style={() => …}` on a custom element root, and (2) `bindStyle()` only setting one property per binding. `basic-gauge.tsrx` (LT-026) works around this with a static, server-computed-once `style` attribute — a real, user-visible regression versus the hand-written component.
-  **Decision (scope, not yet implemented):** Once LT-029 lands: (a) exempt `style={() => …}` from the custom-element reactive-attribute gate, the same way `class-map` already is; (b) lower a `style={() => ({ … })}` object-literal-bodied thunk to one `watch(reactive, bindStyle(el, map))` call, analogous to the existing per-key `class-map` lowering.
-  **Check:** `basic-gauge.tsrx`'s ring updates live (color and rotation) when `value` changes after connect, parity-tested against the hand-written `basic-gauge.ts`.
+  **Summary:** Added a `style-map` `AttributeIR` kind (`classify-attributes.ts`) for `style={() => ({ … })}`, classified separately from `reactive` so it bypasses the custom-element gate — both on descendant elements and, newly, the component root itself (previously hard-blocked; now lowers to `watch(thunk, bindStyle(host, keys))` targeting the ambient `host`). Server-side renders the initial value via a new `styleAttr()` runtime helper. `basic-gauge.tsrx` migrated off its static-string workaround; ring color/rotation now update live, parity with the hand-written version. New tests in `server/tests/tsrx/style-map.test.ts`. Along the way, rebuilt the stale `types/` declarations (hadn't been regenerated since LT-030's merge), which was masking a real `tsc` failure in the new lowering.
 
 - [ ] LT-014: Type-flow diagnostics — Volar language-core plugin over the LT-011 span table (ADR 0024 milestone 4, stage 2)
   **Skill:** le-truc-dev

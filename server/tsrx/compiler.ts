@@ -189,6 +189,22 @@ export type AttributeIR =
 	  }
 	| {
 			/**
+			 * `style={() => ({ … })}` — an object-literal-bodied style thunk
+			 * (LT-028). Lowers to one `watch(thunk, bindStyle(el, [keys]))` call
+			 * against `bindStyle()`'s map-form overload (LT-029), keyed on the
+			 * object's own property names (plain idents or `'--custom-prop'`
+			 * string literals). Classified separately from `reactive` so it
+			 * bypasses the custom-element reactive-attribute gate the same way
+			 * `class-map` does.
+			 */
+			kind: 'style-map'
+			thunkText: string
+			/** The arrow function node — thunkText's own source range (LT-011). */
+			thunk: TsrxNode
+			object: TsrxNode
+	  }
+	| {
+			/**
 			 * Dynamic rendering: `html={expr}` — the .tsrx spelling of the
 			 * upstream `{html expr}` keyword (newer grammar than the pinned
 			 * parser). Server-known expressions render as raw, TRUSTED HTML
