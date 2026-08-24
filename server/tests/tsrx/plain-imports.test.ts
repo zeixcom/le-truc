@@ -100,6 +100,35 @@ describe('plain import used both server- and client-side', () => {
 	})
 })
 
+describe('plain import used only inside a bare (non-arrow) attribute expression', () => {
+	// `helper(count)` classifies as a `'server'`-kind attribute (the
+	// classifier's fallback for any non-arrow `{…}` expression) — spliced
+	// verbatim and unconditionally into the server module by emit-server.ts,
+	// with no other usage site anywhere else in the template (LT-037).
+	const source = `import { helper } from '../../_common/helper.ts'
+
+	export function C({ count }: { count: number })
+	@{
+		expose({})
+		<>
+			<c-el data-x={helper(count)}>ok</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+
+	test('lands in the server module only, with no TSRX014', () => {
+		const { component, diagnostics } = compileComponent(
+			source,
+			'examples/card/c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		expect(diagnostics.some(d => d.code === 'TSRX014')).toBe(false)
+		expect(component?.serverCode).toContain('helper')
+		expect(component?.clientCode).not.toContain('helper')
+	})
+})
+
 describe('relative specifier rewriting', () => {
 	const source = `import { serverOnlyHelper } from '../../_common/serverOnlyHelper.ts'
 

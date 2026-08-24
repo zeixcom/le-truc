@@ -87,7 +87,7 @@ export const parsePlainImports = (
 			if (local) localNames.push(local)
 		}
 		let importText = text(ctx.source, stmt)
-		if (specifier.startsWith('.')) {
+		if (specifier.startsWith('.') && isNode(specifierNode)) {
 			const resolved = posix
 				.normalize(posix.join(dir, specifier))
 				.replace(/\.ts$/, '')
@@ -139,6 +139,17 @@ const walkAttrs = function* (node: TemplateNode): Generator<AttributeIR> {
 /** Every server-known-position expression node anywhere in the template. */
 const walkServerExprs = function* (node: TemplateNode): Generator<TsrxNode> {
 	if (node.kind === 'expr' && !node.lazy) yield node.expr
+	// `'server'`-kind attributes (the classifier's fallback for any non-arrow
+	// `{…}` expression, e.g. `data-foo={helper(count)}`) are spliced verbatim
+	// and unconditionally into the SERVER module by emit-server.ts — no
+	// scope/dependency gate exists there, unlike `reactive`/`style-map`/
+	// `class-map`. They belong in this always-server-rendered bucket, not the
+	// scope-gated `walkServerRenderedThunks` one (LT-037, found reviewing
+	// LT-034: a plain import used only inside a `'server'`-kind attribute was
+	// invisible to `placePlainImports`, mis-diagnosed as unused, and dropped
+	// from the server module even though the generated code referenced it).
+	for (const attr of walkAttrs(node))
+		if (attr.kind === 'server') yield attr.node
 	if (node.kind === 'if') {
 		yield node.test
 		for (const child of node.then) yield* walkServerExprs(child)

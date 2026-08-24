@@ -670,7 +670,18 @@ const lazyWatchSource = (component: ComponentIR, child: ExprNode): string => {
 		)
 			return `'${value}'`
 	}
-	return child.exprText
+	// Anything else (a call/member expression, etc.) isn't one of `watch()`'s
+	// identifier/string-prop-name overloads — spliced verbatim it would be a
+	// bare expression like `formatHex(host.value)`, which matches none of
+	// `watch()`'s overloads except accidentally the array-source one,
+	// producing a confusing TS2769 instead of running reactively. Thunk-wrap
+	// it so it lowers to the arrow thunk-source overload instead (LT-038,
+	// found migrating `card-colorscale.tsrx`: `&{formatHex(host.value)}`
+	// broke until manually rewritten to `&{() => formatHex(host.value)}` —
+	// an already-authored arrow thunk is left as-is, everything else gets
+	// the same wrapping done automatically).
+	if (nodeType(expr) === 'ArrowFunctionExpression') return child.exprText
+	return `() => ${child.exprText}`
 }
 
 /**

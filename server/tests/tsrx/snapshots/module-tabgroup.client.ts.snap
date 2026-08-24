@@ -33,6 +33,7 @@ export default defineComponent<ModuleTabgroupProps>(
 	({ all, expose, on, watch }) => {
 		const tabs = all('button[role="tab"]', 'module-tabgroup: button[role="tab"] missing')
 		const tabpanels = all('[role="tabpanel"]', 'module-tabgroup: [role="tabpanel"] missing')
+		const panelId = (id: string) => `panel${id}`
 		const selected = createCell(tabs.get().find(el => el.ariaSelected === 'true')?.getAttribute('aria-controls') ?? '')
 		expose({ selected: selected.get })
 		each(tabs, tab => {
