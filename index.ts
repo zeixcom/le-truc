@@ -1,4 +1,4 @@
-// Le Truc 2.5.1
+// Le Truc 2.6.0
 
 // From Cause & Effect
 // Names deprecated by @zeix/cause-effect 1.5 ahead of its 2.0 keep their upstream
