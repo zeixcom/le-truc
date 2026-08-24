@@ -226,13 +226,27 @@ export type TopEffectPlan =
 			/**
 			 * `style={() => ({ … })}` (LT-028): one `watch(thunk, bindStyle(el,
 			 * keys))` call against `bindStyle()`'s map-form overload (LT-029) —
-			 * unlike `class-map`'s per-key expansion, every declared CSS
-			 * property is set from the single evaluated map in one dispatch.
-			 * `query` is `'host'` for the component-root case (LT-028's
-			 * motivating gap): the target is the ambient `host`, not a queried
-			 * descendant.
+			 * every declared CSS property is set from the single evaluated map
+			 * in one dispatch. `query` is `'host'` for the component-root case
+			 * (LT-028's motivating gap): the target is the ambient `host`, not
+			 * a queried descendant.
 			 */
 			kind: 'watch-style'
+			query: string
+			keys: string[]
+			thunkText: string
+			sourceStart: number | undefined
+			sourceEnd: number | undefined
+	  }
+	| {
+			/**
+			 * `class={() => ({ … })}` (LT-031): one `watch(thunk, bindClass(el,
+			 * keys))` call against `bindClass()`'s map-form overload (LT-029) —
+			 * every declared class token is toggled from the single evaluated
+			 * map in one dispatch, mirroring `watch-style`. `query` is `'host'`
+			 * for the component-root case (LT-032).
+			 */
+			kind: 'watch-class'
 			query: string
 			keys: string[]
 			thunkText: string
@@ -1774,18 +1788,14 @@ export const analyzeClient = (
 				emitPassEntries(attr.entries, query, sink)
 			} else if (attr.kind === 'class-map') {
 				collectAmbient(attr.object)
-				for (const key of classMapKeys(attr.object)) {
-					sink.push({
-						kind: 'watch-attr',
-						query,
-						attr: `class:${key}`,
-						thunkText: attr.thunkText,
-						dispatch: 'attribute',
-						coerceToString: false,
-						sourceStart: attr.thunk.start,
-						sourceEnd: attr.thunk.end,
-					})
-				}
+				sink.push({
+					kind: 'watch-class',
+					query,
+					keys: classMapKeys(attr.object),
+					thunkText: attr.thunkText,
+					sourceStart: attr.thunk.start,
+					sourceEnd: attr.thunk.end,
+				})
 			} else if (attr.kind === 'style-map') {
 				collectAmbient(attr.object)
 				sink.push({
@@ -2430,10 +2440,24 @@ export const analyzeClient = (
 					})
 					continue
 				}
+				if (attr.kind === 'class-map') {
+					// LT-032: same root exemption as style-map — targets the
+					// ambient `host`, not a queried descendant.
+					collectAmbient(attr.object)
+					ambient.add('host')
+					effects.push({
+						kind: 'watch-class',
+						query: 'host',
+						keys: classMapKeys(attr.object),
+						thunkText: attr.thunkText,
+						sourceStart: attr.thunk.start,
+						sourceEnd: attr.thunk.end,
+					})
+					continue
+				}
 				if (
 					attr.kind === 'event' ||
 					attr.kind === 'reactive' ||
-					attr.kind === 'class-map' ||
 					attr.kind === 'html' ||
 					attr.kind === 'ref' ||
 					attr.kind === 'pass'

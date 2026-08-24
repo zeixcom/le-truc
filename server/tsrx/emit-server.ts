@@ -711,6 +711,16 @@ export const emitServerModule = (
 					expr: `attr('style', styleAttr((${attr.thunkText})()) || null)`,
 				})
 			}
+		} else if (attr.kind === 'class-map') {
+			// LT-032: same root exemption as style-map — render the initial
+			// class list here, the same way `class-map` does for descendants.
+			if (dependenciesOf(attr.object).isSubsetOf(component.serverKnown)) {
+				used.add('attr')
+				used.add('cls')
+				rootParts.push({
+					expr: `attr('class', cls((${attr.thunkText})()) || null)`,
+				})
+			}
 		}
 	}
 	rootParts.push({ static: '>' })

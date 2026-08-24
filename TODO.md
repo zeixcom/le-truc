@@ -98,9 +98,18 @@
   **Skill:** le-truc-dev
   **Summary:** Verified the merged implementation against the proposed signatures and semantics — exact match, including test coverage for multi-target `ok`, per-key/`nil` clearing, and `bindProperty`'s partial-patch behavior. No net-new work needed.
 
-- [x] LT-028: No sanctioned `.tsrx` lowering for reactive host-level style/CSS-custom-property updates — done ✓
+- [x] LT-028: No sanctioned `.tsrx` lowering for reactive host-level style/CSS-custom-property updates — reviewed ✓
   **Skill:** le-truc-dev
   **Summary:** Added a `style-map` `AttributeIR` kind (`classify-attributes.ts`) for `style={() => ({ … })}`, classified separately from `reactive` so it bypasses the custom-element gate — both on descendant elements and, newly, the component root itself (previously hard-blocked; now lowers to `watch(thunk, bindStyle(host, keys))` targeting the ambient `host`). Server-side renders the initial value via a new `styleAttr()` runtime helper. `basic-gauge.tsrx` migrated off its static-string workaround; ring color/rotation now update live, parity with the hand-written version. New tests in `server/tests/tsrx/style-map.test.ts`. Along the way, rebuilt the stale `types/` declarations (hadn't been regenerated since LT-030's merge), which was masking a real `tsc` failure in the new lowering.
+  **Review:** Approved as implemented — correct and well-tested. Left two consistency gaps against the pre-existing `class-map` lowering, split out below as LT-031/LT-032. `bindProperty`/`bindAttribute`'s array forms and `bindState`'s map form are unaddressed in `.tsrx` too; see those tasks' rationale for why that's not the same kind of gap.
+
+- [x] LT-031: Migrate `class-map`'s lowering to `bindClass`'s array-form overload — one `watch()` call instead of N — done ✓
+  **Skill:** le-truc-dev
+  **Summary:** Added a `watch-class` `TopEffectPlan` kind (`analyze.ts`, next to `watch-style`) carrying `{ query, keys, thunkText, … }`; `class-map`'s branch in `emitConstructEffects` now pushes one of these instead of looping per key. `emit-client.ts` lowers it to one `watch(thunk, bindClass(el, [keys]))` call. Behavior unchanged (per-token `Boolean()` coercion, absent-token-is-off — `bindClass`'s array form already implements this); pure codegen consolidation. `class-map`'s object-literal form had zero prior test coverage anywhere in the corpus — added `server/tests/tsrx/class-map.test.ts`.
+
+- [x] LT-032: Extend the component-root reactive exemption to `class-map` (host-level class-map) — done ✓
+  **Skill:** le-truc-dev
+  **Summary:** Extended the root's `style-map` exemption (`analyze.ts`'s `emitTopEffects`, `node === component.root` branch) to `class-map`, pushing a `watch-class` effect targeting `host` and dropping `class-map` from the root's forbidden-kinds list. Server-side: the root's own opening-tag builder (`emit-server.ts` `rootParts`, distinct from `emitElement`'s descendant path) had **no** existing class-map handling at all — root class-map was previously blocked outright, not just under-optimized — so this added a case rendering `attr('class', cls((thunk)()) || null)`, mirroring the `style-map` case beside it. Covered by `class-map.test.ts`'s root-level cases.
 
 - [ ] LT-014: Type-flow diagnostics — Volar language-core plugin over the LT-011 span table (ADR 0024 milestone 4, stage 2)
   **Skill:** le-truc-dev

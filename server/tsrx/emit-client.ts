@@ -349,14 +349,28 @@ export const emitClientModule = (
 		}
 		if (effect.kind === 'watch-style') {
 			// LT-028/LT-029: one watch() call against bindStyle()'s map-form
-			// overload — unlike watch-attr's `class:` per-key expansion, every
-			// declared CSS property is set from the single evaluated map.
+			// overload — every declared CSS property is set from the single
+			// evaluated map.
 			imports.add('watch')
 			imports.add('bindStyle')
 			const slices = sliceOf(effect.thunkText, effect.sourceStart)
 			const keys = effect.keys.map(key => `'${key}'`).join(', ')
 			at(
 				`watch(${effect.thunkText}, bindStyle(${effect.query}, [${keys}]))`,
+				slices,
+			)
+			return
+		}
+		if (effect.kind === 'watch-class') {
+			// LT-031/LT-029: one watch() call against bindClass()'s map-form
+			// overload — every declared class token is toggled from the single
+			// evaluated map, mirroring watch-style.
+			imports.add('watch')
+			imports.add('bindClass')
+			const slices = sliceOf(effect.thunkText, effect.sourceStart)
+			const keys = effect.keys.map(key => `'${key}'`).join(', ')
+			at(
+				`watch(${effect.thunkText}, bindClass(${effect.query}, [${keys}]))`,
 				slices,
 			)
 			return
