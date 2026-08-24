@@ -27,9 +27,9 @@ This file is auto-generated. Do not edit manually.
 | [0020](0020-merge-based-validity-composition-and-relayvalidity.md) | Merge-Based Validity Composition and `relayValidity()` | ✅ Accepted | M1, §4 |
 | [0021](0021-root-parameterized-query-and-queryall.md) | `query`/`queryAll` — Root-Parameterized Siblings of `first`/`all` | ✅ Accepted | S6, M4, M8, M14 |
 | [0022](0022-debug-extension-for-visual-and-console-instrumentation.md) | `debug()` Extension for Visual and Console Instrumentation | ✅ Accepted | S3, N1, M5, M6 |
-| [0023](0023-adopt-tsrx-as-unified-component-format.md) | Adopt TSRX as the Unified Component Format | 🔄 Proposed | M1, M3, M4, §1, §5, §7 |
+| [0024](0024-adopt-tsrx-as-isomorphic-component-format.md) | Adopt TSRX as the Isomorphic Component Format | ✅ Accepted | M1, M3, M4, §1, §5, §7 |
 
 ---
 
-**Last updated:** 2026-08-21
+**Last updated:** 2026-08-24
 **Total ADRs:** 23 (excluding template)
