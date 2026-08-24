@@ -110,6 +110,14 @@ When the reactive value is boolean, `toggleAttribute` is called — the attribut
 
 When the reactive is nil, `el.style.removeProperty(prop)` is called, restoring whatever value the CSS cascade provides. Setting the reactive back to a string re-applies the inline style.
 
+## Map-Form `bind*` Overloads: Static Array, `typeof` Narrowing, `bindProperty` is the Odd One Out
+
+`bindStyle`, `bindAttribute`, `bindClass`, `bindProperty`, and `bindState` (`src/bindings.ts`, ADR 0023) each have a second overload accepting `readonly string[]` in place of the single target, returning a handler keyed by that array instead of a bare value.
+
+- **The array is declared statically at the call site, never accumulated.** This is what resolves the "clear everything vs. clear only absent" question: the array is always the complete key set for that binding, so there's no history to track. `bindStyle`/`bindAttribute`'s `nil()` removes every declared key; `bindClass`/`bindState` need no `nil` at all — an empty map already clears every declared token via the same toggle loop that handles absent keys.
+- **`bindProperty`'s map form is a partial PATCH, not a clear/set pair** — the one exception. Arbitrary object properties have no "remove" operation, so a key absent from the value object is left untouched, not cleared. Every other helper's map form treats an absent/`null` key as "clear this one." Don't generalize `bindProperty`'s behavior to the other four, or vice versa.
+- **Each helper is implemented as a `function` declaration with two overload signatures plus one shared implementation**, replacing the previous `const` arrow function. The implementation branches on `typeof arg === 'string'`, not `Array.isArray(arg)`. `Array.isArray`'s negative narrowing does not exclude `readonly string[]` from a `string | readonly string[]` union, because a readonly array is not assignable to the type guard's `any[]` return type — the false branch stays unnarrowed. `typeof` narrows cleanly both ways. Follow this pattern for any future `bind*` map-form addition.
+
 ## Debug Mode Guards and the `debug()` Extension
 
 DEV-gated code is guarded inline by `process.env.DEV_MODE === 'true'` at each use site — there is no `DEV_MODE` const, because this exact literal-comparison form is what Bun's minifier folds for dead-code elimination in production builds. Keep the env check first in `&&` chains. `debug()` (`src/extensions/debug.ts`) narrows `DEV_MODE` rather than adding a second mode: its `debug` property only exists when `DEV_MODE` is on, and every effect it drives re-checks the same guard at fire time.

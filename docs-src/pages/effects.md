@@ -86,6 +86,19 @@ Two of these deserve a second look.
 See [Reactive Styles](styling.html#reactive-styles) for examples of how CSS and effects work together.
 {% /callout %}
 
+### Bind Several Targets from One Source
+
+`bindStyle()`, `bindAttribute()`, `bindClass()`, `bindProperty()`, and `bindState()` each also accept an array of targets instead of a single one. Use this when one computed value drives several properties, attributes, class tokens, object keys, or custom states at once — one `watch()` call instead of several:
+
+```js
+watch(
+  () => ({ '--gauge-color': color, '--gauge-degree': `${degree}deg` }),
+  bindStyle(host, ['--gauge-color', '--gauge-degree']),
+)
+```
+
+The array of targets is fixed where you call the helper. The handler you pass to `watch()` receives an object keyed by those targets. For `bindStyle()`, `bindAttribute()`, and `bindClass()`, a target missing from that object (or set to `null`/`undefined`) is cleared — removed from the style/attribute, or toggled off for a class. `bindState()` toggles the same way. `bindProperty()` is the exception: a missing key is left alone, not cleared, because arbitrary object properties have no "remove" operation.
+
 ### Derive Inline with a Thunk
 
 Instead of a named signal, you can **pass a thunk** as the `watch` source to derive a value inline:
