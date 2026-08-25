@@ -16,6 +16,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createEffect } from '@zeix/cause-effect'
 import { watchFiles } from '../file-watcher'
+import { retryUntil } from './helpers/test-utils'
 
 /* === Helpers === */
 
@@ -129,8 +130,14 @@ describe('watchFiles — debounced batch updates', () => {
 			),
 		)
 
-		// Wait for debounce (50 ms) + a generous margin for I/O
-		await Bun.sleep(300)
+		// Debounce is 50 ms, but a busy CI runner can delay fs events and the
+		// timer well beyond that — poll instead of a single fixed sleep so the
+		// test passes as soon as the batch settles instead of racing a clock.
+		await retryUntil(() => observed, {
+			condition: value => value === N,
+			timeout: 5000,
+			interval: 25,
+		})
 
 		stopEffect()
 		expect(observed).toBe(N)
@@ -150,7 +157,13 @@ describe('watchFiles — debounced batch updates', () => {
 		expect(observedContent).toBe('v1')
 
 		await writeTempFile(dir, 'doc.md', 'v2')
-		await Bun.sleep(300)
+
+		// See the burst test above: poll rather than sleep a fixed duration.
+		await retryUntil(() => observedContent, {
+			condition: value => value === 'v2',
+			timeout: 5000,
+			interval: 25,
+		})
 
 		stopEffect()
 		expect(observedContent).toBe('v2')
