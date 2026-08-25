@@ -1,16 +1,25 @@
 /**
- * Import-placement inference for plain (non-`.tsrx`) imports (LT-034, ADR
- * 0024 sub-design 14). `config.ts`'s `parseComposeImports` only recognizes
- * `ImportDeclaration`s resolving to sibling `.tsrx` files; every other
- * top-level import used to be silently dropped from generated output. This
- * module collects those plain imports and places each one into whichever
- * generated module(s) actually reference its bindings — inferred from usage,
- * the same free-identifier analysis the compiler already runs for setup
- * consts (`CLIENT_ONLY_PRIMITIVES`, the `clientSetup` gate) — no new
- * annotation syntax.
+ * Source-import collection and placement (LT-044, regrouping move M6 of
+ * LE_TRUC_COMPILER.md §7): the ONE module owning "what does this source
+ * import, and where does each import land". Three concerns, previously
+ * split across `config.ts` (compose-import resolution) and
+ * `plain-imports.ts` (plain-import placement):
+ *
+ * 1. `parseComposeImports` — named imports of sibling `.tsrx` modules
+ *    (ADR 0023 sub-design 10), the composable targets.
+ * 2. `parsePlainImports` — every OTHER top-level import, with relative
+ *    specifiers rewritten for the flat generated directory (LT-034, ADR
+ *    0024 sub-design 14).
+ * 3. `placePlainImports`/`computeClientNeededNames` — placement of each
+ *    plain import into whichever generated module(s) actually reference
+ *    its bindings, inferred from usage — the same free-identifier analysis
+ *    the compiler already runs for setup consts — no new annotation syntax.
+ *
+ * Browser-pure by construction (ADR 0025 sub-design 6): specifier
+ * resolution uses the small pure-string POSIX helpers below, NOT
+ * `node:path` — the compiler must stay loadable in a browser bundle.
  */
 
-import { posix } from 'node:path'
 import type { TsrxNode } from '@tsrx/core'
 import {
 	asArray,
@@ -20,13 +29,75 @@ import {
 	JS_GLOBALS,
 	text,
 } from './ast-utils'
-import type {
-	AttributeIR,
-	ComponentIR,
-	ExtractContext,
-	TemplateNode,
-} from './compiler'
 import { diagnostic } from './diagnostics'
+import { dependenciesOf, isServerEvaluable } from './evaluability'
+import type { ComponentIR, ExtractContext, TemplateNode } from './ir'
+import { collectAttrs, walkTemplate } from './walk'
+
+/* === Pure-string POSIX path helpers (no node:path — browser purity) === */
+
+/** `dir/file.tsrx` → `dir`; `file.tsrx` → `.`; `/file.tsrx` → `/`. */
+const dirname = (p: string): string => {
+	const idx = p.lastIndexOf('/')
+	return idx === -1 ? '.' : idx === 0 ? '/' : p.slice(0, idx)
+}
+
+/** `join('dir', './sibling.tsrx')` → `dir/./sibling.tsrx` (normalize after). */
+const join = (dir: string, rel: string): string =>
+	dir === '.' ? rel : `${dir}/${rel}`
+
+/** Lexical `.`/`..` segment resolution, matching `posix.normalize`. */
+const normalize = (p: string): string => {
+	const absolute = p.startsWith('/')
+	const out: string[] = []
+	for (const part of p.split('/')) {
+		if (part === '' || part === '.') continue
+		if (part === '..') {
+			if (out.length > 0 && out[out.length - 1] !== '..') out.pop()
+			else if (!absolute) out.push('..')
+			continue
+		}
+		out.push(part)
+	}
+	return (absolute ? '/' : '') + out.join('/')
+}
+
+/* === Compose imports (from config.ts) === */
+
+/**
+ * Named imports of other `.tsrx` modules (ADR 0023 sub-design 10): local
+ * binding name → import specifier resolved to a repo-relative path.
+ * `filename` is itself repo-relative, so the specifier resolves against its
+ * directory. Only `.tsrx` specifiers compose — anything else (a `.ts`
+ * component, a library import) is not a composable import.
+ */
+export const parseComposeImports = (
+	ast: TsrxNode,
+	filename: string,
+): Map<string, string> => {
+	const imports = new Map<string, string>()
+	const dir = dirname(filename)
+	for (const stmt of asArray(ast.body)) {
+		if (stmt.type !== 'ImportDeclaration') continue
+		const specifierNode = stmt.source
+		const specifier =
+			isNode(specifierNode) &&
+			specifierNode.type === 'Literal' &&
+			typeof specifierNode.value === 'string'
+				? specifierNode.value
+				: null
+		if (!specifier || !specifier.endsWith('.tsrx')) continue
+		const resolved = normalize(join(dir, specifier))
+		for (const spec of asArray(stmt.specifiers)) {
+			if (spec.type !== 'ImportSpecifier') continue
+			const local = identifierName(spec.local)
+			if (local) imports.set(local, resolved)
+		}
+	}
+	return imports
+}
+
+/* === Plain imports (from plain-imports.ts) === */
 
 /**
  * Every generated module lives flat in `server/generated/tsrx/`, regardless
@@ -48,16 +119,9 @@ export type PlainImportIR = {
 	start: number
 }
 
-/** Free identifiers minus JS/DOM globals — the names that could be imports. */
-const dependenciesOf = (node: TsrxNode): Set<string> => {
-	const free = freeIdentifiers(node)
-	for (const global of JS_GLOBALS) free.delete(global)
-	return free
-}
-
 /**
  * Every top-level `ImportDeclaration` whose specifier does NOT resolve to a
- * `.tsrx` compose target (`config.ts`'s `parseComposeImports` already claims
+ * `.tsrx` compose target (`parseComposeImports` above already claims
  * those). Side-effect-only imports (`import 'culori/css'`) have no bindings
  * to trace usage from. A relative specifier (`./`, `../`) is rewritten to
  * stay valid from the generated modules' flat output directory — it was
@@ -70,7 +134,7 @@ export const parsePlainImports = (
 	filename: string,
 ): PlainImportIR[] => {
 	const result: PlainImportIR[] = []
-	const dir = posix.dirname(filename)
+	const dir = dirname(filename)
 	for (const stmt of asArray(ast.body)) {
 		if (stmt.type !== 'ImportDeclaration') continue
 		const specifierNode = stmt.source
@@ -88,9 +152,7 @@ export const parsePlainImports = (
 		}
 		let importText = text(ctx.source, stmt)
 		if (specifier.startsWith('.') && isNode(specifierNode)) {
-			const resolved = posix
-				.normalize(posix.join(dir, specifier))
-				.replace(/\.ts$/, '')
+			const resolved = normalize(join(dir, specifier)).replace(/\.ts$/, '')
 			const rewritten = `${GENERATED_DIR_DEPTH_PREFIX}${resolved}`
 			importText = importText.replace(
 				text(ctx.source, specifierNode),
@@ -107,129 +169,74 @@ export const parsePlainImports = (
 	return result
 }
 
-/** Every attribute anywhere in the template, paired with its owning kind. */
-const walkAttrs = function* (node: TemplateNode): Generator<AttributeIR> {
-	if (node.kind === 'element') {
-		for (const attr of node.attrs) yield attr
-		for (const child of node.children) yield* walkAttrs(child)
-		return
-	}
-	if (node.kind === 'if') {
-		for (const child of node.then) yield* walkAttrs(child)
-		for (const child of node.alternate) yield* walkAttrs(child)
-		return
-	}
-	if (node.kind === 'switch') {
-		for (const arm of node.cases)
-			for (const child of arm.children) yield* walkAttrs(child)
-		return
-	}
-	if (node.kind === 'try') {
-		for (const child of node.children) yield* walkAttrs(child)
-		for (const child of node.catchChildren) yield* walkAttrs(child)
-		for (const child of node.pendingChildren ?? []) yield* walkAttrs(child)
-		return
-	}
-	if (node.kind === 'compose') {
-		for (const child of node.children) yield* walkAttrs(child)
-		return
-	}
-}
-
-/** Every server-known-position expression node anywhere in the template. */
-const walkServerExprs = function* (node: TemplateNode): Generator<TsrxNode> {
-	if (node.kind === 'expr' && !node.lazy) yield node.expr
-	// `'server'`-kind attributes (the classifier's fallback for any non-arrow
-	// `{…}` expression, e.g. `data-foo={helper(count)}`) are spliced verbatim
-	// and unconditionally into the SERVER module by emit-server.ts — no
-	// scope/dependency gate exists there, unlike `reactive`/`style-map`/
-	// `class-map`. They belong in this always-server-rendered bucket, not the
-	// scope-gated `walkServerRenderedThunks` one (LT-037, found reviewing
-	// LT-034: a plain import used only inside a `'server'`-kind attribute was
-	// invisible to `placePlainImports`, mis-diagnosed as unused, and dropped
-	// from the server module even though the generated code referenced it).
-	for (const attr of walkAttrs(node))
-		if (attr.kind === 'server') yield attr.node
-	if (node.kind === 'if') {
-		yield node.test
-		for (const child of node.then) yield* walkServerExprs(child)
-		for (const child of node.alternate) yield* walkServerExprs(child)
-		return
-	}
-	if (node.kind === 'switch') {
-		yield node.discriminant
-		for (const arm of node.cases)
-			for (const child of arm.children) yield* walkServerExprs(child)
-		return
-	}
-	if (node.kind === 'try') {
-		for (const child of node.children) yield* walkServerExprs(child)
-		for (const child of node.catchChildren) yield* walkServerExprs(child)
-		for (const child of node.pendingChildren ?? [])
-			yield* walkServerExprs(child)
-		return
-	}
-	if (node.kind === 'compose') {
-		for (const attr of node.attrs)
-			if (attr.kind === 'arg' && attr.node) yield attr.node
-		for (const child of node.children) yield* walkServerExprs(child)
-		return
-	}
-	if (node.kind === 'element')
-		for (const child of node.children) yield* walkServerExprs(child)
+/**
+ * Every server-known-position expression node anywhere in the template
+ * (LT-042: rebuilt on `walkTemplate` — traversal encoded once in walk.ts;
+ * the collected NAME SET is unchanged, which is all `placePlainImports`
+ * consumes). Includes `'server'`-kind attributes (the classifier's fallback
+ * for any non-arrow `{…}` expression, e.g. `data-foo={helper(count)}`) —
+ * they are spliced verbatim and unconditionally into the SERVER module by
+ * emit-server.ts, no scope/dependency gate exists there, unlike `reactive`/
+ * `style-map`/`class-map`. They belong in this always-server-rendered
+ * bucket, not the scope-gated `serverRenderedThunkNodes` one (LT-037,
+ * found reviewing LT-034: a plain import used only inside a `'server'`-kind
+ * attribute was invisible to `placePlainImports`, mis-diagnosed as unused,
+ * and dropped from the server module even though the generated code
+ * referenced it).
+ */
+const serverExprNodes = (root: TemplateNode): TsrxNode[] => {
+	const out: TsrxNode[] = []
+	walkTemplate(root, node => {
+		if (node.kind === 'expr' && !node.lazy) out.push(node.expr)
+		else if (node.kind === 'if') out.push(node.test)
+		else if (node.kind === 'switch') out.push(node.discriminant)
+		else if (node.kind === 'compose')
+			for (const attr of node.attrs)
+				if (attr.kind === 'arg' && attr.node) out.push(attr.node)
+	})
+	for (const attr of collectAttrs(root))
+		if (attr.kind === 'server') out.push(attr.node)
+	return out
 }
 
 /** Every client-always expression node anywhere in the template. */
-const walkClientExprs = function* (node: TemplateNode): Generator<TsrxNode> {
-	if (node.kind === 'expr' && node.lazy) yield node.expr
-	if (node.kind === 'client-stmt') yield node.node
-	for (const attr of walkAttrs(node)) {
-		if (attr.kind === 'reactive') yield attr.thunk
+const clientExprNodes = (root: TemplateNode): TsrxNode[] => {
+	const out: TsrxNode[] = []
+	walkTemplate(root, node => {
+		if (node.kind === 'expr' && node.lazy) out.push(node.expr)
+		else if (node.kind === 'client-stmt') out.push(node.node)
+	})
+	for (const attr of collectAttrs(root)) {
+		if (attr.kind === 'reactive') out.push(attr.thunk)
 		else if (attr.kind === 'style-map' || attr.kind === 'class-map')
-			yield attr.object
-		else if (attr.kind === 'event') yield attr.handler
-		else if (attr.kind === 'html' && attr.reactive) yield attr.node
+			out.push(attr.object)
+		else if (attr.kind === 'event') out.push(attr.handler)
+		else if (attr.kind === 'html' && attr.reactive) out.push(attr.node)
 	}
-	if (node.kind === 'element')
-		for (const child of node.children) yield* walkClientExprs(child)
-	else if (node.kind === 'if') {
-		for (const child of node.then) yield* walkClientExprs(child)
-		for (const child of node.alternate) yield* walkClientExprs(child)
-	} else if (node.kind === 'switch') {
-		for (const arm of node.cases)
-			for (const child of arm.children) yield* walkClientExprs(child)
-	} else if (node.kind === 'try') {
-		for (const child of node.children) yield* walkClientExprs(child)
-		for (const child of node.catchChildren) yield* walkClientExprs(child)
-		for (const child of node.pendingChildren ?? [])
-			yield* walkClientExprs(child)
-	} else if (node.kind === 'compose') {
-		for (const child of node.children) yield* walkClientExprs(child)
-	}
+	return out
 }
 
 /**
  * Server-conditional reactive-family thunks (`reactive`/`style-map`/
- * `class-map`) — mirrors `emit-server.ts`'s own `dependenciesOf(...)
- * .isSubsetOf(component.serverKnown)` gate exactly, so a plain import used
- * only inside a thunk that DOES get server-rendered still lands server-side.
+ * `class-map`) — gated by the same `isServerEvaluable` rule emit-server.ts
+ * applies (evaluability.ts, LT-043), so a plain import used only inside a
+ * thunk that DOES get server-rendered still lands server-side.
  */
-const walkServerRenderedThunks = function* (
-	node: TemplateNode,
+const serverRenderedThunkNodes = (
+	root: TemplateNode,
 	serverKnown: ReadonlySet<string>,
-): Generator<TsrxNode> {
-	for (const attr of walkAttrs(node)) {
-		if (
-			attr.kind === 'reactive' &&
-			dependenciesOf(attr.thunk).isSubsetOf(serverKnown)
-		)
-			yield attr.thunk
+): TsrxNode[] => {
+	const out: TsrxNode[] = []
+	for (const attr of collectAttrs(root)) {
+		if (attr.kind === 'reactive' && isServerEvaluable(attr.thunk, serverKnown))
+			out.push(attr.thunk)
 		else if (
 			(attr.kind === 'style-map' || attr.kind === 'class-map') &&
-			dependenciesOf(attr.object).isSubsetOf(serverKnown)
+			isServerEvaluable(attr.object, serverKnown)
 		)
-			yield attr.object
+			out.push(attr.object)
 	}
+	return out
 }
 
 type SetupLikeComponent = Pick<
@@ -254,7 +261,7 @@ export const computeClientNeededNames = (
 	component: SetupLikeComponent,
 ): ReadonlySet<string> => {
 	const needed = new Set<string>()
-	for (const exprNode of walkClientExprs(component.root))
+	for (const exprNode of clientExprNodes(component.root))
 		for (const n of dependenciesOf(exprNode)) needed.add(n)
 	for (const stmt of component.clientSetup)
 		for (const n of dependenciesOf(stmt.node)) needed.add(n)
@@ -307,9 +314,9 @@ export const placePlainImports = (
 	// unconditionally (ADR 0024 sub-design 12).
 	for (const stmt of component.setup)
 		for (const n of dependenciesOf(stmt.node)) serverNames.add(n)
-	for (const exprNode of walkServerExprs(component.root))
+	for (const exprNode of serverExprNodes(component.root))
 		for (const n of dependenciesOf(exprNode)) serverNames.add(n)
-	for (const exprNode of walkServerRenderedThunks(
+	for (const exprNode of serverRenderedThunkNodes(
 		component.root,
 		component.serverKnown,
 	))

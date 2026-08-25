@@ -6,7 +6,7 @@
  *   bun server/tsrx/smoke.ts
  */
 import * as fs from 'node:fs'
-import { analyzeClient } from './analyze'
+import { analyzeClient } from './analysis/plan'
 import { compileSource } from './compiler'
 import { emitClientModule } from './emit-client'
 import { emitServerModule } from './emit-server'

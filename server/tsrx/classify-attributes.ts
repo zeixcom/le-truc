@@ -20,7 +20,7 @@ import type {
 	ComposeAttrIR,
 	ExtractContext,
 	PassEntryIR,
-} from './compiler'
+} from './ir'
 
 /**
  * Parse `pass={{ prop: thunk, … }}` entries — shared by raw dashed tags and

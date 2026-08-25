@@ -23,6 +23,8 @@ import {
 	classifyAttribute,
 	classifyComposeAttribute,
 } from './classify-attributes'
+import { isTemplateForOfNode } from './core'
+import { diagnostic } from './diagnostics'
 import type {
 	AttributeIR,
 	ComposeAttrIR,
@@ -30,9 +32,7 @@ import type {
 	ForIR,
 	SignalIR,
 	TemplateNode,
-} from './compiler'
-import { isForOfNode } from './compiler'
-import { diagnostic } from './diagnostics'
+} from './ir'
 
 /**
  * Validate a control-flow condition (`@if` test, `@switch` discriminant):
@@ -205,7 +205,7 @@ const lowerBodyStatements = (
 			out.push(...lowerChildren(ctx, stmt, signals, fors))
 			continue
 		}
-		if (isForOfNode(stmt)) {
+		if (isTemplateForOfNode(stmt)) {
 			const lowered = lowerFor(ctx, stmt, signals, fors)
 			if (lowered) out.push(lowered)
 			continue
@@ -568,7 +568,7 @@ export const lowerChildren = (
 			i += 1
 			continue
 		}
-		if (isForOfNode(child)) {
+		if (isTemplateForOfNode(child)) {
 			const lowered = lowerFor(ctx, child, signals, fors)
 			if (lowered) out.push(lowered)
 			i += 1

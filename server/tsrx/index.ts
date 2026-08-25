@@ -10,7 +10,7 @@
  * ROADMAP "Packaging"); with Le Truc v3.0 it ships as `@tsrx/le-truc`.
  */
 
-import { analyzeClient } from './analyze'
+import { analyzeClient } from './analysis/plan'
 import { collectComposeElements, compileSource } from './compiler'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import { emitClientModule } from './emit-client'
@@ -112,9 +112,9 @@ export const compileComponent = (
 	}
 }
 
-export type { ClientPlan } from './analyze'
-export { analyzeClient } from './analyze'
-export type { CompileResult, ComponentIR } from './compiler'
+export type { ClientPlan } from './analysis/plan'
+export { analyzeClient } from './analysis/plan'
+export type { CompileResult } from './compiler'
 export { compileSource } from './compiler'
 export { dedentCss } from './css'
 export type { CompileDiagnostic, DiagnosticCode } from './diagnostics'
@@ -122,6 +122,7 @@ export type { EmittedClientModule } from './emit-client'
 export { emitClientModule } from './emit-client'
 export type { EmittedServerModule } from './emit-server'
 export { emitServerModule } from './emit-server'
+export type { ComponentIR } from './ir'
 export type { ComponentRegistry, RegistryEntry } from './registry'
 export { registryJson } from './registry'
 export type { SourceSpan } from './spans'

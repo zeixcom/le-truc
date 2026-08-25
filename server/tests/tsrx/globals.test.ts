@@ -12,8 +12,11 @@
 import { describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import type { ComponentProps, FactoryContext } from '@zeix/le-truc'
 import {
 	CONTEXT_NAMES,
+	FACTORY_CONTEXT_MEMBER_NAMES,
+	FACTORY_CONTEXT_MEMBERS,
 	PARSER_FACTORIES,
 	SIGNAL_CONSTRUCTORS,
 } from '../../tsrx/ast-utils'
@@ -54,6 +57,31 @@ describe('globals.d.ts — ambient vocabulary parity with the compiler', () => {
 		])
 		const stray = declaredConsts.filter(name => !allowed.has(name))
 		expect(stray).toEqual([])
+	})
+
+	test('FACTORY_CONTEXT_MEMBERS are real FactoryContext members and never module imports (LT-041)', () => {
+		// Type-level subset assertion: compiles only while every listed
+		// member is a key of the REAL FactoryContext — a rename/removal in
+		// @zeix/le-truc fails the standing tsc gate instead of silently
+		// mis-splitting the generated client's context vs import lists.
+		type IsSubset = [(typeof FACTORY_CONTEXT_MEMBER_NAMES)[number]] extends [
+			keyof FactoryContext<ComponentProps>,
+		]
+			? true
+			: false
+		const assertSubset: IsSubset = true
+		expect(assertSubset).toBe(true)
+		// Channel split: a destructured context member is never a signal
+		// constructor or parser factory (those import from '@zeix/le-truc').
+		const mischanneled = [...FACTORY_CONTEXT_MEMBERS].filter(
+			m => SIGNAL_CONSTRUCTORS.has(m) || PARSER_FACTORIES.has(m),
+		)
+		expect(mischanneled).toEqual([])
+		// The one deliberate overlap with the ambient vocabulary: `expose` is
+		// both a declared ambient (raw sources call it unqualified) and a
+		// destructured context member in the generated client.
+		expect(FACTORY_CONTEXT_MEMBERS.has('expose')).toBe(true)
+		expect(declaredConsts).toContain('expose')
 	})
 })
 

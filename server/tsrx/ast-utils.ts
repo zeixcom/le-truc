@@ -49,6 +49,30 @@ export const CONTEXT_NAMES: ReadonlySet<string> = new Set<string>([
 	'provideContexts',
 ])
 
+/**
+ * FactoryContext members the generated client DESTRUCTURES rather than
+ * imports from '@zeix/le-truc' (emit-client's context-vs-module split).
+ * Kept as a literal array alongside the Set so the parity test can assert,
+ * type-level, that every member is a key of the real `FactoryContext`
+ * (globals.test.ts) — a `@zeix/le-truc` rename/removal then fails tsc.
+ * `host`/`internals`/`requestContext`/`provideContexts` also live on the
+ * context but arrive through the analyzer's ambient collection
+ * (`CONTEXT_NAMES`), not this list; `each`/`reconcile`/`defineComponent`/
+ * `bind*`/parsers/signal constructors are module exports.
+ */
+export const FACTORY_CONTEXT_MEMBER_NAMES = [
+	'all',
+	'expose',
+	'first',
+	'on',
+	'pass',
+	'watch',
+] as const
+
+export const FACTORY_CONTEXT_MEMBERS: ReadonlySet<string> = new Set<string>(
+	FACTORY_CONTEXT_MEMBER_NAMES,
+)
+
 /** Managed form props usable as string-literal lazy children (text-bindable). */
 export const MANAGED_TEXT_PROPS: ReadonlySet<string> = new Set<string>([
 	'validationMessage',
@@ -150,6 +174,60 @@ export const isNode = (value: unknown): value is TsrxNode =>
 
 export const asArray = (value: unknown): TsrxNode[] =>
 	Array.isArray(value) ? (value.filter(isNode) as TsrxNode[]) : []
+
+/** The `.type` discriminator of an AST node, or null for non-nodes. */
+export const nodeType = (node: unknown): string | null =>
+	isNode(node) ? String(node.type) : null
+
+/**
+ * `() => host.<prop>` — the host-prop mirror pattern. Returns the property
+ * name, or null when the thunk isn't a non-computed `host.<prop>` member
+ * read. Shared by the analyzer (dispatch decision: `bindProperty`, not
+ * `bindAttribute`) and the server emitter (render from the parser-exposed
+ * prop's root attribute).
+ */
+export const hostPropOf = (thunk: TsrxNode): string | null => {
+	const body = thunk.body
+	if (!isNode(body) || body.type !== 'MemberExpression' || body.computed)
+		return null
+	const obj = body.object
+	if (!isNode(obj) || obj.type !== 'Identifier' || String(obj.name) !== 'host')
+		return null
+	const prop = body.property
+	if (!isNode(prop) || prop.type !== 'Identifier') return null
+	return String(prop.name)
+}
+
+/**
+ * Property names of an object literal keyed by identifier. `allowStrings`
+ * (style maps) also accepts string-literal keys — CSS custom properties
+ * (`'--gauge-color'`) are not valid JS identifiers and must be quoted at
+ * the call site; class maps never use them.
+ */
+export const objectKeys = (
+	object: TsrxNode,
+	opts: { allowStrings: boolean },
+): string[] => {
+	const keys: string[] = []
+	if (nodeType(object) !== 'ObjectExpression') return keys
+	for (const prop of asArray(object.properties)) {
+		if (prop.type !== 'Property') continue
+		const key = prop.key
+		if (nodeType(key) === 'Identifier')
+			keys.push(String((key as TsrxNode).name))
+		else if (
+			opts.allowStrings &&
+			nodeType(key) === 'Literal' &&
+			typeof (key as TsrxNode).value === 'string'
+		)
+			keys.push(String((key as TsrxNode).value))
+	}
+	return keys
+}
+
+/** `basic-counter` → `basicCounter` (a dashed name as a JS identifier). */
+export const sanitizeVarName = (name: string): string =>
+	name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
 
 export const identifierName = (node: unknown): string | null =>
 	isNode(node) && node.type === 'Identifier' ? String(node.name) : null

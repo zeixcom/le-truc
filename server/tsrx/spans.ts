@@ -57,9 +57,47 @@ const offsetToLineCol = (
 /* === Exported Functions === */
 
 /**
+ * Re-indent a verbatim slice for generated code (LT-041, moved from
+ * emit-server.ts so the reindentation family lives in one module): strip
+ * the source's common indentation, apply `level` tabs (first line
+ * included). Lines inside a multi-line template literal pass through
+ * byte-identical — their leading whitespace is string content, not
+ * indentation (LT-010). Unlike `appendWithSpans` below — which never
+ * strips the first line (callers pass it already positioned) and whose
+ * common-indent computation skips it — this variant computes `common` over
+ * ALL significant lines and strips it from every line that starts with it.
+ */
+export const reindent = (slice: string, level: number): string => {
+	const lines = slice.split('\n')
+	const mask = lineStartsInTemplate(lines)
+	const indents = lines
+		.filter(
+			(line, i) =>
+				line.trim().length > 0 && !mask[i] && !line.trimStart().startsWith('*'),
+		)
+		.map(line => line.match(/^[ \t]*/)?.[0] ?? '')
+	const common = indents.length
+		? (indents.reduce((min, ind) => (ind.length < min.length ? ind : min)) ??
+			'')
+		: ''
+	const prefix = '\t'.repeat(level)
+	return lines
+		.map((line, i) => {
+			if (mask[i]) return line
+			if (line.trim().length === 0) return ''
+			return (
+				prefix + (line.startsWith(common) ? line.slice(common.length) : line)
+			)
+		})
+		.join('\n')
+}
+
+/**
  * Append `text` (already assembled, with any verbatim `slices` interpolated
- * into it) to `lines`, applying the same reindent rule as `pushStatement`
- * (emit-client) / `reindent` (emit-server): continuation lines drop their
+ * into it) to `lines`, applying the module's reindent rule (see `reindent`
+ * above for the precise difference: the FIRST line here is prefixed but
+ * never stripped, and excluded from the common-indent computation — callers
+ * pass it already positioned mid-line): continuation lines drop their
  * common leading indentation and gain `depth` tabs; lines that start inside
  * an open template literal pass through byte-identical (LT-010). While doing
  * so, record one `SourceSpan` per generated LINE each slice touches — a

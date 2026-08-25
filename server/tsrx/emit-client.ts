@@ -21,9 +21,10 @@ import type {
 	ParserKind,
 	ReconcilePlan,
 	TopEffectPlan,
-} from './analyze'
-import type { ComponentIR, SignalIR } from './compiler'
-import { computeClientNeededNames } from './plain-imports'
+} from './analysis/plan'
+import { FACTORY_CONTEXT_MEMBERS, sanitizeVarName } from './ast-utils'
+import { computeClientNeededNames } from './imports'
+import type { ComponentIR, SignalIR } from './ir'
 import {
 	appendWithSpans,
 	type SourceSlice,
@@ -49,15 +50,8 @@ export type EmittedClientModule = {
 /* === Internal Functions === */
 
 /** `aria-selected` → `ariaSelected` (ARIA reflection property name). */
-const ariaProperty = (attr: string): string | null => {
-	if (!attr.startsWith('aria-')) return null
-	return attr
-		.split('-')
-		.map((part, i) =>
-			i === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1),
-		)
-		.join('')
-}
+const ariaProperty = (attr: string): string | null =>
+	attr.startsWith('aria-') ? sanitizeVarName(attr) : null
 
 const parserImport = (parser: ParserKind): string | null => parser
 
@@ -483,10 +477,9 @@ export const emitClientModule = (
 	// constructors are '@zeix/le-truc' module exports. host/internals are
 	// context members too, collected by the analyzer from every client code
 	// position (ambientContext).
-	const CONTEXT_HELPERS = ['all', 'expose', 'first', 'on', 'pass', 'watch']
 	const contextMembers = [
 		...new Set([
-			...[...imports].filter(h => CONTEXT_HELPERS.includes(h)),
+			...[...imports].filter(h => FACTORY_CONTEXT_MEMBERS.has(h)),
 			...plan.ambientContext,
 		]),
 	].sort()
@@ -529,7 +522,7 @@ export const emitClientModule = (
 		' */',
 	]
 	const importList = [...imports]
-		.filter(name => !CONTEXT_HELPERS.includes(name))
+		.filter(name => !FACTORY_CONTEXT_MEMBERS.has(name))
 		.sort()
 	body.push(`import { ${importList.join(', ')} } from '@zeix/le-truc'`)
 	if (needsFormType)

@@ -18,17 +18,22 @@
  */
 
 import type { TsrxNode } from '@tsrx/core'
-import { freeIdentifiers, JS_GLOBALS, MANAGED_TEXT_PROPS } from './ast-utils'
 import {
-	type AttributeIR,
-	type ComponentIR,
-	type ForIR,
-	isVoidTag,
-	type TemplateNode,
-} from './compiler'
-import { lineStartsInTemplate } from './indent'
+	freeIdentifiers,
+	hostPropOf,
+	JS_GLOBALS,
+	MANAGED_TEXT_PROPS,
+} from './ast-utils'
+import { isVoidElement } from './core'
+import { isServerEvaluable } from './evaluability'
+import type { AttributeIR, ComponentIR, ForIR, TemplateNode } from './ir'
 import type { RegistryEntry } from './registry'
-import { appendWithSpans, type SourceSpan, type SpanCursor } from './spans'
+import {
+	appendWithSpans,
+	reindent,
+	type SourceSpan,
+	type SpanCursor,
+} from './spans'
 
 /* === Types === */
 
@@ -75,44 +80,6 @@ const escapeAttrValue = (value: string): string =>
 		.replace(/>/g, '&gt;')
 		.replace(/"/g, '&quot;')
 
-/** Free identifiers excluding JS globals — the dependency set that matters. */
-const dependenciesOf = (node: TsrxNode): Set<string> => {
-	const free = freeIdentifiers(node)
-	for (const global of JS_GLOBALS) free.delete(global)
-	return free
-}
-
-/**
- * Re-indent a verbatim slice for generated code: strip the source's common
- * indentation, apply `level` tabs (first line included). Lines inside a
- * multi-line template literal pass through byte-identical — their leading
- * whitespace is string content, not indentation (LT-010).
- */
-const reindent = (slice: string, level: number): string => {
-	const lines = slice.split('\n')
-	const mask = lineStartsInTemplate(lines)
-	const indents = lines
-		.filter(
-			(line, i) =>
-				line.trim().length > 0 && !mask[i] && !line.trimStart().startsWith('*'),
-		)
-		.map(line => line.match(/^[ \t]*/)?.[0] ?? '')
-	const common = indents.length
-		? (indents.reduce((min, ind) => (ind.length < min.length ? ind : min)) ??
-			'')
-		: ''
-	const prefix = '\t'.repeat(level)
-	return lines
-		.map((line, i) => {
-			if (mask[i]) return line
-			if (line.trim().length === 0) return ''
-			return (
-				prefix + (line.startsWith(common) ? line.slice(common.length) : line)
-			)
-		})
-		.join('\n')
-}
-
 /**
  * A lazy child's initial server value: a signal identifier reads `.get()`,
  * a thunk is invoked, an exposed-prop string key resolves through
@@ -158,7 +125,8 @@ const lazyValueExpression = (
 	// Anything else (a call expression, an arrow thunk, a bare non-signal
 	// identifier, …) is only safe to render verbatim if its dependency
 	// closure is server-known — the same rule attribute thunks already
-	// follow (`dependenciesOf(...).isSubsetOf(scope)` above `emit`). A lazy
+	// follow (`isServerEvaluable(thunk, scope)`, the single gate in
+	// evaluability.ts). A lazy
 	// child referencing `host` (a client-only ambient, e.g. `formatHex(host
 	// .value)`) has no server value at all: render nothing initially, the
 	// client's `watch()` for this lazy child corrects it on connect (DOM-is-
@@ -166,7 +134,7 @@ const lazyValueExpression = (
 	// attribute. Found and fixed alongside LT-034 (`card-colorscale.tsrx`'s
 	// hex-value lazy child called `formatHex(host.value)`, which used to
 	// render verbatim server-side where `host` doesn't exist).
-	if (!dependenciesOf(expr).isSubsetOf(scope)) return "''"
+	if (!isServerEvaluable(expr, scope)) return "''"
 	if (expr.type === 'ArrowFunctionExpression') return `(${exprText})()`
 	return exprText
 }
@@ -176,36 +144,22 @@ const lazyValueExpression = (
  * prop's value at render time IS the root attribute's server expression
  * (DOM-is-truth — the host attribute is the prop's seed, ADR 0003). Null when
  * the prop is not Parser-exposed or the root does not render its attribute.
+ * The `() => host.<prop>` pattern match is `hostPropOf` (ast-utils), shared
+ * with the analyzer's dispatch decision.
  */
 const hostPropMirrorExpr = (
 	component: ComponentIR,
 	thunk: TsrxNode,
 ): string | null => {
-	const body = thunk.body
-	if (!isTsrxNode(body) || body.type !== 'MemberExpression' || body.computed)
+	const propName = hostPropOf(thunk)
+	if (propName === null || !component.parserExposeProps.has(propName))
 		return null
-	const obj = body.object
-	if (
-		!isTsrxNode(obj) ||
-		obj.type !== 'Identifier' ||
-		String(obj.name) !== 'host'
-	)
-		return null
-	const prop = body.property
-	if (!isTsrxNode(prop) || prop.type !== 'Identifier') return null
-	const propName = String(prop.name)
-	if (!component.parserExposeProps.has(propName)) return null
 	const rootAttr = component.root.attrs.find(
 		(a): a is Extract<AttributeIR, { kind: 'server' }> =>
 			a.kind === 'server' && a.name === propName,
 	)
 	return rootAttr ? rootAttr.exprText : null
 }
-
-const isTsrxNode = (value: unknown): value is TsrxNode =>
-	!!value &&
-	typeof value === 'object' &&
-	typeof (value as TsrxNode).type === 'string'
 
 /* === Exported Functions === */
 
@@ -396,7 +350,7 @@ export const emitServerModule = (
 				emitElement(root, armScope, depth, [hiddenAttr(hiddenCond)])
 				for (const child of root.children)
 					emitGuardedChild(child, armScope, guardedExpr)
-				if (!isVoidTag(root.tag))
+				if (!isVoidElement(root.tag))
 					lines.push(`${tab(depth)}${buffer}.push('</${root.tag}>')`)
 			}
 			emitArmRoot(pendingRoot, scope, `${stateVar} !== 'pending'`, null)
@@ -497,14 +451,14 @@ export const emitServerModule = (
 		const htmlAttr = node.attrs.find(a => a.kind === 'html') as
 			| Extract<AttributeIR, { kind: 'html' }>
 			| undefined
-		if (htmlAttr && dependenciesOf(htmlAttr.node).isSubsetOf(scope)) {
+		if (htmlAttr && isServerEvaluable(htmlAttr.node, scope)) {
 			used.add('sanitizeHtml')
 			lines.push(
 				`${tab(depth)}${buffer}.push(sanitizeHtml(String(${htmlAttr.exprText})))`,
 			)
 		}
 		for (const child of node.children) emit(child, scope, depth)
-		if (!isVoidTag(node.tag))
+		if (!isVoidElement(node.tag))
 			lines.push(`${tab(depth)}${buffer}.push('</${node.tag}>')`)
 		lines.push(...(templateQueue.pop() ?? []))
 	}
@@ -537,20 +491,20 @@ export const emitServerModule = (
 					if (mirror !== null) {
 						used.add('attr')
 						parts.push({ expr: `attr('${attr.name}', ${mirror})` })
-					} else if (dependenciesOf(attr.thunk).isSubsetOf(scope)) {
+					} else if (isServerEvaluable(attr.thunk, scope)) {
 						used.add('attr')
 						parts.push({ expr: `attr('${attr.name}', (${attr.thunkText})())` })
 					}
 					break
 				}
 				case 'class-map':
-					if (dependenciesOf(attr.object).isSubsetOf(scope)) {
+					if (isServerEvaluable(attr.object, scope)) {
 						used.add('cls')
 						classExpr = `cls((${attr.thunkText})())`
 					}
 					break
 				case 'style-map':
-					if (dependenciesOf(attr.object).isSubsetOf(scope)) {
+					if (isServerEvaluable(attr.object, scope)) {
 						used.add('attr')
 						used.add('styleAttr')
 						parts.push({
@@ -611,7 +565,7 @@ export const emitServerModule = (
 			lines.push(`${tab(depth + 1)}const ${hoisted.name} = ${hoisted.initText}`)
 		emitElement(loop.output, loopScope, depth + 1)
 		for (const child of loop.output.children) emit(child, loopScope, depth + 1)
-		if (!isVoidTag(loop.output.tag))
+		if (!isVoidElement(loop.output.tag))
 			lines.push(`${tab(depth + 1)}${buffer}.push('</${loop.output.tag}>')`)
 		lines.push(`${tab(depth)}}`)
 	}
@@ -644,7 +598,7 @@ export const emitServerModule = (
 		}
 		emitElement(loop.output, loopScope, depth + 1, [dataKey])
 		for (const child of loop.output.children) emit(child, loopScope, depth + 1)
-		if (!isVoidTag(loop.output.tag))
+		if (!isVoidElement(loop.output.tag))
 			lines.push(`${tab(depth + 1)}${buffer}.push('</${loop.output.tag}>')`)
 		lines.push(`${tab(depth)}}`)
 
@@ -686,7 +640,7 @@ export const emitServerModule = (
 			parts.push({ static: '>' })
 			out.push(`${tab(atDepth)}${buffer}.push(${pushArgument(parts)})`)
 			for (const child of node.children) shape(child, atDepth)
-			if (!isVoidTag(node.tag))
+			if (!isVoidElement(node.tag))
 				out.push(`${tab(atDepth)}${buffer}.push('</${node.tag}>')`)
 		}
 		shape(loop.output, depth + 1)
@@ -717,7 +671,7 @@ export const emitServerModule = (
 			// LT-028: the root's reactive style is the one construct the client
 			// analyzer accepts (targeting `host`) — render its initial value here
 			// the same way `class-map` does for descendants.
-			if (dependenciesOf(attr.object).isSubsetOf(component.serverKnown)) {
+			if (isServerEvaluable(attr.object, component.serverKnown)) {
 				used.add('attr')
 				used.add('styleAttr')
 				rootParts.push({
@@ -727,7 +681,7 @@ export const emitServerModule = (
 		} else if (attr.kind === 'class-map') {
 			// LT-032: same root exemption as style-map — render the initial
 			// class list here, the same way `class-map` does for descendants.
-			if (dependenciesOf(attr.object).isSubsetOf(component.serverKnown)) {
+			if (isServerEvaluable(attr.object, component.serverKnown)) {
 				used.add('attr')
 				used.add('cls')
 				rootParts.push({

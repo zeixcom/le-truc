@@ -1,14 +1,14 @@
 /**
- * `export const config = { … }` extraction (ADR 0023 sub-design 8) and
- * `.tsrx` compose-import resolution (ADR 0023 sub-design 10) — two small,
- * self-contained parses `compiler.ts`'s `compileSource` calls once each.
+ * `export const config = { … }` extraction (ADR 0023 sub-design 8) —
+ * extension activation, one small self-contained parse `compiler.ts`'s
+ * `compileSource` calls per module-level statement. (Compose-import
+ * resolution moved to `imports.ts`, LT-044.)
  */
 
-import { posix } from 'node:path'
 import type { TsrxNode } from '@tsrx/core'
 import { asArray, identifierName, isNode } from './ast-utils'
-import type { ConfigIR, ExtractContext } from './compiler'
 import { diagnostic } from './diagnostics'
+import type { ConfigIR, ExtractContext } from './ir'
 
 /**
  * Extract and validate `export const config = { … }` — extension activation
@@ -105,37 +105,4 @@ export const readConfig = (
 		}
 	}
 	return config
-}
-
-/**
- * Named imports of other `.tsrx` modules (ADR 0023 sub-design 10): local
- * binding name → import specifier resolved to a repo-relative path.
- * `filename` is itself repo-relative, so the specifier resolves against its
- * directory. Only `.tsrx` specifiers compose — anything else (a `.ts`
- * component, a library import) is not a composable import.
- */
-export const parseComposeImports = (
-	ast: TsrxNode,
-	filename: string,
-): Map<string, string> => {
-	const imports = new Map<string, string>()
-	const dir = posix.dirname(filename)
-	for (const stmt of asArray(ast.body)) {
-		if (stmt.type !== 'ImportDeclaration') continue
-		const specifierNode = stmt.source
-		const specifier =
-			isNode(specifierNode) &&
-			specifierNode.type === 'Literal' &&
-			typeof specifierNode.value === 'string'
-				? specifierNode.value
-				: null
-		if (!specifier || !specifier.endsWith('.tsrx')) continue
-		const resolved = posix.normalize(posix.join(dir, specifier))
-		for (const spec of asArray(stmt.specifiers)) {
-			if (spec.type !== 'ImportSpecifier') continue
-			const local = identifierName(spec.local)
-			if (local) imports.set(local, resolved)
-		}
-	}
-	return imports
 }
