@@ -561,26 +561,41 @@ still open:
   were judged not worth the churn once the module-level decoupling (M1–M7) had
   already resolved the actual coupling. Revisit only if the flat `server/tsrx/`
   root becomes hard to navigate.
-- **`walk.ts` covers less than its own stated ambition.** Its doc comment
-  explicitly lists what it does NOT cover: `countForSelector`/
-  `countComposeBySource`'s branch-exclusivity counting, `parentOf`,
-  `findHoleParent`, `findMirror`/`findAttrSite`, `hasDeepConstruct`,
-  `recordSites`, and the list-body/composed-children validators. These remain
-  bespoke recursive walks inside `analysis/selectors.ts`, `analysis/loops.ts`,
-  `analysis/harvest.ts`, and `analysis/effects.ts` — each is semantically
-  distinct enough (different traversal rules, different early-exit logic) that
-  visitor-izing them would either lose that logic or turn `walk.ts` into a
-  grab-bag interface. Tracked as LT-046 in `TODO.md`.
-- **`evaluability.ts` has no dedicated unit test.** It's exercised transitively
-  through every golden/diagnostic test that touches server rendering, but the
-  M4 rationale ("a divergence is a wrong component, not a wrong message")
-  argues for a small direct test pinning `dependenciesOf`/`isServerEvaluable`
-  in isolation. Tracked as LT-047.
-- **`analysis/loops.ts` (`runLoops`) and `analysis/naming.ts` have no
-  standalone unit test** at the same granularity `analysis.test.ts` already
-  gives `runHarvest`/`runEffects`/the selector engine — only exercised
-  indirectly through full `analyzeClient` via golden/feature tests. Tracked as
-  LT-048.
+- **`walk.ts` covers less than its own stated ambition — reviewed (LT-046),
+  decision: keep the split.** Its doc comment lists what it does NOT cover:
+  `countForSelector`/`countComposeBySource`'s branch-exclusivity counting,
+  `parentOf`, `findHoleParent`, `findMirror`/`findAttrSite`,
+  `hasDeepConstruct`, `recordSites`, and the list-body/composed-children
+  validators. Read fresh against `walkTemplate`'s shape, each falls into a
+  category the generic pre-order visitor doesn't fit without either losing
+  behavior or growing a grab-bag interface:
+  - **Aggregation logic IS the recursion** — `countForSelector` returns `max`
+    across `@if`/`@switch` branches (mutually exclusive) but `sum` across
+    async `@try` arms (coexisting); the branch-exclusivity rule has to be
+    inline in the recursive call graph, not bolted onto a visitor callback.
+  - **Target/predicate search with early exit** — `parentOf`, `findHoleParent`,
+    `findMirror` stop at the first match and return one node.
+    `walkTemplate` always fully traverses (no short-circuit signal), so using
+    it here would mean visiting the whole tree just to keep the first hit —
+    both slower and further from the "find the parent of X" intent than the
+    5-line bespoke walk it replaces.
+  - **Depth-conditional predicate** — `hasDeepConstruct`'s depth guard changes
+    what counts as a construct at `depth === 0` vs. `depth > 0`; that's a
+    parameter the generic visitor has no slot for.
+  - **Pass-interleaved, stateful** — `recordSites` threads a monotonic
+    `documentOrder` counter and loop-output context through its own
+    recursion while mutating two collections; it's less "a walk" than "one
+    pass's traversal-shaped implementation."
+  No new `walkTemplate`/`collectAttrs` case would remove real duplication
+  here — the six holdouts solve six different problems. Closed as won't-do;
+  `walk.ts`'s own doc comment remains the record of the decision, this
+  paragraph is the "why" behind it.
+- **`evaluability.ts`, `analysis/loops.ts` (`runLoops`), and
+  `analysis/naming.ts` now have direct unit tests** (LT-047/LT-048:
+  `server/tests/tsrx/evaluability.test.ts`, `loops-naming.test.ts`) at the
+  same "hand-build the input, call the function" granularity
+  `analysis.test.ts` already gave `runHarvest`/`runEffects`/the selector
+  engine.
 
 ---
 

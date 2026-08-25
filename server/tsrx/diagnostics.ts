@@ -346,14 +346,4 @@ export const diagnostic = {
 			`\`${name}\`'s fallback argument references ${names.map(n => `\`${n}\``).join(', ')}, which the server cannot resolve — requestContext()'s fallback must be a literal or an expression over server args/setup, since the server renders using it directly (no ancestor DOM to walk at render time).`,
 			lineOf(source, offset),
 		),
-
-	/** Recompute a diagnostic's line from a node offset (keeps messages stable). */
-	withLine: (
-		d: CompileDiagnostic,
-		source: string,
-		offset: number | undefined,
-	) => ({
-		...d,
-		line: lineOf(source, offset),
-	}),
 }
