@@ -2,9 +2,12 @@
 
 > Deep-dive companion to `server/SERVER.md` § "TSRX Compiler" and ADR 0024. SERVER.md
 > describes how the compiler plugs into the docs build; this document describes the
-> compiler itself: its modules, data types, control flow, cross-cutting invariants,
-> and — at the end — a proposed internal regrouping to reduce module coupling.
+> compiler itself: its modules, data types, control flow, and cross-cutting invariants.
 > Symbol names are stable anchors; avoid citing line numbers from this file.
+>
+> This document reflects the compiler **after** the LT-022/LT-039–044 regrouping
+> (§7 of the previous revision, now executed — see § 7 "Regrouping history" for
+> what moved and what's still open).
 
 ## 1. What this compiler is
 
@@ -28,9 +31,10 @@ module is today's idiomatic hand-written Le Truc factory, importing solely from
 `@zeix/le-truc`; the `.tsrx` source itself imports nothing (ambient vocabulary).
 
 The parser dependency `@tsrx/core` is **pinned at 0.1.60** (ADR 0024 sub-design 2).
-`compiler.ts` is currently the one module importing its *values*; siblings import
-only the `TsrxNode` *type* (erased at compile time). `core-shim.d.ts` is the type
-side of that boundary — a pin upgrade touches `compiler.ts` and the shim only.
+`core.ts` is the **only** module importing its *values*; siblings import only the
+`TsrxNode` *type* (erased at compile time) from `ir.ts` or directly from
+`@tsrx/core`. `core-shim.d.ts` is the type side of that boundary — a pin upgrade
+touches `core.ts` and the shim only.
 
 Entry point: `index.ts` exports `compileComponent(source, filename, registry,
 childImports?, composeRegistry?)` → `{ component: CompiledComponent | null,
@@ -45,23 +49,23 @@ effect logs and moves on).
                      │
      ┌───────────────┴───────────────┐
      │  FRONT END  (compiler.ts)     │  compileSource
-     │  parse (@tsrx/core)           │  ├─ parseComposeImports      (config.ts)
-     │  setup extraction             │  ├─ parsePlainImports        (plain-imports.ts)
+     │  parse (core.ts → @tsrx/core) │  ├─ parseComposeImports      (imports.ts)
+     │  setup extraction             │  ├─ parsePlainImports        (imports.ts)
      │  template lowering            │  ├─ lowerChildren           (lower-template.ts)
      │  attribute classification     │  │   └─ classifyAttribute(s) (classify-attributes.ts)
      │  signal type inference        │  ├─ inferType                (infer-type.ts)
      │  config extraction            │  ├─ readConfig               (config.ts)
      │  CSS dedent                   │  ├─ dedentCss                (css.ts)
-     │  import placement             │  └─ placePlainImports        (plain-imports.ts)
+     │  import placement             │  └─ placePlainImports        (imports.ts)
      └───────────────┬───────────────┘
-                     │  ComponentIR  (shared vocabulary, defined in compiler.ts)
+                     │  ComponentIR  (shared vocabulary, defined in ir.ts)
      ┌───────────────┴───────────────┐
-     │  CLIENT ANALYSIS  (analyze.ts)│  analyzeClient(component, registry, diags, composeRegistry)
-     │  pass 1  @for → each() plans  │  → ClientPlan
-     │  pass 1b List @for → reconcile│
-     │  pass 2  signal render sites  │
-     │  pass 3  harvest plans        │
-     │  pass 4  top-level effects    │
+     │  CLIENT ANALYSIS (analysis/*) │  analyzeClient(component, registry, diags, composeRegistry)
+     │  pass 1  @for → each() plans  │  → ClientPlan       (analysis/plan.ts, orchestration)
+     │  pass 1b List @for → reconcile│                     (analysis/loops.ts)
+     │  pass 2  signal render sites  │                     (analysis/harvest.ts)
+     │  pass 3  harvest plans        │                     (analysis/harvest.ts)
+     │  pass 4  top-level effects    │                     (analysis/effects.ts)
      └──────┬────────────────┬───────┘
             │ ClientPlan     │ (errors gate here)
             ▼                ▼
@@ -80,34 +84,50 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 
 | Module | Size | Role | Intra-package imports |
 | --- | ---: | --- | --- |
-| `index.ts` | 132 | Public API; `compileComponent` pipeline assembly; flat re-exports | analyze, compiler, css, diagnostics, emit-client, emit-server, registry, spans |
-| `compiler.ts` | 933 | Front end: parsing, setup extraction, IR vocabulary, `collectComposeElements` | ast-utils, config, css, diagnostics, infer-type, lower-template, plain-imports, **@tsrx/core (values)** |
-| `lower-template.ts` | 991 | JSX/`@if`/`@switch`/`@try`/`@for` → `TemplateNode` IR; list-body validation | ast-utils, classify-attributes, compiler (`isForOfNode` value + types), diagnostics |
-| `classify-attributes.ts` | 282 | `JSXAttribute` → `AttributeIR` / `ComposeAttrIR`; shared `pass={{ }}` parser | ast-utils, compiler (types) |
-| `analyze.ts` | 2513 | Client analysis → `ClientPlan` (addressing, harvest, loops, effects) | ast-utils, compiler (types), diagnostics, registry |
-| `emit-server.ts` | 827 | `ComponentIR` → server render module | ast-utils, compiler (types + `isVoidTag`), indent, registry, spans |
-| `emit-client.ts` | 537 | `ComponentIR` + `ClientPlan` → client factory module | analyze (types), compiler (types), spans |
-| `config.ts` | 141 | `export const config` extraction **and** compose-import resolution | ast-utils, compiler (types), diagnostics |
-| `plain-imports.ts` | 277 | Plain (non-`.tsrx`) import collection + server/client placement | ast-utils, compiler (types), diagnostics |
-| `infer-type.ts` | 118 | Signal value-type inference (`string|number|boolean|unknown`) | ast-utils |
-| `ast-utils.ts` | 311 | AST predicates, free-identifier analysis, recognized-name vocabulary | — (leaf) |
-| `diagnostics.ts` | 317 | Diagnostic codes TSRX001–014, message factories | — (leaf) |
-| `spans.ts` | 201 | Generated↔source span recording + lookup (LT-011) | indent |
+| `index.ts` | 133 | Public API; `compileComponent` pipeline assembly; flat re-exports | analysis/plan, compiler, diagnostics, emit-client, emit-server, registry, spans |
+| `compiler.ts` | 636 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements` | ast-utils, config, core, css, diagnostics, imports, infer-type, ir (types), lower-template, walk |
+| `ir.ts` | 404 | Pure type leaf: the whole IR vocabulary (`TemplateNode`, `AttributeIR`, `ComponentIR`, `SignalIR`, `ForIR`, `ConfigIR`, `ExtractContext`, …) | diagnostics (type), `@tsrx/core` (type) |
+| `core.ts` | 21 | The **only** `@tsrx/core` value-import leaf (`parseModule`, `isStyleElement`, `getStyleElementStylesheet`, `isTemplateForOfNode`, `isVoidElement`) | `@tsrx/core` (values) |
+| `walk.ts` | 101 | One structural `TemplateNode` visitor (`walkTemplate`, `childNodes`) + `collectAttrs` | ir (types) |
+| `evaluability.ts` | 39 | `dependenciesOf` + `isServerEvaluable` — the single home of the server-known dependency-closure rule | ast-utils |
+| `lower-template.ts` | 991 | JSX/`@if`/`@switch`/`@try`/`@for` → `TemplateNode` IR; list-body validation | ast-utils, classify-attributes, core (`isTemplateForOfNode` value), diagnostics, ir (types) |
+| `classify-attributes.ts` | 282 | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `pass={{ }}` parser | ast-utils, ir (types) |
+| `infer-type.ts` | 118 | Signal value-type inference (`string\|number\|boolean\|unknown`) | ast-utils |
+| `config.ts` | 108 | `export const config` extraction **only** | ast-utils, diagnostics, ir (types) |
+| `imports.ts` | 352 | Compose-import resolution + plain (non-`.tsrx`) import collection and placement | ast-utils, diagnostics, evaluability, ir (types), walk |
+| `analysis/plan.ts` | 443 | `ClientPlan`/`QueryPlan`/… types, `AnalysisContext` assembly, `analyzeClient` orchestration | ast-utils, diagnostics (type), evaluability, ir (types), registry (type), walk, analysis/{effects,harvest,loops,naming} |
+| `analysis/selectors.ts` | 285 | Pure selector engine: synthesis, structural uniqueness (branch-exclusivity counting), union/compose addressing, `enclosingIfOf`, `loopFor` | ir (types) |
+| `analysis/naming.ts` | 64 | `uniqueName`, `addQuery` (query table + name allocation) | ir (type), analysis/plan (type) |
+| `analysis/harvest.ts` | 696 | Passes 2+3: render sites, harvest-plan selection, `paramDomRead`/`substituteArgExpr`; shared signal-read AST predicates | ast-utils, diagnostics, evaluability, ir (types), analysis/plan (types), analysis/selectors |
+| `analysis/loops.ts` | 418 | Passes 1+1b: `each()` and `reconcile()` planning | ast-utils, diagnostics, evaluability, ir (types), analysis/harvest (`returnsNumber`), analysis/plan (types), analysis/selectors |
+| `analysis/effects.ts` | 886 | Pass 4: document-ordered per-construct effect planning | ast-utils, diagnostics, ir (types), analysis/harvest (`lazyWatchSource`, `returnsNumber`), analysis/plan (types), analysis/selectors |
+| `emit-server.ts` | 813 | `ComponentIR` → server render module | ast-utils, core (`isVoidElement` value), evaluability, ir (types), registry (type), spans |
+| `emit-client.ts` | 561 | `ComponentIR` + `ClientPlan` → client factory module | analysis/plan (types), ast-utils, imports (`computeClientNeededNames`), ir (types), spans |
+| `spans.ts` | 239 | Generated↔source span recording + lookup (LT-011); also owns plain `reindent` (moved from `emit-server.ts` in the M7 dedup) | indent |
 | `indent.ts` | 134 | Template-literal-safe line classification for reindentation (LT-010) | — (leaf) |
 | `css.ts` | 38 | `<style>` dedent | — (leaf) |
+| `diagnostics.ts` | 359 | Diagnostic codes TSRX001–016, message factories | — (leaf) |
 | `registry.ts` | 36 | `RegistryEntry` type + `registryJson` | — (leaf) |
 | `runtime.ts` | 294 | Server-evaluation harness — imported **by generated code only**, never by the compiler | — (leaf) |
-| `smoke.ts` | 83 | Dev script: compile corpus, execute renders, print | analyze, compiler, emit-client, emit-server |
-| `globals.d.ts` | 58 | Ambient vocabulary for editor surfaces; parity-tested against `ast-utils` | — |
+| `smoke.ts` | 83 | Dev script: compile corpus, execute renders, print | analysis/plan, compiler, emit-client, emit-server |
+| `globals.d.ts` | 71 | Ambient vocabulary for editor surfaces; parity-tested against `ast-utils` | — |
 | `core-shim.d.ts` | 41 | Type shim for the pinned `@tsrx/core` | — |
 
 External consumers: `server/effects/tsrx.ts` and `server/build.ts` (via `../tsrx`,
 i.e. the `index.ts` facade, plus direct `registry`/`spans` imports); tests import
 overwhelmingly through the facade.
 
+**Dependency shape**: every module now points strictly at `ir.ts` (types), `core.ts`
+(the one `@tsrx/core` value import), `walk.ts`, and `evaluability.ts` as shared
+leaves — no runtime value cycles remain. Within `analysis/`, `plan.ts` orchestrates
+`{selectors, naming, harvest, loops, effects}`, and `harvest.ts` is itself imported
+back by `loops.ts` and `effects.ts` for a handful of shared signal-read predicates
+(`returnsNumber`, `lazyWatchSource`) — the one edge inside `analysis/` that isn't a
+strict fan-out from `plan.ts`.
+
 ## 4. Data types
 
-### 4.1 Front-end IR (defined in `compiler.ts`)
+### 4.1 Front-end IR (defined in `ir.ts`)
 
 **`ComponentIR`** — one extracted component; the shared input of both emitters:
 
@@ -115,14 +135,15 @@ overwhelmingly through the facade.
 | --- | --- | --- |
 | `name` / `tag` / `source` | `string` | Function name, custom-element tag (root tag), original source text |
 | `paramsText` / `paramNames` | `string` / `string[]` | Verbatim destructured-args parameter; bound names (server args) |
-| `setup` | `SetupStmt[]` | All setup statements verbatim (`{ text, range, node }`), source order |
+| `setup` | `SetupStmt[]` | All setup statements verbatim (`{ text, range, node, name }`), source order |
 | `clientSetup` | `SetupStmt[]` | Connect-time side effects (LT-008); client module only |
-| `signals` | `SignalIR[]` | Declared signal constructors |
+| `plainSetup` | `SetupStmt[]` | Plain (non-signal, non-`expose()`) setup consts — a subset of `setup` the client factory also needs to re-emit (LT-034 follow-up); `setup` as a whole remains the server-only verbatim re-declaration |
+| `signals` | `SignalIR[]` | Declared signal constructors, incl. `requestContext` (LT-035) |
 | `exposeText` / `exposeRange` / `exposeArgNode` | — | Verbatim `expose({...})`, its span, its argument node |
 | `exposeProps` | `Map<string,string>` | prop → signal name (`expose({ prop: sig.get })`) |
 | `parserExposeProps` | `Map` | prop → `{ parser, fallbackText }` (`expose({ prop: asString('') })`) |
 | `exposeAmbients` | `string[]` | Ambient names `expose()` uses (`as*` factories, `defineMethod`) |
-| `contextRefs` | `string[]` | Context members referenced from setup/expose (`host`, `internals`) |
+| `contextRefs` | `string[]` | Context members referenced from setup/expose (`host`, `internals`, `requestContext`, `provideContexts` — LT-035) |
 | `config` | `ConfigIR \| null` | Extension activation (`export const config`) |
 | `root` | element `TemplateNode` | Template root (style block removed) |
 | `fors` | `Map<TsrxNode, ForIR>` | `@for` loops keyed by their AST node |
@@ -130,12 +151,14 @@ overwhelmingly through the facade.
 | `typeDecls` / `globalDecl` / `propsTypeName` | — | Exported `type`/`interface`s, `declare global`, `<Name>Props` |
 | `componentDoc` | `string \| null` | Leading JSDoc, carried above the generated default export (LT-006) |
 | `serverKnown` | `ReadonlySet<string>` | Names server-known at template evaluation (args + setup) |
-| `imports` | `{ server: string[]; client: string[] }` | Placed plain imports, ready to splice (LT-034) |
+| `imports` | `{ server: string[]; client: string[]; serverLocalNames: ReadonlySet<string> }` | Placed plain imports, ready to splice (LT-034); `serverLocalNames` lets `emit-server.ts` skip the `exposeArgNode` `any`-stub for a name that already has a real server import |
 
-**`SignalIR`** — `{ name, text, textStart, constructor, init, inferredType }` where
-`constructor ∈ {createCell, createState, createList, createStore, deriveCell,
-deriveList, deriveStore}`. `textStart` supports the client's seed-substitution
-surgery (replacing an arg-dependent initializer with a DOM harvest read).
+**`SignalIR`** — `{ name, text, textStart, constructor, init, inferredType,
+fallbackText }` where `constructor ∈ {createCell, createState, createList,
+createStore, deriveCell, deriveList, deriveStore, requestContext}`. `textStart`
+supports the client's seed-substitution surgery (replacing an arg-dependent
+initializer with a DOM harvest read). `fallbackText` is `requestContext`-only —
+see § 4.4.
 
 **`TemplateNode`** — the template IR union:
 
@@ -173,7 +196,7 @@ form variant leading (ADR 0019 ordering, enforced structurally).
 **`ExtractContext`** — threaded through the front end: `{ source, diagnostics,
 serverKnown, composeImports, setupInits }`.
 
-### 4.2 Analysis plan (defined in `analyze.ts`)
+### 4.2 Analysis plan (defined in `analysis/plan.ts`)
 
 **`ClientPlan`** = `{ queries, harvests, effects, ambientContext, childTags }`.
 
@@ -191,6 +214,9 @@ root; `'one'` throws with the message; `'many'` is `all()`.
 | `substitute` | expr | Arg-dependent initializer; each param identifier replaced by a DOM read (LT-008) |
 | `list` | seed: `'verbatim' \| { container, valueSelector }` | Reconciled List: pure-literal seed reused, or container adoption |
 
+A `requestContext` signal never gets a `HarvestPlan` entry — it has no DOM seed at
+all; see § 4.4.
+
 **`TopEffectPlan`** — the document-ordered effect list: `watch-text`, `watch-attr`
 (with `dispatch: 'attribute' | 'property'` and `coerceToString`), `pass`,
 `on`, `watch-style` / `watch-class` (map-form keys, LT-028/031), `each`, `reconcile`,
@@ -201,58 +227,132 @@ Loop-scoped variants: `LoopEffectPlan` (`watch-attr` / `watch-class` / `on` insi
 `ReconcilePlan` (container/template/signal/itemParam/keyParam/holeSelector/
 itemEvents). Every plan node carries `sourceStart`/`sourceEnd` for the span table.
 
+**`AnalysisContext`** — the explicit context threaded through all four passes
+(replacing the pre-regrouping closure-shared state):
+
+```ts
+AnalysisContext = {
+  component: ComponentIR
+  source: string
+  diagnostics: CompileDiagnostic[]
+  registry: ReadonlySet<string>
+  composeRegistry?: ReadonlyMap<string, RegistryEntry>
+  queries: QueryPlan[]
+  harvests: HarvestPlan[]
+  effects: TopEffectPlan[]
+  childTags: Set<string>
+  ambient: Set<string>
+  usedNames: Set<string>
+  refNames: Set<string>
+  forPlans: Map<ForIR, ForClientPlan>
+  reconcilePlans: Map<ForIR, ReconcilePlan>
+  addQuery: (base, selector, cardinality) => string
+  collectAmbient: (node) => void
+  badFreeNames: (node) => string[]
+}
+```
+
+`plan.ts` builds this object once, runs the four passes over it in their
+original order, and reads `queries`/`harvests`/`effects`/`ambient`/`childTags`
+back out into the returned `ClientPlan`. `selectors.ts`'s `loopFor` (and its
+sibling selector helpers) are pure functions imported directly by whichever pass
+needs them — not context fields — so each pass re-imports what it needs from
+`selectors.ts` rather than reaching through the context for it.
+
 ### 4.3 Emission & support types
 
 - `EmittedServerModule` = `{ code, runtimeImports: Set<string>, spans }`; same
   shape for `EmittedClientModule` (`imports` names `@zeix/le-truc` symbols).
 - `SourceSpan` = `{ generatedStart, sourceStart, length }` — byte-identical in
   both files; `SourceSlice` / `SpanCursor` support recording during assembly.
-- `CompileDiagnostic` = `{ code: TSRX001–014, severity, message, line? }`.
+- `CompileDiagnostic` = `{ code: TSRX001–016, severity, message, line? }`.
 - `RegistryEntry` = `{ tag, name, source, serverModule, clientModule, css, propsType }`.
 - `PlainImportIR` = `{ text, localNames, sideEffectOnly, start }`.
 - Runtime types: `ServerCell<T>` (read-once box), `ServerList<T>` (iterable box
   with cause-effect-parity key generation via `entries()`).
 
+### 4.4 Context protocol — `requestContext`/`provideContexts` (LT-035, ADR 0024 sub-design 15)
+
+A signal-shaped consumer primitive and a plain client-only provider primitive,
+layered onto the existing signal/setup machinery rather than adding a new
+`TemplateNode` kind:
+
+- **`requestContext(Context, fallback)`** — recognized in `compileSource`'s setup
+  loop, separately from the ordinary `SIGNAL_CONSTRUCTORS` dispatch. Requires
+  exactly two arguments (TSRX015); the fallback must be server-known — its free
+  identifiers ⊆ `paramNames ∪ setupInits` at that point in source order (else
+  TSRX016). Produces a `SignalIR` with `constructor: 'requestContext'`,
+  `init` = the fallback node, `fallbackText` = the fallback's verbatim text.
+  Adds `'requestContext'` to `contextRefs`.
+  - **Analysis**: explicitly skipped by the harvest pass — it never needs a DOM
+    harvest site (TSRX004 does not apply).
+  - **Server emission**: excluded from the constructor-import set; the compiler
+    substitutes `const ${name} = createCell(${fallbackText})` for the verbatim
+    `requestContext(...)` call (the span still points at the original source
+    range — a deliberately coarse remap, since there's no server-side
+    `requestContext` to point at).
+  - **Client emission**: emitted verbatim, in its own loop (not through
+    `harvestInitializer`); `requestContext` itself is destructured from the
+    factory's context parameter, never imported from `@zeix/le-truc`.
+  - Otherwise signal-shaped: usable in reactive attrs/lazy text exactly like
+    `createCell` (its name is in `serverKnown`, so a reactive attribute reading
+    it server-renders using the fallback value).
+- **`provideContexts([...])`** — a bare expression statement, recognized because
+  `provideContexts` is in `CONTEXT_NAMES` (`ast-utils.ts`); lowers to a
+  `clientSetup` entry (same path as `internals?.states.add(...)`), never runs
+  server-side. Assigning its result to a `const` instead routes through the
+  plain-setup-const path, where `CLIENT_ONLY_PRIMITIVES` now includes it,
+  producing TSRX013 (a client-only primitive can't back a signal declaration).
+
+`CONTEXT_NAMES` (`ast-utils.ts`) grew from `{host, internals}` to `{host,
+internals, requestContext, provideContexts}`; `CLIENT_ONLY_PRIMITIVES` grew to
+include both context-protocol primitives alongside `first`/`all`/`watch`/`on`/
+`pass`.
+
 ## 5. Control flow
 
 ### 5.1 Front end — `compileSource` (compiler.ts)
 
-1. **Parse** via `@tsrx/core`'s `parseModule`. A parse failure gets a
-   newer-grammar hint (statement-form `switch`, `{html}`/`{text}`/`{ref}`
-   keywords, setup `await`, `component`) naming what the pinned 0.1.60 cannot parse.
-2. **Compose imports** (`parseComposeImports`): named imports of sibling `.tsrx`
-   modules → local name → repo-relative path map.
-3. **Plain imports** (`parsePlainImports`): every other top-level import, with
-   relative specifiers rewritten for the flat generated directory.
+1. **Parse** via `core.ts`'s `parseModule` (the pinned `@tsrx/core`). A parse
+   failure gets a newer-grammar hint (statement-form `switch`, `{html}`/
+   `{text}`/`{ref}` keywords, setup `await`, `component`) naming what the
+   pinned 0.1.60 cannot parse.
+2. **Compose imports** (`parseComposeImports`, `imports.ts`): named imports of
+   sibling `.tsrx` modules → local name → repo-relative path map.
+3. **Plain imports** (`parsePlainImports`, `imports.ts`): every other top-level
+   import, with relative specifiers rewritten for the flat generated directory.
 4. **Locate the exported component function** whose body is an `@{ }`
    (`JSXCodeBlock`) container. Exactly one; single destructured args object;
    otherwise TSRX008.
 5. **Setup loop** over the body statements, classifying each:
    - single `const` → `SetupStmt`; if the initializer calls a recognized signal
-     constructor → `SignalIR` (+ `inferType`); a ternary between two signal
-     constructors → TSRX013; a plain const calling a client-only primitive
-     (`first`/`all`/`watch`/`on`/`pass`) → TSRX013.
+     constructor → `SignalIR` (+ `inferType`); `requestContext(...)` is
+     recognized separately (§ 4.4); a ternary between two signal constructors →
+     TSRX013; a plain const calling a client-only primitive (`first`/`all`/
+     `watch`/`on`/`pass`/`requestContext`/`provideContexts`) → TSRX013.
    - `expose(...)` → verbatim text + span; scan its object for `.get` members
      (`exposeProps`), parser-factory calls (`parserExposeProps`, `exposeAmbients`),
      `defineMethod`; collect context refs.
    - bare expression statement whose free names are all client-known →
-     `clientSetup` (LT-008).
+     `clientSetup` (LT-008; `provideContexts([...])` included).
    - anything else → TSRX005.
 6. **Template lowering** (`lowerChildren` on the fragment) with `serverKnown` =
    args + signals + setup inits (see 5.2). Root element must carry a dashed tag;
    a `<style>` sibling yields the CSS artifact; missing style → TSRX008.
-7. **Module-level declarations**: `readConfig` (TSRX009 on invalid shapes), type
-   declarations (verbatim, `<Name>Props` detected), `declare global`.
-   `observedAttributes` entries must be parser-exposed (else TSRX009, inert).
-8. **Import placement** (`placePlainImports`): classify each plain import by
-   where its bindings' free-identifier usages occur — setup (both modules),
-   server-evaluated template positions, client-always positions, and
-   server-rendered reactive thunks — into `imports.server` / `imports.client`;
-   unused → TSRX014 warning.
+7. **Module-level declarations**: `readConfig` (`config.ts`, TSRX009 on invalid
+   shapes), type declarations (verbatim, `<Name>Props` detected), `declare
+   global`. `observedAttributes` entries must be parser-exposed (else TSRX009,
+   inert).
+8. **Import placement** (`placePlainImports`, `imports.ts`): classify each plain
+   import by where its bindings' free-identifier usages occur — setup (both
+   modules), server-evaluated template positions (via `evaluability.ts`),
+   client-always positions, and server-rendered reactive thunks — into
+   `imports.server` / `imports.client`; unused → TSRX014 warning.
 9. **Gate**: any TSRX001 (reactive `@for` over a non-`createList`) nulls the
    component (file skipped by the build effect).
 
-**`collectComposeElements`** walks root + all loop outputs collecting `compose`
+**`collectComposeElements`** walks root + all loop outputs (via `walk.ts`'s
+`walkTemplate`, `{intoCompose: false, intoPending: false}`) collecting `compose`
 nodes for corpus-wide validation in `index.ts`.
 
 ### 5.2 Template lowering (lower-template.ts)
@@ -277,35 +377,34 @@ scan) dispatches to `lowerElement` / `lowerComposeElement` / `lowerIf` /
   `&{item}` hole (`validateListBody`); reserved names checked. Other reactive
   iterables → TSRX001.
 
-### 5.3 Client analysis — `analyzeClient` (analyze.ts)
+### 5.3 Client analysis — `analyzeClient` (analysis/plan.ts, orchestrating analysis/{selectors,naming,harvest,loops,effects}.ts)
 
-Runs with a closure-shared context: `queries`, `harvests`, `effects`,
-`childTags`, `ambient` (context members), `usedNames` (name allocator),
-`refNames` (pre-collected from the whole template), plus helpers `addQuery`
-(dedup by selector+cardinality; registers registry-child tags for type-flow
-imports), `collectAmbient`, `badFreeNames`, `loopFor`.
+Builds one `AnalysisContext` (§ 4.2) and runs the four passes over it in order:
 
-- **Pass 1 — `@for` → `each()` plans.** Output element selector uniqueness
-  (TSRX007); collection naming (iterable name if free, else role-plural, else
-  `tag+s`); hoisted-const rebinding map (const → bare attribute it rendered
-  into, TSRX003 if unrenderable); loop-variable-in-thunk check (TSRX002);
-  free-name validation; lazy children in loop bodies gated.
-- **Pass 1b — reactive-list `@for` → `reconcile()` plans.** One reactive list
-  per component; container must be a non-root parent element; authored
-  `<template>` collision check; hole-parent selector; bindItem-scoped event
-  targets with taken-name allocation; item-handler free-name rules (item is a
-  Signal inside `bindItem`).
-- **Pass 2 — signal render sites** in document order: direct attr thunks
-  (`() => sig.get()`), membership marks (`String(sig.get() === c)`, loop
-  outputs only), lazy text children (identifier, exposed-prop string literal,
-  or arrow returning `sig.get()`).
-- **Pass 3 — harvest plans.** Precedence: reconciled List (`list`) → direct
-  site (first by document order; `deriveCell`/`deriveStore` never take this
-  route) → arg substitution (`substituteArgExpr`: rewrite each param
-  identifier with `paramDomRead` — host-prop mirror → bare attribute site →
-  root `host.getAttribute` — right-to-left by source range) → membership
-  fallback. No route at all → TSRX004.
-- **Pass 4 — top-level effects** (`emitTopEffects` walk, document order):
+- **Pass 1 — `@for` → `each()` plans** (`analysis/loops.ts`). Output element
+  selector uniqueness (TSRX007, via `analysis/selectors.ts`); collection naming
+  (iterable name if free, else role-plural, else `tag+s`); hoisted-const
+  rebinding map (const → bare attribute it rendered into, TSRX003 if
+  unrenderable); loop-variable-in-thunk check (TSRX002); free-name validation;
+  lazy children in loop bodies gated.
+- **Pass 1b — reactive-list `@for` → `reconcile()` plans** (`analysis/loops.ts`).
+  One reactive list per component; container must be a non-root parent element;
+  authored `<template>` collision check; hole-parent selector; bindItem-scoped
+  event targets with taken-name allocation; item-handler free-name rules (item
+  is a Signal inside `bindItem`).
+- **Pass 2 — signal render sites** (`analysis/harvest.ts`), in document order:
+  direct attr thunks (`() => sig.get()`), membership marks (`String(sig.get()
+  === c)`, loop outputs only), lazy text children (identifier, exposed-prop
+  string literal, or arrow returning `sig.get()`). A `requestContext` signal is
+  skipped entirely (§ 4.4).
+- **Pass 3 — harvest plans** (`analysis/harvest.ts`). Precedence: reconciled
+  List (`list`) → direct site (first by document order; `deriveCell`/
+  `deriveStore` never take this route) → arg substitution (`substituteArgExpr`:
+  rewrite each param identifier with `paramDomRead` — host-prop mirror → bare
+  attribute site → root `host.getAttribute` — right-to-left by source range) →
+  membership fallback. No route at all → TSRX004.
+- **Pass 4 — top-level effects** (`analysis/effects.ts`, `emitTopEffects` walk,
+  document order):
   - Root element: `style-map`/`class-map` lower to `watch-style`/`watch-class`
     targeting the ambient `host`; any other reactive construct on the root is
     rejected.
@@ -327,6 +426,10 @@ imports), `collectAmbient`, `badFreeNames`, `loopFor`.
     custom-element gate TSRX012 / host-mirror property dispatch, pass with
     registry gate TSRX012, class/style maps, events, lazy children with managed
     form prop gate TSRX010).
+
+`loops.ts` and `effects.ts` import a handful of signal-read predicates back from
+`harvest.ts` (`returnsNumber`, `lazyWatchSource`) — the one intra-`analysis/`
+dependency edge that isn't a plain fan-out from `plan.ts`.
 
 ### 5.4 Server emission — `emitServerModule` (emit-server.ts)
 
@@ -350,19 +453,24 @@ lines, with:
   `client-stmt` → nothing.
 - **Elements** (`emitElement`): `static` attrs escaped inline; `server` attrs via
   the runtime `attr()` helper (boolean → toggle semantics); reactive thunks
-  render **only when their dependency closure ⊆ scope** (else omitted — DOM-is-
-  truth); `class-map` → `cls()`, `style-map` → `styleAttr()`; `html` →
-  `sanitizeHtml()` when server-known; `event`/`ref` stripped. The **root
-  element's** opening is assembled after children emission (same parts
-  machinery) with the root-only `class-map`/`style-map` exemptions (LT-028/032).
+  render **only when their dependency closure ⊆ scope** (`isServerEvaluable`,
+  `evaluability.ts`; else omitted — DOM-is-truth); `class-map` → `cls()`,
+  `style-map` → `styleAttr()`; `html` → `sanitizeHtml()` when server-known;
+  `event`/`ref` stripped. The **root element's** opening is assembled after
+  children emission (same parts machinery) with the root-only `class-map`/
+  `style-map` exemptions (LT-028/032).
 - **Loops**: server-data `@for` → `for (const item of items(iterable))` or
   `entries(...)` when the index is used, hoisted consts re-declared; reactive
   list → `for (const [k, item] of list.entries())` with `data-key`, plus the
   extracted `<template>` whose `&{item}` hole becomes `<slot></slot>`.
+- **Signals**: a `requestContext` signal emits as `createCell(${fallbackText})`
+  instead of its verbatim source text (§ 4.4) — the one setup statement whose
+  server text diverges from its client text.
 - **Module assembly**: runtime import (sorted `used` set), composed server
   module imports, plain server imports, `typeDecls`, `render<Name>(params)`
   with the verbatim parameter slice, `any`-stubs for client-only free names
-  inside `expose()` method-producer closures (LT-019), verbatim setup statements
+  inside `expose()` method-producer closures (LT-019, skipped when
+  `serverLocalNames` already resolves the name), verbatim setup statements
   (span-recorded via `appendWithSpans`), buffer prologue, root open + children
   lines + root close, `return __html.join('')`.
 
@@ -373,8 +481,12 @@ Renders the plan into the factory, mirroring hand-written component layout:
 1. **Queries** (`first`/`all`/non-throwing `first`) in plan order.
 2. **Signals** in declaration order: list harvests either verbatim or with the
    seed argument surgically replaced by the container-adoption read; other
-   harvests via `harvestInitializer` (text/attr/membership reads, parser-wrapped).
-3. **`expose()` verbatim** (span-recorded), then `clientSetup` statements.
+   harvests via `harvestInitializer` (text/attr/membership reads, parser-wrapped);
+   `requestContext` signals emitted verbatim in their own loop, destructured
+   from the factory context rather than imported (§ 4.4).
+3. **`expose()` verbatim** (span-recorded), then `plainSetup` and `clientSetup`
+   statements (`computeClientNeededNames`, `imports.ts`, decides which
+   `plainSetup` consts the client actually needs).
 4. **Effects** in document order via `emitTopEffect` — each kind maps to one
    idiomatic call (`watch(thunk, bindAttribute(el, attr))`, map-form
    `bindStyle(el, [keys])`, `pass(target, { get, set })`, `on(...)`, `each(...)`
@@ -412,221 +524,63 @@ why every verbatim slice is span-recorded rather than rewritten.
   expression's initial value when its dependency closure is server-known;
   otherwise it is omitted and the client's first binding pass corrects it. No
   serialized state payload ever ships.
-- **Dependency-provable evaluation**: the same `freeIdentifiers(node)` −
-  `JS_GLOBALS` ⊆ scope predicate gates server rendering of reactive thunks,
-  style/class maps, `html`, and lazy children — currently restated in several
-  modules (see § 7.1).
+- **Dependency-provable evaluation**: one `isServerEvaluable(node, scope)`
+  predicate (`evaluability.ts`) gates server rendering of reactive thunks,
+  style/class maps, `html`, and lazy children — consumed identically by
+  `imports.ts`, `emit-server.ts`, and `analysis/harvest.ts`.
 - **Verbatim slices**: setup statements, thunks, handlers, and `expose()` are
   copied byte-identically (only reindented, LT-010 template-literal-safe via
   `lineStartsInTemplate`), never rewritten — which is what makes the sparse
-  span table sound (LT-011).
-- **Vocabulary parity**: `ast-utils.ts`'s recognized-name sets are mirrored in
-  `globals.d.ts`, pinned by `server/tests/tsrx/globals.test.ts`.
+  span table sound (LT-011). `requestContext` is the one deliberate exception
+  on the server side (§ 4.4).
+- **Vocabulary parity**: `ast-utils.ts`'s recognized-name sets (incl.
+  `FACTORY_CONTEXT_MEMBERS`) are mirrored in `globals.d.ts`, pinned by
+  `server/tests/tsrx/globals.test.ts`.
 - **Selector uniqueness is proven structurally** against the template the
   compiler itself renders (role → bare tag → discriminator; exclusivity-aware
-  counting for `@if`/`@switch`, coexistence-summing for async arms).
-- **Pin isolation**: `@tsrx/core` values enter through `compiler.ts` only;
-  `core-shim.d.ts` is the type-side boundary.
+  counting for `@if`/`@switch`, coexistence-summing for async arms) —
+  `analysis/selectors.ts`.
+- **Pin isolation**: `@tsrx/core` values enter through `core.ts` only;
+  `core-shim.d.ts` is the type-side boundary. An upgrade touches `core.ts` and
+  the shim only.
 - **One reactive list per component** (extracted-template addressing limit);
   **one addressable construct root per `@if` branch**; **composed children are
   statics/server expressions only**.
 
-## 7. Simplification proposal — regrouping to reduce coupling
+## 7. Regrouping history and remaining gaps
 
-The compiler grew feature-by-feature (LT-001…LT-035) with locality as its only
-organizing principle: each new concern got a file or a block in an existing
-pass. The result is functionally clean but structurally coupled in specific,
-fixable ways. Everything below is **behavior-preserving** — the golden tests
-(`server.golden`, `client.golden`, `cem.golden`, snapshots, diagnostics,
-features) pin every artifact byte-for-byte.
+The LT-022/LT-039–044 tasks executed the coupling-reduction plan this document
+previously proposed in full (moves M1–M7): `ir.ts` (M1), `core.ts` (M2),
+`walk.ts` (M3), `evaluability.ts` (M4), the `analysis/*` split (M5),
+`imports.ts` (M6), and small-helper dedup (M7) all landed, behavior-preserving
+throughout (goldens, diagnostics, and `check:tsrx` byte-identical). What's
+still open:
 
-### 7.1 Coupling inventory (what couples today, with evidence)
-
-1. **`compiler.ts` is a type hub with a value cycle.** It owns the entire IR
-   vocabulary, so *every* sibling imports types from the module that also does
-   front-end work — type-level hub-and-spoke. Worse, `compiler.ts` →
-   `lower-template.ts` (`lowerChildren`) and `lower-template.ts` →
-   `compiler.ts` (`isForOfNode`) is a genuine **runtime value cycle**, created
-   only so `compiler.ts` can remain the sole `@tsrx/core` value importer while
-   re-exporting two predicates (`isForOfNode`, `isVoidTag`; `emit-server.ts`
-   also imports `isVoidTag` from it).
-2. **`analyze.ts` (2,513 lines) conflates five jobs** — selector engine, query
-   table/naming, harvest planning (incl. initializer rewriting), loop planning,
-   per-construct effect planning — interleaved through closures over shared
-   mutable state (`queries`, `effects`, `ambient`, `usedNames`, `refNames`,
-   `addQuery`, `collectAmbient`). Nothing inside it is independently testable
-   or reusable; every new construct kind edits this one file in four places.
-3. **The same rules live in several homes.**
-   - `dependenciesOf` (free names minus globals) is defined identically in
-     `analyze.ts`, `emit-server.ts`, `plain-imports.ts`.
-   - The server-known evaluability gate is restated in `emit-server.ts`
-     (reactive attrs, class/style maps, `html`, lazy children),
-     `plain-imports.ts` (`walkServerRenderedThunks` — whose comment admits it
-     "mirrors emit-server.ts's own gate exactly"), and `analyze.ts`
-     (`substituteArgExpr` preconditions). If one changes, the others silently
-     diverge — this is the highest-risk duplication because a divergence is a
-     wrong *component*, not a wrong error message.
-   - Node predicates: `isNode` (ast-utils), `isTsrxNode` (emit-server),
-     `nodeType` (analyze) — three spellings of one predicate.
-   - Host-prop mirror matching: `hostPropMirrorExpr` (emit-server) vs
-     `hostPropMirrorOf` (analyze) — same pattern match, two homes.
-   - `classMapKeys`/`styleMapKeys` (analyze) — near-duplicates.
-   - `sanitizeVarName` (analyze) vs an inline identical regex (compiler).
-   - Reindentation: `reindent` (emit-server) reimplements the same algorithm
-     `appendWithSpans` (spans.ts) already contains (minus span recording).
-   - Factory-context membership: `CONTEXT_HELPERS` (emit-client) is a third
-     list of the context-vs-module-exports split, alongside `CONTEXT_NAMES` /
-     `CLIENT_ONLY_PRIMITIVES` (ast-utils) and `globals.d.ts` — but it is the
-     one list **not** covered by the `globals.test.ts` parity test.
-4. **~12 bespoke recursive `TemplateNode` walks** (`collectComposeElements`,
-   `walkAttrs`/`walkServerExprs`/`walkClientExprs`/`walkServerRenderedThunks`,
-   `collectRefs`, `countForSelector`, `countComposeBySource`, `parentOf`,
-   `enclosingIfOf`, `findHoleParent`, `findMirror`/`findAttrSite`,
-   `recordSites`, `validateComposedChildren`'s walk, `validateListBody`'s walk,
-   `collectItemEvents`, `gatedLazyChild`, `hasDeepConstruct`/`hasClientConstructs`).
-   Each new `TemplateNode` variant (the next one is already queued: composed
-   elements with control-flow children) must be added to all of them — the
-   widest-maintenance coupling in the package.
-5. **`config.ts` holds two unrelated concerns** (its own header says so):
-   extension-config extraction and compose-import resolution.
-6. **Layering leaks**: `plain-imports.ts` knows `emit-server.ts`'s rendering
-   rule; `emit-client.ts` knows the analyzer's context split; `emit-server.ts`
-   re-derives proofs `analyze.ts` already established (async arm shapes).
-
-### 7.2 Target grouping
-
-Group by pipeline role, with the IR and the pin boundary as shared leaves —
-every arrow then points strictly downward:
-
-```
-server/tsrx/
-  index.ts            public facade + compileComponent pipeline (API unchanged)
-  core.ts             NEW  @tsrx/core adapter — ALL value imports in one leaf
-                          (parseModule, isStyleElement, getStyleElementStylesheet,
-                           isTemplateForOfNode, isVoidElement)
-  ir.ts               NEW  the whole IR vocabulary: TemplateNode, AttributeIR,
-                          ComposeAttrIR, PassEntryIR, ForIR, SignalIR, ConfigIR,
-                          ComponentIR, ExtractContext, SetupStmt, SourceRange
-  walk.ts             NEW  one structural TemplateNode visitor + derived
-                          collectors (attrs, exprs, elements, parents)
-  evaluability.ts     NEW  dependenciesOf + isServerEvaluable(node, scope) —
-                          the single home of the server-known rule
-  front/
-    extract.ts        WAS compiler.ts — compileSource only (no type hub role)
-    lower-template.ts      unchanged role
-    classify-attributes.ts unchanged role
-    infer-type.ts          unchanged role
-    config.ts              readConfig only (extension activation)
-    imports.ts        WAS config.ts's compose half + plain-imports.ts — all
-                          source-import collection and placement
-  analysis/
-    plan.ts          ClientPlan/QueryPlan/... types + AnalysisContext assembly
-    selectors.ts     selector engine (build/count/resolve, union, compose count)
-    naming.ts        query table + name allocation (addQuery, uniqueName, …)
-    harvest.ts       sites, HarvestPlan selection, paramDomRead, substitution
-    loops.ts         pass 1 (each) + pass 1b (reconcile)
-    effects.ts       pass 4 (per-construct effect planning)
-  emit/
-    emit-server.ts        unchanged role
-    emit-client.ts        unchanged role
-    spans.ts, indent.ts   unchanged (emit support)
-  runtime.ts              unchanged — generated-code side, never compiler-side
-  globals.d.ts, core-shim.d.ts, css.ts, diagnostics.ts, registry.ts  (leaves)
-```
-
-(A flat variant — same splits, no folders, e.g. `analyze-selectors.ts` — is a
-fine lighter-weight alternative if the directory nesting is unwelcome; the
-splits matter more than the folders.)
-
-### 7.3 The moves, and what each one decouples
-
-**M1 — Extract `ir.ts`.** Move all IR type definitions out of `compiler.ts`.
-Siblings import from `ir.ts`; `compiler.ts` (→ `front/extract.ts`) becomes a
-leaf-ish front-end module. *Decouples:* the type hub (every module no longer
-depends on the front end for vocabulary); the `classify`/`config`/
-`plain-imports` back-edges disappear.
-
-**M2 — Extract `core.ts` (pin adapter).** Move the five `@tsrx/core` value
-imports out of `compiler.ts`. `lower-template.ts` imports `isTemplateForOfNode`
-from `core.ts` directly; `emit-server.ts` imports `isVoidElement`; the
-`isForOfNode`/`isVoidTag` re-exports in `compiler.ts` are deleted.
-*Decouples:* kills the only runtime value cycle in the package; the ADR's pin
-goal ("an upgrade touches one file + the shim") is preserved but achieved by a
-leaf adapter instead of a re-export hub.
-
-**M3 — Extract `walk.ts`.** One `walkTemplate(node, visitor)` (with the
-if/switch/try/compose/fors traversal rules encoded once) plus derived
-collectors. Migrate the walks module by module — `plain-imports.ts` first
-(smallest, four generators), then `collectComposeElements`, then the analyzer's
-structural queries. *Decouples:* adding a `TemplateNode` variant becomes one
-edit in `walk.ts` (+ the modules that care), not twelve divergent edits; makes
-the walks unit-testable in isolation.
-
-**M4 — Extract `evaluability.ts`.** One `dependenciesOf` + one
-`isServerEvaluable(node, scope)`; import it in `analyze.ts`, `emit-server.ts`,
-`plain-imports.ts`. `walkServerRenderedThunks`'s "mirrors emit-server exactly"
-comment becomes an actual shared implementation. *Decouples:* the
-highest-risk duplication — the rule that decides what the server renders.
-
-**M5 — Split `analyze.ts` into `analysis/*`.** The four passes already have
-names; give them files and make the shared closure state an explicit
-`AnalysisContext` passed between them (queries/effects/ambient/usedNames/
-refNames/addQuery/collectAmbient as fields). `plan.ts` assembles and returns
-the `ClientPlan`. *Decouples:* selector logic, harvest rewriting, loop
-planning, and effect planning become independently testable and independently
-evolvable; `emit-client.ts` imports plan types from `analysis/plan.ts` rather
-than the monolith.
-
-**M6 — Merge import handling into `front/imports.ts`.** `parseComposeImports`
-(from `config.ts`) + `parsePlainImports`/`placePlainImports`. One module owns
-"what does this source import, and where does each import land". `config.ts`
-keeps only `readConfig`. *Decouples:* two half-related files become one
-coherent concern and one pure single-purpose file.
-
-**M7 — De-duplicate the small helpers.** Node predicate → ast-utils (delete
-`isTsrxNode`, `nodeType`); `hostPropOf(thunk)` shared by analyze + emit-server;
-one `objectKeys(object, { allowStrings })` for class/style maps;
-`sanitizeVarName` → ast-utils (replacing compiler's inline copy); `spans.ts`
-gains the plain `reindent` (emit-server delegates); `CONTEXT_HELPERS` →
-ast-utils as `FACTORY_CONTEXT_MEMBERS`, added to the `globals.test.ts` parity
-surface. *Decouples:* cross-module "same knowledge" drift, and brings the last
-uncovered vocabulary list under the parity test.
-
-**M8 — (Optional) physical folder regrouping** per § 7.2, updating
-`SERVER.md` § "TSRX Compiler" (the module map at its line ~244) and the six
-direct test imports (`compiler`, `ast-utils`, `spans`, `runtime`, `registry`,
-`indent` — most can route through the `index.ts` facade, which already
-re-exports them or should).
-
-### 7.4 Suggested order (each step ends green)
-
-1. **Baseline**: confirm `bun test server/tests/tsrx` passes; snapshots
-   regenerate to nothing (`UPDATE_SNAPSHOTS=1` idempotent).
-2. **M1 + M2** (pure moves; no behavior): the cycle dies, imports re-point.
-   Blast radius: intra-package imports + one test path.
-3. **M7** (mechanical dedup): deletions backed by identical implementations.
-4. **M3** (walk.ts): migrate walks one consuming module at a time; goldens
-   byte-compare after each.
-5. **M4** (evaluability.ts): the semantic consolidation — goldens prove the
-   server render set is unchanged.
-6. **M5** (analyze split): biggest diff, zero algorithm change; move code,
-   introduce `AnalysisContext`, keep pass order identical.
-7. **M6 + M8**: file merges and the optional folder move; update SERVER.md.
-
-### 7.5 What deliberately stays as-is
-
-- **The two emitters remain separate** — they are independent products with
-  independent consumers; merging them would couple server and client codegen.
-- **`diagnostics.ts` stays centralized** — the diagnostic catalog is product
-  surface (ADR 0024: "diagnostics are the compiler's product"); per-module
-  fragments would make the TSRX code table harder to keep coherent.
-- **`runtime.ts` stays isolated** in the package root (imported by generated
-  code under `server/generated/tsrx/` via the `'../../tsrx/runtime'`
-  specifier) — moving it changes generated-module text and breaks byte-equality
-  with the golden corpus for no structural gain.
-- **`registry.ts`, `spans.ts`, `indent.ts`, `css.ts`** stay small leaves.
-- **No behavior gates change**: milestone gates, severity policy, span tables,
-  and golden bytes are invariant across every step.
+- **M8 (physical folder regrouping)** was deliberately skipped — `analysis/` is
+  the only subfolder; `front/` and `emit/` groupings from the original proposal
+  were judged not worth the churn once the module-level decoupling (M1–M7) had
+  already resolved the actual coupling. Revisit only if the flat `server/tsrx/`
+  root becomes hard to navigate.
+- **`walk.ts` covers less than its own stated ambition.** Its doc comment
+  explicitly lists what it does NOT cover: `countForSelector`/
+  `countComposeBySource`'s branch-exclusivity counting, `parentOf`,
+  `findHoleParent`, `findMirror`/`findAttrSite`, `hasDeepConstruct`,
+  `recordSites`, and the list-body/composed-children validators. These remain
+  bespoke recursive walks inside `analysis/selectors.ts`, `analysis/loops.ts`,
+  `analysis/harvest.ts`, and `analysis/effects.ts` — each is semantically
+  distinct enough (different traversal rules, different early-exit logic) that
+  visitor-izing them would either lose that logic or turn `walk.ts` into a
+  grab-bag interface. Tracked as LT-046 in `TODO.md`.
+- **`evaluability.ts` has no dedicated unit test.** It's exercised transitively
+  through every golden/diagnostic test that touches server rendering, but the
+  M4 rationale ("a divergence is a wrong component, not a wrong message")
+  argues for a small direct test pinning `dependenciesOf`/`isServerEvaluable`
+  in isolation. Tracked as LT-047.
+- **`analysis/loops.ts` (`runLoops`) and `analysis/naming.ts` have no
+  standalone unit test** at the same granularity `analysis.test.ts` already
+  gives `runHarvest`/`runEffects`/the selector engine — only exercised
+  indirectly through full `analyzeClient` via golden/feature tests. Tracked as
+  LT-048.
 
 ---
 

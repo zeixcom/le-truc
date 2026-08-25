@@ -192,3 +192,23 @@
   **Skill:** le-truc-dev
   **Context:** ADR 0025 embeds the compiler client-side, but nothing today stops a Node API from creeping back into `server/tsrx/`. Add a browser-target bundle of the compile pipeline (front end + analyze + both emitters + spans) and a test that compiles a fixture through the browser-shaped bundle and asserts the artifacts are identical to the Node-side compile of the same fixture. The bundle doubles as the seed of the playground's compile worker and lazy-loads from the docs site.
   **Check:** CI runs the browser smoke; a deliberately reintroduced `node:` import fails it; fixture artifacts byte-identical across the two contexts.
+
+- [ ] LT-046: (Optional) Extend `walk.ts` coverage to the remaining bespoke `TemplateNode` walks — or document why not
+  **Skill:** le-truc-dev
+  **Context:** Post-LT-042/022 review (`server/tsrx/LE_TRUC_COMPILER.md` §7) found `walk.ts` covers only the uniform walks; `countForSelector`/`countComposeBySource` (branch-exclusivity counting), `parentOf`, `findHoleParent`, `findMirror`/`findAttrSite`, `hasDeepConstruct`, `recordSites`, and the list-body/composed-children validators remain bespoke recursion in `analysis/selectors.ts`, `analysis/loops.ts`, `analysis/harvest.ts`, `analysis/effects.ts`. Each has genuinely different traversal rules (early exit, exclusivity arithmetic, chain-only search) — assess whether any generalize cleanly onto `walkTemplate`'s visitor without losing that logic, or whether the current split is the right permanent shape and `walk.ts`'s doc comment is sufficient documentation (in which case close this as won't-do).
+  **Check:** Either new walks land with goldens byte-identical, or a decision is recorded (ADR or a note in `LE_TRUC_COMPILER.md` §7) that the split stays.
+
+- [ ] LT-047: Direct unit test for `evaluability.ts` (`dependenciesOf`/`isServerEvaluable`)
+  **Skill:** le-truc-dev
+  **Context:** `evaluability.ts` (LT-043) is the single home of the server-known dependency-closure rule that decides what the server renders — a divergence here is a wrong *component*, not a wrong diagnostic message. It's currently only exercised transitively through golden/diagnostic tests across `imports.ts`, `emit-server.ts`, and `analysis/harvest.ts`. Add a small direct test file pinning both functions against hand-built AST fixtures (server-known scope subset/superset cases, `JS_GLOBALS` exclusion).
+  **Check:** New `server/tests/tsrx/evaluability.test.ts`; no change to existing goldens.
+
+- [ ] LT-048: Standalone unit tests for `analysis/loops.ts` (`runLoops`) and `analysis/naming.ts`
+  **Skill:** le-truc-dev
+  **Context:** `server/tests/tsrx/analysis.test.ts` (from LT-022) covers `runHarvest`/`runEffects`/the selector engine at the "hand-build an `AnalysisContext`, call one pass" granularity, but `runLoops` (`each()`/`reconcile()` planning) and `naming.ts` (`addQuery`/`uniqueName`) have no equivalent — only indirect coverage via full `analyzeClient` through golden/feature tests. Add tests at the same granularity as the existing ones so a regression in loop/name planning fails locally instead of only via a golden diff.
+  **Check:** `analysis.test.ts` gains `runLoops`/naming coverage; no change to existing goldens.
+
+- [ ] LT-049: Delete unused `diagnostic.withLine` (`diagnostics.ts`)
+  **Skill:** le-truc-dev
+  **Context:** Post-refactor review found `diagnostic.withLine` (recomputes a diagnostic's line from a node offset) has no call sites anywhere in `server/tsrx/` or `server/tests/tsrx/` — dead code, likely superseded when the line-computing diagnostic factories (e.g. `contextFallbackNotServerKnown`) were added directly with `lineOf` inline. Confirm no external consumer via a repo-wide grep, then delete.
+  **Check:** `grep -rn "withLine" server/` finds only the deletion diff; `bunx tsc --noEmit` clean; `bun test server/tests` unchanged.
