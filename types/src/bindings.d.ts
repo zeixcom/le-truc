@@ -11,7 +11,10 @@ import type { SingleMatchHandlers } from '@zeix/cause-effect';
  * `tel:`); see `isSafeURL()` for the exact rules. `dangerouslyBindInnerHTML()`
  * is an XSS sink — pass a `sanitize` option (e.g. DOMPurify) for untrusted
  * input, and return `TrustedHTML` from it on pages that enforce
- * `require-trusted-types-for 'script'`. Le Truc ships no sanitizer.
+ * `require-trusted-types-for 'script'`. `configureHtmlSanitizer()` registers
+ * a module-level default `sanitize` for call sites that omit their own — Le
+ * Truc still ships no sanitizer implementation of its own; this is a
+ * consumer-configured hook, not a library default (ADR-0010).
  */
 /**
  * Placeholder for the DOM's `TrustedHTML` type (Trusted Types API). Declared
@@ -22,6 +25,8 @@ import type { SingleMatchHandlers } from '@zeix/cause-effect';
  * Exists only to satisfy the `innerHTML` cast below. See ADR-0010.
  */
 type TrustedHTML = object;
+/** A sanitizer function: raw HTML in, a safe `string` or `TrustedHTML` out. */
+type Sanitizer = (html: string) => string | TrustedHTML;
 type DangerouslyBindInnerHTMLOptions = {
     shadowRootMode?: ShadowRootMode;
     allowScripts?: boolean;
@@ -29,10 +34,27 @@ type DangerouslyBindInnerHTMLOptions = {
      * Sanitizer applied to the HTML string before assignment to `innerHTML`.
      * Return a sanitized `string`, or a `TrustedHTML` instance on pages that
      * enforce Trusted Types (see the Security note on
-     * `dangerouslyBindInnerHTML` below).
+     * `dangerouslyBindInnerHTML` below). Omit to fall back to the module-level
+     * default configured via `configureHtmlSanitizer()`, if any.
      */
-    sanitize?: (html: string) => string | TrustedHTML;
+    sanitize?: Sanitizer;
 };
+/**
+ * Configure the module-level default sanitizer that `dangerouslyBindInnerHTML()`
+ * falls back to when a call site omits its own `sanitize` option. Purely
+ * opt-in — call once, e.g. at app startup; every `dangerouslyBindInnerHTML()`
+ * call site keeps working exactly as before unless it left `sanitize` unset.
+ * A call site's own `sanitize` option still takes precedence.
+ *
+ * Le Truc ships no sanitizer implementation of its own (ADR-0010) — this
+ * only registers a hook. DOMPurify is the recommended choice; configure it
+ * with `RETURN_TRUSTED_TYPE: true` for Trusted-Types-enforcing pages (see the
+ * Trusted Types note on `dangerouslyBindInnerHTML` below).
+ *
+ * @since 2.6
+ * @param sanitize - Default sanitizer, or `undefined` to clear it
+ */
+declare const configureHtmlSanitizer: (sanitize: Sanitizer | undefined) => void;
 /**
  * Look up the element a `bind*`-produced closure was registered against, if
  * any. Used by `watch()`'s `DEV_MODE` instrumentation (ADR 0022) — a handler
@@ -263,9 +285,10 @@ declare function bindStyle<P extends string>(element: HTMLElement | SVGElement |
  * with optional Shadow DOM, sanitization, and script re-execution support.
  *
  * - `ok(html)` → schedules `element.innerHTML = html` (or `shadowRoot.innerHTML`);
- *   if `sanitize` is provided, it is applied first. If `allowScripts` is true,
- *   `<script>` elements are re-executed after injection (inline `<script>` added
- *   via `innerHTML` does not run on its own).
+ *   `sanitize` is applied first if provided, falling back to the module-level
+ *   default configured via `configureHtmlSanitizer()` when omitted. If
+ *   `allowScripts` is true, `<script>` elements are re-executed after
+ *   injection (inline `<script>` added via `innerHTML` does not run on its own).
  * - `nil` (or an empty/falsy `html`) → schedules a reset via
  *   `element.replaceChildren()` (or `shadowRoot.replaceChildren(document.createElement('slot'))`).
  *   This goes through the same per-element `schedule()` dedup as the `ok`
@@ -291,4 +314,4 @@ declare function bindStyle<P extends string>(element: HTMLElement | SVGElement |
  * @returns Match handlers that schedule the innerHTML mutation
  */
 declare const dangerouslyBindInnerHTML: (element: Element, options?: DangerouslyBindInnerHTMLOptions) => SingleMatchHandlers<string>;
-export { bindAttribute, bindClass, bindProperty, bindState, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, getDebugBindingTarget, safeSetAttribute, setTextPreservingComments, };
+export { bindAttribute, bindClass, bindProperty, bindState, bindStyle, bindText, bindVisible, configureHtmlSanitizer, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, getDebugBindingTarget, type Sanitizer, safeSetAttribute, setTextPreservingComments, };

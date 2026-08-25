@@ -120,9 +120,11 @@ export {
 	bindStyle,
 	bindText,
 	bindVisible,
+	configureHtmlSanitizer,
 	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
 	escapeHTML,
+	type Sanitizer,
 	safeSetAttribute,
 	setTextPreservingComments,
 } from './src/bindings'

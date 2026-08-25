@@ -41,13 +41,15 @@ Concretely:
 
 5. **DOMPurify is the canonical example.** A consumer configures DOMPurify with `RETURN_TRUSTED_TYPE: true` and passes `DOMPurify.sanitize` as the hook; full Trusted Types compliance follows with no other configuration. Verified for real — not just documented — in `examples/test/audit/test-sanitize-tt.spec.ts` (`audit-dompurify` component), which installs `dompurify` as a devDependency (test-only, not bundled) and exercises this exact integration under Trusted-Types-enforcing CSP, in both Chromium and WebKit.
 
+6. **`configureHtmlSanitizer(sanitize)` registers a module-level default `sanitize`** (`src/bindings.ts`, `@since 2.6`) that `dangerouslyBindInnerHTML()` falls back to when a call site omits its own `sanitize` option. Resolved fresh on every `ok()` call, not captured at bind time, so a `configureHtmlSanitizer()` call after some elements are already bound still reaches them. Precedence: call-site `sanitize` > configured default > raw passthrough (today's behavior, unchanged when neither is set). Gives every call site — including one with no options object at all, e.g. the TSRX compiler's generated `html={() => …}` reactive binding (ADR-0024) — a single place to wire up a sanitizer once instead of at every call site.
+
 This refines ADR-0009's `dangerouslyBindInnerHTML` guidance: where ADR-0009 named only `escapeHTML` and `setTextPreservingComments` as the safe utilities for direct DOM manipulation, ADR-0010 establishes the `sanitize` hook as the supported chokepoint for the one HTML-injection sink the library owns.
 
 ## Alternatives Considered
 
 - **Option A — A dedicated `trustedTypes` option (e.g. `{ policy, sanitize }`).** Rejected. It introduces a second security knob that partially overlaps `sanitize`, the classic "two ways to do it" that breeds confusion. It also implies the library should manage a `TrustedTypePolicy`, which edges toward owning sanitization policy — exactly the responsibility REQUIREMENTS §7 keeps off the library. The union return type achieves the same capability with one option and zero policy ownership.
 
-- **Option B — Auto-wrap with a default library-owned `TrustedTypePolicy`.** Rejected. A library-default policy that silently creates `TrustedHTML` from unsanitized strings would *weaken* security: it converts the dangerous sink into one that bypasses the consumer's CSP enforcement without their explicit opt-in. Trusted Types' value is that trust is explicit and auditable; a hidden default policy defeats that.
+- **Option B — Auto-wrap with a default library-owned `TrustedTypePolicy`.** Rejected. A library-default policy that silently creates `TrustedHTML` from unsanitized strings would *weaken* security: it converts the dangerous sink into one that bypasses the consumer's CSP enforcement without their explicit opt-in. Trusted Types' value is that trust is explicit and auditable; a hidden default policy defeats that. `configureHtmlSanitizer()` (Decision point 6) is not this option revisited: it ships no sanitizer and does nothing until the consumer explicitly calls it; the true unconfigured default (raw passthrough) is unchanged.
 
 - **Option C — Do nothing; document that TT-enforced pages require a per-app exemption.** Rejected. `require-trusted-types-for 'script'` is now a mainstream configuration, and Le Truc's only `innerHTML` sink is this one function. Leaving it un-addressable pushes every TT-enforced consumer toward blanket `'allow-duplicates'`/exemption workarounds, which degrade the very CSP the consumer adopted. The union-return fix is small and keeps the decision in the consumer's hands.
 
@@ -66,6 +68,7 @@ For sourcing the `TrustedHTML` type itself (Decision point 2):
 - The library owns no sanitizer and no `TrustedTypePolicy`, preserving the §7 boundary and the bundle-size target.
 - The change is additive: existing `sanitize: (html) => string` callers are unaffected; the external `SingleMatchHandlers<string>` contract is stable.
 - Sanitization and trust are co-located at the one chokepoint, making the security posture of any `dangerouslyBindInnerHTML` call site auditable at a glance.
+- `configureHtmlSanitizer()` gives every call site — hand-written or TSRX-generated — one app-wide place to wire up DOMPurify once, closing a real gap for constructs with no way to pass a per-call-site `sanitize` at all (e.g. the compiler-generated `html={() => …}` binding, ADR-0024).
 
 **Bad / trade-offs:**
 - Consumers who want Trusted Types compliance must bring a sanitizer that produces `TrustedHTML` (e.g. DOMPurify). The library provides no default — by design, but it is one more thing for the consumer to wire up.
@@ -78,5 +81,6 @@ For sourcing the `TrustedHTML` type itself (Decision point 2):
 - Requirements: [M16](../REQUIREMENTS.md#m16-security-validation-in-setattribute), §4 (bundle size), §7 (Out of Scope — no templating/sanitizer)
 - Architecture: Security, `bind*` helpers, Safety Utilities
 - Partially supersedes: [ADR-0009](0009-security-validation-in-bindattribute.md) — only the `dangerouslyBindInnerHTML` / `innerHTML`-sink guidance; ADR-0009's `bindAttribute` / `safeSetAttribute` URL and `on*` validation stands unchanged.
-- CHANGELOG: 2.1.0 entry documents `TrustedHTML`'s module-private `object` type and the `RETURN_TRUSTED_TYPE` option.
-- Tests: `examples/test/audit/test-audit.ts` (`audit-trusted-html`, `audit-dompurify`), `examples/test/audit/test-sanitize-tt.spec.ts` — real DOMPurify exercised under Trusted-Types enforcement. `dompurify` added as a devDependency for this purpose only (not bundled; the library still ships no sanitizer).
+- `server/tsrx/runtime.ts` has a same-named `configureHtmlSanitizer`/`sanitizeHtml` pair for the TSRX compiler's SERVER-rendered `html={expr}` path (ADR-0024) — deliberately symmetric naming, but a separate mechanism (different file, different runtime). One deliberate asymmetry: the server's unconfigured default *escapes* markup (safe-but-inert), the client's unconfigured default is raw passthrough — each preserves its own prior behavior rather than unifying on one default.
+- CHANGELOG: 2.1.0 entry documents `TrustedHTML`'s module-private `object` type and the `RETURN_TRUSTED_TYPE` option. Unreleased entry documents `configureHtmlSanitizer()`.
+- Tests: `examples/test/audit/test-audit.ts` (`audit-trusted-html`, `audit-dompurify`), `examples/test/audit/test-sanitize-tt.spec.ts` — real DOMPurify exercised under Trusted-Types enforcement. `dompurify` added as a devDependency for this purpose only (not bundled; the library still ships no sanitizer). `src/tests/bindings.test.ts`'s `describe('configureHtmlSanitizer (default fallback)')` pins the fallback/precedence/no-regression behavior.

@@ -17,6 +17,7 @@ import {
 	bindStyle,
 	bindText,
 	bindVisible,
+	configureHtmlSanitizer,
 	dangerouslyBindInnerHTML,
 	escapeHTML,
 	safeSetAttribute,
@@ -849,5 +850,49 @@ describe('dangerouslyBindInnerHTML', () => {
 
 		const script = el.querySelectorAll('script')[0] as FakeElement
 		expect(script?.removed).toBe(false)
+	})
+
+	describe('configureHtmlSanitizer (default fallback)', () => {
+		afterEach(() => {
+			configureHtmlSanitizer(undefined)
+		})
+
+		test('a call site with no sanitize option falls back to the configured default', () => {
+			configureHtmlSanitizer(html => html.replace(/<img[^>]*>/gi, ''))
+			const el = new FakeElement('div')
+			dangerouslyBindInnerHTML(el as unknown as Element).ok(
+				'<img src=x onerror="alert(1)"><p>safe</p>',
+			)
+			flushRAF()
+			expect(el.innerHTML).toBe('<p>safe</p>')
+		})
+
+		test("a call site's own sanitize option still takes precedence over the default", () => {
+			configureHtmlSanitizer(() => '<default>')
+			const el = new FakeElement('div')
+			dangerouslyBindInnerHTML(el as unknown as Element, {
+				sanitize: () => '<explicit>',
+			}).ok('<p>hi</p>')
+			flushRAF()
+			expect(el.innerHTML).toBe('<explicit>')
+		})
+
+		test('unconfigured (no configureHtmlSanitizer call) behaves exactly as before — raw passthrough', () => {
+			const el = new FakeElement('div')
+			dangerouslyBindInnerHTML(el as unknown as Element).ok(
+				'<img src=x onerror="alert(1)">',
+			)
+			flushRAF()
+			expect(el.innerHTML).toBe('<img src=x onerror="alert(1)">')
+		})
+
+		test('configureHtmlSanitizer(undefined) clears a previously configured default', () => {
+			configureHtmlSanitizer(() => '<sanitized>')
+			configureHtmlSanitizer(undefined)
+			const el = new FakeElement('div')
+			dangerouslyBindInnerHTML(el as unknown as Element).ok('<p>raw</p>')
+			flushRAF()
+			expect(el.innerHTML).toBe('<p>raw</p>')
+		})
 	})
 })
