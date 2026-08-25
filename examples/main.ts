@@ -53,14 +53,12 @@ import './test/watch/test-watch.ts'
 // Structural-only custom elements — no behavior, just layout containers.
 // Declared as named classes (not inline expressions) so the CEM analyzer
 // extracts proper PascalCase names + descriptions for editor LSP awareness.
-
-/** Container for a blog post card in the blog layout. */
-class CardBlogpost extends HTMLElement {}
-customElements.define('card-blogpost', CardBlogpost)
-
-/** Callout banner for highlighted or danger content. */
-class CardCallout extends HTMLElement {}
-customElements.define('card-callout', CardCallout)
+//
+// card-blogpost and card-callout used to be stubs here too; both migrated to
+// .tsrx (fb06e37a, LT-033/LT-034) — same structural-only shape, now compiled
+// from examples/card/{blogpost,callout}/*.tsrx and read into the CEM
+// manifest from their generated client, so a stub here would double-declare
+// the tag (verify-cem.ts's duplicate-tag guard).
 
 /** Wrapper around a live component preview in the docs. */
 class ModuleDemo extends HTMLElement {}
