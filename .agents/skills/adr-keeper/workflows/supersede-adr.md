@@ -1,12 +1,13 @@
 # Supersede ADR Workflow
 
-This workflow is for **published** ADRs only — i.e., the ADR exists in `main`'s history (check with `git show main:adr/000X-title.md`). If the ADR is still unpublished, even if Accepted, amend it in place via the update-adr workflow instead; there's no prior public decision to preserve a record of.
+This workflow is for a **breaking** change to a **published** ADR — the ADR exists in `main`'s history (check with `git show main:adr/000X-title.md`) AND the change reverses, contradicts, or materially changes what it decided (see the breaking/non-breaking checklist in workflows/update-adr.md). If the ADR is unpublished, amend it in place regardless of the change's nature — nobody outside the branch has seen it yet. If the ADR is published but the change is non-breaking (a clarification, a fix, or an additive extension that leaves existing behavior intact), also amend it in place via update-adr.md — don't inflate the ADR sequence for a change nobody needs a diff to understand.
 
 ## Steps
 
 1. **Identify the ADR to supersede**
    - Confirm ADR number with user
    - Verify it's published: `git show main:adr/000X-title.md`. If it isn't, stop and use update-adr.md instead
+   - Confirm the change is actually breaking (see workflows/update-adr.md's checklist). If it's non-breaking, stop and use update-adr.md instead
    - Read the existing ADR
 
 2. **Create the new ADR**
