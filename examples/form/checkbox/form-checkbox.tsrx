@@ -43,15 +43,15 @@ export function FormCheckbox(
 @{
 	expose({
 		checked: asBoolean(false),
-	})
+	});
 
 	<>
-		<form-checkbox name={name} checked={checked}>
+		<form-checkbox {name} {checked}>
 			<label>
 				<input
 					type="checkbox"
-					checked={() => host.checked}
-					disabled={() => host.disabled}
+					checked={'checked'}
+					disabled={'disabled'}
 					ref={checkbox}
 					onChange={() => ({ checked: checkbox.checked })}
 				/>
